@@ -1,0 +1,98 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/telegram-cards-ux-deploy",
+  "commit_scope": "Improve Telegram task cards for actionable UX and add scheduled hosted self-improve cycle with codex executor/model proof and usage-limit precheck.",
+  "files_owned": [
+    "api/app/routers/agent_telegram.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/app/services/agent_routing_service.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/TELEGRAM-CARD-CONTRACT.md",
+    "docs/system_audit/telegram_card_samples_2026-02-21.json",
+    "docs/system_audit/telegram_card_upgrade_checklist_2026-02-21.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-telegram",
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-21-telegram-card-ux",
+    "task-2026-02-21-self-improve-cycle"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/system_audit/telegram_card_samples_2026-02-21.json",
+    "docs/system_audit/telegram_card_upgrade_checklist_2026-02-21.md"
+  ],
+  "change_files": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_routing_service.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    ".github/workflows/self-improve-cycle.yml",
+    "api/scripts/run_self_improve_cycle.py",
+    "api/tests/test_run_self_improve_cycle.py",
+    "docs/TELEGRAM-CARD-CONTRACT.md",
+    "docs/system_audit/telegram_card_samples_2026-02-21.json",
+    "docs/system_audit/telegram_card_upgrade_checklist_2026-02-21.md",
+    "docs/system_audit/commit_evidence_2026-02-21_telegram-cards-self-improve-deploy.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py",
+      "cd api && pytest -q tests/test_run_self_improve_cycle.py tests/test_openclaw_executor_integration.py -k \"self_improve or codex\"",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and hosted/public deployment verification proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Telegram alerts become compact actionable cards with explicit runtime model/executor and proof links; scheduled self-improve run skips near usage limits and reports per-stage runtime metadata.",
+    "public_endpoints": [
+      "/api/agent/telegram/webhook",
+      "/api/agent/tasks",
+      "/api/automation/usage/alerts"
+    ],
+    "test_flows": [
+      "Send task alert updates for pending/running/needs_decision/failed/completed and verify Task/Runtime/Why/Next/Proof fields.",
+      "Run hosted self-improve workflow and verify skip behavior when usage limit threshold is breached.",
+      "Run hosted self-improve workflow and verify plan/execute/review stages include executor and model metadata."
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/root-config-integrity-next",
+  "commit_scope": "Route persistence contract, automation usage snapshot storage, and friction ledger path toggles through config instead of app environment fallbacks.",
+  "files_owned": [
+    "api/app/config_loader.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/config/api.json",
+    "api/tests/test_persistence_contract_config.py",
+    "docs/system_audit/commit_evidence_2026-04-24_root-config-persistence-friction.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_persistence_contract_config.py -q",
+      "cd api && python3 -m ruff check app/services/persistence_contract_service.py app/services/automation_usage_service.py app/services/friction_service.py app/config_loader.py tests/test_persistence_contract_config.py",
+      "git diff --check",
+      "rg -n \"os\\.getenv|os\\.environ\\.get|environ\\[|getenv\\(\" api/app/services/persistence_contract_service.py api/app/services/friction_service.py api/app/config_loader.py",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Persistence and friction health behavior keeps the same public shape while configuration comes from api/config plus user overlay instead of ambient app env fallbacks.",
+    "public_endpoints": [
+      "/health",
+      "/health/persistence-contract",
+      "/api/friction/summary",
+      "/api/automation/usage"
+    ],
+    "test_flows": [
+      "Persistence contract auto mode ignores dev SQLite and enforces for PostgreSQL",
+      "Automation usage snapshot path and DB storage toggles come from config",
+      "Friction, monitor, and GitHub Actions health paths come from config"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local validation is complete; standard PR gates, CI, deployment, and live sensing still need to run."
+  },
+  "idea_ids": [
+    "repository-health",
+    "root-config-integrity"
+  ],
+  "spec_ids": [
+    "repository-architecture-health",
+    "root-config-spine"
+  ],
+  "task_ids": [
+    "root-config-persistence-friction-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-attunement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_persistence_contract_config.py",
+    "targeted pytest and ruff outputs in thread",
+    "PR guard report docs/system_audit/pr_check_failures/pr_check_guard_20260424T095616Z_codex-root-config-integrity-next.json",
+    "app env-read scan: 143 to 131 matches"
+  ],
+  "change_files": [
+    "api/app/config_loader.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/friction_service.py",
+    "api/app/services/persistence_contract_service.py",
+    "api/config/api.json",
+    "api/tests/test_persistence_contract_config.py"
+  ],
+  "change_intent": "runtime_fix"
+}

@@ -1,0 +1,102 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/b480",
+  "commit_scope": "Add API-visible runner registry heartbeats and list endpoints; wire worker heartbeat updates into poll/execute flow and add retry/steering diagnostics telemetry",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_runner_registry_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_runner_registry_api.py"
+  ],
+  "idea_ids": [
+    "runner-availability-control-plane"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_runner_registry_heartbeat_visibility"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest -q api/tests/test_agent_runner_registry_api.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py",
+    "python3 -m py_compile api/scripts/agent_runner.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-registry-control-heartbeat.json"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_runner_registry_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_run_state_api.py",
+    "api/tests/test_agent_runner_registry_api.py",
+    "api/tests/test_agent_task_persistence.py",
+    "docs/AGENT-THREAD-RESUME-SPEC.md",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "web/app/remote-ops/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-control-loop-db-pattern.json",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-registry-control-heartbeat.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile api/scripts/agent_runner.py",
+      "pytest -q api/tests/test_agent_runner_registry_api.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_agent_task_persistence.py api/tests/test_agent_task_claims.py api/tests/test_agent_run_state_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "API can now report online/offline runners while runners poll for task control and publish progress/diagnostics for UI-driven monitoring and abort workflows.",
+    "public_endpoints": [
+      "/api/agent/runners/heartbeat",
+      "/api/agent/runners",
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/run-state/update"
+    ],
+    "test_flows": [
+      "runner heartbeat registers idle/running states",
+      "API list filters stale runners by default and includes stale on request",
+      "runner task loop updates status via task context and run-state endpoints"
+    ]
+  }
+}

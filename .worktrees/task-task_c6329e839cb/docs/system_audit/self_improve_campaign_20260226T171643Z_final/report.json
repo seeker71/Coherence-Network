@@ -1,0 +1,12 @@
+{
+  "timestamp":"20260226T171643Z",
+  "flow_mode":"strong-cheap-strong",
+  "models":{"plan":"gpt-5.3-codex","execute":"gpt-5.3-codex-spark","review":"gpt-5.3-codex"},
+  "source_metrics":{"success_rate":0.63,"goal_proximity":0.63,"goal_ref":"docs/PLAN.md:9"},
+  "flows":[
+    {"flow":1,"exit_codes":{"plan":0,"execute":0,"review":0},"verdict":"FAIL","cumulative_success_rate_pct":0.00,"execute":"EVIDENCE success_rate=0.63 goal_proximity=0.63 GOAL_REF docs/PLAN.md:9 ","review":"PASS_FAIL: FAIL "},
+    {"flow":2,"exit_codes":{"plan":0,"execute":0,"review":0},"verdict":"PASS","cumulative_success_rate_pct":50.00,"execute":"EVIDENCE success_rate=0.63 goal_proximity=0.63 GOAL_REF docs/PLAN.md:9 MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex) ","review":"PASS_FAIL: PASS "},
+    {"flow":3,"exit_codes":{"plan":0,"execute":0,"review":0},"verdict":"PASS","cumulative_success_rate_pct":66.67,"execute":"EVIDENCE success_rate=0.63 goal_proximity=0.63 GOAL_REF docs/PLAN.md:9 MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex) ","review":"PASS_FAIL: PASS "},
+    {"flow":4,"exit_codes":{"plan":0,"execute":0,"review":0},"verdict":"PASS","cumulative_success_rate_pct":75.00,"execute":"EVIDENCE success_rate=0.63 goal_proximity=0.63 GOAL_REF docs/PLAN.md:9 MODEL_FLOW strong(gpt-5.3-codex)->cheap(gpt-5.3-codex-spark)->strong(gpt-5.3-codex) ","review":"PASS_FAIL: PASS "}
+  ]
+}

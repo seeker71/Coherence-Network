@@ -1,0 +1,87 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/code-audit-flex-memory",
+  "commit_scope": "Audit internal code health, config/data-in-code leakage, refactoring targets, and bidirectional memory integration path.",
+  "files_owned": [
+    "docs/system_audit/code_health_memory_audit_2026-04-25.md",
+    "docs/system_audit/commit_evidence_2026-04-25_code-health-memory-audit.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 scripts/agent_status.py --json",
+      "cd api && python3 scripts/run_maintainability_audit.py --output /tmp/code_audit_maintainability.json",
+      "rg scans for env/config, hard-coded URLs, duplicate constants, service registry usage, memory service durability",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-25_code-health-memory-audit.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Audit artifact drafted from live structure. Maintainability audit reports severity=high, risk_score=790, layer_violation_count=1, large_module_count=23, very_large_module_count=9, long_function_count=88. App direct env reads counted at 135 under api/app. Evidence validation passed. Local PR guard passed with ready_for_push=True; follow-through check passed with stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Audit artifact exists; evidence validation, local guard, PR CI, and public deploy validation pending."
+  },
+  "idea_ids": [
+    "internal-health",
+    "bidirectional-memory"
+  ],
+  "spec_ids": [
+    "code-health-memory-audit"
+  ],
+  "task_ids": [
+    "code-audit-flex-memory-20260425"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "health-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "audit",
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "maintainability severity=high risk_score=790",
+    "layer_violation_count=1: api/app/models/evidence.py imports app.services.story_protocol_bridge",
+    "large_module_count=23; very_large_module_count=9; long_function_count=88",
+    "api/app direct env reads=135; automation_usage_service env reads=83",
+    "memory_service uses in-process dictionaries and is not yet graph/DB durable"
+    ,
+    "local guard report: docs/system_audit/pr_check_failures/pr_check_guard_20260425T080322Z_codex-code-audit-flex-memory.json",
+    "follow-through check: codex_open_prs=0, stale_codex_prs=0"
+  ],
+  "change_files": [
+    "docs/system_audit/code_health_memory_audit_2026-04-25.md"
+  ],
+  "change_intent": "docs_only"
+}

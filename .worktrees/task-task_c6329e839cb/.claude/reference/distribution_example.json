@@ -1,0 +1,31 @@
+{
+  "distribution_id": "uuid-dist-1",
+  "asset_id": "uuid-coherence-network",
+  "value_amount": 10000.00,
+  "distribution_method": "COHERENCE_WEIGHTED",
+  "contributors": [
+    {
+      "contributor_id": "uuid-seeker71",
+      "name": "seeker71",
+      "direct_cost": 2413.19,
+      "coherence_score": 0.92,
+      "coherence_multiplier": 1.42,
+      "weighted_cost": 3426.73,
+      "payout_share": 0.9622,
+      "payout_amount": 9622.18
+    },
+    {
+      "contributor_id": "uuid-urs-muff",
+      "name": "Urs Muff",
+      "direct_cost": 100.00,
+      "coherence_score": 0.64,
+      "coherence_multiplier": 1.14,
+      "weighted_cost": 114.00,
+      "payout_share": 0.0378,
+      "payout_amount": 377.82
+    }
+  ],
+  "total_weighted_cost": 3540.73,
+  "total_distributed": 10000.00,
+  "distribution_timestamp": "2026-02-13T10:00:00Z"
+}

@@ -1,0 +1,72 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/local-guard-ci-parity-20260217-0550",
+  "commit_scope": "Enforce rebase-before-push in local worktree guard flow and update documented contract; ignore transient .cache directory",
+  "files_owned": [
+    "scripts/worktree_pr_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "AGENTS.md",
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-02-17_rebase-before-push-enforcement.json"
+  ],
+  "idea_ids": [
+    "local-ci-parity"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "task_rebase_before_push_enforcement"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 -m py_compile scripts/worktree_pr_guard.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_rebase-before-push-enforcement.json",
+    "GITHUB_TOKEN=\"$GH_TOKEN\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "scripts/worktree_pr_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "AGENTS.md",
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-02-17_rebase-before-push-enforcement.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile scripts/worktree_pr_guard.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_rebase-before-push-enforcement.json",
+      "GITHUB_TOKEN=\"$GH_TOKEN\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Pending CI validation on updated PR"
+  }
+}

@@ -1,0 +1,81 @@
+{
+    "date": "2026-03-20",
+    "thread_branch": "claude/jolly-curran",
+    "commit_scope": "Fix all test failures (959 pass, 0 fail, 0 skip) and draft OpenClaw marketplace, crypto treasury, and audit ledger specs",
+    "files_owned": [
+        "api/tests/conftest.py",
+        "api/tests/test_agent_telegram_webhook.py",
+        "api/tests/test_automation_usage_api.py",
+        "api/tests/test_check_pipeline_hierarchical.py",
+        "api/tests/test_inventory_api.py",
+        "api/tests/test_concurrent_access.py",
+        "api/tests/test_agent_execute_endpoint.py",
+        "README.md",
+        "docs/WORKBOOK.md",
+        "specs/121-openclaw-idea-marketplace.md",
+        "specs/122-crypto-treasury-bridge.md",
+        "specs/123-transparent-audit-ledger.md"
+    ],
+    "change_files": [
+        "api/tests/conftest.py",
+        "api/tests/test_agent_telegram_webhook.py",
+        "api/tests/test_automation_usage_api.py",
+        "api/tests/test_check_pipeline_hierarchical.py",
+        "api/tests/test_inventory_api.py",
+        "api/tests/test_concurrent_access.py",
+        "api/tests/test_agent_execute_endpoint.py",
+        "api/app/services/automation_usage_service.py",
+        "README.md",
+        "docs/WORKBOOK.md",
+        "specs/121-openclaw-idea-marketplace.md",
+        "specs/122-crypto-treasury-bridge.md",
+        "specs/123-transparent-audit-ledger.md"
+    ],
+    "idea_ids": [
+        "coherence-network-api-runtime",
+        "federated-instance-aggregation",
+        "portfolio-governance"
+    ],
+    "spec_ids": [
+        "121-openclaw-idea-marketplace",
+        "122-crypto-treasury-bridge",
+        "123-transparent-audit-ledger"
+    ],
+    "task_ids": [
+        "task-2026-03-20-test-fixes-openclaw-specs"
+    ],
+    "contributors": [
+        {
+            "contributor_id": "claude-code",
+            "contributor_type": "machine",
+            "roles": ["implementation", "test_fix", "spec_authoring"]
+        }
+    ],
+    "agent": {
+        "name": "claude-code",
+        "version": "claude-opus-4-20250514"
+    },
+    "evidence_refs": [
+        "cd api && .venv/bin/pytest tests/ --ignore=tests/holdout -q",
+        "python3 scripts/validate_spec_quality.py"
+    ],
+    "change_intent": "runtime_fix",
+    "local_validation": {
+        "status": "pass",
+        "commands": [
+            "cd api && .venv/bin/pytest tests/ --ignore=tests/holdout -q"
+        ]
+    },
+    "ci_validation": {
+        "status": "pending",
+        "run_url": ""
+    },
+    "deploy_validation": {
+        "status": "pending",
+        "environment": "local-only"
+    },
+    "phase_gate": {
+        "can_move_next_phase": true,
+        "blocked_reason": ""
+    }
+}

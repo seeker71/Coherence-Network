@@ -1,0 +1,63 @@
+{
+  "date": "2026-02-22",
+  "thread_branch": "codex/self-improve-workflow-indent-fix",
+  "commit_scope": "Fix YAML run-block indentation in self-improve workflow so workflow_dispatch remains recognized and status parsing executes safely.",
+  "files_owned": [
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task-2026-02-22-self-improve-workflow-indent-fix"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/self-improve-cycle.yml"
+  ],
+  "change_files": [
+    ".github/workflows/self-improve-cycle.yml",
+    "docs/system_audit/commit_evidence_2026-02-22_self-improve-workflow-indent-fix.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-22_self-improve-workflow-indent-fix.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and successful workflow_dispatch trigger proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Self Improve workflow is parsed correctly by GitHub Actions and accepts manual dispatch again.",
+    "public_endpoints": [],
+    "test_flows": [
+      "Trigger workflow_dispatch for self-improve-cycle.yml and confirm run starts successfully."
+    ]
+  }
+}

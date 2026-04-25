@@ -1,0 +1,25 @@
+{
+  "known_missing_for_web": [
+    "/api/import/stack",
+    "/api/projects/",
+    "/api/search?q="
+  ],
+  "known_unmounted_agent_paths": [
+    "/agent/effectiveness",
+    "/agent/fatal-issues",
+    "/agent/metrics",
+    "/agent/monitor-issues",
+    "/agent/pipeline-status",
+    "/agent/route",
+    "/agent/status-report",
+    "/agent/tasks",
+    "/agent/tasks/attention",
+    "/agent/tasks/count",
+    "/agent/tasks/{task_id}",
+    "/agent/tasks/{task_id}/log",
+    "/agent/telegram/diagnostics",
+    "/agent/telegram/test-send",
+    "/agent/telegram/webhook",
+    "/agent/usage"
+  ]
+}

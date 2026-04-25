@@ -1,0 +1,112 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/vision-generate-candidates-20260425",
+  "commit_scope": "Promote five regenerated Living Collective vision images from audited candidates into production static assets.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-04-25_vision-generated-production-sample.json",
+    "web/public/visuals/generated/lc-network-0.jpg",
+    "web/public/visuals/generated/lc-nourishment-0.jpg",
+    "web/public/visuals/generated/lc-pulse-0.jpg",
+    "web/public/visuals/generated/lc-space-0.jpg",
+    "web/public/visuals/generated/lc-v-shelter-organism-0.jpg"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile quality-review-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-nourishment-0.jpg --profile quality-review-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-pulse-0.jpg --profile quality-review-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-network-0.jpg --profile quality-review-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-v-shelter-organism-0.jpg --profile quality-review-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/audit_vision_image_candidates.py --batch-file output/vision-quality/sample-promoted-batch.json --candidate-dir . --profile quality-review-v1 --min-bytes 1000 --report output/vision-quality/promoted-audit.json",
+      "python3 scripts/check_generated_vision_assets.py --allow-untracked",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -v tests/test_audit_vision_image_candidates.py tests/test_generate_visuals_manifest.py tests/test_check_generated_vision_assets.py",
+      "python3 scripts/sync_kb_to_db.py lc-pulse --api-url http://127.0.0.1:18161 --api-key dev-key",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Generated and promoted 5 quality-review-v1 images. Targeted production audit passed with present=5, missing=0, too_small=0, unreadable_dimensions=0. Asset check passed with 142 references and 452 prompt records. Focused tests: 7 passed, 1 pytest config warning. Local PR guard passed with ready_for_push=True after syncing lc-pulse into the local verification DB. Follow-through check passed with stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local generation, audit, asset validation, focused tests, and pre-push guard pass; PR CI and public deploy validation pending."
+  },
+  "idea_ids": [
+    "living-collective-vision",
+    "vision-image-regeneration"
+  ],
+  "spec_ids": [
+    "vision-image-prompt-manifest"
+  ],
+  "task_ids": [
+    "vision-generated-production-sample-20260425"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-approval"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "generation",
+        "validation",
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "generation profile: quality-review-v1",
+    "promoted image audit: 5/5 present and readable",
+    "lc-network-0.jpg: 133742 bytes, 886x665",
+    "lc-nourishment-0.jpg: 102210 bytes, 886x665",
+    "lc-pulse-0.jpg: 83437 bytes, 886x665",
+    "lc-space-0.jpg: 112419 bytes, 886x665",
+    "lc-v-shelter-organism-0.jpg: 97162 bytes, 886x665",
+    "local guard report: docs/system_audit/pr_check_failures/pr_check_guard_20260424T222012Z_codex-vision-generate-candidates-20260425.json",
+    "follow-through check: codex_open_prs=1, stale_codex_prs=0"
+  ],
+  "change_files": [
+    "web/public/visuals/generated/lc-network-0.jpg",
+    "web/public/visuals/generated/lc-nourishment-0.jpg",
+    "web/public/visuals/generated/lc-pulse-0.jpg",
+    "web/public/visuals/generated/lc-space-0.jpg",
+    "web/public/visuals/generated/lc-v-shelter-organism-0.jpg"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public vision concept pages using these five stable image paths serve regenerated quality-review-v1 image assets.",
+    "public_endpoints": [
+      "https://coherencycoin.com/vision"
+    ],
+    "test_flows": [
+      "Run public deploy verifier after merge.",
+      "Fetch promoted image URLs from production after deploy."
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "date": "2026-03-28",
+  "thread_branch": "worker-main",
+  "commit_scope": "Add the minimal spec for submitting the Coherence Network MCP server and skill surfaces to five or more public registries for discovery.",
+  "files_owned": [
+    ".gitignore",
+    "specs/idea-4deb5bd7c800.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-03-28_mcp-skill-registry-discovery-spec.json"
+  ],
+  "idea_ids": [
+    "idea-4deb5bd7c800"
+  ],
+  "spec_ids": [
+    "idea-4deb5bd7c800"
+  ],
+  "task_ids": [
+    "task_daa7b04df9672625"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "specification",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python -c \"from pathlib import Path; text=Path('specs/idea-4deb5bd7c800.md').read_text(encoding='utf-8'); assert len(text) >= 500; required=['## Summary','## Requirements','## API changes','## Data model','## Verification criteria','## Risks']; missing=[h for h in required if h not in text]; assert not missing, missing\"",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_mcp-skill-registry-discovery-spec.json"
+  ],
+  "change_files": [
+    ".gitignore",
+    "specs/idea-4deb5bd7c800.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-03-28T08:53:57-06:00",
+    "environment": {
+      "python": "3.12.10"
+    },
+    "commands": [
+      "python -c \"from pathlib import Path; text=Path('specs/idea-4deb5bd7c800.md').read_text(encoding='utf-8'); assert len(text) >= 500; required=['## Summary','## Requirements','## API changes','## Data model','## Verification criteria','## Risks']; missing=[h for h in required if h not in text]; assert not missing, missing\"",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_mcp-skill-registry-discovery-spec.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "ci"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Spec authored only; implementation, CI, and deploy validation are outside this task."
+  }
+}

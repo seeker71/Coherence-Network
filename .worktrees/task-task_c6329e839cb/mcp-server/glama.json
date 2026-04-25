@@ -1,0 +1,13 @@
+{
+  "name": "coherence-network",
+  "description": "Coherence Network MCP server — 22 typed tools for AI agents to publish ideas, query the knowledge graph, record resonance, trace value chains, link identities, and explore the Living Codex ontology via the Model Context Protocol.",
+  "url": "https://github.com/seeker71/Coherence-Network",
+  "homepage": "https://coherencycoin.com",
+  "license": "MIT",
+  "tags": ["knowledge-graph", "ideas", "resonance", "collaboration", "neo4j", "ontology", "value-chain", "attribution"],
+  "install": {
+    "npx": "coherence-mcp-server",
+    "uvx": "coherence-mcp-server",
+    "pip": "coherence-mcp-server"
+  }
+}

@@ -1,0 +1,248 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --background: 24 22% 11%;
+    /* Slightly higher lightness for default text on layered warm gradients */
+    --foreground: 38 32% 93%;
+    --card: 24 20% 14%;
+    --card-foreground: 38 30% 92%;
+    --popover: 24 20% 13%;
+    --popover-foreground: 38 30% 92%;
+    --primary: 36 72% 58%;
+    --primary-foreground: 24 28% 11%;
+    --secondary: 27 20% 20%;
+    --secondary-foreground: 38 22% 92%;
+    --muted: 24 16% 18%;
+    --muted-foreground: 34 22% 90%;
+    --accent: 28 24% 24%;
+    --accent-foreground: 38 26% 92%;
+    --destructive: 3 68% 56%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 28 16% 24%;
+    --input: 28 16% 24%;
+    --ring: 36 72% 58%;
+    --chart-1: 36 72% 58%;
+    --chart-2: 158 30% 45%;
+    --chart-3: 45 65% 72%;
+    --chart-4: 12 60% 65%;
+    --chart-5: 198 36% 52%;
+    --radius: 0.75rem;
+  }
+  /* ── Light mode — Spec 165: warm off-white palette, WCAG AA compliant ── */
+  :root.light {
+    color-scheme: light;
+    --background: 42 40% 96%;
+    --foreground: 24 28% 14%;
+    --card: 42 30% 98%;
+    --card-foreground: 24 26% 16%;
+    --popover: 42 30% 97%;
+    --popover-foreground: 24 26% 16%;
+    /* Darker gold so primary text passes AA on light bg (~4.78:1 on hsl(42 40% 96%)) */
+    --primary: 36 72% 34%;
+    --primary-foreground: 42 40% 97%;
+    --secondary: 36 22% 88%;
+    --secondary-foreground: 24 22% 18%;
+    --muted: 36 20% 90%;
+    /* muted-foreground: 28 18% 38% ≈ #6b5d4a — passes AA on card/bg (~5.58:1) */
+    --muted-foreground: 28 18% 38%;
+    --accent: 36 28% 85%;
+    --accent-foreground: 24 22% 18%;
+    --destructive: 3 68% 44%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 36 20% 82%;
+    --input: 36 20% 82%;
+    --ring: 36 72% 34%;
+    --chart-1: 36 72% 34%;
+    --chart-2: 158 38% 32%;
+    --chart-3: 45 65% 38%;
+    --chart-4: 12 60% 48%;
+    --chart-5: 198 44% 38%;
+  }
+  :root.dark {
+    color-scheme: dark;
+    --background: 24 22% 11%;
+    --foreground: 38 32% 93%;
+    --card: 24 20% 14%;
+    --card-foreground: 38 30% 92%;
+    --popover: 24 20% 13%;
+    --popover-foreground: 38 30% 92%;
+    --primary: 36 72% 58%;
+    --primary-foreground: 24 28% 11%;
+    --secondary: 27 20% 20%;
+    --secondary-foreground: 38 22% 92%;
+    --muted: 24 16% 18%;
+    --muted-foreground: 34 22% 90%;
+    --accent: 28 24% 24%;
+    --accent-foreground: 38 26% 92%;
+    --destructive: 3 68% 56%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 28 16% 24%;
+    --input: 28 16% 24%;
+    --ring: 36 72% 58%;
+    --chart-1: 36 72% 58%;
+    --chart-2: 158 30% 45%;
+    --chart-3: 45 65% 72%;
+    --chart-4: 12 60% 65%;
+    --chart-5: 198 36% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    /* Mobile keystone — prevent horizontal scroll on any viewport. Any
+       descendant that sets its own overflow or max-width overrides this. */
+    overflow-x: hidden;
+  }
+  html, body {
+    /* Ensure the document itself cannot be wider than the viewport, so
+       no child element forces a 430-pixel text line on a 390-pixel phone. */
+    max-width: 100vw;
+  }
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Warm organic backdrop — adapts to dark/light mode. */
+html {
+  background:
+    radial-gradient(60rem 40rem at 6% -12%, hsl(22 68% 55% / 0.2), transparent 62%),
+    radial-gradient(50rem 36rem at 100% 0%, hsl(44 52% 48% / 0.16), transparent 62%),
+    radial-gradient(72rem 46rem at 45% 100%, hsl(160 34% 30% / 0.16), transparent 64%),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(24 28% 8%) 100%);
+}
+
+/* Light mode: gentler, sun-warmed gradients */
+html.light {
+  background:
+    radial-gradient(60rem 40rem at 6% -12%, hsl(36 72% 60% / 0.12), transparent 62%),
+    radial-gradient(50rem 36rem at 100% 0%, hsl(44 60% 70% / 0.10), transparent 62%),
+    radial-gradient(72rem 46rem at 45% 100%, hsl(160 34% 60% / 0.08), transparent 64%),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(42 32% 90%) 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  /* Softer blooms so foreground text stays legible */
+  background:
+    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.05), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.035), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.04), transparent 74%);
+  mix-blend-mode: screen;
+}
+
+/* Light mode body overlay — reduced bloom intensity */
+html.light body::before {
+  background:
+    radial-gradient(520px 340px at 14% 24%, hsl(28 80% 70% / 0.06), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 40% 55% / 0.04), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 80% 68% / 0.05), transparent 74%);
+  mix-blend-mode: multiply;
+}
+
+/* Hero headline: full-opacity ink + soft shadow for separation from ambient gradients */
+.hero-headline {
+  color: hsl(var(--foreground));
+  text-shadow: 0 2px 28px hsl(20 40% 6% / 0.55);
+}
+
+html.light .hero-headline {
+  text-shadow: 0 2px 18px hsl(36 40% 88% / 0.8);
+}
+
+/* Theme transition: smooth colour shifts on mode change */
+html {
+  transition: background 0.3s ease;
+}
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Gentle scroll reveal animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+/* Staggered delays for sections */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* Warm pulse for living elements */
+@keyframes warmPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-warm-pulse {
+  animation: warmPulse 3s ease-in-out infinite;
+}
+
+/* Automation garden — activity brook scroll affordance */
+.garden-brook-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(199 89% 48% / 0.35) transparent;
+}
+.garden-brook-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.garden-brook-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, hsl(199 89% 48% / 0.4), hsl(160 84% 39% / 0.25));
+  border-radius: 999px;
+}
+
+/* Gentle hover lift */
+.hover-lift {
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px hsl(36 72% 58% / 0.08);
+  border-color: hsl(36 72% 58% / 0.2);
+}
+
+/* Smooth link underline animation */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: hsl(var(--primary));
+  transition: width 0.3s ease-out;
+}
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* Smooth page transitions for inner content */
+main {
+  animation: fadeInUp 0.4s ease-out;
+}

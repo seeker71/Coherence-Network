@@ -1,0 +1,52 @@
+name: Auto Heal Deploy Gates
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to inspect (optional)"
+        required: false
+        type: string
+
+jobs:
+  heal-main-checks:
+    concurrency:
+      group: auto-heal-deploy-gates-job-${{ github.event.inputs.sha || github.sha }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Auto-heal failed required checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: |
+          cd api
+          python scripts/auto_heal_deploy_gates.py \
+            --repo "${{ github.repository }}" \
+            --branch main \
+            --base main \
+            --sha "$TARGET_SHA" \
+            --timeout-seconds 900 \
+            --poll-seconds 30 \
+            --json > ../auto_heal_report.json
+          cat ../auto_heal_report.json
+
+      - name: Upload auto-heal report
+        uses: actions/upload-artifact@v7
+        with:
+          name: auto_heal_report_${{ github.sha }}
+          path: auto_heal_report.json

@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/fix-runtime-persistence-ready",
+  "commit_scope": "Prefer DB persistence for runtime telemetry even when RUNTIME_EVENTS_PATH is set, restoring production readiness.",
+  "files_owned": [
+    "api/app/services/runtime_event_store.py",
+    "api/tests/test_runtime_event_store_precedence.py",
+    "specs/107-runtime-telemetry-db-precedence.md",
+    "docs/system_audit/commit_evidence_2026-02-17_runtime-telemetry-db-precedence.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "107"
+  ],
+  "task_ids": [
+    "runtime-telemetry-db-precedence"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q --ignore=tests/holdout tests/test_runtime_event_store_precedence.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_runtime-telemetry-db-precedence.json"
+  ],
+  "change_files": [
+    "api/app/services/runtime_event_store.py",
+    "api/tests/test_runtime_event_store_precedence.py",
+    "specs/107-runtime-telemetry-db-precedence.md"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T10:10:00Z",
+    "environment": {
+      "python": "3.x"
+    },
+    "commands": [
+      "cd api && pytest -q --ignore=tests/holdout tests/test_runtime_event_store_precedence.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_runtime-telemetry-db-precedence.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production readiness no longer fails when runtime telemetry is configured with RUNTIME_EVENTS_PATH but a database is available; persistence contract should pass and /api/ready should return 200.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/ready",
+      "https://coherence-network-production.up.railway.app/api/health/persistence"
+    ],
+    "test_flows": [
+      "test_runtime_db_precedence_over_events_path_when_runtime_database_url_set"
+    ]
+  }
+}

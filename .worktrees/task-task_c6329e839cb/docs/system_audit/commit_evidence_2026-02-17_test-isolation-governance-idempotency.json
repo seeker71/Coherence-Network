@@ -1,0 +1,103 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260217-api-coverage-verification",
+  "commit_scope": "Fix order-dependent API test failures by isolating env-driven state, hardening idea tracked-id sourcing, and making governance idea-create apply idempotent.",
+  "files_owned": [
+    "api/app/services/agent_service.py",
+    "api/app/services/governance_service.py",
+    "api/app/services/idea_service.py",
+    "api/tests/conftest.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_discovery_sources.py",
+    "docs/system_audit/commit_evidence_2026-02-17_test-isolation-governance-idempotency.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "009",
+    "089"
+  ],
+  "task_ids": [
+    "stabilize-local-ci-context-api-suite"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/pytest -x -q",
+    "./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "BASE_SHA=$(git merge-base origin/main HEAD) ./scripts/run_local_ci_context.sh",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "api/app/services/agent_service.py",
+    "api/app/services/governance_service.py",
+    "api/app/services/idea_service.py",
+    "api/tests/conftest.py",
+    "api/tests/test_agent_task_persistence.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_discovery_sources.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Governance idea-create approvals no longer stall as approved due duplicate-id state, and API test/runtime state isolation no longer depends on execution order.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/governance/change-requests",
+      "https://coherence-network-production.up.railway.app/api/ideas"
+    ],
+    "test_flows": [
+      "api:/api/governance/change-requests -> vote yes on idea_create -> status applied",
+      "api:/api/ideas create/update/question flows under isolated portfolio path"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T02:57:00Z",
+    "environment": {
+      "python": "3.14.3",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd api && .venv/bin/pytest -x -q",
+      "./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "BASE_SHA=$(git merge-base origin/main HEAD) ./scripts/run_local_ci_context.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-api+railway-web",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI pass for this branch commit and post-merge contract checks."
+  }
+}

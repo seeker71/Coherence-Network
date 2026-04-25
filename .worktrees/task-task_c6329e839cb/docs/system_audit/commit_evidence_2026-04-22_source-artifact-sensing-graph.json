@@ -1,0 +1,143 @@
+{
+  "date": "2026-04-22",
+  "thread_branch": "codex/living-signal-layer",
+  "commit_scope": "Implement the Codex living-signal layer and source-artifact sensing graph integration: a dynamic /signals UI instrument plus provenance-rich inferred graph edges and source-backed frequency profile dimensions.",
+  "files_owned": [
+    "specs/living-signal-layer.md",
+    "specs/source-artifact-sensing-graph-integration.md",
+    "web/lib/living-signal.ts",
+    "web/tests/integration/living-signal.test.ts",
+    "web/components/living-signal/",
+    "web/components/living-signal/LivingSignalInstrument.tsx",
+    "web/app/signals/",
+    "web/app/signals/page.tsx",
+    "web/app/page.tsx",
+    "output/playwright/living-signal-layer.png",
+    "api/app/routers/sensings.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/frequency_profile_service.py",
+    "api/tests/test_source_artifact_sensing_graph.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-04-22_source-artifact-sensing-graph.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run test -- tests/integration/living-signal.test.ts",
+      "cd web && npm run build",
+      "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py",
+      "cd api && .venv/bin/pytest -q tests/test_concept_story_crud.py tests/test_knowledge_resonance.py",
+      "cd api && /opt/homebrew/bin/ruff check app/services/graph_service.py app/routers/sensings.py app/services/frequency_profile_service.py tests/test_source_artifact_sensing_graph.py",
+      "python3 scripts/validate_spec_quality.py --file specs/source-artifact-sensing-graph-integration.md",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "gh pr merge 1011 --repo seeker71/Coherence-Network --squash --delete-branch",
+      "git fetch origin main && git rebase origin/main",
+      "git worktree add --detach /Users/ursmuff/.claude-worktrees/Coherence-Network/maint-audit-origin-main-20260422130250 origin/main",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/maint-audit-origin-main-20260422130250 && python3 api/scripts/run_maintainability_audit.py --output /tmp/maint_origin_main_latest.json",
+      "PATH=\"$PWD/api/.venv/bin:$PATH\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-22_source-artifact-sensing-graph.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Runtime slice is locally validated but not committed, pushed, opened as a PR, or checked in CI."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "living-signal-layer",
+    "source-artifact-sensing-graph-integration"
+  ],
+  "task_ids": [
+    "living-signal-layer-2026-04-22",
+    "source-artifact-sensing-graph-2026-04-22"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "frontend-implementation",
+        "test-authoring",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "specs/living-signal-layer.md",
+    "specs/source-artifact-sensing-graph-integration.md",
+    "web/tests/integration/living-signal.test.ts",
+    "web/components/living-signal/",
+    "web/app/signals/",
+    "web/app/page.tsx",
+    "output/playwright/living-signal-layer.png",
+    "api/tests/test_source_artifact_sensing_graph.py",
+    "api/app/routers/sensings.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/frequency_profile_service.py",
+    "docs/system_audit/maintainability_baseline.json"
+  ],
+  "change_files": [
+    "specs/living-signal-layer.md",
+    "specs/source-artifact-sensing-graph-integration.md",
+    "web/lib/living-signal.ts",
+    "web/tests/integration/living-signal.test.ts",
+    "web/components/living-signal/",
+    "web/components/living-signal/LivingSignalInstrument.tsx",
+    "web/app/signals/",
+    "web/app/signals/page.tsx",
+    "web/app/page.tsx",
+    "output/playwright/living-signal-layer.png",
+    "api/app/routers/sensings.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/frequency_profile_service.py",
+    "api/tests/test_source_artifact_sensing_graph.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The web now exposes a dynamic /signals instrument whose guidance changes through received movements, while source-backed sensings create complete provenance edges to extracted concepts and entity profiles expose source-backed dimensions for graph traversal and resonance.",
+    "public_endpoints": [
+      "/signals",
+      "/api/sensings",
+      "/api/graph/nodes/{id}/edges",
+      "/api/profile/{entity_id}"
+    ],
+    "test_flows": [
+      "Open /signals and confirm the living signal instrument renders with form vitality, living pulse, movement buttons, signal ribbons, and recent movement rows.",
+      "Click Attune, Clarify, Ground, or Embody and confirm guidance and pulse update through the client-side signal engine.",
+      "Create an artifact node, create a concept node, then POST a source-backed sensing related to the concept and confirm the outgoing analogous-to edge carries source_artifact_id, sensing_id, extraction_method, confidence, ingestion_policy, and rationale.",
+      "Request /api/profile/{sensing_id} and confirm source artifact and ingestion policy dimensions are present.",
+      "Call graph_service.create_provenance_edge with incomplete metadata and confirm it rejects the write."
+    ]
+  }
+}

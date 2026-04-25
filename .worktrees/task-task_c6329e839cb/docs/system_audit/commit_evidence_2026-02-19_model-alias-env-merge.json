@@ -1,0 +1,88 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/runner-model-alias-env-merge-20260219",
+  "commit_scope": "Merge default codex model aliases with environment overrides so partial alias maps cannot disable gtp-5.3-codex normalization on routing or hosted runner execution paths.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-alias-env-merge.json",
+    "maintainability_audit_report.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_a3272029c2351bbe",
+    "task_80112263ea23cf20"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hosted route mismatch observed: task_80112263ea23cf20 created command with --model gtp-5.3-codex under partial/legacy alias config.",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "Added regressions for partial env alias maps in routing + runner alias resolution",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main (ready_for_push=True)",
+    "maintainability_audit_report.json refreshed by local PR guard",
+    "Rebased onto latest origin/main and re-ran targeted regressions + evidence validation"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_openclaw_executor_integration.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_model-alias-env-merge.json",
+    "maintainability_audit_report.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_model-alias-env-merge.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting CI, merge, and hosted post-deploy alias task success proof."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Even when AGENT_MODEL_ALIAS_MAP or AGENT_CODEX_MODEL_ALIAS_MAP omits gtp aliases, default gtp-5.3-codex normalization remains active and hosted runner uses gpt-5-codex.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/runners"
+    ],
+    "test_flows": [
+      "create task with context.model_override=gtp-5.3-codex and verify command/model resolve to gpt-5-codex",
+      "run hosted codex task and verify runner_model_alias shows requested gtp-5.3-codex with effective gpt-5-codex"
+    ]
+  }
+}

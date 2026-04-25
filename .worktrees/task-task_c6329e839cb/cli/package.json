@@ -1,0 +1,56 @@
+{
+  "name": "coherence-cli",
+  "version": "0.13.0",
+  "description": "Coherence Network CLI — trace ideas from inception to payout, with fair attribution, coherence scoring, and 37 identity providers. No signup needed.",
+  "type": "module",
+  "bin": {
+    "coh": "bin/coh.mjs",
+    "coherence": "bin/coh.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "keywords": [
+    "coherence",
+    "coherence-network",
+    "contribution",
+    "attribution",
+    "identity",
+    "cli",
+    "ideas",
+    "specs",
+    "roi",
+    "open-source",
+    "fair-attribution",
+    "value-chain",
+    "traceability",
+    "staking",
+    "federation",
+    "governance",
+    "mcp",
+    "ai-agent",
+    "openclaw"
+  ],
+  "license": "MIT",
+  "homepage": "https://coherencycoin.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seeker71/Coherence-Network.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seeker71/Coherence-Network/issues"
+  },
+  "author": "Coherence Network Contributors",
+  "dependencies": {
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "inquirer": "^13.3.2",
+    "ora": "^9.3.0"
+  }
+}

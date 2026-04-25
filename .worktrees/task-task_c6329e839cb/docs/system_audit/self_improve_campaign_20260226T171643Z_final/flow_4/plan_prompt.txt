@@ -1,0 +1,1 @@
+Return exactly: PLAN, PATCH, RUN, RESULT. Keep concise and mention project-goal alignment with success rate and throughput.

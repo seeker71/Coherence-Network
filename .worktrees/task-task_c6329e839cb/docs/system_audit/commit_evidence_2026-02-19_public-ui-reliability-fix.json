@@ -1,0 +1,120 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/public-ui-reliability-fix-20260219",
+  "commit_scope": "Fix public web reliability regressions by routing browser API calls through same-origin proxy routes, hardening idea detail loading against upstream failures, adding /runtime route handling, and preventing API health page indefinite loading on stalled requests.",
+  "files_owned": [
+    "maintainability_audit_report.json",
+    "web/lib/api.ts",
+    "web/app/api/[...path]/",
+    "web/app/api/[...path]/route.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/api-health/page.tsx",
+    "web/app/runtime/",
+    "web/app/runtime/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-19_public-ui-reliability-fix.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance",
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task_b4c49be570ad0e28",
+    "task_68e7eb1a555be31b",
+    "task_bc95e91205261492",
+    "task_906faef73e031cb2",
+    "task_be620c1831b88ad7",
+    "task_53111a59c7b4015c"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+    "cd web && npm run build",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "Playwright local UI verification artifacts: /tmp/coherence_local_playwright and /tmp/coherence_local_playwright_artifacts",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_public-ui-reliability-fix.json",
+    "Public verification report: /tmp/coherence_public_verify/public_verification_report_2026-02-19.md"
+  ],
+  "change_files": [
+    "maintainability_audit_report.json",
+    "web/lib/api.ts",
+    "web/app/api/[...path]/",
+    "web/app/api/[...path]/route.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/api-health/page.tsx",
+    "web/app/runtime/",
+    "web/app/runtime/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public web routes no longer fail due cross-origin browser fetches, /ideas/{id} no longer crashes on transient upstream failures, /runtime is no longer a 404, and /api-health no longer remains indefinitely in first-load waiting state.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network.vercel.app/tasks?task_id=task_b4c49be570ad0e28",
+      "https://coherence-network.vercel.app/ideas/portfolio-governance",
+      "https://coherence-network.vercel.app/runtime",
+      "https://coherence-network.vercel.app/api-health",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks"
+    ],
+    "test_flows": [
+      "web: open /tasks and confirm data renders (not stuck loading)",
+      "web: open /tasks?task_id=<id> and confirm evidence panel renders instead of hanging",
+      "web: open /ideas/portfolio-governance and confirm no server-side application error",
+      "web: open /runtime and confirm route resolves (redirect to /usage)",
+      "web: open /api-health and confirm status resolves to ok/error state without indefinite waiting"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-19T20:30:00Z",
+    "commands": [
+      "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "Local Playwright check: /tasks, /tasks?task_id=..., /ideas/portfolio-governance, /runtime, /api-health"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deploy verification for this branch."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-03-01T10:00:05.428841Z",
+  "rows": [
+    {
+      "requested_executor": "codex",
+      "effective_executor": "codex",
+      "runner_codex_auth_mode": "oauth",
+      "runner_cursor_auth_mode": null,
+      "model": "codex/gpt-5.3-codex-spark",
+      "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: auth mode proof\" --model gpt-5.3-codex-spark --skip-git-repo-check --json"
+    },
+    {
+      "requested_executor": "cursor",
+      "effective_executor": "cursor",
+      "runner_codex_auth_mode": null,
+      "runner_cursor_auth_mode": "oauth",
+      "model": "cursor/auto",
+      "command": "agent --trust --print --output-format json \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: auth mode proof\" --model auto"
+    },
+    {
+      "requested_executor": "openrouter",
+      "effective_executor": "openrouter",
+      "runner_codex_auth_mode": null,
+      "runner_cursor_auth_mode": null,
+      "model": "openrouter/free",
+      "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: auth mode proof\" --model openrouter/free"
+    }
+  ]
+}

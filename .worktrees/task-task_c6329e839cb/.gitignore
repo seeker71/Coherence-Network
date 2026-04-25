@@ -1,4 +1,113 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+.npm
+.cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Secrets
+*.pem
+*.key
+.env.*
+!.env.example
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.trx
+
+# Logs
+*.log
+logs/
+
+# Generated task packages
+api/packages/
+.aider*
+
+# Runner progress tracking (persisted per-idea, not committed)
+.idea-progress/
+.idea-events/
+.idea-progress.md
+
+# Local / one-off audit outputs (do not merge)
+docs/system_audit/production_db_*.json
+docs/system_audit/production_db_*.md
+
+# Temp debug / trace (do not merge)
+git_trace.txt
+out.txt
+
+.deployment_config
+
+# SQLite databases and WAL sidecar files (regenerate via: python3 scripts/seed_db.py)
+data/*.db
+*.db-wal
+*.db-shm
+
+# Task artifacts / compiled
 *.pyc
 __pycache__/
 .task-*
 data/coherence.db
+.codex*
+pytest-cache-files-*
+api/pytest-cache-files-*
+*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*
+.claude/worktrees/
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*
+
+# Runtime artifacts that pollute worktrees (don't commit)
+api/data/*.db
+**/tsconfig.tsbuildinfo
+test-results/
+web/test-results/
+.claude/plans/
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*

@@ -1,0 +1,99 @@
+{
+  "date": "2026-03-12",
+  "thread_branch": "codex/rewrite-demo-content-20260312",
+  "commit_scope": "Rewrite seeded idea/demo copy and priority language so MVP-facing pages speak to first-time users in plain language instead of internal scoring and system wording.",
+  "files_owned": [
+    "api/app/services/idea_service.py",
+    "web/app/demo/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/today/page.tsx",
+    "web/lib/humanize.ts",
+    "docs/system_audit/commit_evidence_2026-03-12_demo-content-priority-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/services/idea_service.py",
+    "web/app/demo/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/today/page.tsx",
+    "web/lib/humanize.ts",
+    "docs/system_audit/commit_evidence_2026-03-12_demo-content-priority-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance",
+    "coherence-signal-depth",
+    "federated-instance-aggregation"
+  ],
+  "spec_ids": [
+    "076-ui-alignment-overhaul"
+  ],
+  "task_ids": [
+    "task-2026-03-12-demo-content-priority-language"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "copywriting",
+        "ux_review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -v tests/test_ideas.py tests/test_inventory_api.py",
+    "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_demo-content-priority-language.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -v tests/test_ideas.py tests/test_inventory_api.py",
+      "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_demo-content-priority-language.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The MVP-facing idea, today, and demo pages now describe ideas and urgency in plain language and avoid exposing raw priority scores as the main explanation.",
+    "public_endpoints": [
+      "http://127.0.0.1:3000/today",
+      "http://127.0.0.1:3000/ideas",
+      "http://127.0.0.1:3000/ideas/portfolio-governance",
+      "http://127.0.0.1:3000/demo"
+    ],
+    "test_flows": [
+      "Open /ideas and confirm each idea explains why it matters now without showing a raw priority score as visible copy.",
+      "Open /ideas/portfolio-governance and confirm the detail summary explains timing and proof in plain language.",
+      "Open /today and /demo and confirm the top recommendations and spotlight copy read clearly to a first-time user."
+    ]
+  }
+}

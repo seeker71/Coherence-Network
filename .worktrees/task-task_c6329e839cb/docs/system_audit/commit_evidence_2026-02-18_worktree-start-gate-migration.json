@@ -1,0 +1,67 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/deploy-worktree-start-gate",
+  "commit_scope": "Replace legacy worktree start gate script with Makefile-based gate checks and update worktree docs",
+  "files_owned": [
+    "Makefile",
+    "AGENTS.md",
+    ".codex/environments/environment.toml",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md"
+  ],
+  "idea_ids": ["public-e2e-flow-gate-automation"],
+  "spec_ids": ["095-public-e2e-flow-gate-automation"],
+  "task_ids": ["task_2026_02_18_worktree_gate_fix"],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["validation", "decision"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_worktree-start-gate-migration.json",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "change_files": [
+    "Makefile",
+    "AGENTS.md",
+    ".codex/environments/environment.toml",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/RUNBOOK.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/ensure_worktree_start_clean.py",
+    "docs/system_audit/commit_evidence_2026-02-18_worktree-start-gate-migration.json"
+  ],
+  "change_intent": "docs_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_worktree-start-gate-migration.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}

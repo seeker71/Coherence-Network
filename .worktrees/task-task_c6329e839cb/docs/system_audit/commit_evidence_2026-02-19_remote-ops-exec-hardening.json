@@ -1,0 +1,79 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/remote-ops-deploy-20260218",
+  "commit_scope": "Require execute token on direct task execution by default and verify both execution paths in remote-ops smoke checks.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "scripts/verify_remote_ops_smoke.sh"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-remote-ops-exec-hardening-2026-02-19"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "security-hardening",
+        "verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_web_api_deploy.sh",
+    "./scripts/verify_remote_ops_smoke.sh"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "scripts/verify_remote_ops_smoke.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile api/app/routers/agent.py",
+      "bash -n scripts/verify_remote_ops_smoke.sh",
+      "pytest -q tests/test_agent_execute_endpoint.py",
+      "REMOTE_OPS_CURL_TIMEOUT=90 REMOTE_OPS_RUN_EXEC=1 ./scripts/verify_remote_ops_smoke.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production",
+    "notes": "Push branch and redeploy public contract before final verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Direct execute endpoint now requires token by default when AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH is not set, and remote ops smoke validates token-protection for both pickup-and-execute and direct execute.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}/execute",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/pickup-and-execute",
+      "https://coherence-web-production.up.railway.app/remote-ops"
+    ],
+    "test_flows": [
+      "Run verify_remote_ops_smoke.sh with no token and confirm both execute paths report token-protected responses when execution is guarded.",
+      "Run unit tests for execute endpoint token behavior with AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH=1 in local API tests."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Waiting for deployment and public-check validation in Railway."
+  }
+}

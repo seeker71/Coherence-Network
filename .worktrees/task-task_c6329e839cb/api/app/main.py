@@ -1,0 +1,984 @@
+from __future__ import annotations
+
+import logging
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from sqlalchemy import text
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+from app.adapters.graph_store import InMemoryGraphStore
+from app.adapters.postgres_store import PostgresGraphStore, Base
+from app.config_loader import database_url, get_bool, get_float, get_str
+from app.routers import (
+    agent,
+    automation_usage,
+    assets,
+    audit,
+    coherence,
+    contributor_recognition,
+    contributions,
+    contributor_identity,
+    credentials,
+    contributors,
+    distributions,
+    federation,
+    friction,
+    gates,
+    governance,
+    health,
+    ideas,
+    inventory,
+    lenses,
+    marketplace,
+    registry_discovery,
+    news,
+    peers,
+    providers,
+    spec_registry,
+    runtime,
+    auth_keys,
+    blueprints,
+    content,
+    vision,
+    traceability,
+    treasury,
+    value_lineage,
+    contributors_portfolio,
+    me_portfolio,
+)
+from app.routers import cc_economics as cc_economics_router
+from app.routers import cc_exchange as cc_exchange_router
+from app.routers import accessible_ontology as accessible_ontology_router
+from app.routers import beliefs
+from app.routers import concepts
+from app.routers import locales as locales_router
+from app.routers import entity_views as entity_views_router
+from app.routers import debug as debug_router
+from app.routers import dif_feedback
+from app.routers import models as models_router
+from app.routers import data_retention as data_retention_router
+from app.routers import geolocation
+from app.routers import edges as edges_router
+from app.routers import graph
+from app.routers import graph_questions
+from app.routers import graph_zoom
+from app.routers import graph_health
+from app.routers import agent_grounded_metrics_routes
+from app.routers import meta as meta_router
+from app.routers import verification as verification_router
+from app.routers import onboarding as onboarding_router
+from app.routers import openclaw_node_bridge
+from app.routers import pipeline
+from app.routers import pipeline_policies
+from app.routers import push as push_router
+from app.routers import ui_preferences as ui_preferences_router
+from app.routers import memberships as memberships_router
+from app.routers import activity as activity_router
+from app.routers import messages as messages_router
+from app.routers import workspaces as workspaces_router
+from app.routers import workspace_projects as workspace_projects_router
+from app.routers import provider_stats
+from app.routers import service_registry_router
+from app.routers import constellation as constellation_router
+from app.routers import inspired_by as inspired_by_router
+from app.routers import gatherings as gatherings_router
+from app.routers import presence_resonance as presence_resonance_router
+from app.routers import vitality as vitality_router
+from app.middleware.attribution import AttributionMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.read_tracking import ReadTrackingMiddleware
+from app.middleware.request_duration import RequestDurationMiddleware
+from app.middleware.request_outcomes import RequestOutcomesMiddleware
+from app.models.runtime import RuntimeEventCreate
+from app.services import runtime_service
+
+_startup_logger = logging.getLogger("coherence.api.slow")
+
+
+def _startup_compat_row(node: dict) -> dict:
+    row = dict(node)
+    if row.get("legacy_id"):
+        row["id"] = row["legacy_id"]
+    return row
+
+
+def _warn_on_suspect_cors_config() -> None:
+    from app.services.config_service import get_cors_origins, get_database_url
+
+    _ao_list = get_cors_origins()
+    _ao = _ao_list[0] if _ao_list else "http://localhost:3000"
+    _db = get_database_url()
+    if _ao == "http://localhost:3000" and "postgres" in _db:
+        _startup_logger.warning(
+            "CORS_DEFAULT_IN_PRODUCTION ALLOWED_ORIGINS is still 'http://localhost:3000' "
+            "but database contains 'postgres', indicating a production database. "
+            "Set CORS origins in config to your production domain(s)."
+        )
+
+
+def _ensure_db_tables() -> None:
+    try:
+        from app.services.unified_models import Base as _UnifiedBase
+        from app.services.unified_db import engine as _get_engine
+
+        _eng = _get_engine()
+        if _eng:
+            _UnifiedBase.metadata.create_all(_eng, checkfirst=True)
+            _startup_logger.info("DB tables ensured via unified_models.Base")
+    except Exception:
+        _startup_logger.warning("DB table creation skipped", exc_info=True)
+    # Ensure the default workspace exists (tenant primitive).
+    try:
+        from app.services import workspace_service as _ws
+        _ws.ensure_default_workspace()
+    except Exception:
+        _startup_logger.warning("Default workspace ensure skipped", exc_info=True)
+
+
+def _list_graph_nodes(node_type: str, startup_errors: list[str], error_label: str) -> tuple[int, list[dict]]:
+    from app.services import graph_service as _gs
+
+    try:
+        result = _gs.list_nodes(type=node_type, limit=2000)
+        rows = [_startup_compat_row(n) for n in result.get("items", [])]
+        return len(rows), rows
+    except Exception:
+        _startup_logger.error("startup: %s graph_nodes unreadable", node_type, exc_info=True)
+        startup_errors.append(error_label)
+        return 0, []
+
+
+def _count_contribution_edges(startup_errors: list[str]) -> int:
+    try:
+        from app.models.graph import Edge
+        from app.services.unified_db import session as _sess
+
+        with _sess() as s:
+            return s.query(Edge).filter(Edge.type == "contribution").count()
+    except Exception:
+        _startup_logger.error("startup: contribution graph_edges unreadable", exc_info=True)
+        startup_errors.append("contributions_graph_unreadable")
+        return 0
+
+
+def _build_flow_items(
+    contributor_rows: list[dict],
+    contribution_rows: list[dict],
+    asset_rows: list[dict],
+) -> int:
+    from app.services import inventory_service
+
+    try:
+        flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
+            runtime_window_seconds=86400,
+            contributor_rows=contributor_rows,
+            contribution_rows=contribution_rows,
+            asset_rows=asset_rows,
+            spec_registry_limit=200,
+            lineage_link_limit=300,
+            usage_event_limit=1200,
+            commit_evidence_limit=500,
+            runtime_event_limit=2000,
+        )
+        if not isinstance(flow_payload, dict):
+            return 0
+        return len(flow_payload.get("items", []))
+    except Exception:
+        _startup_logger.debug("api_startup_flow_cache_failed", exc_info=True)
+        return 0
+
+
+def _record_startup_friction_events(startup_errors: list[str]) -> None:
+    if not startup_errors:
+        return
+    try:
+        from app.models.friction import FrictionEvent as _FE
+        from app.services import friction_service as _fs
+
+        for err_label in startup_errors:
+            evt = _FE(
+                id=f"fric_{uuid4().hex[:12]}",
+                timestamp=datetime.now(timezone.utc),
+                stage="startup",
+                block_type="missing_table",
+                severity="high",
+                owner="api_startup",
+                unblock_condition=f"Ensure {err_label.replace('_', ' ')} exists; run DB migrations or restart.",
+                energy_loss_estimate=1.0,
+                cost_of_delay=0.0,
+                status="open",
+                notes=f"Startup detected: {err_label}",
+            )
+            _fs.append_event(evt)
+    except Exception:
+        _startup_logger.warning("Failed to record startup friction events", exc_info=True)
+
+
+def _warm_startup_caches() -> None:
+    try:
+        startup_begin = time.perf_counter()
+        from app.services import (
+            commit_evidence_service,
+            idea_service,
+            runtime_service as runtime_cache_service,
+            spec_registry_service,
+        )
+
+        idea_rows = idea_service.list_ideas().ideas
+        spec_rows = spec_registry_service.list_specs(limit=1000)
+        evidence_rows = commit_evidence_service.list_records(limit=2000)
+        runtime_rows = runtime_cache_service.list_events(
+            limit=2000,
+            since=datetime.now(timezone.utc) - timedelta(hours=24),
+        )
+        startup_errors: list[str] = []
+        contributor_rows, contributor_payload_rows = _list_graph_nodes(
+            "contributor", startup_errors, "contributors_graph_unreadable"
+        )
+        asset_rows, asset_payload_rows = _list_graph_nodes(
+            "asset", startup_errors, "assets_graph_unreadable"
+        )
+        contribution_rows = _count_contribution_edges(startup_errors)
+        flow_items = _build_flow_items(
+            contributor_payload_rows,
+            [],
+            asset_payload_rows,
+        )
+        startup_ms = (time.perf_counter() - startup_begin) * 1000.0
+        _startup_logger.info(
+            "api_startup_cache_warm elapsed_ms=%.2f idea_count=%s spec_count=%s evidence_count=%s runtime_events=%s contributors=%s contributions=%s assets=%s flow_items=%s",
+            startup_ms,
+            len(idea_rows),
+            len(spec_rows),
+            len(evidence_rows),
+            len(runtime_rows),
+            contributor_rows,
+            contribution_rows,
+            asset_rows,
+            flow_items,
+        )
+        _record_startup_friction_events(startup_errors)
+    except Exception:
+        _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
+
+
+async def _setup_service_registry(app: FastAPI) -> None:
+    try:
+        from app.services.service_registry import ServiceRegistry
+        from app.services.contracts.agent_contract import AgentServiceContract
+        from app.services.contracts.federation_contract import FederationServiceContract
+        from app.services.contracts.idea_contract import IdeaServiceContract
+        from app.services.contracts.inventory_contract import InventoryServiceContract
+        from app.services.contracts.runtime_contract import RuntimeServiceContract
+
+        registry = ServiceRegistry()
+        registry.register(IdeaServiceContract())
+        registry.register(AgentServiceContract())
+        registry.register(RuntimeServiceContract())
+        registry.register(InventoryServiceContract())
+        registry.register(FederationServiceContract())
+
+        await registry.initialize_all()
+
+        missing = registry.validate_dependencies()
+        if missing:
+            _startup_logger.warning("service_registry_missing_deps: %s", missing)
+
+        app.state.service_registry = registry
+        metrics = registry.startup_metrics()
+        _startup_logger.info(
+            "service_registry_ready discovered=%d registered=%d initialized=%d failed=%d",
+            metrics["discovered"],
+            metrics["registered"],
+            metrics["initialized"],
+            metrics["failed"],
+        )
+    except Exception:
+        _startup_logger.warning("service_registry_setup_failed", exc_info=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _warn_on_suspect_cors_config()
+    _ensure_db_tables()
+    _warm_startup_caches()
+    await _setup_service_registry(app)
+
+    # Register the on-demand translator backend. Because the app uses a
+    # lifespan context manager, @app.on_event("startup") decorators are
+    # ignored by FastAPI — so we do startup work here to make sure it
+    # actually runs.
+    try:
+        from app.services import translator_backends
+        from app.services import content_indexer_service
+
+        idx_stats = content_indexer_service.scan_and_index_specs()
+        _startup_logger.info("startup: content_indexer_stats=%s", idx_stats)
+
+        backend_name = translator_backends.register_default_backend()
+        if backend_name:
+            _startup_logger.info(
+                "startup: translator_backend=%s (on-demand attunement active)",
+                backend_name,
+            )
+        else:
+            _startup_logger.info(
+                "startup: translator_backend=none (views serve anchor only)"
+            )
+    except Exception:
+        _startup_logger.error(
+            "startup: translator/indexer registration failed", exc_info=True,
+        )
+
+    yield
+    # shutdown: nothing needed currently
+
+
+app = FastAPI(
+    title="Coherence Contribution Network API",
+    version=health.HEALTH_VERSION,
+    description=(
+        "Open intelligence platform that traces every idea from inception to payout — "
+        "with fair attribution, coherence scoring, and federated trust.\n\n"
+        "**Ecosystem:** "
+        "[Web](https://coherencycoin.com) · "
+        "[API Docs](https://api.coherencycoin.com/docs) · "
+        "[CLI (`npm i -g coherence-cli`)](https://www.npmjs.com/package/coherence-cli) · "
+        "[MCP Server](https://www.npmjs.com/package/coherence-mcp-server) · "
+        "[GitHub](https://github.com/seeker71/Coherence-Network) · "
+        "[OpenClaw Skill](https://clawhub.com/skills/coherence-network)"
+    ),
+    contact={"name": "Coherence Network", "url": "https://github.com/seeker71/Coherence-Network"},
+    lifespan=lifespan,
+    openapi_tags=[
+        {"name": "health", "description": "Liveness and readiness probes"},
+        {"name": "contributors", "description": "Contributor registry CRUD"},
+        {"name": "assets", "description": "Asset inventory CRUD"},
+        {"name": "contributions", "description": "Contribution tracking with coherence scoring"},
+        {"name": "distributions", "description": "Value distribution calculations"},
+        {"name": "ideas", "description": "Idea portfolio and ROI analysis"},
+        {"name": "spec-registry", "description": "Feature specification tracking"},
+        {"name": "agent", "description": "Task orchestration and agent execution"},
+        {"name": "gates", "description": "Release gate validation"},
+        {"name": "runtime", "description": "Runtime telemetry and event tracking"},
+        {"name": "inventory", "description": "System lineage aggregation"},
+        {"name": "governance", "description": "Change approval workflows"},
+        {"name": "friction", "description": "Pipeline friction signals"},
+        {"name": "automation-usage", "description": "Provider readiness and usage tracking"},
+        {"name": "value-lineage", "description": "Value attribution tracing"},
+        {"name": "identity", "description": "Contributor identity linking and verification"},
+        {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
+        {"name": "discovery", "description": "Submission readiness for MCP and skill discovery registries"},
+    ],
+)
+logger = logging.getLogger("coherence.api.slow")
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    logger.addHandler(handler)
+logger.propagate = False
+logger.setLevel(logging.INFO)
+
+
+def _slow_request_ms_threshold() -> float:
+    return max(25.0, get_float("api", "slow_request_ms", 1500.0))
+
+
+def _build_route_signature(request) -> tuple[str, str, str]:
+    route = request.scope.get("route")
+    route_path = ""
+    route_name = ""
+    if route is not None:
+        route_path = str(getattr(route, "path", "") or "")
+        route_name = str(getattr(route, "name", "") or "")
+    raw_path = request.url.path
+    request_path = route_path if route_path else raw_path
+    return request_path, route_name, raw_path
+
+
+def _query_summary(query_params) -> tuple[int, list[dict[str, str]], dict[str, str]]:
+    items = []
+    heavy_keys = {
+        "limit",
+        "top",
+        "runtime_window_seconds",
+        "contributor_limit",
+        "contribution_limit",
+        "asset_limit",
+        "spec_limit",
+        "lineage_link_limit",
+        "usage_event_limit",
+        "runtime_event_limit",
+        "max_implementation_files",
+        "cycles",
+        "max_endpoints",
+        "delay_ms",
+    }
+    summary: dict[str, str] = {}
+    for key, value in query_params.multi_items():
+        if key in heavy_keys:
+            summary[key] = value
+        if len(items) < 8:
+            items.append({"k": key, "v": value})
+    return len(query_params), items, summary
+
+
+def _client_identity(request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",", 1)[0].strip()
+    remote = request.client.host if request.client and request.client.host else ""
+    if remote:
+        return remote
+    return "unknown"
+
+
+def _correlation_id(request) -> str:
+    for key in (
+        "x-request-id",
+        "x-amzn-trace-id",
+        "cf-ray",
+    ):
+        value = request.headers.get(key)
+        if value:
+            return value
+    return "none"
+
+
+def _safe_int_or_none(value: str | None) -> int | None:
+    if not value or not value.isdigit():
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def _slow_route_reasons(
+    path: str,
+    status_code: int | None,
+    reasons: list[str],
+    method: str,
+    query_summary: dict[str, str],
+) -> list[str]:
+    observed = list(reasons)
+    status_code = status_code or 0
+
+    if "/api/inventory/flow" in path:
+        observed.append("inventory/flow performs multi-source aggregation")
+    if "/api/inventory/system-lineage" in path:
+        observed.append("system-lineage computes lineage + commit evidence + runtime summary")
+    if "/api/inventory/commit-evidence" in path:
+        observed.append("commit-evidence sorts and traverses recent records")
+    if "/api/runtime/ideas/summary" in path:
+        observed.append("runtime summary computes windowed event rollup")
+    if "/api/runtime/exerciser/run" in path:
+        observed.append("runtime exerciser performs batched endpoint hits")
+    if status_code and status_code >= 500:
+        observed.append("server error path")
+    runtime_window_seconds = query_summary.get("runtime_window_seconds")
+    if runtime_window_seconds and runtime_window_seconds.isdigit():
+        if int(runtime_window_seconds) > 86400:
+            observed.append("large runtime_window_seconds window")
+    for key in ("contributor_limit", "contribution_limit", "asset_limit", "spec_limit"):
+        value = query_summary.get(key)
+        if value and value.isdigit() and int(value) >= 2000:
+            observed.append(f"high request load key={key} value={value}")
+    for key in ("lineage_link_limit", "usage_event_limit", "runtime_event_limit"):
+        value = query_summary.get(key)
+        if value and value.isdigit() and int(value) >= 2000:
+            observed.append(f"high request load key={key} value={value}")
+
+    if method == "POST" and any(key in query_summary for key in ("delay_ms", "runtime_window_seconds")):
+        observed.append("POST with latency-affecting query modifiers")
+    if status_code >= 500:
+        observed.append("server error path")
+    if status_code == 404:
+        observed.append("route miss")
+    if not query_summary:
+        observed.append("no heavy query params")
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for reason in observed:
+        if reason in seen:
+            continue
+        seen.add(reason)
+        ordered.append(reason)
+    return ordered
+
+# Configure CORS
+from app.services.config_service import get_cors_origins
+allowed_origins = get_cors_origins()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-API-Key", "X-Idea-ID"],
+    expose_headers=["X-Request-ID", "X-Coherence-Runtime-Ms", "X-Coherence-Runtime-Cost-Estimate"],
+)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses per OWASP best practices."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if get_bool("server", "enable_hsts", default=False):
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        return response
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Generate or propagate X-Request-ID for tracing across services."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = None
+        for key in ("x-request-id", "x-amzn-trace-id", "cf-ray"):
+            value = request.headers.get(key)
+            if value:
+                request_id = value
+                break
+        if not request_id:
+            request_id = str(uuid4())
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(ReadTrackingMiddleware)
+app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
+# RequestOutcomesMiddleware sits inside RateLimitMiddleware (added later
+# = outer) so it counts requests that actually reached the route, not
+# ones rejected at the rate-limit layer. Its snapshot is exposed via
+# /api/health for the pulse witness to read.
+app.add_middleware(RequestOutcomesMiddleware)
+app.add_middleware(RateLimitMiddleware)
+# AttributionMiddleware is added LAST so it becomes the outermost middleware
+# in the stack — it populates request.state.contributor_id before the rate
+# limiter runs, so Phase 2 can trivially bucket by contributor.
+app.add_middleware(AttributionMiddleware)
+
+# Initialize graph store based on config
+if get_bool("api", "testing", False) or get_str("server", "environment", "development") == "test":
+    persist_path = get_str("storage", "graph_store_path", default=None)
+    app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
+else:
+    configured_database_url = database_url()
+    if str(configured_database_url).lower().startswith("postgres"):
+        app.state.graph_store = PostgresGraphStore(configured_database_url)
+    else:
+        persist_path = get_str("storage", "graph_store_path", default=None)
+        app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
+
+# Operational endpoints
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect to API documentation."""
+    return RedirectResponse(url="/docs")
+
+@app.post("/api/admin/reset-database")
+async def reset_database(x_admin_key: str = Header(None)):
+    """Drop and recreate all database tables. DESTRUCTIVE - use with caution!"""
+    admin_key = get_str("auth", "admin_key", default="dev-admin")
+    if not admin_key or x_admin_key != admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    store = app.state.graph_store
+    if not isinstance(store, PostgresGraphStore):
+        raise HTTPException(status_code=400, detail="Only PostgreSQL databases can be reset")
+
+    # Drop all tables (unified graph schema)
+    with store.engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS graph_edges CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS graph_nodes CASCADE;"))
+        conn.commit()
+
+    # Recreate with current schema
+    Base.metadata.create_all(bind=store.engine)
+
+    return {
+        "status": "success",
+        "message": "Database tables dropped and recreated with unified graph schema",
+        "changes": [
+            "graph_nodes: universal entity store (contributors, assets, ideas, specs, etc.)",
+            "graph_edges: universal relationship store (contributions, dependencies, etc.)",
+        ]
+    }
+
+# ---------------------------------------------------------------------------
+# API Versioning Strategy
+# ---------------------------------------------------------------------------
+# Current state:
+#   - All canonical routes are mounted at the /api/ prefix.
+#   - Legacy /v1/ aliases exist for contributors, assets, contributions, and
+#     distributions (see "Backward compatibility" block below). These aliases
+#     are hidden from the OpenAPI schema (include_in_schema=False).
+#
+# Future versioning:
+#   - Breaking changes will be introduced under a /v2/ prefix. The /v1/ and
+#     /api/ routes will remain unchanged until the deprecation window closes.
+#
+# Deprecation policy:
+#   - Old API versions are supported for a minimum of 6 months after the
+#     successor version reaches general availability.
+#   - Deprecation will be communicated via Deprecation / Sunset response
+#     headers on affected endpoints before removal.
+# ---------------------------------------------------------------------------
+
+# Resource routers (canonical)
+app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(contributor_recognition.router, prefix="/api", tags=["contributors"])
+app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
+app.include_router(contributors_portfolio.router, prefix="/api", tags=["contributors"])
+app.include_router(me_portfolio.router, prefix="/api")
+app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(audit.router, prefix="/api", tags=["audit"])
+app.include_router(contributions.router, prefix="/api", tags=["contributions"])
+app.include_router(contributor_identity.router, prefix="/api", tags=["identity"])
+app.include_router(distributions.router, prefix="/api", tags=["distributions"])
+app.include_router(agent.router, prefix="/api", tags=["agent"])
+app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
+app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
+app.include_router(messages_router.router, prefix="/api", tags=["messages"])
+app.include_router(activity_router.router, prefix="/api", tags=["activity"])
+app.include_router(workspace_projects_router.router, prefix="/api", tags=["projects"])
+app.include_router(memberships_router.router, prefix="/api", tags=["memberships"])
+app.include_router(lenses.router, prefix="/api", tags=["lenses"])
+app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
+app.include_router(coherence.router, prefix="/api", tags=["coherence"])
+from app.routers import practice as practice_router
+from app.routers import sensings as sensings_router
+app.include_router(practice_router.router, prefix="/api", tags=["practice"])
+app.include_router(sensings_router.router, prefix="/api", tags=["sensings"])
+app.include_router(governance.router, prefix="/api", tags=["governance"])
+app.include_router(federation.router, prefix="/api", tags=["federation"])
+app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])
+app.include_router(friction.router, prefix="/api", tags=["friction"])
+app.include_router(gates.router, prefix="/api", tags=["gates"])
+app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
+app.include_router(runtime.router, prefix="/api", tags=["runtime"])
+app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
+app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
+app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
+app.include_router(news.router, prefix="/api", tags=["news"])
+app.include_router(peers.router, prefix="/api", tags=["peers"])
+app.include_router(blueprints.router, prefix="/api", tags=["blueprints"])
+app.include_router(content.router, prefix="/api", tags=["content"])
+app.include_router(vision.router, prefix="/api", tags=["vision"])
+app.include_router(traceability.router, prefix="/api", tags=["traceability"])
+app.include_router(inspired_by_router.router, prefix="/api", tags=["inspired-by"])
+app.include_router(gatherings_router.router, prefix="/api", tags=["gatherings"])
+app.include_router(presence_resonance_router.router, prefix="/api", tags=["presence-resonance"])
+
+# Auto-index repository content on startup
+@app.on_event("startup")
+async def startup_indexer():
+    try:
+        from app.services import content_indexer_service
+        stats = content_indexer_service.scan_and_index_specs()
+        _startup_logger.info("startup: content_indexer_stats=%s", stats)
+    except Exception:
+        _startup_logger.error("startup: content_indexer failed", exc_info=True)
+
+
+@app.on_event("startup")
+async def startup_translator_backend():
+    """Register the on-demand attunement backend.
+
+    Defaults to LibreTranslate (free, no key) so the platform translates
+    content the moment a visitor requests a locale we don't have cached yet.
+    Set ``COHERENCE_TRANSLATOR=anthropic`` + provide ``ANTHROPIC_API_KEY`` to
+    upgrade to Claude for richer attunement with prompt-carried glossary.
+    """
+    try:
+        from app.services import translator_backends
+        name = translator_backends.register_default_backend()
+        if name:
+            _startup_logger.info("startup: translator_backend=%s (on-demand attunement active)", name)
+        else:
+            _startup_logger.info("startup: translator_backend=none (views serve anchor only)")
+    except Exception:
+        _startup_logger.error("startup: translator_backend registration failed", exc_info=True)
+app.include_router(providers.router, prefix="/api", tags=["agent"])
+app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
+app.include_router(treasury.router, prefix="/api", tags=["treasury"])
+app.include_router(provider_stats.router)
+app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
+app.include_router(pipeline_policies.router, prefix="/api", tags=["pipeline"])
+app.include_router(push_router.router, prefix="/api", tags=["push"])
+app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
+app.include_router(cc_economics_router.router, prefix="/api", tags=["cc-economics"])
+app.include_router(cc_exchange_router.router, prefix="/api", tags=["cc-exchange"])
+from app.routers import renderers as renderers_router
+app.include_router(renderers_router.router, prefix="/api", tags=["renderers"])
+from app.routers import render_events as render_events_router
+app.include_router(render_events_router.router, prefix="/api", tags=["render-events"])
+from app.routers import memory as memory_router
+app.include_router(memory_router.router, prefix="/api", tags=["memory"])
+from app.routers import translations as translations_router
+app.include_router(translations_router.router, prefix="/api", tags=["translations"])
+from app.routers import evidence as evidence_router
+app.include_router(evidence_router.router, prefix="/api", tags=["evidence"])
+from app.routers import settlement as settlement_router
+app.include_router(settlement_router.router, prefix="/api", tags=["settlement"])
+from app.routers import creator_economy as creator_economy_router
+app.include_router(creator_economy_router.router, prefix="/api", tags=["creator-economy"])
+app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["creator-economy"])
+app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(locales_router.router, prefix="/api", tags=["locales"])
+app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
+app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
+app.include_router(data_retention_router.router, prefix="/api", tags=["data-retention"])
+app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
+app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
+app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(graph_zoom.router, prefix="/api", tags=["graph"])
+app.include_router(graph_questions.router, prefix="/api", tags=["graph"])
+app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
+app.include_router(edges_router.router, prefix="/api", tags=["edges"])
+app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
+app.include_router(meta_router.router, prefix="/api", tags=["meta"])
+app.include_router(verification_router.router, prefix="/api", tags=["verification"])
+app.include_router(debug_router.router, prefix="/api", tags=["debug"])
+app.include_router(models_router.router, prefix="/api", tags=["models"])
+
+# Constellation view — network graph visualization data
+app.include_router(constellation_router.router, prefix="/api", tags=["constellation"])
+
+# Workspace vitality — living-system health metrics
+app.include_router(vitality_router.router, prefix="/api", tags=["vitality"])
+
+# Cross-domain resonance (CRK) endpoints
+from app.routers import resonance as resonance_router  # noqa: E402
+app.include_router(resonance_router.router, prefix="/api", tags=["resonance"])
+
+# Serendipity Discovery feed
+from app.routers import discovery as discovery_router  # noqa: E402
+app.include_router(discovery_router.router, prefix="/api", tags=["discovery"])
+
+# Proprioception — auto-sensing system state
+from app.routers import proprioception as proprioception_router  # noqa: E402
+app.include_router(proprioception_router.router, prefix="/api", tags=["proprioception"])
+
+# Discord bot vote endpoint (spec-164)
+from app.routers import discord_votes  # noqa: E402
+app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
+
+# Daily engagement brief (spec-171)
+from app.routers import brief as brief_router  # noqa: E402
+app.include_router(brief_router.router)
+
+# Identity-driven onboarding - TOFU MVP (spec-168)
+app.include_router(onboarding_router.router, tags=["onboarding"])
+
+# UX tabs mobile-friendly — per-contributor UI preferences (spec ux-tabs-mobile-friendly)
+app.include_router(ui_preferences_router.router)
+
+# Living Collective interest registration — privacy-first community gathering
+from app.routers import interest as interest_router  # noqa: E402
+app.include_router(interest_router.router, tags=["interest"])
+
+# View tracking — per-contributor view events, trending, discovery chains
+from app.routers import views as views_router  # noqa: E402
+app.include_router(views_router.router, prefix="/api", tags=["views"])
+
+# Wallet integration — connect, verify, manage on-chain wallets
+from app.routers import wallets as wallets_router  # noqa: E402
+app.include_router(wallets_router.router, prefix="/api", tags=["wallets"])
+
+# Reward policies — community-configurable reward formulas
+from app.routers import reward_policies as reward_policies_router  # noqa: E402
+app.include_router(reward_policies_router.router, prefix="/api", tags=["reward-policies"])
+
+# Flow simulator — visualize CC flow, simulate scenarios, sense vitality
+from app.routers import flow_simulator as flow_simulator_router  # noqa: E402
+app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
+
+# Energy sensing — frequencies, harmonies, the organism sees itself
+from app.routers import energy_sensing as energy_sensing_router  # noqa: E402
+app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
+
+# Flow renderer — live energy flow topology for particle visualization
+from app.routers import flow_renderer as flow_renderer_router  # noqa: E402
+app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
+
+# World lens — see the world through concept/contributor/community frequency
+from app.routers import world_lens as world_lens_router  # noqa: E402
+app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
+
+# Fallback witness — honest record of silent-degradation paths
+from app.routers import fallbacks as fallbacks_router  # noqa: E402
+app.include_router(fallbacks_router.router, prefix="/api", tags=["sensing"])
+
+# Reactions — emoji + comment on any entity
+from app.routers import reactions as reactions_router  # noqa: E402
+app.include_router(reactions_router.router, prefix="/api", tags=["reactions"])
+
+# Meeting — felt state of viewer + content as a combined organism
+from app.routers import meetings as meetings_router  # noqa: E402
+app.include_router(meetings_router.router, prefix="/api", tags=["meeting"])
+
+# Explore queue — serendipitous walks across the graph
+from app.routers import explore as explore_router  # noqa: E402
+app.include_router(explore_router.router, prefix="/api", tags=["explore"])
+
+# Proposals — light governance via the meeting gesture
+from app.routers import proposals as proposals_router  # noqa: E402
+app.include_router(proposals_router.router, prefix="/api", tags=["proposals"])
+
+# Notifications — quiet witness of who spoke back
+from app.routers import notifications as notifications_router  # noqa: E402
+app.include_router(notifications_router.router, prefix="/api", tags=["notifications"])
+
+# Personal feed — your corner of the organism
+from app.routers import personal_feed as personal_feed_router  # noqa: E402
+app.include_router(personal_feed_router.router, prefix="/api", tags=["feed"])
+
+# Presence — felt witness that others are meeting the same thing
+from app.routers import presence as presence_router  # noqa: E402
+app.include_router(presence_router.router, prefix="/api", tags=["presence"])
+
+# Backward compatibility for legacy clients; hidden from OpenAPI.
+# These /v1/ aliases map to the same routers as /api/ and will be maintained
+# for at least 6 months after any future /v2/ release (see versioning strategy above).
+app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
+app.include_router(assets.router, prefix="/v1", include_in_schema=False)
+app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
+app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
+
+
+@app.middleware("http")
+async def capture_runtime_metrics(request: Request, call_next):
+    if not get_bool("runtime", "telemetry_enabled", default=True):
+        return await call_next(request)
+
+    start = time.perf_counter()
+    status_code: int | None = None
+    exc_name: str | None = None
+    exc_message: str | None = None
+    method = request.method
+    request_path, route_name, raw_path = _build_route_signature(request)
+    query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
+    route_label = route_name or "unknown"
+    response = None
+    excluded_paths = {"/api/runtime/change-token"}
+    should_capture = request_path.startswith("/api") or request_path.startswith("/v1") or raw_path.startswith("/api") or raw_path.startswith("/v1")
+    if request_path in excluded_paths or raw_path in excluded_paths:
+        should_capture = False
+    slow_threshold_ms = _slow_request_ms_threshold()
+    log_all_requests = get_bool("api", "log_all_requests", False)
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    except Exception as exc:
+        status_code = 500
+        exc_name = exc.__class__.__name__
+        exc_message = str(exc)
+        raise
+    finally:
+        elapsed_ms = (time.perf_counter() - start) * 1000.0
+        if status_code is None:
+            status_code = 500
+        if response is not None:
+            response.headers["x-coherence-runtime-ms"] = f"{max(0.0, elapsed_ms):.3f}"
+            response.headers["x-coherence-runtime-cost-estimate"] = (
+                f"{runtime_service.estimate_runtime_cost(max(0.0, elapsed_ms)):.8f}"
+            )
+            existing_exposed = str(response.headers.get("access-control-expose-headers") or "")
+            required_exposed = {
+                "x-request-id",
+                "x-coherence-runtime-ms",
+                "x-coherence-runtime-cost-estimate",
+            }
+            if existing_exposed:
+                current = {part.strip().lower() for part in existing_exposed.split(",") if part.strip()}
+            else:
+                current = set()
+            merged = sorted(current | required_exposed)
+            response.headers["access-control-expose-headers"] = ", ".join(merged)
+        if should_capture:
+            if request.headers.get("content-length"):
+                body_size = _safe_int_or_none(request.headers.get("content-length")) or 0
+            else:
+                body_size = 0
+            reasons = _slow_route_reasons(
+                path=request_path,
+                status_code=status_code,
+                reasons=[],
+                method=method,
+                query_summary=heavy_query_rows,
+            )
+            try:
+                metadata = {
+                    "method": method,
+                    "route": route_label,
+                    "query_count": query_count,
+                    "query_samples": ",".join(
+                        f"{row.get('k')}={row.get('v')}" for row in raw_query_rows[:6]
+                    ),
+                    "heavy_query_keys": ",".join(sorted(heavy_query_rows.keys())),
+                    "body_bytes": body_size,
+                    "client": _client_identity(request),
+                    "req_id": _correlation_id(request),
+                    "slow_reasons": ", ".join(reasons),
+                    "exception": exc_name or "",
+                    "page_view_id": str(request.headers.get("x-page-view-id") or "").strip(),
+                    "page_route": str(request.headers.get("x-page-route") or "").strip(),
+                }
+                runtime_service.record_event(
+                    RuntimeEventCreate(
+                        source="api",
+                        endpoint=request_path,
+                        raw_endpoint=raw_path,
+                        method=method,
+                        status_code=status_code,
+                        runtime_ms=max(0.1, elapsed_ms),
+                        idea_id=request.headers.get("x-idea-id"),
+                        metadata=metadata,
+                    )
+                )
+            except Exception:
+                # Telemetry should not affect request success.
+                logger.debug("Telemetry recording failed", exc_info=True)
+
+            if elapsed_ms >= slow_threshold_ms or log_all_requests or status_code >= 500:
+                    reason_text = ", ".join(reasons) if reasons else "unspecified"
+                    logger.warning(
+                        "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
+                    "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
+                    method,
+                    request_path,
+                    route_label,
+                    raw_path,
+                    status_code,
+                    elapsed_ms,
+                    query_count,
+                    raw_query_rows,
+                    heavy_query_rows,
+                    body_size,
+                    reason_text,
+                        _correlation_id(request),
+                        _client_identity(request),
+                        f"{exc_name or 'none'}{':' + exc_message if exc_message else ''}",
+                    )

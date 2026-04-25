@@ -1,0 +1,5 @@
+You are the cheap execution stage.
+Apply lessons from prior review findings: include concrete command outputs/proof artifacts and explicit project-goal alignment evidence.
+Use this plan:
+| Packet standardizes reviewer visibility | `operational clarity for maintainers` | `rg` check #2 |
+Return exactly: PLAN, PATCH, RUN, RESULT.

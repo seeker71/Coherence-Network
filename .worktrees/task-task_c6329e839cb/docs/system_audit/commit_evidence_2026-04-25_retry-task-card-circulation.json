@@ -1,0 +1,89 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/health-retry-task-cards",
+  "commit_scope": "Hydrate retry, split, respec, and decision-created follow-up tasks with the same task-card context as fresh seeded work.",
+  "files_owned": [
+    "api/app/services/agent_routing/prompt_templates_loader.py",
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_task_dedup_service.py",
+    "docs/system_audit/commit_evidence_2026-04-25_retry-task-card-circulation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_task_dedup_service.py -q",
+      "python3 -m py_compile api/app/services/pipeline_advance_service.py api/app/services/agent_routing/prompt_templates_loader.py",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-25_retry-task-card-circulation.json"
+    ],
+    "summary": "24 task pipeline tests passed; changed services compiled successfully; branch rebased on origin/main; PR guard local_preflight=pass ready_for_push=True; follow-through stale_codex_prs=0; evidence validation passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local validation passes; pre-push guard, CI, merge, deploy, and live sensing remain pending."
+  },
+  "idea_ids": [
+    "runner-context-hygiene",
+    "pipeline-low-success-rate"
+  ],
+  "spec_ids": [
+    "retry-task-card-circulation"
+  ],
+  "task_ids": [
+    "health-retry-task-cards"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Live retry/split tasks showed task_card_validation.score=0.0 while fresh smart-seeded tasks scored 1.0.",
+    "Regression tests cover spec retry and timeout split follow-up task-card hydration.",
+    "Focused pytest run: 24 passed.",
+    "PR guard report: docs/system_audit/pr_check_failures/pr_check_guard_20260424T220302Z_codex-health-retry-task-cards.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_routing/prompt_templates_loader.py",
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_task_dedup_service.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Pipeline retry, auto-fix split, respec, heal, and decision follow-up tasks preserve or autofill full task-card context so health sensors no longer see weak-card retry work.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/agent/tasks",
+      "https://api.coherencycoin.com/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "Observe fresh retry/split-created spec tasks and confirm context.task_card_validation.score is 1.0.",
+      "Confirm weak-card retry/split tasks no longer accumulate in running/pending task inventory."
+    ]
+  }
+}

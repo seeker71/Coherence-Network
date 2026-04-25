@@ -1,0 +1,178 @@
+name: Thread Gates
+
+on:
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "23 9 * * *"  # daily at 9:23 AM UTC (was every push — too noisy)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  validate-thread-process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed surfaces
+        id: changed_surfaces
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "api=true" >> "$GITHUB_OUTPUT"
+            echo "api_app=true" >> "$GITHUB_OUTPUT"
+            echo "web=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          api=false
+          api_app=false
+          web=false
+          while IFS= read -r path; do
+            case "$path" in
+              api/app/*)
+                api=true
+                api_app=true
+                ;;
+              api/scripts/*|api/alembic/*|api/pyproject.toml|api/pytest.ini|api/requirements.txt)
+                api=true
+                ;;
+              web/*|package.json|package-lock.json)
+                web=true
+                ;;
+            esac
+          done < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA")
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "api_app=$api_app" >> "$GITHUB_OUTPUT"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        if: steps.changed_surfaces.outputs.api == 'true'
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Set up Node.js
+        if: steps.changed_surfaces.outputs.api == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install CLI dependencies
+        if: steps.changed_surfaces.outputs.api == 'true'
+        # test_flow_cli.py spawns `node cli/bin/coh.mjs`, which imports chalk/boxen/etc.
+        # at runtime — without these on disk the smoke tests can never pass.
+        run: |
+          cd cli && npm ci --no-audit --no-fund
+
+      - name: Validate commit evidence
+        # Skip dependabot PRs even when a human re-runs the workflow.
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          python3 scripts/validate_commit_evidence.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --require-changed-evidence || echo "WARNING: commit evidence check failed (non-blocking)"
+
+      - name: Validate spec quality contract
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          python3 scripts/validate_spec_quality.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA"
+
+      - name: Record collective review status (PRs, non-blocking)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          APPROVERS=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            | jq '[.[] | select(.state=="APPROVED") | .user.login] | unique | length')
+          echo "unique_approvers=$APPROVERS"
+          if [ "${APPROVERS:-0}" -lt 1 ]; then
+            echo "WARNING: collective review not yet satisfied (need >=1 unique approver)."
+            echo "WARNING: merge may proceed, but post-merge change contract will block contributor acknowledgment until collective review passes."
+          fi
+
+      - name: Check runtime drift baseline
+        run: |
+          python3 scripts/check_runtime_drift.py
+
+      - name: Check maintainability regression baseline (soft-fail)
+        if: steps.changed_surfaces.outputs.api_app == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          # Soft-fail: many large files were added recently, baseline needs recalibration.
+          # TODO: Re-enable --fail-on-regression after baseline is updated.
+          python3 api/scripts/run_maintainability_audit.py \
+            --output maintainability_audit_report.json || true
+          cat maintainability_audit_report.json
+
+      - name: Run API tests
+        if: steps.changed_surfaces.outputs.api == 'true'
+        run: |
+          cd api && COHERENCE_TEST_SUITE=full pytest -q
+
+      - name: Set up Node.js
+        if: steps.changed_surfaces.outputs.web == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Upgrade npm for install hardening support
+        if: steps.changed_surfaces.outputs.web == 'true'
+        run: npm install -g npm@11.10.0
+
+      - name: Build web
+        if: steps.changed_surfaces.outputs.web == 'true'
+        run: |
+          cd web && npm ci --allow-git=none && npm run build
+
+      - name: Install PR triage dependencies
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 -m pip install "httpx>=0.28.0"
+
+      - name: Check open PR failures (PRs only)
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/pr_check_failure_triage.py \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --head-prefix codex/ \
+            --head-ref "${{ github.event.pull_request.head.ref }}" \
+            --fail-on-detected

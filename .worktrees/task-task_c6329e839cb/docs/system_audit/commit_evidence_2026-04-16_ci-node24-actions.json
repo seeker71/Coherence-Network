@@ -1,0 +1,105 @@
+{
+  "date": "2026-04-16",
+  "thread_branch": "codex/ci-node24-actions",
+  "commit_scope": "Remove GitHub Actions Node 20 deprecation warnings by upgrading workflow pins from actions/checkout@v4 to @v5 and actions/setup-python@v5 to @v6 across the active CI and deploy workflows, while removing the now-redundant FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 override from thread-gates.",
+  "files_owned": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/asset_value_update.yml",
+    ".github/workflows/auto-heal-deploy-gates.yml",
+    ".github/workflows/auto_track_contributions.yml",
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/claude-code-host-runner-task.yml",
+    ".github/workflows/external-tools-audit.yml",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/maintainability-architecture-audit.yml",
+    ".github/workflows/pr-check-failure-triage.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    ".github/workflows/self-improve-cycle.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/commit_evidence_2026-04-16_ci-node24-actions.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "ci-node24-actions"
+  ],
+  "spec_ids": [
+    "split-review-deploy-verify-phases"
+  ],
+  "task_ids": [
+    "ci-node24-actions-2026-04-16"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://github.com/actions/checkout/releases/tag/v5.0.0",
+    "https://github.com/actions/setup-python/releases/tag/v6.0.0",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/24536420663",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/24536257485"
+  ],
+  "change_files": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/asset_value_update.yml",
+    ".github/workflows/auto-heal-deploy-gates.yml",
+    ".github/workflows/auto_track_contributions.yml",
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/claude-code-host-runner-task.yml",
+    ".github/workflows/external-tools-audit.yml",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/maintainability-architecture-audit.yml",
+    ".github/workflows/pr-check-failure-triage.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    ".github/workflows/self-improve-cycle.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_ci-node24-actions.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local guard completion, commit creation, push, PR checks, merge, and post-merge verification."
+  }
+}

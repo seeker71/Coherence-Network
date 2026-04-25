@@ -1,0 +1,96 @@
+{
+  "date": "2026-03-12",
+  "thread_branch": "codex/nontechnical-flow-pass-20260312",
+  "commit_scope": "Rewrite core MVP web surfaces in plain language, simplify shared navigation, and add a direct plan-to-work handoff so a first-time user can move from idea to plan to work without reading internal system jargon.",
+  "files_owned": [
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/today/page.tsx",
+    "web/components/ideas/IdeaDsssSpecBuilder.tsx",
+    "web/components/ideas/IdeaProgressEditor.tsx",
+    "web/components/ideas/IdeaTaskQuickCreate.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx",
+    "web/components/today/TodayTopIdeaQuickLaunch.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_nontechnical-flow-pass.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/today/page.tsx",
+    "web/components/ideas/IdeaDsssSpecBuilder.tsx",
+    "web/components/ideas/IdeaProgressEditor.tsx",
+    "web/components/ideas/IdeaTaskQuickCreate.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/site_header.tsx",
+    "web/components/today/TodayTopIdeaQuickLaunch.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_nontechnical-flow-pass.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "076-ui-alignment-overhaul"
+  ],
+  "task_ids": [
+    "task-2026-03-12-nontechnical-flow-pass"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "ux_review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+    "http://127.0.0.1:3101/today",
+    "http://127.0.0.1:3101/ideas/portfolio-governance",
+    "playwright desktop and mobile screenshots captured during local review",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_nontechnical-flow-pass.json",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_nontechnical-flow-pass.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The MVP-facing Today and Idea pages now speak in plain language, hide internal IDs in links/tooltips, simplify shared navigation, and let a user move from idea to plan to work with clearer next-step guidance.",
+    "public_endpoints": [
+      "http://127.0.0.1:3101/today",
+      "http://127.0.0.1:3101/ideas/portfolio-governance"
+    ],
+    "test_flows": [
+      "Open /today on desktop and mobile and confirm the page highlights the best next move, a direct start-work action, and simplified navigation labels.",
+      "Open /ideas/portfolio-governance on desktop and mobile and confirm the page explains progress, work creation, and plan creation in plain language without visible raw IDs.",
+      "From the idea page, confirm the plan builder offers a direct Start first work step action after a plan exists so the flow does not end at planning."
+    ]
+  }
+}

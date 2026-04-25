@@ -1,0 +1,103 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/railway-telegram-management-20260219",
+  "commit_scope": "Map Railway deploy-management calls into Telegram commands (head, status, schedule, verify, jobs, tick due/all/by-id) with validated webhook responses.",
+  "files_owned": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py",
+    "docs/system_audit/commit_evidence_2026-02-19_railway-telegram-management.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "spec-003-agent-telegram-decision-loop"
+  ],
+  "task_ids": [
+    "task-2026-02-19-railway-telegram-management"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py (red before implementation: 4 failed)",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py (green after implementation: 7 passed)",
+    "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_gates.py (13 passed)",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway head -> SHA 4e0242e854c3",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway status -> public_contract_passed (warnings included)",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway schedule 3 -> job 65fc290d30624ce2 scheduled",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway verify 2 -> job 0ff95eeedf954988 completed",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway jobs -> listed scheduled+completed jobs",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway tick due -> updated due job to completed",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway tick all -> no jobs updated",
+    "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI smoke: /railway tick {job_id} -> explicit per-job tick path exercised",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/services/telegram_railway_service.py",
+    "api/tests/test_agent_telegram_webhook.py"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py",
+      "cd api && pytest -q tests/test_agent_telegram_webhook.py tests/test_gates.py",
+      "/opt/homebrew/opt/python@3.11/bin/python3.11 ASGI webhook smoke scripts for /railway head|status|schedule|verify|jobs|tick due|tick all|tick {job_id}",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Telegram webhook now exposes all Railway deploy-management operations in command form and returns deploy/job state to the requesting Telegram chat.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy-contract",
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy-verification-jobs"
+    ],
+    "test_flows": [
+      "POST /api/agent/telegram/webhook with /railway head and /railway status",
+      "POST /api/agent/telegram/webhook with /railway schedule 3 then /railway jobs",
+      "POST /api/agent/telegram/webhook with /railway verify 2",
+      "POST /api/agent/telegram/webhook with /railway tick due and /railway tick all",
+      "POST /api/agent/telegram/webhook with /railway tick {job_id}"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting commit/push and CI/deploy completion."
+  }
+}

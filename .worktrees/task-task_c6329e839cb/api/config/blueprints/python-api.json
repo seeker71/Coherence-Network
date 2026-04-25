@@ -1,0 +1,44 @@
+{
+  "name": "Python API Foundation",
+  "description": "Base roadmap for a FastAPI-based backend service.",
+  "author_id": "onboard:f241d2611ded2d2b",
+  "price_cc": 10.0,
+  "ideas": [
+    {
+      "id": "api-auth-foundation",
+      "name": "API Authentication Foundation",
+      "description": "Implement JWT-based authentication and user session management.",
+      "work_type": "feature",
+      "potential_value": 150,
+      "estimated_cost": 40
+    },
+    {
+      "id": "api-db-migration-layer",
+      "name": "Database Migration Layer",
+      "description": "Set up Alembic or similar for structured schema evolution.",
+      "work_type": "enhancement",
+      "potential_value": 100,
+      "estimated_cost": 25
+    },
+    {
+      "id": "api-error-standardization",
+      "name": "Standardized Error Responses",
+      "description": "Unified JSON error schema across all endpoints.",
+      "work_type": "enhancement",
+      "potential_value": 80,
+      "estimated_cost": 15
+    }
+  ],
+  "edges": [
+    {
+      "from": "api-auth-foundation",
+      "to": "api-error-standardization",
+      "type": "depends-on"
+    },
+    {
+      "from": "api-db-migration-layer",
+      "to": "api-auth-foundation",
+      "type": "inspires"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "coherence-network": {
+      "command": "node",
+      "args": ["mcp-server/index.mjs"],
+      "cwd": "${COHERENCE_NETWORK_DIR}",
+      "env": {
+        "COHERENCE_API_BASE": "${COHERENCE_HUB_URL:-https://api.coherencycoin.com}"
+      }
+    }
+  }
+}

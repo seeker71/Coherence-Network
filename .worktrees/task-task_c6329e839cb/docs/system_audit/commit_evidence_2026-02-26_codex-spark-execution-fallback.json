@@ -1,0 +1,91 @@
+{
+  "date": "2026-02-26",
+  "thread_branch": "codex/actual-progress-20260226",
+  "commit_scope": "Unblock server-side task execution for Codex Spark routes by falling back from OpenRouter-key errors to local codex exec, and allow explicit manual re-execution of failed/completed tasks.",
+  "files_owned": [
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_codex_service.py",
+    "api/app/routers/agent.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/system_audit/commit_evidence_2026-02-26_codex-spark-execution-fallback.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "003-task-status-and-attention"
+  ],
+  "task_ids": [
+    "task_a4eb8599bf4d67fe",
+    "task_380be33944346917"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/auto_heal_start_gate.sh",
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"blocks_paid_provider_until_forced or falls_back_to_codex_when_openrouter_key_missing_for_codex_model or requeues_failed_task_for_manual_rerun\"",
+    "cd api && ruff check app/services/agent_execution_service.py tests/test_agent_execute_endpoint.py app/routers/agent.py",
+    "AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH=1 /Users/ursmuff/source/Coherence-Network/api/.venv/bin/uvicorn app.main:app --port 18112 --host 127.0.0.1",
+    "POST /api/agent/tasks/{task_id}/execute?force_paid_providers=true on openclaw/gpt-5.3-codex-spark task",
+    "GET /api/runtime/events?limit=80 (verified tool:codex.exec success event)",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260226T104034Z_codex-actual-progress-20260226.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_codex_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "docs/system_audit/commit_evidence_2026-02-26_codex-spark-execution-fallback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"blocks_paid_provider_until_forced or falls_back_to_codex_when_openrouter_key_missing_for_codex_model or requeues_failed_task_for_manual_rerun\"",
+      "cd api && ruff check app/services/agent_execution_service.py tests/test_agent_execute_endpoint.py app/routers/agent.py",
+      "POST /api/agent/tasks/{task_id}/execute?force_paid_providers=true (local uvicorn on :18112, spark task)",
+      "GET /api/runtime/events?limit=80 (confirmed /tool:codex.exec status_code=200)"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push and CI verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Codex Spark tasks now complete via codex CLI fallback when OpenRouter key is absent, and runtime telemetry includes a successful tool:codex.exec event for those executions.",
+    "public_endpoints": [
+      "http://127.0.0.1:18112/api/agent/tasks/{task_id}",
+      "http://127.0.0.1:18112/api/runtime/events?limit=80",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}"
+    ],
+    "test_flows": [
+      "Create task with context.executor=openclaw and model_override=gpt-5.3-codex-spark, then execute with force_paid_providers=true and verify status=completed.",
+      "Confirm runtime events include endpoint /tool:codex.exec with provider openai-codex and status_code 200 for that task.",
+      "Re-execute a failed task through POST /api/agent/tasks/{task_id}/execute and verify rerun is attempted (manual_reexecute_requested=true)."
+    ]
+  }
+}

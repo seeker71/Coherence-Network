@@ -1,0 +1,374 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
+  "name": "coherence-mcp-server",
+  "version": "0.5.1",
+  "description": "MCP server for the Coherence Network — 84 typed tools for AI agents to browse ideas, trace value chains, manage tasks, link identities, and navigate the universal graph.",
+  "repository": "https://github.com/seeker71/Coherence-Network",
+  "homepage": "https://coherencycoin.com",
+  "license": "MIT",
+  "authors": [
+    "coherence-network"
+  ],
+  "categories": [
+    "collaboration",
+    "project-management",
+    "open-source",
+    "knowledge-graph"
+  ],
+  "tags": [
+    "ideas",
+    "collaboration",
+    "investment",
+    "federation",
+    "coherence",
+    "open-source",
+    "value-attribution",
+    "ontology",
+    "living-codex"
+  ],
+  "packages": [
+    {
+      "registry": "npm",
+      "name": "coherence-mcp-server",
+      "version": "0.5.1"
+    }
+  ],
+  "tools": [
+    {
+      "name": "coherence_list_ideas",
+      "description": "Browse the idea portfolio ranked by ROI and free-energy score. Returns ideas with scores, manifestation status, and selection weights."
+    },
+    {
+      "name": "coherence_get_idea",
+      "description": "Get full details for a single idea including scores, open questions, value gap, and linked tasks."
+    },
+    {
+      "name": "coherence_idea_progress",
+      "description": "Get progress for an idea: stage, tasks by phase, CC staked/spent, contributors."
+    },
+    {
+      "name": "coherence_select_idea",
+      "description": "Let the portfolio engine select the next highest-ROI idea to work on. Temperature controls exploration vs exploitation."
+    },
+    {
+      "name": "coherence_showcase",
+      "description": "List validated, shipped ideas that have proven their value."
+    },
+    {
+      "name": "coherence_resonance",
+      "description": "Show which ideas are generating the most energy and activity right now."
+    },
+    {
+      "name": "coherence_list_specs",
+      "description": "List feature specs with ROI metrics, value gaps, and implementation summaries."
+    },
+    {
+      "name": "coherence_get_spec",
+      "description": "Get full spec detail including implementation summary, pseudocode, and ROI."
+    },
+    {
+      "name": "coherence_list_lineage",
+      "description": "List value lineage chains connecting ideas to specs, implementations, and payouts."
+    },
+    {
+      "name": "coherence_lineage_valuation",
+      "description": "Get ROI valuation for a lineage chain — measured value, estimated cost, and ROI ratio."
+    },
+    {
+      "name": "coherence_list_providers",
+      "description": "List all 37 supported identity providers grouped by category (Social, Dev, Crypto/Web3, Professional, Identity, Custom)."
+    },
+    {
+      "name": "coherence_link_identity",
+      "description": "Link a provider identity (GitHub, Discord, Ethereum, etc.) to a contributor. No registration required."
+    },
+    {
+      "name": "coherence_lookup_identity",
+      "description": "Find which contributor owns a specific provider identity. Reverse lookup."
+    },
+    {
+      "name": "coherence_get_identities",
+      "description": "Get all linked identities for a contributor."
+    },
+    {
+      "name": "coherence_record_contribution",
+      "description": "Record a contribution. Identify by contributor_id OR by provider+provider_id (no registration needed)."
+    },
+    {
+      "name": "coherence_contributor_ledger",
+      "description": "Get a contributor's CC balance and contribution history."
+    },
+    {
+      "name": "coherence_status",
+      "description": "Get network health: API status, uptime, federation nodes, idea count."
+    },
+    {
+      "name": "coherence_friction_report",
+      "description": "Get friction report — where the pipeline struggles."
+    },
+    {
+      "name": "coherence_list_federation_nodes",
+      "description": "List federated nodes and their capabilities."
+    },
+    {
+      "name": "coherence_list_tasks",
+      "description": "List tasks in the agent work pipeline with optional filters (pending, running, completed, failed, needs_decision)."
+    },
+    {
+      "name": "coherence_get_task",
+      "description": "Get full detail for a single task including direction, context, worker_id, and result/output."
+    },
+    {
+      "name": "coherence_task_next",
+      "description": "Claim the highest-priority pending task from the queue. This is the entry point for agents to start working."
+    },
+    {
+      "name": "coherence_task_claim",
+      "description": "Claim a specific task by ID."
+    },
+    {
+      "name": "coherence_task_report",
+      "description": "Report the result of a claimed task (completed or failed)."
+    },
+    {
+      "name": "coherence_task_seed",
+      "description": "Create a new task from an existing idea (e.g. seed a 'spec' task for idea X)."
+    },
+    {
+      "name": "coherence_task_events",
+      "description": "Get the activity log/event stream for a specific task."
+    },
+    {
+      "name": "coherence_create_idea",
+      "description": "Create a new idea in the portfolio. Scoped to a workspace (default: coherence-network)."
+    },
+    {
+      "name": "coherence_list_workspaces",
+      "description": "List all workspaces (tenants). Each workspace owns its own ideas, specs, pillars, and agent personas."
+    },
+    {
+      "name": "coherence_get_workspace",
+      "description": "Get a workspace's full manifest (name, description, pillars, visibility)."
+    },
+    {
+      "name": "coherence_create_workspace",
+      "description": "Create a new workspace (tenant) with its own pillar taxonomy. Use this to onboard a contributor team with isolated ideas/specs/agents."
+    },
+    {
+      "name": "coherence_get_workspace_pillars",
+      "description": "Get the pillar taxonomy declared by a workspace. Use this before setting `pillar` on a new idea."
+    },
+    {
+      "name": "coherence_update_idea",
+      "description": "Update an existing idea's properties (stage, status, metadata)."
+    },
+    {
+      "name": "coherence_list_edges",
+      "description": "List relationship edges in the universal graph with optional filters."
+    },
+    {
+      "name": "coherence_get_entity_edges",
+      "description": "Get all incoming and outgoing edges for any entity (Idea, Spec, Contributor, Asset)."
+    },
+    {
+      "name": "coherence_create_edge",
+      "description": "Create a typed relationship edge between two entities in the graph."
+    },
+    {
+      "name": "coherence_list_assets",
+      "description": "List tracked assets (code, docs, endpoints) with pagination."
+    },
+    {
+      "name": "coherence_get_asset",
+      "description": "Get detail for a specific asset by UUID."
+    },
+    {
+      "name": "coherence_create_asset",
+      "description": "Register a new tracked asset."
+    },
+    {
+      "name": "coherence_get_news_feed",
+      "description": "Latest news items from configured RSS sources with optional POV ranking."
+    },
+    {
+      "name": "coherence_get_news_resonance",
+      "description": "News items matched to ideas with resonance scores and explanations."
+    },
+    {
+      "name": "coherence_list_news_sources",
+      "description": "List all configured news sources."
+    },
+    {
+      "name": "coherence_add_news_source",
+      "description": "Add a new news source (RSS)."
+    },
+    {
+      "name": "coherence_get_trending_news",
+      "description": "Trending keywords extracted from recent news items."
+    },
+    {
+      "name": "coherence_get_treasury_info",
+      "description": "Treasury wallet addresses, conversion rates, and total CC balance."
+    },
+    {
+      "name": "coherence_record_deposit",
+      "description": "Record a crypto deposit and convert to CC for a contributor."
+    },
+    {
+      "name": "coherence_get_deposit_history",
+      "description": "Get deposit history for a contributor."
+    },
+    {
+      "name": "coherence_list_change_requests",
+      "description": "List open governance change proposals."
+    },
+    {
+      "name": "coherence_get_change_request",
+      "description": "Get detail for a specific change proposal."
+    },
+    {
+      "name": "coherence_vote_governance",
+      "description": "Cast a vote on a governance change proposal."
+    },
+    {
+      "name": "coherence_propose_governance",
+      "description": "Create a new governance change proposal."
+    },
+    {
+      "name": "coherence_get_dif_stats",
+      "description": "DIF accuracy statistics — true/false positive rates, accuracy by language."
+    },
+    {
+      "name": "coherence_get_recent_dif",
+      "description": "Recent DIF verification entries with scores and outcomes."
+    },
+    {
+      "name": "coherence_get_resonant_peers",
+      "description": "Find contributors with similar interests (structural resonance) to a specific contributor."
+    },
+    {
+      "name": "coherence_get_nearby_peers",
+      "description": "Find contributors physically close to a specific contributor."
+    },
+    {
+      "name": "coherence_list_blueprints",
+      "description": "List available project roadmap blueprints (templates)."
+    },
+    {
+      "name": "coherence_apply_blueprint",
+      "description": "Seed a full roadmap of ideas and edges from a blueprint template."
+    },
+    {
+      "name": "coherence_read_file",
+      "description": "Read raw file content from the repository (specs, docs, etc.) via direct link."
+    },
+    {
+      "name": "coherence_list_concepts",
+      "description": "Browse the Living Codex ontology — 184 universal concepts with typed relationships and 53 axes."
+    },
+    {
+      "name": "coherence_get_concept",
+      "description": "Get full details for a single concept from the Living Codex ontology."
+    },
+    {
+      "name": "coherence_link_concepts",
+      "description": "Create a typed relationship edge between two concepts in the Living Codex ontology."
+    },
+    {
+      "name": "coherence_create_spec",
+      "description": "Create a new spec in the registry. Requires spec_id (slug), title, summary, and idea_id."
+    },
+    {
+      "name": "coherence_update_spec",
+      "description": "Update an existing spec's properties (title, summary, value, cost, implementation summary)."
+    },
+    {
+      "name": "coherence_advance_idea",
+      "description": "Check prerequisites and advance an idea to its next lifecycle stage. Returns current state, prerequisite check results, and whether advancement succeeded."
+    },
+    {
+      "name": "coherence_trace",
+      "description": "Trace the full lineage of any entity — from idea to specs to tasks to source files. Provides navigation breadcrumbs across the entire system."
+    },
+    {
+      "name": "coherence_pipeline_policies",
+      "description": "View or update pipeline policies (phase_chain, max_retries, failure_patterns, provider_per_phase, etc). Use action='list' to see all, action='get' with key, action='set' with key+value."
+    },
+    {
+      "name": "coherence_workspace_tasks",
+      "description": "List tasks for a specific workspace, seed a full pipeline (spec->impl->test->review->deploy->verify), or get workspace status."
+    },
+    {
+      "name": "coherence_list_workspace_members",
+      "description": "List members of a workspace with their roles and join dates."
+    },
+    {
+      "name": "coherence_invite_member",
+      "description": "Invite a contributor to a workspace with an optional role."
+    },
+    {
+      "name": "coherence_list_my_workspaces",
+      "description": "List workspaces that a contributor belongs to."
+    },
+    {
+      "name": "coherence_send_message",
+      "description": "Send a message to a contributor (DM) or a workspace channel."
+    },
+    {
+      "name": "coherence_get_inbox",
+      "description": "Get inbox messages for a contributor with optional filters."
+    },
+    {
+      "name": "coherence_get_workspace_activity",
+      "description": "Get the activity feed (event timeline) for a workspace."
+    },
+    {
+      "name": "coherence_list_workspace_projects",
+      "description": "List projects in a workspace for organizing ideas into groups."
+    },
+    {
+      "name": "coherence_create_workspace_project",
+      "description": "Create a new project within a workspace to group related ideas."
+    },
+    {
+      "name": "coherence_discover",
+      "description": "Serendipity feed — personalized discovery of resonant ideas, peers, cross-domain connections, and news. Returns what resonates with who you are."
+    },
+    {
+      "name": "coherence_constellation",
+      "description": "Network visualization data — nodes (ideas, contributors, concepts) and edges with positions for galaxy/constellation rendering."
+    },
+    {
+      "name": "coherence_vitality",
+      "description": "Workspace health as living-system signals — diversity index, resonance density, flow rate, breath rhythm, connection strength, activity pulse."
+    },
+    {
+      "name": "coherence_resonate",
+      "description": "Find ideas that share deep structural patterns with a given idea — cross-domain resonance via harmonic matching."
+    },
+    {
+      "name": "coherence_news_feed",
+      "description": "Get the latest news items from configured RSS sources."
+    },
+    {
+      "name": "coherence_news_resonance",
+      "description": "Get news items matched to ideas with resonance scores."
+    },
+    {
+      "name": "coherence_federation_nodes",
+      "description": "List federation nodes with hostname, OS, providers, and last heartbeat."
+    },
+    {
+      "name": "coherence_belief_profile",
+      "description": "Get the belief profile for a contributor — worldview axes and top concepts."
+    },
+    {
+      "name": "coherence_cc_supply",
+      "description": "Get CC token economics — total minted, outstanding, and coherence score."
+    },
+    {
+      "name": "coherence_governance_requests",
+      "description": "List governance change requests with status and proposer info."
+    }
+  ]
+}

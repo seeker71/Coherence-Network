@@ -1,0 +1,81 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/health-stop-unspecced-impl",
+  "commit_scope": "Stop the local runner from auto-enqueueing implementation tasks when the completed spec phase did not produce an active spec.",
+  "files_owned": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py",
+    "docs/system_audit/commit_evidence_2026-04-25_stop-unspecced-impl-advance.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_runner_spec_gate_guidance.py -q",
+      "cd api && python3 -m py_compile scripts/local_runner.py",
+      "cd api && python3 -m ruff check tests/test_runner_spec_gate_guidance.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-25_stop-unspecced-impl-advance.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Focused validation is passing; full local gate, CI, deployment, and live sensing still need to complete."
+  },
+  "idea_ids": [
+    "repository-health",
+    "pipeline-proprioception"
+  ],
+  "spec_ids": [
+    "repository-architecture-health",
+    "pipeline-monitoring"
+  ],
+  "task_ids": [
+    "stop-unspecced-impl-advance-2026-04-25"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "live-sensing"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Live monitor after PR #1161 still reported recent failure signatures impl_without_active_spec x5 and impl_for_done_spec x3",
+    "api/scripts/local_runner.py previously set spec_path to none and still POSTed an impl task",
+    "api/tests/test_runner_spec_gate_guidance.py",
+    "PR guard report docs/system_audit/pr_check_failures/pr_check_guard_20260424T200844Z_codex-health-stop-unspecced-impl.json",
+    "Local verifier rerun passed after first-run automation usage cache warmup"
+  ],
+  "change_files": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py"
+  ],
+  "change_intent": "process_only"
+}
