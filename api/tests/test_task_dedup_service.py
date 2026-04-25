@@ -413,6 +413,65 @@ class TestAutoRetryDedupGate:
 
 class TestAutoAdvanceFingerprint:
 
+    def test_advance_does_not_escalate_predecessor_when_next_phase_exhausted(self, monkeypatch):
+        """When auto-advance walks to a downstream phase that's exhausted its
+        retry budget, it must NOT mark the just-completed predecessor task as
+        needs_decision. The exhausted phase's own tasks already carry their
+        escalation state from maybe_retry; double-escalating onto the wrong
+        task type produces misleading prompts ("Task 'impl' for X failed 4
+        times" attached to a successful spec) and pollutes the predecessor
+        phase's count, eventually capping it too.
+        """
+        from app.services import pipeline_advance_service as pas
+        from app.services.task_dedup_service import IdeaPhaseHistory
+
+        # A spec task just completed (use default _LONG_SPEC_OUTPUT so the
+        # HOLLOW_COMPLETION gate doesn't block advance before our check)
+        task = _task(
+            task_type="spec",
+            status="completed",
+            idea_id="idea-exhausted-impl",
+        )
+
+        # impl phase: 4 failures, 0 completions, retry budget exhausted
+        def fake_history(idea_id, phase):
+            if phase == "impl":
+                return IdeaPhaseHistory(failed_count=4, completed_count=0)
+            return IdeaPhaseHistory()
+
+        monkeypatch.setattr(
+            "app.services.task_dedup_service.check_idea_phase_history",
+            fake_history,
+        )
+
+        update_calls: list = []
+        create_calls: list = []
+
+        def fake_update(task_id, **kwargs):
+            update_calls.append((task_id, kwargs))
+            return {"id": task_id, **kwargs}
+
+        def fake_create(data):
+            create_calls.append(data)
+            return {"id": "should-not-create", "task_type": data.task_type, "context": data.context}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "update_task", fake_update)
+        monkeypatch.setattr(_as, "create_task", fake_create)
+        monkeypatch.setattr(_as, "list_tasks", lambda **_k: ([], 0, 0))
+
+        result = pas.maybe_advance(task)
+
+        # Should not advance, should not escalate the spec task
+        assert result is None
+        assert update_calls == [], (
+            f"predecessor (spec) was modified — escalation leaked onto wrong task: {update_calls}"
+        )
+        # Should also not auto-fix (no new task should be created from this path)
+        assert create_calls == [], (
+            f"unexpected task created when downstream phase is exhausted: {create_calls}"
+        )
+
     def test_advance_sets_fingerprint(self, monkeypatch):
         """maybe_advance creates task with deterministic fingerprint (R8)."""
         from app.services import pipeline_advance_service as pas

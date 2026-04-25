@@ -473,11 +473,19 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             log.info("AUTO_ADVANCE skip — %s task already active for %s", candidate, idea_id)
             return None
         if history.retry_budget_left <= 0 and history.completed_count == 0:
+            # The downstream phase is exhausted, but `task` is the
+            # just-completed PREDECESSOR (e.g. spec). Calling
+            # _escalate_or_autofix(task, ...) would mark that working
+            # predecessor as needs_decision with a misleading prompt about
+            # the wrong phase ("Task 'impl' for X failed 4 times" attached
+            # to a successful spec task). The exhausted phase's own tasks
+            # already carry their needs_decision state from maybe_retry's
+            # escalation path. Just stop advancing — don't double-escalate.
             log.warning(
-                "AUTO_ADVANCE escalate — %s for %s has %d failures, no completions, retry budget exhausted",
+                "AUTO_ADVANCE skip — %s for %s exhausted (%d failures, 0 completions); "
+                "downstream tasks already escalated, not re-marking predecessor",
                 candidate, idea_id, history.failed_count,
             )
-            _escalate_or_autofix(task, candidate, idea_id, history.failed_count)
             return None
         # This phase is eligible
         break
