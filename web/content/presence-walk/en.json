@@ -154,8 +154,7 @@
         ":test-"
       ],
       "excludedContributorTypes": [
-        "SYSTEM",
-        "AGENT"
+        "SYSTEM"
       ],
       "initialFallback": "·"
     },
