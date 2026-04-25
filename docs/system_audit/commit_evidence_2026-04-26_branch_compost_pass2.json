@@ -1,0 +1,70 @@
+{
+  "date": "2026-04-26",
+  "thread_branch": "codex/branch-compost-pass2-20260426",
+  "commit_scope": "Record second branch compost pass after releasing the equivalent-patch likely-safe remote branch.",
+  "files_owned": [
+    "docs/system_audit/branch_compost_pass2_2026-04-26.md",
+    "docs/system_audit/commit_evidence_2026-04-26_branch_compost_pass2.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_branch_compost_pass2.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Evidence validation passed. Branch was up to date with origin/main. PR guard local_preflight=pass and ready_for_push=True. Follow-through check reported codex_open_prs=0 and stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "summary": "Pending merge and pulse verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks and deploy pulse verification are pending."
+  },
+  "idea_ids": [
+    "branch-hygiene"
+  ],
+  "spec_ids": [
+    "branch-compost-20260426"
+  ],
+  "task_ids": [
+    "branch-compost-pass2-20260426"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "branch-hygiene",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "tmp/pass2-local-prune.log",
+    "tmp/pass2-worktree-prune.log",
+    "git cherry origin/main origin/worker/test/ux-web-ecosystem-links/task_c6a",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260425T232815Z_codex-branch-compost-pass2-20260426.json"
+  ],
+  "change_files": [
+    "docs/system_audit/branch_compost_pass2_2026-04-26.md"
+  ],
+  "change_intent": "docs_only"
+}
