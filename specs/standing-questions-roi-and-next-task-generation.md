@@ -88,7 +88,7 @@ Creates a task in the agent task store and returns task metadata.
 
 ## Downstream Consumers
 
-- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Reads `idea_service.get_idea()` to collect `actual_value` and `potential_value` for computing value realization percentage (`actual_value / potential_value`). This feeds into the grounded value formula as an economic signal. As specs 112-115 record real measurements, the ROI fields exposed by this spec become increasingly grounded rather than estimated.
+- **Spec 115** ([115-grounded-cost-value-measurement.md](grounded-cost-value-measurement.md)) — Reads `idea_service.get_idea()` to collect `actual_value` and `potential_value` for computing value realization percentage (`actual_value / potential_value`). This feeds into the grounded value formula as an economic signal. As specs 112-115 record real measurements, the ROI fields exposed by this spec become increasingly grounded rather than estimated.
 
 ## Files
 

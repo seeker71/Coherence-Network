@@ -58,11 +58,11 @@ And `local_runner.py` (seeder, line ~3264) treats a passing code-review as a sig
 
 ## Research Inputs
 
-- `2026-03-27` - [local_runner.py `_PHASE_SEQUENCE`](api/scripts/local_runner.py#L886) — defines the intended sequence but it is not wired into auto-advance
-- `2026-03-27` - [pipeline_advance_service.py `_NEXT_PHASE`](api/app/services/pipeline_advance_service.py#L118) — current dead-end at `code-review: None`
-- `2026-03-27` - [local_runner.py seeder ~L3264](api/scripts/local_runner.py#L3261) — advances to `merge` on review pass, does not chain deploy/verify
-- `2026-03-27` - [Spec 139](specs/coherence-network-agent-pipeline.md) — pipeline auto-advance and retry logic this spec modifies
-- `2026-03-27` - [Spec 138](specs/idea-lifecycle-management.md) — idea lifecycle and `manifestation_status` values this spec extends
+- `2026-03-27` - [local_runner.py `_PHASE_SEQUENCE`](../api/scripts/local_runner.py#L886) — defines the intended sequence but it is not wired into auto-advance
+- `2026-03-27` - [pipeline_advance_service.py `_NEXT_PHASE`](../api/app/services/pipeline_advance_service.py#L118) — current dead-end at `code-review: None`
+- `2026-03-27` - [local_runner.py seeder ~L3264](../api/scripts/local_runner.py#L3261) — advances to `merge` on review pass, does not chain deploy/verify
+- `2026-03-27` - [Spec 139](coherence-network-agent-pipeline.md) — pipeline auto-advance and retry logic this spec modifies
+- `2026-03-27` - [Spec 138](idea-lifecycle-management.md) — idea lifecycle and `manifestation_status` values this spec extends
 
 ## API Contract
 

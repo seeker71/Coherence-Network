@@ -170,8 +170,8 @@ The cap ensures the array never exceeds 50 entries regardless of how many condit
 
 ## Upstream Dependencies
 
-- **Spec 114** ([114-auto-heal-from-diagnostics.md](114-auto-heal-from-diagnostics.md)) — Creates `heal_task_id` that this spec attributes in resolution records.
-- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Consumes resolution data for `heal_resolved_count` and quality multiplier.
+- **Spec 114** ([114-auto-heal-from-diagnostics.md](auto-heal-from-diagnostics.md)) — Creates `heal_task_id` that this spec attributes in resolution records.
+- **Spec 115** ([115-grounded-cost-value-measurement.md](grounded-cost-value-measurement.md)) — Consumes resolution data for `heal_resolved_count` and quality multiplier.
 
 ## Known Gaps and Follow-up Tasks
 
