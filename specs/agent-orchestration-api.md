@@ -482,8 +482,7 @@ None for MVP.
 
 ## See also
 
-- [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — orchestrator that uses this API
-- [003-agent-telegram-decision-loop.md](003-agent-telegram-decision-loop.md) — Telegram webhook integration
+- [project-manager-pipeline.md](project-manager-pipeline.md) — orchestrator that uses this API
 - [docs/MODEL-ROUTING.md](../docs/MODEL-ROUTING.md) — routing table and fallbacks
 - [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — monitor-issues usage
 

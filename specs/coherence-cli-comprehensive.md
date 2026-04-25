@@ -51,9 +51,9 @@ The `coherence-cli` (published as `npm i -g coherence-cli`) is the primary termi
 
 ## Research Inputs (Required)
 
-- `2026-03-24` - [Coherence Network CLI README](cli/README.md) - Current implemented features and usage.
-- `2026-03-24` - [Spec 147: coherence-cli Binary Conflict](specs/coherence-cli-macos-cc-binary-conflict.md) - Context on binary naming (`cc`, `coh`, `coherence`).
-- `2026-03-24` - [Spec 048: Contributions API](specs/contributions-api.md) - Backend contract for recording contributions.
+- `2026-03-24` - [Coherence Network CLI README](../cli/README.md) - Current implemented features and usage.
+- `2026-03-24` - [Spec 147: coherence-cli Binary Conflict](cli-binary-name-conflict.md) - Context on binary naming (`cc`, `coh`, `coherence`).
+- `2026-03-24` - [Spec 048: Contributions API](contributions-api.md) - Backend contract for recording contributions.
 
 ## Task Card (Required)
 

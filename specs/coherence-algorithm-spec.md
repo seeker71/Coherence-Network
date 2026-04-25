@@ -96,7 +96,6 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 
 ## See also
 
-- [008-sprint-1-graph-foundation.md](008-sprint-1-graph-foundation.md) — graph data source
 - docs/concepts/COHERENCE-ALGORITHM-SKETCH.md
 
 ## Decision Gates

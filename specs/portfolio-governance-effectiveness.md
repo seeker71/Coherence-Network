@@ -48,9 +48,9 @@ Portfolio governance exists to ensure ideas move from promise to real results. T
 
 ## Research Inputs
 
-- `2026-03-06` - [Spec 053: Ideas Prioritization](specs/ideas-prioritization.md) - defines the existing idea model, scoring, and portfolio API that this spec extends
-- `2026-03-06` - [Spec 120: Super-Idea Rollup Criteria](specs/super-idea-rollup-criteria.md) - defines rollup validation for portfolio-governance; this spec provides the data to evaluate that rollup
-- `2026-03-15` - [Spec 115: Grounded Idea Metrics](specs/grounded-idea-metrics.md) - establishes the pattern of computing derived metrics from idea state
+- `2026-03-06` - [Spec 053: Ideas Prioritization](ideas-prioritization.md) - defines the existing idea model, scoring, and portfolio API that this spec extends
+- `2026-03-06` - [Spec 120: Super-Idea Rollup Criteria](super-idea-rollup-criteria.md) - defines rollup validation for portfolio-governance; this spec provides the data to evaluate that rollup
+- `2026-03-15` - [Spec 115: Grounded Idea Metrics](grounded-idea-portfolio-metrics.md) - establishes the pattern of computing derived metrics from idea state
 
 ## Task Card
 

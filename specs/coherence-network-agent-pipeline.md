@@ -66,11 +66,11 @@ The project currently requires manual orchestration to move ideas through the de
 
 ## Research Inputs (Required)
 
-- `2026-03-15` - [Spec 138: Idea Lifecycle Management](specs/idea-lifecycle-management.md) - defines idea stages and auto-advance endpoints this pipeline drives
-- `2026-03-06` - [Spec 005: Project Manager Pipeline](specs/project-manager-pipeline.md) - existing orchestrator pattern (spec→impl→test→review loop) that this spec generalizes to idea-driven scheduling
-- `2026-03-06` - [Spec 002: Agent Orchestration API](specs/agent-orchestration-api.md) - task API contract used for task creation and status tracking
-- `2026-03-15` - [local_runner.py](api/scripts/local_runner.py) - existing provider-based task executor with error classification; pipeline must call this path rather than reimplement execution logic
-- `2026-03-20` - [SlotSelector service](api/app/services/slot_selector.py) - existing slot/capacity selector used by local execution flows; pipeline must integrate this mechanism for consistent task claims
+- `2026-03-15` - [Spec 138: Idea Lifecycle Management](idea-lifecycle-management.md) - defines idea stages and auto-advance endpoints this pipeline drives
+- `2026-03-06` - [Spec 005: Project Manager Pipeline](project-manager-pipeline.md) - existing orchestrator pattern (spec→impl→test→review loop) that this spec generalizes to idea-driven scheduling
+- `2026-03-06` - [Spec 002: Agent Orchestration API](agent-orchestration-api.md) - task API contract used for task creation and status tracking
+- `2026-03-15` - [local_runner.py](../api/scripts/local_runner.py) - existing provider-based task executor with error classification; pipeline must call this path rather than reimplement execution logic
+- `2026-03-20` - [SlotSelector service](../api/app/services/slot_selection_service.py) - existing slot/capacity selector used by local execution flows; pipeline must integrate this mechanism for consistent task claims
 
 ## Task Card (Required)
 
