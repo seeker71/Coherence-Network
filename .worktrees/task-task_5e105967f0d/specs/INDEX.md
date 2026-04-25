@@ -1,8 +1,8 @@
 # Spec Index
 
-> 84 specs (79 done, 4 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 83 specs (79 done, 3 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (20 ideas → 84 specs)
+## By Idea (20 ideas → 83 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -103,9 +103,8 @@
 - [developer-quick-start](developer-quick-start.md) — developer quick start guide
 - [external-repo-milestone](external-repo-milestone.md) — standalone proof script + CI workflow demonstrating full API lifecycle from outside the monorepo
 
-### federation-and-nodes (2 specs)
+### federation-and-nodes (1 spec)
 - [federation-network-layer](federation-network-layer.md) — multi-node federation protocol
-- [federation-aggregated-visibility](federation-aggregated-visibility.md) — network-wide provider stats and web dashboard
 
 ### external-presence (2 specs)
 - [external-presence-bots-and-news](external-presence-bots-and-news.md) — social bots + news ingestion
@@ -114,14 +113,14 @@
 ### public-verification-framework (1 spec)
 - [public-verification-framework](public-verification-framework.md) — Merkle hash chains, Arweave snapshots, public audit API
 
-### self-custody-wallet-integration (1 spec)
-- [self-custody-wallet-integration](self-custody-wallet-integration.md) — SIWE wallet link, Ed25519 off-chain keypair, EVM address as contributor identity
-
 ### financial-integration-fiat-bridge (1 spec)
 - [financial-integration](financial-integration.md) — CC fiat bridge, USDC exchange, KYC, tax reporting
 
 ### creator-economy-promotion (1 spec)
 - [creator-economy-promotion](creator-economy-promotion.md) — creator landing page, proof card API, featured assets + community tag filtering
+
+### creator-economy-bridge (1 spec)
+- [creator-economy-bridge](creator-economy-bridge.md) — external platform mirroring, engagement beacon, frequency profiles, resonant discovery, community algorithm
 
 ### living-collective-vision (5 specs)
 - [db-backed-vision-aligned-content](db-backed-vision-aligned-content.md) — vision-aligned concept content backed by DB

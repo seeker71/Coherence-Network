@@ -6,6 +6,7 @@ work_type: feature
 pillar: network
 specs:
   - [federation-network-layer](../specs/federation-network-layer.md)
+  - [federation-aggregated-visibility](../specs/federation-aggregated-visibility.md)
 ---
 
 # Federation and Nodes
