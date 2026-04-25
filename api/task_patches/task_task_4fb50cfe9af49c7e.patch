@@ -1,0 +1,330 @@
+diff --git a/.gitignore b/.gitignore
+index a017610d..1655c2d4 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -111,3 +111,7 @@ __pycache__/
+ .task-*
+ data/coherence.db
+ .codex*
++*.pyc
++__pycache__/
++.task-*
++data/coherence.db
+diff --git a/specs/INDEX.md b/specs/INDEX.md
+index dac646f7..c4fddbfc 100644
+--- a/specs/INDEX.md
++++ b/specs/INDEX.md
+@@ -1,6 +1,6 @@
+ # Spec Index
+ 
+-> 82 specs (79 done, 3 draft, 0 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
++> 83 specs (79 done, 4 draft, 0 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+ 
+ ## By Idea (19 ideas → 82 specs)
+ 
+@@ -103,8 +103,9 @@
+ - [developer-quick-start](developer-quick-start.md) — developer quick start guide
+ - [external-repo-milestone](external-repo-milestone.md) — standalone proof script + CI workflow demonstrating full API lifecycle from outside the monorepo
+ 
+-### federation-and-nodes (1 spec)
++### federation-and-nodes (2 specs)
+ - [federation-network-layer](federation-network-layer.md) — multi-node federation protocol
++- [federation-aggregated-visibility](federation-aggregated-visibility.md) — network-wide provider health + web dashboard
+ 
+ ### external-presence (2 specs)
+ - [external-presence-bots-and-news](external-presence-bots-and-news.md) — social bots + news ingestion
+diff --git a/specs/federation-aggregated-visibility.md b/specs/federation-aggregated-visibility.md
+new file mode 100644
+index 00000000..416782d3
+--- /dev/null
++++ b/specs/federation-aggregated-visibility.md
+@@ -0,0 +1,289 @@
++---
++idea_id: federation-and-nodes
++status: draft
++source:
++  - file: api/app/routers/federation.py
++    symbols: [get_aggregated_node_stats, get_node_provider_stats]
++  - file: api/app/services/federation_service.py
++    symbols: [get_aggregated_node_stats, get_node_provider_stats]
++  - file: web/app/federation/page.tsx
++    symbols: [FederationPage, loadNodes, loadNetworkStats, NodeProviderStats, NetworkProviderPanel]
++requirements:
++  - "GET /api/federation/nodes/stats returns network-wide provider health: success_rate, avg_duration_s, sample_count, needs_attention per provider"
++  - "GET /api/federation/nodes/{node_id}/stats returns per-node provider breakdown with same shape as network-wide"
++  - "Federation web page renders a Network Provider Health panel above the node list"
++  - "Each node card on the federation page shows a mini provider health indicator (green/amber/red badge per provider)"
++  - "Alerts array from /api/federation/nodes/stats surfaces visually on the dashboard (badge count + expandable list)"
++  - "Stats panel shows total_measurements, window_days, node count, and online count at a glance"
++done_when:
++  - "GET /api/federation/nodes/stats returns 200 with providers, alerts, total_measurements, window_days keys"
++  - "GET /api/federation/nodes/{node_id}/stats returns 200 with per-node provider breakdown (or 404 if unknown node)"
++  - "Web /federation page loads without error when zero nodes are registered"
++  - "Web /federation page renders NetworkProviderPanel section when stats endpoint returns data"
++  - "All tests pass: python3 -m pytest api/tests/test_flow_federation.py -q"
++test: "python3 -m pytest api/tests/test_flow_federation.py -q"
++constraints:
++  - "Do not duplicate slot_measurements file reads in the federation path — use stored measurement summaries in the DB"
++  - "Per-node stats endpoint must reuse federation_service helpers, not re-implement aggregation logic"
++  - "Web fetch must use cache: 'no-store' consistent with the existing node list fetch"
++  - "No new DB migrations required — all data comes from node_measurement_summaries already populated by push_measurements"
++---
++
++# Spec: Federation Aggregated Visibility
++
++## Purpose
++
++The federation layer already pushes and stores measurement summaries from every node, and `federation_service.get_aggregated_node_stats` already aggregates them into a fleet-wide view. But the web dashboard shows only node identity (hostname, status, providers list) — provider health, speed, and alerts are invisible. This spec surfaces that data on the `/federation` page so operators and contributors can see, at a glance, whether the network is healthy and which providers need attention.
++
++This is the proof layer: it turns "federation is wired up" into "federation is visibly working."
++
++## Requirements
++
++- [ ] **R1**: `GET /api/federation/nodes/stats` — already exists; verify response shape includes `providers` (dict keyed by slot_id → `{success_rate, avg_duration_s, sample_count, needs_attention, node_count}`), `alerts` (list), `total_measurements`, `window_days`, `nodes` (dict).
++- [ ] **R2**: Add `GET /api/federation/nodes/{node_id}/stats` — returns provider breakdown for a single node. Reuses `get_aggregated_node_stats` filtered by `node_id`, or a new `get_node_provider_stats(node_id)` helper in `federation_service.py`. Returns 404 if the node is not registered.
++- [ ] **R3**: Web `/federation` page adds a `loadNetworkStats()` async function that fetches `/api/federation/nodes/stats` with `cache: 'no-store'`.
++- [ ] **R4**: Web `/federation` page renders a **Network Provider Health** panel (new `NetworkProviderPanel` component inline or in same file) above the node list. Panel shows:
++  - Summary row: `total_measurements` · `window_days`-day window · alert count badge (amber if >0)
++  - One row per provider: name, success rate (color-coded green ≥80% / amber 50–79% / red <50%), avg duration, sample count.
++  - Collapsible alert list when alerts are present.
++- [ ] **R5**: Each node card in the existing node grid adds a mini provider health row — for each provider in `node.providers`, show a colored dot (green/amber/red) based on that provider's `success_rate` from the network stats response. If no stats data is available for a provider, show a grey dot.
++- [ ] **R6**: Add tests in `api/tests/test_flow_federation.py` covering:
++  - `GET /api/federation/nodes/stats` returns 200 with expected keys when no measurements exist.
++  - `GET /api/federation/nodes/{node_id}/stats` returns 404 for unknown node.
++  - `GET /api/federation/nodes/{node_id}/stats` returns 200 with correct provider data after measurements are pushed.
++
++## Research Inputs
++
++- `2026-04-25` — `api/app/routers/federation.py:142` — `/api/federation/nodes/stats` endpoint already wired to `federation_service.get_aggregated_node_stats`
++- `2026-04-25` — `api/app/services/federation_service.py:917` — `get_aggregated_node_stats` returns `{nodes, providers, task_types, alerts, window_days, total_measurements}`
++- `2026-04-25` — `web/app/federation/page.tsx` — page shows node list with status, hostname, providers but no health/speed data
++- `2026-04-25` — `api/app/routers/provider_stats.py` — local-node stats endpoint at `/api/providers/stats`; federation path is separate
++
++## API Contract
++
++### `GET /api/federation/nodes/stats`
++
++Already exists. Expected response shape (verified against `federation_service.get_aggregated_node_stats`):
++
++**Response 200**
++```json
++{
++  "nodes": {
++    "node-abc": {
++      "hostname": "builder-1.example.com",
++      "os_type": "linux",
++      "status": "online",
++      "last_seen_at": "2026-04-25T10:00:00Z"
++    }
++  },
++  "providers": {
++    "claude": {
++      "success_rate": 0.87,
++      "avg_duration_s": 42.3,
++      "sample_count": 156,
++      "needs_attention": false,
++      "node_count": 2
++    }
++  },
++  "task_types": {
++    "spec": {
++      "claude": {
++        "success_rate": 0.9,
++        "sample_count": 40
++      }
++    }
++  },
++  "alerts": [
++    {
++      "provider": "codex",
++      "metric": "success_rate",
++      "value": 0.42,
++      "threshold": 0.5,
++      "message": "codex success rate 42% < 50% threshold"
++    }
++  ],
++  "window_days": 7,
++  "total_measurements": 312
++}
++```
++
++### `GET /api/federation/nodes/{node_id}/stats`
++
++New endpoint.
++
++**Response 200** (same `providers`, `task_types`, `alerts` shape as above, scoped to one node)
++```json
++{
++  "node_id": "node-abc",
++  "node": {
++    "hostname": "builder-1.example.com",
++    "status": "online"
++  },
++  "providers": {
++    "claude": {
++      "success_rate": 0.87,
++      "avg_duration_s": 42.3,
++      "sample_count": 78,
++      "needs_attention": false
++    }
++  },
++  "task_types": {},
++  "alerts": [],
++  "window_days": 7,
++  "total_measurements": 78
++}
++```
++
++**Response 404**
++```json
++{"detail": "Node not found"}
++```
++
++## Data Model
++
++No new tables. All data comes from `node_measurement_summaries` (written by `store_measurement_summaries`) joined with `federation_nodes`.
++
++```yaml
++# Existing table: node_measurement_summaries
++NodeMeasurementSummaryRecord:
++  id: int
++  node_id: str
++  decision_point: str        # e.g. "provider_spec"
++  slot_id: str               # e.g. "claude", "codex"
++  sample_count: int
++  success_count: int
++  failure_count: int
++  avg_duration_s: float
++  pushed_at: str (ISO 8601)
++  dedup_key: str
++```
++
++## Files
++
++### API
++
++- `api/app/routers/federation.py` — add `GET /api/federation/nodes/{node_id}/stats` handler; import `get_node_provider_stats` from service
++- `api/app/services/federation_service.py` — add `get_node_provider_stats(node_id: str, window_days: int | None = None) -> dict` that filters `get_aggregated_node_stats` output by node_id (or queries directly); returns 404-compatible dict `{"error": "not_found"}` if node unknown
++
++### Web
++
++- `web/app/federation/page.tsx` — add `loadNetworkStats()` fetch; add `NetworkProviderPanel` component; update node cards with provider health dots
++
++### Tests
++
++- `api/tests/test_flow_federation.py` — add 3 test cases for new endpoint and stats shape
++
++## Acceptance Tests
++
++- `api/tests/test_flow_federation.py::test_federation_network_stats_empty`
++- `api/tests/test_flow_federation.py::test_federation_node_stats_not_found`
++- `api/tests/test_flow_federation.py::test_federation_node_stats_with_measurements`
++
++## Verification Scenarios
++
++### Scenario 1 — Network stats returns correct shape when no measurements exist
++
++```bash
++# Register a node first
++curl -s -X POST http://localhost:8000/api/federation/nodes \
++  -H "Content-Type: application/json" \
++  -d '{"node_id":"test-node-1","hostname":"test.local","os_type":"linux","providers":["claude"],"capabilities":{}}'
++
++# Fetch network stats
++curl -s http://localhost:8000/api/federation/nodes/stats | python3 -m json.tool
++```
++
++Expected: HTTP 200; response contains `"providers"`, `"alerts"`, `"total_measurements"`, `"window_days"` keys; `total_measurements` is `0`; `providers` is `{}`.
++
++### Scenario 2 — Per-node stats 404 for unknown node
++
++```bash
++curl -s -o /dev/null -w "%{http_code}" \
++  http://localhost:8000/api/federation/nodes/no-such-node-xyz/stats
++```
++
++Expected output: `404`
++
++### Scenario 3 — Per-node stats 200 after measurements pushed
++
++```bash
++NODE_ID="test-node-1"
++
++# Push measurement summary
++curl -s -X POST http://localhost:8000/api/federation/nodes/${NODE_ID}/measurements \
++  -H "Content-Type: application/json" \
++  -d '{
++    "summaries": [{
++      "decision_point": "provider_spec",
++      "slot_id": "claude",
++      "sample_count": 10,
++      "success_count": 9,
++      "failure_count": 1,
++      "avg_duration_s": 38.0,
++      "dedup_key": "test-node-1:provider_spec:claude:2026-04-25"
++    }]
++  }'
++
++# Fetch per-node stats
++curl -s http://localhost:8000/api/federation/nodes/${NODE_ID}/stats | python3 -m json.tool
++```
++
++Expected: HTTP 200; `providers.claude.success_rate` is `0.9`; `total_measurements` is `10`.
++
++### Scenario 4 — Network-wide stats aggregates across two nodes
++
++```bash
++# Register second node and push its measurements
++curl -s -X POST http://localhost:8000/api/federation/nodes \
++  -H "Content-Type: application/json" \
++  -d '{"node_id":"test-node-2","hostname":"test2.local","os_type":"darwin","providers":["claude"],"capabilities":{}}'
++
++curl -s -X POST http://localhost:8000/api/federation/nodes/test-node-2/measurements \
++  -H "Content-Type: application/json" \
++  -d '{
++    "summaries": [{
++      "decision_point": "provider_spec",
++      "slot_id": "claude",
++      "sample_count": 20,
++      "success_count": 14,
++      "failure_count": 6,
++      "avg_duration_s": 55.0,
++      "dedup_key": "test-node-2:provider_spec:claude:2026-04-25"
++    }]
++  }'
++
++# Check network stats
++curl -s http://localhost:8000/api/federation/nodes/stats | python3 -c "
++import json,sys
++d=json.load(sys.stdin)
++c=d['providers'].get('claude',{})
++print('node_count:', c.get('node_count'))
++print('total_measurements:', d['total_measurements'])
++"
++```
++
++Expected: `node_count: 2`, `total_measurements: 30`
++
++### Scenario 5 — Web page renders without crash when stats returns empty
++
++```bash
++# Build and check Next.js SSR (assumes dev server running)
++curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/federation
++```
++
++Expected: `200` (page renders; no 500 even when no federation data)
++
++## Out of Scope
++
++- Real-time push / WebSocket updates to the dashboard
++- Historical trend charts (time-series graphs over days/weeks)
++- Per-task-type breakdown visible in the web UI (API returns it; web shows provider-level only)
++- Authentication / access control on stats endpoints
++- Local-node `/api/providers/stats` integration into the federation view (different data path)
++
++## Risks and Assumptions
++
++- **Risk**: `get_aggregated_node_stats` in the service is already ~100 lines; the per-node variant should filter it, not fork it. If the service function isn't easily parameterized by node_id, the impl agent should add a `node_id` filter parameter to the existing function rather than duplicating it.
++- **Risk**: The web page is a Next.js Server Component with `cache: 'no-store'`. If the API is slow, the page will be slow. Keep stats fetch fire-and-forget with a short timeout or use `Promise.allSettled` so node list is never blocked by a stats failure.
++- **Assumption**: `node_measurement_summaries` contains enough data for the window to produce non-empty stats once the node is operational. If a new node has never pushed measurements, the per-node stats endpoint should return an empty-but-valid response (not 404), with a `"note": "no measurements in window"` field.
++- **Assumption**: Provider `slot_id` values in measurement summaries match the `providers` array on node registration (e.g., both use `"claude"`, not `"claude-sonnet-4-6"`). If they diverge, health dots on node cards will show grey.
