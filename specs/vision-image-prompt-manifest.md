@@ -16,6 +16,7 @@ requirements:
   - "Regeneration can target one stable image path or deterministic prompt batch."
   - "Regeneration can write review candidates under a separate output directory before production assets are replaced."
   - "Candidate image batches can be audited for existence, size, dimensions, and prompt/profile provenance before promotion."
+  - "Prompt manifest can be split into deterministic non-overlapping batches for parallel review or future swarm execution."
 done_when:
   - "Prompt manifest covers all current vision images."
   - "Asset validation includes prompt-record coverage."
@@ -37,7 +38,9 @@ Living Collective vision images must be regenerable from source-controlled promp
 - [ ] **R1**: Add a repository-owned prompt manifest that records every current `web/public/visuals/generated/*.jpg` and `docs/visuals/*.png` image with stable path, prompt text, source collection, model settings when known, and mirror paths when applicable.
 - [ ] **R2**: Add or update validation so current vision images fail checks when they have no prompt manifest record or when the prompt is empty.
 - [ ] **R3**: Add a manifest-driven regeneration path that can target one image by stable repo path or record id without reading prompt data from the existing image artifact.
-- [ ] **R4**: Add deterministic batch planning so the prompt manifest can be split into non-overlapping regeneration batches for parallel review or future swarm execution.
+- [ ] **R4**: Add a candidate-output regeneration path that writes review images under a separate `--out-dir` (e.g. `output/vision-quality/candidates`) so production assets stay untouched until a human review confirms the batch.
+- [ ] **R5**: Add a candidate-audit script that verifies for each candidate: file existence, size, dimensions, and prompt/profile provenance — emitting a structured report before any promotion to production.
+- [ ] **R6**: Add deterministic batch planning so the prompt manifest can be split into non-overlapping regeneration batches for parallel review or future swarm execution.
 
 ## Files to Create/Modify
 
