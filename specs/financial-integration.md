@@ -31,7 +31,6 @@ constraints:
   - "Exchange rate cannot be manually overridden — computed from formula only"
 ---
 
-> **Parent idea**: [financial-integration-fiat-bridge](../ideas/financial-integration-fiat-bridge.md)
 > **Source**: [`api/app/services/cc_economics_service.py`](../api/app/services/cc_economics_service.py) | [`api/app/services/cc_exchange_adapter.py`](../api/app/services/cc_exchange_adapter.py) | [`api/app/routers/cc_exchange.py`](../api/app/routers/cc_exchange.py)
 
 # Spec: Financial Integration -- CC Fiat Bridge

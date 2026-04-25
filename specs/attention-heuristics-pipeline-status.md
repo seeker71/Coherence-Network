@@ -145,9 +145,7 @@ When metrics are unavailable (e.g. no metrics_service), `low_success_rate` remai
 
 ## See also
 
-- [002 Agent Orchestration API](002-agent-orchestration-api.md) — pipeline-status response shape.
-- [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — Phase 3 monitor attention, Phase 4 auto-fix.
-- [007 Meta-pipeline backlog](007-meta-pipeline-backlog.md) — item 4: attention heuristics.
+- [Agent Orchestration API](agent-orchestration-api.md) — pipeline-status response shape.
 - [PIPELINE-ATTENTION](../docs/PIPELINE-ATTENTION.md) — operational checklist.
 
 ## Concurrency Behavior

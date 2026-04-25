@@ -185,8 +185,8 @@ See `api/tests/test_project_manager.py` and `api/tests/test_project_manager_pipe
 
 ## See also
 
-- [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — API used by orchestrator
-- [006-overnight-backlog.md](006-overnight-backlog.md) — overnight backlog format
+- [002-agent-orchestration-api.md](agent-orchestration-api.md) — API used by orchestrator
+- [006-overnight-backlog.md](../docs/planning/006-overnight-backlog.md) — overnight backlog format (archived)
 
 ## Decision Gates
 

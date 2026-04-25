@@ -429,7 +429,7 @@ Manual verification:
 
 ## Downstream Consumers
 
-- **Spec 115** ([115-grounded-cost-value-measurement.md](115-grounded-cost-value-measurement.md)) — Reads `list_links()` and `valuation()` from the value lineage service to collect `measured_value_total` as an economic signal for grounded value computation. This is the primary consumer of lineage valuation data for real-time task-level ROI measurement.
+- **Spec 115** ([115-grounded-cost-value-measurement.md](grounded-cost-value-measurement.md)) — Reads `list_links()` and `valuation()` from the value lineage service to collect `measured_value_total` as an economic signal for grounded value computation. This is the primary consumer of lineage valuation data for real-time task-level ROI measurement.
 
 ## Known Gaps and Follow-up Tasks
 

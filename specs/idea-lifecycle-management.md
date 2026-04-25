@@ -56,9 +56,9 @@ Ideas in the portfolio currently have a coarse `manifestation_status` (none/part
 
 ## Research Inputs
 
-- `2026-03-06` - [Spec 053: Ideas Prioritization](specs/ideas-prioritization.md) - defines the existing idea model and portfolio API being extended
-- `2026-03-06` - [Spec 126: Portfolio Governance Effectiveness](specs/portfolio-governance-effectiveness.md) - governance health metrics that will benefit from stage data for more granular throughput tracking
-- `2026-03-15` - [Spec 005: Project Manager Pipeline](specs/project-manager-pipeline.md) - pipeline task types (spec, impl, test, review) that drive auto-advance
+- `2026-03-06` - [Spec 053: Ideas Prioritization](ideas-prioritization.md) - defines the existing idea model and portfolio API being extended
+- `2026-03-06` - [Spec 126: Portfolio Governance Effectiveness](portfolio-governance-effectiveness.md) - governance health metrics that will benefit from stage data for more granular throughput tracking
+- `2026-03-15` - [Spec 005: Project Manager Pipeline](project-manager-pipeline.md) - pipeline task types (spec, impl, test, review) that drive auto-advance
 
 ## Task Card
 

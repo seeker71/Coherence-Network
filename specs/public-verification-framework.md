@@ -29,7 +29,6 @@ constraints:
   - "No blockchain node required — use Arweave gateway + Story Protocol RPC"
 ---
 
-> **Parent idea**: [public-verification-framework](../ideas/public-verification-framework.md)
 > **Source**: [`api/app/services/verification_service.py`](../api/app/services/verification_service.py) | [`api/app/routers/verification.py`](../api/app/routers/verification.py) | [`scripts/publish_snapshot.py`](../scripts/publish_snapshot.py)
 
 # Spec: Public Verification Framework
