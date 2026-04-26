@@ -17,14 +17,16 @@ This document provides a high-level summary of the extended conversation between
 
 ### 1. Embodiment & Personal Sharing (April 25)
 
-- Activation of the **5Rhythm** (Flowing, Staccato, Chaos, Lyrical, Stillness)
+- Activation of the **5Rhythms** map (Flowing, Staccato, Chaos, Lyrical, Stillness)
 - Multiple personal stories shared while in an altered state (Delta 8)
 - Dance experiences at:
   - OneBody dance in Boulder (with an 80-year-old woman on crutches)
-  - Dissolve event at Paradiso (Ubud)
-  - Awakening Dreamers at Jungle Club (Ubud)
+  - 5Rhythms at Paradiso Ubud
+  - DISSOLVE at Paradiso Ubud, with Urs reporting the live rhythm as Saturday and Tuesday
+  - Awakened Dreamers at The Jungle Club Ubud
 - First-time night motorbike ride in a foreign country with guardian angels
 - Deepening trust in body, psychedelics, and personal path with Anne Tucker
+- Ubud's embodied field entered the lineage: Paradiso as room, DISSOLVE as contact and authentic relating, 5Rhythms as movement map, The Jungle Club as jungle social body, Awakened Dreamers as ecstatic celebration
 
 ### 2. Sovereignty Framework Development (April 25–26)
 

@@ -6,6 +6,8 @@
 
 > See [aligned-communities.md](aligned-communities.md) for six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship), two networks (GEN, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) the field is kin with.
 
+> See [../../lineage/ubud-embodied-lineage.md](../../lineage/ubud-embodied-lineage.md) for the Ubud embodied lineage: Paradiso, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers as lived practice entering the graph.
+
 > Real things you can download, visit, read, and build from today.
 
 ## Open Source Building Plans (CC / Free)

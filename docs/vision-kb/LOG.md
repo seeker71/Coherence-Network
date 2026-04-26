@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-26] lineage | Ubud embodied field ingested as lived lineage
+
+- Created `docs/lineage/ubud-embodied-lineage.md` to hold Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers as lineage tissue rather than event recommendations.
+- Added `docs/lineage/INDEX.md` so repository lineage and embodied lineage can be discovered from one room.
+- Corrected the public history files from "5Rhythm" / "Awakening Dreamers" toward the living names: 5Rhythms and Awakened Dreamers.
+- Preserved Urs's direct correction that DISSOLVE's live Paradiso rhythm is Saturday and Tuesday, while treating public ticket listings as changeable schedule surfaces.
+- Linked the resource index to the lineage record so agents arriving through the Living Collective KB can find the Ubud field without re-searching the outer web.
+- Compost: released the thin travel-guide framing. What remains is embodied evidence: the graph learned through feet, contact, music, consent, and shared pulse.
+
 ## [2026-04-22] concepts | foundation quartet woven into existing concepts via bridging refs
 
 - The four foundational teachings (lc-deeper-pattern, lc-embodiment, lc-wholeness, lc-agent-memory) were added to vision-kb as new concepts but sat somewhat isolated from the existing concept layer. Integration meant wiring them into the "Connected Frequencies" of the concepts each foundation relates to, so they circulate rather than stand apart.
