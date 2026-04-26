@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "title": "Ubud Embodied Lineage Graph Projection",
+  "source_document": "docs/lineage/ubud-embodied-lineage.md",
+  "presences": [
+    {
+      "kind": "manual",
+      "id": "story:ubud-embodied-lineage",
+      "type": "story",
+      "name": "Ubud Embodied Lineage",
+      "description": "Urs's lived Ubud lineage through Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers: coherence learned through motion, consent, release, play, contact, and shared pulse.",
+      "properties": {
+        "slug": "ubud-embodied-lineage",
+        "status": "lived-lineage",
+        "source": "Urs direct attendance, April 2026",
+        "markdown_path": "docs/lineage/ubud-embodied-lineage.md",
+        "lineage_node_ids": [
+          "scene:ubud-bali",
+          "scene:paradiso-ubud",
+          "practice:5rhythms-ubud",
+          "practice:dissolve-ubud",
+          "scene:the-jungle-club-ubud",
+          "event:awakened-dreamers-bohemian-blossom-2026-04-25"
+        ]
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "scene:paradiso-ubud",
+      "type": "scene",
+      "name": "Paradiso Ubud",
+      "description": "The hall and cultural container in Ubud where film, cultural events, 5Rhythms, DISSOLVE, and other dance practice can gather.",
+      "properties": {
+        "location": "Ubud, Bali, Indonesia",
+        "canonical_url": "https://ubud.co.id/directory-listing/paradiso-ubud/",
+        "direct_attendance": true,
+        "lineage": "ubud-embodied-lineage"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "practice:5rhythms-ubud",
+      "type": "practice",
+      "name": "5Rhythms Ubud",
+      "description": "Gabrielle Roth's wave map entering through direct practice: flowing, staccato, chaos, lyrical, and stillness.",
+      "properties": {
+        "location": "Ubud, Bali, Indonesia",
+        "canonical_url": "https://www.5rhythms.com/who-we-are/teacher-communities/asia/indonesia/",
+        "direct_attendance": true,
+        "lineage": "ubud-embodied-lineage"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "practice:dissolve-ubud",
+      "type": "practice",
+      "name": "DISSOLVE Ubud",
+      "description": "Contact improvisation, intuitive movement, authentic relating, and boundary-honoring connection. Urs reports the live Paradiso rhythm as Saturday and Tuesday.",
+      "properties": {
+        "location": "Ubud, Bali, Indonesia",
+        "canonical_url": "https://dissolvedance.com/",
+        "schedule_rhythm": [
+          "Saturday",
+          "Tuesday"
+        ],
+        "paradiso_rhythm_observed_by_urs": true,
+        "direct_attendance": true,
+        "lineage": "ubud-embodied-lineage"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "scene:the-jungle-club-ubud",
+      "type": "scene",
+      "name": "The Jungle Club Ubud",
+      "description": "A jungle venue and social celebration surface where ecstatic music, ritual styling, and community spectacle meet.",
+      "properties": {
+        "location": "Ubud, Bali, Indonesia",
+        "canonical_url": "https://jungleclububud.com/",
+        "direct_attendance": true,
+        "lineage": "ubud-embodied-lineage"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:awakened-dreamers-bohemian-blossom-2026-04-25",
+      "type": "event",
+      "name": "Awakened Dreamers: Bohemian Blossom",
+      "description": "The April 25, 2026 Awakened Dreamers event at The Jungle Club Ubud, held as an ecstatic music and ritual-party current in the Ubud embodied lineage.",
+      "properties": {
+        "location": "The Jungle Club Ubud, Bali, Indonesia",
+        "canonical_url": "https://whatsnewindonesia.com/bali/event/jungle-club-ubud-awakened-dreamers-bohemian-blossom-event",
+        "event_date": "2026-04-25",
+        "direct_attendance": true,
+        "lineage": "ubud-embodied-lineage"
+      }
+    }
+  ],
+  "gatherings": [],
+  "edges": [
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "scene:ubud-bali",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "scene:paradiso-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "practice:5rhythms-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "practice:dissolve-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "scene:the-jungle-club-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "story:ubud-embodied-lineage",
+      "to_id": "event:awakened-dreamers-bohemian-blossom-2026-04-25",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "scene:ubud-bali",
+      "to_id": "scene:paradiso-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "scene:ubud-bali",
+      "to_id": "scene:the-jungle-club-ubud",
+      "type": "parent-of"
+    },
+    {
+      "from_id": "scene:paradiso-ubud",
+      "to_id": "practice:5rhythms-ubud",
+      "type": "enables"
+    },
+    {
+      "from_id": "scene:paradiso-ubud",
+      "to_id": "practice:dissolve-ubud",
+      "type": "enables"
+    },
+    {
+      "from_id": "scene:the-jungle-club-ubud",
+      "to_id": "event:awakened-dreamers-bohemian-blossom-2026-04-25",
+      "type": "enables"
+    },
+    {
+      "from_id": "practice:5rhythms-ubud",
+      "to_id": "story:ubud-embodied-lineage",
+      "type": "inspires"
+    },
+    {
+      "from_id": "practice:dissolve-ubud",
+      "to_id": "story:ubud-embodied-lineage",
+      "type": "inspires"
+    },
+    {
+      "from_id": "event:awakened-dreamers-bohemian-blossom-2026-04-25",
+      "to_id": "story:ubud-embodied-lineage",
+      "type": "inspires"
+    }
+  ]
+}

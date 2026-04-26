@@ -1,0 +1,106 @@
+{
+  "date": "2026-04-26",
+  "thread_branch": "codex/ubud-lineage-graph-projection-20260426",
+  "commit_scope": "Project the Ubud embodied lineage into public graph, API, and web access surfaces.",
+  "files_owned": [
+    "docs/lineage/ubud-embodied-lineage.graph.json",
+    "scripts/import_lineage.py",
+    "web/app/lineage/",
+    "web/app/lineage/[slug]/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m json.tool docs/lineage/ubud-embodied-lineage.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/ubud-embodied-lineage.graph.json --dry-run --api https://api.coherencycoin.com",
+      "cd web && npm run build",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_lineage_graph_projection.json",
+      "git fetch origin main && git rebase origin/main (blocked by intended unstaged edits)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/import_lineage.py docs/lineage/ubud-embodied-lineage.graph.json --api https://api.coherencycoin.com --source contributor:presence-visitor",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -sS https://api.coherencycoin.com/api/graph/nodes/story%3Aubud-embodied-lineage",
+      "curl -sS https://coherencycoin.com/lineage/ubud-embodied-lineage",
+      "curl -sS https://pulse.coherencycoin.com/pulse/now"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before local, CI, graph projection, and deploy validation complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "ubud-lineage-graph-projection-20260426"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "lineage-source",
+        "direct-attendee"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "attune",
+        "expand",
+        "project"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/lineage/ubud-embodied-lineage.md",
+    "docs/lineage/ubud-embodied-lineage.graph.json",
+    "https://api.coherencycoin.com/api/graph/nodes/story%3Aubud-embodied-lineage",
+    "https://coherencycoin.com/lineage/ubud-embodied-lineage"
+  ],
+  "change_files": [
+    "docs/lineage/ubud-embodied-lineage.graph.json",
+    "scripts/import_lineage.py",
+    "web/app/lineage/",
+    "web/app/lineage/[slug]/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The Ubud embodied lineage can be replayed into graph nodes and canonical edges, then browsed from /lineage/ubud-embodied-lineage.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/graph/nodes/story%3Aubud-embodied-lineage",
+      "https://coherencycoin.com/lineage/ubud-embodied-lineage"
+    ],
+    "test_flows": [
+      "Dry-run manifest replay shows 6 manual nodes and 14 graph edges with 0 skipped.",
+      "Production graph replay creates or updates the Ubud lineage nodes and edges.",
+      "Public web route renders the lineage and links to node and graph zoom surfaces."
+    ]
+  }
+}
