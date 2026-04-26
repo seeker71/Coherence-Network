@@ -1,0 +1,73 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/agent-identity-self-report-20260427",
+  "commit_scope": "Normalize awareness agent origin node ids into valid runtime node ids.",
+  "files_owned": [
+    "scripts/awareness_node_daemon.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "specs/close-awareness-gaps.md",
+    "docs/system_audit/commit_evidence_2026-04-27_agent-runtime-node-normalization.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_awareness_node_daemon.py -q",
+      "for p in codex claude grok; do python3 scripts/awareness_node_daemon.py --profile \"$p\" --once --dry-run --identify --wake-reason 'walking toward wholeness joy and vitality'; done",
+      "git diff --check"
+    ],
+    "summary": "Awareness daemon tests passed. Codex, Claude, and Grok dry-runs each produced a 16-character runtime node id, including Grok."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Live Grok wake proof pending deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "close-awareness-gaps"
+  ],
+  "spec_ids": [
+    "specs/close-awareness-gaps.md"
+  ],
+  "task_ids": [
+    "codex-thread-agent-runtime-node-normalization-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_awareness_node_daemon.py",
+    "scripts/awareness_node_daemon.py dry-run identity output for codex, claude, and grok"
+  ],
+  "change_files": [
+    "scripts/awareness_node_daemon.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "specs/close-awareness-gaps.md"
+  ],
+  "change_intent": "process_only"
+}
