@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 
 # normalize_tags / validate_raw_tags / slugify moved to idea_text_helpers.py;
 # re-imported below for backward compat (#163 modularity drift)
-from app.services.idea_text_helpers import (  # noqa: E402,F401
+from app.services.idea_naming import (  # noqa: E402,F401
     _TAG_SLUG_PATTERN,
     normalize_tags,
     slugify,
@@ -409,7 +409,7 @@ def _prune_transient_internal_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool
 
 
 # Extracted to idea_resonance_helpers.py (#163)
-from app.services.idea_resonance_helpers import (  # noqa: E402,F401
+from app.services.idea_resonance_tokens import (  # noqa: E402,F401
     _CONCEPT_RESONANCE_STOP_WORDS,
     _FUZZY_STOP_WORDS,
     _RESONANCE_TOKEN_PATTERN,
@@ -422,7 +422,7 @@ from app.services.idea_resonance_helpers import (  # noqa: E402,F401
 
 
 # Extracted to idea_derive_helper.py (#163)
-from app.services.idea_derive_helper import (  # noqa: E402,F401
+from app.services.idea_derivation import (  # noqa: E402,F401
     _derived_idea_for_id,
     _idea_to_metadata,
 )
@@ -498,7 +498,7 @@ from app.services.idea_standing_questions import (  # noqa: E402,F401
 
 
 # Extracted to idea_scoring_helpers (#163)
-from app.services.idea_scoring_helpers import (  # noqa: E402,F401
+from app.services.idea_scoring import (  # noqa: E402,F401
     _build_cost_vector,
     _build_value_vector,
     _marginal_cc_return,
