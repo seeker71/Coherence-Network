@@ -1,8 +1,8 @@
 name: Update External Asset Values
 
 on:
-  schedule:
-    - cron: '22 7 * * *'  # daily (was every 6h)
+  # Daily schedule disabled until updater scripts (scripts/asset_tracking/update_asset_value.py)
+  # are implemented. Manual dispatch still works.
   workflow_dispatch:  # Manual trigger
 
 jobs:
