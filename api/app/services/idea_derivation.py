@@ -17,7 +17,7 @@ from typing import Any
 
 from app.models.idea import Idea, IdeaLifecycle, IdeaType, ManifestationStatus
 from app.services import idea_registry_service
-from app.services.idea_resonance_helpers import _find_closest_graph_idea, _humanize_idea_id
+from app.services.idea_resonance_tokens import _find_closest_graph_idea, _humanize_idea_id
 
 logger = logging.getLogger(__name__)
 
