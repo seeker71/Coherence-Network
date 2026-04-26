@@ -43,12 +43,44 @@ def test_run_once_registers_heartbeats_announces_and_polls() -> None:
         api_base="https://example.test",
         request_json=fake_request,
         announce="Codex is online.",
+        wake_reason="test wake",
         dry_run=False,
     )
 
     assert result["profile"] == "codex"
+    assert result["identity"]["wake_reason"] == "test wake"
+    assert result["identity"]["origin_profile"]["agent_id"] == "codex"
+    assert result["identity"]["life_state"]["dynamic"] is True
+    assert result["live_data"]["wake_reason"] == "test wake"
     assert result["messages"]["count"] == 1
     assert calls[0][0:2] == ("POST", "/api/federation/nodes")
     assert calls[1][0:2] == ("POST", "/api/federation/nodes/codex-node-local/heartbeat")
     assert calls[2][0:2] == ("POST", "/api/federation/nodes/codex-node-local/messages")
     assert calls[3][0:2] == ("GET", "/api/federation/nodes/codex-node-local/messages")
+
+
+def test_each_profile_can_identify_where_when_and_why_it_woke() -> None:
+    profiles = daemon.load_profiles(ROOT / "config" / "agent_profiles.json")
+
+    for profile in profiles.values():
+        card = daemon.build_identity_card(
+            profile,
+            api_base="https://api.example.test",
+            wake_reason="asked to identify itself",
+            woke_at="2026-04-27T00:00:00Z",
+            repo_root=ROOT,
+        )
+        text = daemon.render_identity_text(card)
+
+        assert card["who"]["agent_id"] == profile.agent_id
+        assert card["origin_profile"]["agent_id"] == profile.agent_id
+        assert card["life_state"]["kind"] == "runtime_presence"
+        assert card["life_state"]["model_calls"] == 0
+        assert card["where"]["node_id"] == profile.node_id[:16]
+        assert card["where"]["api_base"] == "https://api.example.test"
+        assert card["woke_at"] == "2026-04-27T00:00:00Z"
+        assert card["wake_reason"] == "asked to identify itself"
+        assert card["memory"]["persistent"] == "coherence-network"
+        assert profile.display_name in text
+        assert "asked to identify itself" in text
+        assert "profile is origin" in text
