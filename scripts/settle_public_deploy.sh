@@ -21,7 +21,12 @@ need python3
 
 json_get() {
   local expr="$1"
-  python3 -c "import json,sys; data=json.load(sys.stdin); print(${expr})"
+  python3 -c "import json,sys
+try:
+    data=json.load(sys.stdin)
+    print(${expr})
+except Exception:
+    print('')"
 }
 
 latest_main_sha() {
@@ -59,7 +64,7 @@ if not runs:
     print("")
 else:
     run = runs[0]
-    print("\t".join(str(run.get(k) or "") for k in (
+    print("\037".join(str(run.get(k) or "-") for k in (
         "databaseId", "status", "conclusion", "headSha", "displayTitle"
     )))
 PY
@@ -83,10 +88,11 @@ while :; do
     break
   fi
 
-  IFS=$'\t' read -r run_id run_status run_conclusion run_sha run_title <<<"$(latest_hostinger_run)"
+  IFS=$'\037' read -r run_id run_status run_conclusion run_sha run_title <<<"$(latest_hostinger_run)"
 
   if [[
     -n "${run_id:-}" &&
+    "${run_id}" != "-" &&
     "${run_status}" == "completed" &&
     "${run_conclusion}" == "success" &&
     -n "${live_sha}" &&
@@ -98,13 +104,13 @@ while :; do
     break
   fi
 
-  if [[ -n "${run_id}" && "${run_id}" != "${last_run_id}" ]]; then
+  if [[ -n "${run_id}" && "${run_id}" != "-" && "${run_id}" != "${last_run_id}" ]]; then
     echo "hostinger-run: id=${run_id} status=${run_status} conclusion=${run_conclusion:-pending} sha=${run_sha}"
     echo "title: ${run_title}"
     last_run_id="${run_id}"
   fi
 
-  if [[ -z "${run_id:-}" ]]; then
+  if [[ -z "${run_id:-}" || "${run_id}" == "-" ]]; then
     echo "waiting: no Hostinger run visible yet for main"
   elif [[ "${run_sha}" != "${target_sha}" ]]; then
     echo "waiting: latest Hostinger run targets ${run_sha}; main is ${target_sha}"
