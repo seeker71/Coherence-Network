@@ -25,7 +25,7 @@
     "next": "^15.1.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.5",
     "@tanstack/react-query": "^5.62.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
