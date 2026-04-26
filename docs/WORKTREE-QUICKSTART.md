@@ -129,19 +129,16 @@ gh api -X DELETE repos/seeker71/Coherence-Network/git/refs/heads/codex/<thread-n
 
 ## Post-Merge Deploy Watch (fast path)
 
-After merge, do not guess whether production has caught up. Watch the main push workflows, then verify once the host rollout settles:
+After merge, do not hand-watch every push. Let the deploy settle command follow the latest `main` SHA through Hostinger concurrency cancellations, wait for API SHA parity, and run the public deploy verifier once production is current:
 
 ```bash
-gh run list --repo seeker71/Coherence-Network --branch main --limit 5
-gh run watch <public-deploy-run-id> --repo seeker71/Coherence-Network
-gh run watch <hostinger-run-id> --repo seeker71/Coherence-Network
-./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
+./scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
 ```
 
 Interpretation:
-- `Public Deploy Contract` green + `Hostinger Auto Deploy` still running means "wait", not "retry the same public verify in a loop".
-- If `/api/gates/main-head` has the new SHA but `/api/health` still serves the previous SHA before Hostinger finishes, that is rollout lag.
-- Re-run the public verify after Hostinger finishes. Treat it as a blocker only if SHA parity is still wrong after the host job settles.
+- A canceled Hostinger run can be normal when a newer `main` push supersedes it.
+- The settle command follows the newest Hostinger run on `main`, not the run that happened to start after your PR.
+- Treat failure as real only when the latest run for current `main` fails or SHA parity times out.
 
 ## Recover Common Failures
 

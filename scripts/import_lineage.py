@@ -7,8 +7,7 @@ target: resolved URLs go through /api/inspired-by (which triggers
 auto-enrichment, cross-reference scanning, and resonance attune on
 the target side); manual/placeholder nodes go through
 /api/graph/nodes; gatherings go through
-/api/presences/{id}/gatherings with the full role roster; explicit
-edges go through /api/graph/edges after their endpoints exist.
+/api/presences/{id}/gatherings with the full role roster.
 
 Nothing is hardcoded — the target side does its own resolving, its
 own attunement, its own cross-referencing. The manifest is the
@@ -74,38 +73,6 @@ def _create_manual(client: httpx.Client, sig: dict[str, Any]) -> dict[str, Any] 
     return r.json()
 
 
-def _create_edge(
-    client: httpx.Client,
-    edge: dict[str, Any],
-    ref_to_target_id: dict[str, str],
-    source_id: str,
-) -> dict[str, Any] | None:
-    from_ref = edge.get("from_ref") or edge.get("from_id")
-    to_ref = edge.get("to_ref") or edge.get("to_id")
-    from_id = ref_to_target_id.get(from_ref, from_ref)
-    to_id = ref_to_target_id.get(to_ref, to_ref)
-    if not from_id or not to_id:
-        print(f"  ? edge missing endpoint: {edge}")
-        return None
-    payload = {
-        "from_id": from_id,
-        "to_id": to_id,
-        "type": edge["type"],
-        "properties": edge.get("properties") or {},
-        "strength": edge.get("strength", 1.0),
-        "created_by": edge.get("created_by") or source_id,
-    }
-    try:
-        r = client.post("/api/graph/edges", json=payload, timeout=30.0)
-    except httpx.HTTPError as e:
-        print(f"  ! {from_id} -[{edge['type']}]-> {to_id}: {e}")
-        return None
-    if not r.is_success:
-        print(f"  ! {from_id} -[{edge['type']}]-> {to_id}: HTTP {r.status_code}")
-        return None
-    return r.json()
-
-
 def _ensure_source_contributor(client: httpx.Client, source_id: str) -> None:
     """Make sure the source contributor exists on the target. If not,
     create a minimal one — the importer writes inspired-by edges from
@@ -135,7 +102,7 @@ def _ensure_source_contributor(client: httpx.Client, source_id: str) -> None:
 def replay(manifest_path: Path, api_base: str, source_id: str,
            dry_run: bool = False) -> dict[str, int]:
     manifest = json.loads(manifest_path.read_text())
-    counts = {"resolved": 0, "manual": 0, "gatherings": 0, "edges": 0, "skipped": 0}
+    counts = {"resolved": 0, "manual": 0, "gatherings": 0, "skipped": 0}
 
     # ref → target_id map built as we create nodes on the target.
     # A ref is either a URL (resolved entry) or the manual id string.
@@ -148,9 +115,8 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
         # Pass 1 — create every presence on the target.
         presences = manifest.get("presences", [])
         gatherings = manifest.get("gatherings", [])
-        edges = manifest.get("edges", [])
 
-        print(f"\n[1/3] Creating {len(presences)} presences")
+        print(f"\n[1/2] Creating {len(presences)} presences")
         for sig in presences:
             kind = sig.get("kind")
             label = sig.get("url") or sig.get("name") or sig.get("id")
@@ -182,7 +148,7 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
 
         # Pass 2 — gatherings, now that all hosts/performers exist on
         # the target with known ids.
-        print(f"\n[2/3] Creating {len(gatherings)} gatherings")
+        print(f"\n[2/2] Creating {len(gatherings)} gatherings")
         for ev in gatherings:
             primary_ref = ev.get("primary_ref")
             if not primary_ref:
@@ -244,22 +210,6 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
                 print(f"  ! {ev.get('title')}: {e}")
                 counts["skipped"] += 1
             time.sleep(0.3)
-
-        print(f"\n[3/3] Creating {len(edges)} edges")
-        for edge in edges:
-            from_label = edge.get("from_ref") or edge.get("from_id")
-            to_label = edge.get("to_ref") or edge.get("to_id")
-            rel_type = edge.get("type")
-            if dry_run:
-                print(f"  [dry-run] edge: {from_label} -[{rel_type}]-> {to_label}")
-                counts["edges"] += 1
-                continue
-            created = _create_edge(client, edge, ref_to_target_id, source_id)
-            if created:
-                counts["edges"] += 1
-                print(f"  ✓ {from_label} -[{rel_type}]-> {to_label}")
-            else:
-                counts["skipped"] += 1
 
     return counts
 
