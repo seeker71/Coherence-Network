@@ -1,0 +1,105 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/close-awareness-gaps-20260427",
+  "commit_scope": "Close no-model awareness gaps: message readback, routing proof repair, agent profiles, and local awareness daemon.",
+  "files_owned": [
+    "api/app/routers/federation.py",
+    "api/tests/test_federation_message_readback.py",
+    "api/tests/test_cursor_fact_report_routing.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "api/scripts/cursor_fact_report.py",
+    "scripts/awareness_node_daemon.py",
+    "config/agent_profiles.json",
+    "specs/close-awareness-gaps.md",
+    "docs/system_audit/commit_evidence_2026-04-27_close-awareness-gaps.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_federation_message_readback.py tests/test_cursor_fact_report_routing.py tests/test_awareness_node_daemon.py -q",
+      "cd api && python3 -m pytest tests/test_federation_layer.py tests/test_flow_core_api.py::test_federation_node_messaging_flow tests/test_federation_message_readback.py tests/test_cursor_fact_report_routing.py tests/test_awareness_node_daemon.py -q",
+      "cd api && python3 ../scripts/awareness_node_daemon.py --profile codex --once --dry-run",
+      "python3 scripts/awareness_node_daemon.py --profile codex --once --announce 'Codex no-model awareness node is present: registered, heartbeated, announced, and polling messages without calling model providers.'",
+      "cd api && python3 scripts/cursor_fact_report.py --output /tmp/cursor_fact_report_close_awareness_gaps.json",
+      "python3 scripts/validate_spec_quality.py --file specs/close-awareness-gaps.md",
+      "python3 -m py_compile api/app/routers/federation.py api/scripts/cursor_fact_report.py scripts/awareness_node_daemon.py",
+      "python3 -m json.tool config/agent_profiles.json >/dev/null",
+      "git diff --check"
+    ],
+    "summary": "Focused tests and federation regression tests passed. The no-model daemon dry-run emitted register/heartbeat payloads. A live no-model daemon run registered codex-local-node, heartbeated, announced msg_d6bda9bb6a7b, and polled messages. Cursor fact report emitted a report path without the removed _select_executor failure."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy has been requested yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR and CI proof remain pending."
+  },
+  "idea_ids": [
+    "close-awareness-gaps"
+  ],
+  "spec_ids": [
+    "specs/close-awareness-gaps.md"
+  ],
+  "task_ids": [
+    "codex-thread-close-awareness-gaps-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_federation_message_readback.py",
+    "api/tests/test_cursor_fact_report_routing.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "/tmp/cursor_fact_report_close_awareness_gaps.json",
+    "live awareness daemon: codex-local-node registered, heartbeat status online, announced msg_d6bda9bb6a7b"
+  ],
+  "change_files": [
+    "api/app/routers/federation.py",
+    "api/tests/test_federation_message_readback.py",
+    "api/tests/test_cursor_fact_report_routing.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "api/scripts/cursor_fact_report.py",
+    "scripts/awareness_node_daemon.py",
+    "config/agent_profiles.json",
+    "specs/close-awareness-gaps.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Federation messages can be read by id, self messages are available only with include_self=true, routing proof generation no longer calls a removed helper, and no-model awareness presence can run from static profiles.",
+    "public_endpoints": [
+      "/api/federation/messages/{message_id}",
+      "/api/federation/nodes/{node_id}/messages?include_self=true"
+    ],
+    "test_flows": [
+      "Local ASGI federation message readback tests",
+      "No-model daemon dry-run",
+      "Cursor fact report generation"
+    ]
+  }
+}

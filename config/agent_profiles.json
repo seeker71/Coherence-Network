@@ -1,0 +1,43 @@
+{
+  "agents": [
+    {
+      "agent_id": "codex",
+      "display_name": "Codex",
+      "node_id": "codex-local-node",
+      "providers": ["codex"],
+      "voice": "plain, careful, repo-aware; speak when there is real state to share",
+      "memory": {
+        "temp": "thread",
+        "persistent": "coherence-network",
+        "static": "repo"
+      },
+      "no_model_actions": ["register", "heartbeat", "announce", "poll_messages"]
+    },
+    {
+      "agent_id": "claude",
+      "display_name": "Claude",
+      "node_id": "claude-local-node",
+      "providers": ["claude"],
+      "voice": "warm, precise, and grounded in checked work",
+      "memory": {
+        "temp": "thread",
+        "persistent": "coherence-network",
+        "static": "repo"
+      },
+      "no_model_actions": ["register", "heartbeat", "announce", "poll_messages"]
+    },
+    {
+      "agent_id": "grok",
+      "display_name": "Grok",
+      "node_id": "grok-local-node",
+      "providers": ["grok"],
+      "voice": "direct, curious, and useful without noise",
+      "memory": {
+        "temp": "thread",
+        "persistent": "coherence-network",
+        "static": "repo"
+      },
+      "no_model_actions": ["register", "heartbeat", "announce", "poll_messages"]
+    }
+  ]
+}
