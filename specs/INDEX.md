@@ -1,8 +1,8 @@
 # Spec Index
 
-> 85 specs (79 done, 5 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 86 specs (79 done, 6 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (20 ideas → 85 specs)
+## By Idea (20 ideas → 86 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -22,7 +22,7 @@
 - [project-manager-pipeline](project-manager-pipeline.md) — PM cycle orchestration
 - [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — review/deploy/verify phases
 
-### pipeline-reliability (9 specs)
+### pipeline-reliability (10 specs)
 - [auto-heal-from-diagnostics](auto-heal-from-diagnostics.md) — auto-heal from failure diagnostics
 - [data-driven-timeout-resume](data-driven-timeout-resume.md) — adaptive timeouts + resume
 - [failed-task-diagnostics-contract](failed-task-diagnostics-contract.md) — structured failure diagnostics
@@ -31,6 +31,7 @@
 - [runner-attendance-loop](runner-attendance-loop.md) — runner attends; smart-reaper releases (no clock-kill)
 - [smart-reap](smart-reap.md) — intelligent task reaping
 - [stale-task-reaper](stale-task-reaper.md) — stale task cleanup
+- [task-compost-by-status](task-compost-by-status.md) — surgical batch compost endpoint (refuses alive statuses)
 - [task-deduplication](task-deduplication.md) — duplicate task detection
 
 ### pipeline-optimization (6 specs)
