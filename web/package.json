@@ -18,7 +18,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
-    "@types/three": "^0.183.1",
+    "@types/three": "^0.184.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.11.0",
@@ -29,7 +29,7 @@
     "@tanstack/react-query": "^5.62.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "three": "^0.183.2",
+    "three": "^0.184.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"
   },
