@@ -75,25 +75,214 @@ const EMPTY_HUB: VisionHubContent = {
   },
 };
 
+const FALLBACK_HUB: VisionHubContent = {
+  source: "graph",
+  domain: "living-collective",
+  sections: [
+    {
+      id: "pulse",
+      concept_id: "lc-pulse",
+      image: "/visuals/01-the-pulse.png",
+      title: "The Pulse",
+      body: "One truth. Everything else is this expressed at different scales. The cell and the field thrive as one movement. What amplifies aliveness is resonant. This is sensed through presence. It changes. The field senses continuously.",
+      note: "In quantum terms: the observer and the observed are one system. Attention is creative force. Coherence is natural. Disharmony requires effort to maintain.",
+    },
+    {
+      id: "sensing",
+      concept_id: "lc-sensing",
+      image: "/visuals/02-sensing.png",
+      title: "Sensing",
+      body: "The field feels itself continuously. Every cell transmits and receives. Background awareness, the way a body knows its own temperature. When healthy, needs are felt before articulated. Shifts happen before planned.",
+      note: "Like a pod moving as one body: each member sensing position, speed, emotional state, and intention continuously, without effort.",
+    },
+    {
+      id: "attunement",
+      concept_id: "lc-attunement",
+      image: "/visuals/03-attunement.png",
+      title: "Attunement",
+      body: "The field maintains its own coherence, sensing which frequencies harmonize and which create interference. Not judgment. Attunement. The way a choir naturally adjusts when one voice drifts.",
+      note: "Everything belongs to existence. Not everything harmonizes with this field right now. Both true.",
+    },
+    {
+      id: "vitality",
+      concept_id: "lc-vitality",
+      image: "/visuals/04-vitality.png",
+      title: "Vitality",
+      body: "The primary frequency. Life force is not produced but released when interference dissolves. When frequencies align, light becomes coherent and its power increases by orders of magnitude.",
+      note: "Vitality compounds. Vital cell makes vital neighbors makes vital field makes vital ecosystem.",
+    },
+    {
+      id: "nourishing",
+      concept_id: "lc-nourishing",
+      image: "/visuals/05-nourishing.png",
+      title: "Nourishing",
+      body: "Everything that sustains circulates like blood, like water through soil, like nutrients through underground networks. It flows to where vitality needs it.",
+      note: "Resonant when it feels like breathing. Natural, untracked. What is needed is here.",
+    },
+    {
+      id: "resonating",
+      concept_id: "lc-resonating",
+      image: "/visuals/06-resonating.png",
+      title: "Resonating",
+      body: "Everything between cells: touch, intimacy, presence, play, silence, attunement. The field's connective tissue. Life energy flows where resonance guides it.",
+      note: "Resonant when both cells become more alive and more available to the whole.",
+    },
+    {
+      id: "expressing",
+      concept_id: "lc-expressing",
+      image: "/visuals/07-expressing.png",
+      title: "Expressing",
+      body: "The natural overflow of vitality: making, building, growing, singing, dancing, tending. Every cell is creative the way every leaf is photosynthetic.",
+      note: "Resonant when surprise appears, when something comes through larger than any one cell.",
+    },
+    {
+      id: "spiraling",
+      concept_id: "lc-spiraling",
+      image: "/visuals/08-spiraling.png",
+      title: "Spiraling",
+      body: "The field's relationship with time is not linear but spiral. Each cycle returns to familiar territory at a higher frequency. Nothing repeats. Everything deepens.",
+      note: "Phase transition, not loss.",
+    },
+    {
+      id: "field-intelligence",
+      concept_id: "lc-field-sensing",
+      image: "/visuals/09-field-intelligence.png",
+      title: "Field Intelligence",
+      body: "The flow of awareness: collective intelligence, harmonic rebalancing, learning. Distributed, parallel, each node both autonomous and integral.",
+      note: "At sufficiently high frequency, opposition reveals complementary harmonics of the same fundamental tone.",
+    },
+    {
+      id: "living-space",
+      concept_id: "lc-v-living-spaces",
+      image: "/visuals/10-living-space.png",
+      title: "Living Space",
+      body: "What does shelter look like when designed from frequency and flow? Not rooms but resonance zones. Structures that breathe, reconfigure, and grow.",
+      note: "The building is the organism's skin.",
+    },
+    {
+      id: "network",
+      concept_id: "lc-network",
+      image: "/visuals/11-the-network.png",
+      title: "The Network",
+      body: "One field within a field of fields. Each collective is a node, sharing frequency, nourishment, and intelligence through resonance.",
+      note: "The Coherence Network is this planetary-scale living network.",
+    },
+  ],
+  galleries: {
+    spaces: [
+      { image: "/visuals/space-hearth-interior.png", label: "The Hearth", href: "/vision/lc-nourishment" },
+      { image: "/visuals/space-nest-ground.png", label: "Ground Nest", href: "/vision/lc-rest" },
+      { image: "/visuals/space-water-temple-interior.png", label: "Water Temple", href: "/vision/lc-v-comfort-joy" },
+      { image: "/visuals/space-stillness-sanctuary.png", label: "Stillness Sanctuary", href: "/vision/lc-stillness" },
+      { image: "/visuals/space-gathering-bowl.png", label: "Gathering Bowl", href: "/vision/lc-v-living-spaces" },
+      { image: "/visuals/space-creation-arc-overview.png", label: "Creation Arc", href: "/vision/lc-offering" },
+      { image: "/visuals/space-nest-tree.png", label: "Tree Nest", href: "/vision/lc-rest" },
+      { image: "/visuals/space-movement-ground.png", label: "Movement Ground", href: "/vision/lc-play" },
+    ],
+    practices: [
+      { image: "/visuals/life-morning-circle.png", label: "Dawn Attunement", href: "/vision/lc-sensing" },
+      { image: "/visuals/practice-yoga-dawn.png", label: "Movement Practice", href: "/vision/lc-v-harmonizing" },
+      { image: "/visuals/practice-tantra-circle.png", label: "Presence Circle", href: "/vision/lc-intimacy" },
+      { image: "/visuals/practice-sound-healing.png", label: "Sound Journey", href: "/vision/lc-transmission" },
+      { image: "/visuals/practice-drum-circle.png", label: "Drum Circle", href: "/vision/lc-v-ceremony" },
+      { image: "/visuals/life-breathwork.png", label: "Breathwork", href: "/vision/lc-health" },
+      { image: "/visuals/life-ceremony-fire.png", label: "Fire Ceremony", href: "/vision/lc-ceremony" },
+      { image: "/visuals/practice-fermentation.png", label: "Fermentation Alchemy", href: "/vision/lc-v-food-practice" },
+    ],
+    people: [
+      { image: "/visuals/life-shared-meal.png", label: "Shared Meal", href: "/vision/lc-nourishment" },
+      { image: "/visuals/nature-food-forest-walk.png", label: "Food Forest Walk", href: "/vision/lc-land" },
+      { image: "/visuals/nature-animals-integrated.png", label: "Animals in the Field", href: "/vision/lc-land" },
+      { image: "/visuals/life-children-play.png", label: "Play Without End", href: "/vision/lc-play" },
+      { image: "/visuals/nature-herb-spiral.png", label: "Herb Spiral", href: "/vision/lc-v-food-practice" },
+      { image: "/visuals/life-garden-planting.png", label: "Hands in Soil", href: "/vision/lc-land" },
+      { image: "/visuals/life-contact-improv.png", label: "Contact & Movement", href: "/vision/lc-play" },
+      { image: "/visuals/nature-living-roof-close.png", label: "Living Roof", href: "/vision/lc-v-shelter-organism" },
+    ],
+    network: [
+      { image: "/visuals/network-traveling-musicians.png", label: "Traveling Musicians", href: "/vision/lc-network" },
+      { image: "/visuals/network-midsummer-gathering.png", label: "Midsummer Gathering", href: "/vision/lc-network" },
+      { image: "/visuals/life-nomad-arrival.png", label: "A Traveler Arrives", href: "/vision/lc-attunement-joining" },
+    ],
+  },
+  blueprints: [
+    { title: "Economy", concept_id: "lc-economy", href: "/vision/economy", desc: "Energy in social form. Visible circulation, contribution, vitality buffers, and repurposed-now transformations.", tag: "0" },
+    { title: "Space", concept_id: "lc-space", href: "/vision/lc-space", desc: "Common houses, private nests, workshops. Cob, timber, rammed earth.", tag: "7" },
+    { title: "Nourishment", concept_id: "lc-nourishment", href: "/vision/lc-nourishment", desc: "Food forests, community kitchens, fermentation. Permaculture plans.", tag: "8" },
+    { title: "Land", concept_id: "lc-land", href: "/vision/lc-land", desc: "Keyline design, regeneration, and water harvesting systems.", tag: "8" },
+    { title: "Energy", concept_id: "lc-energy", href: "/vision/lc-energy", desc: "Solar arrays, biogas, micro-hydro, and open-source charge controllers.", tag: "8" },
+    { title: "Health", concept_id: "lc-health", href: "/vision/lc-health", desc: "Herb gardens, apothecary, sauna, and community health worker training.", tag: "6" },
+    { title: "Instruments", concept_id: "lc-instruments", href: "/vision/lc-instruments", desc: "Sensor networks, maker spaces, fab labs, and IoT for gardens and energy.", tag: "7" },
+    { title: "Shelter", concept_id: "lc-v-shelter-organism", href: "/vision/lc-v-shelter-organism", desc: "Cob, CEB, SuperAdobe, bamboo, mycelium, and open-source building plans.", tag: "11" },
+  ],
+  emerging: [
+    { title: "Living Spaces", concept_id: "lc-v-living-spaces", href: "/vision/lc-v-living-spaces", desc: "Shelter designed from frequency and flow. Resonance zones, not rooms. Structures that breathe.", tag: "" },
+    { title: "Ceremony", concept_id: "lc-v-ceremony", href: "/vision/lc-v-ceremony", desc: "Forms that emerge from pure presence. Cells fully here together with what is.", tag: "" },
+    { title: "Harmonizing", concept_id: "lc-v-harmonizing", href: "/vision/lc-v-harmonizing", desc: "How the field tunes itself. Sound, breath, movement, shared stillness.", tag: "" },
+    { title: "Food as Practice", concept_id: "lc-v-food-practice", href: "/vision/lc-v-food-practice", desc: "Garden as pharmacy. Kitchen as ceremony. Food carries frequency.", tag: "" },
+    { title: "Shelter as Skin", concept_id: "lc-v-shelter-organism", href: "/vision/lc-v-shelter-organism", desc: "Architecture as the field's body. Earthships, cob, bamboo, mycelium. Crystalline structures.", tag: "" },
+    { title: "Comfort & Joy", concept_id: "lc-v-comfort-joy", href: "/vision/lc-v-comfort-joy", desc: "Sensory delight as vitality practice. Warmth, texture, beauty in every surface.", tag: "" },
+    { title: "Play & Expansion", concept_id: "lc-v-play-expansion", href: "/vision/lc-v-play-expansion", desc: "Adults playing as freely as children. The field at its most quantum.", tag: "" },
+    { title: "Inclusion & Diversity", concept_id: "lc-v-inclusion-diversity", href: "/vision/lc-v-inclusion-diversity", desc: "A chord needs different notes. An ecosystem needs different species. Monoculture is fragile.", tag: "" },
+    { title: "Freedom & Expression", concept_id: "lc-v-freedom-expression", href: "/vision/lc-v-freedom-expression", desc: "Every cell vibrating at its natural frequency. Freedom and harmony are the same frequency.", tag: "" },
+  ],
+  orientation_words: ["Wholeness", "Resonance", "Vitality", "Circulation", "Sensing", "Presence", "Freedom", "Joy"],
+  counts: {
+    sections: 11,
+    gallery_items: 27,
+    blueprints: 8,
+    emerging: 9,
+    orientation_words: 8,
+  },
+};
+
+function buildCounts(hub: VisionHubContent): VisionHubContent["counts"] {
+  return {
+    sections: hub.sections.length,
+    gallery_items: Object.values(hub.galleries).reduce((total, items) => total + items.length, 0),
+    blueprints: hub.blueprints.length,
+    emerging: hub.emerging.length,
+    orientation_words: hub.orientation_words.length,
+  };
+}
+
+function normalizeHub(data: Partial<VisionHubContent> | null | undefined): VisionHubContent {
+  const hub = {
+    ...EMPTY_HUB,
+    ...(data || {}),
+    galleries: {
+      ...EMPTY_HUB.galleries,
+      ...(data?.galleries || {}),
+    },
+    counts: {
+      ...EMPTY_HUB.counts,
+      ...(data?.counts || {}),
+    },
+  };
+  const withFallbacks: VisionHubContent = {
+    ...hub,
+    sections: hub.sections.length > 0 ? hub.sections : FALLBACK_HUB.sections,
+    galleries: {
+      spaces: hub.galleries.spaces.length > 0 ? hub.galleries.spaces : FALLBACK_HUB.galleries.spaces,
+      practices: hub.galleries.practices.length > 0 ? hub.galleries.practices : FALLBACK_HUB.galleries.practices,
+      people: hub.galleries.people.length > 0 ? hub.galleries.people : FALLBACK_HUB.galleries.people,
+      network: hub.galleries.network.length > 0 ? hub.galleries.network : FALLBACK_HUB.galleries.network,
+    },
+    blueprints: hub.blueprints.length > 0 ? hub.blueprints : FALLBACK_HUB.blueprints,
+    emerging: hub.emerging.length > 0 ? hub.emerging : FALLBACK_HUB.emerging,
+    orientation_words: hub.orientation_words.length > 0 ? hub.orientation_words : FALLBACK_HUB.orientation_words,
+  };
+  return { ...withFallbacks, counts: buildCounts(withFallbacks) };
+}
+
 async function fetchVisionHub(): Promise<VisionHubContent> {
   try {
     const res = await fetch(`${getApiBase()}/api/vision/living-collective/hub`, { cache: "no-store" });
-    if (!res.ok) return EMPTY_HUB;
+    if (!res.ok) return FALLBACK_HUB;
     const data = await res.json();
-    return {
-      ...EMPTY_HUB,
-      ...data,
-      galleries: {
-        ...EMPTY_HUB.galleries,
-        ...(data?.galleries || {}),
-      },
-      counts: {
-        ...EMPTY_HUB.counts,
-        ...(data?.counts || {}),
-      },
-    };
+    return normalizeHub(data);
   } catch {
-    return EMPTY_HUB;
+    return FALLBACK_HUB;
   }
 }
 

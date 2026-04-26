@@ -1,0 +1,86 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/vision-page-regression-20260427",
+  "commit_scope": "Restore the /vision page core concepts and images when the graph-backed vision hub is empty.",
+  "files_owned": [
+    "web/app/vision/page.tsx",
+    "docs/system_audit/commit_evidence_2026-04-27_vision-page-empty-hub-fallback.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 - <<'PY' ... verify every /visuals path in web/app/vision/page.tsx exists under web/public ... PY",
+      "cd web && npm run build",
+      "python3 - <<'PY' ... fetch http://localhost:3117/vision and assert restored labels exist and empty-hub placeholders are absent ... PY",
+      "python3 scripts/sync_kb_to_db.py lc-pulse --api-url http://127.0.0.1:18079 --api-key dev-key",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "All referenced fallback visual assets exist, the Next.js production build passed, a local /vision render showed The Pulse, Sensing, Living Space, The Network, The Hearth, and Dawn Attunement while omitting the empty graph placeholder messages, local web validation passed after seeding the verifier DB with lc-pulse, and the local PR guard plus follow-through checks passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and deploy contract verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending production deploy verification for https://coherencycoin.com/vision."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "vision-page-empty-hub-fallback"
+  ],
+  "spec_ids": [
+    "vision-page-regression"
+  ],
+  "task_ids": [
+    "codex-thread-vision-page-regression-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Live https://api.coherencycoin.com/api/vision/living-collective/hub returned graph source with zero sections, galleries, blueprints, emerging items, and orientation words.",
+    "Local render check against http://localhost:3117/vision confirmed restored fallback content and no empty graph placeholder messages."
+  ],
+  "change_files": [
+    "web/app/vision/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The /vision route renders persistent curated core concepts, galleries, blueprints, emerging concepts, and orientation words whenever the graph-backed living-collective hub is empty or unavailable.",
+    "public_endpoints": [
+      "GET /vision",
+      "GET /api/vision/living-collective/hub"
+    ],
+    "test_flows": [
+      "Local server-side render with no local API available uses fallback content.",
+      "Production deploy verification should confirm https://coherencycoin.com/vision contains core concept and gallery labels and no empty-hub placeholders."
+    ]
+  }
+}
