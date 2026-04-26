@@ -1,8 +1,8 @@
 # Spec Index
 
-> 84 specs (79 done, 4 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 85 specs (79 done, 5 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (20 ideas → 84 specs)
+## By Idea (20 ideas → 85 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -22,12 +22,13 @@
 - [project-manager-pipeline](project-manager-pipeline.md) — PM cycle orchestration
 - [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — review/deploy/verify phases
 
-### pipeline-reliability (8 specs)
+### pipeline-reliability (9 specs)
 - [auto-heal-from-diagnostics](auto-heal-from-diagnostics.md) — auto-heal from failure diagnostics
 - [data-driven-timeout-resume](data-driven-timeout-resume.md) — adaptive timeouts + resume
 - [failed-task-diagnostics-contract](failed-task-diagnostics-contract.md) — structured failure diagnostics
 - [heal-completion-issue-resolution](heal-completion-issue-resolution.md) — heal + issue resolution
 - [incident-response-and-self-healing](incident-response-and-self-healing.md) — incident response automation
+- [runner-attendance-loop](runner-attendance-loop.md) — runner attends; smart-reaper releases (no clock-kill)
 - [smart-reap](smart-reap.md) — intelligent task reaping
 - [stale-task-reaper](stale-task-reaper.md) — stale task cleanup
 - [task-deduplication](task-deduplication.md) — duplicate task detection
