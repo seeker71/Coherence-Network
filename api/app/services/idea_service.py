@@ -142,22 +142,6 @@ def _resolve_idea_raw(id_or_slug: str, ideas: list) -> "Idea | None":
 # in seed_ideas.json and are used for internal-idea classification only.
 # The DB is the sole source of truth for idea data; this set is only for
 # the is_internal_idea_id() classification heuristic.
-_KNOWN_INTERNAL_IDEA_IDS: set[str] = {
-    "coherence-network-agent-pipeline",
-    "coherence-network-api-runtime",
-    "coherence-network-value-attribution",
-    "coherence-network-web-interface",
-    "deployment-gate-reliability",
-    "interface-trust-surface",
-    "minimum-e2e-path",
-    "funder-proof-page",
-    "idea-hierarchy-model",
-    "unified-sqlite-store",
-    "agent-prompt-ab-roi",
-    "agent-failed-task-diagnostics",
-    "agent-auto-heal",
-    "agent-grounded-measurement",
-}
 
 STANDING_QUESTION_TEXT = (
     "How can we improve this idea, show whether it is working yet, "
@@ -170,22 +154,6 @@ _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
 _IDEAS_CACHE_TTL_SECONDS = 30.0  # 30s cache — prevents DB hammering under load
 
-DEFAULT_INTERNAL_IDEA_PREFIXES = (
-    "spec-origin-",
-    "endpoint-lineage-",
-    "public-e2e-",
-    "e2e-idea-",
-)
-DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS = {"machine:commit-evidence"}
-TRANSIENT_INTERNAL_ID_PATTERNS = (
-    re.compile(r"^public-e2e-[0-9a-f]{8}$"),
-)
-DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"^public-e2e-[0-9a-f]{8}$"), "deployment-gate-reliability"),
-    (re.compile(r"^e2e-idea-[0-9a-f]{8}$"), "deployment-gate-reliability"),
-    (re.compile(r"^spec-origin-"), "portfolio-governance"),
-    (re.compile(r"^endpoint-lineage-"), "oss-interface-alignment"),
-)
 
 
 
