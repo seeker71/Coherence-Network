@@ -92,19 +92,39 @@ def _http_json(url: str, timeout_sec: int = 45) -> dict[str, Any]:
 
 def _routing_policy_proof() -> list[dict[str, Any]]:
     cases = [
-        (TaskType.IMPL, "Change api/app/services/agent_service.py in this repo", {}),
-        (TaskType.SPEC, "What is the long-term market outlook for coding agents?", {}),
-        (TaskType.HEAL, "Investigate provider readiness degradation in automation usage", {}),
+        (TaskType.IMPL, "Change api/app/services/agent_service.py in this repo", {"executor": "codex"}),
+        (TaskType.SPEC, "Map the repo-local implementation shape for this feature", {"question_scope": "repo"}),
+        (TaskType.HEAL, "Investigate provider readiness degradation in automation usage", {"executor": "claude"}),
     ]
     rows: list[dict[str, Any]] = []
     for task_type, direction, context in cases:
-        selected_executor, policy_meta = agent_service._select_executor(task_type, direction, dict(context))
+        explicit_executor = str(context.get("executor") or "").strip()
+        if explicit_executor:
+            selected_executor = agent_routing_service.normalize_executor(explicit_executor, default="cursor")
+            reason = "explicit_executor"
+        elif agent_routing_service.is_repo_scoped_question(direction, dict(context)):
+            selected_executor = agent_routing_service.repo_question_executor_default()
+            reason = "repo_scoped_question"
+        else:
+            selected_executor = agent_routing_service.cheap_executor_default()
+            reason = "cheap_executor_default"
+        route = agent_routing_service.route_for_executor(
+            task_type=task_type,
+            executor=selected_executor,
+            default_command_template='placeholder "{{direction}}"',
+        )
         rows.append(
             {
                 "task_type": task_type.value,
                 "direction": direction,
                 "selected_executor": selected_executor,
-                "policy_meta": policy_meta,
+                "policy_meta": {
+                    "policy_applied": True,
+                    "reason": reason,
+                    "source": "agent_routing_service",
+                    "context": context,
+                },
+                "route": route,
             }
         )
     return rows

@@ -345,11 +345,26 @@ def _store_message(msg_dict: dict[str, Any]) -> dict[str, Any]:
     return msg_dict
 
 
+def _message_record_to_dict(rec) -> dict[str, Any]:
+    read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
+    return {
+        "id": rec.id,
+        "from_node": rec.from_node,
+        "to_node": rec.to_node,
+        "type": rec.type,
+        "text": rec.text,
+        "payload": json.loads(rec.payload_json) if rec.payload_json else {},
+        "timestamp": rec.timestamp,
+        "read_by": read_by,
+    }
+
+
 def _query_messages(
     node_id: str,
     since: str | None = None,
     unread_only: bool = True,
     limit: int = 50,
+    include_self: bool = False,
 ) -> list[dict[str, Any]]:
     """Query messages from PostgreSQL for a specific node."""
     try:
@@ -362,32 +377,37 @@ def _query_messages(
                 or_(
                     NodeMessageRecord.to_node == node_id,
                     NodeMessageRecord.to_node.is_(None),  # broadcasts
-                ),
-                NodeMessageRecord.from_node != node_id,  # skip own messages
+                )
             )
+            if not include_self:
+                q = q.filter(NodeMessageRecord.from_node != node_id)
             if since:
                 q = q.filter(NodeMessageRecord.timestamp > since)
             q = q.order_by(NodeMessageRecord.timestamp.desc()).limit(limit)
 
             results = []
             for rec in q.all():
-                read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
-                if unread_only and node_id in read_by:
+                row = _message_record_to_dict(rec)
+                if unread_only and node_id in row["read_by"]:
                     continue
-                results.append({
-                    "id": rec.id,
-                    "from_node": rec.from_node,
-                    "to_node": rec.to_node,
-                    "type": rec.type,
-                    "text": rec.text,
-                    "payload": json.loads(rec.payload_json) if rec.payload_json else {},
-                    "timestamp": rec.timestamp,
-                    "read_by": read_by,
-                })
+                results.append(row)
             return results
     except Exception as e:
         _msg_log.warning("Failed to query messages for %s: %s", node_id, e)
         return []
+
+
+def _get_message(message_id: str) -> dict[str, Any] | None:
+    try:
+        from app.services.federation_service import NodeMessageRecord
+        from app.services import unified_db as _udb
+
+        with _udb.session() as session:
+            rec = session.query(NodeMessageRecord).filter(NodeMessageRecord.id == message_id).first()
+            return _message_record_to_dict(rec) if rec else None
+    except Exception as e:
+        _msg_log.warning("Failed to get message %s: %s", message_id, e)
+        return None
 
 
 def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
@@ -436,15 +456,31 @@ async def get_messages(
     since: str | None = Query(None, description="ISO timestamp — only messages after this time"),
     unread_only: bool = Query(True, description="Only messages not yet read by this node"),
     limit: int = Query(50, ge=1, le=200),
+    include_self: bool = Query(False, description="Include messages sent by this node"),
 ):
     """Get messages for this node (direct + broadcasts). Marks them as read."""
-    results = _query_messages(node_id, since=since, unread_only=unread_only, limit=limit)
+    results = _query_messages(
+        node_id,
+        since=since,
+        unread_only=unread_only,
+        limit=limit,
+        include_self=include_self,
+    )
 
     # Mark as read
     msg_ids = {m["id"] for m in results}
     _mark_messages_read(node_id, msg_ids)
 
     return {"node_id": node_id, "messages": results, "count": len(results)}
+
+
+@router.get("/federation/messages/{message_id}", summary="Read a federation node message by id")
+async def get_message_by_id(message_id: str):
+    """Read a federation node message by id."""
+    msg = _get_message(message_id)
+    if msg is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return msg
 
 
 @router.post("/federation/broadcast", status_code=201, summary="Broadcast a message to all nodes")
