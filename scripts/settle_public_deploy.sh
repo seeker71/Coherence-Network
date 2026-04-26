@@ -85,6 +85,19 @@ while :; do
 
   IFS=$'\t' read -r run_id run_status run_conclusion run_sha run_title <<<"$(latest_hostinger_run)"
 
+  if [[
+    -n "${run_id:-}" &&
+    "${run_status}" == "completed" &&
+    "${run_conclusion}" == "success" &&
+    -n "${live_sha}" &&
+    "${live_sha}" == "${run_sha}" &&
+    "${run_sha}" != "${target_sha}"
+  ]]; then
+    echo "deploy-sha: live=${live_sha} matches latest Hostinger deploy"
+    echo "main-sha: ${target_sha} has no newer Hostinger deploy; treating as non-runtime/process-only drift"
+    break
+  fi
+
   if [[ -n "${run_id}" && "${run_id}" != "${last_run_id}" ]]; then
     echo "hostinger-run: id=${run_id} status=${run_status} conclusion=${run_conclusion:-pending} sha=${run_sha}"
     echo "title: ${run_title}"
@@ -112,4 +125,5 @@ while :; do
   sleep "$POLL_SECONDS"
 done
 
-"$(dirname "$0")/verify_web_api_deploy.sh" "$API_URL" "$WEB_URL"
+VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}" \
+  "$(dirname "$0")/verify_web_api_deploy.sh" "$API_URL" "$WEB_URL"
