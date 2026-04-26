@@ -23,3 +23,16 @@ updates:
       time: "08:20"
       timezone: "UTC"
     open-pull-requests-limit: 10
+    groups:
+      # Peer-deps that must move together — solo bumps fail with ERESOLVE
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
