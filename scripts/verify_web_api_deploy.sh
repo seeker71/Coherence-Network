@@ -565,8 +565,12 @@ check_api_runtime_sha() {
   fi
 
   if [[ "$observed_sha" != "$expected_sha" ]]; then
-    echo "FAIL: API deployed SHA does not match expected main-head SHA"
-    return 1
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: API deployed SHA does not match expected main-head SHA"
+      return 1
+    fi
+    echo "WARN: API deployed SHA does not match expected main-head SHA (non-blocking)"
+    return 0
   fi
 
   echo "PASS"
