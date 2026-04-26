@@ -143,10 +143,6 @@ def _resolve_idea_raw(id_or_slug: str, ideas: list) -> "Idea | None":
 # The DB is the sole source of truth for idea data; this set is only for
 # the is_internal_idea_id() classification heuristic.
 
-STANDING_QUESTION_TEXT = (
-    "How can we improve this idea, show whether it is working yet, "
-    "and make that proof clearer over time?"
-)
 
 _CACHE_LOCK = threading.Lock()
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
@@ -493,39 +489,12 @@ def _write_single_idea(idea: Idea, position: int) -> None:
     _invalidate_ideas_cache()
 
 
-def _ensure_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    changed = False
-    for idea in ideas:
-        if is_internal_idea_id(idea.id, idea.interfaces):
-            continue
-        has_standing = any(q.question == STANDING_QUESTION_TEXT for q in idea.open_questions)
-        if has_standing:
-            continue
-        default_value = 24.0 if idea.manifestation_status != ManifestationStatus.NONE else 20.0
-        default_cost = 2.0 if idea.manifestation_status != ManifestationStatus.NONE else 3.0
-        idea.open_questions.append(
-            IdeaQuestion(
-                question=STANDING_QUESTION_TEXT,
-                value_to_whole=default_value,
-                estimated_cost=default_cost,
-            )
-        )
-        changed = True
-    return ideas, changed
-
-
-def _prune_internal_standing_questions(ideas: list[Idea]) -> tuple[list[Idea], bool]:
-    changed = False
-    for idea in ideas:
-        if not is_internal_idea_id(idea.id, idea.interfaces):
-            continue
-        before = len(idea.open_questions)
-        if before == 0:
-            continue
-        idea.open_questions = [q for q in idea.open_questions if q.question != STANDING_QUESTION_TEXT]
-        if len(idea.open_questions) != before:
-            changed = True
-    return ideas, changed
+# Extracted to idea_standing_questions (#163)
+from app.services.idea_standing_questions import (  # noqa: E402,F401
+    STANDING_QUESTION_TEXT,
+    _ensure_standing_questions,
+    _prune_internal_standing_questions,
+)
 
 
 def _score(idea: Idea) -> float:
