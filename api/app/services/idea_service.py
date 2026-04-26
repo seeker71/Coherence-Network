@@ -75,6 +75,22 @@ from app.services.idea_text_helpers import (  # noqa: E402,F401
     slugify,
     validate_raw_tags,
 )
+from app.services.idea_internal_filter import (  # noqa: E402,F401
+    DEFAULT_INTERNAL_IDEA_PREFIXES,
+    DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS,
+    DISCOVERED_INTERNAL_ID_ALIASES,
+    TRANSIENT_INTERNAL_ID_PATTERNS,
+    _KNOWN_INTERNAL_IDEA_IDS,
+    _SCHEMA_ARTIFACT_IDS,
+    _canonical_discovered_idea_id,
+    _configured_internal_idea_exact_ids,
+    _configured_internal_idea_interface_tags,
+    _configured_internal_idea_prefixes,
+    _is_transient_internal_idea_id,
+    _should_track_discovered_idea_id,
+    canonical_discovered_idea_id,
+    is_internal_idea_id,
+)
 
 
 def is_idea_external(idea_id: str) -> bool:
@@ -172,87 +188,13 @@ DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
-def _configured_internal_idea_prefixes() -> set[str]:
-    raw = get_str("ideas", "internal_idea_id_prefixes")
-    if not raw:
-        return set(DEFAULT_INTERNAL_IDEA_PREFIXES)
-    out = {item.strip().lower() for item in raw.split(",") if item.strip()}
-    return out or set(DEFAULT_INTERNAL_IDEA_PREFIXES)
 
 
-def _configured_internal_idea_exact_ids() -> set[str]:
-    out = set(_KNOWN_INTERNAL_IDEA_IDS)
-    raw = get_str("ideas", "internal_idea_id_exact")
-    if raw:
-        out.update(item.strip().lower() for item in raw.split(",") if item.strip())
-    return out
 
 
-def _configured_internal_idea_interface_tags() -> set[str]:
-    raw = get_str("ideas", "internal_idea_interface_tags")
-    if not raw:
-        return set(DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS)
-    out = {item.strip().lower() for item in raw.split(",") if item.strip()}
-    return out or set(DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS)
 
 
-def is_internal_idea_id(idea_id: str, interfaces: list[str] | None = None) -> bool:
-    normalized_id = str(idea_id or "").strip().lower()
-    if not normalized_id:
-        return False
-    if normalized_id in _configured_internal_idea_exact_ids():
-        return True
-    for prefix in _configured_internal_idea_prefixes():
-        if normalized_id.startswith(prefix):
-            return True
-    if isinstance(interfaces, list):
-        tags = {str(item).strip().lower() for item in interfaces if str(item).strip()}
-        if tags.intersection(_configured_internal_idea_interface_tags()):
-            return True
-    return False
 
-
-def _is_transient_internal_idea_id(idea_id: str) -> bool:
-    normalized_id = str(idea_id or "").strip().lower()
-    if not normalized_id:
-        return False
-    return any(pattern.match(normalized_id) for pattern in TRANSIENT_INTERNAL_ID_PATTERNS)
-
-
-_SCHEMA_ARTIFACT_IDS = frozenset({
-    "string", "string?", "string|null", "number", "boolean", "integer",
-    "object", "array", "null", "type", "required", "properties",
-    "properties:", "tracked:", "added_properties:",
-})
-
-
-def _canonical_discovered_idea_id(idea_id: str) -> str | None:
-    normalized_id = str(idea_id or "").strip().lower().rstrip("])}\"'")
-    if not normalized_id or normalized_id == "unmapped":
-        return None
-    # Reject schema/YAML artifacts that aren't real idea IDs
-    if normalized_id in _SCHEMA_ARTIFACT_IDS:
-        return None
-    # Reject IDs that are clearly not slugs (contain special chars)
-    if any(c in normalized_id for c in "?[]{}|;:\"'<>"):
-        return None
-    # Reject very short IDs (likely parsing noise)
-    if len(normalized_id) < 4:
-        return None
-    for pattern, target_id in DISCOVERED_INTERNAL_ID_ALIASES:
-        if pattern.match(normalized_id):
-            return target_id
-    if _is_transient_internal_idea_id(normalized_id):
-        return None
-    return normalized_id
-
-
-def canonical_discovered_idea_id(idea_id: str) -> str | None:
-    return _canonical_discovered_idea_id(idea_id)
-
-
-def _should_track_discovered_idea_id(idea_id: str) -> bool:
-    return _canonical_discovered_idea_id(idea_id) is not None
 
 
 def _idea_ids_from_payload(payload: dict[str, Any]) -> list[str]:
@@ -502,224 +444,24 @@ def _prune_transient_internal_ideas(ideas: list[Idea]) -> tuple[list[Idea], bool
     return kept, changed
 
 
-def _humanize_idea_id(idea_id: str) -> str:
-    words = [part for part in idea_id.replace("_", "-").split("-") if part]
-    if not words:
-        return "Derived tracked idea"
-    return " ".join(words).strip().capitalize()
+# Extracted to idea_resonance_helpers.py (#163)
+from app.services.idea_resonance_helpers import (  # noqa: E402,F401
+    _CONCEPT_RESONANCE_STOP_WORDS,
+    _FUZZY_STOP_WORDS,
+    _RESONANCE_TOKEN_PATTERN,
+    _extract_resonance_tokens,
+    _find_closest_graph_idea,
+    _humanize_idea_id,
+    _idea_concept_tokens,
+    _idea_domain_tokens,
+)
 
 
-_FUZZY_STOP_WORDS = frozenset({
-    "spec", "origin", "endpoint", "lineage", "the", "a", "for", "and", "of",
-    "with", "from", "to", "in", "on", "by", "is", "at", "or", "an",
-})
-_RESONANCE_TOKEN_PATTERN = re.compile(r"[a-z0-9]{3,}")
-_CONCEPT_RESONANCE_STOP_WORDS = _FUZZY_STOP_WORDS.union({
-    "idea",
-    "ideas",
-    "concept",
-    "concepts",
-    "network",
-    "system",
-    "platform",
-    "service",
-    "services",
-    "tool",
-    "tools",
-    "domain",
-    "domains",
-    "cross",
-    "related",
-    "across",
-    "core",
-})
-
-
-def _extract_resonance_tokens(*parts: Any) -> set[str]:
-    tokens: set[str] = set()
-    pending = list(parts)
-    while pending:
-        part = pending.pop()
-        if part is None:
-            continue
-        if isinstance(part, (list, tuple, set)):
-            pending.extend(part)
-            continue
-        text = str(part).strip().lower()
-        if not text:
-            continue
-        text = text.replace("_", " ").replace("-", " ")
-        for token in _RESONANCE_TOKEN_PATTERN.findall(text):
-            if token in _CONCEPT_RESONANCE_STOP_WORDS:
-                continue
-            tokens.add(token)
-    return tokens
-
-
-def _idea_concept_tokens(idea: Idea) -> set[str]:
-    return _extract_resonance_tokens(
-        idea.id,
-        idea.name,
-        idea.description,
-        idea.tags,
-        [item.question for item in idea.open_questions],
-    )
-
-
-def _idea_domain_tokens(idea: Idea) -> set[str]:
-    return _extract_resonance_tokens(idea.tags, idea.interfaces)
-
-
-def _find_closest_graph_idea(idea_id: str, graph_ideas: list) -> Any | None:
-    """Find the graph idea with the highest Jaccard word overlap to the given ID."""
-    target_words = set(idea_id.replace("-", " ").replace("_", " ").lower().split()) - _FUZZY_STOP_WORDS
-    if len(target_words) < 2:
-        return None
-
-    best_match = None
-    best_score = 0.0
-    for idea in graph_ideas:
-        idea_words = set(idea.id.replace("-", " ").replace("_", " ").lower().split()) - _FUZZY_STOP_WORDS
-        if not idea_words:
-            continue
-        overlap = len(target_words & idea_words)
-        union = len(target_words | idea_words)
-        score = overlap / union if union > 0 else 0
-        if score > best_score and score >= 0.5:
-            best_score = score
-            best_match = idea
-    return best_match
-
-
-def _idea_to_metadata(idea: Any) -> dict[str, Any]:
-    """Extract metadata dict from an Idea object for signal inheritance."""
-    d: dict[str, Any] = {
-        "name": idea.name,
-        "description": idea.description,
-        "interfaces": idea.interfaces,
-        "potential_value": idea.potential_value,
-        "actual_value": idea.actual_value,
-        "estimated_cost": idea.estimated_cost,
-        "actual_cost": idea.actual_cost,
-        "confidence": idea.confidence,
-        "resistance_risk": idea.resistance_risk,
-        "idea_type": idea.idea_type.value if idea.idea_type else "standalone",
-        "parent_idea_id": idea.parent_idea_id,
-        "child_idea_ids": idea.child_idea_ids or [],
-        "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
-    }
-    if getattr(idea, "lifecycle", None) is not None:
-        d["lifecycle"] = idea.lifecycle.value if hasattr(idea.lifecycle, "value") else str(idea.lifecycle)
-    if getattr(idea, "duplicate_of", None) is not None:
-        d["duplicate_of"] = idea.duplicate_of
-    return d
-
-
-def _derived_idea_for_id(idea_id: str) -> Idea:
-    # Try to find metadata from DB — exact match first, then fuzzy match
-    metadata: dict[str, Any] = {}
-    try:
-        db_ideas = idea_registry_service.load_ideas()
-        # Exact match
-        for idea in db_ideas:
-            if idea.id == idea_id:
-                metadata = _idea_to_metadata(idea)
-                break
-        # Node-type fallback — idea may exist as a non-idea node (e.g. spec).
-        # Read its actual stored properties so updates via the idea API persist.
-        if not metadata:
-            try:
-                from app.services import graph_service as _gs
-                raw = _gs.get_node(idea_id)
-                if raw:
-                    # Flatten the node dict (to_dict() already merges properties)
-                    metadata = {k: raw[k] for k in [
-                        "name", "description", "potential_value", "actual_value",
-                        "estimated_cost", "actual_cost", "confidence",
-                        "resistance_risk", "idea_type", "parent_idea_id",
-                        "child_idea_ids", "manifestation_status", "duplicate_of",
-                        "lifecycle", "interfaces",
-                    ] if raw.get(k) is not None}
-                    logger.debug("Node-type fallback for derived idea %s (type=%s)", idea_id, raw.get("type"))
-            except Exception:
-                logger.debug("Node-type fallback failed for derived idea %s", idea_id, exc_info=True)
-
-        # Fuzzy match — inherit scores from closest graph idea
-        if not metadata:
-            closest = _find_closest_graph_idea(idea_id, db_ideas)
-            if closest:
-                metadata = _idea_to_metadata(closest)
-                # Keep the discovered ID's auto-generated name, not the matched idea's name
-                metadata.pop("name", None)
-                metadata.pop("description", None)
-                logger.debug("Fuzzy matched idea %s → %s", idea_id, closest.id)
-    except Exception:
-        logger.warning("Failed to load seed metadata for derived idea %s", idea_id, exc_info=True)
-    name = str(metadata.get("name") or _humanize_idea_id(idea_id))
-    description = str(
-        metadata.get("description")
-        or f"Automatically derived from commit-evidence tracking for idea id '{idea_id}'."
-    )
-    interfaces = metadata.get("interfaces")
-    if not isinstance(interfaces, list) or not all(isinstance(x, str) for x in interfaces):
-        interfaces = ["machine:api", "human:web", "machine:commit-evidence"]
-
-    # Copy all numeric and enum fields from seed, with safe defaults
-    potential_value = float(metadata.get("potential_value", 70.0))
-    actual_value = float(metadata.get("actual_value", 0.0))
-    estimated_cost = float(metadata.get("estimated_cost", 12.0))
-    actual_cost = float(metadata.get("actual_cost", 0.0))
-    confidence = float(metadata.get("confidence", 0.55))
-    resistance_risk = float(metadata.get("resistance_risk", 3.0))
-
-    # Hierarchy fields
-    idea_type_str = metadata.get("idea_type", "standalone")
-    try:
-        idea_type = IdeaType(idea_type_str)
-    except ValueError:
-        idea_type = IdeaType.STANDALONE
-    parent_idea_id = metadata.get("parent_idea_id")
-    child_idea_ids = metadata.get("child_idea_ids", [])
-    if not isinstance(child_idea_ids, list):
-        child_idea_ids = []
-
-    # Status
-    status_str = metadata.get("manifestation_status", "none")
-    try:
-        status = ManifestationStatus(status_str)
-    except ValueError:
-        status = ManifestationStatus.NONE
-
-    # Lifecycle
-    lifecycle_str = metadata.get("lifecycle", "active") or "active"
-    try:
-        lifecycle = IdeaLifecycle(lifecycle_str)
-    except (ValueError, AttributeError):
-        lifecycle = IdeaLifecycle.ACTIVE
-
-    duplicate_of = metadata.get("duplicate_of") or None
-
-    return Idea(
-        id=idea_id,
-        name=name,
-        description=description,
-        potential_value=potential_value,
-        actual_value=actual_value,
-        estimated_cost=estimated_cost,
-        actual_cost=actual_cost,
-        resistance_risk=resistance_risk,
-        confidence=max(0.0, min(confidence, 1.0)),
-        manifestation_status=status,
-        lifecycle=lifecycle,
-        duplicate_of=duplicate_of,
-        interfaces=interfaces,
-        open_questions=[],
-        idea_type=idea_type,
-        parent_idea_id=parent_idea_id,
-        child_idea_ids=child_idea_ids,
-        slug=idea_id,
-        slug_history=[],
-    )
+# Extracted to idea_derive_helper.py (#163)
+from app.services.idea_derive_helper import (  # noqa: E402,F401
+    _derived_idea_for_id,
+    _idea_to_metadata,
+)
 
 
 def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
