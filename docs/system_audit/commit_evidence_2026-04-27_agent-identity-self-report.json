@@ -1,0 +1,74 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/agent-identity-self-report-20260427",
+  "commit_scope": "Add no-model identity self-report cards where profiles are origin and each wake produces live identity data.",
+  "files_owned": [
+    "scripts/awareness_node_daemon.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "specs/close-awareness-gaps.md",
+    "docs/system_audit/commit_evidence_2026-04-27_agent-identity-self-report.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_awareness_node_daemon.py -q",
+      "python3 scripts/awareness_node_daemon.py --profile codex --once --dry-run --identify --wake-reason 'asked to identify itself'",
+      "for p in codex claude grok; do python3 scripts/awareness_node_daemon.py --profile \"$p\" --once --dry-run --identify --wake-reason 'asked to identify itself'; done",
+      "python3 scripts/validate_spec_quality.py --file specs/close-awareness-gaps.md"
+    ],
+    "summary": "Identity self-report tests passed. Codex, Claude, and Grok profiles each produced origin_profile plus live who/where/woke_at/wake_reason identity data without model calls."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy proof yet for this follow-up."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR and CI proof remain pending."
+  },
+  "idea_ids": [
+    "close-awareness-gaps"
+  ],
+  "spec_ids": [
+    "specs/close-awareness-gaps.md"
+  ],
+  "task_ids": [
+    "codex-thread-agent-identity-self-report-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_awareness_node_daemon.py",
+    "scripts/awareness_node_daemon.py dry-run identity output for codex, claude, and grok"
+  ],
+  "change_files": [
+    "scripts/awareness_node_daemon.py",
+    "api/tests/test_awareness_node_daemon.py",
+    "specs/close-awareness-gaps.md"
+  ],
+  "change_intent": "process_only"
+}
