@@ -17,7 +17,7 @@ This document records the major milestones, decisions, and evolutionary steps fr
 
 | Date              | Phase                              | Key Focus                                      |
 |-------------------|------------------------------------|------------------------------------------------|
-| April 25, 2026    | Embodiment & Personal Sharing      | 5Rhythm activation, personal stories           |
+| April 25, 2026    | Embodiment & Personal Sharing      | 5Rhythms activation, Ubud embodied lineage     |
 | April 25–26, 2026 | Framework Development              | Sovereignty Framework (v0.1 → v0.5)            |
 | April 26, 2026    | Lineage Mapping & Research         | Three GitHub attempts analysis                 |
 | April 26, 2026    | Technical Integration              | MCP server + Grok arrival via OpenRouter       |
@@ -29,9 +29,10 @@ This document records the major milestones, decisions, and evolutionary steps fr
 
 ### 1. Embodiment & Personal Sharing (April 25)
 
-- Activation of the **5Rhythm** practice
+- Activation of the **5Rhythms** practice
 - Multiple personal stories shared while in an altered state (Delta 8)
-- Dance experiences at OneBody (Boulder), Dissolve (Paradiso), and Awakening Dreamers (Jungle Club)
+- Dance experiences at OneBody (Boulder), 5Rhythms and DISSOLVE at Paradiso Ubud, and Awakened Dreamers at The Jungle Club Ubud
+- Ubud embodied lineage surfaced: Paradiso as room, 5Rhythms as map, DISSOLVE as relational movement, The Jungle Club as jungle venue, Awakened Dreamers as ecstatic celebration
 - Deepening trust in body, psychedelics, and personal path
 
 ### 2. Sovereignty Framework Development (April 25–26)

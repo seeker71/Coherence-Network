@@ -1,0 +1,93 @@
+{
+  "date": "2026-04-26",
+  "thread_branch": "codex/ubud-embodied-lineage-20260426",
+  "commit_scope": "Ingest Ubud embodied lineage as public lineage record and correct related history language.",
+  "files_owned": [
+    "docs/lineage/INDEX.md",
+    "docs/lineage/ubud-embodied-lineage.md",
+    "docs/history/conversation-milestones.md",
+    "docs/history/conversation-summary.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_embodied_lineage.json",
+      "git fetch origin main && git rebase origin/main (blocked by intended unstaged docs edits)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -sS https://pulse.coherencycoin.com/pulse/now"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before local, CI, and deploy validation complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "ubud-embodied-lineage-20260426"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "lineage-source",
+        "direct-attendee"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "ingest",
+        "digest",
+        "compost"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/lineage/ubud-embodied-lineage.md",
+    "https://ubud.co.id/directory-listing/paradiso-ubud/",
+    "https://www.5rhythms.com/who-we-are/teacher-communities/asia/indonesia/",
+    "https://megatix.co.id/events/dissolve-play",
+    "https://dissolvedance.com/",
+    "https://jungleclububud.com/",
+    "https://whatsnewindonesia.com/bali/event/jungle-club-ubud-awakened-dreamers-bohemian-blossom-event"
+  ],
+  "change_files": [
+    "docs/lineage/INDEX.md",
+    "docs/lineage/ubud-embodied-lineage.md",
+    "docs/history/conversation-milestones.md",
+    "docs/history/conversation-summary.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
