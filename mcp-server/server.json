@@ -111,6 +111,22 @@
       "description": "List federated nodes and their capabilities."
     },
     {
+      "name": "coherence_awareness_publish",
+      "description": "Publish a diagnostic awareness event from a federation node."
+    },
+    {
+      "name": "coherence_awareness_stream",
+      "description": "Read a bounded slice from diagnostic, node-message, or task SSE streams."
+    },
+    {
+      "name": "coherence_node_message_send",
+      "description": "Send a durable node-to-node or broadcast message."
+    },
+    {
+      "name": "coherence_node_messages",
+      "description": "Read durable inbound messages for a node."
+    },
+    {
       "name": "coherence_list_tasks",
       "description": "List tasks in the agent work pipeline with optional filters (pending, running, completed, failed, needs_decision)."
     },
