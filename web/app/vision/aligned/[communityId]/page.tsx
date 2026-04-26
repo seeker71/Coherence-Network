@@ -242,6 +242,47 @@ const COMMUNITIES: Record<string, {
     ],
     visit: "Visit the Earthship Visitor Center in Taos (open daily). Stay overnight in a rental Earthship to experience the technology. The Earthship Academy offers hands-on building courses from one week to full certification.",
   },
+  "bumi-sehat": {
+    name: "Bumi Sehat",
+    location: "Ubud, Bali, Indonesia",
+    size: "~50 staff · 600+ births a year · tens of thousands served",
+    founded: "1995",
+    url: "https://bumisehat.org/",
+    visual: "/visuals/nature-architecture-blend.png",
+    tagline: "A community organism for the threshold of birth",
+    story: "In 1995, midwife and poet Robin Lim opened a small clinic in Nyuh Kuning, Ubud, for mothers reaching for the kind of care that arrives with skill, gentleness, and the assumption of welcome. Her first patients were the women with the fewest options — the poorest, the youngest, the most isolated. Her premise was simple: every soul has the right to a safe, gentle, conscious birth — and the community is what makes that possible.\n\nThirty years later, Bumi Sehat (\"healthy mother earth\") has grown into a community organism of about fifty staff — midwives, doulas, doctors, herbalists, cooks, gardeners, volunteers — who together welcome more than six hundred babies a year and serve tens of thousands of women, children, and families in pre- and post-natal care. Care is offered on sliding scale, and free for those who arrive with empty hands. The clinic runs on donations, in-kind giving, and the daily attention of a community that has learned to hold birth, breastfeeding, malnutrition recovery, and disaster response as one continuous practice.\n\nWhen the 2004 tsunami struck Aceh, Bumi Sehat went. When the 2018 Lombok earthquakes hit, they went. When COVID disrupted maternal care across Indonesia, they stayed open. The thread is the same: vulnerability is a community matter, and the people skilled at holding it well move with it wherever it appears. Robin received the CNN Hero of the Year award in 2011 and the Magsaysay Award (often called Asia's Nobel) in 2024 — and the clinic kept running the next morning at the same pace, on the same donations, with the same hands.",
+    resonates: [
+      "Community-tended care held across the most vulnerable thresholds — birth, postpartum, infant nourishment, recovery",
+      "Donation economy proven across three decades and three disaster zones",
+      "Care-giver and care-receiver inside the same field, rather than across a desk",
+      "Free care for those arriving with empty hands, sliding scale for those with means — the math holds because the field holds",
+      "Disaster response that stays — Aceh, Lombok, Sulawesi — care travels with the community when it has to",
+      "Gentle birth as a practice of conscious attunement rather than a procedure",
+      "One woman's clear vision held by 50+ people for 30 years with the original frequency intact",
+    ],
+    weLearn: [
+      "How a community can hold the care function across decades while staying a body rather than an institution",
+      "Donation economy design — sliding scale, in-kind giving, the rhythms of a clinic that lives on the gift",
+      "How to hold birth, breastfeeding, and postpartum recovery as one continuous community practice",
+      "The on-the-ground choreography of disaster response that stays after the cameras leave",
+      "How a single woman's clear vision can metabolize into a body of fifty while keeping the original pulse intact",
+      "The art of meeting vulnerability with skill, presence, and ceremony",
+    ],
+    theyLearn: [
+      "The Coherence Network as connective tissue between care-holding communities globally",
+      "Resonance scoring to match incoming volunteers, doulas, and donors with the moments their gifts land best",
+      "Living Collective vocabulary for thirty years of practice — naming what they have been doing so it travels further",
+      "Graph-based mapping of their multi-decade knowledge so younger care communities can learn from their rhythm",
+    ],
+    concepts: [
+      { id: "lc-vitality", label: "Vitality", why: "Care held precisely at the most vital thresholds — birth, first breath, first feeding, first weeks" },
+      { id: "lc-nourishment", label: "Nourishment", why: "Breastfeeding support, postpartum nutrition, child malnutrition recovery — the body fed by the community" },
+      { id: "lc-circulation", label: "Circulation", why: "Donation economy as the metabolism of care — gift in, care out, sustained for thirty years" },
+      { id: "lc-intimacy", label: "Intimacy", why: "Birth and postpartum are the most intimate human passages, held openly by a community of skilled tenders" },
+      { id: "lc-v-ceremony", label: "Ceremony", why: "Water blessings, prayer, presence — ritual woven through every care encounter rather than separated from it" },
+    ],
+    visit: "Bumi Sehat welcomes visitors with prior notice — write to hello@bumisehat.org. Volunteers (especially midwives, doulas, lactation consultants, and gardeners) can apply through their volunteer programs. Donations of cash or supplies (clean cotton baby clothes, postpartum items, breastfeeding aids) are received with gratitude at the Ubud clinic.",
+  },
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ communityId: string }> }): Promise<Metadata> {
