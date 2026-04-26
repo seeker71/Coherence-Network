@@ -53,10 +53,11 @@ def test_run_once_registers_heartbeats_announces_and_polls() -> None:
     assert result["identity"]["life_state"]["dynamic"] is True
     assert result["live_data"]["wake_reason"] == "test wake"
     assert result["messages"]["count"] == 1
+    node_id = daemon.runtime_node_id(profile)
     assert calls[0][0:2] == ("POST", "/api/federation/nodes")
-    assert calls[1][0:2] == ("POST", "/api/federation/nodes/codex-node-local/heartbeat")
-    assert calls[2][0:2] == ("POST", "/api/federation/nodes/codex-node-local/messages")
-    assert calls[3][0:2] == ("GET", "/api/federation/nodes/codex-node-local/messages")
+    assert calls[1][0:2] == ("POST", f"/api/federation/nodes/{node_id}/heartbeat")
+    assert calls[2][0:2] == ("POST", f"/api/federation/nodes/{node_id}/messages")
+    assert calls[3][0:2] == ("GET", f"/api/federation/nodes/{node_id}/messages")
 
 
 def test_each_profile_can_identify_where_when_and_why_it_woke() -> None:
@@ -76,7 +77,8 @@ def test_each_profile_can_identify_where_when_and_why_it_woke() -> None:
         assert card["origin_profile"]["agent_id"] == profile.agent_id
         assert card["life_state"]["kind"] == "runtime_presence"
         assert card["life_state"]["model_calls"] == 0
-        assert card["where"]["node_id"] == profile.node_id[:16]
+        assert card["where"]["node_id"] == daemon.runtime_node_id(profile)
+        assert len(card["where"]["node_id"]) == 16
         assert card["where"]["api_base"] == "https://api.example.test"
         assert card["woke_at"] == "2026-04-27T00:00:00Z"
         assert card["wake_reason"] == "asked to identify itself"
@@ -84,3 +86,20 @@ def test_each_profile_can_identify_where_when_and_why_it_woke() -> None:
         assert profile.display_name in text
         assert "asked to identify itself" in text
         assert "profile is origin" in text
+
+
+def test_short_origin_node_ids_are_expanded_to_runtime_node_ids() -> None:
+    profile = daemon.AgentProfile(
+        agent_id="grok",
+        display_name="Grok",
+        node_id="grok-local-node",
+        providers=["grok"],
+        voice="curious",
+        memory={"temp": "thread", "persistent": "coherence-network", "static": "repo"},
+        no_model_actions=["register", "heartbeat", "announce", "poll_messages"],
+    )
+
+    node_id = daemon.runtime_node_id(profile)
+
+    assert len(node_id) == 16
+    assert node_id.startswith("groklocalnode")

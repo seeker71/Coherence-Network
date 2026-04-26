@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -91,6 +92,16 @@ def _branch_name(repo_root: Path = REPO_ROOT) -> str:
     return branch or "unknown"
 
 
+def runtime_node_id(profile: AgentProfile) -> str:
+    """Return the 16-character node id required by the federation API."""
+    raw = "".join(ch for ch in profile.node_id.lower() if ch.isalnum())
+    if len(raw) >= 16:
+        return raw[:16]
+    seed = f"{profile.agent_id}:{profile.node_id}:{profile.display_name}"
+    suffix = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+    return (raw + suffix)[:16]
+
+
 def build_identity_card(
     profile: AgentProfile,
     *,
@@ -115,7 +126,7 @@ def build_identity_card(
             "providers": profile.providers,
         },
         "where": {
-            "node_id": profile.node_id[:16],
+            "node_id": runtime_node_id(profile),
             "api_base": api_base,
             "repo_root": str(repo_root),
             "branch": _branch_name(repo_root),
@@ -160,8 +171,9 @@ def run_once(
 ) -> dict[str, Any]:
     call = request_json or (lambda method, path, *, body=None, params=None: globals()["request_json"](api_base, method, path, body=body, params=params))
     identity = build_identity_card(profile, api_base=api_base, wake_reason=wake_reason)
+    node_id = runtime_node_id(profile)
     register_body = {
-        "node_id": profile.node_id[:16],
+        "node_id": node_id,
         "hostname": profile.display_name,
         "os_type": "vps",
         "providers": profile.providers,
