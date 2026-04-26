@@ -1,0 +1,79 @@
+{
+  "date": "2026-04-26",
+  "thread_branch": "codex/deploy-settle-quiet-20260426",
+  "commit_scope": "Quiet deploy settling during gateway restarts and preserve Hostinger run fields when conclusion is empty.",
+  "files_owned": [
+    "scripts/settle_public_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate",
+      "bash -n scripts/settle_public_deploy.sh",
+      "DEPLOY_SETTLE_TIMEOUT_SECONDS=30 DEPLOY_SETTLE_POLL_SECONDS=5 ./scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_deploy_settle_quiet.json",
+      "git fetch origin main && git rebase origin/main (blocked by intended unstaged edits)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -sS https://pulse.coherencycoin.com/pulse/now"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before local, CI, and deploy validation complete."
+  },
+  "idea_ids": [
+    "deploy-energy-reduction"
+  ],
+  "spec_ids": [
+    "deployment-flow"
+  ],
+  "task_ids": [
+    "deploy-settle-quiet-20260426"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "deployment-energy-sensing"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "attune",
+        "deploy-flow"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/settle_public_deploy.sh",
+    "https://api.coherencycoin.com/api/health",
+    "https://github.com/seeker71/Coherence-Network/actions/workflows/hostinger-auto-deploy.yml"
+  ],
+  "change_files": [
+    "scripts/settle_public_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
