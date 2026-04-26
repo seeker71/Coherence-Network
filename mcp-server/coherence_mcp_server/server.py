@@ -8,7 +8,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from mcp.server import Server
@@ -90,6 +92,96 @@ def api_put(path: str, body: dict[str, Any]) -> Any:
         return {"error": detail}
     except Exception as exc:
         return {"error": str(exc)}
+
+
+def decode_sse_events(lines: list[str]) -> list[dict[str, Any]]:
+    """Decode SSE data lines into JSON objects, preserving raw payloads."""
+    events: list[dict[str, Any]] = []
+    data_lines: list[str] = []
+
+    def flush() -> None:
+        if not data_lines:
+            return
+        payload = "\n".join(data_lines).strip()
+        data_lines.clear()
+        if not payload:
+            return
+        try:
+            parsed = json.loads(payload)
+            events.append(parsed if isinstance(parsed, dict) else {"data": parsed})
+        except json.JSONDecodeError:
+            events.append({"raw": payload})
+
+    for raw_line in lines:
+        line = raw_line.rstrip("\r\n")
+        if not line:
+            flush()
+            continue
+        if line.startswith(":"):
+            continue
+        if line.startswith("data:"):
+            data_lines.append(line[5:].lstrip())
+    flush()
+    return events
+
+
+def api_sse(
+    path: str,
+    params: dict[str, Any] | None = None,
+    *,
+    duration_seconds: float = 5.0,
+    max_events: int = 20,
+) -> dict[str, Any]:
+    """Read a bounded slice from an SSE endpoint and return parsed events."""
+    url = f"{API_BASE}{path}"
+    filtered = {k: v for k, v in (params or {}).items() if v is not None}
+    deadline = time.monotonic() + max(0.1, min(float(duration_seconds), 30.0))
+    read_timeout = max(1.0, min(float(duration_seconds) + 1.0, 10.0))
+    event_limit = max(1, min(int(max_events), 200))
+    lines: list[str] = []
+    events: list[dict[str, Any]] = []
+
+    try:
+        with httpx.stream(
+            "GET",
+            url,
+            params=filtered,
+            headers={**_headers(), "Accept": "text/event-stream"},
+            timeout=httpx.Timeout(connect=5.0, read=read_timeout, write=5.0, pool=5.0),
+        ) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                lines.append(line)
+                if line == "":
+                    events = decode_sse_events(lines)
+                    if len(events) >= event_limit:
+                        break
+                if time.monotonic() >= deadline:
+                    break
+        if not events:
+            events = decode_sse_events(lines)
+        events = events[:event_limit]
+        return {
+            "stream": path,
+            "duration_seconds": duration_seconds,
+            "max_events": event_limit,
+            "count": len(events),
+            "events": events,
+        }
+    except httpx.HTTPStatusError as exc:
+        return {"error": f"{exc.response.status_code} {exc.response.reason_phrase}", "stream": path}
+    except httpx.ReadTimeout:
+        events = decode_sse_events(lines)[:event_limit]
+        return {
+            "stream": path,
+            "duration_seconds": duration_seconds,
+            "max_events": event_limit,
+            "count": len(events),
+            "events": events,
+            "ended_by": "read_timeout",
+        }
+    except Exception as exc:
+        return {"error": str(exc), "stream": path}
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +369,64 @@ TOOLS: list[Tool] = [
         name="coherence_list_federation_nodes",
         description="List federated nodes and their capabilities.",
         inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_awareness_publish",
+        description="Publish a diagnostic awareness event from a federation node. Delivered to active diagnostic stream subscribers.",
+        inputSchema={
+            "type": "object",
+            "required": ["node_id", "event_type"],
+            "properties": {
+                "node_id": {"type": "string", "description": "Publishing node ID"},
+                "event_type": {"type": "string", "description": "Awareness event kind, e.g. heartbeat, reasoning, tool_call"},
+                "message": {"type": "string", "description": "Short human-readable signal"},
+                "data": {"type": "object", "description": "Optional structured event payload"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_awareness_stream",
+        description="Read a bounded slice from diagnostic, node-message, or task-event SSE streams.",
+        inputSchema={
+            "type": "object",
+            "required": ["stream_type"],
+            "properties": {
+                "stream_type": {"type": "string", "description": "diagnostics, node, or task"},
+                "node_id": {"type": "string", "description": "Node ID for diagnostics/node streams; use '*' for all diagnostics"},
+                "task_id": {"type": "string", "description": "Task ID for task event streams"},
+                "duration_seconds": {"type": "number", "description": "Max seconds to hold stream open (default 5, max 30)", "default": 5},
+                "max_events": {"type": "number", "description": "Max parsed events to return (default 20, max 200)", "default": 20},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_node_message_send",
+        description="Send a federation node message. Use to stream awareness out as durable node-to-node text or command payloads.",
+        inputSchema={
+            "type": "object",
+            "required": ["from_node_id", "text"],
+            "properties": {
+                "from_node_id": {"type": "string", "description": "Sender node ID"},
+                "to_node_id": {"type": "string", "description": "Recipient node ID; omit for broadcast"},
+                "type": {"type": "string", "description": "Message type, e.g. text, command, command_response", "default": "text"},
+                "text": {"type": "string", "description": "Message text"},
+                "payload": {"type": "object", "description": "Optional structured payload"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_node_messages",
+        description="Read federation node messages for a node. This is the durable inbound awareness channel.",
+        inputSchema={
+            "type": "object",
+            "required": ["node_id"],
+            "properties": {
+                "node_id": {"type": "string", "description": "Recipient node ID"},
+                "since": {"type": "string", "description": "Optional ISO timestamp lower bound"},
+                "unread_only": {"type": "boolean", "description": "Only unread messages (default true)", "default": True},
+                "limit": {"type": "number", "description": "Max messages to return (default 50)", "default": 50},
+            },
+        },
     ),
     # Tasks (Agent Work Protocol)
     Tool(
@@ -1129,10 +1279,8 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "display_name": args["provider_id"],
             })
         case "coherence_lookup_identity":
-            from urllib.parse import quote
             return api_get(f"/api/identity/lookup/{quote(args['provider'])}/{quote(args['provider_id'])}")
         case "coherence_get_identities":
-            from urllib.parse import quote
             return api_get(f"/api/identity/{quote(args['contributor_id'])}")
         # Contributions
         case "coherence_record_contribution":
@@ -1147,7 +1295,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 }.items() if v is not None
             })
         case "coherence_contributor_ledger":
-            from urllib.parse import quote
             return api_get(f"/api/contributions/ledger/{quote(args['contributor_id'])}")
         # Status
         case "coherence_status":
@@ -1166,6 +1313,58 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             nodes = api_get("/api/federation/nodes")
             caps = api_get("/api/federation/nodes/capabilities")
             return {"nodes": nodes, "capabilities": caps}
+        case "coherence_awareness_publish":
+            body = {
+                "event_type": args["event_type"],
+                "message": args.get("message", ""),
+                "data": args.get("data", {}),
+                "source": "mcp",
+            }
+            return api_post(f"/api/federation/nodes/{quote(args['node_id'], safe='')}/diag", body)
+        case "coherence_awareness_stream":
+            stream_type = (args.get("stream_type") or "").strip().lower()
+            duration_seconds = args.get("duration_seconds", 5)
+            max_events = args.get("max_events", 20)
+            if stream_type == "diagnostics":
+                node_id = args.get("node_id") or "*"
+                return api_sse(
+                    f"/api/federation/nodes/{quote(node_id, safe='*')}/diag/stream",
+                    duration_seconds=duration_seconds,
+                    max_events=max_events,
+                )
+            if stream_type == "node":
+                node_id = args.get("node_id")
+                if not node_id:
+                    return {"error": "node_id is required for node streams"}
+                return api_sse(
+                    f"/api/federation/nodes/{quote(node_id, safe='')}/stream",
+                    duration_seconds=duration_seconds,
+                    max_events=max_events,
+                )
+            if stream_type == "task":
+                task_id = args.get("task_id")
+                if not task_id:
+                    return {"error": "task_id is required for task streams"}
+                return api_sse(
+                    f"/api/agent/tasks/{quote(task_id, safe='')}/events",
+                    duration_seconds=duration_seconds,
+                    max_events=max_events,
+                )
+            return {"error": "stream_type must be one of: diagnostics, node, task"}
+        case "coherence_node_message_send":
+            body = {
+                "to_node": args.get("to_node_id"),
+                "type": args.get("type", "text"),
+                "text": args["text"],
+                "payload": args.get("payload", {}),
+            }
+            return api_post(f"/api/federation/nodes/{quote(args['from_node_id'], safe='')}/messages", body)
+        case "coherence_node_messages":
+            return api_get(f"/api/federation/nodes/{quote(args['node_id'], safe='')}/messages", {
+                "since": args.get("since"),
+                "unread_only": args.get("unread_only", True),
+                "limit": args.get("limit", 50),
+            })
         # Tasks
         case "coherence_list_tasks":
             params = {

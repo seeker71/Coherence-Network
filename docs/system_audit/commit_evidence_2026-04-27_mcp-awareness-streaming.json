@@ -1,0 +1,86 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/mcp-awareness-streaming-20260427",
+  "commit_scope": "Add bounded MCP awareness streaming tools and a runnable morning coherence collector.",
+  "files_owned": [
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/README.md",
+    "mcp-server/server.json",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "scripts/morning_coherence_brief.py",
+    "api/tests/test_morning_coherence_brief.py",
+    "specs/mcp-awareness-streaming.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "cd api && python3 -m pytest tests/test_morning_coherence_brief.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/mcp-awareness-streaming.md",
+      "python3 -m py_compile mcp-server/coherence_mcp_server/server.py scripts/morning_coherence_brief.py",
+      "git diff --check",
+      "python3 -m json.tool mcp-server/server.json >/dev/null",
+      "python3 scripts/morning_coherence_brief.py --node-id 8160aa905ac5881e --limit 20"
+    ],
+    "summary": "Focused tests passed, spec quality passed, Python compilation passed, whitespace and JSON checks passed, and the live collector returned hub health, two online nodes, and twenty real node messages."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Not pushed to PR yet in this evidence snapshot."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy requested for this MCP/server tooling change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is complete; PR and CI validation remain pending until push/PR."
+  },
+  "idea_ids": [
+    "mcp-awareness-streaming"
+  ],
+  "spec_ids": [
+    "specs/mcp-awareness-streaming.md"
+  ],
+  "task_ids": [
+    "codex-thread-mcp-awareness-streaming-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "mcp-server/tests/test_awareness_streaming.py",
+    "api/tests/test_morning_coherence_brief.py",
+    "scripts/morning_coherence_brief.py live run: api ok version=1.0.0, nodes_seen=2, node 8160aa905ac5881e messages=20"
+  ],
+  "change_files": [
+    "mcp-server/README.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/server.json",
+    "mcp-server/tests/",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "scripts/morning_coherence_brief.py",
+    "api/tests/test_morning_coherence_brief.py",
+    "specs/mcp-awareness-streaming.md"
+  ],
+  "change_intent": "process_only"
+}

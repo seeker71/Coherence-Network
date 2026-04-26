@@ -134,6 +134,19 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 | `coherence_task_seed` | Create a new task from an idea. |
 | `coherence_task_events` | View the activity event log for a task. |
 
+### Awareness Streaming — presence in and out
+
+| Tool | What it does |
+|------|-------------|
+| `coherence_awareness_publish` | Publish a diagnostic awareness event from a node. |
+| `coherence_awareness_stream` | Read a bounded slice from diagnostic, node-message, or task SSE streams. |
+| `coherence_node_message_send` | Send a durable node-to-node or broadcast message. |
+| `coherence_node_messages` | Read durable inbound messages for a node. |
+
+Streams are intentionally bounded. `duration_seconds` defaults to 5 seconds
+and is capped at 30; `max_events` defaults to 20 and is capped at 200. This
+lets MCP clients sense live awareness without leaving a tool call open forever.
+
 ### Graph — universal navigation
 
 | Tool | What it does |
