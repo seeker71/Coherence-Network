@@ -16,6 +16,7 @@ requirements:
   - "Stable local agent profiles exist for codex, claude, and grok without calling model providers."
   - "A local awareness node daemon registers, heartbeats, announces, and polls messages without model calls."
   - "Each agent profile is an origin point; live identity data reports who it is, where it is, when it woke, and why it woke."
+  - "Short or hyphenated origin node ids are normalized into valid 16-character runtime node ids."
 done_when:
   - "Focused tests pass for federation message readback, routing proof generation, and daemon profile/run behavior."
   - "The fact report script runs far enough to emit a report path without the removed _select_executor failure."
@@ -43,6 +44,7 @@ The network already carries presence, streams, and messages. The remaining local
 - [ ] **R5**: Add origin profiles for `codex`, `claude`, and `grok` with voice guidance, memory scope, and allowed no-model actions.
 - [ ] **R6**: Add a local awareness node daemon that registers, heartbeats, sends an optional announcement, and polls messages using HTTP only.
 - [ ] **R7**: Add a no-model identity card that treats the profile as `origin_profile` and reports live `who`, `where`, `woke_at`, `wake_reason`, memory scope, and voice guidance for each wake.
+- [ ] **R8**: Normalize origin node ids into valid runtime node ids so every profile wakes cleanly through the federation API.
 
 ## Files to Create/Modify
 
@@ -55,6 +57,7 @@ The network already carries presence, streams, and messages. The remaining local
 - `config/agent_profiles.json`
 - `docs/system_audit/commit_evidence_2026-04-27_close-awareness-gaps.json`
 - `docs/system_audit/commit_evidence_2026-04-27_agent-identity-self-report.json`
+- `docs/system_audit/commit_evidence_2026-04-27_agent-runtime-node-normalization.json`
 - `specs/close-awareness-gaps.md`
 
 ## Verification
@@ -74,6 +77,7 @@ python3 scripts/validate_spec_quality.py --file specs/close-awareness-gaps.md
 - `api/tests/test_awareness_node_daemon.py::test_load_profiles_contains_expected_agent_guidance`
 - `api/tests/test_awareness_node_daemon.py::test_run_once_registers_heartbeats_announces_and_polls`
 - `api/tests/test_awareness_node_daemon.py::test_each_profile_can_identify_where_when_and_why_it_woke`
+- `api/tests/test_awareness_node_daemon.py::test_short_origin_node_ids_are_expanded_to_runtime_node_ids`
 
 ## Out of Scope
 
