@@ -131,6 +131,13 @@ class LibreTranslateBackend:
     def _translate(self, text: str, source_lang: str, target_lang: str) -> str:
         if not text.strip():
             return text
+        if len(text) > 3500:
+            chunks = re.split(r"(\n\s*\n)", text)
+            translated_chunks = [
+                self._translate(part, source_lang, target_lang) if part.strip() else part
+                for part in chunks
+            ]
+            return "".join(translated_chunks)
         body: dict[str, Any] = {
             "q": text,
             "source": source_lang,

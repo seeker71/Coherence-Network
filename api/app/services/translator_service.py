@@ -192,6 +192,13 @@ def attune_from_anchor(
         target_lang=target_lang,
         glossary_prompt=glossary,
     )
+    if (
+        target_lang != anchor.lang
+        and (title or "") == (anchor.content_title or "")
+        and (desc or "") == (anchor.content_description or "")
+        and (md or "") == (anchor.content_markdown or "")
+    ):
+        return None
     rec = _cache.write_view(
         entity_type=entity_type,
         entity_id=entity_id,

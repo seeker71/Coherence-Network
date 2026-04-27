@@ -1,10 +1,12 @@
 {
   "date": "2026-04-27",
-  "thread_branch": "codex/vision-i18n-20260427",
+  "thread_branch": "codex/vision-i18n-live-hardening-20260427",
   "commit_scope": "Improve /vision and concept-page i18n for restored fallback content and missing concept language views.",
   "files_owned": [
     "api/app/routers/concepts.py",
     "api/app/services/idea_hierarchy.py",
+    "api/app/services/translator_backends.py",
+    "api/app/services/translator_service.py",
     "api/tests/test_on_demand_attunement.py",
     "web/app/vision/page.tsx",
     "web/app/vision/[conceptId]/page.tsx",
@@ -20,7 +22,7 @@
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
     ],
-    "summary": "Focused on-demand attunement tests passed, including the new no-views concept case. The CI-failing super-idea rollup tests passed after restoring the missing update_idea binding. The Next.js production build passed. A local German /vision render showed localized restored fallback content and preserved lang=de on concept links. Follow-through was clean and the local PR guard passed after seeding the isolated verifier DB with lc-pulse."
+    "summary": "Focused on-demand attunement tests passed, including the new no-views concept case. The CI-failing super-idea rollup tests passed after restoring the missing update_idea binding. The Next.js production build passed. A local German /vision render showed localized restored fallback content and preserved lang=de on concept links. Follow-through was clean and the local PR guard passed after seeding the isolated verifier DB with lc-pulse. After live verification exposed an unchanged English machine view, translator fallback was hardened to chunk long text and reject unchanged target-language machine views."
   },
   "ci_validation": {
     "status": "pending",
@@ -73,6 +75,8 @@
   "change_files": [
     "api/app/routers/concepts.py",
     "api/app/services/idea_hierarchy.py",
+    "api/app/services/translator_backends.py",
+    "api/app/services/translator_service.py",
     "api/tests/test_on_demand_attunement.py",
     "web/app/vision/page.tsx",
     "web/app/vision/[conceptId]/page.tsx"
