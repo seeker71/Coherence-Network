@@ -6,6 +6,10 @@ work_type: research
 pillar: foundation
 specs:
   - [knowledge-resonance-engine](../specs/knowledge-resonance-engine.md)
+  - [agent-memory-system](../specs/agent-memory-system.md)
+  - [living-signal-layer](../specs/living-signal-layer.md)
+  - [source-artifact-sensing-graph-integration](../specs/source-artifact-sensing-graph-integration.md)
+  - [gitnexus-integration-experiment](../specs/gitnexus-integration-experiment.md)
 ---
 
 # Knowledge and Resonance
