@@ -2,6 +2,10 @@
 idea_id: knowledge-and-resonance
 status: draft
 source:
+  - file: docs/integration/gitnexus-integration-experiment.md
+    symbols: [setup steps, agent contract, decision criteria]
+  - file: scripts/measure_gitnexus_value.py
+    symbols: [collect_window(), render_report(), WindowMetrics]
   - file: mcp-server/coherence_mcp_server/server.py
     symbols: [MCP server entrypoint — sidecar registration target]
   - file: specs/source-artifact-sensing-graph-integration.md
