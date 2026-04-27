@@ -146,3 +146,14 @@ else
 fi
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
+
+# GitNexus sidecar (per specs/gitnexus-integration-experiment.md). Non-blocking:
+# any failure is logged and the deploy still succeeds. The trial's spec
+# explicitly counts install/staleness incidents as data, not setup bugs.
+INSTALL_GITNEXUS="${COMPOSE_ROOT}/install-gitnexus.sh"
+if [[ -x "$INSTALL_GITNEXUS" ]]; then
+  REPO_DIR="$REPO_DIR" COMPOSE_ROOT="$COMPOSE_ROOT" LOG_FILE="$LOG_FILE" \
+    "$INSTALL_GITNEXUS" || log "gitnexus: install script returned non-zero (deploy continues)"
+else
+  log "gitnexus: install script not present at $INSTALL_GITNEXUS (skipped)"
+fi
