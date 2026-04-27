@@ -1,0 +1,98 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/vision-i18n-no-english-fallback-20260427",
+  "commit_scope": "Prevent non-English concept pages from rendering English story bodies while translation is pending.",
+  "files_owned": [
+    "api/app/routers/concepts.py",
+    "api/tests/test_on_demand_attunement.py",
+    "web/app/vision/[conceptId]/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "docs/system_audit/commit_evidence_2026-04-27_vision-i18n-no-english-fallback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+      "cd web && npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-no-english-fallback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "Focused API tests passed with pending non-English concepts returning no English story body. The commit evidence validated, diff whitespace passed, the Next.js production build passed, follow-through found no stale Codex PRs, and the local PR guard passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public verification for /vision/lc-pulse?lang=de and /api/concepts/lc-pulse?lang=de."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; remote PR and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "vision-i18n-no-english-fallback"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "codex-thread-vision-i18n-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Live GET /api/concepts/lc-pulse?lang=de returned language_meta.pending=false with English name and story_content before hardening had deployed.",
+    "Live GET /vision?lang=de rendered localized restored content but still exposed at least one English concept string in the payload."
+  ],
+  "change_files": [
+    "api/app/routers/concepts.py",
+    "api/tests/test_on_demand_attunement.py",
+    "web/app/vision/[conceptId]/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When a visitor requests a non-English concept page and the target language view is missing or still being attuned, the API no longer returns the English story body and the web page shows a localized pending panel instead of English prose.",
+    "public_endpoints": [
+      "GET /vision/lc-pulse?lang=de",
+      "GET /api/concepts/lc-pulse?lang=de"
+    ],
+    "test_flows": [
+      "Focused API on-demand attunement tests",
+      "Next.js production build",
+      "Production deploy verification"
+    ]
+  }
+}
