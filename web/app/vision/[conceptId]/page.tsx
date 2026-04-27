@@ -31,6 +31,12 @@ import { ReactionBar } from "@/components/ReactionBar";
 
 export const dynamic = "force-dynamic";
 
+function localizedHref(href: string, lang: LocaleCode): string {
+  if (lang === DEFAULT_LOCALE || href.startsWith("http") || href.startsWith("#")) return href;
+  const joiner = href.includes("?") ? "&" : "?";
+  return `${href}${joiner}lang=${lang}`;
+}
+
 /* ── Data fetching ─────────────────────────────────────────────────── */
 
 async function fetchConcept(id: string, lang?: LocaleCode): Promise<Concept | null> {
@@ -270,7 +276,7 @@ export default async function VisionConceptPage({
 
         {/* Breadcrumb */}
         <nav className="text-sm text-stone-500 mb-6 flex items-center gap-2" aria-label="breadcrumb">
-          <Link href="/vision" className="hover:text-amber-400/80 transition-colors">{t("vision.breadcrumbRoot")}</Link>
+          <Link href={localizedHref("/vision", lang)} className="hover:text-amber-400/80 transition-colors">{t("vision.breadcrumbRoot")}</Link>
           <span className="text-stone-700">/</span>
           <span className="text-stone-300">{concept.name}</span>
         </nav>
@@ -361,10 +367,10 @@ export default async function VisionConceptPage({
             <div className="max-w-3xl space-y-4 pt-8">
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
               <div className="flex gap-4 text-sm pt-4">
-                <Link href="/vision" className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.backToRoot")}</Link>
-                <Link href="/vision/realize" className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.livingIt")}</Link>
-                <Link href="/vision/join" className="text-stone-500 hover:text-teal-300/80 transition-colors">{t("vision.join")}</Link>
-                <Link href={`/vision/${conceptId}/edit`} className="text-stone-600 hover:text-amber-300/60 transition-colors ml-auto">{t("vision.editStory")}</Link>
+                <Link href={localizedHref("/vision", lang)} className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.backToRoot")}</Link>
+                <Link href={localizedHref("/vision/realize", lang)} className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.livingIt")}</Link>
+                <Link href={localizedHref("/vision/join", lang)} className="text-stone-500 hover:text-teal-300/80 transition-colors">{t("vision.join")}</Link>
+                <Link href={localizedHref(`/vision/${conceptId}/edit`, lang)} className="text-stone-600 hover:text-amber-300/60 transition-colors ml-auto">{t("vision.editStory")}</Link>
               </div>
             </div>
           </>

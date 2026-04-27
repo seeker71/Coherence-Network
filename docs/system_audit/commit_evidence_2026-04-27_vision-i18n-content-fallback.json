@@ -1,0 +1,95 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/vision-i18n-20260427",
+  "commit_scope": "Improve /vision and concept-page i18n for restored fallback content and missing concept language views.",
+  "files_owned": [
+    "api/app/routers/concepts.py",
+    "api/app/services/idea_hierarchy.py",
+    "api/tests/test_on_demand_attunement.py",
+    "web/app/vision/page.tsx",
+    "web/app/vision/[conceptId]/page.tsx",
+    "docs/system_audit/commit_evidence_2026-04-27_vision-i18n-content-fallback.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+      "cd api && python3 -m pytest tests/test_super_idea_rollup.py -q",
+      "cd web && npm ci --allow-git=none && npm run build",
+      "curl -fsSL http://localhost:3127/vision?lang=de ... assert Der Puls, Morgen-Einstimmung, Ganzheit, localized /vision/lc-pulse?lang=de links",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "Focused on-demand attunement tests passed, including the new no-views concept case. The CI-failing super-idea rollup tests passed after restoring the missing update_idea binding. The Next.js production build passed. A local German /vision render showed localized restored fallback content and preserved lang=de on concept links. Follow-through was clean and the local PR guard passed after seeding the isolated verifier DB with lc-pulse."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and deploy contract verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public verification for https://coherencycoin.com/vision?lang=de and concept pages such as /vision/lc-pulse?lang=de."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "vision-i18n-content-fallback"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "codex-thread-vision-i18n-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Live /api/concepts/lc-pulse?lang=de returned language_meta.pending=true and English story_content before this fix.",
+    "Local /vision?lang=de render contained Der Puls, Morgen-Einstimmung, Ganzheit, and /vision/lc-pulse?lang=de."
+  ],
+  "change_files": [
+    "api/app/routers/concepts.py",
+    "api/app/services/idea_hierarchy.py",
+    "api/tests/test_on_demand_attunement.py",
+    "web/app/vision/page.tsx",
+    "web/app/vision/[conceptId]/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The /vision page honors lang query parameters, preserves locale through vision navigation, renders German fallback content instead of English restored fallback content, and concept pages with no existing language views create an anchor plus requested translated view instead of serving English story content.",
+    "public_endpoints": [
+      "GET /vision?lang=de",
+      "GET /vision/lc-pulse?lang=de",
+      "GET /api/concepts/lc-pulse?lang=de"
+    ],
+    "test_flows": [
+      "Local German /vision render",
+      "Focused API on-demand attunement tests",
+      "Production build"
+    ]
+  }
+}

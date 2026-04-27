@@ -106,6 +106,24 @@ async def test_missing_view_enqueues_attunement(stub_backend):
 
 
 @pytest.mark.asyncio
+async def test_no_views_creates_anchor_and_returns_attuned_content(stub_backend):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        cid = await _create_concept(c)
+        await c.patch(f"/api/concepts/{cid}/story", json={"story_content": "# Anchor\n\nAnchor body."})
+
+        r = await c.get(f"/api/concepts/{cid}?lang=de")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language_meta"]["lang"] == "de"
+        assert body["language_meta"]["pending"] is False
+        assert body["name"].startswith("[de] ")
+        assert body["story_content"].startswith("[de] ")
+
+        rows = _tcache.all_canonical_views("concept", cid)
+        assert {v.lang for v in rows} == {"en", "de"}
+
+
+@pytest.mark.asyncio
 async def test_attunement_carries_glossary(stub_backend):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         cid = await _create_concept(c)

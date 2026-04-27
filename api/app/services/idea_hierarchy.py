@@ -136,7 +136,7 @@ def get_rollup_progress(idea_id: str) -> RollupProgress | None:
 
 def validate_super_idea(idea_id: str) -> tuple[RollupProgress | None, str | None]:
     from app.services.idea_service import (
-        _read_ideas, _resolve_idea_raw, _write_ideas, _write_single_idea,
+        _read_ideas, _resolve_idea_raw, _write_ideas, _write_single_idea, update_idea,
     )  # noqa: F401
     """Check rollup criteria for a super-idea and auto-update manifestation_status.
 
@@ -176,5 +176,4 @@ def validate_super_idea(idea_id: str) -> tuple[RollupProgress | None, str | None
         progress = get_rollup_progress(idea_id)
 
     return progress, None
-
 
