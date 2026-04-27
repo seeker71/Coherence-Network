@@ -1,0 +1,86 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/vision-i18n-pending-summary-20260427",
+  "commit_scope": "Localize pending non-English concept hero summaries for core Living Collective concepts.",
+  "files_owned": [
+    "api/app/routers/concepts.py",
+    "api/tests/test_on_demand_attunement.py",
+    "docs/system_audit/commit_evidence_2026-04-27_vision-i18n-pending-summary.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-pending-summary.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "Focused API tests passed, including pending German title glossary behavior. Evidence validation and diff whitespace passed, follow-through found no stale Codex PRs, and the local PR guard passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending production verification for /api/concepts/lc-pulse?lang=de and /vision/lc-pulse?lang=de."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and remote validation remain pending."
+  },
+  "idea_ids": [
+    "vision-i18n-pending-summary"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "codex-thread-vision-i18n-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "After PR #1254 deployed, live /api/concepts/lc-pulse?lang=de returned pending=true and story_content=null, but still returned English name and description.",
+    "Live /vision/lc-pulse?lang=de still exposed The Pulse and One truth in the hero."
+  ],
+  "change_files": [
+    "api/app/routers/concepts.py",
+    "api/tests/test_on_demand_attunement.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Pending German core concept pages use glossary-backed German names and descriptions while hiding untranslated English story content.",
+    "public_endpoints": [
+      "GET /api/concepts/lc-pulse?lang=de",
+      "GET /vision/lc-pulse?lang=de"
+    ],
+    "test_flows": [
+      "Focused API on-demand attunement tests",
+      "Production deploy verification"
+    ]
+  }
+}
