@@ -82,6 +82,19 @@ def _glossary_title(title: str, lang: str) -> str | None:
     return table.get(title.strip())
 
 
+def _write_anchor_view_from_concept(concept_id: str, concept: dict[str, Any]):
+    return translation_cache.write_view(
+        entity_type="concept",
+        entity_id=concept_id,
+        lang=translator_service.DEFAULT_LOCALE,
+        content_title=str(concept.get("name") or concept_id),
+        content_description=str(concept.get("description") or ""),
+        content_markdown=str(concept.get("story_content") or concept.get("details") or ""),
+        author_type=translation_cache.AUTHOR_TYPE_ORIGINAL_HUMAN,
+        notes="Auto-created from legacy concept fields so on-demand i18n has an anchor.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
@@ -679,6 +692,34 @@ async def get_concept(
         if lang and lang != translator_service.DEFAULT_LOCALE:
             if not translator_service.is_supported(lang):
                 raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=lang))
+            if translator_service.has_backend():
+                try:
+                    anchor = _write_anchor_view_from_concept(concept_id, concept)
+                    translated = translator_service.attune_from_anchor(
+                        entity_type="concept",
+                        entity_id=concept_id,
+                        target_lang=lang,
+                    )
+                    if translated is not None:
+                        concept["name"] = translated.content_title or concept.get("name")
+                        concept["description"] = translated.content_description or concept.get("description")
+                        concept["story_content"] = translated.content_markdown or concept.get("story_content")
+                        concept["language_meta"] = {
+                            "lang": lang,
+                            "is_anchor": False,
+                            "stale": False,
+                            "available_langs": sorted([translator_service.DEFAULT_LOCALE, lang]),
+                            "pending": False,
+                            "anchor": {
+                                "lang": anchor.lang,
+                                "author_type": anchor.author_type,
+                                "updated_at": anchor.updated_at.isoformat() if anchor.updated_at else None,
+                                "content_hash": anchor.content_hash,
+                            },
+                        }
+                        return concept
+                except Exception:
+                    pass
             # Snippet-fallback: even before the background attunement lands,
             # translate the name + description synchronously so a first-time
             # visitor in this language doesn't see English content. The
