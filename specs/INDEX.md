@@ -1,8 +1,8 @@
 # Spec Index
 
-> 86 specs (79 done, 6 draft, 1 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 89 specs (79 done, 7 draft, 3 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (20 ideas → 86 specs)
+## By Idea (22 ideas → 89 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -88,8 +88,9 @@
 - [cli-binary-name-conflict](cli-binary-name-conflict.md) — rename `cc` → `coh`, remove macOS clang conflict
 - [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
 
-### knowledge-and-resonance (4 specs)
+### knowledge-and-resonance (5 specs)
 - [agent-memory-system](agent-memory-system.md) — write/manage/read memory loop: moments of aliveness, consolidation at rest, retrieval as composition
+- [gitnexus-integration-experiment](gitnexus-integration-experiment.md) — sidecar GitNexus MCP server for call-graph awareness; bounded 30-task trial with adopt/drop/pivot decision
 - [knowledge-resonance-engine](knowledge-resonance-engine.md) — concept layer, belief resonance, discovery feed
 - [living-signal-layer](living-signal-layer.md) — sense signals as a changing field, not fixed categories
 - [source-artifact-sensing-graph-integration](source-artifact-sensing-graph-integration.md) — source artifacts as first-class graph nodes with provenance
@@ -124,6 +125,12 @@
 
 ### creator-economy-promotion (1 spec)
 - [creator-economy-promotion](creator-economy-promotion.md) — creator landing page, proof card API, featured assets + community tag filtering
+
+### close-awareness-gaps (1 spec)
+- [close-awareness-gaps](close-awareness-gaps.md) — close gaps in observability/awareness across the pipeline
+
+### mcp-awareness-streaming (1 spec)
+- [mcp-awareness-streaming](mcp-awareness-streaming.md) — MCP tools for federation diagnostic publish/subscribe + bounded SSE streams
 
 ### living-collective-vision (5 specs)
 - [db-backed-vision-aligned-content](db-backed-vision-aligned-content.md) — vision-aligned concept content backed by DB
