@@ -169,8 +169,8 @@ async def test_no_backend_no_attunement():
         })
         r = await c.get(f"/api/concepts/{cid}?lang=de")
         assert r.status_code == 200
-        # Serves anchor, never attunes
         assert r.json()["language_meta"]["pending"] is True
+        assert r.json()["story_content"] is None
         # No view was written
         rows = _tcache.all_canonical_views("concept", cid)
         assert all(v.lang != "de" for v in rows)
