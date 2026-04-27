@@ -9,6 +9,7 @@ on:
       - 'pulse/**'
       - 'deploy/hostinger/**'
       - 'scripts/verify_web_api_deploy.sh'
+      - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
   workflow_dispatch:
     inputs:
@@ -54,7 +55,8 @@ jobs:
       - name: Sync tracked deploy script to VPS
         run: |
           scp -i ~/.ssh/id_hostinger deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
-          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
+          scp -i ~/.ssh/id_hostinger deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
+          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
 
       - name: Roll forward VPS
         run: |
