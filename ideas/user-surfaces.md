@@ -42,6 +42,11 @@ The platform has rich data (ideas, specs, tasks, contributions, coherence scores
 
 - **web-news-resonance-page**: `/news` page showing a daily resonance feed matched to ideas with relevance scores. External news articles and events are matched against active ideas to surface opportunities and threats. Helps contributors understand the broader context of their work.
 - **ux-homepage-readability**: Hero text nearly invisible on dark background. Warm amber palette (`#D4A574` on `#1a1a2e`) gives approximately 3.2:1 contrast ratio -- below the 4.5:1 WCAG AA minimum. Fix by either lightening the text or adding a semi-transparent background behind text blocks.
+- **ux-contributor-experience**: unshipped attempt — ux contributor experience (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **ux-my-portfolio**: unshipped attempt — ux my portfolio (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **ux-resonance-empty-state**: unshipped attempt — ux resonance empty state (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **ux-value-lineage-visualization**: unshipped attempt — ux value lineage visualization (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **web-skeleton**: unshipped attempt — web skeleton (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
 
 ## Open Questions
 

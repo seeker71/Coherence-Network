@@ -48,3 +48,7 @@ The pipeline fails in multiple ways: provider timeouts, executor crashes, valida
 - **silent-failure-detection**: 9 failed tasks with `error_summary=None`. The runner must capture stderr, exit code, timeout info, and partial output for every failure. Silent failures are the most expensive kind -- you pay the CC cost and learn nothing.
 - **task-deduplication**: 799 spec tasks for 147 ideas. Before creating a new task, check completed_tasks table. If a task with the same idea_id and phase already exists and succeeded, skip it. If it failed, check error_category before retrying.
 - **data-driven-timeout-resume**: Replace fixed 300s timeouts with measurement-derived ones. Track P50, P90, P99 execution times per provider per task type. Set timeout at 2x P90. Resume from partial work on timeout instead of restarting.
+- **ci-pipeline**: unshipped attempt — ci pipeline (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **pipeline-deploy-phase**: unshipped attempt — pipeline deploy phase (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **runner-pipeline-health**: unshipped attempt — runner pipeline health (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **runner-self-update**: unshipped attempt — runner self update (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)

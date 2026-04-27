@@ -45,6 +45,8 @@ The original schema had 10+ separate tables (ideas, specs, tasks, contributors, 
 - **universal-node-edge-layer**: Replace 10+ tables with `nodes` (`id`, `type`, `name`, `properties` JSONB) + `edges` (`from_id`, `to_id`, `type`, `strength`). PostgreSQL JSONB chosen over Neo4j for operational simplicity -- one database to manage, not two. Graph queries use recursive CTEs instead of a separate graph database.
 - **concept-layer-foundation**: 184 universal concepts, 46 relationship types, 53 axes from the Living Codex ontology. Concepts are nodes; relationships are edges. The concept layer provides the vocabulary for coherence scoring -- how well does an idea align with the platform's conceptual framework?
 - **service-contract-registry**: `ServiceSpec`, `ServiceRef`, `IService` protocol with dependency validation and health reporting. Every service declares what it needs and what it provides. The registry validates that all dependencies are satisfied before startup.
+- **data-hygiene-db-monitoring**: unshipped attempt — data hygiene db monitoring (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **data-retention-summarization**: unshipped attempt — data retention summarization (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
 
 ## Open Questions
 

@@ -57,3 +57,5 @@ A platform that lives only at one URL has a ceiling on reach. Contributors are o
 - **presence-modularization**: Modular public presences — shared fragments + build script.
 - **community-project-funder-match**: Match community projects with small funders.
 - **oss-interface-alignment**: Align OSS intelligence interfaces with runtime.
+- **creator-economy-bridge**: unshipped attempt — creator economy bridge (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **geolocation-awareness-geocoding**: unshipped attempt — geolocation awareness geocoding (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
