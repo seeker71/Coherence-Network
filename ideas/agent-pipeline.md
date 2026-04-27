@@ -42,3 +42,6 @@ Manual software development does not scale. A single human cannot spec, implemen
 - **split-review-into-phases**: Current review tries to verify code quality AND production deployment in one step, resulting in 60-80% failure rate. Split into: (1) code-review -- static analysis and spec compliance, (2) deploy -- push code to production environment, (3) verify-production -- confirm endpoints respond correctly, data persists, no regressions.
 - **pipeline-data-flow-fixes**: Phase auto-advance fires before push confirmation, causing tasks to advance before code is actually on the remote. Push failures are hardcoded as `execution_error` instead of the more specific `push_failed`, making diagnostics harder.
 - **validation-requires-production**: Review phase asks the provider to verify production behavior, but the provider cannot deploy. The runner itself must check endpoints after deploy -- providers verify code quality, the runner verifies production state.
+- **agent-sse-control-channel**: unshipped attempt — agent sse control channel (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **spec-verification-upgrade**: unshipped attempt — spec verification upgrade (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **test-backlog-cursor**: unshipped attempt — test backlog cursor (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)

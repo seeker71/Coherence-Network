@@ -36,3 +36,4 @@ Developer friction compounds. If tests are slow, developers skip them. If databa
 
 - **external-repo-milestone**: Create `coherence-external-proof` repo to demonstrate external enablement. The repo uses the public API to create ideas, record contributions, track lifecycle stages, and measure coherence scores for a completely unrelated project. If the platform cannot manage someone else's ideas, it is not ready for adoption.
 - **db-error-tracking**: Health endpoint reports `schema_ok` boolean. Startup database errors logged at ERROR level (not WARNING or INFO). Missing tables recorded as friction events with table name, expected schema, and timestamp. This turns invisible infrastructure failures into actionable alerts.
+- **documentation-developer-experience**: unshipped attempt — documentation developer experience (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)

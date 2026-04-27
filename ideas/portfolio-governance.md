@@ -55,3 +55,4 @@ With 338 ideas in the system, the signal-to-noise ratio collapses unless every i
 - **grant-belief-graph**: Belief graph — per-user and per-contributor knowledge structure.
 - **grant-source-ingestion**: Grant source document ingestion — extract, normalize, operationalize.
 - **validation-quality-gates**: Validation quality gates that separate real value from noise.
+- **validation-categories**: unshipped attempt — validation categories (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)

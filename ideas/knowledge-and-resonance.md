@@ -75,3 +75,5 @@ Without a concept layer, every idea is a bag of words. Similarity is keyword mat
 - **codex-digital-signatures**: ECDSA verification for concept authenticity.
 - **codex-llm-pipeline**: LLM concept processing pipeline — multi-provider AI analysis.
 - **codex-image-analysis**: Visual concept extraction — analyze images for concept networks.
+- **concept-as-idea-registration**: unshipped attempt — concept as idea registration (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **ucore-daily-engagement-skill**: unshipped attempt — ucore daily engagement skill (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)

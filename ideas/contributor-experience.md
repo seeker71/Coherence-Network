@@ -37,6 +37,8 @@ New contributors arrive and see a "Share your idea" prompt but have no context a
 
 - **ux-new-contributor-orientation**: Landing page needs context -- what is Coherence Network, what are ideas for, what does CC mean, why participate. "How it works" section (Share -> Grow -> Value) needs real examples, not abstract descriptions. Should show actual ideas that went from inception to completion with real CC payouts.
 - **identity-37-providers**: 37 identity providers across 6 categories (Social, Dev, Crypto/Web3, Professional, Identity, Platform). Contributors attributed via any existing account without registering. GitHub, Twitter, Discord, Ethereum wallet, LinkedIn -- any existing identity is sufficient.
+- **contributor-discovery**: unshipped attempt — contributor discovery (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **contributor-messaging**: unshipped attempt — contributor messaging (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
 
 ## Open Questions
 

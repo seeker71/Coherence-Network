@@ -40,3 +40,5 @@ Without a common unit of account, you cannot compare the cost of writing a spec 
 ## Absorbed Ideas
 
 - **market-driven-exchange-rates**: Replace hardcoded 1 ETH = 1000 CC with oracle-fed pricing. Fetch live prices from CoinGecko/Chainlink. CC value tracks real contribution value, not crypto speculation. Exchange rates update at most daily to prevent gaming.
+- **attention-economy-cc-flow**: unshipped attempt — attention economy cc flow (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **cc-flow-on-asset-use**: unshipped attempt — cc flow on asset use (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
