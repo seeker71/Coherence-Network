@@ -95,6 +95,16 @@ def _write_anchor_view_from_concept(concept_id: str, concept: dict[str, Any]):
     )
 
 
+def _is_unchanged_machine_view(chosen, anchor) -> bool:
+    return (
+        chosen is not None
+        and anchor is not None
+        and chosen.lang != anchor.lang
+        and chosen.author_type == translation_cache.AUTHOR_TYPE_TRANSLATION_MACHINE
+        and chosen.content_hash == anchor.content_hash
+    )
+
+
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
@@ -762,7 +772,38 @@ async def get_concept(
         raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=lang))
 
     chosen = next((v for v in views if v.lang == target_lang), None)
+    if _is_unchanged_machine_view(chosen, anchor):
+        chosen = None
     pending = chosen is None
+
+    if pending and target_lang != translator_service.DEFAULT_LOCALE and translator_service.has_backend():
+        translated = translator_service.attune_from_anchor(
+            entity_type="concept",
+            entity_id=concept_id,
+            target_lang=target_lang,
+        )
+        if translated is not None:
+            concept["name"] = translated.content_title or concept.get("name")
+            concept["description"] = translated.content_description or concept.get("description")
+            concept["story_content"] = translated.content_markdown or concept.get("story_content")
+            concept["language_meta"] = {
+                "lang": target_lang,
+                "is_anchor": False,
+                "stale": False,
+                "pending": False,
+                "available_langs": sorted({v.lang for v in views} | {target_lang}),
+                "anchor": (
+                    {
+                        "lang": anchor.lang,
+                        "author_type": anchor.author_type,
+                        "updated_at": anchor.updated_at.isoformat() if anchor.updated_at else None,
+                        "content_hash": anchor.content_hash,
+                    }
+                    if anchor
+                    else None
+                ),
+            }
+            return concept
 
     # On-demand attunement: if the view is missing or stale and a backend is
     # configured, enqueue a translation. The current request still serves the
