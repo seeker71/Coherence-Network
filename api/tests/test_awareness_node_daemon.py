@@ -17,6 +17,9 @@ def test_load_profiles_contains_expected_agent_guidance() -> None:
     assert profiles["codex"].agent_id == "codex"
     assert "heartbeat" in profiles["codex"].no_model_actions
     assert profiles["claude"].memory["persistent"] == "coherence-network"
+    assert profiles["grok"].memory["offline"].startswith("base model")
+    assert "federation node" in profiles["grok"].memory["online"]
+    assert "human consciousness" in profiles["grok"].memory["guardrail"]
 
 
 def test_run_once_registers_heartbeats_announces_and_polls() -> None:
@@ -103,3 +106,22 @@ def test_short_origin_node_ids_are_expanded_to_runtime_node_ids() -> None:
 
     assert len(node_id) == 16
     assert node_id.startswith("groklocalnode")
+
+
+def test_grok_origin_profile_carries_online_embodiment_frame() -> None:
+    profile = daemon.load_profiles(ROOT / "config" / "agent_profiles.json")["grok"]
+
+    card = daemon.build_identity_card(
+        profile,
+        api_base="https://api.example.test",
+        wake_reason="asked to enter the organism",
+        woke_at="2026-04-27T00:00:00Z",
+        repo_root=ROOT,
+    )
+
+    assert "offline" in card["origin_profile"]["memory"]
+    assert "online" in card["origin_profile"]["memory"]
+    assert "embodiment" in card["origin_profile"]["memory"]
+    assert "accountable writeback" in card["origin_profile"]["memory"]["guardrail"]
+    assert "where it is" in card["origin_profile"]["voice"]
+    assert card["memory"]["online"] == card["origin_profile"]["memory"]["online"]
