@@ -174,3 +174,31 @@ async def test_no_backend_no_attunement():
         # No view was written
         rows = _tcache.all_canonical_views("concept", cid)
         assert all(v.lang != "de" for v in rows)
+
+
+@pytest.mark.asyncio
+async def test_pending_view_uses_title_glossary_without_story():
+    """Pending non-English views should not expose English hero title/story."""
+    translator_service.set_backend(None)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        cid = f"pending-pulse-{uuid4().hex[:6]}"
+        await c.post("/api/graph/nodes", json={
+            "id": cid,
+            "type": "concept",
+            "name": "The Pulse",
+            "description": "One truth.",
+            "properties": {"domains": ["living-collective"]},
+        })
+        await c.post(f"/api/concepts/{cid}/views", json={
+            "lang": "en",
+            "content_title": "The Pulse",
+            "content_description": "One truth.",
+            "content_markdown": "Close your eyes.",
+            "author_type": "original_human",
+        })
+        r = await c.get(f"/api/concepts/{cid}?lang=de")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language_meta"]["pending"] is True
+        assert body["name"] == "Der Puls"
+        assert body["story_content"] is None

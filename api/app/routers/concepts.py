@@ -27,7 +27,17 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 _CONCEPT_NAME_GLOSSARY: dict[str, dict[str, str]] = {
     "de": {
+        "The Pulse": "Der Puls",
+        "Sensing": "Spüren",
+        "Attunement": "Einstimmung",
+        "Vitality": "Lebendigkeit",
         "Nourishing": "Nährend",
+        "Resonating": "Resonieren",
+        "Expressing": "Ausdruck",
+        "Spiraling": "Spiralen",
+        "Field Intelligence": "Feldintelligenz",
+        "Living Space": "Lebendiger Raum",
+        "The Network": "Das Netz",
         "Community": "Gemeinschaft",
         "Ritual": "Ritual",
         "Stillness": "Stille",
@@ -73,6 +83,23 @@ _CONCEPT_NAME_GLOSSARY: dict[str, dict[str, str]] = {
 }
 
 
+_CONCEPT_DESCRIPTION_GLOSSARY: dict[str, dict[str, str]] = {
+    "de": {
+        "lc-pulse": "Eine Wahrheit. Alles andere ist diese Wahrheit in verschiedenen Maßstäben. Die Zelle und das Feld gedeihen als eine Bewegung. Was Lebendigkeit verstärkt, ist resonant.",
+        "lc-sensing": "Das Feld fühlt sich fortwährend selbst. Jede Zelle sendet und empfängt. Bedürfnisse werden gespürt, bevor sie formuliert werden.",
+        "lc-attunement": "Das Feld hält seine eigene Stimmigkeit und spürt, welche Frequenzen harmonieren und welche Reibung erzeugen.",
+        "lc-vitality": "Lebenskraft wird nicht produziert; sie wird frei, wenn Störung sich löst.",
+        "lc-nourishing": "Alles, was erhält, zirkuliert wie Blut, Wasser im Boden und Nährstoffe in unterirdischen Netzen.",
+        "lc-resonating": "Berührung, Nähe, Gegenwart, Spiel, Stille und Einstimmung bilden das verbindende Gewebe des Feldes.",
+        "lc-expressing": "Der natürliche Überfluss von Lebendigkeit: machen, bauen, wachsen, singen, tanzen und hüten.",
+        "lc-spiraling": "Das Feld bewegt sich nicht linear durch Zeit, sondern spiralig durch Wiederkehr und höhere Frequenz.",
+        "lc-field-sensing": "Kollektive Intelligenz, harmonisches Ausbalancieren und Lernen: verteilt und zugleich ganz.",
+        "lc-v-living-spaces": "Schutz aus Frequenz und Fluss: Resonanzzonen statt Zimmer, Strukturen, die atmen und wachsen.",
+        "lc-network": "Ein Feld in einem Feld aus Feldern, in dem Gemeinschaften Frequenz, Nahrung und Intelligenz teilen.",
+    },
+}
+
+
 def _glossary_title(title: str, lang: str) -> str | None:
     """Look up a concept title in the LC glossary. Returns the translated
     term when found, else None (caller keeps the backend's output)."""
@@ -80,6 +107,11 @@ def _glossary_title(title: str, lang: str) -> str | None:
         return None
     table = _CONCEPT_NAME_GLOSSARY.get(lang) or {}
     return table.get(title.strip())
+
+
+def _glossary_description(concept_id: str, lang: str) -> str | None:
+    table = _CONCEPT_DESCRIPTION_GLOSSARY.get(lang) or {}
+    return table.get(concept_id)
 
 
 def _write_anchor_view_from_concept(concept_id: str, concept: dict[str, Any]):
@@ -752,10 +784,19 @@ async def get_concept(
                         concept["name"] = gloss
                     elif t_title:
                         concept["name"] = t_title
-                    if t_desc:
+                    gloss_desc = _glossary_description(concept_id, lang)
+                    if gloss_desc:
+                        concept["description"] = gloss_desc
+                    elif t_desc and t_desc != src_desc:
                         concept["description"] = t_desc
                 except Exception:
                     pass
+                gloss = _glossary_title(src_title, lang)
+                if gloss:
+                    concept["name"] = gloss
+                gloss_desc = _glossary_description(concept_id, lang)
+                if gloss_desc:
+                    concept["description"] = gloss_desc
             concept["language_meta"] = {
                 "lang": lang,
                 "is_anchor": False,
@@ -845,10 +886,19 @@ async def get_concept(
                     concept["name"] = gloss
                 elif t_title:
                     concept["name"] = t_title
-                if t_desc:
+                gloss_desc = _glossary_description(concept_id, target_lang)
+                if gloss_desc:
+                    concept["description"] = gloss_desc
+                elif t_desc and t_desc != src_desc:
                     concept["description"] = t_desc
             except Exception:
                 pass
+            gloss = _glossary_title(src_title, target_lang)
+            if gloss:
+                concept["name"] = gloss
+            gloss_desc = _glossary_description(concept_id, target_lang)
+            if gloss_desc:
+                concept["description"] = gloss_desc
         concept["story_content"] = None
 
     concept["language_meta"] = {
