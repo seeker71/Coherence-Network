@@ -764,6 +764,7 @@ async def get_concept(
                 "pending": True,
                 "anchor": None,
             }
+            concept["story_content"] = None
         return concept
 
     # Decide which view to return
@@ -848,6 +849,7 @@ async def get_concept(
                     concept["description"] = t_desc
             except Exception:
                 pass
+        concept["story_content"] = None
 
     concept["language_meta"] = {
         "lang": target_lang,

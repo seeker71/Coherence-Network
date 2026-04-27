@@ -212,7 +212,8 @@ export default async function VisionConceptPage({
   });
   const outgoing = relevantEdges.filter((e) => e.from === conceptId);
   const incoming = relevantEdges.filter((e) => e.to === conceptId);
-  const hasStory = !!concept.story_content;
+  const translationPending = lang !== DEFAULT_LOCALE && languageMeta?.pending === true;
+  const hasStory = !!concept.story_content && !translationPending;
 
   // Build a nameMap that covers every touch. Start with the LC concept
   // map (cheap — one list endpoint), then resolve every non-concept
@@ -376,8 +377,17 @@ export default async function VisionConceptPage({
           </>
         )}
 
+        {translationPending && (
+          <section className="max-w-3xl rounded-2xl border border-amber-500/20 bg-amber-500/10 p-6 text-stone-300">
+            <h2 className="text-xl font-light text-amber-200">{t("vision.translationPendingTitle")}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-stone-400">
+              {t("vision.translationPendingBody")}
+            </p>
+          </section>
+        )}
+
         {/* Structured mode (fallback when no story_content) */}
-        {!hasStory && (
+        {!hasStory && !translationPending && (
           <StructuredContent
             concept={concept}
             conceptId={conceptId}
