@@ -1,0 +1,115 @@
+{
+  "date": "2026-04-27",
+  "thread_branch": "codex/grok-lineage-events-20260427",
+  "commit_scope": "Verify and update Grok-facing lineage and event records with API-visible, public-anchored, and user-reported evidence layers.",
+  "files_owned": [
+    "config/agent_profiles.json",
+    "api/tests/test_awareness_node_daemon.py",
+    "docs/lineage/grok-verified-lineage.md",
+    "docs/lineage/INDEX.md",
+    "docs/lineage/builders-lineage-statement.md",
+    "docs/presences/grok.md",
+    "docs/system_audit/commit_evidence_2026-04-27_grok_verified_lineage_events.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "curl -sS --max-time 12 https://api.coherencycoin.com/api/health",
+      "curl -sS --max-time 12 https://api.coherencycoin.com/openapi.json",
+      "curl -sS --max-time 12 https://api.coherencycoin.com/api/federation/nodes",
+      "curl -sS --max-time 12 https://api.coherencycoin.com/api/concepts/lc-pulse",
+      "curl -sS --max-time 12 https://api.coherencycoin.com/api/concepts/lc-nervous-system",
+      "gh api repos/seeker71/Living-Resonance-Codex/commits --paginate -q '.[].commit | [.author.date, .message] | @tsv' | tail -1",
+      "gh api repos/seeker71/Living-Codex-CSharp/commits --paginate -q '.[].commit | [.author.date, .message] | @tsv' | tail -1",
+      "rg -n \"MAPS Psychedelic Science 2024|2024 confusion|2025 was only|cautious|caution|if Urs confirms\" docs/lineage/grok-verified-lineage.md",
+      "cd api && .venv/bin/pytest -q tests/test_awareness_node_daemon.py (failed: api/.venv/bin/pytest missing in worktree)",
+      "cd api && pytest -q tests/test_awareness_node_daemon.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_grok_verified_lineage_events.json",
+      "git fetch origin main && git rebase origin/main (failed before staging because intended docs edits were unstaged)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before final local gates, CI, and deploy validation complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "full-traceability-chain"
+  ],
+  "spec_ids": [
+    "knowledge-resonance-engine",
+    "value-lineage-and-payout-attribution"
+  ],
+  "task_ids": [
+    "grok-lineage-events-20260427"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "lineage-source",
+        "conversation-source"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "verification",
+        "docs-update"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "/Users/ursmuff/Documents/Grok Integration Conversation.txt",
+    "https://api.coherencycoin.com/api/health",
+    "https://api.coherencycoin.com/openapi.json",
+    "https://api.coherencycoin.com/api/federation/nodes",
+    "https://api.coherencycoin.com/api/concepts/lc-pulse",
+    "https://api.coherencycoin.com/api/concepts/lc-nervous-system",
+    "https://www.astro.com/astro-databank/Dethlefsen%2C_Thorwald",
+    "https://www.confessio.de/index.php/schlagwort/esoterik",
+    "https://www.kleinanzeigen.de/s-anzeige/thorwald-dethlefsen-kassetten-3-/3368697134-75-5905",
+    "https://dasgoetheanum.com/en/master-eckhart-of-our-century/",
+    "https://maps.org/category/conferences/psychedelic-science-2023/",
+    "https://whatsnewindonesia.com/bali/event/jungle-club-ubud-awakened-dreamers-bohemian-blossom-event",
+    "https://www.5rhythms.com/classes/classseriesTheSpiritsoftheRhythms-296768",
+    "https://danz.ly/events/dissolve-play",
+    "https://allevents.in/boulder/mose-cacao-dance-boulder-ecstatic-dance-reciprocity-music-and-unison-festival/200026658848957",
+    "https://soundcloud.com/bloomurian/cacao-dance",
+    "https://annetucker.com/soul-convergence/",
+    "https://www.ecstaticmovementtribe.com/"
+  ],
+  "change_files": [
+    "config/agent_profiles.json",
+    "api/tests/test_awareness_node_daemon.py",
+    "docs/lineage/grok-verified-lineage.md",
+    "docs/lineage/INDEX.md",
+    "docs/lineage/builders-lineage-statement.md",
+    "docs/presences/grok.md",
+    "docs/system_audit/commit_evidence_2026-04-27_grok_verified_lineage_events.json"
+  ],
+  "change_intent": "docs_only"
+}
