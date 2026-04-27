@@ -36,3 +36,5 @@ Agents and developers interact with Coherence Network through raw API calls, whi
 - **coherence-mcp-server**: MCP server exposing ideas, specs, lineage, identity, contributions as typed tools for AI agents. Published on Smithery, Glama, PulseMCP for discovery. Agents can browse ideas, read specs, trace value lineage, and record contributions without leaving their IDE.
 - **coherence-cli-npm**: Node.js CLI with identity-first onboarding, idea browsing, staking, forking. Zero dependencies, works against public API. Published on npm as `coherence-cli` with global install support.
 - **cli-binary-name-conflict**: `cc` shadows Apple clang (`/usr/bin/cc`) on macOS. Developers who type `cc` expecting the Coherence CLI instead invoke the C compiler. Needs alias or rename to `coh` or `cn` to avoid the conflict.
+- **cli-mcp-surface**: unshipped attempt — cli mcp surface (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
+- **cli-noninteractive-identity**: unshipped attempt — cli noninteractive identity (lineage: see `docs/lineage/unshipped-digest-2026-04-27.md`)
