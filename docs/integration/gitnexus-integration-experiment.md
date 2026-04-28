@@ -17,67 +17,49 @@ The trial is bounded — 30 paired tasks, then decide.
 
 ## Setup
 
-### 1. Pin the GitNexus revision
+GitNexus ships as the npm package `gitnexus`. Both local developer agents and the VPS runner use the same npx-based install so the trial measures one version everywhere.
 
-Trial uses GitNexus pinned at the SHA recorded in `scripts/measure_gitnexus_value.py::GITNEXUS_PIN`. If the upstream API shifts mid-trial, we want to know — re-pinning would invalidate the measurement window.
+### 1. The pin lives in two places (kept in sync)
 
-### 2. Install on the runner host
+| File | What it pins | Read by |
+|------|--------------|---------|
+| `.mcp.json` (repo root) | `gitnexus@1.6.3` | Claude Code, Cursor (project-scoped MCP) |
+| `scripts/.gitnexus-pin` | `npm:1.6.3` + `sha:ffa0510...` | `deploy/hostinger/install-gitnexus.sh` |
 
-```bash
-# On the agent runner host (e.g., the VPS at 187.77.152.42 or each worker node)
-git clone https://github.com/abhigyanpatwari/GitNexus.git ~/gitnexus
-cd ~/gitnexus
-git checkout "$(cat /docker/coherence-network/repo/scripts/.gitnexus-pin)"
-npm install
-npm run build
+When bumping the pin, update **both** files in the same PR. The git SHA in `.gitnexus-pin` records what was tested upstream so a measurement window is reproducible even if the npm version is later yanked or republished.
 
-# Index this repository
-node dist/cli.js index /docker/coherence-network/repo
+### 2. Local developer setup (Claude Code, Cursor)
 
-# Start the sidecar MCP server (background, port 8765)
-node dist/cli.js mcp serve --port 8765 &
-```
-
-Verify: `curl -s http://localhost:8765/tools | jq '.tools | length'` returns `16`.
-
-### 3. Register with each agent
-
-**Claude Code** (`~/.claude.json` or `.mcp.json` per project):
+The repo's `.mcp.json` is auto-discovered by Claude Code when the working directory is inside this repo. No global install needed:
 
 ```json
 {
   "mcpServers": {
     "gitnexus": {
-      "url": "http://localhost:8765",
-      "type": "sse"
+      "command": "npx",
+      "args": ["-y", "gitnexus@1.6.3", "mcp"]
     }
   }
 }
 ```
 
-**Cursor** (`~/.cursor/mcp.json`):
+First call pays the npm fetch (~10s); subsequent calls use the npx cache. Verify by listing tools in your agent — you should see 16 GitNexus tools (`query`, `context`, `impact`, `cypher`, ...) alongside the 60 from `coherence-mcp-server`.
 
-```json
-{
-  "mcpServers": {
-    "gitnexus": {
-      "command": "node",
-      "args": ["/home/user/gitnexus/dist/cli.js", "mcp", "stdio"]
-    }
-  }
-}
-```
+### 3. VPS runner setup (automatic via Hostinger Auto Deploy)
 
-**Local runner agents**: register via the MCP loader the runner already uses for `coherence-mcp-server` — point at `http://localhost:8765` as a second server, no code changes to the runner needed.
+`deploy/hostinger/install-gitnexus.sh` runs at the end of every push-to-main deploy:
 
-### 4. Reindex on commit
+1. Reads `npm:` line from `scripts/.gitnexus-pin`.
+2. Pre-caches `gitnexus@$NPM_VERSION` via `npx --yes gitnexus@$NPM_VERSION --version`.
+3. Stops the previous sidecar (PID at `/var/run/gitnexus.pid`).
+4. Starts a new sidecar via `nohup npx --yes gitnexus@$NPM_VERSION mcp --port 8765`.
+5. Logs to `/docker/coherence-network/gitnexus.log`.
 
-GitNexus's index can drift from `HEAD`. For the trial, reindex after every commit to the runner's working tree:
+Non-blocking: any failure logs and exits 0 so api/web/pulse deploy keeps flowing.
 
-```bash
-# Add to the runner's post-commit hook or pipeline-advance step
-node ~/gitnexus/dist/cli.js index /docker/coherence-network/repo --incremental
-```
+### 4. Register the VPS sidecar with runner agents
+
+Runner agents on the VPS (which is where the trial actually measures) connect to `http://localhost:8765` via SSE. Add the second server alongside `coherence-mcp-server` in the runner's MCP loader config — no code changes to the runner itself.
 
 If the agent acts on a stale index, count it as a `pivot` signal in the measurement, not a setup bug to silence.
 
@@ -120,6 +102,53 @@ The two outputs are independent. Compose them in the agent's plan, not in a quer
 2. `coherence_trace(symbol="Idea.coherence_score")` → which spec frontmatter mentions this symbol.
 
 If GitNexus surfaces a caller that no spec covers, that's a finding regardless of the rename — surface it to the user.
+
+---
+
+## Worked example — adding a parameter to `_coherence_score`
+
+A real demonstration of how the agent contract changes the workflow on a concrete edit task in this codebase.
+
+**Hypothetical task**: extend `_coherence_score(exchange_rate)` in `api/app/services/cc_treasury_service.py` to accept an optional `target_supply` parameter so callers can model what-if scenarios. Default value preserves existing behavior.
+
+### Without GitNexus (today's pattern)
+
+The agent typically does:
+
+```bash
+grep -rn "_coherence_score" api/  # raw textual sweep
+```
+
+This returns 4 hits, all in the same file. Agent edits the function and the 3 internal callers. Tests pass. Ships.
+
+What's missed:
+- Two **public** wrappers (`coherence_status()`, `can_mint()`) call `_coherence_score(exchange_rate)` and re-expose its return through dicts. Their callers don't grep against `_coherence_score` because they call the public wrappers — but those wrappers' contracts depend on `_coherence_score`'s signature.
+- `coherence_status()` is consumed by `api/app/routers/energy_sensing.py:252` (`cc_treasury_service.coherence_status(rate)`), which feeds the `/api/sensings/energy` route, which feeds the web `/practice` page.
+- The agent didn't see this chain. If the wrapper's return shape changes downstream of the new param, the practice page silently breaks.
+
+This is the **downstream-caller miss** the trial is measuring.
+
+### With GitNexus (the trial pattern)
+
+The agent calls in order:
+
+1. **`gitnexus.impact(symbol="_coherence_score")`** — returns the blast-radius graph:
+   - 3 direct callers in `cc_treasury_service.py` (depth 1, confidence 1.0)
+   - 2 indirect callers via wrapper functions (`coherence_status`, `can_mint`) at depth 2
+   - Following the wrappers: `routers/energy_sensing.py::coherence_status` and `routers/practice.py::practice_summary` at depth 3
+   - That's the chain the grep missed.
+
+2. **`gitnexus.context(symbol="coherence_status")`** — returns the wrapper's return shape so the agent can decide whether the new param leaks through. If `coherence_status` returns `{"coherence_score": ...}` literally, the wrapper can keep its current contract by passing `target_supply=None` through. If callers rely on the score being computed against the live supply only, the wrapper signature needs widening too.
+
+3. **`coherence_trace(file="api/app/services/cc_treasury_service.py")`** — returns the meaning-layer info: which spec covers this file (`cc-economics-and-value-coherence`), which `done_when` items reference it, which contributors have stake.
+
+4. **`coherence_trace(file="web/app/practice/page.tsx")`** *(if step 1 surfaces it)* — checks whether the practice page has spec coverage. If it doesn't, that's a finding to surface independent of this edit.
+
+The agent now has a **full picture**: code surface (GitNexus), intent surface (our tools), and the spec coverage that defines what tests must pass. The edit plan can then propagate the new parameter as a no-op default through the wrappers, write tests at each layer, and ship without the silent practice-page regression.
+
+### What the trial measures from this difference
+
+The trial isn't measuring whether GitNexus is *capable* of this — it clearly is. It's measuring whether agents **actually use it** when given the option, and whether outcomes (composted failures, heal cycles, downstream-caller misses) actually move. An impressive tool that agents skip because the contract isn't sharp earns a `drop`. A tool agents reach for and outcomes shift earns `adopt`.
 
 ---
 

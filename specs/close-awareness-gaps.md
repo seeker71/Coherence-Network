@@ -4,7 +4,7 @@ status: active
 source:
   - file: api/app/routers/federation.py
     symbols: [get_messages(), get_message_by_id()]
-  - file: scripts/cursor_fact_report.py
+  - file: api/scripts/cursor_fact_report.py
     symbols: [_routing_policy_proof()]
   - file: scripts/awareness_node_daemon.py
     symbols: [AgentProfile, build_identity_card(), render_identity_text(), load_profiles(), run_once()]
