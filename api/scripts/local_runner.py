@@ -349,7 +349,7 @@ def _detect_providers() -> dict[str, dict]:
         # --dangerously-skip-permissions: bypass all permission checks
         # --output-format text: plain text output (no JSON wrapping)
         # NOTE: --print disables tools — never use it for impl/test tasks
-        "claude": {"cmd": ["claude", "-p", "--dangerously-skip-permissions", "--allowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch", "--output-format", "text"], "append_prompt": True, "check": _check_claude_auth},
+        "claude": {"cmd": ["claude", "-p", "--dangerously-skip-permissions", "--allowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch,mcp__gitnexus__query,mcp__gitnexus__context,mcp__gitnexus__impact,mcp__gitnexus__cypher,mcp__gitnexus__detect_changes,mcp__gitnexus__rename,mcp__gitnexus__list_repos,mcp__gitnexus__group_list,mcp__gitnexus__group_sync,mcp__gitnexus__group_contracts,mcp__gitnexus__group_query,mcp__gitnexus__group_status", "--output-format", "text"], "append_prompt": True, "check": _check_claude_auth},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
