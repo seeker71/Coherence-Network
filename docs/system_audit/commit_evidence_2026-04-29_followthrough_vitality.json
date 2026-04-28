@@ -1,0 +1,100 @@
+{
+  "date": "2026-04-29",
+  "thread_branch": "codex/followthrough-vitality",
+  "commit_scope": "Implement the first Symphony alignment slice: normalized control-plane task shape, follow-through blockers, and orchestration tissue vitality signals.",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/tests/test_agent_control_plane.py",
+    "specs/symphony-alignment-orchestration.md",
+    "docs/system_audit/commit_evidence_2026-04-29_followthrough_vitality.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_agent_control_plane.py",
+      "cd api && .venv/bin/ruff check app/models/agent.py app/services/agent_service_pipeline_status.py tests/test_agent_control_plane.py",
+      "cd api && python3 -m pytest -q tests/test_agent_control_plane.py",
+      "cd api && python3 -m ruff check app/models/agent.py app/services/agent_service_pipeline_status.py tests/test_agent_control_plane.py",
+      "cd api && python3 -m pytest -q tests/test_agent.py tests/test_agent_task_claims.py tests/test_monitor_pipeline_stale_running.py tests/test_flow_cli.py::TestCLIFlow::test_pipeline_status_shape tests/test_agent_monitor_helpers.py",
+      "cd api && python3 -m pytest -q tests/test_agent_control_plane.py tests/test_agent_task_claims.py tests/test_flow_cli.py tests/test_agent_monitor_helpers.py tests/test_stale_task_reaper.py",
+      "cd api && python3 - <<'PY'\nfrom app.services.agent_service_pipeline_status import get_pipeline_status\ns = get_pipeline_status()\nprint({'followthrough': s.get('followthrough'), 'orchestration_tissue': s.get('orchestration_tissue'), 'control_plane_count': (s.get('control_plane') or {}).get('normalized_active_count')})\nPY",
+      "git diff --check",
+      "python3 scripts/validate_spec_quality.py --file specs/symphony-alignment-orchestration.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-29_followthrough_vitality.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+    ],
+    "summary": "Focused control-plane tests, ruff, equivalent existing agent/task/status tests, full API pytest through the PR guard, local worktree web validation, spec quality validation, evidence validation, and whitespace checks passed. The local status sample reported followthrough.status=clear, codex_open_prs=0, vitality_score=100, circulation=flowing, stale_tissue_count=0, and hardened_tissue_count=0. Early checks passed with python3 after worktree-local api/.venv was unavailable. The obsolete spec-referenced test paths tests/test_agent.py and tests/test_monitor_pipeline_stale_running.py were not present in this checkout, so equivalent existing agent control-plane, task-claim, CLI, monitor helper, and stale reaper tests were used. One PR guard run reported a transient worktree-runtime-web-guard failure with only npm warnings in the report tail; rerunning the exact command passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public verification if this status-surface change is deployed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks and deploy proof are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "symphony-alignment-orchestration"
+  ],
+  "task_ids": [
+    "codex-thread-followthrough-vitality-20260429"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "testing",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "PR #1260 previously blocked the follow-through gate until it was merged cleanly.",
+    "Spec requirement R10 asks stale Codex PRs to surface with exact PR URL, owner, reason, and remediation command.",
+    "Focused tests simulate a stale green PR and verify merge guidance plus orchestration tissue contraction."
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/tests/test_agent_control_plane.py",
+    "specs/symphony-alignment-orchestration.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The agent pipeline status surface reports normalized active control-plane tasks, stale follow-through blockers, and measurable orchestration tissue signals for vitality, circulation, stale tissue, and hardened tissue.",
+    "public_endpoints": [
+      "GET /api/agent/pipeline-status"
+    ],
+    "test_flows": [
+      "Focused agent control-plane tests",
+      "Existing task-claim, CLI, monitor helper, and stale reaper tests",
+      "PR thread gates"
+    ]
+  }
+}

@@ -1,8 +1,18 @@
 """Agent pipeline status: running, pending, completed with attention and diagnostics."""
 
 from datetime import datetime, timezone
+import json
+import shutil
+import subprocess
 from typing import Any
 
+from app.models.agent import (
+    ControlPlaneExecution,
+    ControlPlaneProof,
+    ControlPlaneSource,
+    ControlPlaneTask,
+    ControlPlaneWorkspace,
+)
 from app.services.agent_service_store import _ensure_store_loaded, _store
 from app.services.agent_service_task_derive import (
     failure_classification,
@@ -56,6 +66,72 @@ def _pipeline_task_status_item(task: dict[str, Any], now: datetime) -> tuple[str
     return st_val, item
 
 
+def normalize_task_to_control_plane(task: dict[str, Any]) -> dict[str, Any]:
+    """Normalize an internal agent task into the Symphony-aligned task shape."""
+    task_id = str(task.get("id") or "").strip()
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    source = context.get("source") if isinstance(context.get("source"), dict) else {}
+    workspace = context.get("workspace") if isinstance(context.get("workspace"), dict) else {}
+    proof = context.get("proof") if isinstance(context.get("proof"), dict) else {}
+    execution = context.get("execution") if isinstance(context.get("execution"), dict) else {}
+    followthrough_blockers = proof.get("followthrough_blockers")
+    if not isinstance(followthrough_blockers, list):
+        followthrough_blockers = []
+
+    def _string_list(key: str) -> list[str]:
+        value = context.get(key)
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        return []
+
+    task_type = task_type_name(task.get("task_type")) or "unknown"
+    model = str(task.get("model") or execution.get("model") or "").strip() or None
+    claimed_by = str(task.get("claimed_by") or execution.get("claimed_by") or "").strip() or None
+    control_task = ControlPlaneTask(
+        id=task_id,
+        source=ControlPlaneSource(
+            kind=str(source.get("kind") or context.get("source_kind") or "internal_api"),
+            external_id=source.get("external_id") or context.get("external_id"),
+            url=source.get("url") or context.get("url"),
+        ),
+        title=str(context.get("title") or task.get("direction") or task_id)[:160],
+        description=str(task.get("direction") or ""),
+        state=status_value(task.get("status")) or "pending",
+        priority=context.get("priority") if isinstance(context.get("priority"), int) else None,
+        labels=_string_list("labels"),
+        blocked_by=_string_list("blocked_by"),
+        task_type=task_type,
+        files_allowed=_string_list("files_allowed"),
+        done_when=_string_list("done_when"),
+        commands=_string_list("commands"),
+        constraints=_string_list("constraints"),
+        workspace=ControlPlaneWorkspace(
+            branch=workspace.get("branch") or context.get("branch"),
+            path=workspace.get("path") or context.get("workspace_path"),
+            key=workspace.get("key") or context.get("workspace_key"),
+        ),
+        execution=ControlPlaneExecution(
+            executor=execution.get("executor") or context.get("executor"),
+            model=model,
+            claimed_by=claimed_by,
+            claimed_at=task.get("claimed_at") or execution.get("claimed_at"),
+            attempts=int(execution.get("attempts") or context.get("attempts") or 0),
+            max_attempts=int(execution.get("max_attempts") or context.get("max_attempts") or 1),
+            next_retry_at=execution.get("next_retry_at") or context.get("next_retry_at"),
+        ),
+        proof=ControlPlaneProof(
+            local_validation=str(proof.get("local_validation") or "pending"),
+            evidence_file=proof.get("evidence_file") or context.get("evidence_file"),
+            pr_url=proof.get("pr_url") or context.get("pr_url"),
+            ci_status=str(proof.get("ci_status") or "pending"),
+            deploy_status=str(proof.get("deploy_status") or "not_required"),
+            followthrough_status=str(proof.get("followthrough_status") or "clear"),
+            followthrough_blockers=followthrough_blockers,
+        ),
+    )
+    return control_task.model_dump(mode="json")
+
+
 def _collect_pipeline_status_items(now: datetime) -> tuple[list[dict], list[dict], list[dict]]:
     running, pending, completed = [], [], []
     for t in _store.values():
@@ -67,6 +143,226 @@ def _collect_pipeline_status_items(now: datetime) -> tuple[list[dict], list[dict
         else:
             completed.append(item)
     return running, pending, completed
+
+
+def _parse_github_time(value: str) -> datetime | None:
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return None
+    if cleaned.endswith("Z"):
+        cleaned = f"{cleaned[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(cleaned)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _minutes_since_github_time(value: str, now: datetime) -> float:
+    parsed = _parse_github_time(value)
+    if parsed is None:
+        return 0.0
+    return max(0.0, (now - parsed).total_seconds() / 60.0)
+
+
+def _gh_json(args: list[str], *, timeout: int = 5) -> Any:
+    out = subprocess.check_output(["gh", *args], text=True, timeout=timeout)
+    return json.loads(out or "null")
+
+
+def _status_rollup_errors(rollup: Any) -> list[str]:
+    if not isinstance(rollup, list):
+        return []
+    errors: list[str] = []
+    for row in rollup:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name") or row.get("context") or "unknown").strip()
+        row_type = str(row.get("__typename") or "").strip()
+        if row_type == "CheckRun":
+            status = str(row.get("status") or "").strip().upper()
+            conclusion = str(row.get("conclusion") or "").strip().upper()
+            if status != "COMPLETED":
+                errors.append(f"{name}:status={status or 'UNKNOWN'}")
+            elif conclusion not in {"SUCCESS", "NEUTRAL", "SKIPPED"}:
+                errors.append(f"{name}:conclusion={conclusion or 'UNKNOWN'}")
+        elif row_type == "StatusContext":
+            state = str(row.get("state") or "").strip().upper()
+            if state != "SUCCESS":
+                errors.append(f"{name}:state={state or 'UNKNOWN'}")
+    return errors
+
+
+def _followthrough_action(detail: dict[str, Any], check_errors: list[str]) -> tuple[str, str]:
+    if bool(detail.get("isDraft")):
+        return "draft_pr", "finish or close draft PR before starting new work"
+    merge_state = str(detail.get("mergeStateStatus") or "").strip().upper()
+    if check_errors:
+        return "failing_check", "inspect failing checks and rerun after repair"
+    if merge_state == "CLEAN":
+        return "stale_pr", "merge or close stale green PR"
+    return "stale_pr", f"rebase or resolve merge state {merge_state or 'UNKNOWN'}"
+
+
+def _followthrough_blocker_from_pr(
+    row: dict[str, Any],
+    *,
+    repo: str,
+    now: datetime,
+    stale_minutes: float,
+) -> dict[str, Any] | None:
+    head = str(row.get("headRefName") or "").strip()
+    if not head.startswith("codex/") or bool(row.get("isDraft")):
+        return None
+    age_minutes = _minutes_since_github_time(str(row.get("updatedAt") or ""), now)
+    if age_minutes < stale_minutes:
+        return None
+    number = int(row.get("number") or 0)
+    detail: dict[str, Any] = {}
+    if number > 0:
+        try:
+            payload = _gh_json(
+                [
+                    "pr",
+                    "view",
+                    str(number),
+                    "--repo",
+                    repo,
+                    "--json",
+                    "isDraft,mergeStateStatus,statusCheckRollup",
+                ]
+            )
+            detail = payload if isinstance(payload, dict) else {}
+        except Exception:
+            detail = {}
+    check_errors = _status_rollup_errors(detail.get("statusCheckRollup"))
+    kind, action = _followthrough_action(detail, check_errors)
+    url = str(row.get("url") or "").strip()
+    command = (
+        f"gh pr merge {number} --repo {repo} --merge --delete-branch"
+        if kind == "stale_pr" and action.startswith("merge")
+        else f"gh pr checks {number} --repo {repo}"
+    )
+    return {
+        "kind": kind,
+        "url": url,
+        "owner": "codex",
+        "command": command,
+        "reason": action,
+        "pr_number": number,
+        "head": head,
+        "age_minutes": round(age_minutes, 1),
+        "check_errors": check_errors,
+    }
+
+
+def collect_followthrough_status(
+    *,
+    now: datetime,
+    repo: str = "seeker71/Coherence-Network",
+    stale_minutes: float = 90.0,
+) -> dict[str, Any]:
+    """Best-effort live follow-through view for open Codex PRs."""
+    if shutil.which("gh") is None:
+        return {
+            "status": "unknown",
+            "collector_available": False,
+            "reason": "gh_not_available",
+            "blockers": [],
+        }
+    try:
+        payload = _gh_json(
+            [
+                "pr",
+                "list",
+                "--repo",
+                repo,
+                "--state",
+                "open",
+                "--limit",
+                "200",
+                "--json",
+                "number,title,headRefName,updatedAt,url,isDraft",
+            ]
+        )
+    except Exception as exc:
+        return {
+            "status": "unknown",
+            "collector_available": False,
+            "reason": f"gh_query_failed:{type(exc).__name__}",
+            "blockers": [],
+        }
+    rows = payload if isinstance(payload, list) else []
+    blockers = [
+        blocker
+        for row in rows
+        if isinstance(row, dict)
+        for blocker in [_followthrough_blocker_from_pr(
+            row,
+            repo=repo,
+            now=now,
+            stale_minutes=stale_minutes,
+        )]
+        if blocker is not None
+    ]
+    codex_open_count = len([
+        row for row in rows
+        if isinstance(row, dict)
+        and str(row.get("headRefName") or "").startswith("codex/")
+        and not bool(row.get("isDraft"))
+    ])
+    return {
+        "status": "blocked" if blockers else "clear",
+        "collector_available": True,
+        "repo": repo,
+        "stale_minutes": stale_minutes,
+        "codex_open_prs": codex_open_count,
+        "blockers": blockers,
+    }
+
+
+def _orchestration_tissue(
+    running: list[dict],
+    pending: list[dict],
+    attention: dict[str, Any],
+    followthrough: dict[str, Any],
+) -> dict[str, Any]:
+    blocker_count = len(followthrough.get("blockers") or [])
+    stale_tissue = blocker_count + (1 if attention.get("stuck") else 0)
+    hardened_tissue = 0
+    if attention.get("repeated_failures"):
+        hardened_tissue += 1
+    if attention.get("executor_fail"):
+        hardened_tissue += 1
+    if attention.get("low_success_rate"):
+        hardened_tissue += 1
+    circulation_score = max(0, 100 - stale_tissue * 25 - hardened_tissue * 15)
+    vitality_score = max(0, circulation_score - (10 if pending and not running else 0))
+    if followthrough.get("status") == "unknown":
+        circulation = "unverified"
+    elif stale_tissue or hardened_tissue:
+        circulation = "constricted"
+    else:
+        circulation = "flowing"
+    signals: list[str] = []
+    if blocker_count:
+        signals.append(f"{blocker_count} stale follow-through blocker(s)")
+    if attention.get("stuck"):
+        signals.append("pending work is waiting without active circulation")
+    if attention.get("repeated_failures"):
+        signals.append("repeated failures indicate hardened execution tissue")
+    if not signals:
+        signals.append("no stale follow-through or hardened execution signals detected")
+    return {
+        "vitality_score": vitality_score,
+        "circulation": circulation,
+        "circulation_score": circulation_score,
+        "stale_tissue_count": stale_tissue,
+        "hardened_tissue_count": hardened_tissue,
+        "signals": signals,
+    }
 
 
 def _pipeline_latest_activity(
@@ -258,6 +554,15 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
     latest_request, latest_response = _pipeline_latest_activity(running, completed)
     attention = _pipeline_attention_summary(running, pending, completed)
     diagnostics = _pipeline_queue_diagnostics(running, pending, completed)
+    followthrough = collect_followthrough_status(now=now)
+    if followthrough.get("status") == "blocked":
+        attention.setdefault("flags", []).append("followthrough_blocked")
+    normalized_control_plane = [
+        normalize_task_to_control_plane(_store.get(item["id"]) or {})
+        for item in [*running[:5], *pending[:5]]
+        if item.get("id") in _store
+    ]
+    tissue = _orchestration_tissue(running, pending, attention, followthrough)
     return {
         "running": running[:10],
         "pending": sorted(pending, key=lambda x: x.get("created_at", ""))[:20],
@@ -274,7 +579,13 @@ def get_pipeline_status(now_utc=None) -> dict[str, Any]:
             "output_empty": attention["output_empty"],
             "executor_fail": attention["executor_fail"],
             "low_success_rate": attention["low_success_rate"],
-            "flags": attention["flags"],
+                "flags": attention["flags"],
         },
         "diagnostics": diagnostics,
+        "followthrough": followthrough,
+        "orchestration_tissue": tissue,
+        "control_plane": {
+            "normalized_active": normalized_control_plane,
+            "normalized_active_count": len(normalized_control_plane),
+        },
     }

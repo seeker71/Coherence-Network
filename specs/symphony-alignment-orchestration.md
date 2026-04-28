@@ -10,6 +10,10 @@ source:
     symbols: [executor dispatch, task claim, task completion]
   - file: api/app/services/agent_service_pipeline_status.py
     symbols: [pipeline status]
+  - file: api/app/models/agent.py
+    symbols: [ControlPlaneTask, ControlPlaneProof]
+  - file: api/tests/test_agent_control_plane.py
+    symbols: [control-plane normalization, follow-through blockers, orchestration tissue]
 requirements:
   - "Map OpenAI Symphony concepts to Coherence Network's existing orchestration surfaces without replacing the current delivery contract."
   - "Define one normalized control-plane task model that can represent internal API tasks, backlog items, GitHub issues, and future Linear issues."
@@ -41,15 +45,15 @@ This spec digests Symphony into Coherence's architecture without replacing the e
 ## Requirements
 
 - [ ] **R1: Symphony mapping**: Document how Symphony's workflow loader, tracker client, orchestrator, workspace manager, agent runner, logging, and status surface map to existing Coherence components.
-- [ ] **R2: Normalized task model**: Define a task shape that can represent internal API tasks, backlog entries, GitHub issues, future Linear issues, and generated ROI tasks with common fields for state, source, priority, labels, blockers, workspace identity, proof requirements, and completion criteria.
+- [x] **R2: Normalized task model**: Define a task shape that can represent internal API tasks, backlog entries, GitHub issues, future Linear issues, and generated ROI tasks with common fields for state, source, priority, labels, blockers, workspace identity, proof requirements, and completion criteria. Initial implementation adds `ControlPlaneTask` and normalizes active internal API tasks.
 - [ ] **R3: Policy layer**: Preserve `AGENTS.md` as the human and agent workflow authority while introducing a future machine-readable workflow contract, such as `WORKFLOW.md` or `config/orchestration_workflow.json`, for dispatch-safe runtime settings.
 - [ ] **R4: Dispatcher contract**: Specify eligibility rules for active states, terminal states, priority order, blocker handling, task claims, max concurrency, stale detection, and retry backoff.
 - [ ] **R5: Workspace lifecycle**: Require deterministic per-task branch and worktree naming, root containment, prompt-gate execution, lifecycle hooks, cleanup rules for terminal work, and refusal to run implementation commands in the primary workspace.
 - [ ] **R6: Executor runner boundary**: Keep Codex, OpenClaw, Cursor, and other executors behind the existing task runner abstraction. Future `codex app-server` support may be added as one runner mode, not as a replacement for the current executor policy.
-- [ ] **R7: Evidence and reconciliation**: Attach proof to task execution records, not only commits. Reconciliation must compare tracker state, task state, PR state, CI state, evidence validation, and deploy readiness before declaring work complete.
-- [ ] **R8: Status surface**: Expose one operator-readable and machine-readable status view for active, blocked, retrying, review-ready, merge-ready, deploy-ready, stale, and failed work.
+- [ ] **R7: Evidence and reconciliation**: Attach proof to task execution records, not only commits. Reconciliation must compare tracker state, task state, PR state, CI state, evidence validation, and deploy readiness before declaring work complete. Initial implementation adds follow-through proof fields and stale PR blockers to the status surface.
+- [x] **R8: Status surface**: Expose one operator-readable and machine-readable status view for active, blocked, retrying, review-ready, merge-ready, deploy-ready, stale, and failed work. Initial implementation extends `/api/agent/pipeline-status` with `followthrough`, `orchestration_tissue`, and normalized active tasks.
 - [ ] **R9: Adapter-first Linear support**: Add Linear only as a tracker adapter behind the normalized task model. GitHub Issues, internal API tasks, backlog specs, and ROI-generated tasks must continue to use the same dispatcher and evidence path.
-- [ ] **R10: Follow-through unblocker**: Treat stale open Codex PRs as active orchestration blockers. The reconciler must surface them with the exact PR URL, failing or pending gate, recommended action, and owner so new work does not accumulate behind abandoned follow-through.
+- [x] **R10: Follow-through unblocker**: Treat stale open Codex PRs as active orchestration blockers. The reconciler must surface them with the exact PR URL, failing or pending gate, recommended action, and owner so new work does not accumulate behind abandoned follow-through.
 
 ## Research Inputs
 
@@ -149,6 +153,14 @@ Status surface
 
 ## Phased Implementation Plan
 
+### Implemented Slice: Follow-through Vitality
+
+- `ControlPlaneTask`, proof, execution, source, and workspace models exist in `api/app/models/agent.py`.
+- `/api/agent/pipeline-status` now includes `followthrough` with stale Codex PR blockers, PR URLs, owners, reasons, and suggested commands.
+- `/api/agent/pipeline-status` now includes `orchestration_tissue` with `vitality_score`, `circulation`, `stale_tissue_count`, and `hardened_tissue_count`.
+- `/api/agent/pipeline-status` now includes `control_plane.normalized_active` for running and pending internal API tasks.
+- `api/tests/test_agent_control_plane.py` validates internal task normalization, stale PR remediation guidance, and tissue signals.
+
 ### Phase 1: Contract and Inventory
 
 - Create a Symphony alignment inventory that marks each concept as `covered`, `partial`, or `missing`.
@@ -203,7 +215,7 @@ Status surface
 
 ```bash
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
-cd api && pytest -q tests/test_agent.py tests/test_agent_task_claims.py tests/test_monitor_pipeline_stale_running.py
+cd api && python3 -m pytest -q tests/test_agent_control_plane.py tests/test_agent_task_claims.py tests/test_flow_cli.py tests/test_agent_monitor_helpers.py tests/test_stale_task_reaper.py
 ```
 
 ## Out of Scope
@@ -226,7 +238,7 @@ cd api && pytest -q tests/test_agent.py tests/test_agent_task_claims.py tests/te
 - Follow-up task: add a Linear tracker adapter after the normalized model is stable.
 - Follow-up task: add one status surface that proves tracker state, worktree state, PR state, CI state, deploy state, and evidence state together.
 - Follow-up task: add a machine-readable workflow policy; `AGENTS.md` remains the authoritative contract until then.
-- Follow-up task: add stale PR follow-through reconciliation so green stale PRs are presented as merge-or-close actions and failing stale PRs are presented with check-level remediation.
+- Follow-up task: extend stale PR follow-through reconciliation beyond live GitHub CLI collection into persisted monitor reports so deployed environments without `gh` still show the latest known blocker state.
 
 ## Decision Gates
 
