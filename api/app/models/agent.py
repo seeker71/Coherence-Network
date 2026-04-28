@@ -218,6 +218,77 @@ class AgentTaskListItem(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class ControlPlaneSource(BaseModel):
+    """Normalized origin for tracker/API/backlog work."""
+
+    kind: str
+    external_id: Optional[str] = None
+    url: Optional[str] = None
+
+
+class ControlPlaneWorkspace(BaseModel):
+    """Deterministic workspace identity for a control-plane task."""
+
+    branch: Optional[str] = None
+    path: Optional[str] = None
+    key: Optional[str] = None
+
+
+class ControlPlaneExecution(BaseModel):
+    """Execution state independent of a specific runner implementation."""
+
+    executor: Optional[str] = None
+    model: Optional[str] = None
+    claimed_by: Optional[str] = None
+    claimed_at: Optional[datetime] = None
+    attempts: int = 0
+    max_attempts: int = 1
+    next_retry_at: Optional[datetime] = None
+
+
+class ControlPlaneFollowthroughBlocker(BaseModel):
+    """A blocker that prevents orchestration from moving cleanly to new work."""
+
+    kind: str
+    url: Optional[str] = None
+    command: Optional[str] = None
+    owner: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class ControlPlaneProof(BaseModel):
+    """Proof state attached to task execution."""
+
+    local_validation: str = "pending"
+    evidence_file: Optional[str] = None
+    pr_url: Optional[str] = None
+    ci_status: str = "pending"
+    deploy_status: str = "not_required"
+    followthrough_status: str = "clear"
+    followthrough_blockers: List[ControlPlaneFollowthroughBlocker] = Field(default_factory=list)
+
+
+class ControlPlaneTask(BaseModel):
+    """Symphony-aligned task shape used by Coherence orchestration."""
+
+    id: str
+    source: ControlPlaneSource
+    title: str
+    description: Optional[str] = None
+    state: str
+    priority: Optional[int] = None
+    labels: List[str] = Field(default_factory=list)
+    blocked_by: List[str] = Field(default_factory=list)
+    task_type: str
+    files_allowed: List[str] = Field(default_factory=list)
+    done_when: List[str] = Field(default_factory=list)
+    commands: List[str] = Field(default_factory=list)
+    constraints: List[str] = Field(default_factory=list)
+    workspace: ControlPlaneWorkspace = Field(default_factory=ControlPlaneWorkspace)
+    execution: ControlPlaneExecution = Field(default_factory=ControlPlaneExecution)
+    proof: ControlPlaneProof = Field(default_factory=ControlPlaneProof)
+
+
 class AgentTaskList(BaseModel):
     """List of tasks with total. meta reports fallbacks (e.g. runtime_fallback_backfill_count) for validation."""
 
