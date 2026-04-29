@@ -1,8 +1,8 @@
 # Spec Index
 
-> 89 specs (79 done, 7 draft, 3 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 91 specs (79 done, 8 draft, 4 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (22 ideas → 89 specs)
+## By Idea (22 ideas → 91 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -14,13 +14,14 @@
 - [standing-questions-roi-and-next-task-generation](standing-questions-roi-and-next-task-generation.md) — ROI questions → task generation
 - [super-idea-rollup-criteria](super-idea-rollup-criteria.md) — rollup rules for super-ideas
 
-### agent-pipeline (6 specs)
+### agent-pipeline (7 specs)
 - [agent-orchestration-api](agent-orchestration-api.md) — task dispatch + agent coordination
 - [attention-heuristics-pipeline-status](attention-heuristics-pipeline-status.md) — pipeline attention scoring
 - [coherence-network-agent-pipeline](coherence-network-agent-pipeline.md) — end-to-end pipeline flow
 - [pipeline-observability-and-auto-review](pipeline-observability-and-auto-review.md) — observability + auto-review
 - [project-manager-pipeline](project-manager-pipeline.md) — PM cycle orchestration
 - [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — review/deploy/verify phases
+- [symphony-alignment-orchestration](symphony-alignment-orchestration.md) — alignment + orchestration of multi-agent task symphony
 
 ### pipeline-reliability (10 specs)
 - [auto-heal-from-diagnostics](auto-heal-from-diagnostics.md) — auto-heal from failure diagnostics
@@ -61,12 +62,13 @@
 - [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP cost + acceptance proof
 - [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — governance effectiveness scoring
 
-### value-attribution (9 specs)
+### value-attribution (10 specs)
 - [asset-renderer-plugin](asset-renderer-plugin.md) — pluggable renderers per MIME type
 - [assets-api](assets-api.md) — asset CRUD + lineage
 - [contributions-api](contributions-api.md) — contribution tracking API
 - [contributor-onboarding-and-governed-change-flow](contributor-onboarding-and-governed-change-flow.md) — governed change flow
 - [distribution-engine](distribution-engine.md) — value distribution engine
+- [glyph-render-witness-proof](glyph-render-witness-proof.md) — sovereign witness glyph for page renders; first concrete instance of the geometric-glyph substrate
 - [normalize-github-commit-cost-estimation](normalize-github-commit-cost-estimation.md) — GitHub commit cost estimation
 - [task-claim-tracking-and-roi-dedupe](task-claim-tracking-and-roi-dedupe.md) — task claim tracking + ROI dedup
 - [value-lineage-and-payout-attribution](value-lineage-and-payout-attribution.md) — value lineage chain
