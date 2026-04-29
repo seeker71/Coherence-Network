@@ -32,14 +32,17 @@ asset:
   any vehicle-class movement instrument
 - [`real-estate.md`](real-estate.md) — land, houses, condos,
   buildings, leasehold rights
+- [`rented-places.md`](rented-places.md) — short-term and recurring
+  rentals as temporal opportunity-windows for network presence
 - [`intellectual-property.md`](intellectual-property.md) — patents,
   trademarks, copyrights, trade secrets, domain names, brand assets
 - [`digital-access.md`](digital-access.md) — software subscriptions,
   API keys, cloud service accounts, SaaS contracts, professional
   licenses
 - [`access-granted.md`](access-granted.md) — things the cell does
-  not own but can use under terms (rentals, friend-of-the-family
-  arrangements, professional access, library cards, gym memberships)
+  not own but can use under terms (rentals other than short-term,
+  friend-of-the-family arrangements, professional access, library
+  cards, gym memberships)
 
 ## Privacy contract
 
