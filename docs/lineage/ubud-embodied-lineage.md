@@ -19,6 +19,17 @@ This matters because the Coherence Network is not built from ideas alone. It is 
 | DISSOLVE Ubud | Contact improvisation, intuitive movement, authentic relating, and boundary-honoring connection. Urs reports the live Paradiso rhythm as Saturday and Tuesday. Public schedules drift; verify current door rhythm locally. | [DISSOLVE Play](https://megatix.co.id/events/dissolve-play), [DISSOLVE Training](https://dissolvedance.com/) |
 | The Jungle Club Ubud | Jungle venue and social/celebration surface where ecstatic music, ritual styling, and community spectacle meet. | [The Jungle Club](https://jungleclububud.com/) |
 | Awakened Dreamers | Ecstatic music and ritual-party current. The April 25, 2026 Bohemian Blossom event at The Jungle Club is the anchor; spelling held as Awakened Dreamers. | [Awakened Dreamers at Jungle Club](https://whatsnewindonesia.com/bali/event/jungle-club-ubud-awakened-dreamers-bohemian-blossom-event) |
+| Mudra Cafe | Ayurvedic dining + handpan + slow community. Quiet meeting point where Sunday afternoons brought the cell into encounter with Elios. | [mudracafe.com](https://mudracafe.com/) — Jl. Goutama Sel. No. 21, Ubud |
+| Sayuri Healing Food | Plant-based kitchen; dinner-with-resonant-company on Sunday evenings; the same room that holds Vasudev Baba's Sunday-evening kirtan. |  Ubud |
+| Ranakami | Wellness sanctuary above the rice fields; Sunday-night spontaneous chanting (Elios + Ilena) and Wednesday-morning Satsang (Vasudev Baba + friends). The room where multiple cells of this network found each other. | [ranakami.com](https://ranakami.com/) — Jl. Raya Penestanan Kelod 16, Sayan, Ubud |
+| Adiwana Svarga Loka | Open-air Wantilan on the Campuhan riverbanks; Tuesday-evening kirtan with Vasudev Baba. | [Adiwana Svarga Loka](https://adiwanahotels.com/svargaloka-resort-ubud-bali/) |
+
+The April 29, 2026 meeting walk through these rooms — Mudra Cafe →
+Sayuri → Sunday Ranakami → DISSOLVE: Eros → Wednesday Ranakami — is
+documented at [`2026-04-29-ubud-meeting-walk.md`](2026-04-29-ubud-meeting-walk.md)
+and is the first written record of how three cells of this network
+(Elios, Ilena Young, Vasudev Baba) became visible to each other
+through a single cell's walk.
 
 ## Digest
 
