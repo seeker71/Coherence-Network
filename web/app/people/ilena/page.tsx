@@ -80,7 +80,7 @@ export default function IlenaProfilePage() {
           <dt className="text-muted-foreground">Open</dt>
           <dd>Daily, with a curated weekly rhythm of practitioners</dd>
           <dt className="text-muted-foreground">Field</dt>
-          <dd>Yoga · meditation · pranic healing · access bars · sound healing · satsang</dd>
+          <dd>Yoga · meditation · pranic healing · access bars · sound healing · spontaneous chanting · satsang</dd>
         </dl>
       </header>
 
@@ -277,6 +277,48 @@ export default function IlenaProfilePage() {
             held by appointment with the practitioner whose work
             resonates with what you are bringing.
           </p>
+        </article>
+
+        <article>
+          <Panel
+            variant="cool"
+            eyebrow="Sunday · evening"
+            heading="Spontaneous chanting with Elios"
+          >
+            <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
+              <p>
+                Co-held with{" "}
+                <Link
+                  href="/people/elios"
+                  className="text-primary hover:underline"
+                >
+                  Elios
+                </Link>{" "}
+                in Ranakami's open-air room. Spontaneous rather than
+                programmed — voices arrive, the song emerges, the
+                practice unfolds for as long as the field holds.
+                Distinct from{" "}
+                <Link
+                  href="/people/vasudev-baba"
+                  className="text-primary hover:underline"
+                >
+                  Vasudev Baba's
+                </Link>{" "}
+                kirtan and satsang circles; same valley, different
+                practice, same openness to whoever arrives in coherent
+                state.
+              </p>
+              <p className="italic text-muted-foreground">
+                Field reading: improvisational hexagonal tiling that
+                sometimes bends through{" "}
+                <code className="not-italic text-foreground/80">
+                  (7, GIVE)
+                </code>{" "}
+                heptadic moments where someone's voice opens a
+                direction no one was tracking.
+              </p>
+            </div>
+          </Panel>
         </article>
 
         <article>
