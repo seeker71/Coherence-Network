@@ -36,3 +36,9 @@ forward.
 - [`onboarded-assets/2026-04-29-tesla-model-3-longmont.md`](onboarded-assets/2026-04-29-tesla-model-3-longmont.md)
   — Tesla Model 3 currently in Longmont, Colorado. Primary shepherd
   retained; legal wrapper handles outer-world obligations.
+
+For the full register of categories — financial, vehicles, real
+estate, intellectual property, digital access, and access-granted
+arrangements — see [`registry/`](registry/). The registry holds
+category-level public entries; sensitive specifics live in the
+wrapper's encrypted treasury record.
