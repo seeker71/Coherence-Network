@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-29 | **Concepts**: 76 | **Status**: 57 expanding, 19 seed | **Transmissions held**: 3 (2 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-04-29 | **Concepts**: 84 | **Status**: 57 expanding, 27 seed | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -115,6 +115,17 @@ From [If You Found This Video, the Hardest Part Is Already Behind You](transmiss
 - **[Void as Potential](concepts/lc-void-as-potential.md)** — 174 Hz — the emptiness that is pregnant; pure potential awaiting embodiment
 - **[Field Update](concepts/lc-field-update.md)** — 741 Hz — each release makes awakening easier for others; private work as collective contribution
 - **[Freedom as Recognition](concepts/lc-freedom-as-recognition.md)** — 396 Hz — already present, awaiting notice; nothing to attain, only obscuration to drop
+
+From [From Drained To Nourished](transmissions/2026-04-29-from-drained-to-nourished.md) (Dr. Sue Morter, *The Art of Awakening* podcast, ~7,434-word English caption, 2026):
+
+- **[Vertical Nourishment](concepts/lc-vertical-nourishment.md)** — 528 Hz — receiving directly from source, breath, body, deeper self
+- **[Horizontal Nourishment Trap](concepts/lc-horizontal-nourishment-trap.md)** — 396 Hz — the depleting search outward for love, joy, safety, validation
+- **[Emotional Availability Without Absorption](concepts/lc-emotional-availability-without-absorption.md)** — 639 Hz — present without collapsing your field into theirs
+- **[Overgiving Depletion](concepts/lc-overgiving-depletion.md)** — 285 Hz — the leak in the helping pattern; closed by opening vertical, not withholding
+- **[Relationships as Mirrors](concepts/lc-relationships-as-mirrors.md)** — 741 Hz — others reflect how you are loving yourself
+- **[Trauma as Identity Anchor](concepts/lc-trauma-as-identity-anchor.md)** — 285 Hz — painful states becoming familiar reference points
+- **[Boundaries as Loving Truth](concepts/lc-boundaries-as-loving-truth.md)** — 432 Hz — care, not punishment
+- **[Presence Over Protection](concepts/lc-presence-over-protection.md)** — 174 Hz — choosing aliveness rather than defensive contraction
 
 Transmissions held source-marked but **not** integrated as concepts (witness without absorption):
 

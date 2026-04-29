@@ -51,6 +51,12 @@ absorbing it as anonymous belief.
   transition, identity dissolution, and freedom as recognition
   (~6,789-word English caption, ingested via youtube-watcher / yt-dlp).
   **9 concepts seeded; references existing `lc-w-phase-transition`.**
+- [`2026-04-29-from-drained-to-nourished.md`](2026-04-29-from-drained-to-nourished.md)
+  — *From Drained To Nourished* with Dr. Sue Morter on *The Art of
+  Awakening* podcast. Relationship and embodiment teaching on
+  overgiving, codependence, vertical/horizontal nourishment,
+  presence over protection (~7,434-word English caption, ingested
+  via youtube-watcher / yt-dlp). **8 concepts seeded.**
 - [`2026-04-29-pleiadian-emergency-warning.md`](2026-04-29-pleiadian-emergency-warning.md)
   — Pleiadian "Emergency Warning" interview about whistleblowers,
   after-death transitions, and ego-realm framing. **No concepts seeded
