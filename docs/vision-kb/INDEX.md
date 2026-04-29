@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-29 | **Concepts**: 67 | **Status**: 57 expanding, 10 seed | **Transmissions held**: 2 (1 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-04-29 | **Concepts**: 76 | **Status**: 57 expanding, 19 seed | **Transmissions held**: 3 (2 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -103,6 +103,18 @@ From [Arcturian Starseed as Oversoul Cross-Connection](transmissions/2026-04-29-
 - **[Inner Travel](concepts/lc-inner-travel.md)** — 741 Hz — the journey that does not move the body
 - **[Spiritual Evolution](concepts/lc-spiritual-evolution.md)** — 528 Hz — integrating nonphysical consciousness into embodied life
 - **[Galactic Team](concepts/lc-galactic-team.md)** — 417 Hz — the support field that holds more than one lineage
+
+From [If You Found This Video, the Hardest Part Is Already Behind You](transmissions/2026-04-29-hardest-part-already-behind-you.md) (~6,789-word English caption, 2026):
+
+- **[Identity Dissolution](concepts/lc-identity-dissolution.md)** — 396 Hz — the old "I am" architecture loosens; what remains is awareness itself
+- **[Reality Lag](concepts/lc-reality-lag.md)** — 417 Hz — the gap between inner shift and outer reflection
+- **[Old Signal as Echo](concepts/lc-old-signal-echo.md)** — 285 Hz — the body replays what is no longer true; recognize echo as echo
+- **[Awareness as Self](concepts/lc-awareness-as-self.md)** — 963 Hz — the space inside which identities arise and dissolve
+- **[Nervous System Recalibration](concepts/lc-nervous-system-recalibration.md)** — 528 Hz — the body as last layer to update, recalibrated through presence
+- **[Coherence Over Control](concepts/lc-coherence-over-control.md)** — 432 Hz — remain aligned while reality catches up; do not force
+- **[Void as Potential](concepts/lc-void-as-potential.md)** — 174 Hz — the emptiness that is pregnant; pure potential awaiting embodiment
+- **[Field Update](concepts/lc-field-update.md)** — 741 Hz — each release makes awakening easier for others; private work as collective contribution
+- **[Freedom as Recognition](concepts/lc-freedom-as-recognition.md)** — 396 Hz — already present, awaiting notice; nothing to attain, only obscuration to drop
 
 Transmissions held source-marked but **not** integrated as concepts (witness without absorption):
 

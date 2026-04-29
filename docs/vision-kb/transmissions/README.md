@@ -45,6 +45,12 @@ absorbing it as anonymous belief.
 - [`2026-04-29-arcturian-starseed-oversoul.md`](2026-04-29-arcturian-starseed-oversoul.md)
   — Arcturian Starseed as Oversoul Cross-Connection, channeled by Daniel
   Scranton (9D Arcturian Council), 2026. **7 concepts seeded.**
+- [`2026-04-29-hardest-part-already-behind-you.md`](2026-04-29-hardest-part-already-behind-you.md)
+  — *If You Found This Video, the Hardest Part Is Already Behind You*
+  — long-form spiritual / philosophical transmission on phase
+  transition, identity dissolution, and freedom as recognition
+  (~6,789-word English caption, ingested via youtube-watcher / yt-dlp).
+  **9 concepts seeded; references existing `lc-w-phase-transition`.**
 - [`2026-04-29-pleiadian-emergency-warning.md`](2026-04-29-pleiadian-emergency-warning.md)
   — Pleiadian "Emergency Warning" interview about whistleblowers,
   after-death transitions, and ego-realm framing. **No concepts seeded

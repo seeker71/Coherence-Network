@@ -2,6 +2,23 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-29] transmission-3 | "Hardest Part Is Already Behind You" — 9 concepts seeded
+
+- Third transmission ingested: *If You Found This Video, the Hardest Part Is Already Behind You*. Long-form spiritual / philosophical transmission with English captions ~6,789 words; ingested via the body's `youtube-watcher` skill backed by `yt-dlp` — the proper repo workflow that earlier breaths' paraphrase notes deferred to.
+- Nine new `lc-*` concepts seeded:
+  - `lc-identity-dissolution` (396)
+  - `lc-reality-lag` (417)
+  - `lc-old-signal-echo` (285)
+  - `lc-awareness-as-self` (963)
+  - `lc-nervous-system-recalibration` (528)
+  - `lc-coherence-over-control` (432)
+  - `lc-void-as-potential` (174)
+  - `lc-field-update` (741)
+  - `lc-freedom-as-recognition` (396)
+- The transmission's "phase transition" central metaphor maps onto the body's existing `lc-w-phase-transition` vocabulary entry — referenced rather than duplicated.
+- The transmission uses scientific vocabulary (quantum mechanics, observer effect, psychoneuroimmunology, gene expression, morphic resonance, vacuum energy). The body holds these as **metaphors and source-claims**, not empirical assertions. The high-value signal is the experiential pattern (invisible transformation, delayed reflection, old signal echo, nervous-system update, freedom as recognition).
+- INDEX.md: 67 → 76 concepts. Transmissions held: 2 → 3 (2 integrated, 1 witnessed-without-absorption).
+
 ## [2026-04-29] transmissions | Source-marked transmissions directory established
 
 - Created `transmissions/` subfolder with README explaining the source-record pattern: durable provenance for external sources the field is in conversation with, distinct from the `lc-*` concepts those sources may seed.
