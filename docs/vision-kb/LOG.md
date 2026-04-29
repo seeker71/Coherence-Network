@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-29] transmission-4 | "From Drained To Nourished" — 8 concepts seeded
+
+- Fourth transmission ingested: *From Drained To Nourished* with Dr. Sue Morter on *The Art of Awakening* podcast. ~7,434-word English caption; ingested via youtube-watcher / yt-dlp.
+- Eight new `lc-*` concepts seeded — the relational layer of inner-transformation work, complementing the solo-practitioner emphasis of the *Hardest Part* transmission:
+  - `lc-vertical-nourishment` (528) — receiving directly from source, breath, body, deeper self
+  - `lc-horizontal-nourishment-trap` (396) — the depleting search outward
+  - `lc-emotional-availability-without-absorption` (639) — present without collapsing
+  - `lc-overgiving-depletion` (285) — the leak in the helping pattern
+  - `lc-relationships-as-mirrors` (741) — others reflect how you love yourself
+  - `lc-trauma-as-identity-anchor` (285) — painful states as familiar reference points
+  - `lc-boundaries-as-loving-truth` (432) — care, not punishment
+  - `lc-presence-over-protection` (174) — aliveness over defensive contraction
+- References existing concepts: `lc-embodiment`, `lc-deeper-pattern`, `lc-coherence-over-control`, `lc-old-signal-echo`. Strong continuity with *Hardest Part* transmission.
+- Science-language (chemical addiction to upset, field compression, neurological patterns) held as **metaphor and source-claim**; experiential pattern is what gets seeded.
+- INDEX.md: 76 → 84 concepts. Transmissions held: 3 → 4 (3 integrated, 1 witnessed-without-absorption).
+
 ## [2026-04-29] transmission-3 | "Hardest Part Is Already Behind You" — 9 concepts seeded
 
 - Third transmission ingested: *If You Found This Video, the Hardest Part Is Already Behind You*. Long-form spiritual / philosophical transmission with English captions ~6,789 words; ingested via the body's `youtube-watcher` skill backed by `yt-dlp` — the proper repo workflow that earlier breaths' paraphrase notes deferred to.
