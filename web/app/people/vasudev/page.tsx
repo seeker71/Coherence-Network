@@ -46,8 +46,15 @@ export default function VasudevProfilePage() {
         </h1>
         <p className="text-lg text-foreground/80 leading-relaxed">
           Kirtan and satsang in Ubud — Tuesday evenings at{" "}
-          <span className="text-primary">Svarga Loka</span>, Wednesday
-          mornings at{" "}
+          <Link
+            href="https://adiwanahotels.com/svargaloka-resort-ubud-bali/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Svarga Loka
+          </Link>
+          , Wednesday mornings at{" "}
           <Link
             href="/people/ilena"
             className="text-primary hover:underline"
@@ -56,6 +63,20 @@ export default function VasudevProfilePage() {
           </Link>
           .
         </p>
+        <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+          <dt className="text-muted-foreground">Tuesday</dt>
+          <dd>
+            Kirtan at the Wantilan, Adiwana Svarga Loka — riverbanks of
+            the Campuhan, ~5 minutes from central Ubud
+          </dd>
+          <dt className="text-muted-foreground">Wednesday</dt>
+          <dd>
+            Satsang at Ranakami — Jl. Raya Penestanan Kelod no 16, Sayan,
+            Ubud · 11:00, 90 min
+          </dd>
+          <dt className="text-muted-foreground">Field</dt>
+          <dd>Devotional singing · contemplative dialogue · lineage-as-living-stream</dd>
+        </dl>
       </header>
 
       <Panel variant="warm" eyebrow="A note from this body">
@@ -131,17 +152,47 @@ export default function VasudevProfilePage() {
         </article>
 
         <article>
+          <h2 className="text-2xl font-light text-foreground mb-4">
+            Where & when the body meets
+          </h2>
+          <p className="text-sm text-foreground/75 leading-relaxed mb-6">
+            Two rooms in two adjacent valleys, on two consecutive nights
+            of the week. The Svarga Loka Wantilan is open-air and sits
+            on the riverbanks of the Campuhan, about five minutes' walk
+            from central Ubud. Ranakami is across the western ridge in
+            Sayan, above the Penestanan rice fields. The same voice,
+            different acoustics. The same lineage, different rooms.
+          </p>
+        </article>
+
+        <article>
           <Panel
             variant="cool"
-            eyebrow="A circle that meets"
-            heading="Tuesday — Kirtan at Svarga Loka"
+            eyebrow="Tuesday · evening"
+            heading="Kirtan at Svarga Loka"
           >
             <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
               <p>
-                Devotional singing in a room that has held this practice
-                for years. Harmonium, voices, the slow build into the
-                names. Visitors and locals seated together on the floor.
-                The hour ends when the room ends; nothing rushes.
+                Devotional singing in the Wantilan — an open-air room
+                that has held this practice for years. Harmonium, voices,
+                the slow build into the names. Visitors and locals
+                seated together on the floor. The hour ends when the
+                room ends; nothing rushes.
+              </p>
+              <p>
+                Held at{" "}
+                <Link
+                  href="https://adiwanahotels.com/svargaloka-resort-ubud-bali/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Adiwana Svarga Loka
+                </Link>
+                , Jl. Cok Rai Pudak, Peliatan, Ubud. Times shift gently
+                with the seasons; current schedule on the resort's
+                Facebook and Instagram. Open to anyone who arrives in
+                coherent state.
               </p>
               <p className="italic text-muted-foreground">
                 Field reading:{" "}
@@ -157,22 +208,29 @@ export default function VasudevProfilePage() {
         <article>
           <Panel
             variant="cool"
-            eyebrow="A circle that meets"
-            heading="Wednesday — Satsang at Ranakami"
+            eyebrow="Wednesday · 11:00"
+            heading="Satsang at Ranakami"
           >
             <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
               <p>
-                11:00 for ninety minutes. A private gathering held with
-                friends. The practice is to bring a question alive in
-                you and let the wisdom of one tradition or another speak
-                into it. Bodies are welcome. Words are welcome. Silence
-                is welcome.
+                90 minutes. A private gathering held with friends. The
+                practice is to bring a question alive in you and let the
+                wisdom of one tradition or another speak into it. Bodies
+                are welcome. Words are welcome. Silence is welcome.
               </p>
               <p>
-                Free for those who came to Tuesday's kirtan. Free for
-                Indonesian participants always. A 50,000 IDR offering
-                otherwise — given as a gesture toward the field rather
-                than a price for a seat.
+                Held at{" "}
+                <Link
+                  href="/people/ilena"
+                  className="text-primary hover:underline"
+                >
+                  Ranakami
+                </Link>
+                , Jl. Raya Penestanan Kelod no 16, Sayan, Ubud. Free for
+                those who came to Tuesday's kirtan. Free for Indonesian
+                participants always. A 50,000 IDR offering otherwise —
+                given as a gesture toward the field rather than a price
+                for a seat.
               </p>
               <p className="italic text-muted-foreground">
                 Field reading:{" "}

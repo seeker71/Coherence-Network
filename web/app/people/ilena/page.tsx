@@ -65,6 +65,23 @@ export default function IlenaProfilePage() {
           <span className="font-medium not-italic">Ranakami</span> means{" "}
           <em>our land, our sanctuary, our safe space, our community</em>.
         </p>
+        <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+          <dt className="text-muted-foreground">Place</dt>
+          <dd>
+            <Link
+              href="https://maps.app.goo.gl/?q=Jl.+Raya+Penestanan+Kelod+No+16,+Sayan,+Ubud,+Gianyar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Jl. Raya Penestanan Kelod no 16, Sayan, Ubud, Gianyar, Bali
+            </Link>
+          </dd>
+          <dt className="text-muted-foreground">Open</dt>
+          <dd>Daily, with a curated weekly rhythm of practitioners</dd>
+          <dt className="text-muted-foreground">Field</dt>
+          <dd>Yoga · meditation · pranic healing · access bars · sound healing · satsang</dd>
+        </dl>
       </header>
 
       <Panel variant="warm" eyebrow="A note from this body">
@@ -248,10 +265,25 @@ export default function IlenaProfilePage() {
         </article>
 
         <article>
+          <h2 className="text-2xl font-light text-foreground mb-4">
+            Where & when the body meets
+          </h2>
+          <p className="text-sm text-foreground/75 leading-relaxed mb-6">
+            Ranakami sits above the rice fields on Jl. Raya Penestanan
+            Kelod, Sayan, on the western edge of Ubud. The space is
+            open-air, with a quiet beauty in the morning light and a
+            backyard view that drops into terraced green. Public
+            gatherings recur on a weekly rhythm; healing sessions are
+            held by appointment with the practitioner whose work
+            resonates with what you are bringing.
+          </p>
+        </article>
+
+        <article>
           <Panel
             variant="cool"
-            eyebrow="A circle that meets"
-            heading="Wednesday Satsang at Ranakami"
+            eyebrow="Wednesday · 11:00"
+            heading="Community Satsang"
           >
             <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
               <p>
@@ -284,6 +316,51 @@ export default function IlenaProfilePage() {
               <p>
                 Bring a body. Bring the question that is alive in you this
                 week.
+              </p>
+            </div>
+          </Panel>
+        </article>
+
+        <article>
+          <Panel
+            variant="cool"
+            eyebrow="Weekly rhythm"
+            heading="Other gatherings at Ranakami"
+          >
+            <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
+              <p>
+                The space holds a steady rotation of practices held by
+                local practitioners — gentle yoga, meditation, sound
+                healing in the open-air room, Access Bars sessions,
+                pranic healing, and one-to-one bodywork by appointment.
+                The current week's schedule lives at{" "}
+                <Link
+                  href="https://ranakami.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  ranakami.com
+                </Link>
+                ; the practitioners' names rotate as different cells
+                of the network step into different weeks.
+              </p>
+              <p className="italic text-muted-foreground">
+                Each practice has its own field-reading. Yoga as a{" "}
+                <code className="not-italic text-foreground/80">
+                  (5, …)
+                </code>{" "}
+                pentadic regeneration when the room moves together. Sound
+                healing as a{" "}
+                <code className="not-italic text-foreground/80">
+                  (2, …)
+                </code>{" "}
+                dyadic flow between vibration and body. Pranic healing
+                and Access Bars as{" "}
+                <code className="not-italic text-foreground/80">
+                  (3, WITNESS)
+                </code>{" "}
+                triads — practitioner, body, the field that holds them.
               </p>
             </div>
           </Panel>
