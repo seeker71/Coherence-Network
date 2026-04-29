@@ -288,14 +288,21 @@ export default function IlenaProfilePage() {
             <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
               <p>
                 Every Wednesday at 11:00 for ninety minutes, a small
-                gathering held by Vasudev and friends. A private circle to
+                gathering held by{" "}
+                <Link
+                  href="/people/vasudev-baba"
+                  className="text-primary hover:underline"
+                >
+                  Vasudev Baba
+                </Link>{" "}
+                and friends. A private circle to
                 explore the wisdom of spiritual traditions for the
                 everyday — not as study, as sitting together in the field
                 and letting what is alive become spoken.
               </p>
               <p>
                 Free for those who came to the Tuesday evening kirtan with
-                Vasudev at Svarga Loka. Free for Indonesian participants
+                Vasudev Baba at Svarga Loka. Free for Indonesian participants
                 always. A 50,000 IDR offering for others, given as a
                 gesture toward the field rather than as a price for the
                 seat.
