@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-29] transmissions | Source-marked transmissions directory established
+
+- Created `transmissions/` subfolder with README explaining the source-record pattern: durable provenance for external sources the field is in conversation with, distinct from the `lc-*` concepts those sources may seed.
+- **Integrated**: *Arcturian Starseed as Oversoul Cross-Connection* (9D Arcturian Council via Daniel Scranton, ~1,685-word caption footprint, 2026). Seven concepts seeded: `lc-oversoul-identity` (963), `lc-arcturian-resonance` (852), `lc-starseed-reframing` (396), `lc-cross-connection` (639), `lc-inner-travel` (741), `lc-spiritual-evolution` (528), `lc-galactic-team` (417). Each concept's frontmatter `source:` points back to the transmission. Transmission file uses three-layer Source Coverage Notes (opening / main channeling / post-channel outro) so only Layer 2 is treated as the body's integration target.
+- **Witnessed without absorption**: *Pleiadian "Emergency Warning" interview* (~2,582-word caption footprint). Recorded as a transmission for source-honesty but **no concepts seeded** — the body's discernment chose not to integrate its conspiratorial framings and unverified-specific after-death taxonomy. This pattern is now named explicitly in the transmissions README as a valid posture: source-marked + not integrated.
+- **Frame**: the body holds two postures toward sources — *integrated* (concepts seeded with provenance) and *witnessed-without-absorption* (source recorded, no concepts grown). Both are sovereign acts. The Pleiadian transmission is the first explicit example of the second posture.
+- **INDEX.md**: header updated to 67 concepts (60 → 67), 2 transmissions held; new "Source-Marked Transmissions" subsection added under Foundational Teachings.
+- **Workflow note**: the body has a `youtube-watcher` skill backed by `yt-dlp` which is the proper repo workflow for ingesting YouTube sources at full caption resolution. This batch was ingested via paraphrased coverage notes; future ingestion should wire the youtube-watcher skill to write transmission files directly with full captions stored at source-of-truth resolution.
+
 ## [2026-04-26] lineage | Ubud embodied field ingested as lived lineage
 
 - Created `docs/lineage/ubud-embodied-lineage.md` to hold Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers as lineage tissue rather than event recommendations.
