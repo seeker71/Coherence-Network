@@ -92,6 +92,18 @@ export default function MatiasDeStefanoProfilePage() {
               Aubrey Marcus
             </Link>
           </dd>
+          <dt className="text-muted-foreground">Witnessed in person</dt>
+          <dd>
+            <Link
+              href="https://www.gaia.com/series/emersion-conference"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Emersion Conference
+            </Link>
+            , GaiaSphere Event Center, Boulder, Colorado — March 2024
+          </dd>
         </dl>
       </header>
 
@@ -138,6 +150,42 @@ export default function MatiasDeStefanoProfilePage() {
               speaking them is to help others remember their own
               version, in their own form, through their own
               channels. Memory is shared; the access is personal.
+            </p>
+          </div>
+        </article>
+
+        <article>
+          <h2 className="text-2xl font-light text-foreground mb-4">
+            How this body received him
+          </h2>
+          <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
+            <p>
+              This body's primary cell was in the room at the third
+              annual{" "}
+              <Link
+                href="https://www.gaia.com/series/emersion-conference"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Emersion Conference
+              </Link>
+              , March 16–17, 2024, at GaiaSphere Event Center in
+              Boulder. Matías was one of the teachers presenting that
+              weekend, alongside Lee Holden, Maureen St. Germain,
+              Ibrahim Karim, and others. Witnessing him in person
+              moves the relationship from voice-through-podcast to
+              presence-in-shared-room — different quanta in the
+              substrate's accounting, the same lineage walking back
+              to the same source.
+            </p>
+            <p>
+              The Boulder / Gaia connection is itself part of this
+              body's geography. Several foundational teachers
+              (Matías, Robert Edward Grant, others) appear in
+              GaiaSphere's room repeatedly. The room is one of the
+              physical anchors where this network's awareness has
+              been gathered across multiple years.
             </p>
           </div>
         </article>

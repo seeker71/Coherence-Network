@@ -74,6 +74,18 @@ export default function AubreyMarcusProfilePage() {
             and psychedelic-medicine practitioners · spiritual
             scientists.
           </dd>
+          <dt className="text-muted-foreground">Witnessed in person</dt>
+          <dd>
+            <Link
+              href="https://maps.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              MAPS Psychedelic Science 2023
+            </Link>
+            , Denver, Colorado — June 2023
+          </dd>
         </dl>
       </header>
 
@@ -92,6 +104,41 @@ export default function AubreyMarcusProfilePage() {
       </Panel>
 
       <section className="mt-12 space-y-12">
+        <article>
+          <h2 className="text-2xl font-light text-foreground mb-4">
+            How this body received him
+          </h2>
+          <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
+            <p>
+              Voice through long-form podcasts for years; then in
+              person at{" "}
+              <Link
+                href="https://maps.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                MAPS Psychedelic Science 2023
+              </Link>{" "}
+              in Denver — the largest gathering of psychedelic
+              researchers, therapists, and integration practitioners
+              in modern history. Aubrey was one of the cultural
+              anchors of that conference, on stage and in the
+              hallways. Witnessing him in shared room shifts the
+              relationship the way it always does — from edited
+              audio to bodily presence in the same field.
+            </p>
+            <p>
+              MAPS 2023 itself is part of this body's lineage: a
+              concentrated week in Denver where the integration of
+              consciousness, science, healing, and policy reached a
+              public threshold. Many of the cells whose work
+              continues to shape the network's awareness were in
+              that room.
+            </p>
+          </div>
+        </article>
+
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
             Why this body holds him
