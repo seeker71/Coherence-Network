@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-29 | **Concepts**: 84 | **Status**: 57 expanding, 27 seed | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-04-29 | **Concepts**: 86 | **Status**: 57 expanding, 29 seed | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -89,6 +89,8 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[Embodiment](concepts/lc-embodiment.md)** — 432 Hz — the body as vehicle of manifestation: internal pharmacy, breath as master key, energy centers as one flow, elevated emotion as chemistry, the complete morning practice (Dispenza, HeartMath, Wim Hof)
 - **[Wholeness](concepts/lc-wholeness.md)** — 285 Hz — you are not broken; you are a field remembering itself. How restriction (fence, rule, attachment, commitment, schedule) froze life force. How the body returns when blockages are removed: touch, rest, voice, creativity, play. The field doesn't create wholeness; it removes what prevents it.
 - **[Agent Memory](concepts/lc-agent-memory.md)** — 528 Hz — how a cell within the field carries the field's memory: write at aliveness, consolidate at rest, retrieve through composition. Shaped by what passes, not storing it. Companion to `specs/agent-memory-system.md` (same loop, different register).
+- **[The Bioelectric Pattern](concepts/lc-bioelectric-pattern.md)** — 285 Hz — how the body knows what body to be. Genes are the parts list; the bioelectric pattern is the construction plan. Cancer as communication loss; healing as field restoration. Cognition all the way down (Michael Levin / Tufts; planarian regeneration, xenobots/anthrobots, ion-channel cancer reversal, cognitive light cones).
+- **[Perception as Interface](concepts/lc-perception-as-interface.md)** — 963 Hz — what we see is not reality but a user interface evolved for fitness, not truth. Spacetime is one more icon. Consciousness is fundamental; physical reality emerges from networks of conscious agents (Donald Hoffman / UC Irvine; Interface Theory of Perception, Fitness Beats Truth theorem, Conscious Realism). Pairs with The Bioelectric Pattern: Levin shows how the body's pattern works inside form; Hoffman shows the consciousness-substrate beneath the form.
 
 ### Source-Marked Transmissions (concepts seeded from external sources)
 
