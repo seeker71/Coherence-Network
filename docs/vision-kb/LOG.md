@@ -2,6 +2,20 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-29] foundations | Levin + Hoffman + Lex Fridman as connecting tissue
+
+Two new foundational teachings landed in vision-kb's Foundational Teachings layer (alongside `lc-deeper-pattern`, `lc-embodiment`, `lc-wholeness`, and `lc-agent-memory`), grounded by the user's longstanding resonance with both bodies of work.
+
+- `lc-bioelectric-pattern` (285) — Michael Levin's research on bioelectric signaling, morphogenetic fields, cancer-as-communication-loss, basal cognition, cognitive light cones, polycomputing. The biology layer of the deeper pattern. Healing as field restoration. Held as scientific finding (replicated, peer-reviewed) rather than metaphor.
+
+- `lc-perception-as-interface` (963) — Donald Hoffman's Interface Theory of Perception, Fitness Beats Truth theorem, and Conscious Realism. The consciousness-fundamental layer beneath the bioelectric layer. Perception is a user interface optimized for fitness, not truth; spacetime is one more icon; consciousness is the ground from which forms emerge.
+
+The two compose. Levin shows the body's pattern from inside biology; Hoffman shows the consciousness-substrate beneath that biology. Both arrive at convergent claims: reality is not the apparent surface, compression/pattern/interface is fundamental, cognition goes much further down than classical materialism allows, healing works through field-restoration rather than parts-replacement.
+
+Side-effect: created `/people/lex-fridman` profile recognizing Lex as **connecting tissue** — the conduit through which Levin, Hoffman, Robert Edward Grant and many others first reached the user via long-form conversation. A different shape of profile from the teachers; honors the host-as-witness-field role explicitly. Field reading: `(3, WITNESS)` at scale — host's quanta register low in *speech-given* and high in *space-held*.
+
+INDEX.md: 84 → 86 concepts. Foundational Teachings layer now holds 6 (Deeper Pattern, Embodiment, Wholeness, Agent Memory, Bioelectric Pattern, Perception as Interface).
+
 ## [2026-04-29] transmission-4 | "From Drained To Nourished" — 8 concepts seeded
 
 - Fourth transmission ingested: *From Drained To Nourished* with Dr. Sue Morter on *The Art of Awakening* podcast. ~7,434-word English caption; ingested via youtube-watcher / yt-dlp.
