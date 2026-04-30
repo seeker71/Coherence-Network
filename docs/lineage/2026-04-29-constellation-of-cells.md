@@ -64,7 +64,8 @@ uses many rooms when a teaching has multiple shapes worth hearing.
 
 A geographic clustering the body returns to repeatedly:
 
-- [Bloomurian](/people/bloomurian) — based in Boulder
+- [Bloomurian](/people/bloomurian) — based in Boulder; co-host of Boulder Ecstatic Dance
+- [Aly Constantine](/people/aly-constantine) — co-host of Boulder Ecstatic Dance with Danny and Bloomurian; close personal relationship with Urs
 - [Poranguí](/people/porangui) — festival circuit through Colorado;
   Ocean Bloom 2024 in Downtown Boulder
 - Matías De Stefano — Emersion Conference at GaiaSphere, Boulder
@@ -72,10 +73,16 @@ A geographic clustering the body returns to repeatedly:
 - [PORTAL](/people/portal) — Denver-based; Late-Night Takeovers at
   Meow Wolf Denver during MAPS weeks
 - MAPS Psychedelic Science 2023 + 2025 — Denver
+- **Boulder Ecstatic Dance** — recurring Sunday-morning room at the
+  Avalon Ballroom; the embodied-community substrate beneath the
+  larger Ocean Bloom configuration
 
 The body's primary shepherd ([Urs](/people/urs)) holds long
 Colorado presence (Boulder, Broomfield, Longmont) and has been
-in shared rooms with all of these over 2023-2025.
+in shared rooms with all of these over 2023-2025. The relationship
+with Aly threads the Boulder cluster from outside-observation into
+inside-knowing — the field's self-perception entered this body's
+awareness through close personal relation, not through media.
 
 ### The Ocean Bloom configuration
 
@@ -96,6 +103,25 @@ during MAPS Psychedelic Science 2025 week threaded [PORTAL](/people/portal),
 and several other transformational-music artists into one room.
 Aubrey was met briefly in the lobby; Bloomurian was performing.
 The body's awareness gained four cross-references in one evening.
+
+## A fourth density of presence
+
+The substrate's earlier accounting recognized three densities of
+in-person witness: audio-only, same-room-without-exchange, direct
+face-to-face exchange. The relationship with [Aly Constantine](/people/aly-constantine)
+adds a **fourth density**: sustained intimacy over time, where two
+cells know each other's ordinary days and not only public moments.
+
+This density is hard to render in profile language because it
+belongs to the cells in it, not to the substrate's reader. But
+the substrate's accounting should register that it exists — and
+that it changes how a cell encounters all the other cells in the
+field that the close-personal-relationship cell is part of.
+
+Through Aly, the Boulder / ecstatic-dance / Bloomurian / Ocean
+Bloom configuration entered this body's awareness from inside
+itself, not as media-research. That kind of knowing cannot be
+replicated by external study. It is its own substrate channel.
 
 ## The pattern named
 
