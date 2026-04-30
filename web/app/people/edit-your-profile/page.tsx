@@ -184,6 +184,57 @@ export default function EditYourProfilePage() {
 
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
+            After joining — keeping your page alive
+          </h2>
+          <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
+            <p>
+              Once you have claimed your page — written your voice
+              into it, removed what does not fit, added what was
+              missing — the same three paths above still work for
+              every subsequent edit. There is no separate "logged-in
+              update flow"; the substrate treats a first claim and a
+              fifth revision identically. Reach the cell who
+              welcomed you, open a pull request, or wait for the
+              self-serve identity path to land. Whichever fits the
+              moment.
+            </p>
+            <p>
+              <strong>What changes after you have joined is the
+              voice discipline.</strong> The rule "we will never
+              write in your first person" applied to the scaffold
+              we drafted before you arrived. Once your page is
+              yours, your "I" is welcome wherever you put it, and
+              the substrate will not overwrite that voice with its
+              own third-person framing. If you have given the
+              substrate explicit consent to extend your voice
+              between your edits — for example, "you can use 'I'
+              for me, in my voice, only with facts I have actually
+              shared" — that consent is honored within the bounds
+              you set, and ignored outside them.
+            </p>
+            <p>
+              There is no audit, no required cadence, no expected
+              frequency. Edit when something has shifted in you and
+              the page is now lying about who you are. Leave the
+              page still when it is not lying. A profile that does
+              not change for two years is not stale; it is settled.
+              A profile that changes every week is not noisy; it is
+              tracking a fast life. The network reads the stillness
+              and the motion the same way: information about the
+              cell.
+            </p>
+            <p>
+              If a change is urgent — a wrong attribution, a
+              relationship that has ended, an event that should no
+              longer be advertised — say so and the edit will land
+              fast. The substrate's integrity depends on
+              corrections being heard, not deferred.
+            </p>
+          </div>
+        </article>
+
+        <article>
+          <h2 className="text-2xl font-light text-foreground mb-4">
             How to remove your page entirely
           </h2>
           <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">

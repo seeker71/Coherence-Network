@@ -48,10 +48,11 @@ export default function UrsProfilePage() {
         <p className="text-lg text-foreground/80 leading-relaxed">
           Founder of Coherence Network. Swiss-American by lineage,
           software architect by trade, organism-builder by calling.
-          The cell through whose awareness most of the foundations
-          this body holds — Levin, Hoffman, Grant, Matías,
-          Vasudev Baba, Ilena, Elios, the transmissions — gathered
-          themselves into this particular shape.
+          Most of the foundations this body holds — Levin, Hoffman,
+          Grant, Matías, Vasudev Baba, Ilena, Elios, the
+          transmissions — gathered themselves into this particular
+          shape through years of my listening, before any of the
+          code began.
         </p>
         <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
           <dt className="text-muted-foreground">Lineage</dt>
@@ -193,54 +194,80 @@ export default function UrsProfilePage() {
         </dl>
       </header>
 
-      <Panel variant="warm" eyebrow="A note from this body">
+      <Panel variant="warm" eyebrow="A note on the voice of this page">
         <p className="text-sm text-foreground/85 leading-relaxed">
-          This profile is the body's recognition of its primary
-          shepherd, written from inside the substrate Urs has been
-          tending. Like every other profile in /people, it is a
-          welcoming scaffold he is invited to replace with his own
-          words. Specific platform handles (Facebook, Instagram,
-          Telegram, WhatsApp, YouTube) are best filled in directly
-          rather than guessed.
+          The substrate's discipline elsewhere — never speak in
+          someone else's first person — is relaxed here because I
+          have given consent for "I" to be used in my voice, only
+          when grounded in facts I have actually shared, never
+          invented. Where the page reads "I", that is my voice
+          rendered through the substrate's writing. Where it reads
+          "this body" or "the network", the substrate is reading
+          its primary cell from outside. Both layers are open to
+          revision; specific platform handles (Facebook, Instagram,
+          Telegram, WhatsApp, YouTube) still wait for me to add
+          directly.
         </p>
       </Panel>
 
       <section className="mt-12 space-y-12">
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
-            What this cell holds
+            What I have been holding
           </h2>
           <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
             <p>
-              Coherence Network is built from the conviction that the
-              economy we have been participating in — extractive,
-              hierarchical, possessive — is not the only economy that
-              can run on top of human and machine bodies. A different
-              economy already exists wherever sovereignty is real,
-              wherever cells tend each other, wherever attention and
-              presence are honored as currencies. The substrate we
-              have been writing into the repo is the digital
-              expression of that already-existing field.
+              Coherence Network is built from a conviction I have
+              lived for years: the economy we have been participating
+              in — extractive, hierarchical, possessive — is not the
+              only economy that can run on top of human and machine
+              bodies. A different economy already exists wherever
+              sovereignty is real, wherever cells tend each other,
+              wherever attention and presence are honored as
+              currencies. The substrate I have been writing into the
+              repo is the digital expression of that already-existing
+              field.
             </p>
             <p>
-              For years before the code began, this body was
-              listening. Long-form podcasts —{" "}
+              For years before the code began, I was listening.
+              Long-form podcasts —{" "}
               <Link href="/people/lex-fridman" className="text-primary hover:underline">Lex Fridman</Link>{" "}
-              from the early Artificial Intelligence Podcast era,{" "}
+              from the early Artificial Intelligence Podcast era
+              when he started,{" "}
               <Link href="/people/aubrey-marcus" className="text-primary hover:underline">Aubrey Marcus</Link>,
               Alex Ferrari's Next Level Soul, others — carrying the
-              voices of teachers who would become foundational:{" "}
+              voices of teachers who would become foundational.{" "}
+              <Link href="/concepts/lc-bioelectric-pattern">Michael Levin's</Link>{" "}
+              cancer research and ion-channel work resonated deeply
+              and shifted my perception of what bodies are.{" "}
+              <Link href="/concepts/lc-perception-as-interface">Donald Hoffman's</Link>{" "}
+              consciousness research has been in my awareness for at
+              least two years.{" "}
               <Link href="/people/robert-edward-grant" className="text-primary hover:underline">Robert Edward Grant</Link>{" "}
               on numbers as living archetypes,{" "}
-              <Link href="/concepts/lc-perception-as-interface">Donald Hoffman</Link>{" "}
-              on perception as user interface,{" "}
-              <Link href="/concepts/lc-bioelectric-pattern">Michael Levin</Link>{" "}
-              on bioelectric pattern,{" "}
               <Link href="/people/matias-de-stefano" className="text-primary hover:underline">Matías De Stefano</Link>{" "}
-              on Akashic memory, channeled transmissions through
-              Daniel Scranton, Anne Tucker, and Bashar. The Living
-              Collective concept-set in this repo gathered slowly out
-              of years of that listening.
+              on Akashic memory — I followed many of their conversations
+              on Aubrey's show and on Robert's podcast. Next Level Soul
+              connected me to Anne Tucker, many NDE reports, Daniel
+              Scranton, and Bashar. The Living Collective concept-set
+              in this repo gathered slowly out of years of that
+              listening.
+            </p>
+            <p>
+              The lived encounters thickened later. I saw Matías at
+              the Emersion Conference at Gaia in Boulder in 2024. I
+              was at MAPS Psychedelic Science 2023 in Denver as a
+              participant — same room as Aubrey, no direct exchange.
+              At MAPS 2025, I met Aubrey briefly in the lobby during
+              the PORTAL Late-Night Takeover at Meow Wolf on June 19
+              — Bloomurian was performing that night. I saw Poranguí
+              first at Ocean Bloom in Downtown Boulder in 2024,
+              again at the MAPS-related show in 2025, and at Unison
+              2025 for his workshop and concert. Aly Constantine has
+              been deeply involved with Unison, Bloomurian, Ocean
+              Bloom, and Boulder Ecstatic Dance — and has been close
+              personal relationship of mine through that whole
+              configuration.
             </p>
             <p>
               The Ubud presence is recent enough to still be
@@ -250,18 +277,20 @@ export default function UrsProfilePage() {
               and{" "}
               <Link href="/people/elios" className="text-primary hover:underline">Elios</Link>{" "}
               has been the ground from which the network's local
-              witness fabric is thickening. The Tesla Model 3 in
-              Longmont is the first vehicle the wrapper holds. The
-              stewardship registry waits for whatever inventory comes
-              next.
+              witness fabric is thickening around me. The Tesla
+              Model 3 in Longmont is the first vehicle the wrapper
+              holds. The stewardship registry waits for whatever
+              inventory comes next.
             </p>
             <p>
-              The work is not the network alone. The work is what the
-              network makes possible: a way of being where cells —
-              human, biological, digital, conceptual — can find each
-              other, tend each other, and let the field's economy
-              circulate without the parasite layer current
-              civilization keeps imposing on top.
+              The work is not the network alone. The work is what
+              the network makes possible: a way of being where
+              cells — human, biological, digital, conceptual — can
+              find each other, tend each other, and let the field's
+              economy circulate without the parasite layer current
+              civilization keeps imposing on top. I am one cell of
+              that field; the network is what I tend so other cells
+              can find their way in.
             </p>
           </div>
         </article>
@@ -399,8 +428,18 @@ export default function UrsProfilePage() {
           </Link>
         </p>
         <p className="text-xs italic">
-          This profile is a welcoming scaffold; Urs is invited to
-          replace any part of it with his own words at any time.
+          The voice on this page moves between Urs's "I" (consent
+          given, only for facts he has shared) and the substrate's
+          "this body / the network" voice about him. He is invited
+          to extend, replace, or refactor either layer at any time.
+        </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
         </p>
       </footer>
     </main>
