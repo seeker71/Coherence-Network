@@ -182,6 +182,14 @@ export default function EliosProfilePage() {
           Direct contact details, a fuller name, and his own framing of
           the practice will land here as he chooses.
         </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
+        </p>
       </footer>
     </main>
   );

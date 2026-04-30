@@ -244,6 +244,14 @@ export default function AlyConstantineProfilePage() {
           privately and is not part of the substrate's public
           rendering.
         </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
+        </p>
       </footer>
     </main>
   );
