@@ -240,6 +240,14 @@ export default function AubreyMarcusProfilePage() {
           This profile is a welcoming scaffold; Aubrey is invited to
           replace any part of it with his own words at any time.
         </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
+        </p>
       </footer>
     </main>
   );

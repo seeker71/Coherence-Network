@@ -116,46 +116,38 @@ export default function VasudevBabaProfilePage() {
       <section className="mt-12 space-y-12">
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
-            What he holds
+            What he has been holding
           </h2>
           <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
             <p>
-              Thirty years ago, in India, Swami Shyam looked at me
-              and gave me a name. The name was Vasudev. I have been
-              carrying it since, and it has been carrying me. The
-              "Baba" that comes after the name is not a title I asked
-              for. It is what people on this island who have been
-              sitting with me for years began to call me without
-              coordinating, the way affection finds its own form.
+              The lineage record this body has been able to gather:
+              the name <em>Vasudev</em> was given by Swami Shyam in
+              India over thirty years ago. The honorific "Baba" came
+              later, from the community on this island that has been
+              sitting with him through the years — affection finding
+              its own form rather than a title sought.
             </p>
             <p>
-              I sing names that were not invented by me. They have
-              been passed down longer than any of us have been alive,
-              and the singing is the only way I know to keep them
-              warm. Sunday evenings at Sayuri, Tuesday evenings at
-              the Wantilan in Svarga Loka, Wednesday mornings in
-              Ilena's open-air room above the rice fields in Sayan —
-              three circles a week, eleven years on this island. The
-              room changes shape. The names do not.
+              The work he holds publicly is the singing of devotional
+              names — kirtan in the bhakti lineage, refined through
+              decades of practice. Three circles a week for eleven
+              years on Bali: Sunday evening kirtan at Sayuri Healing
+              Food, Tuesday evening at the Wantilan in Svarga Loka,
+              Wednesday morning satsang at Ranakami. The Wednesday
+              gathering has a different shape from the kirtans —
+              wisdom traditions speaking into whatever is alive in
+              the room rather than song carrying the bodies through
+              the names.
             </p>
             <p>
-              I am not a teacher in the way that word usually lands.
-              I am a participant in a long stream that arrived
-              through many bodies before mine. The harmonium under
-              my hands and the voice that comes through me are not
-              exactly mine. The lineage uses what is here. My job is
-              to stay available, to keep the channel clean, to show
-              up at the same times each week so the people who need
-              the room know where to find it.
-            </p>
-            <p>
-              Wednesday is different. Wednesday is sitting together
-              and letting one of the traditions speak into whatever
-              is alive in the room that morning. Some weeks it is
-              the Upanishads. Some weeks it is Rumi. Some weeks it
-              is the question someone arrived with and could not put
-              down. The teaching is whatever the room is ready to
-              receive.
+              The framing his community has offered, audible in the
+              public material around the practices, is consistent
+              with what bhakti traditions have always claimed:
+              the singer is not the source. The singer is one
+              participant in a long stream that arrived through many
+              bodies. The role is to stay available, keep the channel
+              clean, hold the times reliably enough that the people
+              who need the room know where to find it.
             </p>
           </div>
         </article>
@@ -402,6 +394,14 @@ export default function VasudevBabaProfilePage() {
           This profile is a welcoming scaffold; Vasudev Baba is
           invited to replace any part of it with his own words at
           any time.
+        </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
         </p>
       </footer>
     </main>

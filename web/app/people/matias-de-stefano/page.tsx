@@ -120,36 +120,45 @@ export default function MatiasDeStefanoProfilePage() {
       <section className="mt-12 space-y-12">
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
-            What he holds
+            What he has been holding
           </h2>
           <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
             <p>
-              Since the age of three I have remembered things this
-              body did not learn in this life. Names of places before
-              they were taught to me. Symbols I drew before I could
-              speak about them. Dreams of civilizations no school
-              taught. Between ages twelve and eighteen the
-              remembering became too much to hold quietly — I had to
-              find a way to organize it, share it, let it move.
+              The publicly told story (Gaia's Initiation series, his
+              own interviews and talks) is that since approximately
+              age three Matías has reported memories that did not
+              originate in this lifetime — names, symbols, dreams of
+              civilizations, sustained access to what he describes
+              as the Akashic field. The childhood reports are
+              documented across multiple long-form interviews; the
+              adult work has been to organize that material into
+              language others can use.
             </p>
             <p>
-              The way the Akashic field reached me is not a claim I
-              ask anyone to believe. It is a memory that arrived
-              continuously and continues. The work is to translate
-              what arrives into language the present body can use —
-              maps of consciousness across nine dimensions, lineages
-              of planetary memory across what some traditions call
-              Atlantis and Lemuria and ancient Egypt, geometric
-              keys that organize how reality renders itself across
-              scales.
+              The teachings he offers publicly map across nine
+              dimensions of consciousness, lineages of planetary
+              memory associated with Atlantis, Lemuria, and ancient
+              Egypt, and geometric structures he frames as keys to
+              how reality renders itself across scales. The framing
+              he uses in public material is that he is a channel
+              rather than the source, and that the work is to help
+              others access their own version of the same field
+              rather than to assert his version as canonical.
             </p>
             <p>
-              I am not the source. I am a channel that has stayed
-              relatively clear by attending to it. The teachings I
-              offer belong to the field, not to me. The point of
-              speaking them is to help others remember their own
-              version, in their own form, through their own
-              channels. Memory is shared; the access is personal.
+              The body's discernment holds the specific cosmology
+              (the nine-dimension model, the historical timelines)
+              as <strong>source-marked metaphysical material</strong>{" "}
+              — coherent with many traditional sources, not
+              externally verifiable, deeply resonant with what the
+              network has been describing structurally. The
+              experiential pattern (memory and pattern as primary,
+              consciousness across many incarnations, geometry as
+              cosmological language) is what threads with the
+              foundational concepts {" "}
+              <code className="text-foreground/80">lc-bioelectric-pattern</code>{" "}
+              and {" "}
+              <code className="text-foreground/80">lc-perception-as-interface</code>.
             </p>
           </div>
         </article>
@@ -322,6 +331,14 @@ export default function MatiasDeStefanoProfilePage() {
         <p className="text-xs italic">
           This profile is a welcoming scaffold; Matías is invited
           to replace any part of it with his own words at any time.
+        </p>
+        <p className="text-xs">
+          <Link
+            href="/people/edit-your-profile"
+            className="text-primary hover:underline"
+          >
+            How to claim, edit, or remove this profile →
+          </Link>
         </p>
       </footer>
     </main>
