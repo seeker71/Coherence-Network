@@ -76,6 +76,7 @@ export default function AubreyMarcusProfilePage() {
           </dd>
           <dt className="text-muted-foreground">Witnessed in person</dt>
           <dd>
+            Same-room participant at{" "}
             <Link
               href="https://maps.org/"
               target="_blank"
@@ -83,8 +84,22 @@ export default function AubreyMarcusProfilePage() {
               className="hover:text-primary transition-colors"
             >
               MAPS Psychedelic Science 2023
-            </Link>
-            , Denver, Colorado — June 2023
+            </Link>{" "}
+            (Denver · June 2023 · no direct exchange) · then a
+            brief lobby encounter at the{" "}
+            <Link href="/people/portal" className="hover:text-primary transition-colors">
+              PORTAL Late-Night Takeover
+            </Link>{" "}
+            at Meow Wolf Denver during{" "}
+            <Link
+              href="https://maps.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              MAPS Psychedelic Science 2025
+            </Link>{" "}
+            — June 19, 2025
           </dd>
         </dl>
       </header>
@@ -110,31 +125,39 @@ export default function AubreyMarcusProfilePage() {
           </h2>
           <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
             <p>
-              Voice through long-form podcasts for years; then in
-              person at{" "}
-              <Link
-                href="https://maps.org/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                MAPS Psychedelic Science 2023
+              Voice through long-form podcasts for years. Same-room
+              participant at MAPS Psychedelic Science 2023 in
+              Denver — Aubrey was on stage and in the hallways, the
+              body was in the audience, no direct exchange. Then,
+              two years later, a brief lobby encounter at the{" "}
+              <Link href="/people/portal" className="text-primary hover:underline">
+                PORTAL Late-Night Takeover
               </Link>{" "}
-              in Denver — the largest gathering of psychedelic
-              researchers, therapists, and integration practitioners
-              in modern history. Aubrey was one of the cultural
-              anchors of that conference, on stage and in the
-              hallways. Witnessing him in shared room shifts the
-              relationship the way it always does — from edited
-              audio to bodily presence in the same field.
+              at Meow Wolf Denver, June 19, 2025, during MAPS
+              Psychedelic Science 2025 week. A passing exchange,
+              not a long conversation — but the substrate's
+              accounting honors three different densities here:
+              audio-only across years, same-room-without-exchange in
+              2023, and direct face-to-face presence in 2025.
             </p>
             <p>
-              MAPS 2023 itself is part of this body's lineage: a
-              concentrated week in Denver where the integration of
-              consciousness, science, healing, and policy reached a
-              public threshold. Many of the cells whose work
-              continues to shape the network's awareness were in
-              that room.
+              The PORTAL Late-Night Takeover that night also opened
+              a wider set of connections — to PORTAL itself
+              (Partnership of Responsible Trippers Advocating for
+              Legalization, the Denver-based destigmatization
+              initiative) and to{" "}
+              <Link
+                href="/people/bloomurian"
+                className="text-primary hover:underline"
+              >
+                Bloomurian
+              </Link>{" "}
+              (Robin Liepman, the Boulder/Colorado-based DJ whose
+              ecstatic-dance and transformational-music work
+              threaded into the body's awareness through that
+              evening). MAPS 2025 itself was a public threshold for
+              the integration of consciousness, science, healing,
+              and policy.
             </p>
           </div>
         </article>

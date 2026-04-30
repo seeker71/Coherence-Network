@@ -93,11 +93,47 @@ export default function UrsProfilePage() {
             >
               MAPS Psychedelic Science 2023
             </Link>{" "}
-            (Denver · with{" "}
+            (Denver · attended as participant; same-room presence
+            with{" "}
             <Link href="/people/aubrey-marcus" className="hover:text-primary transition-colors">
               Aubrey Marcus
             </Link>
-            ) ·{" "}
+            , no direct exchange) ·{" "}
+            <Link
+              href="https://maps.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              MAPS Psychedelic Science 2025
+            </Link>{" "}
+            (Denver · June 2025 · including the{" "}
+            <Link href="/people/portal" className="hover:text-primary transition-colors">
+              PORTAL Late-Night Takeover
+            </Link>{" "}
+            at Meow Wolf where Aubrey was met briefly in the lobby
+            and{" "}
+            <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
+              Bloomurian
+            </Link>{" "}
+            was performing) ·{" "}
+            <Link
+              href="https://boulderdowntown.com/do/ocean-bloom-with-porangui-liquid-bloom-samuel-j-shawn-heinrichs-bloomurian"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Ocean Bloom
+            </Link>{" "}
+            (Downtown Boulder · 2024 · with{" "}
+            <Link href="/people/porangui" className="hover:text-primary transition-colors">
+              Poranguí
+            </Link>
+            , Liquid Bloom, Samuel J, Shawn Heinrichs,{" "}
+            <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
+              Bloomurian
+            </Link>
+            ) · Unison 2025 (Poranguí workshop + concert) ·{" "}
             <Link
               href="/people/ilena"
               className="hover:text-primary transition-colors"
