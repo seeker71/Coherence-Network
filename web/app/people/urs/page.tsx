@@ -133,7 +133,22 @@ export default function UrsProfilePage() {
             <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
               Bloomurian
             </Link>
-            ) · Unison 2025 (Poranguí workshop + concert) ·{" "}
+            ) ·{" "}
+            <Link
+              href="https://ecstaticdance.org/dance/boulder-ecstatic-dance-bed/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Boulder Ecstatic Dance
+            </Link>{" "}
+            (recurring · co-hosted by{" "}
+            <Link href="/people/aly-constantine" className="hover:text-primary transition-colors">
+              Aly Constantine
+            </Link>
+            , Danny, and Bloomurian — close personal relationship
+            with Aly through this room) · Unison 2025 (Poranguí
+            workshop + concert) ·{" "}
             <Link
               href="/people/ilena"
               className="hover:text-primary transition-colors"
