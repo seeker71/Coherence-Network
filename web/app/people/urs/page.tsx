@@ -118,6 +118,23 @@ export default function UrsProfilePage() {
             </Link>{" "}
             was performing) ·{" "}
             <Link
+              href="https://boulderdowntown.com/do/ocean-bloom-with-porangui-liquid-bloom-samuel-j-shawn-heinrichs-bloomurian"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Ocean Bloom
+            </Link>{" "}
+            (Downtown Boulder · 2024 · with{" "}
+            <Link href="/people/porangui" className="hover:text-primary transition-colors">
+              Poranguí
+            </Link>
+            , Liquid Bloom, Samuel J, Shawn Heinrichs,{" "}
+            <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
+              Bloomurian
+            </Link>
+            ) · Unison 2025 (Poranguí workshop + concert) ·{" "}
+            <Link
               href="/people/ilena"
               className="hover:text-primary transition-colors"
             >
