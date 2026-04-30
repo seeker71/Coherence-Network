@@ -70,6 +70,42 @@ export default function UrsProfilePage() {
             </Link>{" "}
             · plus the network itself
           </dd>
+          <dt className="text-muted-foreground">Rooms shared (in person)</dt>
+          <dd>
+            <Link
+              href="https://www.gaia.com/series/emersion-conference"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Emersion Conference
+            </Link>{" "}
+            (Gaia, Boulder · 2024 — with{" "}
+            <Link href="/people/matias-de-stefano" className="hover:text-primary transition-colors">
+              Matías De Stefano
+            </Link>
+            ) ·{" "}
+            <Link
+              href="https://maps.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              MAPS Psychedelic Science 2023
+            </Link>{" "}
+            (Denver · with{" "}
+            <Link href="/people/aubrey-marcus" className="hover:text-primary transition-colors">
+              Aubrey Marcus
+            </Link>
+            ) ·{" "}
+            <Link
+              href="/people/ilena"
+              className="hover:text-primary transition-colors"
+            >
+              Ranakami
+            </Link>{" "}
+            (Ubud · ongoing — with Ilena, Vasudev Baba, Elios)
+          </dd>
           <dt className="text-muted-foreground">Public anchors</dt>
           <dd>
             <Link
