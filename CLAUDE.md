@@ -4,6 +4,8 @@
 
 ## Quick Lookup
 
+**Start here**: [`MANIFEST.md`](MANIFEST.md) — single entry-point listing every INDEX in the repo. ~750 tokens to know which INDEX to drill into; total cost to locate any file is under 2K tokens.
+
 | What | Where | CLI |
 |------|-------|-----|
 | Ideas | `ideas/INDEX.md` → `ideas/{slug}.md` | `coh idea {slug}` (DB has raw ideas, not consolidated) |
@@ -11,6 +13,13 @@
 | Pipeline tasks | — | `coh tasks --status pending` |
 | Tracking | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | — |
 | **Living Collective KB** | `docs/vision-kb/INDEX.md` → `concepts/{id}.md` | — |
+| **API routers** | [`api/app/routers/INDEX.md`](api/app/routers/INDEX.md) — every endpoint with one-line purpose | — |
+| **API services** | [`api/app/services/INDEX.md`](api/app/services/INDEX.md) — business logic | — |
+| **Web routes** | [`web/app/INDEX.md`](web/app/INDEX.md) — every page.tsx with route + purpose | — |
+| **Web components / lib** | [`web/components/INDEX.md`](web/components/INDEX.md), [`web/lib/INDEX.md`](web/lib/INDEX.md) | — |
+| **Scripts** | [`scripts/INDEX.md`](scripts/INDEX.md) — operational tools, generators, syncers | — |
+
+**Convention**: every new source file gets a one-line purpose at the top — Python: module docstring; TS/TSX: leading `//` comment or JSDoc. Re-run `python3 scripts/generate_repo_indexes.py` after adding/renaming files. CI `--check` fails if INDEX is stale.
 
 **Files vs CLI**: The idea .md files have problem statements, capabilities, spec links, and absorbed ideas. The DB has raw ideas with auto-generated descriptions. For understanding "what are we building," read the .md files. For task pipeline operations, use CLI. Counts live in `ideas/INDEX.md` and `specs/INDEX.md` — if you want a current number, read there, not here.
 
