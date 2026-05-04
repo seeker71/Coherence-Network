@@ -33,6 +33,20 @@ DEAD_TISSUE_NODES = [
     "asset:6f541a13-c0b6-4a66-888a-915e10f426ef",  # GitHub repo seeker71/Coherence-Network
     "asset:22c3d9e4-335d-4055-a2d0-37b516a70ed1",  # Worker service — Windows/macOS, self-update
     "asset:c8150c8a-085e-41b2-829a-c9a98fc2dee6",  # Cursor Pro Agent — auto model selection
+    # Second pass — platform implementation descriptors. The vision
+    # space holds what the network IS, not how it's wired. The fact
+    # that the web frontend has 35 pages is a deploy detail, not a
+    # resonance with Living Collective concepts.
+    "asset:f3946091-5d2c-4e6e-8cdf-00e77455e5bc",  # Coherence Network API — FastAPI 224 endpoints
+    "asset:fd9b6956-5b2a-4444-bb43-733a86e758fb",  # Coherence Network web frontend — Next.js 15, 35 pages
+    "asset:3ce356f1-b5a4-472b-811e-c8f939010bf9",  # Coherence Network Web — Next.js 15, 16 pages (older)
+    "asset:0fa68f2e-4e28-4ca5-a165-fa2b223a19ee",  # Coherence Network API — 195 endpoints (older)
+    "asset:0d81b5a7-8cff-421b-afbb-32d2ccc50041",  # Production PostgreSQL — ideas, specs, tasks, ...
+    "asset:36d576e4-8e98-4886-befd-592258bd920e",  # Local runner — Thompson Sampling
+    "asset:60e0962a-7764-4d47-8556-1fc7c51ce559",  # Coherence CLI (cc) — Node.js
+    "asset:a06a8f69-19a0-45fa-9fe8-c08d115969a5",  # coherencycoin.com domain + Cloudflare CDN + TLS
+    "asset:ba2b6101-bb9f-4d2c-b29c-8f1e83f35577",  # Coinbase Base wallet — treasury 0x...
+    "asset:bd05c936-58a3-4a71-ad39-3457bae4bb20",  # 179 ideas, 175+ specs, 1952 tasks, 10 news sources
 ]
 
 RENAMES = [
