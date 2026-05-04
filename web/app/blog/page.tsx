@@ -20,6 +20,23 @@ export default function BlogPage() {
       {/* Recent field notes — newest first */}
       <section className="not-prose space-y-4">
         <Link
+          href="/with-us"
+          className="block rounded-xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
+        >
+          <p className="text-xs uppercase tracking-widest text-amber-400 mb-1">
+            With us · An open invitation
+          </p>
+          <h2 className="text-xl font-light mb-1">
+            For communities, individuals, and services anywhere
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            A living network already breathing — what the body offers, the
+            seven directions it organizes around, what working lives look
+            like inside it, and how to weave in.
+          </p>
+          <p className="text-xs text-amber-400/80 mt-3">Read the invitation →</p>
+        </Link>
+        <Link
           href="/silence"
           className="block rounded-xl border border-border/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
         >
