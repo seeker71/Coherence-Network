@@ -490,7 +490,7 @@ export default function WithUsPage() {
           </p>
           <p className="text-lg text-stone-200 leading-relaxed">
             Then write directly:{" "}
-            <a href="mailto:urs@coherencycoin.com" className="text-amber-400 hover:text-amber-300">urs@coherencycoin.com</a>.
+            <a href="mailto:umuff71@gmail.com" className="text-amber-400 hover:text-amber-300">umuff71@gmail.com</a>.
             Tell me what you carry, what you're stewarding, where you want
             to weave.
           </p>
