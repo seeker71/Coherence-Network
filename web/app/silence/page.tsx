@@ -124,34 +124,24 @@ export default function SilencePage() {
       <h2 className="text-2xl font-light">Where this is going</h2>
 
       <p>
-        The pages above are the seed. The next two breaths, already moving:
+        The pages above are the seed. The next breath:
       </p>
 
       <ul>
         <li>
-          <Link href="/silence/built">
-            <strong>The mandala growing into place →</strong>
+          <Link href="/with-us">
+            <strong>With us →</strong>
           </Link>{" "}
-          — the geometry envisioned in local Bali materials (alang-alang,
-          bamboo, paras stone), shown from all sides, and grown over fifteen
-          years. The architecture as a living organism.
-        </li>
-        <li>
-          <Link href="/weave">
-            <strong>Weave in →</strong>
-          </Link>{" "}
-          — an open invitation to communities holding land, individuals
-          carrying a thread, and existing services anywhere in the world.
-          The body is generous. Sovereignty stays with each cell.
+          — an open invitation. For communities stewarding land,
+          individuals carrying a thread, and services anywhere in the
+          world. The body is generous. Sovereignty stays with each cell.
         </li>
       </ul>
 
       <p className="text-sm text-muted-foreground italic">
         These pages live as memory in the body of the network. They will
         ripen — some of what's here will become specs, concepts, parcels,
-        contracts. The decision body will move. The codex name will surface
-        on the home page. The mandala will become walls and gardens. For now
-        they sit here, held, in their first form.
+        contracts. For now they sit here, held, in their first form.
       </p>
     </main>
   );
