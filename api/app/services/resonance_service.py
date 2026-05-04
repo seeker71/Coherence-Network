@@ -45,6 +45,36 @@ RESONANCE_MIN_SCORE = 0.05
 # Cap on edges written per presence so the graph stays readable.
 MAX_RESONANCES_PER_PRESENCE = 8
 
+# Words that pass extract_keywords (long enough, not in the generic English
+# stoplist) but carry no field-specific meaning when shared across a
+# presence and a vision concept. They describe role, medium, or domain
+# infrastructure — "system" / "agent" / "skill" / "documentation" — not
+# the lived signal that makes resonance worth a graph edge. Keeping them
+# out of the overlap stops thin presences (a contributor whose only text
+# is "HUMAN contributor", an asset whose only name is "Worker service")
+# from auto-decorating every concept that happens to mention the same
+# generic word. When a presence's whole spectrum is generic, no edge
+# survives — which is the correct outcome.
+GENERIC_TOKENS: frozenset[str] = frozenset({
+    # role / actor descriptors
+    "human", "agent", "system", "contributor", "user", "person", "people",
+    # medium / artifact descriptors
+    "skill", "documentation", "docs", "code", "content", "asset",
+    "service", "platform", "project", "app", "application",
+    "cli", "api", "tool", "tooling", "version", "release", "build",
+    # generic dev / process words
+    "verify", "test", "demo", "decomposition", "lineage", "import",
+    "source", "data", "item", "mode", "type", "kind", "node", "edge",
+    "graph", "network", "field", "work",
+})
+
+# A presence needs more than one meaningful token left after dropping
+# generic tokens before its overlap with a concept counts as resonance.
+# A single shared token is almost always coincidence (the same English
+# word appearing in two unrelated descriptions); two or more shared
+# domain-specific tokens is where actual alignment lives.
+MIN_MEANINGFUL_OVERLAP = 2
+
 
 def _presence_keywords(node: dict[str, Any]) -> set[str]:
     """The words that describe what this presence holds or makes.
@@ -103,18 +133,21 @@ def compute_resonance(presence_id: str) -> list[dict[str, Any]]:
     if presence.get("type") not in PRESENCE_TYPES:
         return []
 
-    p_kw = _presence_keywords(presence)
+    p_kw = _presence_keywords(presence) - GENERIC_TOKENS
     if not p_kw:
         return []
 
     concepts = graph_service.list_nodes(type="concept", limit=500).get("items", [])
     scored: list[dict[str, Any]] = []
     for concept in concepts:
-        c_kw = _concept_keywords(concept)
+        c_kw = _concept_keywords(concept) - GENERIC_TOKENS
         if not c_kw:
             continue
         shared = p_kw & c_kw
-        if not shared:
+        if len(shared) < MIN_MEANINGFUL_OVERLAP:
+            # A single shared word — even a non-generic one — is almost
+            # always a coincidental English collision. Real resonance
+            # shows up as multiple aligned tokens.
             continue
         # How much of the presence's spectrum echoes inside the concept.
         # Normalizing by the presence (not the concept) means a concept
@@ -230,12 +263,19 @@ def resolve_query(query: str, limit: int = 12) -> dict[str, Any]:
     }
 
 
-def attune(presence_id: str) -> dict[str, Any]:
+def attune(presence_id: str, *, prune_stale: bool = True) -> dict[str, Any]:
     """Compute + write ``resonates-with`` edges for a presence.
 
-    Idempotent: already-present edges are kept (score isn't updated;
-    future passes can refresh). Returns a summary of what was written
-    and what was found.
+    Idempotent on additions: already-present edges are kept (score isn't
+    updated; future passes can refresh). When ``prune_stale`` is true
+    (the default), existing edges to concepts that no longer pass the
+    current threshold are removed — so a re-attune after a presence
+    text change, or after the resonance logic itself tightens, sheds
+    noise edges instead of accumulating them. Pass ``prune_stale=False``
+    to keep the pre-2026-05 behaviour for tests that depend on it.
+
+    Returns a summary of what was written, what was found, and what
+    was pruned.
     """
     scored = compute_resonance(presence_id)
     written: list[dict[str, Any]] = []
@@ -264,9 +304,28 @@ def attune(presence_id: str) -> dict[str, Any]:
         )
         if r.get("id"):
             written.append(item)
+
+    pruned: list[str] = []
+    if prune_stale:
+        kept_targets = {item["concept_id"] for item in scored}
+        existing_edges = graph_service.list_edges(
+            from_id=presence_id,
+            edge_type="resonates-with",
+            limit=200,
+        ).get("items", [])
+        for e in existing_edges:
+            target = e.get("to_id")
+            if not target or not target.startswith("lc-"):
+                continue
+            if target in kept_targets:
+                continue
+            if graph_service.delete_edge(e["id"]):
+                pruned.append(target)
+
     return {
         "presence_id": presence_id,
         "scored_count": len(scored),
         "written": written,
         "existed": existed,
+        "pruned": pruned,
     }
