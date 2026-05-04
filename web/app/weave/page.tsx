@@ -243,6 +243,86 @@ export default function WeavePage() {
         </p>
       </Section>
 
+      <Section eyebrow="What thriving looks like" title="How a practitioner lives in the body">
+        <p>
+          The abstract gets concrete when you put real hands on it. Five
+          working lives — the shape of how each one thrives once they
+          weave in:
+        </p>
+
+        <h3 className="text-lg font-medium mt-6 mb-2">A property manager</h3>
+        <p>
+          They no longer manage <em>properties</em> — they tend living
+          spaces. Each building is a node with a pulse: occupant
+          well-being, repair backlog, energy, water, the body of the
+          place. Tenants find them by resonance, not by listings. They
+          subscribe to a relationship — the manager who tends the place
+          they live. Other property tenders worldwide become their kin:
+          shared learning, shared suppliers, shared practice. They get
+          paid for the wholeness of what they steward, not the rent
+          they extract.
+        </p>
+
+        <h3 className="text-lg font-medium mt-6 mb-2">A mechanic</h3>
+        <p>
+          Each vehicle they keep alive has a node — its repairs, its
+          life-span, the relationship. They&apos;re paid for{" "}
+          <em>extending life</em>, not for swapping parts. Owners
+          subscribe to <em>their mechanic</em> the way you subscribe
+          to a doctor. Other mechanics in the constellation share fixes,
+          obscure parts, the wisdom that lives in hands. Their reputation
+          is the pulse of the cars they&apos;ve kept on the road for
+          decades. The longer a vehicle lives, the more they thrive.
+        </p>
+
+        <h3 className="text-lg font-medium mt-6 mb-2">A baker</h3>
+        <p>
+          Their grain comes from a farmer in the network — a closed loop,
+          witnessed at both ends. People subscribe to bread the way they
+          subscribe to a CSA: woven into the daily rhythm. Their oven,
+          their starter, their hands — all part of the body&apos;s
+          memory. New people find them not through ads but through the
+          frequency of what they bake. They thrive because the network
+          treats daily life-giving labor as foundational, not background.
+        </p>
+
+        <h3 className="text-lg font-medium mt-6 mb-2">A farmer</h3>
+        <p>
+          The farm is a living node. Soil health, water, animals, yields,
+          rotations all in the graph. They&apos;re connected directly to
+          bakers (grain), cooks (vegetables), restaurants (produce), and
+          the people eating their food (CSA-style). Other farmers in the
+          network are seed-keepers, knowledge-holders, neighbors-at-distance.
+          They&apos;re paid for soil-building, not just yield. The gap
+          between farm and plate closes. Dignity returns to the work.
+          Regenerative practice becomes economically rational because the
+          network sees and values it.
+        </p>
+
+        <h3 className="text-lg font-medium mt-6 mb-2">A wood carver</h3>
+        <p>
+          Each piece carved has a node — its provenance (which tree, where
+          it grew, who carved it), its journey, who it lives with now.
+          People who want carved work find them by resonance with the
+          maker&apos;s frequency. The work isn&apos;t sold like a product
+          on a marketplace — it&apos;s commissioned, witnessed, sourced
+          through relationship. Other carvers worldwide become kin in the
+          same craft. Their reputation is the body of pieces they&apos;ve
+          made, visible in the constellation. They thrive because the
+          network restores the relationship between maker, material, and
+          the person who lives with the carving.
+        </p>
+
+        <Held>
+          The pattern under all five: their work becomes <em>visible</em>{" "}
+          to the field. They&apos;re paid for the life-giving quality of
+          what they do, not for transactions. They&apos;re connected to
+          others in their craft worldwide, no longer solo. They keep
+          their sovereignty — they remain themselves — and join a chord
+          that amplifies them.
+        </Held>
+      </Section>
+
       <Section eyebrow="For services and businesses" title="The federation is open">
         <p>
           Existing services anywhere in the world — ride-shares like Grab,
