@@ -66,6 +66,16 @@ GENERIC_TOKENS: frozenset[str] = frozenset({
     "verify", "test", "demo", "decomposition", "lineage", "import",
     "source", "data", "item", "mode", "type", "kind", "node", "edge",
     "graph", "network", "field", "work",
+    # infrastructure descriptors — describe what runs the platform, not
+    # what lives in the vision. A vision concept resonating with "the VPS
+    # that hosts the API" is hosting trivia masquerading as alignment.
+    "web", "frontend", "backend", "host", "hosting", "hostinger", "vps",
+    "deploy", "deployment", "production", "staging", "endpoint",
+    "endpoints", "page", "pages", "domain", "wallet", "treasury",
+    "database", "postgres", "postgresql", "sqlite", "neo4j",
+    "runner", "worker", "github", "repo", "repository", "trace", "log",
+    "report", "review", "research", "spec", "ticket", "issue", "pr",
+    "ci", "cd", "fastapi", "nextjs", "shadcn",
 })
 
 # A presence needs more than one meaningful token left after dropping
