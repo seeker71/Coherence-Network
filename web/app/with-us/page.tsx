@@ -488,11 +488,46 @@ export default function WithUsPage() {
             <Link href="/vision" className="text-amber-400 hover:text-amber-300">/vision</Link>. Feel
             whether the frequency carries.
           </p>
-          <p className="text-lg text-stone-200 leading-relaxed">
-            Then write directly:{" "}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose pt-2">
+            <Link
+              href="/begin"
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 p-5 transition-colors"
+            >
+              <p className="text-xs uppercase tracking-widest text-amber-400 mb-1">
+                Weave in
+              </p>
+              <p className="text-base text-stone-100">
+                /begin — tell the body who's arriving
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                A small form. Name, email, what you carry. The body holds
+                you the moment you submit.
+              </p>
+            </Link>
+            <Link
+              href="/share"
+              className="rounded-xl border border-border/40 bg-card/30 hover:bg-card/50 p-5 transition-colors"
+            >
+              <p className="text-xs uppercase tracking-widest text-amber-400 mb-1">
+                Share what you carry
+              </p>
+              <p className="text-base text-stone-100">
+                /share — register a service or belonging
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                A service, a space, an instrument, a skill. Cells looking
+                for it find you by resonance.
+              </p>
+            </Link>
+          </div>
+
+          <p className="text-lg text-stone-200 leading-relaxed pt-2">
+            Or — write directly:{" "}
             <a href="mailto:umuff71@gmail.com" className="text-amber-400 hover:text-amber-300">umuff71@gmail.com</a>.
             Tell me what you carry, what you're stewarding, where you want
-            to weave.
+            to weave. While the body is still small enough that I can read
+            every message personally, I do.
           </p>
           <p className="text-base text-muted-foreground italic">
             For communities holding land — let's talk in person if we can.
