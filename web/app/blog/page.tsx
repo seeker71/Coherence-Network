@@ -18,7 +18,24 @@ export default function BlogPage() {
   return (
     <main id="main-content" className="mx-auto max-w-2xl px-4 sm:px-6 py-12 space-y-10">
       {/* Recent field notes — newest first */}
-      <section className="not-prose">
+      <section className="not-prose space-y-4">
+        <Link
+          href="/silence"
+          className="block rounded-xl border border-border/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
+        >
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+            Silence · May 2026
+          </p>
+          <h2 className="text-xl font-light mb-1">
+            Three days of silence at a Buddhist temple
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Eight notebook pages from Brahmavihara-Arama in north Bali — the
+            codex naming itself, breath as the central organ, three axes drawn
+            onto a real parcel of land near Tamarind Beach.
+          </p>
+          <p className="text-xs text-amber-400/80 mt-3">Read what came through →</p>
+        </Link>
         <Link
           href="/blog/ana-walks"
           className="block rounded-xl border border-border/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
