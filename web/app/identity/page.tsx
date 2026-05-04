@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import { readIdentity, NAME_KEY, EMAIL_KEY } from "@/lib/identity";
 
 const API = getApiBase();
 
@@ -98,7 +99,9 @@ function StatusDot({ verified, linked }: { verified: boolean; linked: boolean })
 }
 
 export default function IdentityPage() {
+  const [contributorId, setContributorId] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [providers, setProviders] = useState<Record<string, ProviderInfo[]>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -122,12 +125,16 @@ export default function IdentityPage() {
       });
   }, []);
 
-  // Load name from localStorage
+  // Load identity from the shared identity layer (the same keys /me uses).
+  // The previous version read a stale localStorage key that never gets
+  // written, so the page always rendered as if the visitor were anonymous.
   useEffect(() => {
-    const stored = localStorage.getItem("coherence_contributor_id") || "";
-    setName(stored);
-    if (stored) {
-      loadIdentities(stored);
+    const ident = readIdentity();
+    setContributorId(ident.contributorId);
+    setName(ident.name);
+    setEmail(ident.email);
+    if (ident.contributorId) {
+      loadIdentities(ident.contributorId);
     }
   }, []);
 
@@ -145,17 +152,20 @@ export default function IdentityPage() {
   }, []);
 
   const saveName = useCallback(() => {
-    if (!name.trim()) return;
-    localStorage.setItem("coherence_contributor_id", name.trim());
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    // Save to the shared identity key the rest of the app reads.
+    try {
+      localStorage.setItem(NAME_KEY, trimmed);
+    } catch {}
     setMessage({ text: "Name saved.", type: "ok" });
-    loadIdentities(name.trim());
     setTimeout(() => setMessage(null), 2000);
-  }, [name, loadIdentities]);
+  }, [name]);
 
   const linkProvider = useCallback(
     async (provider: string) => {
       const value = inputs[provider]?.trim();
-      if (!value || !name.trim()) return;
+      if (!value || !contributorId) return;
       setBusy(provider);
       setMessage(null);
       try {
@@ -163,7 +173,7 @@ export default function IdentityPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contributor_id: name.trim(),
+            contributor_id: contributorId,
             provider,
             provider_id: value,
             display_name: value,
@@ -172,7 +182,7 @@ export default function IdentityPage() {
         if (res.ok) {
           setMessage({ text: `${provider} linked.`, type: "ok" });
           setInputs((prev) => ({ ...prev, [provider]: "" }));
-          await loadIdentities(name.trim());
+          await loadIdentities(contributorId);
         } else {
           const err = await res.json().catch(() => ({}));
           setMessage({ text: err.detail || "Link failed.", type: "error" });
@@ -183,21 +193,21 @@ export default function IdentityPage() {
       setBusy(null);
       setTimeout(() => setMessage(null), 3000);
     },
-    [inputs, name, loadIdentities],
+    [inputs, contributorId, loadIdentities],
   );
 
   const unlinkProvider = useCallback(
     async (provider: string) => {
-      if (!name.trim()) return;
+      if (!contributorId) return;
       setBusy(provider);
       try {
         const res = await fetch(
-          `${API}/api/identity/${encodeURIComponent(name.trim())}/${provider}`,
+          `${API}/api/identity/${encodeURIComponent(contributorId)}/${provider}`,
           { method: "DELETE" },
         );
         if (res.ok) {
           setMessage({ text: `${provider} unlinked.`, type: "ok" });
-          await loadIdentities(name.trim());
+          await loadIdentities(contributorId);
         }
       } catch {
         setMessage({ text: "Network error.", type: "error" });
@@ -205,15 +215,15 @@ export default function IdentityPage() {
       setBusy(null);
       setTimeout(() => setMessage(null), 3000);
     },
-    [name, loadIdentities],
+    [contributorId, loadIdentities],
   );
 
   const startGitHubOAuth = useCallback(async () => {
-    if (!name.trim()) return;
+    if (!contributorId) return;
     setBusy("github-oauth");
     try {
       const res = await fetch(
-        `${API}/api/identity/verify/github?contributor_id=${encodeURIComponent(name.trim())}`,
+        `${API}/api/identity/verify/github?contributor_id=${encodeURIComponent(contributorId)}`,
         { method: "POST" },
       );
       const data = await res.json();
@@ -288,6 +298,49 @@ export default function IdentityPage() {
         >
           {message.text}
         </div>
+      )}
+
+      {/* You are — read-out of what the body already knows about this cell */}
+      {contributorId ? (
+        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 md:p-6 space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-amber-500">
+            You are
+          </p>
+          <p className="text-base text-stone-200">
+            <span className="font-medium">{name || "(no display name yet)"}</span>
+            {email ? (
+              <>
+                {" "}
+                <span className="text-muted-foreground">·</span>{" "}
+                <span className="text-stone-300">{email}</span>
+              </>
+            ) : null}
+          </p>
+          <p className="text-xs text-muted-foreground font-mono">
+            contributor_id: {contributorId}
+          </p>
+          <p className="text-sm text-muted-foreground italic pt-1">
+            Your identity is held in the body's graph. Linking accounts below
+            gathers your work across platforms onto this single cell.
+          </p>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-border/30 bg-card/30 p-5 md:p-6 space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
+            No identity yet
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You haven't graduated to a contributor yet. Visit{" "}
+            <Link href="/me" className="text-amber-400 hover:text-amber-300">
+              /me
+            </Link>{" "}
+            to begin, or{" "}
+            <Link href="/with-us" className="text-amber-400 hover:text-amber-300">
+              /with-us
+            </Link>{" "}
+            to read the open invitation first.
+          </p>
+        </section>
       )}
 
       {/* Your Name */}
@@ -373,7 +426,7 @@ export default function IdentityPage() {
                             {p.canOAuth && p.key === "github" && (
                               <button
                                 onClick={startGitHubOAuth}
-                                disabled={!name.trim() || busy === "github-oauth"}
+                                disabled={!contributorId || busy === "github-oauth"}
                                 className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2 text-sm hover:bg-muted/40 disabled:opacity-40 transition-colors"
                               >
                                 {busy === "github-oauth" ? "Redirecting..." : "Connect with GitHub"}
@@ -391,7 +444,7 @@ export default function IdentityPage() {
                               />
                               <button
                                 onClick={() => linkProvider(p.key)}
-                                disabled={!name.trim() || !inputs[p.key]?.trim() || busy === p.key}
+                                disabled={!contributorId || !inputs[p.key]?.trim() || busy === p.key}
                                 className="rounded-xl bg-primary/80 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:opacity-40 transition-colors"
                               >
                                 {busy === p.key ? "..." : "Link"}
