@@ -2,7 +2,7 @@
   "help": {
     "tagline": "CLI de Coherence Network",
     "usage": "Uso:",
-    "usageLine": "cc <comando> [args]",
+    "usageLine": "coh <comando> [args]",
     "sectionExplore": "Explorar:",
     "sectionContribute": "Contribuir:",
     "sectionIdentity": "Identidad:",
@@ -41,8 +41,8 @@
   },
   "errors": {
     "networkFailed": "La solicitud de red falló: {reason}",
-    "notAuthenticated": "No autenticado. Ejecuta: cc setup",
-    "unknownCommand": "Comando desconocido: {command}. Ejecuta: cc help",
+    "notAuthenticated": "No autenticado. Ejecuta: coh setup",
+    "unknownCommand": "Comando desconocido: {command}. Ejecuta: coh help",
     "missingArg": "Argumento faltante: {arg}",
     "badRequest": "Solicitud incorrecta: {reason}"
   },

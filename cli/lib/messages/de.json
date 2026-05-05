@@ -2,7 +2,7 @@
   "help": {
     "tagline": "Coherence Network CLI",
     "usage": "Benutzung:",
-    "usageLine": "cc <Befehl> [Argumente]",
+    "usageLine": "coh <Befehl> [Argumente]",
     "sectionExplore": "Erkunden:",
     "sectionContribute": "Mitmachen:",
     "sectionIdentity": "Identität:",
@@ -41,8 +41,8 @@
   },
   "errors": {
     "networkFailed": "Netzwerk-Anfrage fehlgeschlagen: {reason}",
-    "notAuthenticated": "Nicht angemeldet. Führe aus: cc setup",
-    "unknownCommand": "Unbekannter Befehl: {command}. Führe aus: cc help",
+    "notAuthenticated": "Nicht angemeldet. Führe aus: coh setup",
+    "unknownCommand": "Unbekannter Befehl: {command}. Führe aus: coh help",
     "missingArg": "Fehlendes Argument: {arg}",
     "badRequest": "Fehlerhafte Anfrage: {reason}"
   },

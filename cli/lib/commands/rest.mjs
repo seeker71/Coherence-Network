@@ -96,7 +96,7 @@ export async function showRestCoverage() {
     generated_at: String(generated),
     proof:
       "Every path in api_routes can be invoked via: coh rest <METHOD> <path> [--body JSON] [-H 'Name: value']. "
-      + "First-class `cc` subcommands remain recommended for common workflows.",
+      + "First-class `coh` subcommands remain recommended for common workflows.",
   };
 
   console.log(JSON.stringify(proof, null, 2));

@@ -1,0 +1,110 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/npm-publish-cli-0.13.1",
+  "commit_scope": "Patch the CLI help and localized CLI messages to use the current coh binary before publishing the npm package.",
+  "files_owned": [
+    "api/tests/test_flow_cli.py",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/rest.mjs",
+    "cli/lib/messages/de.json",
+    "cli/lib/messages/en.json",
+    "cli/lib/messages/es.json",
+    "cli/lib/messages/id.json",
+    "cli/package.json",
+    "cli/package-lock.json",
+    "docs/system_audit/commit_evidence_2026-05-05_cli_npm_0_13_1_help_binary.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "node --check cli/bin/coh.mjs && node --check cli/lib/commands/rest.mjs",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_help_uses_current_binary_name tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+      "cd cli && npm pack --dry-run --json",
+      "cd cli && npm publish --dry-run --access public",
+      "cd cli && node bin/coh.mjs help | sed -n '1,8p'",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "The CLI help header and usage now print coh, the content --lang regression remains covered, syntax checks pass, and the npm dry-run tarball is coherence-cli@0.13.1 with the expected CLI files."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public deploy validation and npm publish after PR merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, web/API deploy, and npm publish proof remain pending."
+  },
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "cli-binary-name-conflict",
+    "home-content-contribution-attribution"
+  ],
+  "task_ids": [
+    "codex-thread-cli-npm-0-13-1-help-binary-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "npm published coherence-cli@0.13.0 from current main, then package smoke showed help still naming the retired cc binary.",
+    "Local help output now begins with coh and Usage: coh <command> [args]."
+  ],
+  "change_files": [
+    "api/tests/test_flow_cli.py",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/rest.mjs",
+    "cli/lib/messages/de.json",
+    "cli/lib/messages/en.json",
+    "cli/lib/messages/es.json",
+    "cli/lib/messages/id.json",
+    "cli/package.json",
+    "cli/package-lock.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The npm CLI release advertises the current coh binary and still preserves content --lang command parsing for attributed content writes.",
+    "public_endpoints": [
+      "POST /api/entity-views/page/{page_id}",
+      "GET /api/entity-views/page/{page_id}"
+    ],
+    "test_flows": [
+      "CLI help binary-name regression test",
+      "CLI content --lang regression test",
+      "npm pack dry-run"
+    ]
+  }
+}

@@ -336,6 +336,18 @@ class TestSmokeTests:
             f"coh help exited {result.returncode}: {result.stderr}"
         )
 
+    def test_cli_help_uses_current_binary_name(self) -> None:
+        """coh help names the current binary, not the retired cc binary."""
+        with _serve_app() as api_base:
+            result = _run_cli(api_base, "help")
+        assert result.returncode == 0, (
+            f"coh help exited {result.returncode}: {result.stderr}"
+        )
+        output = ANSI_RE.sub("", result.stdout)
+        assert "coh — Coherence Network CLI" in output
+        assert "Usage: coh <command> [args]" in output
+        assert "Usage: cc <command> [args]" not in output
+
     def test_cli_status_runs(self) -> None:
         """coh status exits 0 and outputs something."""
         with _serve_app() as api_base:

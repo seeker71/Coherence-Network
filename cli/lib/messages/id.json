@@ -2,7 +2,7 @@
   "help": {
     "tagline": "CLI Coherence Network",
     "usage": "Penggunaan:",
-    "usageLine": "cc <perintah> [argumen]",
+    "usageLine": "coh <perintah> [argumen]",
     "sectionExplore": "Jelajahi:",
     "sectionContribute": "Ikut serta:",
     "sectionIdentity": "Identitas:",
@@ -41,8 +41,8 @@
   },
   "errors": {
     "networkFailed": "Permintaan jaringan gagal: {reason}",
-    "notAuthenticated": "Belum otentikasi. Jalankan: cc setup",
-    "unknownCommand": "Perintah tidak dikenal: {command}. Jalankan: cc help",
+    "notAuthenticated": "Belum otentikasi. Jalankan: coh setup",
+    "unknownCommand": "Perintah tidak dikenal: {command}. Jalankan: coh help",
     "missingArg": "Argumen tidak ada: {arg}",
     "badRequest": "Permintaan salah: {reason}"
   },
