@@ -1,0 +1,85 @@
+{
+  "date": "2026-05-06",
+  "thread_branch": "codex/profile-data-property-overlay-20260506",
+  "commit_scope": "Keep the source-backed contributor manifest aligned with the production property overlay needed for API-compatible profile display.",
+  "files_owned": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/system_audit/commit_evidence_2026-05-06_profile_data_property_overlay.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api https://api.coherencycoin.com --source contributor:seeker71",
+      "curl -sS https://api.coherencycoin.com/api/graph/nodes/contributor%3Aseeker71 | jq '{id,name,description,domains,keywords}'",
+      "curl -sS 'https://api.coherencycoin.com/api/profile/contributor%3Aseeker71/verify?hash=refresh'",
+      "curl -sS https://api.coherencycoin.com/api/profile/seeker71",
+      "curl -sS https://api.coherencycoin.com/api/profile/contributor%3Aseeker71",
+      "git fetch origin main && git rebase origin/main (blocked by intended unstaged edits)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_profile_data_property_overlay.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before branch CI and final deploy validation complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "profile-contribution-derived-data"
+  ],
+  "task_ids": [
+    "profile-data-property-overlay-20260506"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "lineage-source",
+        "profile-data-source"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "data-replay",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "https://api.coherencycoin.com/api/graph/nodes/contributor%3Aseeker71",
+    "https://api.coherencycoin.com/api/profile/seeker71",
+    "https://api.coherencycoin.com/api/profile/contributor%3Aseeker71"
+  ],
+  "change_files": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
