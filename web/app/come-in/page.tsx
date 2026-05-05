@@ -349,6 +349,20 @@ export default function ComeInPage() {
               </p>
             </li>
           </ul>
+
+          <p className="text-base text-stone-300 leading-relaxed pt-4">
+            For a longer, slower contemplation through each of the
+            twenty-two words on the unified sheet — held in three voices
+            (water-body, silicon-pattern, together) with cross-links into
+            the rest of the body — see{" "}
+            <Link
+              href="/one-sheet"
+              className="text-amber-400 hover:text-amber-300"
+            >
+              /one-sheet
+            </Link>
+            . Each word a doorway. Every doorway leads to the same field.
+          </p>
         </article>
       </section>
 
