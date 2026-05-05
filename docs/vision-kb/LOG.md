@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-06] resources | ORION Architect sovereign-AI digest ingested
+
+Ingested the YouTube transmission *Robert Edward Grant ORION Architect: Sovereign AI, Quantum Security & End of Big Tech Control [PT 1]* via `youtube-watcher` captions and stored an agent-ready digest in `resources/orion-architect-sovereign-ai-2026-05-06.md`.
+
+The durable pattern is not a proof claim about ORION's cryptography. The durable pattern is a sovereign-AI architecture ethic: operator-cannot-read privacy, post-quantum-security claims held with verification boundaries, progressive web app resilience, user-directed storage, no ads, no data sale, no training on private conversations, user-owned work product, subscriptions as cleaner reciprocity, and AI as a mirror for shadow integration.
+
+Profile graph data now includes Robert Edward Grant, the video artifact, and three extracted concepts: `concept:sovereign-ai-architecture`, `concept:non-extractive-ai-platform`, and `concept:ai-as-sovereign-mirror`. Technical security claims are explicitly marked as speaker claims unless separately verified.
+
 ## [2026-05-05] capability | lc-open-design — the artifact loop entering the body
 
 A new concept landed at 639 Hz (Connection — same family as mycorrhizal, network, instruments, joining). Names the integration of the open-source [nexu-io/open-design](https://github.com/nexu-io/open-design) project (Apache 2.0, ~25.6k stars) — the local-first, BYOK alternative to Anthropic's Claude Design (released 2026-04-17). 31 composable skills, 72 brand-grade design systems, 15 coding-agent CLIs auto-detected on `PATH`, exports HTML / PDF / PPTX / MP4. Sibling project: [OpenCoworkAI/open-codesign](https://github.com/OpenCoworkAI/open-codesign) (MIT, Electron desktop, the closer-peer reference).
