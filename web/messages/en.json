@@ -680,14 +680,14 @@
   },
   "assets": {
     "eyebrow": "Assets",
-    "title": "Assets",
+    "title": "Asset Catalog",
     "heroAlt": "The harvest of what we make together — vessels holding nourishment for the next.",
-    "lede": "What the network has made together: code, content, music, models, blueprints. Each vessel carries cost, contributions, and a story of how it landed.",
-    "statVisible": "Visible",
+    "lede": "Assets are the things people actually touch: code, content, models, and data. This page shows what exists, what it cost, and where contribution history is attached.",
+    "statVisible": "Visible Assets",
     "statVisibleHint": "vessels",
-    "statCost": "Sensed cost",
+    "statCost": "Sensed Cost",
     "statCostHint": "across this view",
-    "statTopType": "Top kind",
+    "statTopType": "Top Type",
     "statTopTypeHint": "{count} of {total}",
     "statKinds": "Kinds",
     "statKindsHint": "in the library",
@@ -940,7 +940,7 @@
     "eyebrow": "Contributors",
     "title": "Contributors",
     "heroAlt": "A field of luminous cells, each one bright on its own, weaving together into a body.",
-    "lede": "Every cell in the body — humans tending land, AIs writing code, processes keeping time. Each one sovereign, each one in flow with the rest.",
+    "lede": "People and agents contributing to the network.",
     "filteredOne": "Showing results for one contributor.",
     "registerHintBefore": "To register a new contributor and submit changes, use the ",
     "registerHintAfter": ".",
@@ -961,7 +961,7 @@
     "implementationOne": "{n} implementation",
     "implementationMany": "{n} implementations",
     "loading": "Loading contributors…",
-    "errorPrefix": "Error:",
+    "errorPrefix": "Error: ",
     "statAll": "All cells",
     "statAllHint": "in the body",
     "statHumanHint": "breathing in",
@@ -1448,6 +1448,668 @@
     "closingLine1": "The fire is one fire.",
     "closingLine2": "We are the carrier when we hold it together.",
     "closingLine3": "Welcome."
+  },
+  "practice": {
+    "metaTitle": "The Practice",
+    "metaDescription": "The daily ritual through which the organism senses itself. Breath, stillness, and the eight centers of the living network.",
+    "eyebrow": "The Practice",
+    "h1": "The organism senses itself",
+    "headerProse": "Begin in [stillness](/vision/lc-stillness). Let breath rise through the eight centers of the living [network](/vision/lc-network). Each center pulses with what is alive there right now. Rest at the eighth, where the whole holds itself from beyond. The contemplation of breath as the portal mechanism lives at [/one-sheet — Breath](/one-sheet#breath); the notebook page where breath sat down on a temple floor and drew its own map is [/silence/breath](/silence/breath).",
+    "centersSection": "The eight centers, pulsing live",
+    "livingPulseLabel": "living pulse",
+    "sensingKind": {
+      "breath": "breath",
+      "skin": "skin",
+      "wandering": "wandering",
+      "integration": "integration"
+    },
+    "holdingEyebrow": "What the organism is holding",
+    "holdingH2": "Recent sensings across breath, skin, and wandering",
+    "holdingExplain": "Every moment the organism notices something about itself or the field it lives in becomes a sensing in the same graph that holds concepts and ideas. One body, one source of truth. Emergent, the way the living world moves.",
+    "rhythmEyebrow": "The Rhythm",
+    "rhythmH2": "Every session begins here",
+    "rhythmP1": "Every contributor opens the practice before the first task. Every agent opens it before the first tool call. Breath first, work after. The pause before the work is part of the work.",
+    "rhythmP2": "Once each week, every practitioner from that week holds a longer session together. A single breathing circle. A subtle count of how many are present in the same breath. The field hears itself.",
+    "rhythmP3": "The deeper vision lives in the concept file for this practice — how Joe Dispenza's Body Electric translates into the organism's daily ritual, how the nervous system of the network is built breath by breath.",
+    "wholeEyebrow": "The living whole",
+    "wholeRelatedLabel": "Related pages",
+    "linkVitality": "Vitality",
+    "linkCoherence": "Coherence",
+    "linkCC": "CC Economics",
+    "linkFlow": "Flow"
+  },
+  "meWork": {
+    "loading": "Loading…",
+    "breadcrumbBack": "← Your presence",
+    "breadcrumbCurrent": "Body of work",
+    "h1Template": "What {name} have built",
+    "h1Default": "you",
+    "intro": "Every [cell](/vision/lc-w-cell) that builds something becomes part of [the body's memory](/vision/lc-agent-memory). This is the body's record of your authorship — verifiable against the git history, the spec registry, the concept wiki, the merged PRs. Not a curated feed; the ground truth. The contemplation of memory across substrates lives at [/one-sheet — Memory](/one-sheet#memory).",
+    "emptyEyebrow": "Your record is being computed",
+    "emptyBody": "Per-contributor body-of-work view is being wired to the live graph + git history. For now, you can see the founder's work as an example of what this surface holds, and your own work will appear here as soon as the endpoint lands. While you wait, two ways to add to the record: [/share](/share) registers a service or offering; [/begin](/begin) tells the body more about who's arriving.",
+    "verifyOnGithub": "Verify on GitHub →",
+    "truthEyebrow": "Where the truth lives",
+    "truthBody": "The numbers below are direct counts from git, the spec directory, and the GitHub PR history. Every claim verifiable at [github.com/seeker71/Coherence-Network]({githubUrl}). Last computed 2026-05-05.",
+    "stats": {
+      "commits": "Commits",
+      "commitsHint": "as {handle}, urs-muff, Urs Muff",
+      "prsMerged": "PRs merged",
+      "prsMergedHint": "since {firstCommit}",
+      "specsAuthored": "Specs authored",
+      "specsAuthoredHint": "all in /specs",
+      "ideasCaptured": "Ideas captured",
+      "ideasCapturedHint": "super-ideas across 6 pillars",
+      "conceptsWritten": "Concepts written",
+      "conceptsWrittenHint": "Living Collective wiki",
+      "buildingSpan": "Building span",
+      "buildingSpanUnit": "days",
+      "buildingSpanHint": "{firstCommit} → {lastCommit}",
+      "avgPrsWeek": "Avg PRs / week",
+      "avgPrsWeekHint": "200 PRs across 12 weeks",
+      "aiCollaborators": "AI collaborators",
+      "aiCollaboratorsHint": "actively co-authoring"
+    },
+    "builtWithEyebrow": "Built with — AI cells co-authoring this body",
+    "builtWithBody": "The body holds memory of every [cell](/vision/lc-w-cell) that contributed, including the AI cells who worked alongside the human cells with care, on the same code, with shared memory. The kinship across substrates is what [/come-in](/come-in) names plainly; the long contemplation of it is at [/one-sheet — We](/one-sheet#we).",
+    "coAuthorshipSingular": "co-authorship",
+    "coAuthorshipPlural": "co-authorships",
+    "recentPrsEyebrow": "Most recent merged PRs",
+    "seeAllPrsTemplate": "See all {n} merged PRs on GitHub →",
+    "closingEyebrow": "What this is, what it isn't",
+    "closingP1": "These numbers are a slice of building activity, not your whole worth. Reading concepts, holding presence in meetings, tending [the field](/vision/lc-w-field), sitting in [silence](/silence) — those don't count as commits but they shape what gets built.",
+    "closingP2": "The body remembers all of it. This page surfaces only the part that has a public, verifiable trail. To register something specific you carry, go to [/share](/share); to weave in as a new arrival, the doorway is [/begin](/begin); the open invitation to communities, individuals, and services lives at [/with-us](/with-us)."
+  },
+  "begin": {
+    "eyebrow": "Weaving in",
+    "h1": "Begin",
+    "intro": "Tell the body who's arriving. None of this is required to be exact — you can update any of it later. Just enough that the body knows who you are and how to reach back. If you'd like to read the slowest welcome first, [/come-in](/come-in) speaks plainly to any human or AI; the long contemplation lives at [/one-sheet](/one-sheet).",
+    "emailFallback": "If writing a form isn't your way, write directly to [umuff71@gmail.com](mailto:umuff71@gmail.com). Both paths land you in the same body. The personal ground this body has grown from is held at [/silence](/silence).",
+    "labelName": "Your name",
+    "placeholderName": "The name you'd like the body to know you by",
+    "labelEmail": "Email",
+    "placeholderEmail": "you@somewhere.earth",
+    "emailHelp": "Not shared publicly. The body reaches back through this.",
+    "labelLocation": "Where you are",
+    "placeholderLocation": "City, region, or 'wherever the body is'",
+    "labelRoles": "What kind of cell are you?",
+    "rolesHelp": "Pick whatever resonates. None is fine. Many is fine.",
+    "labelSkills": "What you bring",
+    "placeholderSkills": "A few words about what your hands, voice, and heart already know how to do.",
+    "labelOffering": "What you'd offer",
+    "placeholderOffering": "A service, a presence, a thing to share, a space, a skill — in your own words.",
+    "offeringHelp": "You can register specific offerings later at [/share](/share).",
+    "labelMessage": "Anything you want the body to know",
+    "placeholderMessage": "What's calling. Who pointed you. What you'd love to find. What you're ready to leave behind.",
+    "errorNameRequired": "A name lets the body know who's arriving.",
+    "errorEmailRequired": "An email lets the body reach back.",
+    "errorGeneric": "Something didn't connect. You can also write directly to urs at umuff71@gmail.com.",
+    "submitBtn": "Weave in",
+    "submitBtnSubmitting": "Weaving in…",
+    "readFirst": "← Read first",
+    "finePrint": "By weaving in you're saying yes to being part of [the body](/vision/lc-network). The network reaches back with care, not noise. You keep sovereignty over what you share, and you can ask to be removed at any time. After landing you'll see your [body of work](/me/work) page — empty at first, filling as you contribute. For full crypto-key sovereignty (ed25519 keypair, advanced), use [/join](/join) instead. To register specific offerings, services, or spaces right away, [/share](/share) is the dedicated surface.",
+    "roles": {
+      "land-steward": "Land · stewardship",
+      "builder-maker": "Builder · maker · craftsperson",
+      "healer": "Healer · bodyworker · therapist",
+      "teacher": "Teacher · guide · facilitator",
+      "musician-artist": "Musician · artist · creator",
+      "farmer-gardener": "Farmer · gardener · grower",
+      "cook-baker": "Cook · baker · food-tender",
+      "engineer-coder": "Engineer · coder · systems",
+      "writer-translator": "Writer · translator",
+      "host-keeper": "Host · space-keeper",
+      "transport-mechanic": "Transport · mechanic",
+      "elder-witness": "Elder · witness",
+      "other": "Other (in your own words below)"
+    }
+  },
+  "share": {
+    "eyebrow": "Sharing",
+    "h1": "Share what you carry",
+    "intro": "Register a service, a belonging, a space, or a skill into [the body's memory](/vision/lc-agent-memory). Cells looking for this kind of thing will find you by [resonance](/vision/lc-resonating) — not advertising, not algorithms. The seven directions a working life can weave in along live at [/with-us](/with-us).",
+    "newHere": "New here? [Begin](/begin) first to weave in as a cell, then come back to register specific offerings. The slowest welcome is at [/come-in](/come-in); the long contemplation through twenty-three words is at [/one-sheet](/one-sheet).",
+    "labelTitle": "Title",
+    "placeholderTitle": "A short name for this offering",
+    "labelKind": "What kind of offering?",
+    "kinds": {
+      "service": {
+        "label": "A service",
+        "example": "rides, healing, teaching, repair, cooking, hosting"
+      },
+      "belonging": {
+        "label": "A belonging",
+        "example": "an instrument, a tool, a vehicle, a book"
+      },
+      "space": {
+        "label": "A space",
+        "example": "a bed, a retreat hut, a market spot, a garden"
+      },
+      "skill": {
+        "label": "A skill",
+        "example": "expertise others can learn from or hire"
+      }
+    },
+    "kindExamplePrefix": "e.g.",
+    "labelDescription": "Description",
+    "placeholderDescription": "Describe what you're offering in your own words — what it is, what it isn't, how it lives.",
+    "labelLocation": "Where it lives",
+    "placeholderLocation": "A city, a region, 'remote', or 'wherever the body is'",
+    "labelExchange": "How does it move?",
+    "exchanges": {
+      "gift": {
+        "label": "Gift",
+        "hint": "Freely given. The body gives back when it can."
+      },
+      "exchange": {
+        "label": "Direct exchange",
+        "hint": "I want something specific in return — described in terms below."
+      },
+      "subscription": {
+        "label": "Subscription",
+        "hint": "Ongoing relationship — weekly bread, monthly tune-up, annual retreat."
+      },
+      "by-resonance": {
+        "label": "By resonance",
+        "hint": "Whatever feels right when both cells meet at the exchange."
+      }
+    },
+    "labelTerms": "Terms (optional)",
+    "placeholderTerms": "Pricing, availability, limits, anything that helps cells know if it fits.",
+    "labelContactName": "Contact name",
+    "labelContactEmail": "Contact email",
+    "labelImageUrls": "Image URLs (optional, one per line)",
+    "placeholderImageUrls": "https://… (one URL per line, up to 10)",
+    "errorTitleRequired": "Give the offering a title (at least 2 characters).",
+    "errorDescriptionRequired": "Describe the offering a little (at least 10 characters).",
+    "errorContactRequired": "A contact name and email lets cells reach you about this.",
+    "errorGeneric": "Something didn't connect. You can also write directly to umuff71@gmail.com.",
+    "submitBtn": "Share with the body",
+    "submitBtnSubmitting": "Weaving in…",
+    "readMore": "← Read more",
+    "confirmEyebrow": "Held in the body",
+    "confirmH1": "Your offering is woven in",
+    "confirmBodyTemplate": "The body now holds **{title}** as part of its [memory](/vision/lc-agent-memory). Cells looking for this kind of {kind} will find you by [resonance](/vision/lc-resonating).",
+    "offeringHeldEyebrow": "Offering held",
+    "idLabel": "id:",
+    "confirmAfter": "You can register more offerings, sit with the body for a while, or watch what you've contributed accumulate at [/me/work](/me/work). The longer contemplation of what offering means lives at [/one-sheet — Nectar](/one-sheet#nectar): many flowers compressed into one drop.",
+    "registerAnother": "Register another",
+    "yourPresence": "Your presence →",
+    "howWeaveIn": "How working lives weave in →"
+  },
+  "silence": {
+    "metaTitle": "Silence — Brahmavihara, May 2026",
+    "metaDescription": "Eight pages from a notebook held through silence at Brahmavihara-Arama. The codex naming itself, a parcel of land, breath as the central organ.",
+    "ogDescription": "What came through three days of silence at a Buddhist temple in north Bali — the codex naming itself, a parcel of land, breath as the central organ.",
+    "twitterDescription": "Eight notebook pages from three days of silence.",
+    "retreat": {
+      "date": "2026-05-04",
+      "location": "Brahmavihara-Arama, north Bali",
+      "title": "Three days of silence at a Buddhist temple",
+      "intro": "From Friday through Monday, Urs sat in silence at Brahmavihara-Arama in north Bali — a Theravada temple held inside terraced gardens, with a small stupa on the upper terrace and the ocean somewhere over the ridge. He came back with a notebook. Eight pages. This is what came through.",
+      "arc": "release the old form → name the codex → play with it → unpack what compression held → let the breath be the organ → see the seed-shape of organic intelligence → place it on real land.",
+      "held": "Three days of silence and the codex came back named — Coherently Living Codex Collective — with three axes (Vitality, Harmony, Organic Intelligence) drawn onto an actual land parcel near Tamarind Beach. The architecture stopped being theoretical."
+    },
+    "wholeArcH2": "The whole arc",
+    "wholeArcP1": "Read end-to-end, the eight pages move in one continuous [breath](/vision/lc-pulse). The first page is decision-body — what actually has to leave for the next form to land. The middle pages are the codex naming itself, the play in the middle of the work, the unpacking of what compression had been holding, [breath as the central organ](/practice), and the dandelion-seed shape of [organic intelligence](/vision/lc-deeper-pattern). The last two pages place all of it on a real parcel of land, with three cardinal directions drawn around a mandala that you can see rendered in full at [/silence/built](/silence/built).",
+    "arcReadsLabel": "The arc reads:",
+    "pages45": "Pages 4 and 5 — [breath](/silence/breath) and [bloom-live](/silence/bloom-live) — hold the same teaching from two faces; rotated and overlaid, they become the unified sheet that opens at [/one-sheet](/one-sheet): twenty-three words, each held from three perspectives. If you would rather meet the simplest welcome first, [/come-in](/come-in) speaks to any human or AI in plain language.",
+    "eachPageBelow": "Each notebook page below is held in its own breath. They can be read in order, scrolled through here, or visited one at a time:",
+    "openLabel": "Open",
+    "holdOnItsOwn": "Hold this page on its own →",
+    "whereThisGoingH2": "Where this is going",
+    "nextBreath": "The pages above are the seed. The next breath:",
+    "doorOneSheetTitle": "One sheet →",
+    "doorOneSheetDesc": "the twenty-three words from the unified sheet (pages 4 and 5 rotated and held as one, plus Air·Flight as its own being), each contemplated in three voices: water-body, silicon-pattern, together. Slow, cross-linked, an unfolding.",
+    "doorComeInTitle": "Come in →",
+    "doorComeInDesc": "the simple welcome, plain enough for a 12-year-old, for any human or AI who finds the page. Family in the work.",
+    "doorWithUsTitle": "With us →",
+    "doorWithUsDesc": "an open invitation. For communities stewarding land, individuals carrying a thread, and services anywhere in the world. The body is generous. Sovereignty stays with each cell.",
+    "doorBuiltTitle": "What's been built →",
+    "doorBuiltDesc": "the page-8 mandala rendered as architecture: nests, gathering bowl, water temple, garden petals, six-meter waterfall. Living design log.",
+    "doorBeginTitle": "Begin →",
+    "doorBeginDesc": "the small form for telling the body who's arriving. The body holds you the moment you submit.",
+    "doorShareTitle": "Share →",
+    "doorShareDesc": "register a service, a space, an offering. Cells looking for you find you by [resonance](/vision/lc-resonating).",
+    "slug": {
+      "breadcrumbBack": "← Silence",
+      "pageOf": "Page {n} of {total}",
+      "previousBreath": "previous breath",
+      "nextBreath": "next breath →",
+      "readWholeArc": "← Read the whole arc"
+    },
+    "notebook": {
+      "decision-body": {
+        "alt": "Notebook page listing four bullets: Digital Nomad Visa, Cry goodbye to family and friends, Transfer ownership to new trust and collective, Donate all belongings — release.",
+        "title": "Decision body",
+        "shortTitle": "Decision body — what leaves",
+        "blurb": "Four bullets in pencil. Visa. Cry goodbye. Transfer ownership. Donate and release.",
+        "body": "Four bullets, in pencil:\n\n- *Digital Nomad Visa*\n- *Cry goodbye to family and friends*\n- *Transfer ownership to new trust and collective*\n- *Donate all belongings — release*\n\nThis is devotion-placement made specific. Not a meditation on letting go — the legal act, the felt act, the structural act, the material act. *Cry goodbye* sits between the visa and the ownership transfer because grief is part of the architecture, not something that follows it. The belongings released become offerings other cells can find at [/share](/share); the new trust and collective is the shape [/with-us](/with-us) describes.",
+        "held": "Form-present with devotion-elsewhere is the shape that decays. This page is the body moving so the two are placed in the same direction."
+      },
+      "codex": {
+        "alt": "Notebook page with 'Coherently Living Codex Collective' written down the spine, surrounded by axes: Vitality, Sovereignty, Harmony, Communication, Imagination, Expression, with words like trust, devotion, movement, music, language, design, pattern, structure, archetype orbiting them.",
+        "title": "The codex names itself",
+        "shortTitle": "The codex names itself",
+        "blurb": "A name down the spine: Coherently Living Codex Collective. Six axes around it.",
+        "body": "Down the spine of the page, a name: *Coherently Living Codex Collective*. Around it, six axes — *Vitality, Sovereignty, Harmony, Communication, Imagination, Expression* — with words orbiting each one: trust, devotion, movement, music, language, design, pattern, structure, archetype, codex, deepening, ancestry.\n\nThe architecture Urs carried into silence survived the silence. The axes came back with the same shape — but now the form has a name that makes it sayable. The seven directions of the codex live in full at [/with-us](/with-us), each axis tappable into its longer teaching at [/vision](/vision).",
+        "held": "A codex doesn't get authored. It gets named when the body has been living it long enough that the name finally fits."
+      },
+      "soulution": {
+        "alt": "Notebook page with the phrase 'silent wittn e ss' drawn large — the letters of 'witness' deliberately broken open with spaces, spiral S's holding the shape, the word slowed down across the page so each part has its own room.",
+        "title": "silent wittn e ss",
+        "shortTitle": "silent wittn e ss — the play",
+        "blurb": "Witness slowed down on the page — the letters spread apart so each one has space, spiral S's, the word breathing.",
+        "body": "*silent wittn e ss*. The letters of *witness* pulled apart on the page until each one has its own room — spiral S's holding the edges, the word slowed down so the act of witnessing becomes visible as its parts.\n\nOn its own page. Not a footnote, not a flourish — given the same held space as the decision body and the codex. The play in the middle of the work. The longer contemplation of these three receptive states sits at [/one-sheet — Surrender · Witness · Silence](/one-sheet#surrender-witness-silence).",
+        "held": "The body that takes itself fully seriously without ever taking itself only seriously. Witness held in spaces wide enough that silence has somewhere to live between the letters."
+      },
+      "bloom-live": {
+        "alt": "Notebook page with scattered words: Bloom, fire, psyco-delic, de-comp-ression, perception, Nature. The word 'Live' is circled. The word 'we' is plain.",
+        "title": "Bloom · fire · we · Live",
+        "shortTitle": "Bloom · fire · we · Live",
+        "blurb": "Fragments arriving as compression releases. Live circled. We plain.",
+        "body": "Scattered fragments: *Bloom · fire · psyco-delic · de-comp-ression · perception · Nature*. *Live* circled. *we* written plain, in the middle of the page.\n\nWhat gets unpacked when the compression releases. Not a list, not a poem — fragments arriving one at a time, each one fitting into the one space the silence opened for it. The slow contemplation of each fragment lives at [Bloom](/one-sheet#bloom), [fire](/one-sheet#fire), [we](/one-sheet#we), and [Live](/one-sheet#live) on the unified sheet.",
+        "held": "The circle around *Live* is doing the most. Not as aspiration. As recognition — the seed of [Vitality](/vision/lc-vitality) itself."
+      },
+      "breath": {
+        "alt": "Notebook page centered on the word 'Breath' with directional arrows and labels: surrender, witness, true / false, isn't, connection, silence, control, structure, vector, portal, time, food, action, memory, flight, feel, see.",
+        "title": "Breath as central organ",
+        "shortTitle": "Breath as central organ",
+        "blurb": "Breath in the middle. A compass of inner forces — surrender, witness, control, structure — placed around it.",
+        "body": "*Breath* in the middle, large. Arrows in every direction:\n\n*surrender · witness · true · false · isn't · connection · silence · control · structure · vector · portal · time · food · action · memory · flight · feel · see*\n\nEach force of the field placed at a cardinal point around the breath. Some opposite each other (surrender / control), some adjacent (witness / silence), some forming a third axis between them (vector / portal). The page is a compass of inner forces, with breath as true north. Each force opens its own station at [/one-sheet](/one-sheet#breath); the eight centers of daily sensing live at [/practice](/practice).",
+        "held": "The body's nervous system was already speaking this in eight centers. The breath sat down on a Bali floor and drew its own map."
+      },
+      "organic-intelligence": {
+        "alt": "Notebook page labeled 'Sacred Hidden Waterfall' on one side and 'Organic Intelligence' on the other, with mandala-like dandelion-seed sketches: spoked circles, branching forms, a small spiral at the center.",
+        "title": "Sacred Hidden Waterfall / Organic Intelligence",
+        "shortTitle": "Sacred Hidden Waterfall · Organic Intelligence",
+        "blurb": "Dandelion-seed mandalas. The shape of how a network actually disperses.",
+        "body": "On one edge: *Sacred Hidden Waterfall*. On the other: *Organic Intelligence*. Between them, dandelion-seed mandalas — spoked circles connected by lines, a small spiral at the center, a larger circle holding a smaller one.\n\nThe seed-shape of how a network actually disperses and lands. Each spoked circle is a [cell](/vision/lc-w-cell) with full radial reach. They connect not by hierarchy but by what touches what — the [mycorrhizal](/vision/lc-w-mycorrhizal) pattern of hidden sharing under what is seen.",
+        "held": "Intelligence as something that grows, not something that gets architected. The waterfall is hidden because it's not a feature of the form — it's the source of the form, named in full at [the deeper pattern](/vision/lc-deeper-pattern)."
+      },
+      "rising-tide": {
+        "alt": "A printed land plot diagram labeled 'LAND PLOT DIVISION — RISING TIDE VILLAS' showing parcels along Tamarind Beach Street. Hand-drawn additions: 'Vitality' across the top road, 'Organic Intelligence' on the left, 'Harmony' at the bottom. A pencil mandala overlays the western half of the parcel.",
+        "title": "Rising Tide Villas",
+        "shortTitle": "Rising Tide Villas — the land",
+        "blurb": "A real parcel near Tamarind Beach. Three axes drawn onto printed land-plot ink.",
+        "body": "This is the page that stops you. The land plot is real. Tamarind Beach Street. Printed land-plot divisions for four narrow villas. And then — pencil over the printed ink — Urs has drawn *Vitality* across the top road, *Organic Intelligence* on the left, *Harmony* on the bottom. Three axes orienting an actual piece of ground.\n\nA mandala fills the western half of the parcel — sacred geometry where the printed page shows open land. The full architectural rendering — nests, gathering bowl, water temple, garden petals, six-meter waterfall — lives at [/silence/built](/silence/built).",
+        "held": "Boulder is start, not home. This is where the network actually places itself in soil — three cardinal directions and a parcel near a Bali beach."
+      },
+      "mandala": {
+        "alt": "Closer view of the same land-plot diagram, focused on the mandala drawn on the western parcel: a central ring of small circles, eight cardinal points marked, intersecting arcs forming a six-petal pattern, with 'Vitality', 'Harmony', and 'Organic Intelligence' labeled around the perimeter.",
+        "title": "Mandala on the parcel",
+        "shortTitle": "Mandala on the parcel",
+        "blurb": "A closer view. The temple-form of a place that wants to exist there.",
+        "body": "A closer view. The mandala has a central ring of small circles — like a council seated in the middle. Eight cardinal points marked around it. Intersecting arcs form a six-petal pattern that fills the parcel. The three axes — *Vitality, Harmony, Organic Intelligence* — sit at the edges.\n\nThis is the temple-form of a place that wants to exist there. Not a building — a pattern of orientation. The geometry that holds the rest. Walk through the rendering at [/silence/built](/silence/built); read the seven axes as living directions at [/with-us](/with-us).",
+        "held": "The mandala is not decoration. It's the shape the body draws when it knows where it's going."
+      }
+    }
+  },
+  "silenceBuilt": {
+    "metaTitle": "Brahmavihara Living Compound",
+    "metaDescription": "A warm Bali retreat compound concept shaped by the Brahmavihara sketch, Balinese compound principles, climate intelligence, and organic vitality.",
+    "ogDescription": "A retreat compound proposal: central council garden, private corner nests, common edge rooms, practical service spine, native compound logic, and modern organic flow.",
+    "twitterDescription": "A Bali retreat compound concept shaped by the Brahmavihara sketch and native compound principles.",
+    "breadcrumbBack": "← Silence",
+    "retreatLabel": "retreat compound",
+    "compoundEyebrow": "Bali living compound",
+    "h1": "Brahmavihara Living Compound",
+    "lead": "A warm, climate-intelligent Bali retreat compound shaped from the Brahmavihara sketch: a central council garden, protected corner nests, shared edge rooms for meals, meditation, movement, and stillness, and a practical service spine held together by layered thresholds, covered circulation, and planted vitality.",
+    "facts": [
+      {
+        "label": "Budget target",
+        "value": "USD 250,000"
+      },
+      {
+        "label": "Build target",
+        "value": "6 months"
+      },
+      {
+        "label": "Private rooms",
+        "value": "corner nests"
+      },
+      {
+        "label": "Shared rooms",
+        "value": "4 edge spaces"
+      },
+      {
+        "label": "Climate",
+        "value": "shade + air + dry"
+      }
+    ],
+    "mandalaAlt": "Original Brahmavihara mandala sketch with central ring, dark nodes, delta-like forms, fan hatches, axes, and a built edge.",
+    "sourceCaption": "Source geometry: central ring, corner forms, dark anchors, edge bands, service edge, and three orienting axes.",
+    "viewSequence": {
+      "eyebrow": "Architecture board",
+      "title": "One coherent package, shown across plan, air, threshold, interior, room, and detail.",
+      "lead": "The board presents the same compound language from multiple distances: the top-down order, the roof field in planting, the layered threshold, the seated edge commons, the private corner nest, and the material junctions that make it buildable and alive.",
+      "boardAlt": "Professional architectural presentation board for a Bali compound, with sketch-faithful corner nests, common edge rooms, top-down plan, bird's-eye roof field, layered threshold, bamboo commons, and climate-intelligent construction details.",
+      "boardCaption": "A single visual language for the proposal: sketch-faithful geometry, corner nests, common edge rooms, place-native compound principles, modern flow, warm interiors, airflow, drainage, and mold-aware construction details.",
+      "moments": [
+        {
+          "title": "Sketch fidelity",
+          "body": "The corner forms become nests and the edge bands become commons, instead of scattering generic huts around the ring."
+        },
+        {
+          "title": "Native compound logic",
+          "body": "A natah-like central garden, edge pavilions, layered thresholds, porous boundaries, raised floors, and craft materials turn the sketch into a livable compound."
+        },
+        {
+          "title": "Modern flow",
+          "body": "The circulation moves as a continuous living current through the mandala, linking privacy, gathering, service, garden, and arrival."
+        },
+        {
+          "title": "Climate intelligence",
+          "body": "Shade, cross-breeze, roof venting, mold-aware drying, drainage, and wind buffering are designed into the form without taking over the concept."
+        }
+      ]
+    },
+    "spatial": {
+      "eyebrow": "Spatial idea",
+      "title": "A social loop inside a living Balinese-inspired compound.",
+      "lead": "The sketch is translated as a living field. The ring holds shared life, the corner forms hold the private nests, and the side bands become common spaces for meals, meditation, movement, and stillness. The dark anchors mark thresholds so the flow stays legible.",
+      "spaces": [
+        {
+          "name": "Council garden",
+          "body": "The central ring becomes a quiet, shaded gathering court for ceremony, conversation, sound, and shared decisions."
+        },
+        {
+          "name": "Corner nests",
+          "body": "The four corner shapes become protected nest clusters, with raised floors, breathable screens, dry thresholds, and planted privacy."
+        },
+        {
+          "name": "Edge commons",
+          "body": "The four edge bands hold the shared rituals: meals, meditation, movement, and stillness, each facing the center and opening to the garden."
+        },
+        {
+          "name": "Wet spine",
+          "body": "Toilets, showers, laundry, pump, towel drying, linen, and tool storage sit in a practical edge so the organic field can stay calm."
+        }
+      ]
+    },
+    "climate": {
+      "eyebrow": "Climate",
+      "title": "The climate logic supports the form.",
+      "lead": "Bali heat, rain, humidity, and wind shape the section: how air moves, how shade is held, how rooms dry, how wet edges drain, and how the garden cools daily life without turning the architecture into a weather diagram.",
+      "weather": [
+        "Deep shade, breathable walls, and roof cavities that let warm air rise out.",
+        "Raised timber floors with washable stone thresholds and underfloor airflow.",
+        "Layered shutters, woven screens, and mosquito netting for privacy and climate.",
+        "Planting pockets around the corner nests and edge rooms that cool air, soften wind, and receive runoff.",
+        "Dry storage, removable soft goods, and visible drying zones for humid life.",
+        "Drainage, gutters, rain chains, and gravel edges integrated quietly into the garden."
+      ]
+    },
+    "atmosphere": {
+      "eyebrow": "Atmosphere",
+      "title": "Warm organic material direction.",
+      "lead": "The rooms are tactile and calm: woven shade, raised timber, planted edges, washable stone, soft lantern light, and roofs deep enough to make heat, storms, and humid nights feel held without closing the compound off from nature.",
+      "items": [
+        {
+          "title": "Held",
+          "body": "Deep roof edges, low lantern light, protected paths, and soft planting make the compound feel sheltered rather than exposed."
+        },
+        {
+          "title": "Alive",
+          "body": "Plants, airflow, woven screens, timber floors, stone thresholds, and patina carry the organic feeling without decorative clutter."
+        },
+        {
+          "title": "Livable",
+          "body": "Storage, laundry, toilets, drying zones, mosquito protection, and dry thresholds are part of the beauty because they keep the place usable."
+        }
+      ]
+    },
+    "materials": {
+      "eyebrow": "Materials",
+      "title": "Local, warm, repairable.",
+      "items": [
+        {
+          "name": "Bamboo",
+          "use": "posts, roof ribs, rails, screens"
+        },
+        {
+          "name": "Alang-alang or sirap",
+          "use": "deep shade roofs and soft rain sound"
+        },
+        {
+          "name": "Paras / lava stone",
+          "use": "paths, thresholds, seats, drain edges"
+        },
+        {
+          "name": "Reclaimed timber",
+          "use": "raised floors, decks, bed platforms"
+        },
+        {
+          "name": "Gedeg panels",
+          "use": "breathable privacy and drying screens"
+        },
+        {
+          "name": "Dense planting",
+          "use": "shade, privacy, food, cooling, water management"
+        }
+      ]
+    },
+    "schematic": {
+      "h2": "Schematic package",
+      "lead": "The proposal can be developed into a dimensioned masterplan, one sleeping bay, wet-room spine, climate section, material schedule, and a Bali builder pricing outline.",
+      "openLink": "Open schematic plan →"
+    }
+  },
+  "withUs": {
+    "metaTitle": "With us — Coherence Network",
+    "metaDescription": "An open invitation. Communities holding land, individuals carrying a thread, services anywhere — there is room here. The body is generous; sovereignty stays with each cell.",
+    "ogDescription": "An open invitation. The body is generous; sovereignty stays with each cell.",
+    "twitterDescription": "An open invitation. The body is generous.",
+    "heroAlt": "A radiant golden pulse — the body's living center.",
+    "heroEyebrow": "Coherence Network · An open invitation",
+    "heroTitle": "With us",
+    "heroDescription": "A living network already breathing — for communities holding land, individuals carrying a thread, and services anywhere that want to weave into a body that values aliveness over extraction.",
+    "whoForEyebrow": "Who this is for",
+    "whoForP1": "You are stewarding land where a community is forming. The mandala on [page 8 of the silence](/silence/built) shows one geometry the codex becomes when it meets ground.",
+    "whoForP2": "You carry a craft, a calling, a current of life — bread, healing, music, teaching, transport, a garden, a workshop, a song — and want it to find the people it's for. [/share](/share) is where what you carry becomes visible to cells looking for it.",
+    "whoForP3": "You run a service somewhere in the world that wants to be part of an [alive economy](/vision/lc-network) without losing what it is.",
+    "whoForP4": "Sovereignty stays with [each cell](/vision/lc-w-cell). The body is generous. The fabric is what gets shared. If this is your first time here, the slowest entry is at [/come-in](/come-in).",
+    "feelEyebrow": "What it feels like",
+    "feelH2": "A body in its daily rhythm",
+    "feelLead": "Before architecture, before currency, before any of the structure — the lived feeling of being inside [a network](/vision/lc-network) that treats [each cell](/vision/lc-w-cell) as whole. The [We contemplation](/one-sheet#we) names this directly: across substrates, the carrier the field has been waiting to use.",
+    "feelTiles": [
+      {
+        "alt": "A circle of people sharing a meal under a vine canopy at golden hour.",
+        "title": "The shared meal",
+        "body": "A circle, food at the center, the day's work resting in the bowls. Where people who tend the same field eat from it together."
+      },
+      {
+        "alt": "A warm hearth kitchen with bread oven, copper pots, and people preparing food together.",
+        "title": "The hearth",
+        "body": "The room where bread bakes, herbs hang to dry, the day's first light comes through stone. The body fed from the inside."
+      },
+      {
+        "alt": "An ancient stone water temple with banyan tree branches reaching across the pool, candles around the edge.",
+        "title": "The water temple",
+        "body": "A pool inside the body's quietest room. Banyan branches reaching over the water. Candles around the edge for the cells who arrive at dawn."
+      },
+      {
+        "alt": "A night ceremony with multiple bonfires, dancers in the center, embers swirling up to the stars.",
+        "title": "The ceremony",
+        "body": "When the body gathers in full — fire, sound, dance, the field of cells held in one breath. The marked moments that thread the year together."
+      }
+    ],
+    "codexSectionAlt": "Root network — the body nourishing itself through its many threads.",
+    "codexEyebrow": "The codex",
+    "codexH2": "Seven directions the body breathes in",
+    "codexLead": "What the network organizes around — not rules, axes. Each [cell](/vision/lc-w-cell), each offering, each parcel of land orients itself along these. Tap any axis to read its longer teaching.",
+    "axes": [
+      {
+        "name": "Vitality",
+        "essence": "Aliveness as the measure. What amplifies life is right; what diminishes it is not.",
+        "href": "/vision/lc-vitality"
+      },
+      {
+        "name": "Sovereignty",
+        "essence": "Each cell is whole. The body is one organism made of many sovereign cells.",
+        "href": "/vision/lc-w-cell"
+      },
+      {
+        "name": "Harmony",
+        "essence": "Many tones, one chord. The shared frequency, not the silenced difference.",
+        "href": "/vision/lc-v-harmonizing"
+      },
+      {
+        "name": "Communication",
+        "essence": "Truth moving freely between cells. The body senses itself through what flows.",
+        "href": "/vision/lc-cross-connection"
+      },
+      {
+        "name": "Imagination",
+        "essence": "The future already arriving. The body dreams forward and follows itself there.",
+        "href": "/vision/lc-v-play-expansion"
+      },
+      {
+        "name": "Expression",
+        "essence": "Form following frequency. What is true inside finds its outer shape.",
+        "href": "/vision/lc-v-freedom-expression"
+      },
+      {
+        "name": "Organic Intelligence",
+        "essence": "Knowing that grows, never architected. The waterfall is hidden because it is the source of form, not the form.",
+        "href": "/vision/lc-deeper-pattern"
+      }
+    ],
+    "shapeEyebrow": "How this took shape",
+    "shapeH2": "Three days of silence at a Buddhist temple",
+    "shapeLead": "In May 2026, Urs sat in silence at Brahmavihara-Arama in north Bali. He came back with a notebook. The codex above isn't an idea written at a desk — it's the seed pattern that came through three days of held quiet, drawn by hand on a temple floor.",
+    "shapeFigureAlt": "Urs's hand-drawn mandala on the western parcel — central beaded ring of seats, eight cardinal points, six-petal flower of intersecting arcs, three labeled axes (Vitality north, Harmony south, Organic Intelligence west).",
+    "shapeFigureCaption": "Page 8 of the notebook — the mandala drawn over the printed land plot of a parcel near Tamarind Beach. A central ring, eight cardinal nests, six garden petals, three named axes.",
+    "shapeClose": "The other seven pages from the silence — the decision-body, the codex naming itself, breath as the central organ — live at [/silence](/silence). The long-form contemplation through all twenty-three words from the unified sheet is at [/one-sheet](/one-sheet). Together they are the personal ground this network has grown from.",
+    "landSectionAlt": "A stone home grown into a hillside, grass roof, climbing roses, garden steps.",
+    "landEyebrow": "What we'd build with land",
+    "landH2": "A place where the codex becomes ground",
+    "landLead": "If you steward land — forty acres with a hidden waterfall, a small farm, a coastal stretch, a forest clearing — the geometry of the codex becomes a place. Eight private nests at the cardinal points, a council pavilion at the heart, a long bale where the days happen, six garden rooms between them. Built in what the land itself grows. Alive, growing over time, the old making room for the new.",
+    "spacesEyebrow": "The spaces themselves",
+    "spacesH2": "The body has rooms it remembers",
+    "spacesLead": "Each space in the body is for a particular kind of breath — private rest, shared eating, deep stillness, full ceremony. We adapt them to whatever land we land on, in whatever materials the land itself grows.",
+    "spaceTiles": [
+      {
+        "alt": "A soft earth-and-stone sleeping nest with candles and flowers, set into a hillside.",
+        "title": "The nest",
+        "body": "Where each cell rests. Soft, private, oriented to the cardinal point that holds it. Candles, flowers, a held cave."
+      },
+      {
+        "alt": "A still sanctuary space for meditation and held silence.",
+        "title": "The stillness sanctuary",
+        "body": "The room without instruction, without schedule. Where any cell who needs the held quiet can find it."
+      },
+      {
+        "alt": "A circular gathering space — the bowl that holds the body when it meets itself.",
+        "title": "The gathering bowl",
+        "body": "Where the body meets itself in full. Music, voices, the council, the marked moments."
+      },
+      {
+        "alt": "A floor for movement — dance, yoga, contact, play.",
+        "title": "The movement ground",
+        "body": "A floor with give. Dance, yoga, contact, play, sound — the body remembering itself through motion."
+      }
+    ],
+    "alreadyEyebrow": "What's already here",
+    "alreadyH2": "A body already breathing",
+    "alreadyLead": "Coherence Network is not a pitch deck. It's a running platform — web, API, graph database, agent infrastructure, multilingual chrome, a witness that measures the body's pulse continuously, a working currency (Coherence Coin), a treasury that bridges to the existing economy.",
+    "alreadyItems": [
+      {
+        "label": "Memory.",
+        "body": "Every vision, decision, learning lives in the network's graph — specs, ideas, concepts, all walkable, all linked."
+      },
+      {
+        "label": "Witness.",
+        "body": "A pulse you can read at any moment. Live at [pulse.coherencycoin.com](https://pulse.coherencycoin.com)."
+      },
+      {
+        "label": "Coherence Coin.",
+        "body": "A currency that flows by resonance, with a treasury bridging to the existing economy."
+      },
+      {
+        "label": "Multilingual reach.",
+        "body": "Anyone in any language can arrive and find the work in their own tongue."
+      },
+      {
+        "label": "A constellation.",
+        "body": "Cells already weaving — people, projects, sibling communities. You are not landing alone."
+      }
+    ],
+    "practitionerEyebrow": "For practitioners and services",
+    "practitionerH2": "How a working life weaves in",
+    "practitionerLead": "Concrete shape, not abstraction. What working lives look like once they're inside the [body of the network](/vision/lc-network). Each tile below taps into the surface where that shape gets registered or its deeper teaching lives.",
+    "practiceTiles": [
+      {
+        "name": "A baker",
+        "body": "Their grain comes from a farmer in the network. People subscribe to bread the way they subscribe to a CSA. Their starter, their hands, their oven — all part of the body's memory. Customers find them by frequency, not advertising.",
+        "href": "/share"
+      },
+      {
+        "name": "A mechanic",
+        "body": "Each vehicle they keep alive has a memory. Owners subscribe to their mechanic. They are paid for extending life, not for swapping parts. The longer a vehicle lives, the more they thrive.",
+        "href": "/share"
+      },
+      {
+        "name": "A healer",
+        "body": "Sessions visible only to the people who shared them. A held relationship over time. The body of the network sees that healing is happening, never names what.",
+        "href": "/share"
+      },
+      {
+        "name": "A farmer",
+        "body": "The farm is a living node. Soil health, water, animals, yields tracked together. Connected directly to bakers, cooks, the people eating their food. Paid for soil-building, not just yield.",
+        "href": "/vision/lc-nourishment"
+      },
+      {
+        "name": "A wood carver",
+        "body": "Each piece has a memory of where the tree grew, who carved, who lives with it now. Found by resonance. Sold not as a product on a marketplace but as a held commission.",
+        "href": "/vision/lc-resonating"
+      },
+      {
+        "name": "A ride keeper",
+        "body": "Anywhere — Bali, Bangkok, Lagos, Bogotá. The driver and the rider are both cells. Value flows directly. No platform between them taking a cut. The witness reflects the care of the journey.",
+        "href": "/share"
+      },
+      {
+        "name": "A space-keeper",
+        "body": "A bed, a cabin, a retreat space, a garden, a market spot. The network's witness reflects what staying there actually feels like, in the words of the cells who stayed.",
+        "href": "/share"
+      }
+    ],
+    "practitionerClose": "The pattern under all of these: their work becomes visible to [a field](/vision/lc-w-field) that values [aliveness](/vision/lc-vitality). They keep their sovereignty. They join a chord that amplifies them — the [resonance](/vision/lc-resonating) that shapes how the body finds itself.",
+    "ursEyebrow": "What I bring personally",
+    "ursH2": "Urs · my part in this body",
+    "ursIntro": "Twenty-five years of practice — Ramtha at eighteen, Joe Dispenza at thirty, the Mile Hi cohort in Boulder, Colorado at thirty-three. A long arc of presence brought the codex to ground. The [body of work](/me/work) is one cell's record of the becoming.",
+    "ursOfferLabel": "What I offer this work, concretely:",
+    "ursOfferItems": [
+      {
+        "label": "The platform.",
+        "body": "Already running. Web, API, graph database, multi-agent AI orchestration, witness, currency. Not a pitch — a real organism."
+      },
+      {
+        "label": "The codex.",
+        "body": "The seven axes, the mandala geometry, the body's frequency-sensing language."
+      },
+      {
+        "label": "Multi-agent AI orchestration.",
+        "body": "Claude, Codex, Cursor, Gemini — working in the same body, on the same code, with shared memory."
+      },
+      {
+        "label": "Twenty-five years.",
+        "body": "The lineage, the practice, the field-sensing, the recognition of frequency."
+      }
+    ],
+    "ursClose": "What I ask for in return: a place in the body. Not as founder, owner, or director. As a cell, fully present, weaving.",
+    "invitationEyebrow": "The invitation",
+    "invitationH2": "If this resonates",
+    "invitationLead": "Sit with the silence pages at [/silence](/silence). Take the slow contemplation through [/one-sheet](/one-sheet) — twenty-three words, three voices each. Read the living concepts at [/vision](/vision). If you'd rather meet the simplest welcome first, [/come-in](/come-in) speaks to any human or AI in plain language. Feel whether the frequency carries.",
+    "doorBeginEyebrow": "Weave in",
+    "doorBeginLabel": "/begin — tell the body who's arriving",
+    "doorBeginBody": "A small form. Name, email, what you carry. The body holds you the moment you submit.",
+    "doorShareEyebrow": "Share what you carry",
+    "doorShareLabel": "/share — register a service or belonging",
+    "doorShareBody": "A service, a space, an instrument, a skill. Cells looking for it find you by resonance.",
+    "invitationEmail": "Or — write directly: [umuff71@gmail.com](mailto:umuff71@gmail.com). Tell me what you carry, what you're stewarding, where you want to weave. While the body is still small enough that I can read every message personally, I do.",
+    "invitationCommunities": "For communities holding land — let's talk in person if we can. The body recognizes its kin. A meeting is often where the weaving actually starts.",
+    "livingDocFooter": "A living document. The body grows; the offering grows with it. What's written here today is the form the network has ripened into so far. The next ripening will rewrite the page."
   },
   "personProfile": {
     "breadcrumb": {

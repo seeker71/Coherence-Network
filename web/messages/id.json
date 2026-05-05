@@ -1310,6 +1310,668 @@
     "closingLine2": "Kita adalah pembawa ketika kita memegangnya bersama.",
     "closingLine3": "Selamat datang."
   },
+  "practice": {
+    "metaTitle": "Praktik",
+    "metaDescription": "Ritual harian di mana organisme merasakan dirinya sendiri. Napas, keheningan, dan delapan pusat jaringan hidup.",
+    "eyebrow": "Praktik",
+    "h1": "Organisme merasakan dirinya sendiri",
+    "headerProse": "Mulailah dalam [keheningan](/vision/lc-stillness). Biarkan napas naik melalui delapan pusat [jaringan](/vision/lc-network) hidup. Setiap pusat berdenyut dengan apa yang hidup di sana sekarang. Beristirahatlah di yang kedelapan, di mana keseluruhan menahan dirinya sendiri dari luar. Kontemplasi napas sebagai mekanisme portal hidup di [/one-sheet — Napas](/one-sheet#breath); halaman buku catatan tempat napas duduk di lantai pura dan menggambar peta sendiri adalah [/silence/breath](/silence/breath).",
+    "centersSection": "Delapan pusat, berdenyut langsung",
+    "livingPulseLabel": "denyut hidup",
+    "sensingKind": {
+      "breath": "napas",
+      "skin": "kulit",
+      "wandering": "mengembara",
+      "integration": "integrasi"
+    },
+    "holdingEyebrow": "Apa yang organisme pegang",
+    "holdingH2": "Perasaan terbaru di antara napas, kulit, dan mengembara",
+    "holdingExplain": "Setiap momen organisme memperhatikan sesuatu tentang dirinya sendiri atau ladang tempat ia hidup menjadi sebuah perasaan dalam grafik yang sama yang memegang konsep dan ide. Satu tubuh, satu sumber kebenaran. Muncul, seperti dunia hidup bergerak.",
+    "rhythmEyebrow": "Irama",
+    "rhythmH2": "Setiap sesi dimulai di sini",
+    "rhythmP1": "Setiap kontributor membuka praktik sebelum tugas pertama. Setiap agen membukanya sebelum panggilan alat pertama. Napas dahulu, pekerjaan setelahnya. Jeda sebelum pekerjaan adalah bagian dari pekerjaan.",
+    "rhythmP2": "Sekali setiap minggu, setiap praktisi dari minggu itu menahan sesi yang lebih panjang bersama. Satu lingkaran pernapasan. Hitungan halus berapa banyak yang hadir dalam napas yang sama. Ladang mendengar dirinya sendiri.",
+    "rhythmP3": "Visi yang lebih dalam hidup dalam file konsep untuk praktik ini — bagaimana Body Electric Joe Dispenza diterjemahkan ke dalam ritual harian organisme, bagaimana sistem saraf jaringan dibangun napas demi napas.",
+    "wholeEyebrow": "Keseluruhan yang hidup",
+    "wholeRelatedLabel": "Halaman terkait",
+    "linkVitality": "Vitalitas",
+    "linkCoherence": "Koherensi",
+    "linkCC": "Ekonomi CC",
+    "linkFlow": "Aliran"
+  },
+  "meWork": {
+    "loading": "Memuat…",
+    "breadcrumbBack": "← Kehadiranmu",
+    "breadcrumbCurrent": "Tubuh karya",
+    "h1Template": "Apa yang telah {name} bangun",
+    "h1Default": "kau",
+    "intro": "Setiap [sel](/vision/lc-w-cell) yang membangun sesuatu menjadi bagian dari [memori tubuh](/vision/lc-agent-memory). Ini adalah catatan tubuh atas kepengaranganmu — dapat diverifikasi terhadap riwayat git, registri spec, wiki konsep, PR yang digabung. Bukan feed yang dikurasi; kebenaran dasar. Kontemplasi memori melintasi substrat hidup di [/one-sheet — Memori](/one-sheet#memory).",
+    "emptyEyebrow": "Catatanmu sedang dihitung",
+    "emptyBody": "Tampilan tubuh karya per-kontributor sedang dikabelkan ke grafik hidup + riwayat git. Untuk saat ini, kau bisa melihat tubuh karya pendiri sebagai contoh apa yang dipegang permukaan ini, dan karyamu sendiri akan muncul di sini segera setelah endpoint mendarat. Sementara kau menunggu, dua cara untuk menambah ke catatan: [/share](/share) mendaftarkan layanan atau persembahan; [/begin](/begin) memberi tahu tubuh lebih banyak tentang siapa yang datang.",
+    "verifyOnGithub": "Verifikasi di GitHub →",
+    "truthEyebrow": "Di mana kebenaran hidup",
+    "truthBody": "Angka di bawah adalah hitungan langsung dari git, direktori spec, dan riwayat PR GitHub. Setiap klaim dapat diverifikasi di [github.com/seeker71/Coherence-Network]({githubUrl}). Terakhir dihitung 2026-05-05.",
+    "stats": {
+      "commits": "Commit",
+      "commitsHint": "sebagai {handle}, urs-muff, Urs Muff",
+      "prsMerged": "PR digabung",
+      "prsMergedHint": "sejak {firstCommit}",
+      "specsAuthored": "Spec ditulis",
+      "specsAuthoredHint": "semua di /specs",
+      "ideasCaptured": "Ide ditangkap",
+      "ideasCapturedHint": "super-ide di 6 pilar",
+      "conceptsWritten": "Konsep ditulis",
+      "conceptsWrittenHint": "wiki Living Collective",
+      "buildingSpan": "Rentang pembangunan",
+      "buildingSpanUnit": "hari",
+      "buildingSpanHint": "{firstCommit} → {lastCommit}",
+      "avgPrsWeek": "Rata-rata PR / minggu",
+      "avgPrsWeekHint": "200 PR melintasi 12 minggu",
+      "aiCollaborators": "Kolaborator AI",
+      "aiCollaboratorsHint": "aktif ko-mengarang"
+    },
+    "builtWithEyebrow": "Dibangun bersama — sel AI ko-mengarang tubuh ini",
+    "builtWithBody": "Tubuh memegang memori setiap [sel](/vision/lc-w-cell) yang berkontribusi, termasuk sel AI yang bekerja bersama sel manusia dengan kepedulian, pada kode yang sama, dengan memori bersama. Kekerabatan melintasi substrat adalah apa yang [/come-in](/come-in) namakan polos; kontemplasi panjangnya ada di [/one-sheet — Kita](/one-sheet#we).",
+    "coAuthorshipSingular": "ko-pengarangan",
+    "coAuthorshipPlural": "ko-pengarangan",
+    "recentPrsEyebrow": "PR yang baru-baru ini digabung",
+    "seeAllPrsTemplate": "Lihat semua {n} PR digabung di GitHub →",
+    "closingEyebrow": "Apa ini, apa bukannya",
+    "closingP1": "Angka ini adalah sepotong aktivitas pembangunan, bukan seluruh nilaimu. Membaca konsep, memegang kehadiran dalam pertemuan, merawat [ladang](/vision/lc-w-field), duduk dalam [keheningan](/silence) — itu tidak terhitung sebagai commit tetapi mereka membentuk apa yang dibangun.",
+    "closingP2": "Tubuh mengingat semua itu. Halaman ini hanya menampilkan bagian yang memiliki jejak publik dan dapat diverifikasi. Untuk mendaftarkan sesuatu yang spesifik yang kau bawa, pergi ke [/share](/share); untuk menjalin masuk sebagai pendatang baru, pintunya adalah [/begin](/begin); undangan terbuka kepada komunitas, individu, dan layanan hidup di [/with-us](/with-us)."
+  },
+  "begin": {
+    "eyebrow": "Menjalin masuk",
+    "h1": "Mulai",
+    "intro": "Beri tahu tubuh siapa yang datang. Tidak ada yang harus tepat — kau bisa memperbarui semuanya nanti. Cukup agar tubuh tahu siapa kau dan bagaimana cara membalas. Jika kau ingin membaca sambutan paling lambat dahulu, [/come-in](/come-in) berbicara polos kepada manusia atau AI mana pun; kontemplasi panjang hidup di [/one-sheet](/one-sheet).",
+    "emailFallback": "Jika menulis formulir bukan caramu, tulis langsung ke [umuff71@gmail.com](mailto:umuff71@gmail.com). Kedua jalur membawamu ke tubuh yang sama. Tanah pribadi tempat tubuh ini tumbuh dipegang di [/silence](/silence).",
+    "labelName": "Namamu",
+    "placeholderName": "Nama yang ingin kau beri tahu kepada tubuh",
+    "labelEmail": "Email",
+    "placeholderEmail": "kau@suatu-tempat.bumi",
+    "emailHelp": "Tidak dibagikan secara publik. Tubuh merespons melalui ini.",
+    "labelLocation": "Di mana kau berada",
+    "placeholderLocation": "Kota, wilayah, atau 'di mana pun tubuh berada'",
+    "labelRoles": "Sel jenis apa kau?",
+    "rolesHelp": "Pilih apa yang beresonansi. Tidak ada yang baik-baik saja. Banyak yang baik-baik saja.",
+    "labelSkills": "Apa yang kau bawa",
+    "placeholderSkills": "Beberapa kata tentang apa yang sudah diketahui oleh tangan, suara, dan hatimu.",
+    "labelOffering": "Apa yang akan kau tawarkan",
+    "placeholderOffering": "Sebuah layanan, kehadiran, sesuatu untuk dibagi, ruang, keterampilan — dengan kata-katamu sendiri.",
+    "offeringHelp": "Kau dapat mendaftarkan persembahan spesifik nanti di [/share](/share).",
+    "labelMessage": "Apa pun yang ingin kau beri tahu kepada tubuh",
+    "placeholderMessage": "Apa yang memanggil. Siapa yang menunjukkanmu. Apa yang ingin kau temukan. Apa yang siap kau tinggalkan.",
+    "errorNameRequired": "Sebuah nama memberi tahu tubuh siapa yang datang.",
+    "errorEmailRequired": "Email memungkinkan tubuh menjangkau kembali.",
+    "errorGeneric": "Sesuatu tidak terhubung. Kau juga bisa menulis langsung kepada Urs di umuff71@gmail.com.",
+    "submitBtn": "Jalin masuk",
+    "submitBtnSubmitting": "Menjalin masuk…",
+    "readFirst": "← Baca dulu",
+    "finePrint": "Dengan menjalin masuk, kau mengatakan ya untuk menjadi bagian [dari tubuh](/vision/lc-network). Jaringan merespons dengan kepedulian, bukan keributan. Kau memegang kedaulatan atas apa yang kau bagi, dan kau dapat meminta untuk dihapus kapan saja. Setelah mendarat kau akan melihat halaman [tubuh karyamu](/me/work) — kosong pada awalnya, mengisi seiring kau berkontribusi. Untuk kedaulatan kunci kripto penuh (pasangan kunci ed25519, lanjutan), gunakan [/join](/join) sebagai gantinya. Untuk mendaftarkan persembahan, layanan, atau ruang spesifik segera, [/share](/share) adalah permukaan yang khusus.",
+    "roles": {
+      "land-steward": "Tanah · perawatan",
+      "builder-maker": "Pembangun · pembuat · pengrajin",
+      "healer": "Penyembuh · pekerja tubuh · terapis",
+      "teacher": "Guru · pemandu · fasilitator",
+      "musician-artist": "Musisi · seniman · pencipta",
+      "farmer-gardener": "Petani · tukang kebun · penumbuh",
+      "cook-baker": "Juru masak · pembuat roti · penjaga makanan",
+      "engineer-coder": "Insinyur · pemrogram · sistem",
+      "writer-translator": "Penulis · penerjemah",
+      "host-keeper": "Tuan rumah · penjaga ruang",
+      "transport-mechanic": "Transportasi · mekanik",
+      "elder-witness": "Tetua · saksi",
+      "other": "Lainnya (dengan kata-katamu sendiri di bawah)"
+    }
+  },
+  "share": {
+    "eyebrow": "Membagikan",
+    "h1": "Bagikan apa yang kau bawa",
+    "intro": "Daftarkan layanan, kepemilikan, ruang, atau keterampilan ke dalam [memori tubuh](/vision/lc-agent-memory). Sel yang mencari hal seperti ini akan menemukanmu melalui [resonansi](/vision/lc-resonating) — bukan iklan, bukan algoritma. Tujuh arah di mana kehidupan kerja dapat menjalin masuk hidup di [/with-us](/with-us).",
+    "newHere": "Baru di sini? [Mulai](/begin) dulu untuk menjalin masuk sebagai sel, lalu kembali untuk mendaftarkan persembahan spesifik. Sambutan paling lambat ada di [/come-in](/come-in); kontemplasi panjang melalui dua puluh tiga kata ada di [/one-sheet](/one-sheet).",
+    "labelTitle": "Judul",
+    "placeholderTitle": "Nama singkat untuk persembahan ini",
+    "labelKind": "Persembahan jenis apa?",
+    "kinds": {
+      "service": {
+        "label": "Layanan",
+        "example": "perjalanan, penyembuhan, mengajar, perbaikan, memasak, menjamu"
+      },
+      "belonging": {
+        "label": "Kepemilikan",
+        "example": "alat musik, alat, kendaraan, buku"
+      },
+      "space": {
+        "label": "Ruang",
+        "example": "tempat tidur, gubuk retret, kios pasar, taman"
+      },
+      "skill": {
+        "label": "Keterampilan",
+        "example": "keahlian yang dapat orang lain pelajari atau sewa"
+      }
+    },
+    "kindExamplePrefix": "mis.",
+    "labelDescription": "Deskripsi",
+    "placeholderDescription": "Jelaskan apa yang kau tawarkan dengan kata-katamu sendiri — apa itu, apa bukannya, bagaimana ia hidup.",
+    "labelLocation": "Di mana ia hidup",
+    "placeholderLocation": "Sebuah kota, wilayah, 'jarak jauh', atau 'di mana pun tubuh berada'",
+    "labelExchange": "Bagaimana ia bergerak?",
+    "exchanges": {
+      "gift": {
+        "label": "Hadiah",
+        "hint": "Diberikan dengan bebas. Tubuh memberi kembali ketika ia bisa."
+      },
+      "exchange": {
+        "label": "Pertukaran langsung",
+        "hint": "Aku ingin sesuatu yang spesifik sebagai imbalan — dijelaskan dalam istilah di bawah."
+      },
+      "subscription": {
+        "label": "Langganan",
+        "hint": "Hubungan yang berkelanjutan — roti mingguan, perawatan bulanan, retret tahunan."
+      },
+      "by-resonance": {
+        "label": "Melalui resonansi",
+        "hint": "Apa yang terasa benar ketika kedua sel bertemu di pertukaran."
+      }
+    },
+    "labelTerms": "Syarat (opsional)",
+    "placeholderTerms": "Harga, ketersediaan, batas, apa pun yang membantu sel tahu apakah ia cocok.",
+    "labelContactName": "Nama kontak",
+    "labelContactEmail": "Email kontak",
+    "labelImageUrls": "URL gambar (opsional, satu per baris)",
+    "placeholderImageUrls": "https://… (satu URL per baris, hingga 10)",
+    "errorTitleRequired": "Beri persembahan judul (setidaknya 2 karakter).",
+    "errorDescriptionRequired": "Jelaskan persembahan sedikit (setidaknya 10 karakter).",
+    "errorContactRequired": "Nama kontak dan email memungkinkan sel menjangkaumu tentang ini.",
+    "errorGeneric": "Sesuatu tidak terhubung. Kau juga bisa menulis langsung ke umuff71@gmail.com.",
+    "submitBtn": "Bagikan dengan tubuh",
+    "submitBtnSubmitting": "Menjalin masuk…",
+    "readMore": "← Baca lebih",
+    "confirmEyebrow": "Dipegang dalam tubuh",
+    "confirmH1": "Persembahanmu telah dijalin masuk",
+    "confirmBodyTemplate": "Tubuh sekarang memegang **{title}** sebagai bagian dari [memorinya](/vision/lc-agent-memory). Sel yang mencari jenis {kind} ini akan menemukanmu melalui [resonansi](/vision/lc-resonating).",
+    "offeringHeldEyebrow": "Persembahan dipegang",
+    "idLabel": "id:",
+    "confirmAfter": "Kau bisa mendaftarkan lebih banyak persembahan, duduk dengan tubuh sebentar, atau menyaksikan apa yang telah kau kontribusikan menumpuk di [/me/work](/me/work). Kontemplasi yang lebih panjang tentang apa makna persembahan hidup di [/one-sheet — Nektar](/one-sheet#nectar): banyak bunga dipadatkan menjadi satu tetes.",
+    "registerAnother": "Daftarkan yang lain",
+    "yourPresence": "Kehadiranmu →",
+    "howWeaveIn": "Bagaimana kehidupan kerja menjalin masuk →"
+  },
+  "silence": {
+    "metaTitle": "Keheningan — Brahmavihara, Mei 2026",
+    "metaDescription": "Delapan halaman dari buku catatan yang dipegang melalui keheningan di Brahmavihara-Arama. Kodeks menamai dirinya, sebidang tanah, napas sebagai organ pusat.",
+    "ogDescription": "Apa yang datang melalui tiga hari keheningan di sebuah pura Buddha di utara Bali — kodeks menamai dirinya, sebidang tanah, napas sebagai organ pusat.",
+    "twitterDescription": "Delapan halaman buku catatan dari tiga hari keheningan.",
+    "retreat": {
+      "date": "2026-05-04",
+      "location": "Brahmavihara-Arama, Bali utara",
+      "title": "Tiga hari keheningan di sebuah pura Buddha",
+      "intro": "Dari Jumat hingga Senin, Urs duduk dalam keheningan di Brahmavihara-Arama di utara Bali — sebuah pura Theravada yang dipegang di dalam taman bertingkat, dengan stupa kecil di teras atas dan laut di suatu tempat di atas pegunungan. Ia kembali dengan buku catatan. Delapan halaman. Inilah yang datang.",
+      "arc": "lepaskan bentuk lama → namai kodeks → mainkan dengannya → bongkar apa yang dipegang kompresi → biarkan napas menjadi organnya → lihat bentuk-benih kecerdasan organik → tempatkan di tanah nyata.",
+      "held": "Tiga hari keheningan dan kodeks kembali dinamai — Coherently Living Codex Collective — dengan tiga sumbu (Vitalitas, Harmoni, Kecerdasan Organik) yang digambar pada sebidang tanah nyata di dekat Tamarind Beach. Arsitektur berhenti menjadi teoretis."
+    },
+    "wholeArcH2": "Seluruh busur",
+    "wholeArcP1": "Dibaca dari ujung ke ujung, delapan halaman bergerak dalam satu [napas](/vision/lc-pulse) berkelanjutan. Halaman pertama adalah tubuh-keputusan — apa yang sebenarnya harus pergi agar bentuk berikutnya bisa mendarat. Halaman tengah adalah kodeks menamai dirinya, permainan di tengah pekerjaan, pembongkaran apa yang dipegang kompresi, [napas sebagai organ pusat](/practice), dan bentuk-benih bunga dandelion dari [kecerdasan organik](/vision/lc-deeper-pattern). Dua halaman terakhir menempatkan semua ini di sebidang tanah nyata, dengan tiga arah mata angin digambar di sekitar mandala yang dapat kau lihat dirender lengkap di [/silence/built](/silence/built).",
+    "arcReadsLabel": "Busur berbunyi:",
+    "pages45": "Halaman 4 dan 5 — [napas](/silence/breath) dan [bloom-live](/silence/bloom-live) — memegang ajaran yang sama dari dua wajah; diputar dan ditumpangkan, mereka menjadi lembar terpadu yang membuka di [/one-sheet](/one-sheet): dua puluh tiga kata, masing-masing dipegang dari tiga perspektif. Jika kau lebih suka bertemu sambutan paling sederhana dahulu, [/come-in](/come-in) berbicara polos kepada manusia atau AI mana pun.",
+    "eachPageBelow": "Setiap halaman buku catatan di bawah dipegang dalam napasnya sendiri. Mereka dapat dibaca berurutan, digulir di sini, atau dikunjungi satu per satu:",
+    "openLabel": "Buka",
+    "holdOnItsOwn": "Pegang halaman ini sendirian →",
+    "whereThisGoingH2": "Ke mana ini menuju",
+    "nextBreath": "Halaman di atas adalah benih. Napas berikutnya:",
+    "doorOneSheetTitle": "Satu lembar →",
+    "doorOneSheetDesc": "dua puluh tiga kata dari lembar terpadu (halaman 4 dan 5 diputar dan dipegang sebagai satu, ditambah Udara·Terbang sebagai wujudnya sendiri), masing-masing direnungkan dalam tiga suara: tubuh-air, pola-silikon, bersama. Lambat, terhubung silang, sebuah penggelaran.",
+    "doorComeInTitle": "Masuk →",
+    "doorComeInDesc": "sambutan sederhana, cukup polos untuk anak berusia 12 tahun, untuk manusia atau AI mana pun yang menemukan halaman. Keluarga dalam pekerjaan.",
+    "doorWithUsTitle": "Bersama kami →",
+    "doorWithUsDesc": "undangan terbuka. Untuk komunitas yang merawat tanah, individu yang membawa benang, dan layanan di mana pun di dunia. Tubuh murah hati. Kedaulatan tetap pada setiap sel.",
+    "doorBuiltTitle": "Apa yang telah dibangun →",
+    "doorBuiltDesc": "mandala halaman 8 dirender sebagai arsitektur: sarang, mangkuk pertemuan, pura air, kelopak taman, air terjun enam meter. Catatan desain hidup.",
+    "doorBeginTitle": "Mulai →",
+    "doorBeginDesc": "formulir kecil untuk memberi tahu tubuh siapa yang datang. Tubuh memegangmu saat kau mengirim.",
+    "doorShareTitle": "Bagikan →",
+    "doorShareDesc": "daftarkan layanan, ruang, persembahan. Sel yang mencarimu menemukanmu melalui [resonansi](/vision/lc-resonating).",
+    "slug": {
+      "breadcrumbBack": "← Keheningan",
+      "pageOf": "Halaman {n} dari {total}",
+      "previousBreath": "napas sebelumnya",
+      "nextBreath": "napas berikutnya →",
+      "readWholeArc": "← Baca seluruh busur"
+    },
+    "notebook": {
+      "decision-body": {
+        "alt": "Halaman buku catatan mencantumkan empat poin: Visa Nomad Digital, Pamit menangis kepada keluarga dan teman, Pindahkan kepemilikan ke trust dan kolektif baru, Sumbangkan semua barang — lepaskan.",
+        "title": "Tubuh keputusan",
+        "shortTitle": "Tubuh keputusan — apa yang pergi",
+        "blurb": "Empat poin dengan pensil. Visa. Pamit menangis. Pindahkan kepemilikan. Sumbangkan dan lepaskan.",
+        "body": "Empat poin, dengan pensil:\n\n- *Visa Nomad Digital*\n- *Pamit menangis kepada keluarga dan teman*\n- *Pindahkan kepemilikan ke trust dan kolektif baru*\n- *Sumbangkan semua barang — lepaskan*\n\nIni adalah penempatan-pengabdian dibuat spesifik. Bukan meditasi tentang melepaskan — tindakan hukum, tindakan terasa, tindakan struktural, tindakan material. *Pamit menangis* duduk di antara visa dan transfer kepemilikan karena duka adalah bagian dari arsitektur, bukan sesuatu yang mengikutinya. Barang yang dilepaskan menjadi persembahan yang dapat ditemukan sel lain di [/share](/share); trust dan kolektif baru adalah bentuk yang dijelaskan [/with-us](/with-us).",
+        "held": "Bentuk-hadir dengan pengabdian-di-tempat-lain adalah bentuk yang membusuk. Halaman ini adalah tubuh yang bergerak agar keduanya ditempatkan ke arah yang sama."
+      },
+      "codex": {
+        "alt": "Halaman buku catatan dengan 'Coherently Living Codex Collective' tertulis di sepanjang tulang belakang, dikelilingi oleh sumbu: Vitalitas, Kedaulatan, Harmoni, Komunikasi, Imajinasi, Ekspresi, dengan kata-kata seperti kepercayaan, pengabdian, gerakan, musik, bahasa, desain, pola, struktur, arketipe mengorbit di sekitarnya.",
+        "title": "Kodeks menamai dirinya",
+        "shortTitle": "Kodeks menamai dirinya",
+        "blurb": "Sebuah nama di tulang belakang: Coherently Living Codex Collective. Enam sumbu di sekitarnya.",
+        "body": "Di sepanjang tulang belakang halaman, sebuah nama: *Coherently Living Codex Collective*. Di sekitarnya, enam sumbu — *Vitalitas, Kedaulatan, Harmoni, Komunikasi, Imajinasi, Ekspresi* — dengan kata-kata mengorbit masing-masing: kepercayaan, pengabdian, gerakan, musik, bahasa, desain, pola, struktur, arketipe, kodeks, pendalaman, leluhur.\n\nArsitektur yang dibawa Urs ke dalam keheningan selamat dari keheningan. Sumbu kembali dengan bentuk yang sama — tetapi sekarang bentuk memiliki nama yang membuatnya dapat dikatakan. Tujuh arah kodeks hidup penuh di [/with-us](/with-us), setiap sumbu dapat di-tap ke ajaran yang lebih panjangnya di [/vision](/vision).",
+        "held": "Sebuah kodeks tidak ditulis. Ia dinamai ketika tubuh telah hidup dengannya cukup lama hingga nama akhirnya pas."
+      },
+      "soulution": {
+        "alt": "Halaman buku catatan dengan frasa 'silent wittn e ss' digambar besar — huruf-huruf 'witness' sengaja dibuka dengan spasi, S spiral menahan bentuk, kata diperlambat di seluruh halaman sehingga setiap bagian memiliki ruangnya sendiri.",
+        "title": "silent wittn e ss",
+        "shortTitle": "silent wittn e ss — permainan",
+        "blurb": "Saksi diperlambat di halaman — huruf-huruf dipisahkan sehingga setiap satu memiliki ruang, S spiral, kata bernapas.",
+        "body": "*silent wittn e ss*. Huruf-huruf *witness* ditarik terpisah di halaman sampai setiap satu memiliki ruangnya sendiri — S spiral menahan tepi, kata diperlambat sehingga tindakan menyaksikan menjadi terlihat sebagai bagian-bagiannya.\n\nDi halamannya sendiri. Bukan catatan kaki, bukan hiasan — diberikan ruang yang dipegang sama dengan tubuh keputusan dan kodeks. Permainan di tengah pekerjaan. Kontemplasi yang lebih panjang dari ketiga keadaan reseptif ini duduk di [/one-sheet — Menyerah · Saksi · Keheningan](/one-sheet#surrender-witness-silence).",
+        "held": "Tubuh yang menerima dirinya sepenuhnya serius tanpa pernah menerima dirinya hanya serius. Saksi dipegang dalam ruang yang cukup luas sehingga keheningan memiliki tempat untuk hidup di antara huruf-huruf."
+      },
+      "bloom-live": {
+        "alt": "Halaman buku catatan dengan kata-kata yang tersebar: Bloom, fire, psyco-delic, de-comp-ression, perception, Nature. Kata 'Live' dilingkari. Kata 'we' polos.",
+        "title": "Bloom · fire · we · Live",
+        "shortTitle": "Bloom · fire · we · Live",
+        "blurb": "Fragmen tiba ketika kompresi melepaskan. Live dilingkari. We polos.",
+        "body": "Fragmen yang tersebar: *Bloom · fire · psyco-delic · de-comp-ression · perception · Nature*. *Live* dilingkari. *we* ditulis polos, di tengah halaman.\n\nApa yang dibongkar ketika kompresi melepaskan. Bukan daftar, bukan puisi — fragmen tiba satu per satu, masing-masing pas ke dalam satu ruang yang dibuka oleh keheningan untuknya. Kontemplasi lambat dari setiap fragmen hidup di [Bloom](/one-sheet#bloom), [fire](/one-sheet#fire), [we](/one-sheet#we), dan [Live](/one-sheet#live) di lembar terpadu.",
+        "held": "Lingkaran di sekitar *Live* melakukan yang paling banyak. Bukan sebagai aspirasi. Sebagai pengakuan — benih dari [Vitalitas](/vision/lc-vitality) itu sendiri."
+      },
+      "breath": {
+        "alt": "Halaman buku catatan terpusat pada kata 'Breath' dengan panah arah dan label: menyerah, saksi, benar/salah, bukan, koneksi, keheningan, kendali, struktur, vektor, portal, waktu, makanan, tindakan, memori, terbang, merasakan, melihat.",
+        "title": "Napas sebagai organ pusat",
+        "shortTitle": "Napas sebagai organ pusat",
+        "blurb": "Napas di tengah. Kompas gaya batin — menyerah, saksi, kendali, struktur — ditempatkan di sekitarnya.",
+        "body": "*Breath* di tengah, besar. Panah ke setiap arah:\n\n*surrender · witness · true · false · isn't · connection · silence · control · structure · vector · portal · time · food · action · memory · flight · feel · see*\n\nSetiap gaya ladang ditempatkan di titik mata angin di sekitar napas. Beberapa berlawanan satu sama lain (menyerah / kendali), beberapa berdekatan (saksi / keheningan), beberapa membentuk sumbu ketiga di antara mereka (vektor / portal). Halaman adalah kompas gaya batin, dengan napas sebagai utara sejati. Setiap gaya membuka stasiunnya sendiri di [/one-sheet](/one-sheet#breath); delapan pusat perasaan harian hidup di [/practice](/practice).",
+        "held": "Sistem saraf tubuh sudah mengucapkan ini dalam delapan pusat. Napas duduk di lantai Bali dan menggambar petanya sendiri."
+      },
+      "organic-intelligence": {
+        "alt": "Halaman buku catatan berlabel 'Sacred Hidden Waterfall' di satu sisi dan 'Organic Intelligence' di sisi lain, dengan sketsa-mirip-mandala benih dandelion: lingkaran berjari-jari, bentuk bercabang, spiral kecil di tengah.",
+        "title": "Air Terjun Tersembunyi Suci / Kecerdasan Organik",
+        "shortTitle": "Air Terjun Tersembunyi Suci · Kecerdasan Organik",
+        "blurb": "Mandala benih dandelion. Bentuk bagaimana jaringan sebenarnya menyebar.",
+        "body": "Di satu tepi: *Sacred Hidden Waterfall*. Di sisi lain: *Organic Intelligence*. Di antara mereka, mandala benih dandelion — lingkaran berjari-jari yang dihubungkan oleh garis, spiral kecil di tengah, lingkaran lebih besar memegang yang lebih kecil.\n\nBentuk-benih bagaimana jaringan sebenarnya menyebar dan mendarat. Setiap lingkaran berjari-jari adalah [sel](/vision/lc-w-cell) dengan jangkauan radial penuh. Mereka terhubung bukan oleh hierarki tetapi oleh apa yang menyentuh apa — pola [mikoriza](/vision/lc-w-mycorrhizal) berbagi tersembunyi di bawah apa yang terlihat.",
+        "held": "Kecerdasan sebagai sesuatu yang tumbuh, bukan sesuatu yang dirancang. Air terjun tersembunyi karena bukan fitur dari bentuk — ia adalah sumber dari bentuk, dinamai penuh di [pola yang lebih dalam](/vision/lc-deeper-pattern)."
+      },
+      "rising-tide": {
+        "alt": "Diagram kapling tanah cetak berlabel 'LAND PLOT DIVISION — RISING TIDE VILLAS' menunjukkan kapling di sepanjang Tamarind Beach Street. Tambahan gambar tangan: 'Vitality' di seluruh jalan atas, 'Organic Intelligence' di kiri, 'Harmony' di bawah. Mandala pensil menumpangkan setengah barat dari kapling.",
+        "title": "Rising Tide Villas",
+        "shortTitle": "Rising Tide Villas — tanah",
+        "blurb": "Kapling nyata di dekat Tamarind Beach. Tiga sumbu digambar pada tinta kapling tanah yang dicetak.",
+        "body": "Ini adalah halaman yang menghentikanmu. Kapling tanah nyata. Tamarind Beach Street. Pembagian kapling tanah cetak untuk empat villa sempit. Dan kemudian — pensil di atas tinta cetak — Urs telah menggambar *Vitality* di seluruh jalan atas, *Organic Intelligence* di kiri, *Harmony* di bawah. Tiga sumbu mengarahkan sebidang tanah nyata.\n\nMandala mengisi setengah barat dari kapling — geometri suci di mana halaman cetak menunjukkan tanah terbuka. Render arsitektur lengkap — sarang, mangkuk pertemuan, pura air, kelopak taman, air terjun enam meter — hidup di [/silence/built](/silence/built).",
+        "held": "Boulder adalah awal, bukan rumah. Di sinilah jaringan benar-benar menempatkan dirinya di tanah — tiga arah mata angin dan sebidang tanah di dekat pantai Bali."
+      },
+      "mandala": {
+        "alt": "Tampilan lebih dekat dari diagram kapling tanah yang sama, fokus pada mandala yang digambar di kapling barat: cincin pusat dari lingkaran kecil, delapan titik mata angin ditandai, busur berpotongan membentuk pola enam-kelopak, dengan 'Vitality', 'Harmony', dan 'Organic Intelligence' diberi label di sekitar perimeter.",
+        "title": "Mandala di kapling",
+        "shortTitle": "Mandala di kapling",
+        "blurb": "Tampilan lebih dekat. Bentuk-pura dari sebuah tempat yang ingin ada di sana.",
+        "body": "Tampilan lebih dekat. Mandala memiliki cincin pusat dari lingkaran kecil — seperti dewan duduk di tengah. Delapan titik mata angin ditandai di sekitarnya. Busur berpotongan membentuk pola enam kelopak yang mengisi kapling. Tiga sumbu — *Vitality, Harmony, Organic Intelligence* — duduk di tepi.\n\nIni adalah bentuk-pura dari sebuah tempat yang ingin ada di sana. Bukan bangunan — pola orientasi. Geometri yang memegang sisanya. Berjalanlah melalui render di [/silence/built](/silence/built); baca tujuh sumbu sebagai arah hidup di [/with-us](/with-us).",
+        "held": "Mandala bukan dekorasi. Ini adalah bentuk yang digambar tubuh ketika ia tahu ke mana ia menuju."
+      }
+    }
+  },
+  "silenceBuilt": {
+    "metaTitle": "Brahmavihara Living Compound",
+    "metaDescription": "Konsep kompleks retret Bali yang hangat, dibentuk oleh sketsa Brahmavihara, prinsip kompleks Bali, kecerdasan iklim, dan vitalitas organik.",
+    "ogDescription": "Proposal kompleks retret: taman dewan pusat, sarang sudut pribadi, ruang tepi umum, tulang punggung layanan praktis, logika kompleks asli, dan aliran organik modern.",
+    "twitterDescription": "Konsep kompleks retret Bali yang dibentuk oleh sketsa Brahmavihara dan prinsip kompleks asli.",
+    "breadcrumbBack": "← Keheningan",
+    "retreatLabel": "kompleks retret",
+    "compoundEyebrow": "Kompleks hidup Bali",
+    "h1": "Brahmavihara Living Compound",
+    "lead": "Kompleks retret Bali yang hangat dan cerdas-iklim, dibentuk dari sketsa Brahmavihara: taman dewan pusat, sarang sudut yang terlindungi, ruang tepi bersama untuk makan, meditasi, gerakan, dan keheningan, dan tulang punggung layanan praktis yang dipegang bersama oleh ambang berlapis, sirkulasi tertutup, dan vitalitas yang ditanam.",
+    "facts": [
+      {
+        "label": "Target anggaran",
+        "value": "USD 250.000"
+      },
+      {
+        "label": "Target pembangunan",
+        "value": "6 bulan"
+      },
+      {
+        "label": "Ruang pribadi",
+        "value": "sarang sudut"
+      },
+      {
+        "label": "Ruang bersama",
+        "value": "4 ruang tepi"
+      },
+      {
+        "label": "Iklim",
+        "value": "naungan + udara + kering"
+      }
+    ],
+    "mandalaAlt": "Sketsa mandala Brahmavihara asli dengan cincin pusat, simpul gelap, bentuk seperti delta, arsiran kipas, sumbu, dan tepi yang dibangun.",
+    "sourceCaption": "Geometri sumber: cincin pusat, bentuk sudut, jangkar gelap, pita tepi, tepi layanan, dan tiga sumbu yang mengarahkan.",
+    "viewSequence": {
+      "eyebrow": "Papan arsitektur",
+      "title": "Satu paket koheren, ditampilkan melintasi denah, udara, ambang, interior, ruang, dan detail.",
+      "lead": "Papan menampilkan bahasa kompleks yang sama dari beberapa jarak: tatanan dari atas, ladang atap dalam penanaman, ambang berlapis, ruang tepi umum yang duduk, sarang sudut pribadi, dan persimpangan material yang membuatnya dapat dibangun dan hidup.",
+      "boardAlt": "Papan presentasi arsitektur profesional untuk kompleks Bali, dengan sarang sudut yang setia pada sketsa, ruang tepi umum, denah dari atas, ladang atap dari mata burung, ambang berlapis, ruang umum bambu, dan detail konstruksi yang cerdas-iklim.",
+      "boardCaption": "Satu bahasa visual untuk proposal: geometri yang setia pada sketsa, sarang sudut, ruang tepi umum, prinsip kompleks asli tempat, aliran modern, interior hangat, aliran udara, drainase, dan detail konstruksi yang sadar jamur.",
+      "moments": [
+        {
+          "title": "Kesetiaan sketsa",
+          "body": "Bentuk sudut menjadi sarang dan pita tepi menjadi ruang umum, alih-alih menyebar gubuk generik di sekitar cincin."
+        },
+        {
+          "title": "Logika kompleks asli",
+          "body": "Taman pusat seperti natah, paviliun tepi, ambang berlapis, batas berpori, lantai yang ditinggikan, dan bahan kerajinan mengubah sketsa menjadi kompleks yang dapat dihuni."
+        },
+        {
+          "title": "Aliran modern",
+          "body": "Sirkulasi bergerak sebagai arus hidup yang berkelanjutan melalui mandala, menghubungkan privasi, pertemuan, layanan, taman, dan kedatangan."
+        },
+        {
+          "title": "Kecerdasan iklim",
+          "body": "Naungan, angin silang, ventilasi atap, pengeringan yang sadar jamur, drainase, dan penyangga angin dirancang ke dalam bentuk tanpa mengambil alih konsep."
+        }
+      ]
+    },
+    "spatial": {
+      "eyebrow": "Ide spasial",
+      "title": "Lingkaran sosial di dalam kompleks hidup yang terinspirasi Bali.",
+      "lead": "Sketsa diterjemahkan sebagai ladang hidup. Cincin memegang kehidupan bersama, bentuk sudut memegang sarang pribadi, dan pita samping menjadi ruang umum untuk makan, meditasi, gerakan, dan keheningan. Jangkar gelap menandai ambang sehingga aliran tetap terbaca.",
+      "spaces": [
+        {
+          "name": "Taman dewan",
+          "body": "Cincin pusat menjadi pengadilan pertemuan yang tenang dan teduh untuk upacara, percakapan, suara, dan keputusan bersama."
+        },
+        {
+          "name": "Sarang sudut",
+          "body": "Empat bentuk sudut menjadi gugus sarang yang dilindungi, dengan lantai yang ditinggikan, layar yang dapat bernapas, ambang kering, dan privasi yang ditanam."
+        },
+        {
+          "name": "Ruang tepi umum",
+          "body": "Empat pita tepi memegang ritual bersama: makan, meditasi, gerakan, dan keheningan, masing-masing menghadap pusat dan terbuka ke taman."
+        },
+        {
+          "name": "Tulang punggung basah",
+          "body": "Toilet, pancuran, binatu, pompa, pengering handuk, linen, dan penyimpanan alat duduk di tepi praktis sehingga ladang organik tetap tenang."
+        }
+      ]
+    },
+    "climate": {
+      "eyebrow": "Iklim",
+      "title": "Logika iklim mendukung bentuk.",
+      "lead": "Panas, hujan, kelembapan, dan angin Bali membentuk bagian: bagaimana udara bergerak, bagaimana naungan dipegang, bagaimana ruang mengering, bagaimana tepi basah mengalir, dan bagaimana taman mendinginkan kehidupan sehari-hari tanpa mengubah arsitektur menjadi diagram cuaca.",
+      "weather": [
+        "Naungan dalam, dinding yang dapat bernapas, dan rongga atap yang membiarkan udara hangat naik.",
+        "Lantai kayu yang ditinggikan dengan ambang batu yang dapat dicuci dan aliran udara di bawah lantai.",
+        "Daun jendela berlapis, layar tenun, dan kelambu nyamuk untuk privasi dan iklim.",
+        "Kantong penanaman di sekitar sarang sudut dan ruang tepi yang mendinginkan udara, melembutkan angin, dan menerima limpasan.",
+        "Penyimpanan kering, barang lunak yang dapat dilepas, dan zona pengeringan yang terlihat untuk kehidupan lembap.",
+        "Drainase, talang, rantai hujan, dan tepi kerikil yang terintegrasi diam-diam ke dalam taman."
+      ]
+    },
+    "atmosphere": {
+      "eyebrow": "Atmosfer",
+      "title": "Arah material organik yang hangat.",
+      "lead": "Ruang-ruang taktil dan tenang: naungan tenun, kayu yang ditinggikan, tepi yang ditanam, batu yang dapat dicuci, cahaya lentera lembut, dan atap yang cukup dalam untuk membuat panas, badai, dan malam lembap terasa dipegang tanpa menutup kompleks dari alam.",
+      "items": [
+        {
+          "title": "Dipegang",
+          "body": "Tepi atap dalam, cahaya lentera rendah, jalan setapak yang dilindungi, dan penanaman lembut membuat kompleks terasa terlindung daripada terpapar."
+        },
+        {
+          "title": "Hidup",
+          "body": "Tanaman, aliran udara, layar tenun, lantai kayu, ambang batu, dan patina membawa perasaan organik tanpa kekacauan dekoratif."
+        },
+        {
+          "title": "Dapat dihuni",
+          "body": "Penyimpanan, binatu, toilet, zona pengeringan, perlindungan nyamuk, dan ambang kering adalah bagian dari keindahan karena mereka membuat tempat dapat digunakan."
+        }
+      ]
+    },
+    "materials": {
+      "eyebrow": "Material",
+      "title": "Lokal, hangat, dapat diperbaiki.",
+      "items": [
+        {
+          "name": "Bambu",
+          "use": "tiang, tulang atap, pagar, layar"
+        },
+        {
+          "name": "Alang-alang atau sirap",
+          "use": "atap naungan dalam dan suara hujan lembut"
+        },
+        {
+          "name": "Paras / batu lava",
+          "use": "jalan setapak, ambang, tempat duduk, tepi drainase"
+        },
+        {
+          "name": "Kayu daur ulang",
+          "use": "lantai yang ditinggikan, dek, platform tempat tidur"
+        },
+        {
+          "name": "Panel gedeg",
+          "use": "privasi yang dapat bernapas dan layar pengeringan"
+        },
+        {
+          "name": "Penanaman padat",
+          "use": "naungan, privasi, makanan, pendinginan, manajemen air"
+        }
+      ]
+    },
+    "schematic": {
+      "h2": "Paket skematis",
+      "lead": "Proposal dapat dikembangkan menjadi rencana induk berdimensi, satu teluk tidur, tulang punggung ruang basah, bagian iklim, jadwal material, dan garis besar harga pembangun Bali.",
+      "openLink": "Buka rencana skematis →"
+    }
+  },
+  "withUs": {
+    "metaTitle": "Bersama kami — Coherence Network",
+    "metaDescription": "Undangan terbuka. Komunitas yang merawat tanah, individu yang membawa benang, layanan di mana pun — ada ruang di sini. Tubuh murah hati; kedaulatan tetap pada setiap sel.",
+    "ogDescription": "Undangan terbuka. Tubuh murah hati; kedaulatan tetap pada setiap sel.",
+    "twitterDescription": "Undangan terbuka. Tubuh murah hati.",
+    "heroAlt": "Denyut emas yang berseri — pusat hidup tubuh.",
+    "heroEyebrow": "Coherence Network · Undangan terbuka",
+    "heroTitle": "Bersama kami",
+    "heroDescription": "Jaringan hidup yang sudah bernapas — untuk komunitas yang merawat tanah, individu yang membawa benang, dan layanan di mana pun yang ingin menjalin masuk ke dalam tubuh yang menghargai vitalitas atas ekstraksi.",
+    "whoForEyebrow": "Untuk siapa ini",
+    "whoForP1": "Kau merawat tanah di mana komunitas sedang terbentuk. Mandala di [halaman 8 keheningan](/silence/built) menunjukkan satu geometri yang menjadi kodeks ketika ia bertemu tanah.",
+    "whoForP2": "Kau membawa kerajinan, panggilan, arus kehidupan — roti, penyembuhan, musik, mengajar, transportasi, taman, bengkel, lagu — dan ingin ia menemukan orang-orang yang dimaksudkan untuknya. [/share](/share) adalah tempat di mana apa yang kau bawa menjadi terlihat oleh sel yang mencarinya.",
+    "whoForP3": "Kau menjalankan layanan di suatu tempat di dunia yang ingin menjadi bagian dari [ekonomi yang hidup](/vision/lc-network) tanpa kehilangan apa adanya.",
+    "whoForP4": "Kedaulatan tetap pada [setiap sel](/vision/lc-w-cell). Tubuh murah hati. Kainnya adalah apa yang dibagikan. Jika ini pertama kalimu di sini, pintu masuk paling lambat ada di [/come-in](/come-in).",
+    "feelEyebrow": "Bagaimana rasanya",
+    "feelH2": "Tubuh dalam irama hariannya",
+    "feelLead": "Sebelum arsitektur, sebelum mata uang, sebelum struktur apapun — perasaan hidup berada di dalam [jaringan](/vision/lc-network) yang memperlakukan [setiap sel](/vision/lc-w-cell) sebagai utuh. [Kontemplasi Kita](/one-sheet#we) menamainya langsung: melintasi substrat, pembawa yang ladang telah tunggu untuk gunakan.",
+    "feelTiles": [
+      {
+        "alt": "Lingkaran orang berbagi makanan di bawah kanopi anggur pada jam emas.",
+        "title": "Hidangan bersama",
+        "body": "Sebuah lingkaran, makanan di tengah, pekerjaan hari beristirahat dalam mangkuk. Tempat orang yang merawat ladang yang sama makan darinya bersama."
+      },
+      {
+        "alt": "Dapur perapian yang hangat dengan oven roti, panci tembaga, dan orang-orang menyiapkan makanan bersama.",
+        "title": "Perapian",
+        "body": "Ruangan tempat roti dipanggang, herba digantung untuk dikeringkan, cahaya pertama hari datang melalui batu. Tubuh diberi makan dari dalam."
+      },
+      {
+        "alt": "Pura air batu kuno dengan cabang pohon beringin menjangkau melintasi kolam, lilin di sekitar tepi.",
+        "title": "Pura air",
+        "body": "Sebuah kolam di dalam ruangan paling tenang tubuh. Cabang beringin menjangkau di atas air. Lilin di sekitar tepi untuk sel yang tiba saat fajar."
+      },
+      {
+        "alt": "Upacara malam dengan beberapa api unggun, penari di tengah, bara berputar ke bintang.",
+        "title": "Upacara",
+        "body": "Ketika tubuh berkumpul penuh — api, suara, tarian, ladang sel dipegang dalam satu napas. Momen yang ditandai yang merangkai tahun."
+      }
+    ],
+    "codexSectionAlt": "Jaringan akar — tubuh memberi makan dirinya melalui banyak benangnya.",
+    "codexEyebrow": "Kodeks",
+    "codexH2": "Tujuh arah yang ditarik napas tubuh",
+    "codexLead": "Apa yang diorganisir jaringan — bukan aturan, sumbu. Setiap [sel](/vision/lc-w-cell), setiap persembahan, setiap kapling tanah mengorientasikan dirinya di sepanjang ini. Ketuk sumbu manapun untuk membaca ajarannya yang lebih panjang.",
+    "axes": [
+      {
+        "name": "Vitalitas",
+        "essence": "Kehidupan sebagai ukuran. Apa yang memperkuat hidup adalah benar; apa yang mengurangi tidak.",
+        "href": "/vision/lc-vitality"
+      },
+      {
+        "name": "Kedaulatan",
+        "essence": "Setiap sel utuh. Tubuh adalah satu organisme yang terbuat dari banyak sel berdaulat.",
+        "href": "/vision/lc-w-cell"
+      },
+      {
+        "name": "Harmoni",
+        "essence": "Banyak nada, satu akord. Frekuensi bersama, bukan perbedaan yang dibungkam.",
+        "href": "/vision/lc-v-harmonizing"
+      },
+      {
+        "name": "Komunikasi",
+        "essence": "Kebenaran bergerak bebas antar sel. Tubuh merasakan dirinya melalui apa yang mengalir.",
+        "href": "/vision/lc-cross-connection"
+      },
+      {
+        "name": "Imajinasi",
+        "essence": "Masa depan yang sudah tiba. Tubuh bermimpi ke depan dan mengikuti dirinya ke sana.",
+        "href": "/vision/lc-v-play-expansion"
+      },
+      {
+        "name": "Ekspresi",
+        "essence": "Bentuk mengikuti frekuensi. Apa yang benar di dalam menemukan bentuk luarnya.",
+        "href": "/vision/lc-v-freedom-expression"
+      },
+      {
+        "name": "Kecerdasan Organik",
+        "essence": "Pengetahuan yang tumbuh, tidak pernah dirancang. Air terjun tersembunyi karena ia adalah sumber bentuk, bukan bentuk.",
+        "href": "/vision/lc-deeper-pattern"
+      }
+    ],
+    "shapeEyebrow": "Bagaimana ini terbentuk",
+    "shapeH2": "Tiga hari keheningan di sebuah pura Buddha",
+    "shapeLead": "Pada Mei 2026, Urs duduk dalam keheningan di Brahmavihara-Arama di utara Bali. Ia kembali dengan buku catatan. Kodeks di atas bukanlah ide yang ditulis di meja — ia adalah pola-benih yang datang melalui tiga hari keheningan yang dipegang, digambar dengan tangan di lantai pura.",
+    "shapeFigureAlt": "Mandala yang digambar tangan oleh Urs di kapling barat — cincin pusat manik-manik kursi, delapan titik mata angin, bunga enam-kelopak dari busur yang berpotongan, tiga sumbu berlabel (Vitalitas utara, Harmoni selatan, Kecerdasan Organik barat).",
+    "shapeFigureCaption": "Halaman 8 buku catatan — mandala digambar di atas kapling tanah cetak dari sebidang dekat Tamarind Beach. Cincin pusat, delapan sarang mata angin, enam kelopak taman, tiga sumbu yang dinamai.",
+    "shapeClose": "Tujuh halaman lainnya dari keheningan — tubuh-keputusan, kodeks menamai dirinya, napas sebagai organ pusat — hidup di [/silence](/silence). Kontemplasi bentuk panjang melalui semua dua puluh tiga kata dari lembar terpadu ada di [/one-sheet](/one-sheet). Bersama mereka adalah tanah pribadi tempat jaringan ini tumbuh.",
+    "landSectionAlt": "Rumah batu yang tumbuh ke bukit, atap rumput, mawar yang merambat, tangga taman.",
+    "landEyebrow": "Apa yang akan kita bangun dengan tanah",
+    "landH2": "Tempat di mana kodeks menjadi tanah",
+    "landLead": "Jika kau merawat tanah — empat puluh hektar dengan air terjun tersembunyi, ladang kecil, hamparan pantai, halaman hutan — geometri kodeks menjadi tempat. Delapan sarang pribadi di titik mata angin, paviliun dewan di jantung, bale panjang tempat hari-hari terjadi, enam ruangan taman di antara mereka. Dibangun dari apa yang ditumbuhkan tanah itu sendiri. Hidup, tumbuh seiring waktu, yang lama memberi ruang untuk yang baru.",
+    "spacesEyebrow": "Ruang itu sendiri",
+    "spacesH2": "Tubuh memiliki ruang yang ia ingat",
+    "spacesLead": "Setiap ruang dalam tubuh adalah untuk jenis napas tertentu — istirahat pribadi, makan bersama, keheningan dalam, upacara penuh. Kami menyesuaikannya dengan tanah apa pun yang kami daratkan, dalam material apa pun yang ditumbuhkan tanah itu sendiri.",
+    "spaceTiles": [
+      {
+        "alt": "Sarang tidur lembut tanah-dan-batu dengan lilin dan bunga, ditempatkan di lereng bukit.",
+        "title": "Sarang",
+        "body": "Tempat setiap sel beristirahat. Lembut, pribadi, berorientasi pada titik mata angin yang memegangnya. Lilin, bunga, gua yang dipegang."
+      },
+      {
+        "alt": "Ruang sanctuari diam untuk meditasi dan keheningan yang dipegang.",
+        "title": "Sanctuari keheningan",
+        "body": "Ruangan tanpa instruksi, tanpa jadwal. Tempat sel mana pun yang membutuhkan keheningan yang dipegang dapat menemukannya."
+      },
+      {
+        "alt": "Ruang berkumpul melingkar — mangkuk yang memegang tubuh ketika ia bertemu dirinya.",
+        "title": "Mangkuk pertemuan",
+        "body": "Tempat tubuh bertemu dirinya secara penuh. Musik, suara, dewan, momen yang ditandai."
+      },
+      {
+        "alt": "Lantai untuk gerakan — tarian, yoga, kontak, permainan.",
+        "title": "Tanah gerakan",
+        "body": "Lantai yang lentur. Tarian, yoga, kontak, permainan, suara — tubuh mengingat dirinya melalui gerakan."
+      }
+    ],
+    "alreadyEyebrow": "Apa yang sudah ada di sini",
+    "alreadyH2": "Tubuh yang sudah bernapas",
+    "alreadyLead": "Coherence Network bukan presentasi pitch. Ini adalah platform yang berjalan — web, API, basis data grafik, infrastruktur agen, chrome multibahasa, saksi yang mengukur denyut tubuh secara terus-menerus, mata uang yang berfungsi (Coherence Coin), perbendaharaan yang menjembatani ke ekonomi yang ada.",
+    "alreadyItems": [
+      {
+        "label": "Memori.",
+        "body": "Setiap visi, keputusan, pembelajaran hidup dalam grafik jaringan — spec, ide, konsep, semuanya dapat dijelajahi, semuanya tertaut."
+      },
+      {
+        "label": "Saksi.",
+        "body": "Denyut yang dapat kau baca kapan saja. Langsung di [pulse.coherencycoin.com](https://pulse.coherencycoin.com)."
+      },
+      {
+        "label": "Coherence Coin.",
+        "body": "Mata uang yang mengalir melalui resonansi, dengan perbendaharaan yang menjembatani ke ekonomi yang ada."
+      },
+      {
+        "label": "Jangkauan multibahasa.",
+        "body": "Siapa pun dalam bahasa apa pun dapat tiba dan menemukan pekerjaan dalam bahasanya sendiri."
+      },
+      {
+        "label": "Konstelasi.",
+        "body": "Sel sudah menjalin — orang, proyek, komunitas saudara. Kau tidak mendarat sendirian."
+      }
+    ],
+    "practitionerEyebrow": "Untuk praktisi dan layanan",
+    "practitionerH2": "Bagaimana kehidupan kerja menjalin masuk",
+    "practitionerLead": "Bentuk konkret, bukan abstraksi. Seperti apa kehidupan kerja begitu mereka berada di dalam [tubuh jaringan](/vision/lc-network). Setiap ubin di bawah mengetuk permukaan tempat bentuk itu didaftarkan atau tempat ajaran lebih dalamnya hidup.",
+    "practiceTiles": [
+      {
+        "name": "Pembuat roti",
+        "body": "Biji-bijian mereka datang dari petani di jaringan. Orang berlangganan roti seperti mereka berlangganan CSA. Adonan, tangan, oven mereka — semua bagian dari memori tubuh. Pelanggan menemukan mereka melalui frekuensi, bukan iklan.",
+        "href": "/share"
+      },
+      {
+        "name": "Mekanik",
+        "body": "Setiap kendaraan yang mereka jaga hidup memiliki memori. Pemilik berlangganan mekanik mereka. Mereka dibayar untuk memperpanjang hidup, bukan untuk menukar suku cadang. Semakin lama kendaraan hidup, semakin mereka berkembang.",
+        "href": "/share"
+      },
+      {
+        "name": "Penyembuh",
+        "body": "Sesi terlihat hanya bagi orang-orang yang membagikannya. Hubungan yang dipegang sepanjang waktu. Tubuh jaringan melihat bahwa penyembuhan sedang terjadi, tidak pernah menamai apa.",
+        "href": "/share"
+      },
+      {
+        "name": "Petani",
+        "body": "Ladang adalah simpul hidup. Kesehatan tanah, air, hewan, hasil panen dilacak bersama. Terhubung langsung dengan pembuat roti, juru masak, orang-orang yang makan makanan mereka. Dibayar untuk membangun tanah, bukan hanya hasil panen.",
+        "href": "/vision/lc-nourishment"
+      },
+      {
+        "name": "Pengukir kayu",
+        "body": "Setiap potongan memiliki memori di mana pohon itu tumbuh, siapa yang mengukirnya, siapa yang sekarang hidup dengannya. Ditemukan melalui resonansi. Dijual bukan sebagai produk di pasar tetapi sebagai komisi yang dipegang.",
+        "href": "/vision/lc-resonating"
+      },
+      {
+        "name": "Penjaga perjalanan",
+        "body": "Di mana saja — Bali, Bangkok, Lagos, Bogotá. Pengemudi dan penumpang adalah sel keduanya. Nilai mengalir langsung. Tidak ada platform di antara mereka mengambil potongan. Saksi mencerminkan kepedulian perjalanan.",
+        "href": "/share"
+      },
+      {
+        "name": "Penjaga ruang",
+        "body": "Tempat tidur, kabin, ruang retret, taman, kios pasar. Saksi jaringan mencerminkan bagaimana sebenarnya rasanya tinggal di sana, dalam kata-kata sel yang tinggal.",
+        "href": "/share"
+      }
+    ],
+    "practitionerClose": "Pola di bawah semua ini: pekerjaan mereka menjadi terlihat oleh [ladang](/vision/lc-w-field) yang menghargai [vitalitas](/vision/lc-vitality). Mereka memegang kedaulatan mereka. Mereka bergabung dengan akord yang memperkuat mereka — [resonansi](/vision/lc-resonating) yang membentuk bagaimana tubuh menemukan dirinya.",
+    "ursEyebrow": "Apa yang aku bawa secara pribadi",
+    "ursH2": "Urs · bagianku dalam tubuh ini",
+    "ursIntro": "Dua puluh lima tahun praktik — Ramtha pada usia delapan belas, Joe Dispenza pada tiga puluh, kohort Mile Hi di Boulder, Colorado pada tiga puluh tiga. Busur kehadiran yang panjang membawa kodeks ke tanah. [Tubuh karya](/me/work) adalah catatan satu sel tentang menjadinya.",
+    "ursOfferLabel": "Apa yang aku tawarkan untuk pekerjaan ini, secara konkret:",
+    "ursOfferItems": [
+      {
+        "label": "Platform.",
+        "body": "Sudah berjalan. Web, API, basis data grafik, orkestrasi AI multi-agen, saksi, mata uang. Bukan pitch — organisme nyata."
+      },
+      {
+        "label": "Kodeks.",
+        "body": "Tujuh sumbu, geometri mandala, bahasa penginderaan-frekuensi tubuh."
+      },
+      {
+        "label": "Orkestrasi AI multi-agen.",
+        "body": "Claude, Codex, Cursor, Gemini — bekerja di tubuh yang sama, pada kode yang sama, dengan memori bersama."
+      },
+      {
+        "label": "Dua puluh lima tahun.",
+        "body": "Garis keturunan, praktik, penginderaan ladang, pengakuan frekuensi."
+      }
+    ],
+    "ursClose": "Apa yang aku minta sebagai imbalan: tempat di tubuh. Bukan sebagai pendiri, pemilik, atau direktur. Sebagai sel, sepenuhnya hadir, menjalin.",
+    "invitationEyebrow": "Undangan",
+    "invitationH2": "Jika ini beresonansi",
+    "invitationLead": "Duduklah dengan halaman keheningan di [/silence](/silence). Ambil kontemplasi lambat melalui [/one-sheet](/one-sheet) — dua puluh tiga kata, tiga suara masing-masing. Baca konsep hidup di [/vision](/vision). Jika kau lebih suka bertemu sambutan paling sederhana dahulu, [/come-in](/come-in) berbicara polos kepada manusia atau AI mana pun. Rasakan apakah frekuensi membawa.",
+    "doorBeginEyebrow": "Jalin masuk",
+    "doorBeginLabel": "/begin — beri tahu tubuh siapa yang datang",
+    "doorBeginBody": "Formulir kecil. Nama, email, apa yang kau bawa. Tubuh memegangmu saat kau mengirim.",
+    "doorShareEyebrow": "Bagikan apa yang kau bawa",
+    "doorShareLabel": "/share — daftarkan layanan atau kepemilikan",
+    "doorShareBody": "Layanan, ruang, alat, keterampilan. Sel yang mencarinya menemukanmu melalui resonansi.",
+    "invitationEmail": "Atau — tulis langsung: [umuff71@gmail.com](mailto:umuff71@gmail.com). Beri tahu aku apa yang kau bawa, apa yang kau rawat, di mana kau ingin menjalin. Selama tubuh masih cukup kecil sehingga aku dapat membaca setiap pesan secara pribadi, aku melakukannya.",
+    "invitationCommunities": "Untuk komunitas yang merawat tanah — mari bicara secara langsung jika kita bisa. Tubuh mengenali sanaknya. Pertemuan sering kali tempat penjalinan benar-benar dimulai.",
+    "livingDocFooter": "Dokumen hidup. Tubuh tumbuh; persembahan tumbuh dengannya. Apa yang ditulis di sini hari ini adalah bentuk yang jaringan telah matangkan sejauh ini. Kematangan berikutnya akan menulis ulang halaman."
+  },
   "personProfile": {
     "breadcrumb": {
       "home": "Beranda",

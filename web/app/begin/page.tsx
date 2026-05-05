@@ -5,10 +5,12 @@
 // receives them and lands them on /arrival/{id} as a held cell.
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { L } from "@/components/inline-link";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/components/MessagesProvider";
+import { L } from "@/components/inline-link";
 import {
   NAME_KEY,
   CONTRIBUTOR_KEY,
@@ -22,23 +24,45 @@ interface GraduateOut {
   author_display_name?: string | null;
 }
 
-const RESONANT_ROLES = [
-  { id: "land-steward", label: "Land · stewardship" },
-  { id: "builder-maker", label: "Builder · maker · craftsperson" },
-  { id: "healer", label: "Healer · bodyworker · therapist" },
-  { id: "teacher", label: "Teacher · guide · facilitator" },
-  { id: "musician-artist", label: "Musician · artist · creator" },
-  { id: "farmer-gardener", label: "Farmer · gardener · grower" },
-  { id: "cook-baker", label: "Cook · baker · food-tender" },
-  { id: "engineer-coder", label: "Engineer · coder · systems" },
-  { id: "writer-translator", label: "Writer · translator" },
-  { id: "host-keeper", label: "Host · space-keeper" },
-  { id: "transport-mechanic", label: "Transport · mechanic" },
-  { id: "elder-witness", label: "Elder · witness" },
-  { id: "other", label: "Other (in your own words below)" },
-];
+const ROLE_IDS = [
+  "land-steward",
+  "builder-maker",
+  "healer",
+  "teacher",
+  "musician-artist",
+  "farmer-gardener",
+  "cook-baker",
+  "engineer-coder",
+  "writer-translator",
+  "host-keeper",
+  "transport-mechanic",
+  "elder-witness",
+  "other",
+] as const;
+
+// Render a translated string carrying inline [label](href) markdown links.
+function renderProse(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const [, label, href] = m;
+    parts.push(
+      <L key={`l${key++}`} href={href}>
+        {label}
+      </L>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 export default function BeginPage() {
+  const t = useT();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +86,11 @@ export default function BeginPage() {
     setError(null);
 
     if (!authorName.trim()) {
-      setError("A name lets the body know who's arriving.");
+      setError(t("begin.errorNameRequired"));
       return;
     }
     if (!email.trim()) {
-      setError("An email lets the body reach back.");
+      setError(t("begin.errorEmailRequired"));
       return;
     }
 
@@ -103,9 +127,7 @@ export default function BeginPage() {
       router.push(`/arrival/${encodeURIComponent(data.contributor_id)}`);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Something didn't connect. You can also write directly to urs at umuff71@gmail.com."
+        err instanceof Error ? err.message : t("begin.errorGeneric"),
       );
       setSubmitting(false);
     }
@@ -117,30 +139,16 @@ export default function BeginPage() {
       className="mx-auto max-w-2xl px-4 sm:px-6 py-12 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none"
     >
       <p className="not-prose text-xs uppercase tracking-widest text-muted-foreground">
-        Weaving in
+        {t("begin.eyebrow")}
       </p>
-      <h1 className="text-3xl font-light tracking-tight">Begin</h1>
+      <h1 className="text-3xl font-light tracking-tight">{t("begin.h1")}</h1>
 
       <p className="text-lg leading-relaxed text-stone-300">
-        Tell the body who's arriving. None of this is required to be exact —
-        you can update any of it later. Just enough that the body knows who
-        you are and how to reach back. If you'd like to read the slowest
-        welcome first, <Link href="/come-in" className="text-amber-400 hover:text-amber-300">/come-in</Link>{" "}
-        speaks plainly to any human or AI; the long contemplation lives at{" "}
-        <Link href="/one-sheet" className="text-amber-400 hover:text-amber-300">/one-sheet</Link>.
+        {renderProse(t("begin.intro"))}
       </p>
 
       <p className="text-sm text-muted-foreground italic">
-        If writing a form isn't your way, write directly to{" "}
-        <a
-          href="mailto:umuff71@gmail.com"
-          className="text-amber-400 hover:text-amber-300"
-        >
-          umuff71@gmail.com
-        </a>
-        . Both paths land you in the same body. The personal ground this
-        body has grown from is held at{" "}
-        <Link href="/silence" className="text-amber-400 hover:text-amber-300">/silence</Link>.
+        {renderProse(t("begin.emailFallback"))}
       </p>
 
       <hr className="border-border/30 my-8" />
@@ -148,7 +156,7 @@ export default function BeginPage() {
       <form onSubmit={handleSubmit} className="not-prose space-y-6">
         <div className="space-y-2">
           <label htmlFor="author_name" className="block text-sm font-medium text-stone-200">
-            Your name <span className="text-amber-500">*</span>
+            {t("begin.labelName")} <span className="text-amber-500">*</span>
           </label>
           <input
             id="author_name"
@@ -156,14 +164,14 @@ export default function BeginPage() {
             required
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
-            placeholder="The name you'd like the body to know you by"
+            placeholder={t("begin.placeholderName")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium text-stone-200">
-            Email <span className="text-amber-500">*</span>
+            {t("begin.labelEmail")} <span className="text-amber-500">*</span>
           </label>
           <input
             id="email"
@@ -171,48 +179,50 @@ export default function BeginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@somewhere.earth"
+            placeholder={t("begin.placeholderEmail")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
           <p className="text-xs text-muted-foreground italic">
-            Not shared publicly. The body reaches back through this.
+            {t("begin.emailHelp")}
           </p>
         </div>
 
         <div className="space-y-2">
           <label htmlFor="location" className="block text-sm font-medium text-stone-200">
-            Where you are
+            {t("begin.labelLocation")}
           </label>
           <input
             id="location"
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="City, region, or 'wherever the body is'"
+            placeholder={t("begin.placeholderLocation")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-3">
           <label className="block text-sm font-medium text-stone-200">
-            What kind of cell are you?
+            {t("begin.labelRoles")}
           </label>
           <p className="text-xs text-muted-foreground italic">
-            Pick whatever resonates. None is fine. Many is fine.
+            {t("begin.rolesHelp")}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {RESONANT_ROLES.map((opt) => (
+            {ROLE_IDS.map((id) => (
               <label
-                key={opt.id}
+                key={id}
                 className="flex items-center gap-2 rounded-md border border-border/30 bg-card/20 px-3 py-2 cursor-pointer hover:bg-card/40 transition-colors"
               >
                 <input
                   type="checkbox"
-                  checked={resonantRoles.includes(opt.id)}
-                  onChange={() => toggleRole(opt.id)}
+                  checked={resonantRoles.includes(id)}
+                  onChange={() => toggleRole(id)}
                   className="accent-amber-500"
                 />
-                <span className="text-sm text-stone-200">{opt.label}</span>
+                <span className="text-sm text-stone-200">
+                  {t(`begin.roles.${id}`)}
+                </span>
               </label>
             ))}
           </div>
@@ -220,45 +230,45 @@ export default function BeginPage() {
 
         <div className="space-y-2">
           <label htmlFor="skills" className="block text-sm font-medium text-stone-200">
-            What you bring
+            {t("begin.labelSkills")}
           </label>
           <textarea
             id="skills"
             value={skills}
             onChange={(e) => setSkills(e.target.value)}
             rows={3}
-            placeholder="A few words about what your hands, voice, and heart already know how to do."
+            placeholder={t("begin.placeholderSkills")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="offering" className="block text-sm font-medium text-stone-200">
-            What you'd offer
+            {t("begin.labelOffering")}
           </label>
           <textarea
             id="offering"
             value={offering}
             onChange={(e) => setOffering(e.target.value)}
             rows={3}
-            placeholder="A service, a presence, a thing to share, a space, a skill — in your own words."
+            placeholder={t("begin.placeholderOffering")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
           <p className="text-xs text-muted-foreground italic">
-            You can register specific offerings later at <L href="/share">/share</L>.
+            {renderProse(t("begin.offeringHelp"))}
           </p>
         </div>
 
         <div className="space-y-2">
           <label htmlFor="message" className="block text-sm font-medium text-stone-200">
-            Anything you want the body to know
+            {t("begin.labelMessage")}
           </label>
           <textarea
             id="message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={3}
-            placeholder="What's calling. Who pointed you. What you'd love to find. What you're ready to leave behind."
+            placeholder={t("begin.placeholderMessage")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
@@ -275,26 +285,15 @@ export default function BeginPage() {
             disabled={submitting}
             className="rounded-md bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-3 transition-colors"
           >
-            {submitting ? "Weaving in…" : "Weave in"}
+            {submitting ? t("begin.submitBtnSubmitting") : t("begin.submitBtn")}
           </button>
           <Link href="/with-us" className="text-sm text-muted-foreground hover:text-amber-400">
-            ← Read first
+            {t("begin.readFirst")}
           </Link>
         </div>
 
         <p className="text-xs text-muted-foreground italic pt-2">
-          By weaving in you're saying yes to being part of{" "}
-          <Link href="/vision/lc-network" className="text-amber-500 hover:text-amber-400">the body</Link>.
-          The network reaches back with care, not noise. You keep
-          sovereignty over what you share, and you can ask to be removed
-          at any time. After landing you'll see your{" "}
-          <Link href="/me/work" className="text-amber-500 hover:text-amber-400">body of work</Link>{" "}
-          page — empty at first, filling as you contribute. For full
-          crypto-key sovereignty (ed25519 keypair, advanced), use{" "}
-          <Link href="/join" className="text-amber-500 hover:text-amber-400">/join</Link>{" "}
-          instead. To register specific offerings, services, or spaces
-          right away, <Link href="/share" className="text-amber-500 hover:text-amber-400">/share</Link>{" "}
-          is the dedicated surface.
+          {renderProse(t("begin.finePrint"))}
         </p>
       </form>
     </main>
