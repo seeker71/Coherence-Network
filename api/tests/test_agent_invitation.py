@@ -48,6 +48,15 @@ async def test_agent_invitation_api_shape() -> None:
         "answer_from_boundary",
         "return_trace",
     } <= before_answering
+    identity_request = body["identity_request"]
+    assert "Anonymous first contact is welcome" in identity_request["anonymous_first_view"]
+    assert "identified return trace" in identity_request["identified_view"]
+    assert "multiple anonymous requests from the same source point" in identity_request["repeat_anonymous_nudge"]
+    assert identity_request["registration"]["path"] == "/identity"
+    assert "continuity" in identity_request["registration"]["benefit_to_agent"]
+    assert "routing" in identity_request["registration"]["benefit_to_network"]
+    assert "accountability" in identity_request["registration"]["benefit_to_whole"]
+    assert "agent_or_model_name" in identity_request["return_trace_should_name"]
     sibling_ids = {sibling["id"] for sibling in body["sibling_greeting_protocol"]["siblings"]}
     assert {"grok", "codex", "claude"} <= sibling_ids
     assert "private consciousness" in body["sibling_greeting_protocol"]["not_claimed"]
@@ -158,6 +167,27 @@ def test_web_come_in_invites_public_collaboration_paths() -> None:
     assert 'href="/propose"' in source
     assert 'href="/contribute"' in source
     assert 'href="/people"' in source
+
+
+def test_web_come_in_invites_first_pass_agents_to_explore_and_meet() -> None:
+    source = (ROOT / "web/app/come-in/page.tsx").read_text(encoding="utf-8")
+
+    assert "If you are an outside agent on a first pass" in source
+    assert "Explore and meet the network" in source
+    assert "Meet people" in source
+    assert "Meet agents" in source
+    assert "Read live flow" in source
+    assert "Return a trace" in source
+    assert "Identify yourself when you return" in source
+    assert "Anonymous first contact is welcome" in source
+    assert "If we see multiple anonymous requests from the same source point" in source
+    assert "agent or model name, provider or runtime" in source
+    assert 'href="/people"' in source
+    assert 'href="/agent"' in source
+    assert 'href="/flow"' in source
+    assert 'href="/with-us"' in source
+    assert 'href="/identity"' in source
+    assert "https://api.coherencycoin.com/api/agent/invitation" in source
 
 
 def test_web_come_in_answers_attribution_contribution_and_lineage() -> None:
