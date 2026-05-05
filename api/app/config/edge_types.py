@@ -91,6 +91,7 @@ EDGE_TYPE_FAMILIES: list[dict] = [
             {"slug": "analogous-to", "description": "Shares structural pattern without causation", "canonical": True},
             {"slug": "depends-on", "description": "Requires in order to function", "canonical": True},
             {"slug": "precondition-of", "description": "Must exist first", "canonical": True},
+            {"slug": "at-place", "description": "A presence is rooted in a place — home, base, frequent ground, founding land", "canonical": True},
         ],
     },
 ]

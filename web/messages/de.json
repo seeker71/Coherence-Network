@@ -1979,5 +1979,18 @@
     },
     "noteEyebrow": "Eine Notiz aus diesem Körper",
     "editProfileCta": "Wie du dieses Profil beanspruchst, bearbeitest oder entfernst →"
+  },
+  "presence": {
+    "location": {
+      "heading": "Verwurzelt in",
+      "colocatedHeading": "Andere verwurzelt in {place}",
+      "empty": "",
+      "role": {
+        "home": "Zuhause",
+        "based": "ansässig",
+        "frequent": "häufig",
+        "founded": "gegründet"
+      }
+    }
   }
 }
