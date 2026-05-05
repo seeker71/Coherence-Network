@@ -2118,5 +2118,18 @@
     },
     "noteEyebrow": "A note from this body",
     "editProfileCta": "How to claim, edit, or remove this profile →"
+  },
+  "presence": {
+    "location": {
+      "heading": "Rooted in",
+      "colocatedHeading": "Others rooted in {place}",
+      "empty": "",
+      "role": {
+        "home": "home",
+        "based": "based",
+        "frequent": "frequent",
+        "founded": "founded"
+      }
+    }
   }
 }

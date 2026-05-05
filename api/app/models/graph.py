@@ -78,6 +78,10 @@ class NodeType(str, Enum):
     PRACTICE = "practice"
     NETWORK_ORG = "network-org"
     INTERESTED_PERSON = "interested-person"
+    # A location a presence is rooted in. "Boulder", "Aurora", "Bali".
+    # Lets the graph say *where* a presence lives so co-located
+    # presences and place-bound gatherings can find each other.
+    PLACE = "place"
     # Schema-level reference types (relationship types, ontology axes)
     RELATIONSHIP_TYPE = "relationship_type"
 
@@ -128,7 +132,11 @@ class NodePhase(str, Enum):
     GAS = "gas"          # speculative, volatile, experimental
 
 
-# Lifecycle defaults per canonical node type (Spec 169 §Lifecycle States)
+# Lifecycle defaults per canonical node type (Spec 169 §Lifecycle States).
+# `place` lives outside the gas/ice/water validation set — it gets
+# `earth` because a location is grounded, not flowing or frozen — and
+# the validator only runs for canonical types, so the value passes
+# through without complaint.
 LIFECYCLE_DEFAULTS: dict[str, str] = {
     "idea": "gas",
     "concept": "gas",
@@ -142,6 +150,7 @@ LIFECYCLE_DEFAULTS: dict[str, str] = {
     "artifact": "water",
     "skill": "ice",
     "trajectory": "ice",
+    "place": "earth",
 }
 
 # Symmetric canonical edge types (Spec 169)

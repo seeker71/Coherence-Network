@@ -1,0 +1,39 @@
+-- Migration: add `place` node type and `at-place` edge type.
+--
+-- Place lets the graph say *where* a presence is rooted. A place node
+-- carries name, region, country, and optional lat/lng — used so two
+-- presences typing "Boulder" land on the same node, and so the page
+-- can surface "others rooted in Boulder" without scanning free-text
+-- location strings on every contributor.
+--
+-- Storage: place data lives in graph_nodes.properties JSONB. No new
+-- table is needed. The ORM Node + create_node path handles persistence;
+-- this file documents the keys used and adds an index hint for the
+-- `slug` lookup that ensure_place performs.
+--
+-- Properties used on a `place`-typed graph_node:
+--   slug      TEXT      stable identifier fragment, used in the id
+--                       (id format: "place:<slug>")
+--   region    TEXT      state/province/canton (optional)
+--   country   TEXT      ISO country name or two-letter code (optional)
+--   lat       NUMERIC   latitude (optional, future map renders)
+--   lng       NUMERIC   longitude (optional, future map renders)
+--
+-- Edge: `at-place`
+--   from_id: any presence-like node (contributor, community,
+--            scene, network-org)
+--   to_id:   a `place`-typed node
+--   properties:
+--     role  TEXT  one of "home" | "based" | "frequent" | "founded"
+--                 default "based"
+--     since TEXT  ISO-8601 date or year, optional
+--
+-- No DDL is required for the MVP — Base.metadata.create_all keeps
+-- graph_nodes / graph_edges. The block below is the canonical
+-- reference if a future migration moves slugs to a dedicated column.
+--
+-- ALTER TABLE graph_nodes
+--   ADD COLUMN IF NOT EXISTS slug TEXT;
+-- CREATE INDEX IF NOT EXISTS idx_graph_nodes_place_slug
+--   ON graph_nodes ((properties->>'slug'))
+--   WHERE type = 'place';

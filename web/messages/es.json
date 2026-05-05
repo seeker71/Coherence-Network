@@ -1979,5 +1979,18 @@
     },
     "noteEyebrow": "Una nota desde este cuerpo",
     "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →"
+  },
+  "presence": {
+    "location": {
+      "heading": "Arraigado en",
+      "colocatedHeading": "Otros arraigados en {place}",
+      "empty": "",
+      "role": {
+        "home": "hogar",
+        "based": "afincado",
+        "frequent": "frecuente",
+        "founded": "fundado"
+      }
+    }
   }
 }

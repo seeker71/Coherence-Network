@@ -24,14 +24,37 @@ import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
 import { ResonatesWith } from "./ResonatesWith";
 import { KindredPresences } from "./KindredPresences";
+import { LocationChip } from "./LocationChip";
+import { CoLocated } from "./CoLocated";
 
 export type Presence = {
   provider: string;
   url: string;
 };
 
+// Creation kinds — the vocabulary the renderer recognizes. This must
+// stay in sync with the Python-side CREATION_KINDS in
+// `api/app/services/creation_sources/base.py`. The graph already holds
+// teachings, podcasts, books, courses, essays — not just music — so
+// the type carries the full breadth of what people make in this field.
+export type CreationKind =
+  | "album"
+  | "track"
+  | "video"
+  | "film"
+  | "event"
+  | "book"
+  | "teaching"
+  | "podcast"
+  | "episode"
+  | "essay"
+  | "article"
+  | "course"
+  | "workshop"
+  | "work";
+
 export type Creation = {
-  kind: "album" | "track" | "video" | "event" | "book" | "work";
+  kind: CreationKind;
   name: string;
   url?: string | null;
   image_url?: string | null;
@@ -123,12 +146,24 @@ function creationArt(c: Creation, accent: BrandTone) {
   } as const;
 }
 
-const KIND_GLYPH: Record<Creation["kind"], string> = {
+// Glyph carries the frequency of the creation. Music is rounded; text
+// is angular; transmission is radiant; structured learning is a lattice.
+// Read these at a glance — they're the only label on a creation tile
+// when the image fails to load.
+const KIND_GLYPH: Record<CreationKind, string> = {
   album: "◦",
   track: "♪",
   video: "▸",
+  film: "▶",
   event: "✦",
   book: "▢",
+  teaching: "✸",
+  podcast: "◐",
+  episode: "◗",
+  essay: "¶",
+  article: "❡",
+  course: "⊞",
+  workshop: "✻",
   work: "·",
 };
 
@@ -400,8 +435,10 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             presences={identity.presences}
             identityName={identity.name}
           />
+          <LocationChip presenceId={identity.id} />
           <ResonatesWith presenceId={identity.id} />
           <KindredPresences presenceId={identity.id} />
+          <CoLocated presenceId={identity.id} />
           <InspiredByChips inspired={inspired} />
           <HeldOpen identity={identity} accent={accent} />
         </aside>

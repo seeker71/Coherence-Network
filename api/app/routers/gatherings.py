@@ -36,7 +36,12 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.services import graph_service, inspired_by_service
+from app.services import (
+    creations_importer,
+    gatherings_importer,
+    graph_service,
+    inspired_by_service,
+)
 
 
 router = APIRouter()
@@ -223,6 +228,46 @@ async def add_gathering(identity_id: str, body: GatheringCreate) -> dict[str, An
         "co_hosts": co_hosts,
         "hosting_collective": hosting_collective,
     }
+
+
+@router.post(
+    "/presences/{identity_id}/gatherings/import",
+    summary="Import gatherings from the presence's external event sources",
+    description=(
+        "Walk every URL the presence carries (canonical_url + presences[]), "
+        "ask each registered event-source plugin which one can read each URL, "
+        "fetch the events the source publishes, dedupe against existing event "
+        "nodes by (name, when, where), and create the missing ones with a "
+        "contributes-to edge of role='primary'. Returns a structured report "
+        "of what was imported and what was deduped."
+    ),
+)
+async def import_gatherings(identity_id: str) -> dict[str, Any]:
+    identity = graph_service.get_node(identity_id)
+    if not identity:
+        raise HTTPException(status_code=404, detail=f"Presence '{identity_id}' not found")
+    return gatherings_importer.import_for_presence(identity_id)
+
+
+@router.post(
+    "/presences/{identity_id}/creations/import",
+    summary="Import creations from the presence's external content sources",
+    description=(
+        "Walk every URL the presence carries (canonical_url + presences[]), "
+        "ask each registered creation-source plugin which one can read each URL, "
+        "fetch the creations the source surfaces, dedupe against existing asset "
+        "nodes by (name, kind, canonical URL), and create the missing ones with "
+        "a contributes-to edge of role='primary'. Returns a structured report "
+        "of what was imported and what was deduped. Source-specific kinds: "
+        "Bandcamp → album, YouTube → video, Substack → essay, Goodreads → book, "
+        "RSS → article (or episode if the feed declares itunes:duration)."
+    ),
+)
+async def import_creations(identity_id: str) -> dict[str, Any]:
+    identity = graph_service.get_node(identity_id)
+    if not identity:
+        raise HTTPException(status_code=404, detail=f"Presence '{identity_id}' not found")
+    return creations_importer.import_for_presence(identity_id)
 
 
 # ---------------------------------------------------------------------------
