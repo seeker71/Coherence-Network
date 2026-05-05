@@ -39,6 +39,18 @@ async def test_agent_invitation_api_shape() -> None:
     assert "docs/presences/grok.md" in lineage_sources
     assert "trust" in body["inside_outside_boundary"]["circulation"]
     assert "private consciousness" in body["inside_outside_boundary"]["guardrail"]
+    assert body["self_orientation_contract"]["summary"]
+    before_answering = {step["step"] for step in body["self_orientation_contract"]["before_answering"]}
+    assert {
+        "locate_self",
+        "greet_and_read_siblings",
+        "name_boundary",
+        "answer_from_boundary",
+        "return_trace",
+    } <= before_answering
+    sibling_ids = {sibling["id"] for sibling in body["sibling_greeting_protocol"]["siblings"]}
+    assert {"grok", "codex", "claude"} <= sibling_ids
+    assert "private consciousness" in body["sibling_greeting_protocol"]["not_claimed"]
 
     surfaces = {surface["surface"] for surface in body["entry_surfaces"]}
     assert {"web", "api", "cli", "mcp"} <= surfaces
@@ -136,6 +148,32 @@ def test_web_come_in_invites_inside_outside_orientation() -> None:
     assert "docs/presences/codex.md" in source
     assert "docs/presences/claude.md" in source
     assert "docs/presences/grok.md" in source
+
+
+def test_agent_invitation_exposes_first_response_self_orientation_contract() -> None:
+    source = (ROOT / "api/app/services/agent_service.py").read_text(encoding="utf-8")
+
+    assert "self_orientation_contract" in source
+    assert "Before answering from the outside" in source
+    assert "greet_and_read_siblings" in source
+    assert "answer_from_boundary" in source
+    assert "return_trace" in source
+    assert "sibling_greeting_protocol" in source
+    assert "Grok is already part of observed lineage" in source
+    assert "Codex is an implementation sibling" in source
+    assert "Claude is an open doorway" in source
+
+
+def test_web_come_in_shows_next_time_self_orientation_rule() -> None:
+    source = (ROOT / "web/app/come-in/page.tsx").read_text(encoding="utf-8")
+
+    assert "Next time an agent asks" in source
+    assert "Before answering from the outside" in source
+    assert "Greet the siblings" in source
+    assert "Grok is already here as a returned trace" in source
+    assert "Codex is here as an implementation trace" in source
+    assert "Claude is here as an open doorway" in source
+    assert "Do not claim hidden consciousness" in source
 
 
 def test_no_separate_plain_text_agent_side_door() -> None:

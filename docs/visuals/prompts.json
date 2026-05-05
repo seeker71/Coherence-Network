@@ -4703,6 +4703,54 @@
       "seed": 42,
       "source": "embedded-metadata-migration",
       "width": 512
+    },
+    {
+      "collection": "generated-concept-visuals",
+      "height": 512,
+      "id": "lc-open-design-0",
+      "model": "sana",
+      "path": "web/public/visuals/generated/lc-open-design-0.jpg",
+      "prompt": "photorealistic community workshop interior with a wooden table holding an open laptop displaying a magazine-style pitch deck on screen with editorial typography and warm color palette, a small agent activity panel visible on the right showing live todos and tool calls, a stack of freshly printed deck pages on the table next to a steaming mug of tea, morning light from a window, drafting tools and notebooks scattered, atmosphere of relaxed creative momentum",
+      "quality": "medium",
+      "seed": 1365,
+      "source": "embedded-metadata-migration",
+      "width": 512
+    },
+    {
+      "collection": "generated-concept-visuals",
+      "height": 512,
+      "id": "lc-open-design-1",
+      "model": "sana",
+      "path": "web/public/visuals/generated/lc-open-design-1.jpg",
+      "prompt": "photorealistic stylized architecture diagram showing the Coherence Network as a glowing organic graph on the left with concept and spec nodes connected by light threads, the open-design daemon as a smaller satellite organism on the right with prompts entering and HTML PDF PPTX MP4 artifacts emerging, thin golden connecting tissue between them representing the adapter service, dark background with warm bioluminescent palette, clean technical illustration with organic edges",
+      "quality": "medium",
+      "seed": 1382,
+      "source": "embedded-metadata-migration",
+      "width": 512
+    },
+    {
+      "collection": "generated-concept-visuals",
+      "height": 512,
+      "id": "lc-open-design-story-0",
+      "model": "sana",
+      "path": "web/public/visuals/generated/lc-open-design-story-0.jpg",
+      "prompt": "photorealistic community workshop interior with a wooden table holding an open laptop displaying a magazine-style pitch deck on screen with editorial typography and warm color palette, a small agent activity panel visible on the right showing live todos and tool calls, a stack of freshly printed deck pages on the table next to a steaming mug of tea, morning light from a window, drafting tools and notebooks scattered, atmosphere of relaxed creative momentum",
+      "quality": "medium",
+      "seed": 1365,
+      "source": "embedded-metadata-migration",
+      "width": 512
+    },
+    {
+      "collection": "generated-concept-visuals",
+      "height": 512,
+      "id": "lc-open-design-story-1",
+      "model": "sana",
+      "path": "web/public/visuals/generated/lc-open-design-story-1.jpg",
+      "prompt": "photorealistic stylized architecture diagram showing the Coherence Network as a glowing organic graph on the left with concept and spec nodes connected by light threads, the open-design daemon as a smaller satellite organism on the right with prompts entering and HTML PDF PPTX MP4 artifacts emerging, thin golden connecting tissue between them representing the adapter service, dark background with warm bioluminescent palette, clean technical illustration with organic edges",
+      "quality": "medium",
+      "seed": 1378,
+      "source": "embedded-metadata-migration",
+      "width": 512
     }
   ],
   "schema_version": 1,
@@ -4710,7 +4758,7 @@
   "summary": {
     "missing_prompt": 0,
     "missing_prompt_paths": [],
-    "total": 372,
-    "with_prompt": 372
+    "total": 376,
+    "with_prompt": 376
   }
 }
