@@ -442,7 +442,7 @@ export function UpcomingGatherings({
   };
 
   return (
-    <section className="px-6 pt-8">
+    <section>
       {upcoming.length > 0 && (
         <>
           <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">

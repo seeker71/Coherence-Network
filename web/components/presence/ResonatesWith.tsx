@@ -76,7 +76,7 @@ export function ResonatesWith({ presenceId }: { presenceId: string }) {
   if (!loaded || items.length === 0) return null;
 
   return (
-    <section className="px-6 pt-8">
+    <section>
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
         Resonates with
       </p>
