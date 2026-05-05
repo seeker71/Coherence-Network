@@ -60,12 +60,17 @@ export type PresenceIdentity = {
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function heroGradient(image_url: string | null | undefined, accent: BrandTone) {
-  // Two-layer: the image (or a brand-accent radial) + a bottom-weighted
-  // dark fade. The fade starts soft at 40% so the subject's face and
-  // shoulders stay lit, then deepens into near-solid #08080a where the
-  // title + tagline sit. Works for portraits, album covers, venue
-  // photos — any composition where the focal point lives in the upper
-  // half.
+  // Multi-layer composition. The radial atmosphere ALWAYS lives at the
+  // bottom of the stack; the image (when present) sits on top. If the
+  // image url 404s or the host blocks hotlinking, the radials still
+  // show through — so a broken image_url never produces an empty black
+  // void on a 720px-tall hero.
+  //
+  // Layer order (top → bottom):
+  //   1. bottomFade — soft to opaque toward the title baseline so the
+  //      heading reads even over a busy photo
+  //   2. image_url — only when set; when it loads, covers the radials
+  //   3. radial atmosphere — branded glow + indigo undertone, always
   const bottomFade =
     "linear-gradient(to bottom," +
     "rgba(0,0,0,0) 0%," +
@@ -73,23 +78,35 @@ function heroGradient(image_url: string | null | undefined, accent: BrandTone) {
     "rgba(8,8,10,0.35) 55%," +
     "rgba(8,8,10,0.82) 75%," +
     "rgba(8,8,10,0.98) 100%)";
-  if (image_url) {
-    return {
-      backgroundImage: `${bottomFade},url('${image_url}')`,
-      backgroundSize: "cover, cover",
-      backgroundPosition: "center, center",
-    } as const;
-  }
-  // No image → richer multi-layer atmosphere instead of empty void.
-  // Two oppositional radials in the brand accent + a network-y fine
-  // grid pattern give the hero presence even before the scraper finds
-  // a photo. The brand accent still anchors the feel.
+  // The atmospheric base. Two oppositional radials in the brand accent
+  // (boosted to be visible even against slate-gray defaults), warmed by
+  // an amber low-light wash, sitting on a deep indigo→near-black field.
+  // Even without an image, the hero feels like a place rather than a
+  // void.
+  // `atmosphere` is FOUR composited radial layers — keep it as a list
+  // so background-size / background-position cardinality matches.
+  const atmosphereLayers = [
+    `radial-gradient(ellipse 70% 55% at 22% 25%,${accent.bg}99,transparent 70%)`,
+    `radial-gradient(ellipse 60% 45% at 78% 72%,${accent.bg}66,transparent 72%)`,
+    `radial-gradient(ellipse 40% 35% at 50% 90%,rgba(245,158,11,0.18),transparent 72%)`,
+    `radial-gradient(ellipse 100% 100% at 50% 50%,#11111e 0%,#070710 70%,#040408 100%)`,
+  ];
+  // Layer order (CSS background-image is painted FIRST → LAST as TOP →
+  // BOTTOM), so the heading-fade goes first, the image (if present) on
+  // top of the atmosphere, the atmosphere as the visible base.
+  const layers: string[] = [bottomFade];
+  if (image_url) layers.push(`url('${image_url}')`);
+  layers.push(...atmosphereLayers);
+  // Sizes / positions: bottomFade=100% 100%, image=cover, radials=cover
+  // each. cover for radial works fine — they're auto-sized anyway, and
+  // matching cardinality keeps the layer mapping unambiguous.
+  const sizes = layers.map((_, i) => (i === 1 && image_url ? "cover" : "100% 100%")).join(", ");
+  const positions = layers.map(() => "center").join(", ");
   return {
-    backgroundImage:
-      `${bottomFade},` +
-      `radial-gradient(ellipse 60% 50% at 25% 30%,${accent.bg}55,transparent 70%),` +
-      `radial-gradient(ellipse 50% 40% at 75% 70%,${accent.bg}33,transparent 70%),` +
-      `radial-gradient(ellipse at 50% 50%,#0e0e16 0%,#050509 100%)`,
+    backgroundImage: layers.join(","),
+    backgroundSize: sizes,
+    backgroundPosition: positions,
+    backgroundRepeat: "no-repeat",
   } as const;
 }
 
@@ -280,16 +297,61 @@ function HeldOpen({
 
 // ── Component ─────────────────────────────────────────────────────────
 
+// Brand keys we have full color/icon support for. When the root
+// `provider` (often a domain like "actualize.earth") isn't one of these
+// but the presence carries one of them in its `presences[]`, prefer
+// that — it gives the hero a vibrant atmosphere instead of the slate
+// gray fallback.
+const KNOWN_BRANDS = new Set([
+  "spotify",
+  "bandcamp",
+  "youtube",
+  "soundcloud",
+  "apple-music",
+  "substack",
+  "patreon",
+  "instagram",
+  "tiktok",
+  "x",
+  "twitter",
+  "facebook",
+  "linktree",
+  "linkedin",
+  "vimeo",
+  "imdb",
+  "ecstaticdance",
+  "beatport",
+  "threads",
+  "wikipedia",
+]);
+
+function pickAccentProvider(identity: PresenceIdentity): string {
+  if (KNOWN_BRANDS.has(identity.provider)) return identity.provider;
+  // Walk presences in order — first known brand wins. Order in the
+  // `presences[]` array roughly mirrors which surface the contributor
+  // emphasized when registering, so the first known one is a good
+  // proxy for "the platform this person is most strongly known on".
+  for (const p of identity.presences || []) {
+    if (KNOWN_BRANDS.has(p.provider)) return p.provider;
+  }
+  return identity.provider;
+}
+
 export function PresencePage({ identity }: { identity: PresenceIdentity }) {
-  const accent = brandFor(identity.provider);
+  const accent = brandFor(pickAccentProvider(identity));
   const hasImage = Boolean(identity.image_url);
   const inspired = identity.inspired_by || [];
 
   return (
     <main className="min-h-screen bg-[#08080a] text-white">
       {/* ── Hero — full-width, content centered to 6xl ────────────── */}
+      {/* Height tuned so the hero feels present without dominating: the
+          name + tagline sit roughly two-thirds down regardless of image
+          state, and the body content begins above the fold on a 1440x900
+          laptop. Earlier 80vh values reserved 720px of black void when
+          the image_url 404'd. */}
       <section
-        className="relative min-h-[60vh] sm:min-h-[70vh] lg:min-h-[80vh] flex flex-col justify-end"
+        className="relative min-h-[44vh] sm:min-h-[52vh] lg:min-h-[58vh] flex flex-col justify-end"
         style={heroGradient(identity.image_url, accent)}
       >
         <div className="mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12 pt-10 pb-8 sm:pb-12 lg:pb-16">

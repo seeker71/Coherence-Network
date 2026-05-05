@@ -24,15 +24,18 @@ type Resonance = {
   concept_name: string;
 };
 
+// The /api/concepts/{id}/carried-by endpoint returns a flat shape:
+//   { items: [{ presence_id, presence_name, presence_type, image_url,
+//                score, shared_tokens, method }] }
+// — not a nested presence object. An earlier draft of this component
+// assumed nested {presence: {id, name}} which silently produced an
+// empty kindred list for every page (the !o.presence?.id guard always
+// hit). Match the real API shape.
 type CarriedByItem = {
-  presence: {
-    id: string;
-    name: string;
-    type?: string;
-    canonical_url?: string;
-    provider?: string;
-  };
-  concept_id?: string;
+  presence_id: string;
+  presence_name?: string;
+  presence_type?: string;
+  image_url?: string | null;
   score?: number;
 };
 
@@ -87,8 +90,8 @@ export function KindredPresences({ presenceId }: { presenceId: string }) {
         responses.forEach((resp, i) => {
           const others: CarriedByItem[] = (resp && resp.items) || [];
           others.forEach((o) => {
-            if (!o.presence?.id || o.presence.id === presenceId) return;
-            const existing = byPresence.get(o.presence.id);
+            if (!o.presence_id || o.presence_id === presenceId) return;
+            const existing = byPresence.get(o.presence_id);
             const conceptName = sample[i]?.concept_name || sample[i]?.concept_id || "";
             if (existing) {
               existing.shared += 1;
@@ -99,9 +102,9 @@ export function KindredPresences({ presenceId }: { presenceId: string }) {
                 existing.shared_concepts.push(conceptName);
               }
             } else {
-              byPresence.set(o.presence.id, {
-                id: o.presence.id,
-                name: o.presence.name || o.presence.id,
+              byPresence.set(o.presence_id, {
+                id: o.presence_id,
+                name: o.presence_name || o.presence_id,
                 shared: 1,
                 shared_concepts: conceptName ? [conceptName] : [],
               });
