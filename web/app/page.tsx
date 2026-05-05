@@ -389,6 +389,53 @@ export default async function Home() {
         </p>
       </section>
 
+      {/* Section 5.5: THE GROUND THIS GREW FROM
+        * The personal seed of the body — three days of silence at a Buddhist
+        * temple in Bali, the codex it brought back, and the open invitation
+        * to weave in. A visitor coming for the idea-realization framing might
+        * still want to feel where the body actually came from. */}
+      <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto animate-fade-in-up delay-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link
+            href="/silence"
+            className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
+          >
+            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
+              How this body took shape
+            </p>
+            <p className="text-base text-foreground font-light mb-1">
+              Three days of silence at a Buddhist temple
+            </p>
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              Eight notebook pages from Brahmavihara-Arama in north Bali —
+              the codex naming itself, the personal ground this network
+              has grown from.
+            </p>
+            <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
+              Sit with /silence →
+            </p>
+          </Link>
+          <Link
+            href="/with-us"
+            className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
+          >
+            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
+              An open invitation
+            </p>
+            <p className="text-base text-foreground font-light mb-1">
+              For communities, individuals, and services anywhere
+            </p>
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              Read what the body offers, the seven directions it organizes
+              around, and how working lives weave in.
+            </p>
+            <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
+              Read /with-us →
+            </p>
+          </Link>
+        </div>
+      </section>
+
       {/* Section 6: THE GENTLE TAP */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 max-w-2xl mx-auto text-center">
         <p className="text-xl md:text-2xl font-light text-foreground/90 leading-relaxed">
