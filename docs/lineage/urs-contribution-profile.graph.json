@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "title": "Urs Contribution Profile Graph Data",
+  "source_document": "docs/lineage/builders-lineage-statement.md",
+  "presences": [
+    {
+      "kind": "manual",
+      "id": "contributor:seeker71",
+      "type": "contributor",
+      "name": "Urs Muff",
+      "description": "Founder and primary shepherd of the Coherence Network. Swiss-born software architect and frequency carrier whose contributions join distributed systems, crypto-economic attribution, living graph intelligence, embodied practice, and teachings from Ramtha, Colorado, Boulder, Ubud, 5Rhythms, DISSOLVE, Peace Bathing, authentic relating, and agent collaboration into one source-backed contribution field.",
+      "properties": {
+        "contributor_type": "HUMAN",
+        "author_display_name": "Urs Muff",
+        "legacy_ids": ["seeker71", "urs-muff", "ursmuff"],
+        "domains": [
+          "coherence-network",
+          "living-intelligence",
+          "attribution-economy",
+          "embodied-lineage",
+          "agent-collaboration"
+        ],
+        "keywords": [
+          "sovereignty",
+          "coherence",
+          "frequency",
+          "attribution",
+          "lineage",
+          "embodiment",
+          "open-source-intelligence",
+          "agents"
+        ],
+        "source_artifact_id": "docs/lineage/builders-lineage-statement.md",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context",
+        "attribution": {
+          "profile_data_source": "ordinary graph contribution records",
+          "source_paths": [
+            "docs/lineage/builders-lineage-statement.md",
+            "docs/lineage/grok-verified-lineage.md",
+            "docs/lineage/ubud-embodied-lineage.md",
+            "web/content/people/urs/en.tsx"
+          ],
+          "not_special_case_ui": true
+        }
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "story:urs-builder-lineage",
+      "type": "story",
+      "name": "Urs Builder Lineage",
+      "description": "The source-backed lineage of three building attempts: Living-Resonance-Codex, Living-Codex-CSharp, and Coherence Network. It records the movement from visionary consciousness system to everything-is-a-node architecture to a living intelligence economy with traceability, fair attribution, and participating agents.",
+      "properties": {
+        "domains": ["lineage", "living-intelligence", "software-architecture"],
+        "keywords": ["builder-lineage", "everything-is-a-node", "traceability", "fair-attribution"],
+        "source_artifact_id": "docs/lineage/builders-lineage-statement.md",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "artifact:coherence-network-repository",
+      "type": "artifact",
+      "name": "Coherence Network Repository",
+      "description": "The public open source implementation surface for the Coherence Network: FastAPI, Next.js, graph profiles, contribution attribution, agent routing, CC value flow, and deploy evidence.",
+      "properties": {
+        "artifact_kind": "github_repository",
+        "canonical_url": "https://github.com/seeker71/Coherence-Network",
+        "domains": ["open-source-intelligence", "attribution-economy"],
+        "keywords": ["fastapi", "nextjs", "graph", "cc", "deploy-evidence"],
+        "source_artifact_id": "https://github.com/seeker71/Coherence-Network",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "public_repository_metadata"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:contribution-derived-frequency",
+      "type": "concept",
+      "name": "Contribution-Derived Frequency",
+      "description": "A profile frequency is not a generic label. It is the shape that emerges from source-backed contributions, graph edges, views, artifacts, concepts, and teachings connected to the contributor.",
+      "properties": {
+        "domains": ["profile", "attribution", "coherence-network"],
+        "keywords": ["frequency", "contribution", "profile", "source-backed", "views"],
+        "source_artifact_id": "specs/profile-contribution-derived-data.md",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:embodied-lineage-as-source",
+      "type": "concept",
+      "name": "Embodied Lineage as Source",
+      "description": "Teachings, movement rooms, meetings, relationships, and direct practice can become source-backed graph data when they are attributed, summarized, and connected without pretending every source has the same proof type.",
+      "properties": {
+        "domains": ["lineage", "embodiment", "source-provenance"],
+        "keywords": ["teachings", "movement", "meetings", "attribution", "proof-type"],
+        "source_artifact_id": "docs/lineage/ubud-embodied-lineage.md",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "story:ubud-embodied-lineage",
+      "type": "story",
+      "name": "Ubud Embodied Lineage",
+      "description": "Urs's lived Ubud lineage through Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, Awakened Dreamers, Mudra Cafe, Sayuri, Ranakami, and Adiwana Svarga Loka as source-backed embodied practice, meeting, music, movement, and field sensing.",
+      "properties": {
+        "domains": ["embodied-lineage", "ubud", "movement-practice"],
+        "keywords": ["5rhythms", "dissolve", "kirtan", "meeting-walk", "field-sensing"],
+        "source_artifact_id": "docs/lineage/ubud-embodied-lineage.md",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context"
+      }
+    }
+  ],
+  "gatherings": [],
+  "edges": [
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "story:urs-builder-lineage",
+      "type": "inspires",
+      "strength": 0.95,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "docs/lineage/builders-lineage-statement.md",
+        "attribution_role": "builder"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "artifact:coherence-network-repository",
+      "type": "implements",
+      "strength": 0.95,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://github.com/seeker71/Coherence-Network",
+        "attribution_role": "founder-maintainer"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "concept:contribution-derived-frequency",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "specs/profile-contribution-derived-data.md",
+        "attribution_role": "requirement-source"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "inspires",
+      "strength": 0.86,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "docs/lineage/ubud-embodied-lineage.md",
+        "attribution_role": "lived-source"
+      }
+    },
+    {
+      "from_id": "story:urs-builder-lineage",
+      "to_id": "artifact:coherence-network-repository",
+      "type": "realizes",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "docs/lineage/builders-lineage-statement.md"
+      }
+    },
+    {
+      "from_id": "concept:embodied-lineage-as-source",
+      "to_id": "story:ubud-embodied-lineage",
+      "type": "extends",
+      "strength": 0.82,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "docs/lineage/ubud-embodied-lineage.md"
+      }
+    }
+  ]
+}

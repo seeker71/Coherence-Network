@@ -26,6 +26,7 @@ import argparse
 import json
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -70,7 +71,41 @@ def _create_manual(client: httpx.Client, sig: dict[str, Any]) -> dict[str, Any] 
     if not r.is_success:
         print(f"  ! {sig['id']}: HTTP {r.status_code}")
         return None
-    return r.json()
+    node = r.json()
+    # POST is create-or-return-existing on the graph API. Follow with PATCH so
+    # a manifest can also modify source-backed contribution data from the CLI.
+    node_id = urllib.parse.quote(sig["id"], safe="")
+    try:
+        patch = client.patch(f"/api/graph/nodes/{node_id}", json=payload, timeout=30.0)
+        if patch.is_success:
+            return patch.json()
+        print(f"  ! {sig['id']}: PATCH HTTP {patch.status_code}")
+    except httpx.HTTPError as e:
+        print(f"  ! {sig['id']}: PATCH {e}")
+    return node
+
+
+def _create_edge(client: httpx.Client, edge: dict[str, Any]) -> bool:
+    payload = {
+        "from_id": edge["from_id"],
+        "to_id": edge["to_id"],
+        "type": edge["type"],
+        "properties": edge.get("properties") or {},
+        "strength": float(edge.get("strength", 1.0) or 1.0),
+        "created_by": edge.get("created_by") or "lineage-import",
+    }
+    try:
+        r = client.post("/api/graph/edges", json=payload, timeout=30.0)
+    except httpx.HTTPError as e:
+        print(f"  ! edge {payload['from_id']} -> {payload['to_id']}: {e}")
+        return False
+    if not r.is_success:
+        print(
+            f"  ! edge {payload['from_id']} -> {payload['to_id']}: "
+            f"HTTP {r.status_code}"
+        )
+        return False
+    return True
 
 
 def _ensure_source_contributor(client: httpx.Client, source_id: str) -> None:
@@ -102,7 +137,7 @@ def _ensure_source_contributor(client: httpx.Client, source_id: str) -> None:
 def replay(manifest_path: Path, api_base: str, source_id: str,
            dry_run: bool = False) -> dict[str, int]:
     manifest = json.loads(manifest_path.read_text())
-    counts = {"resolved": 0, "manual": 0, "gatherings": 0, "skipped": 0}
+    counts = {"resolved": 0, "manual": 0, "gatherings": 0, "edges": 0, "skipped": 0}
 
     # ref → target_id map built as we create nodes on the target.
     # A ref is either a URL (resolved entry) or the manual id string.
@@ -116,7 +151,7 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
         presences = manifest.get("presences", [])
         gatherings = manifest.get("gatherings", [])
 
-        print(f"\n[1/2] Creating {len(presences)} presences")
+        print(f"\n[1/3] Creating {len(presences)} presences")
         for sig in presences:
             kind = sig.get("kind")
             label = sig.get("url") or sig.get("name") or sig.get("id")
@@ -148,7 +183,7 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
 
         # Pass 2 — gatherings, now that all hosts/performers exist on
         # the target with known ids.
-        print(f"\n[2/2] Creating {len(gatherings)} gatherings")
+        print(f"\n[2/3] Creating {len(gatherings)} gatherings")
         for ev in gatherings:
             primary_ref = ev.get("primary_ref")
             if not primary_ref:
@@ -210,6 +245,32 @@ def replay(manifest_path: Path, api_base: str, source_id: str,
                 print(f"  ! {ev.get('title')}: {e}")
                 counts["skipped"] += 1
             time.sleep(0.3)
+
+        # Pass 3 — explicit graph edges from the manifest. This is what
+        # lets source-backed lineage records feed the same structural
+        # profile view as API-created contribution edges.
+        edges = manifest.get("edges", [])
+        print(f"\n[3/3] Creating {len(edges)} edges")
+        for edge in edges:
+            from_id = ref_to_target_id.get(edge.get("from_id"), edge.get("from_id"))
+            to_id = ref_to_target_id.get(edge.get("to_id"), edge.get("to_id"))
+            if not from_id or not to_id:
+                print(f"  ? skipping edge with missing endpoint: {edge}")
+                counts["skipped"] += 1
+                continue
+            resolved_edge = dict(edge)
+            resolved_edge["from_id"] = from_id
+            resolved_edge["to_id"] = to_id
+            if dry_run:
+                print(f"  [dry-run] edge: {from_id} -{edge.get('type')}-> {to_id}")
+                counts["edges"] += 1
+                continue
+            if _create_edge(client, resolved_edge):
+                counts["edges"] += 1
+                print(f"  ✓ edge: {from_id} -{edge.get('type')}-> {to_id}")
+            else:
+                counts["skipped"] += 1
+            time.sleep(0.2)
 
     return counts
 

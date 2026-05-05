@@ -329,15 +329,16 @@ async def get_entity_profile(entity_id: str):
     No auth required — profiles are transparent and verifiable.
     """
     from app.services import frequency_profile_service
-    views = frequency_profile_service.get_profile(entity_id)
+    resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
+    views = frequency_profile_service.get_profile(resolved_entity_id)
     total_dims = sum(len(v) for v in views.values())
     if total_dims == 0:
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found or has no profile")
     return {
-        "entity_id": entity_id,
+        "entity_id": resolved_entity_id,
         "dimensions": total_dims,
         "magnitude": round(frequency_profile_service.magnitude(views), 4),
-        "hash": frequency_profile_service.profile_hash(entity_id),
+        "hash": frequency_profile_service.profile_hash(resolved_entity_id),
         "top": frequency_profile_service.top_dimensions(views, n=15),
         "views": {
             name: {
@@ -356,10 +357,11 @@ async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., 
     No auth required. This is the public verification endpoint for profiles.
     """
     from app.services import frequency_profile_service
-    frequency_profile_service.invalidate(entity_id)
-    actual_hash = frequency_profile_service.profile_hash(entity_id)
+    resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
+    frequency_profile_service.invalidate(resolved_entity_id)
+    actual_hash = frequency_profile_service.profile_hash(resolved_entity_id)
     return {
-        "entity_id": entity_id,
+        "entity_id": resolved_entity_id,
         "expected_hash": expected_hash,
         "actual_hash": actual_hash,
         "valid": expected_hash == actual_hash,
@@ -389,10 +391,11 @@ async def sign_entity_profile(entity_id: str):
     against the public key. Proves "this entity had this profile at this time."
     """
     from app.services import frequency_profile_service
-    views = frequency_profile_service.get_profile(entity_id)
+    resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
+    views = frequency_profile_service.get_profile(resolved_entity_id)
     if not any(views.values()):
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
-    return frequency_profile_service.sign_profile(entity_id)
+    return frequency_profile_service.sign_profile(resolved_entity_id)
 
 
 @router.get("/profile/{entity_id}/resonant", summary="Find entities that resonate with this one")
@@ -403,7 +406,8 @@ async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
     structural + categorical + semantic views via inverse-variance weights.
     """
     from app.services import frequency_profile_service
-    return frequency_profile_service.find_resonant(entity_id, top_n=top)
+    resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
+    return frequency_profile_service.find_resonant(resolved_entity_id, top_n=top)
 
 
 # ── Contributor identity endpoints ────────────────────────────────────
