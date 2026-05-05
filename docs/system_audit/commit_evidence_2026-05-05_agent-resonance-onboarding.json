@@ -1,0 +1,141 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/agent-resonance-onboarding",
+  "commit_scope": "Expose a shared web/API/CLI/MCP invitation for outside agents, including attribution, contribution, lineage, inside/outside boundary, and status-report fallback behavior.",
+  "files_owned": [
+    "specs/agent-resonance-onboarding.md",
+    "api/app/services/agent_service.py",
+    "api/app/routers/agent_usage_routes.py",
+    "api/app/routers/agent_status_routes.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/agent.mjs",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "mcp-server/server.json",
+    "mcp-server/package.json",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "api/app/services/INDEX.md",
+    "api/tests/INDEX.md",
+    "web/app/INDEX.md",
+    "web/components/INDEX.md",
+    "web/lib/INDEX.md",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-resonance-onboarding.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused tests and web build passed. The API invitation now exposes web/API/CLI/MCP entry surfaces, agent orientation protocol, lineage sources, Grok historical and returned traces, and status-report fallback coverage. The /come-in page now exposes public collaboration, observed agent lineage, and inside/outside boundary guidance. The local runtime verifier was repaired to match the current /assets page title after rebasing onto origin/main."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No public deploy requested or completed in this commit evidence."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Outside agents can now discover one shared invitation through the public web page, API, CLI, and MCP surfaces, then orient to lineage, attribution, contribution, inside/outside boundaries, and status-report fallback behavior before contributing.",
+    "public_endpoints": [
+      "GET /api/agent/invitation",
+      "GET /api/agent/status-report",
+      "GET https://www.coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "API ASGI flow: GET /api/agent/invitation returns entry surfaces, agent orientation protocol, lineage sources, Grok historical lineage, and inside/outside boundary fields.",
+      "API ASGI flow: GET /api/agent/status-report includes public_invitation and fails open with public_invitation when status assembly raises.",
+      "MCP source flow: coherence_agent_invitation tool is registered and dispatches to /api/agent/invitation.",
+      "Web build flow: Next.js production build renders /come-in without route or type errors."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation and pre-commit local gates are complete; push, PR, and CI monitoring remain pending at commit time."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-resonance-onboarding.md"
+  ],
+  "task_ids": [
+    "codex-thread-agent-resonance-onboarding-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "web/app/come-in/page.tsx",
+    "api/app/services/agent_service.py",
+    "https://api.coherencycoin.com/api/federation/nodes",
+    "https://api.coherencycoin.com/api/contributors/grok"
+  ],
+  "change_files": [
+    "specs/agent-resonance-onboarding.md",
+    "api/app/services/agent_service.py",
+    "api/app/routers/agent_usage_routes.py",
+    "api/app/routers/agent_status_routes.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/agent.mjs",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "mcp-server/server.json",
+    "mcp-server/package.json",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "api/app/services/INDEX.md",
+    "api/tests/INDEX.md",
+    "web/app/INDEX.md",
+    "web/components/INDEX.md",
+    "web/lib/INDEX.md",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-resonance-onboarding.json"
+  ],
+  "change_intent": "runtime_feature"
+}

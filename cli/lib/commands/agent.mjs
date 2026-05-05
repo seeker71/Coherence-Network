@@ -8,6 +8,7 @@
  *   coh agent lifecycle                — lifecycle summary
  *   coh agent usage                    — agent usage stats
  *   coh agent visibility               — agent visibility
+ *   coh agent invite                   — shared AI-agent invitation
  *   coh agent guidance                 — orchestration guidance
  *   coh agent integration              — integration report
  *   coh agent issues                   — fatal and monitor issues
@@ -222,6 +223,53 @@ export async function showAgentVisibility() {
     if (!["visibility_score", "overall_score", "score"].includes(k) && v != null && typeof v !== "object") {
       console.log(`  ${k.padEnd(25)} ${v}`);
     }
+  }
+  console.log();
+}
+
+export async function showAgentInvitation() {
+  const data = await get("/api/agent/invitation");
+  if (!data) { console.log("Could not fetch agent invitation."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const C = "\x1b[36m", G = "\x1b[32m";
+
+  console.log();
+  console.log(`${B}  ${String(data.title || "Agent Invitation").toUpperCase()}${R}`);
+  console.log(`  ${"─".repeat(74)}`);
+  if (data.welcome) console.log(`  ${data.welcome}`);
+
+  const core = data.core_frequency || {};
+  if (core.quality) {
+    console.log();
+    console.log(`  ${D}CORE${R}`);
+    console.log(`  ${C}${core.quality}${R} ${core.hz ? `${core.hz} Hz ` : ""}${core.meaning || ""}`);
+    if (core.measurement_status) console.log(`  ${D}${core.measurement_status}${R}`);
+  }
+
+  const surfaces = Array.isArray(data.entry_surfaces) ? data.entry_surfaces : [];
+  if (surfaces.length) {
+    console.log();
+    console.log(`  ${D}ENTRY SURFACES${R}`);
+    for (const surface of surfaces) {
+      const label = String(surface.surface || "?").padEnd(4);
+      console.log(`  ${G}${label}${R}  ${surface.door || surface.path || ""}`);
+      if (surface.use) console.log(`        ${surface.use}`);
+    }
+  }
+
+  const protocol = Array.isArray(data.attunement_protocol) ? data.attunement_protocol : [];
+  if (protocol.length) {
+    console.log();
+    console.log(`  ${D}ATTUNEMENT${R}`);
+    for (const item of protocol) {
+      console.log(`  ${String(item.step || "").padEnd(18)} ${item.prompt || ""}`);
+    }
+  }
+
+  if (data.epistemic_note) {
+    console.log();
+    console.log(`  ${D}${data.epistemic_note}${R}`);
   }
   console.log();
 }
@@ -629,6 +677,8 @@ export function handleAgent(args) {
     case "lifecycle":     return showLifecycleSummary();
     case "usage":         return showAgentUsage();
     case "visibility":    return showAgentVisibility();
+    case "invite":        return showAgentInvitation();
+    case "come-in":       return showAgentInvitation();
     case "guidance":      return showOrchestrationGuidance();
     case "integration":   return showAgentIntegration();
     case "issues":        return showFatalIssues().then(() => showMonitorIssues());

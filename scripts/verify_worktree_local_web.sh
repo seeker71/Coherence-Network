@@ -627,13 +627,13 @@ run_validations() {
   check_url "Web gates" "${WEB_BASE}/gates"
   check_url "Web diagnostics" "${WEB_BASE}/diagnostics" "Diagnostics Console"
   check_url "Web API coverage page" "${WEB_BASE}/api-coverage" "API Coverage Verification"
-  check_url "Web assets" "${WEB_BASE}/assets" "Asset Catalog"
+  check_url "Web assets" "${WEB_BASE}/assets" "Assets"
   local asset_id
   asset_id="$(sample_asset_id)"
   if [[ -n "${asset_id}" ]]; then
     check_url "Web asset detail" "${WEB_BASE}/assets/${asset_id}" "${asset_id}"
   fi
-  check_url "Web contributions" "${WEB_BASE}/contributions" "Contribution Ledger"
+  check_url "Web contributions" "${WEB_BASE}/contributions" "Contributions"
   check_url "Web contributors" "${WEB_BASE}/contributors" "Contributors"
   local contributor_id
   contributor_id="$(sample_contributor_id)"

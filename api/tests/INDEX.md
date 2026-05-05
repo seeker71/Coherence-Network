@@ -4,12 +4,13 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 94
+**Total files**: 96
 
 | File | Purpose |
 |---|---|
 | [conftest.py](conftest.py) | Pytest configuration and fixtures. |
 | [test_agent_control_plane.py](test_agent_control_plane.py) | _no top-of-file purpose_ |
+| [test_agent_invitation.py](test_agent_invitation.py) | Agent invitation tests for API, CLI, web, and MCP entry surfaces. |
 | [test_agent_memory_loop.py](test_agent_memory_loop.py) | Flow tests for the agent-memory-system spec. |
 | [test_agent_monitor_helpers.py](test_agent_monitor_helpers.py) | _no top-of-file purpose_ |
 | [test_agent_runner_tool_failure_telemetry.py](test_agent_runner_tool_failure_telemetry.py) | Tests for tool-failure-awareness spec: runtime telemetry + friction events. |
@@ -35,6 +36,7 @@
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
+| [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
 | [test_external_presence.py](test_external_presence.py) | Acceptance tests for spec: external-presence-bots-and-news (idea: external-presence). |
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |

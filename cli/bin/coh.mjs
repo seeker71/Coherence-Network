@@ -769,6 +769,7 @@ function showHelp() {
 
 \x1b[1m${t("help.sectionAgentPipeline")}\x1b[0m
   agent                   Status report (default)
+  agent invite            Shared AI-agent invitation and entry map
   agent route [type]      Routing hint for task_type (default impl)
   agent execute <id>      POST execute (set AGENT_EXECUTE_TOKEN)
   agent pickup [task_id]  Pickup-and-execute pending task

@@ -11,6 +11,7 @@ from coherence_mcp_server import server as mcp_server  # noqa: E402
 
 def test_awareness_tools_are_registered() -> None:
     required = {
+        "coherence_agent_invitation",
         "coherence_awareness_publish",
         "coherence_awareness_stream",
         "coherence_node_message_send",
@@ -18,6 +19,21 @@ def test_awareness_tools_are_registered() -> None:
     }
 
     assert required <= set(mcp_server.TOOL_MAP)
+
+
+def test_agent_invitation_dispatch_routes_to_api(monkeypatch) -> None:
+    calls: list[tuple[str, dict | None]] = []
+
+    def fake_get(path: str, params: dict | None = None) -> dict:
+        calls.append((path, params))
+        return {"id": "agent-resonance-onboarding"}
+
+    monkeypatch.setattr(mcp_server, "api_get", fake_get)
+
+    result = mcp_server.dispatch("coherence_agent_invitation", {})
+
+    assert result == {"id": "agent-resonance-onboarding"}
+    assert calls == [("/api/agent/invitation", None)]
 
 
 def test_decode_sse_events_handles_json_keepalive_and_raw_text() -> None:

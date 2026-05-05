@@ -32,3 +32,9 @@ async def get_orchestration_guidance(
 async def get_agent_integration() -> dict:
     """Role-agent integration coverage and remaining gaps."""
     return agent_service.get_agent_integration_status()
+
+
+@router.get("/invitation", summary="Shared invitation for AI agents entering through web, API, CLI, or MCP")
+async def get_agent_invitation() -> dict:
+    """Shared invitation for AI agents entering through web, API, CLI, or MCP."""
+    return agent_service.get_agent_invitation()

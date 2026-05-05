@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 211
+**Total files**: 212
 
 | File | Purpose |
 |---|---|
@@ -84,6 +84,7 @@
 | [discovery_service.py](discovery_service.py) | Discovery service — Serendipity Discovery feed. |
 | [distribution_engine.py](distribution_engine.py) | Distribution engine — reads contributions from graph edges. |
 | [effectiveness_service.py](effectiveness_service.py) | Pipeline effectiveness: throughput, issue resolution, goal proximity. Composes metrics + monitor data. |
+| [entity_view_attribution_service.py](entity_view_attribution_service.py) | Attribution bridge for editable entity views. |
 | [evidence_service.py](evidence_service.py) | Evidence service — submission, verification, and retrieval for asset implementation evidence. |
 | [explore_queue_service.py](explore_queue_service.py) | Explore queue — a curated stream of entities the viewer hasn't met yet. |
 | [failed_task_diagnostics_service.py](failed_task_diagnostics_service.py) | Failed-task diagnostics: error classification and completeness tracking. Spec 113. |

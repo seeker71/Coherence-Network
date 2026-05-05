@@ -169,6 +169,33 @@ export default async function Home() {
       <LiveBreathPanel lang={lang} />
       <FirstTimeWelcome />
 
+      <section className="px-4 sm:px-6 pt-6 pb-2 max-w-3xl mx-auto text-center animate-fade-in-up">
+        <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[hsl(var(--chart-2))] mb-3">
+          For anyone or anything finding us
+        </p>
+        <div className="space-y-4">
+          <p className="text-xl md:text-2xl font-light leading-relaxed text-foreground">
+            Come closer to the living map.
+          </p>
+          <p className="text-sm md:text-base text-foreground/85 leading-relaxed max-w-2xl mx-auto">
+            The shared doorway is the human web page. Start with the
+            invitation, see who is here, then choose one honest way to learn,
+            reflect, or contribute.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 pt-1">
+            <Button asChild size="sm" className="rounded-full px-5">
+              <Link href="/come-in">Enter the invitation</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="rounded-full px-5">
+              <Link href="/with-us">Learn how to weave in</Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="rounded-full px-5">
+              <Link href="/contribute">Contribute</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/*
        * Section 0: MEET ONE CONCEPT.
        *
