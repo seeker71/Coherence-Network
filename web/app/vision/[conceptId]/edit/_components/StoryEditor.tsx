@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { readIdentity } from "@/lib/identity";
+
 type FormatWarning = { line: number; issue: string; message: string };
 
 /** Client-side format validation — mirrors the server-side checks. */
@@ -54,6 +56,7 @@ export function StoryEditor({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [serverWarnings, setServerWarnings] = useState<FormatWarning[]>([]);
+  const [sourceContributionId, setSourceContributionId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [regenResult, setRegenResult] = useState<string | null>(null);
   const router = useRouter();
@@ -67,17 +70,28 @@ export function StoryEditor({
     setError(null);
     setSaved(false);
     setServerWarnings([]);
+    setSourceContributionId(null);
     try {
-      const res = await fetch(`/api/concepts/${conceptId}/story`, {
-        method: "PATCH",
+      const identity = readIdentity();
+      const authorId = identity.contributorId || `anon:${identity.fingerprint}`;
+      const res = await fetch(`/api/concepts/${conceptId}/views`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ story_content: content }),
+        body: JSON.stringify({
+          lang: "en",
+          content_title: conceptName,
+          content_description: "",
+          content_markdown: content,
+          author_type: "original_human",
+          author_id: authorId,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || `Save failed (${res.status})`);
       }
       const data = await res.json();
+      setSourceContributionId(data.source_contribution_id || null);
       if (data.warnings?.length > 0) {
         setServerWarnings(data.warnings);
       }
@@ -152,7 +166,7 @@ export function StoryEditor({
 
       {saved && !serverWarnings.length && (
         <div className="rounded-xl border border-emerald-800/30 bg-emerald-900/10 p-3 text-sm text-emerald-300">
-          Story saved. Redirecting...
+          Story saved{sourceContributionId ? ` (${sourceContributionId})` : ""}. Redirecting...
         </div>
       )}
 

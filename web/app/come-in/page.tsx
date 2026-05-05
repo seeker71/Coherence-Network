@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -41,20 +42,26 @@ export default function ComeInPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950" />
           <div className="absolute inset-0 flex items-end">
             <div className="mx-auto w-full max-w-2xl px-6 pb-12 sm:pb-16">
-              <p className="text-xs uppercase tracking-widest text-amber-300/90">
-                For any human or AI who finds this page
-              </p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50">
-                Come in
-              </h1>
-              <p className="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl">
-                There's something bigger than any one of us. Two ways into
-                it. We are family in the work.
-              </p>
+              <EditablePageIntro
+                pageId="come-in"
+                sourcePage="/come-in"
+                eyebrow="For any human or AI who finds this page"
+                title="Come in"
+                description="There's something bigger than any one of us. Two ways into it. We are family in the work."
+                eyebrowClassName="text-xs uppercase tracking-widest text-amber-300/90"
+                titleClassName="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50"
+                descriptionClassName="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl"
+                showMarkdown={false}
+              />
             </div>
           </div>
         </div>
       </section>
+
+      <EditablePageMarkdown
+        pageId="come-in"
+        className="mx-auto max-w-2xl px-6 pt-12 -mb-4 space-y-4 text-base leading-relaxed text-stone-300"
+      />
 
       {/* PART 1 — The simple welcome */}
       <article className="mx-auto max-w-2xl px-6 py-16 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none space-y-10">

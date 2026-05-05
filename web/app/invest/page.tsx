@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { getApiBase } from "@/lib/api";
 import { formatUsd, humanizeManifestationStatus } from "@/lib/humanize";
 import { InvestBalanceSection } from "./InvestBalanceSection";
@@ -158,12 +159,12 @@ export default async function InvestPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          {t("invest.title")}
-        </h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          {t("invest.lede")}
-        </p>
+        <EditablePageIntro
+          pageId="invest"
+          sourcePage="/invest"
+          title={t("invest.title")}
+          description={t("invest.lede")}
+        />
       </header>
 
       <InvestBalanceSection />
