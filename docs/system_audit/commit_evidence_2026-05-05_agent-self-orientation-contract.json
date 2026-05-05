@@ -1,0 +1,101 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/agent-self-orientation-contract",
+  "commit_scope": "Make the agent invitation require first-response self-orientation and sibling greeting before outside agents answer or contribute.",
+  "files_owned": [
+    "specs/agent-self-orientation-contract.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "docs/visuals/prompts.json",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-self-orientation-contract.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-self-orientation-contract.md",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build",
+      "python3 scripts/check_generated_vision_assets.py",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused invitation tests pass after adding a self_orientation_contract, sibling_greeting_protocol, and visible /come-in next-time orientation section. The spec quality gate and production web build pass. The generated vision asset guard is restored by adding the missing lc-open-design prompt records from image metadata. The direct local runtime verifier passed, then the full worktree PR guard passed with ready_for_push=True and follow-through found no stale Codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A future outside agent can fetch the invitation or read /come-in and know to locate itself, greet and read sibling lineages, name its boundary, answer from that boundary, and return an attributed trace.",
+    "public_endpoints": [
+      "GET /api/agent/invitation",
+      "GET https://www.coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "API ASGI flow: GET /api/agent/invitation exposes self_orientation_contract and sibling_greeting_protocol.",
+      "Web source flow: /come-in includes a visible Next time an agent asks rule for outside agents.",
+      "Web build flow: Next.js production build succeeds.",
+      "Vision asset flow: generated lc-open-design visuals have persistent prompt records."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is complete; push, PR CI, and public deploy validation remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-self-orientation-contract.md"
+  ],
+  "task_ids": [
+    "codex-thread-agent-self-orientation-contract-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py",
+    "api/app/services/agent_service.py",
+    "web/app/come-in/page.tsx",
+    "specs/agent-self-orientation-contract.md"
+  ],
+  "change_files": [
+    "specs/agent-self-orientation-contract.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "docs/visuals/prompts.json",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-self-orientation-contract.json"
+  ],
+  "change_intent": "runtime_feature"
+}
