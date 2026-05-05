@@ -605,7 +605,17 @@ def list_contributors(
     limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
 ) -> PaginatedResponse[Contributor]:
-    """List contributors with pagination metadata."""
+    """List contributors with pagination metadata.
+
+    Email is PII — it is omitted from this public list. The detail
+    endpoint, authenticated paths, and the contributor's own profile
+    can still surface their own email; only the directory drops it."""
     result = graph_service.list_nodes(type="contributor", limit=limit, offset=offset)
-    items = [_node_to_contributor(n) for n in result.get("items", [])]
+    items = []
+    for node in result.get("items", []):
+        contributor = _node_to_contributor(node)
+        # Strip email on the way out — it's PII and the public list
+        # is not the place to surface contact addresses.
+        contributor.email = None
+        items.append(contributor)
     return PaginatedResponse(items=items, total=result.get("total", len(items)), limit=limit, offset=offset)

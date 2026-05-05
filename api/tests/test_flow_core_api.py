@@ -379,7 +379,14 @@ async def test_list_assets_handles_non_pipeline_asset_types():
     enum (e.g. BLUEPRINT, VIDEO, AUDIO from the Living Collective KB
     seed + resolver-minted album/track nodes). The listing model
     accepts any string; the POST contract (AssetCreate) keeps the
-    enum tight."""
+    enum tight.
+
+    Also verifies the list-to-detail round-trip stays intact for
+    slug-shaped node ids: every asset id surfaced by /api/assets must
+    be resolvable via /api/assets/<id>. Earlier the list minted a
+    fresh uuid4() per request when legacy_id was missing, breaking
+    every link by the time the user clicked it.
+    """
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         # Seed an asset node directly in the graph with a non-pipeline
         # asset_type — the exact shape the resolver + KB seed produce.
@@ -396,17 +403,44 @@ async def test_list_assets_handles_non_pipeline_asset_types():
         )
         assert r.status_code in (200, 201), r.text
 
-        # The listing must succeed and include the node we just seeded.
         r = await c.get("/api/assets?limit=500")
         assert r.status_code == 200, r.text
         items = r.json().get("items", [])
         types_seen = {item.get("type") for item in items}
-        # At minimum, our seeded type must flow through the response
-        # unchanged — not coerced to CONTENT or dropped.
         assert "BLUEPRINT" in types_seen, (
             f"expected BLUEPRINT in {types_seen}; the read model must "
             "accept any asset_type string from the graph"
         )
+
+        # ID stability — same node, same id across two list calls.
+        r2 = await c.get("/api/assets?limit=500")
+        assert r2.status_code == 200, r2.text
+        items2 = r2.json().get("items", [])
+        ids1 = {item["description"]: item["id"] for item in items if item.get("description")}
+        ids2 = {item["description"]: item["id"] for item in items2 if item.get("description")}
+        for desc, id1 in ids1.items():
+            id2 = ids2.get(desc)
+            if id2 is not None:
+                assert id1 == id2, (
+                    f"asset id changed between two list calls for "
+                    f"description={desc!r}: {id1} vs {id2}. Every link "
+                    "from the list will 404 before the user clicks it."
+                )
+
+        # Round-trip — every listed id must resolve via the detail
+        # endpoint. Earlier this 404'd for every slug-shaped node.
+        for item in items[:10]:  # cap to keep the test fast
+            asset_id = item["id"]
+            detail = await c.get(f"/api/assets/{asset_id}")
+            assert detail.status_code == 200, (
+                f"GET /api/assets/{asset_id} returned {detail.status_code} "
+                f"for an id that the list endpoint just surfaced; the "
+                f"list-to-detail link is broken. Body: {detail.text[:200]}"
+            )
+            assert detail.json()["id"] == asset_id, (
+                f"detail returned a different id than the one requested "
+                f"({detail.json()['id']} vs {asset_id})"
+            )
 
 
 @pytest.mark.asyncio

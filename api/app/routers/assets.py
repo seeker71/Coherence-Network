@@ -2,8 +2,35 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 from decimal import Decimal
+
+# Stable namespace for deriving asset UUIDs from slug-shaped graph
+# node ids. Resolver-minted and KB-seeded asset nodes carry slug ids
+# like `asset:emc2-music-festival-2026-...`. Without a deterministic
+# mapping, every list call would uuid4() a fresh id per node and
+# every link from list -> detail would 404 on the next request.
+# uuid5(ASSET_NS, node_id) gives the same node the same UUID forever;
+# the detail endpoint re-derives it from each node id and walks until
+# it matches.
+ASSET_NS = uuid5(NAMESPACE_URL, "coherencycoin.com/asset")
+
+
+def _stable_asset_id(node: dict) -> UUID:
+    """Resolve a node to its stable asset UUID.
+
+    Order of trust:
+      1. The portion of `node["id"]` after the `asset:` prefix, if it
+         parses as a UUID — covers nodes whose graph id is already
+         `asset:<uuid>`.
+      2. uuid5 derived from the full node id — deterministic, so the
+         same slug always returns the same UUID.
+    """
+    raw = str(node.get("id", "")).removeprefix("asset:")
+    try:
+        return UUID(raw)
+    except (ValueError, AttributeError):
+        return uuid5(ASSET_NS, str(node.get("id", "")))
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
@@ -60,17 +87,21 @@ def _node_to_registration(node: dict) -> AssetRegistration:
 
 
 def _node_to_asset(node: dict) -> Asset:
-    """Convert a graph node to an Asset model."""
-    legacy_id = node.get("legacy_id", node["id"].replace("asset:", ""))
-    try:
-        asset_id = UUID(legacy_id)
-    except (ValueError, AttributeError):
-        asset_id = uuid4()
+    """Convert a graph node to an Asset model.
+
+    ``image_url`` lands on remote-resolved nodes (inspired-by minted
+    content with og:image), ``file_path`` lands on locally-generated
+    KB visuals served from /visuals/...; either one is enough to give
+    the listing card a real thumbnail."""
+    image_url = node.get("image_url") or None
+    file_path = node.get("file_path") or None
     return Asset(
-        id=asset_id,
+        id=_stable_asset_id(node),
         type=node.get("asset_type", "CODE"),
         description=node.get("description", node.get("name", "")),
         total_cost=Decimal(str(node.get("total_cost", "0"))),
+        image_url=image_url if isinstance(image_url, str) else None,
+        file_path=file_path if isinstance(file_path, str) else None,
     )
 
 
@@ -92,7 +123,6 @@ async def create_asset(asset: AssetCreate) -> Asset:
         properties={
             "asset_type": asset_obj.type,
             "total_cost": str(asset_obj.total_cost),
-            "legacy_id": str(asset_obj.id),
         },
     )
     return asset_obj
@@ -183,13 +213,20 @@ async def get_asset(
     request: Request,
     lang: str | None = Query(None, description="Target language. Description renders in this locale when a view exists."),
 ) -> Asset:
-    """Retrieve a single asset by its unique identifier."""
+    """Retrieve a single asset by its unique identifier.
+
+    The lookup mirrors `_stable_asset_id`:
+      1. Direct hit on `asset:<uuid>` — for nodes whose graph id is
+         already `asset:<uuid>`.
+      2. Walk all asset nodes and match the deterministic
+         `_stable_asset_id(node)` — covers slug-shaped nodes minted
+         by the resolver / KB seed.
+    """
     node = graph_service.get_node(f"asset:{asset_id}")
     if not node:
-        # Search by legacy ID
-        result = graph_service.list_nodes(type="asset", limit=500)
+        result = graph_service.list_nodes(type="asset", limit=1000)
         for n in result.get("items", []):
-            if n.get("legacy_id") == str(asset_id):
+            if _stable_asset_id(n) == asset_id:
                 node = n
                 break
     if not node:

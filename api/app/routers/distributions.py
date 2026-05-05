@@ -20,12 +20,13 @@ router = APIRouter()
 )
 async def create_distribution(distribution: DistributionCreate) -> Distribution:
     """Trigger value distribution for an asset."""
+    from app.routers.assets import _stable_asset_id
+
     asset_node = graph_service.get_node(f"asset:{distribution.asset_id}")
     if not asset_node:
-        # Search by legacy ID
-        result = graph_service.list_nodes(type="asset", limit=500)
+        result = graph_service.list_nodes(type="asset", limit=1000)
         asset_node = next(
-            (n for n in result.get("items", []) if n.get("legacy_id") == str(distribution.asset_id)),
+            (n for n in result.get("items", []) if _stable_asset_id(n) == distribution.asset_id),
             None,
         )
     if not asset_node:

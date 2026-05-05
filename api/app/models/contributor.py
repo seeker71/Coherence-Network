@@ -47,6 +47,12 @@ class ContributorCreate(ContributorBase):
 class Contributor(ContributorBase):
     id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Email is PII. ContributorBase requires it for create/update
+    # contracts, but the read-side model overrides to Optional so the
+    # public list endpoint can omit it cleanly. The detail endpoint
+    # and authenticated paths still populate it for the contributor
+    # themselves.
+    email: Optional[EmailField] = None  # type: ignore[assignment]
     # Claim signals. A contributor created directly (graduate, register)
     # is claimed by the person who made them. A contributor minted as
     # a placeholder (e.g. by the inspired-by resolver so a door stays
