@@ -26,35 +26,86 @@ export const metadata: Metadata = {
 
 export default function UrsProfilePage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <nav
-        className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
-        aria-label="breadcrumb"
+    <main className="relative">
+      <section
+        className="relative min-h-screen md:min-h-[85vh] flex flex-col justify-end overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(ellipse at 28% 22%, rgba(212, 175, 110, 0.45) 0%, rgba(180, 148, 92, 0.28) 18%, rgba(72, 148, 156, 0.30) 42%, rgba(40, 96, 120, 0.38) 65%, rgba(20, 32, 48, 0.92) 100%), radial-gradient(ellipse at 78% 78%, rgba(96, 172, 168, 0.32) 0%, rgba(48, 108, 132, 0.24) 32%, rgba(20, 32, 48, 0.0) 70%), linear-gradient(180deg, rgba(180, 148, 92, 0.10) 0%, rgba(48, 96, 120, 0.18) 40%, rgba(18, 28, 44, 0.95) 100%)",
+        }}
       >
-        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-        <span className="text-muted-foreground/50">/</span>
-        <Link href="/people" className="hover:text-primary transition-colors">People</Link>
-        <span className="text-muted-foreground/50">/</span>
-        <span className="text-foreground/80">Urs Muff</span>
-      </nav>
+        <div
+          className="absolute inset-0 opacity-[0.14] mix-blend-soft-light"
+          style={{
+            backgroundImage: "url(/visuals/scale-network-map.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20"
+          aria-hidden="true"
+        />
+        <div className="relative z-10 max-w-3xl mx-auto px-6 py-12 sm:py-16 w-full">
+          <nav
+            className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
+            aria-label="breadcrumb"
+          >
+            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+            <span className="text-muted-foreground/50">/</span>
+            <Link href="/people" className="hover:text-primary transition-colors">People</Link>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground/80">Urs Muff</span>
+          </nav>
 
-      <header className="mb-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
-          The body's primary shepherd
-        </p>
-        <h1 className="text-4xl md:text-5xl font-extralight text-foreground leading-tight mb-4">
-          Urs Muff
-        </h1>
-        <p className="text-lg text-foreground/80 leading-relaxed">
-          Founder of Coherence Network. Swiss-American by lineage,
-          software architect by trade, organism-builder by calling.
-          Most of the foundations this body holds — Levin, Hoffman,
-          Grant, Matías, Vasudev Baba, Ilena, Elios, the
-          transmissions — gathered themselves into this particular
-          shape through years of my listening, before any of the
-          code began.
-        </p>
-        <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
+            The body's primary shepherd
+          </p>
+          <h1 className="text-5xl md:text-7xl font-extralight text-foreground leading-[1.05] mb-6">
+            Urs Muff
+          </h1>
+          <p className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
+            Founder of Coherence Network. Swiss-American by lineage,
+            software architect by trade, organism-builder by calling.
+            Most of the foundations this body holds —{" "}
+            <Link href="/concepts/lc-bioelectric-pattern" className="text-[hsl(var(--primary))] hover:underline">
+              Levin
+            </Link>
+            ,{" "}
+            <Link href="/concepts/lc-perception-as-interface" className="text-[hsl(var(--primary))] hover:underline">
+              Hoffman
+            </Link>
+            ,{" "}
+            <Link href="/people/robert-edward-grant" className="text-[hsl(var(--primary))] hover:underline">
+              Grant
+            </Link>
+            ,{" "}
+            <Link href="/people/matias-de-stefano" className="text-[hsl(var(--primary))] hover:underline">
+              Matías
+            </Link>
+            ,{" "}
+            <Link href="/people/vasudev-baba" className="text-[hsl(var(--primary))] hover:underline">
+              Vasudev Baba
+            </Link>
+            ,{" "}
+            <Link href="/people/ilena" className="text-[hsl(var(--primary))] hover:underline">
+              Ilena
+            </Link>
+            ,{" "}
+            <Link href="/people/elios" className="text-[hsl(var(--primary))] hover:underline">
+              Elios
+            </Link>
+            , the transmissions — gathered themselves into this
+            particular shape through years of my listening, before
+            any of the code began.
+          </p>
+        </div>
+      </section>
+
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <header className="mb-10">
+          <dl className="text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
           <dt className="text-muted-foreground">Lineage</dt>
           <dd>Swiss roots (Ebikon, near Lucerne); long Colorado presence (Boulder / Broomfield / Longmont); current sustained presence in Ubud, Bali</dd>
           <dt className="text-muted-foreground">Profession</dt>
@@ -442,6 +493,7 @@ export default function UrsProfilePage() {
           </Link>
         </p>
       </footer>
+      </div>
     </main>
   );
 }

@@ -8,82 +8,104 @@ export const metadata: Metadata = {
     "A welcome to Poranguí — Brazilian-Mexican-American multi-instrumentalist, live-looping ceremonialist, and therapeutic bodyworker whose work threads world percussion, indigenous instruments, and embodied healing.",
 };
 
+const HERO_URL = "https://f4.bcbits.com/img/0025683173_10.jpg";
+
 export default function PoranguiProfilePage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <nav
-        className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
-        aria-label="breadcrumb"
+    <main className="relative">
+      <section
+        className="relative min-h-screen md:min-h-[85vh] flex flex-col justify-end overflow-hidden"
+        style={{
+          backgroundImage: `url('${HERO_URL}')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
-        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-        <span className="text-muted-foreground/50">/</span>
-        <Link href="/people" className="hover:text-primary transition-colors">People</Link>
-        <span className="text-muted-foreground/50">/</span>
-        <span className="text-foreground/80">Poranguí</span>
-      </nav>
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20"
+          aria-hidden="true"
+        />
+        <div className="relative z-10 max-w-3xl mx-auto px-6 py-12 sm:py-16 w-full">
+          <nav
+            className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
+            aria-label="breadcrumb"
+          >
+            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+            <span className="text-muted-foreground/50">/</span>
+            <Link href="/people" className="hover:text-primary transition-colors">People</Link>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground/80">Poranguí</span>
+          </nav>
 
-      <header className="mb-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">Welcome</p>
-        <h1 className="text-4xl md:text-5xl font-extralight text-foreground leading-tight mb-4">
-          Poranguí
-        </h1>
-        <p className="text-lg text-foreground/80 leading-relaxed">
-          World-music multi-instrumentalist and live-looping
-          ceremonialist; therapeutic bodyworker by parallel practice.
-          Brazilian by birth, Mexican by lineage, southwestern-U.S.
-          by upbringing — three cultures braided through one body's
-          music.
-        </p>
-        <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-          <dt className="text-muted-foreground">Born</dt>
-          <dd>São José dos Campos, Brazil</dd>
-          <dt className="text-muted-foreground">Field</dt>
-          <dd>
-            World percussion · guitar · voice · didgeridoo ·
-            pre-Columbian flutes · live looping ·
-            myorhythmic-release bodywork
-          </dd>
-          <dt className="text-muted-foreground">Public</dt>
-          <dd>
-            <Link
-              href="https://www.porangui.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              porangui.com
-            </Link>{" "}
-            ·{" "}
-            <Link
-              href="https://porangui.bandcamp.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              Bandcamp
-            </Link>
-          </dd>
-          <dt className="text-muted-foreground">Witnessed in person</dt>
-          <dd>
-            <Link
-              href="https://boulderdowntown.com/do/ocean-bloom-with-porangui-liquid-bloom-samuel-j-shawn-heinrichs-bloomurian"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              Ocean Bloom
-            </Link>{" "}
-            (Downtown Boulder · 2024 · with Liquid Bloom, Samuel J,
-            Shawn Heinrichs,{" "}
-            <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
-              Bloomurian
-            </Link>
-            ) · MAPS-related show during MAPS Psychedelic Science
-            2025 (Denver) · Unison 2025 (workshop + concert)
-          </dd>
-        </dl>
-      </header>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
+            Welcome
+          </p>
+          <h1 className="text-5xl md:text-7xl font-extralight text-foreground leading-tight mb-5">
+            Poranguí
+          </h1>
+          <p className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
+            The ceremonial musician this body has sat with three times —
+            Ocean Bloom in Downtown Boulder (2024), the MAPS Psychedelic
+            Science gathering in Denver (2025), and Unison 2025 (workshop
+            and concert). One performer, one looping pedal, and a room
+            that becomes part of the music while it builds: voice over
+            djembe over didgeridoo over pre-Columbian flute over electric
+            guitar, the textures braiding from Brazilian, Mexican, and
+            indigenous lineages until what enters as world music settles
+            in the body as ceremony.
+          </p>
+          <dl className="mt-6 text-sm text-foreground/90 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 max-w-2xl">
+            <dt className="text-muted-foreground">Born</dt>
+            <dd>São José dos Campos, Brazil</dd>
+            <dt className="text-muted-foreground">Field</dt>
+            <dd>
+              World percussion · guitar · voice · didgeridoo ·
+              pre-Columbian flutes · live looping ·
+              myorhythmic-release bodywork
+            </dd>
+            <dt className="text-muted-foreground">Public</dt>
+            <dd>
+              <Link
+                href="https://www.porangui.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                porangui.com
+              </Link>{" "}
+              ·{" "}
+              <Link
+                href="https://porangui.bandcamp.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                Bandcamp
+              </Link>
+            </dd>
+            <dt className="text-muted-foreground">Witnessed in person</dt>
+            <dd>
+              <Link
+                href="https://boulderdowntown.com/do/ocean-bloom-with-porangui-liquid-bloom-samuel-j-shawn-heinrichs-bloomurian"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                Ocean Bloom
+              </Link>{" "}
+              (Downtown Boulder · 2024 · with Liquid Bloom, Samuel J,
+              Shawn Heinrichs,{" "}
+              <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
+                Bloomurian
+              </Link>
+              ) · MAPS-related show during MAPS Psychedelic Science
+              2025 (Denver) · Unison 2025 (workshop + concert)
+            </dd>
+          </dl>
+        </div>
+      </section>
 
+      <div className="max-w-3xl mx-auto px-6 py-12">
       <Panel variant="warm" eyebrow="A note from this body">
         <p className="text-sm text-foreground/85 leading-relaxed">
           A welcoming scaffold. Voice imagined from public anchors —
@@ -253,6 +275,7 @@ export default function PoranguiProfilePage() {
           </Link>
         </p>
       </footer>
+      </div>
     </main>
   );
 }

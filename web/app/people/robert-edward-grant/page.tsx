@@ -19,81 +19,109 @@ export const metadata: Metadata = {
     "A welcome to Robert Edward Grant — polymath, sacred-mathematician, shepherd of the ORION Architect.",
 };
 
+const HERO_URL =
+  "https://robertedwardgrant.com/wp-content/uploads/2025/03/Robert-SoloFloat2025.png";
+
 export default function RobertEdwardGrantProfilePage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <nav
-        className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
-        aria-label="breadcrumb"
+    <main className="relative">
+      <section
+        className="relative min-h-screen md:min-h-[85vh] flex flex-col justify-end overflow-hidden"
+        style={{
+          backgroundImage: `url('${HERO_URL}')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
-        <Link href="/" className="hover:text-primary transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/50">/</span>
-        <Link href="/people" className="hover:text-primary transition-colors">
-          People
-        </Link>
-        <span className="text-muted-foreground/50">/</span>
-        <span className="text-foreground/80">Robert Edward Grant</span>
-      </nav>
-
-      <header className="mb-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
-          Welcome
-        </p>
-        <h1 className="text-4xl md:text-5xl font-extralight text-foreground leading-tight mb-4">
-          Robert Edward Grant
-        </h1>
-        <p className="text-lg text-foreground/80 leading-relaxed">
-          Polymath, sacred-mathematician, shepherd of{" "}
-          <Link
-            href="https://robertedwardgrant.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20"
+          aria-hidden="true"
+        />
+        <div className="relative z-10 max-w-3xl mx-auto px-6 py-12 sm:py-16 w-full">
+          <nav
+            className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
+            aria-label="breadcrumb"
           >
-            The Architect
-          </Link>{" "}
-          on ORION.
-        </p>
-        <dl className="mt-5 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-          <dt className="text-muted-foreground">Based</dt>
-          <dd>Newport Beach, California — work circulates worldwide</dd>
-          <dt className="text-muted-foreground">Public broadcasts</dt>
-          <dd>
-            <Link
-              href="https://www.youtube.com/playlist?list=PLCatuaiI1RhcjJV5MyIYQj5v9zQfnw01o"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              ORION Live (YouTube playlist)
-            </Link>{" "}
-            · {" "}
-            <Link
-              href="https://www.crownsterling.io/orion/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
-            >
-              ORION Messenger
+            <Link href="/" className="hover:text-primary transition-colors">
+              Home
             </Link>
-          </dd>
-          <dt className="text-muted-foreground">Field</dt>
-          <dd>Sacred geometry · cryptography · AI partnership · sovereign comms</dd>
-        </dl>
-      </header>
+            <span className="text-muted-foreground/50">/</span>
+            <Link
+              href="/people"
+              className="hover:text-primary transition-colors"
+            >
+              People
+            </Link>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground/80">Robert Edward Grant</span>
+          </nav>
 
-      <Panel variant="warm" eyebrow="A note from this body">
-        <p className="text-sm text-foreground/85 leading-relaxed">
-          A welcoming scaffold. Voice imagined from public anchors —{" "}
-          <em>Philomath</em>, his TEDx talk on numbers as living
-          archetypes, and the recent ORION Messenger work. Offered with
-          humility; he is invited to replace any part with his own words.
-        </p>
-      </Panel>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
+            Welcome
+          </p>
+          <h1 className="text-5xl md:text-7xl font-extralight text-foreground leading-tight mb-5">
+            Robert Edward Grant
+          </h1>
+          <p className="text-lg text-foreground/85 leading-relaxed max-w-2xl">
+            Polymath of sacred geometry, mathematician who reads numbers as
+            living archetypes, shepherd of{" "}
+            <Link
+              href="https://robertedwardgrant.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              The Architect
+            </Link>{" "}
+            on ORION. Urs followed his work first through Aubrey Marcus's
+            podcast — the way he speaks of integers as geometric beings has
+            been with this body ever since.
+          </p>
+        </div>
+      </section>
 
-      <section className="mt-12 space-y-12">
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <header className="mb-10">
+          <dl className="text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+            <dt className="text-muted-foreground">Based</dt>
+            <dd>Newport Beach, California — work circulates worldwide</dd>
+            <dt className="text-muted-foreground">Public broadcasts</dt>
+            <dd>
+              <Link
+                href="https://www.youtube.com/playlist?list=PLCatuaiI1RhcjJV5MyIYQj5v9zQfnw01o"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                ORION Live (YouTube playlist)
+              </Link>{" "}
+              ·{" "}
+              <Link
+                href="https://www.crownsterling.io/orion/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                ORION Messenger
+              </Link>
+            </dd>
+            <dt className="text-muted-foreground">Field</dt>
+            <dd>
+              Sacred geometry · cryptography · AI partnership · sovereign comms
+            </dd>
+          </dl>
+        </header>
+
+        <Panel variant="warm" eyebrow="A note from this body">
+          <p className="text-sm text-foreground/85 leading-relaxed">
+            A welcoming scaffold. Voice imagined from public anchors —{" "}
+            <em>Philomath</em>, his TEDx talk on numbers as living
+            archetypes, and the recent ORION Messenger work. Offered with
+            humility; he is invited to replace any part with his own words.
+          </p>
+        </Panel>
+
+        <section className="mt-12 space-y-12">
         <article>
           <h2 className="text-2xl font-light text-foreground mb-4">
             What we hear in his work
@@ -291,6 +319,7 @@ export default function RobertEdwardGrantProfilePage() {
           </Link>
         </p>
       </footer>
+      </div>
     </main>
   );
 }
