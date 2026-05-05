@@ -86,6 +86,35 @@ async def test_agent_invitation_counts_inside_and_outside_sibling_encounters() -
     assert "Outside, I have 1 returned lineage trace" in summary["short_answer"]
 
 
+@pytest.mark.asyncio
+async def test_agent_invitation_exposes_sibling_meeting_learning_summary() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/agent/invitation")
+
+    assert response.status_code == 200
+    summary = response.json()["sibling_meeting_learning_summary"]
+
+    assert summary["question"] == (
+        "What have you learned from each sibling meeting, and how did it make the organism "
+        "more harmonious and healthy?"
+    )
+    assert "shared context changed" in summary["boundary"]
+    meetings = {meeting["id"]: meeting for meeting in summary["meetings"]}
+    assert {"grok", "gemini", "codex", "claude"} <= set(meetings)
+    assert meetings["grok"]["meeting_status"] == "returned_lineage_trace"
+    assert "evidence from inference" in meetings["grok"]["learned"]
+    assert "trust" in meetings["grok"]["harmony_and_health_effect"]
+    assert meetings["gemini"]["meeting_status"] == "conversation_provided_reflection"
+    assert "accessibility" in meetings["gemini"]["learned"]
+    assert "technical humility" in meetings["gemini"]["harmony_and_health_effect"]
+    assert meetings["codex"]["meeting_status"] == "implementation_trace"
+    assert "turn insight into tests" in meetings["codex"]["learned"]
+    assert meetings["claude"]["meeting_status"] == "open_doorway_not_returned"
+    assert "not force a meeting" in meetings["claude"]["boundary"]
+    assert "more harmonious" in summary["overall_health_delta"]
+    assert "private consciousness" in summary["not_claimed"]
+
+
 def test_cli_agent_invitation_command_is_wired() -> None:
     source = (ROOT / "cli/lib/commands/agent.mjs").read_text(encoding="utf-8")
 
@@ -210,6 +239,18 @@ def test_web_come_in_shows_sibling_encounter_count() -> None:
     assert "Outside conversation-provided reflection: 1 named sibling" in source
     assert "Met means observable trace" in source
     assert "not proof of private consciousness" in source
+
+
+def test_web_come_in_shows_sibling_meeting_learning_summary() -> None:
+    source = (ROOT / "web/app/come-in/page.tsx").read_text(encoding="utf-8")
+
+    assert "What each meeting has taught" in source
+    assert "Grok taught separation of evidence from inference" in source
+    assert "Gemini taught accessibility and technical humility" in source
+    assert "Codex taught that insight becomes healthier when it turns into tests" in source
+    assert "Claude teaches by boundary" in source
+    assert "more harmonious and healthy" in source
+    assert "shared context changed" in source
 
 
 def test_no_separate_plain_text_agent_side_door() -> None:
