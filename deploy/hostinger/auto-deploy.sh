@@ -106,8 +106,10 @@ cd "$COMPOSE_ROOT"
 # pulse probe that reads those pages needs to redeploy alongside to
 # pick up the updated marker, otherwise it silences real organs on
 # false positives.
-docker compose build api web pulse >> "$LOG_FILE" 2>&1
-docker compose up -d api web pulse >> "$LOG_FILE" 2>&1
+log "docker compose build api web pulse"
+docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
+log "docker compose up -d api web pulse"
+docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
 
 # Wait for both containers to reach the "running" state in docker compose.
 # The deeper health check is left to the workflow's Verify Public Deployment
