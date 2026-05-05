@@ -98,6 +98,22 @@ for key, value in keys.items():
 env_path.write_text("\n".join(out) + "\n")
 PY
 
+python3 - <<PY
+import json
+from pathlib import Path
+
+sha = "${TARGET_SHA}"
+config_path = Path("${REPO_DIR}/api/config/api.json")
+config = json.loads(config_path.read_text())
+config["deployed_sha"] = sha
+web = config.setdefault("web", {})
+web["deployed_sha"] = sha
+web["updated_at"] = sha
+tmp_path = config_path.with_suffix(config_path.suffix + ".tmp")
+tmp_path.write_text(json.dumps(config, indent=2) + "\n")
+tmp_path.replace(config_path)
+PY
+
 cd "$COMPOSE_ROOT"
 # api + web + pulse share the same repo and SHA. Rebuilding all three
 # on every push keeps the witness in step with what it's probing —
