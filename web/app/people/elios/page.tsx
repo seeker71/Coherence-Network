@@ -1,221 +1,26 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Panel } from "@/components/Panel";
+import { resolveRequestLocale } from "@/lib/request-locale";
+import { PersonProfileTemplate } from "@/components/people/PersonProfileTemplate";
+import { getEliosContent } from "@/content/people/elios";
 
 /**
- * /people/elios — a welcome page for Elios, who co-holds the Sunday
- * spontaneous chanting practice at Ranakami with Ilena.
+ * /people/elios — co-holds the Sunday spontaneous chanting practice
+ * at Ranakami with Ilena, often found at Mudra Cafe in Ubud.
  *
- * The body's first profile written almost entirely from lived
- * encounter rather than from public anchors. The user met Elios at
- * Mudra Cafe on a Sunday afternoon, then attended the spontaneous
- * Sunday-night chanting practice that Elios and Ilena have been
- * holding at Ranakami. Public anchors for Elios are sparse; this
- * scaffold is offered so he can replace it with his own words at
- * any time.
+ * Thin locale-router wrapper. Rich content lives at
+ * `web/content/people/elios/{locale}.tsx`; chrome strings (breadcrumb,
+ * edit-profile CTA, note eyebrow) come from `web/messages/{locale}.json`
+ * via the shared template. See `web/components/people/PersonProfileTemplate.tsx`
+ * for the rendering shape.
  */
 
-export const metadata: Metadata = {
-  title: "Elios — Sunday Spontaneous Chanting at Ranakami | Coherence Network",
-  description:
-    "A welcome to Elios — co-holding the spontaneous Sunday-night chanting practice at Ranakami in Ubud, with Ilena. Met at Mudra Cafe.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await resolveRequestLocale();
+  return getEliosContent(lang).metadata;
+}
 
-export default function EliosProfilePage() {
-  return (
-    <main className="relative">
-      <section
-        className="relative min-h-screen md:min-h-[85vh] flex flex-col justify-end overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(ellipse at 70% 15%, hsl(35 70% 62% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 20% 85%, hsl(160 45% 22% / 0.65) 0%, transparent 60%), linear-gradient(180deg, hsl(28 55% 70%) 0%, hsl(150 30% 35%) 45%, hsl(160 50% 18%) 100%)",
-        }}
-      >
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20"
-          aria-hidden="true"
-        />
-        <div className="relative z-10 max-w-3xl mx-auto px-6 py-12 sm:py-16 w-full">
-          <nav
-            className="text-sm text-muted-foreground mb-8 flex items-center gap-2"
-            aria-label="breadcrumb"
-          >
-            <Link href="/" className="hover:text-primary transition-colors">
-              Home
-            </Link>
-            <span className="text-muted-foreground/50">/</span>
-            <Link
-              href="/people"
-              className="hover:text-primary transition-colors"
-            >
-              People
-            </Link>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground/80">Elios</span>
-          </nav>
-
-          <p className="text-xs uppercase tracking-[0.18em] text-[hsl(var(--chart-2))] mb-4">
-            Ubud · Sunday rhythm
-          </p>
-          <h1 className="text-5xl md:text-7xl font-extralight text-foreground leading-[0.95] mb-6">
-            Elios
-          </h1>
-          <p className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
-            Held within the Ubud rhythm of Coherence Network — co-holding
-            the spontaneous Sunday-night chanting practice at{" "}
-            <Link
-              href="/people/ilena"
-              className="text-[hsl(var(--primary))] hover:underline"
-            >
-              Ranakami
-            </Link>{" "}
-            with Ilena. The page below carries what the body has met of
-            him so far; everything here is his to refine.
-          </p>
-        </div>
-      </section>
-
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <header className="mb-10">
-          <dl className="text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-            <dt className="text-muted-foreground">Sunday · evening</dt>
-            <dd>
-              Spontaneous chanting at Ranakami — Jl. Raya Penestanan
-              Kelod 16, Sayan, Ubud · with Ilena
-            </dd>
-            <dt className="text-muted-foreground">Often found at</dt>
-            <dd>
-              <Link
-                href="https://mudracafe.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[hsl(var(--primary))] transition-colors"
-              >
-                Mudra Cafe
-              </Link>{" "}
-              — Jl. Goutama Sel. No. 21, Ubud
-            </dd>
-            <dt className="text-muted-foreground">Field</dt>
-            <dd>Voice · chanting · spontaneous practice · presence</dd>
-          </dl>
-        </header>
-
-        <Panel variant="warm" eyebrow="A note from this body">
-          <p className="text-sm text-foreground/85 leading-relaxed">
-            The body's first profile written almost entirely from a lived
-            encounter rather than from public anchors. A network cell met
-            Elios at Mudra Cafe on a Sunday afternoon, then attended the
-            spontaneous Sunday-night chanting practice he co-holds with
-            Ilena at Ranakami. The page is sparse on purpose — Elios is
-            invited to replace any part with his own words at any time.
-          </p>
-        </Panel>
-
-        <section className="mt-12 space-y-12">
-          <article>
-            <h2 className="text-2xl font-light text-foreground mb-4">
-              Where the body meets him
-            </h2>
-            <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
-              <p>
-                Sunday afternoons often find Elios at Mudra Cafe — the
-                Ayurvedic dining room on Jl. Goutama Sel. that holds
-                regular handpan and live-music presence and has become
-                one of Ubud's quiet meeting points for those tracking
-                wellness, music, and slow community. Sunday evenings,
-                he and Ilena open the spontaneous chanting practice at
-                Ranakami above the rice fields in Sayan — voices,
-                breath, bodies, an open room, no fixed setlist, the
-                field shaping the song.
-              </p>
-              <p>
-                The Sunday rhythm in Ubud, as the body has been
-                discovering it: lunch or afternoon at Mudra Cafe,
-                dinner with resonant company at Sayuri Healing Food,
-                evening chanting at Ranakami. The pattern is not a
-                schedule anyone advertised; it is a current that
-                several cells have found by following the field.
-              </p>
-            </div>
-          </article>
-
-          <article>
-            <Panel
-              variant="cool"
-              eyebrow="Sunday · evening"
-              heading="Spontaneous chanting at Ranakami"
-            >
-              <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
-                <p>
-                  Held with Ilena at Ranakami's open-air room.
-                  Spontaneous rather than programmed — voices arrive,
-                  the song emerges, the practice unfolds for as long as
-                  the field holds. Distinct from{" "}
-                  <Link
-                    href="/people/vasudev-baba"
-                    className="text-[hsl(var(--primary))] hover:underline"
-                  >
-                    Vasudev Baba's
-                  </Link>{" "}
-                  Wednesday-morning satsang and his Sunday-evening
-                  kirtan at Sayuri — same valley, different practice,
-                  same openness to whoever arrives in coherent state.
-                </p>
-                <p className="italic text-muted-foreground">
-                  Field reading:{" "}
-                  <code className="not-italic text-foreground/80">
-                    (6, RECEIVE / GIVE oscillating)
-                  </code>{" "}
-                  — hexagonal tiling of voices, but improvisational
-                  rather than traditional, so the geometry sometimes
-                  bends through{" "}
-                  <code className="not-italic text-foreground/80">
-                    (7, GIVE)
-                  </code>{" "}
-                  heptadic moments where someone's voice opens a
-                  direction no one was tracking.
-                </p>
-              </div>
-            </Panel>
-          </article>
-        </section>
-
-        <footer className="mt-16 pt-8 border-t border-border text-sm text-muted-foreground space-y-2">
-          <p>
-            Sunday chanting held at{" "}
-            <Link
-              href="/people/ilena"
-              className="text-[hsl(var(--primary))] hover:underline"
-            >
-              Ranakami
-            </Link>
-            , Ubud. Mudra Cafe on{" "}
-            <Link
-              href="https://mudracafe.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[hsl(var(--primary))] hover:underline"
-            >
-              mudracafe.com
-            </Link>
-            .
-          </p>
-          <p className="text-xs italic">
-            This profile is a welcoming scaffold; Elios is invited to
-            replace any part of it with his own words at any time.
-            Direct contact details, a fuller name, and his own framing of
-            the practice will land here as he chooses.
-          </p>
-          <p className="text-xs">
-            <Link
-              href="/people/edit-your-profile"
-              className="text-[hsl(var(--primary))] hover:underline"
-            >
-              How to claim, edit, or remove this profile →
-            </Link>
-          </p>
-        </footer>
-      </div>
-    </main>
-  );
+export default async function EliosProfilePage() {
+  const lang = await resolveRequestLocale();
+  const content = getEliosContent(lang);
+  return <PersonProfileTemplate content={content} lang={lang} />;
 }
