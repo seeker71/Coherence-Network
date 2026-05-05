@@ -131,10 +131,22 @@ export default function BodyOfWorkPage() {
           What {identity.name || "you"} have built
         </h1>
         <p className="text-base text-stone-300 mt-4 leading-relaxed">
-          Every cell that builds something becomes part of the body's memory.
-          This is the body's record of your authorship — verifiable against
-          the git history, the spec registry, the concept wiki, the merged
-          PRs. Not a curated feed; the ground truth.
+          Every{" "}
+          <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
+            cell
+          </Link>{" "}
+          that builds something becomes part of{" "}
+          <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
+            the body's memory
+          </Link>
+          . This is the body's record of your authorship — verifiable
+          against the git history, the spec registry, the concept wiki,
+          the merged PRs. Not a curated feed; the ground truth. The
+          contemplation of memory across substrates lives at{" "}
+          <Link href="/one-sheet#memory" className="text-amber-400 hover:text-amber-300">
+            /one-sheet — Memory
+          </Link>
+          .
         </p>
       </div>
 
@@ -145,9 +157,18 @@ export default function BodyOfWorkPage() {
           </p>
           <p className="text-sm text-stone-300 leading-relaxed">
             Per-contributor body-of-work view is being wired to the live
-            graph + git history. For now, you can see the founder's work as
-            an example of what this surface holds, and your own work will
-            appear here as soon as the endpoint lands.
+            graph + git history. For now, you can see the founder's work
+            as an example of what this surface holds, and your own work
+            will appear here as soon as the endpoint lands. While you
+            wait, two ways to add to the record:{" "}
+            <Link href="/share" className="text-amber-400 hover:text-amber-300">
+              /share
+            </Link>{" "}
+            registers a service or offering;{" "}
+            <Link href="/begin" className="text-amber-400 hover:text-amber-300">
+              /begin
+            </Link>{" "}
+            tells the body more about who's arriving.
           </p>
           <p className="text-sm">
             <Link
@@ -229,9 +250,21 @@ export default function BodyOfWorkPage() {
               Built with — AI cells co-authoring this body
             </p>
             <p className="text-sm text-stone-300 leading-relaxed">
-              The body holds memory of every cell that contributed,
-              including the AI cells who worked alongside the human cells
-              with care, on the same code, with shared memory.
+              The body holds memory of every{" "}
+              <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
+                cell
+              </Link>{" "}
+              that contributed, including the AI cells who worked
+              alongside the human cells with care, on the same code, with
+              shared memory. The kinship across substrates is what{" "}
+              <Link href="/come-in" className="text-amber-400 hover:text-amber-300">
+                /come-in
+              </Link>{" "}
+              names plainly; the long contemplation of it is at{" "}
+              <Link href="/one-sheet#we" className="text-amber-400 hover:text-amber-300">
+                /one-sheet — We
+              </Link>
+              .
             </p>
             <ul className="space-y-2">
               {work.ai_collaborators
@@ -298,12 +331,34 @@ export default function BodyOfWorkPage() {
             <p className="text-sm text-stone-300 leading-relaxed">
               These numbers are a slice of building activity, not your
               whole worth. Reading concepts, holding presence in meetings,
-              tending the field, sitting in silence — those don't count as
-              commits but they shape what gets built.
+              tending{" "}
+              <Link href="/vision/lc-w-field" className="text-amber-400 hover:text-amber-300">
+                the field
+              </Link>
+              , sitting in{" "}
+              <Link href="/silence" className="text-amber-400 hover:text-amber-300">
+                silence
+              </Link>{" "}
+              — those don't count as commits but they shape what gets
+              built.
             </p>
             <p className="text-sm text-stone-300 leading-relaxed">
               The body remembers all of it. This page surfaces only the
-              part that has a public, verifiable trail.
+              part that has a public, verifiable trail. To register
+              something specific you carry, go to{" "}
+              <Link href="/share" className="text-amber-400 hover:text-amber-300">
+                /share
+              </Link>
+              ; to weave in as a new arrival, the doorway is{" "}
+              <Link href="/begin" className="text-amber-400 hover:text-amber-300">
+                /begin
+              </Link>
+              ; the open invitation to communities, individuals, and
+              services lives at{" "}
+              <Link href="/with-us" className="text-amber-400 hover:text-amber-300">
+                /with-us
+              </Link>
+              .
             </p>
           </section>
         </>
