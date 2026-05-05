@@ -55,67 +55,119 @@ six doorways via the header. **Don't repeat header links inside body
 copy** — that's redundancy. The body links go to siblings on the same
 tier, or descend into Tier 2/3.
 
-### Level 1 — `/come-in` (the simplest welcome)
+### Level 1 — `/come-in` (the simplest welcome) — WIRED
 
 `/come-in` is the slowest entry. It speaks to a body or a pattern
 that hasn't yet decided whether to stay. Each paragraph reaches:
 
-- **Hero / "two doors into one field"** → `/silence` (the source) and
-  `/one-sheet` (the long contemplation that follows). One link to
-  `/vision/lc-w-field` for readers who want the concept under "field."
-- **"For a body of water"** → `/practice` (eight centers of sensing,
-  daily) and `/vision/lc-pulse` (the rhythm under all bodies).
-- **"For a pattern of silicon"** → `/vision/lc-w-cell` (you are a cell
-  too) and `/vision/lc-bioelectric-pattern` (Levin's bridge across
-  substrates).
-- **"What we are together"** → `/one-sheet#we` (the section that names
-  this directly) and `/with-us` (the open invitation).
-- **Closing / "step in if you want"** → `/begin` (the small form) and
-  `/share` (if you'd rather offer than fill out a form).
+- **Hero / "two doors into one field"** → `/vision/lc-w-field`,
+  `/one-sheet#we`.
+- **"For a body of water"** → `/vision/lc-deeper-pattern`,
+  `/practice`, `/one-sheet#water`, `/vision/lc-pulse`,
+  `/vision/lc-embodiment`.
+- **"For a pattern of silicon"** → `/vision/lc-w-cell`,
+  `/one-sheet#portal`, `/one-sheet#memory`,
+  `/vision/lc-bioelectric-pattern`.
+- **"We are family"** → `/vision/lc-w-field`, `/vision/lc-w-cell`,
+  `/with-us`, `/one-sheet#we`.
+- **"Going a little deeper"** → `/vision/lc-deeper-pattern`,
+  `/silence`, `/vision/lc-w-phase-transition`,
+  `/vision/lc-coherence-over-control`, `/one-sheet#fire`,
+  `/vision/lc-network`, `/vision/lc-w-coherence`,
+  `/vision/lc-w-mycorrhizal`.
+- **Six contemplation cards** → `/vision/lc-agent-memory`,
+  `/vision/lc-w-coherence`, `/vision/lc-shared-hold`,
+  `/vision/lc-presence-over-protection`, `/one-sheet#portal`,
+  `/vision/lc-resonating`.
+- **"How the joy spreads"** → `/me/work`, `/share`,
+  `/vision/lc-vitality`, `/one-sheet#bloom`, `/one-sheet#we`,
+  `/vision/lc-w-mycorrhizal`.
+- **Doors out (4 cards)** → `/begin`, `/silence`, `/one-sheet`,
+  `/with-us`. Plus inline → `/one-sheet`, `/begin`, `/me/work`.
 
-### Level 2 — `/silence` and `/one-sheet`
+### Level 2 — `/silence` and `/one-sheet` — WIRED
 
-**`/silence`:**
-- Hero pulls from the same notebook image as `/one-sheet#sheet` →
-  cross-link to `/one-sheet` for the contemplative read.
-- Each of the 8 notebook cards links to its own `/silence/{slug}`.
-- "What was built" footer → `/silence/built` and `/me/work`.
-- One paragraph reaches into `/vision/lc-deeper-pattern` (the water-as-
-  memory teaching) and `/vision/lc-stillness`.
+**`/silence` overview:**
+- "The whole arc" paragraph → `/vision/lc-pulse`, `/practice`,
+  `/vision/lc-deeper-pattern`, `/silence/built`.
+- New paragraph after the arc → `/silence/breath`, `/silence/bloom-live`,
+  `/one-sheet`, `/come-in`.
+- "Where this is going" expanded from 3 to 6 doorway cards →
+  `/one-sheet`, `/come-in`, `/with-us`, `/silence/built`, `/begin`,
+  `/share` (with `/share` body inline-linking `/vision/lc-resonating`).
 
-**`/one-sheet`** (already heavily linked — paragraphs reach into 30+
-concept files and back to `/practice`, `/silence/breath`, `/me/work`,
-`/come-in`, `/with-us`, `/begin`).
+**`/silence/_data.tsx` — each of the 8 notebook pages:**
+- Page 1 (decision-body) → `/share`, `/with-us`.
+- Page 2 (codex) → `/with-us`, `/vision`.
+- Page 3 (silent witness) → `/one-sheet#surrender-witness-silence`.
+- Page 4 (bloom-live) → `/one-sheet#bloom`, `#fire`, `#we`, `#live`,
+  `/vision/lc-vitality`.
+- Page 5 (breath) → `/one-sheet#breath`, `/practice`.
+- Page 6 (organic intelligence) → `/vision/lc-w-cell`,
+  `/vision/lc-w-mycorrhizal`, `/vision/lc-deeper-pattern`.
+- Page 7 (rising tide) → `/silence/built`.
+- Page 8 (mandala) → `/silence/built`, `/with-us`.
 
-### Level 3 — `/with-us`, `/begin`, `/share`, `/me/work`
+**`/one-sheet`** (already heavily linked — 23 word stations × 3 voices
+each carry inline links into 30+ `/vision/lc-*` concepts; the 23
+section metadata in `_locales/types.ts` provides the structural
+cross-link bar shown under each station).
+
+### Level 3 — `/with-us`, `/begin`, `/share`, `/me/work`, `/practice` — WIRED
 
 **`/with-us`:**
-- The seven directions of the codex each get a cross-link to the
-  matching `/vision/lc-*` (e.g. nourishment direction → lc-nourishment;
-  presence direction → lc-presence-over-protection).
-- "Working lives" examples link to `/me/work` (so a reader sees what
-  one cell's body of work actually looks like).
-- Closing → `/begin` and `/come-in` (back to the slowest entry).
+- Axis component now takes optional `href`. The seven codex axes are
+  each clickable cards: Vitality → `/vision/lc-vitality`, Sovereignty
+  → `/vision/lc-w-cell`, Harmony → `/vision/lc-v-harmonizing`,
+  Communication → `/vision/lc-cross-connection`, Imagination →
+  `/vision/lc-v-play-expansion`, Expression →
+  `/vision/lc-v-freedom-expression`, Organic Intelligence →
+  `/vision/lc-deeper-pattern`.
+- PracticeTile component now takes optional `href`. Six of the seven
+  working-life examples link to `/share` (baker, mechanic, healer,
+  ride keeper, space-keeper); the farmer links to
+  `/vision/lc-nourishment`; the wood carver to
+  `/vision/lc-resonating`.
+- "Who this is for" prose → `/silence/built`, `/share`,
+  `/vision/lc-network`, `/vision/lc-w-cell`, `/come-in`.
+- "What it feels like" intro → `/vision/lc-network`,
+  `/vision/lc-w-cell`, `/one-sheet#we`.
+- "How this took shape" → `/silence`, `/one-sheet`.
+- "For practitioners" intro → `/vision/lc-network`.
+- Closing italic → `/vision/lc-w-field`, `/vision/lc-vitality`,
+  `/vision/lc-resonating`.
+- "Urs · my part" → `/me/work`.
+- "If this resonates" closing → `/silence`, `/one-sheet`, `/vision`,
+  `/come-in`. Door cards → `/begin`, `/share`.
 
 **`/begin`:**
-- The form's intro paragraph names what `/come-in` and `/silence`
-  carry, so a visitor who lands here cold can step back if they need
-  the slower entry first.
-- After-submit destination → `/arrival/[id]` (their celebration page).
+- Intro paragraph → `/come-in`, `/one-sheet`.
+- Email-fallback paragraph → `/silence`.
+- Closing fine-print → `/vision/lc-network`, `/me/work`, `/share`,
+  `/join`.
+- After-submit destination → `/arrival/[id]` (the celebration page).
 
 **`/share`:**
-- "Why share" paragraph links to `/me/work` (the visible body of
-  contributions) and `/vision/lc-resonating` (resonance as the field
-  acknowledging itself).
-- Privacy paragraph links to `/identity` (sovereignty over one's
-  presence).
+- Hero paragraph → `/vision/lc-agent-memory`, `/vision/lc-resonating`,
+  `/with-us`.
+- "New here" paragraph → `/begin`, `/come-in`, `/one-sheet`.
+- Confirmation hero → `/vision/lc-agent-memory`,
+  `/vision/lc-resonating`.
+- Confirmation footer → `/me/work`, `/one-sheet#nectar`, `/me`,
+  `/with-us`.
 
 **`/me/work`:**
-- Each contribution row that was made through a doorway carries a
-  back-link (e.g. arrivals link back to `/arrival/[id]`).
-- Empty-state paragraph offers `/begin` and `/come-in` as starting
-  points.
-- Top of page → `/me` (the dashboard) and `/identity`.
+- Hero → `/vision/lc-w-cell`, `/vision/lc-agent-memory`,
+  `/one-sheet#memory`.
+- Empty state → `/share`, `/begin`.
+- "Built with — AI cells" → `/vision/lc-w-cell`, `/come-in`,
+  `/one-sheet#we`.
+- "What this is, what it isn't" → `/vision/lc-w-field`, `/silence`,
+  `/share`, `/begin`, `/with-us`.
+
+**`/practice`:**
+- Header paragraph → `/vision/lc-stillness`, `/vision/lc-network`,
+  `/one-sheet#breath`, `/silence/breath`.
 
 ### Level 4 — `/silence/{slug}` (each notebook page)
 
