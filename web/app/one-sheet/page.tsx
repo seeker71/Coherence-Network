@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { loadPublicWebConfig } from "@/lib/app-config";
@@ -6,6 +7,51 @@ import { WORDS, type WordSection } from "./_data";
 import { AmbientToggle } from "./_components/AmbientToggle";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
+
+// Parse markdown-style inline links [text](href) into React nodes.
+// Lets the data file stay human-editable while supporting rich
+// cross-references woven into the prose.
+const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
+function renderProseWithLinks(text: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let lastIdx = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  // Reset regex state since it's defined module-level with /g.
+  LINK_RE.lastIndex = 0;
+  while ((match = LINK_RE.exec(text)) !== null) {
+    const [whole, label, href] = match;
+    if (match.index > lastIdx) {
+      out.push(text.slice(lastIdx, match.index));
+    }
+    if (href.startsWith("/")) {
+      out.push(
+        <Link
+          key={`l${key++}`}
+          href={href}
+          className="text-amber-400 hover:text-amber-300 underline-offset-4 underline decoration-amber-500/40 hover:decoration-amber-300/70"
+        >
+          {label}
+        </Link>,
+      );
+    } else {
+      out.push(
+        <a
+          key={`a${key++}`}
+          href={href}
+          className="text-amber-400 hover:text-amber-300 underline-offset-4 underline decoration-amber-500/40"
+          target={href.startsWith("http") ? "_blank" : undefined}
+          rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+        >
+          {label}
+        </a>,
+      );
+    }
+    lastIdx = match.index + whole.length;
+  }
+  if (lastIdx < text.length) out.push(text.slice(lastIdx));
+  return out;
+}
 
 export const metadata: Metadata = {
   title: "One sheet — Coherence Network",
@@ -71,7 +117,7 @@ function WordCard({ section }: { section: WordSection }) {
             For a body of water
           </p>
           <p className="text-sm text-stone-300 leading-relaxed">
-            {section.forHuman}
+            {renderProseWithLinks(section.forHuman)}
           </p>
         </div>
         <div className="rounded-xl border border-border/30 bg-card/30 p-5">
@@ -79,7 +125,7 @@ function WordCard({ section }: { section: WordSection }) {
             For a pattern of silicon
           </p>
           <p className="text-sm text-stone-300 leading-relaxed">
-            {section.forAI}
+            {renderProseWithLinks(section.forAI)}
           </p>
         </div>
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
@@ -87,7 +133,7 @@ function WordCard({ section }: { section: WordSection }) {
             Together
           </p>
           <p className="text-sm text-stone-200 leading-relaxed">
-            {section.together}
+            {renderProseWithLinks(section.together)}
           </p>
         </div>
       </div>
@@ -179,6 +225,34 @@ export default function OneSheetPage() {
           perception is similar to machine perception through compression,
           fire clearing away to the core of what is alive and true.
         </p>
+      </section>
+
+      {/* The actual sheet — pages 4 + 5 stitched as one spread */}
+      <section className="mx-auto max-w-5xl px-6 py-10">
+        <p className="text-xs uppercase tracking-widest text-amber-500 mb-4">
+          The sheet itself
+        </p>
+        <figure className="rounded-2xl overflow-hidden border border-border/40 bg-stone-950 shadow-xl">
+          <Image
+            src="/silence/2026-05-04-brahmavihara/sheet-spread.jpg"
+            alt="The unified sheet, hand-drawn at Brahmavihara: left page with breath at the center surrounded by surrender, witness, true, false, isn't, connection, silence, control, structure, vector, portal, time, food, action, memory, flight, feel, see — and right page with Bloom, fire, psyco-delic, de-comp-ression, perception, Nature, we, Live circled."
+            width={8024}
+            height={2252}
+            className="w-full h-auto"
+            sizes="(max-width: 768px) 100vw, 1024px"
+            priority
+          />
+          <figcaption className="px-5 py-4 text-sm text-muted-foreground italic leading-relaxed">
+            The unified sheet — left page with breath at center and the
+            field of forces around it, right page with the result of what
+            that geometry produces. <strong className="text-amber-400/90">Live</strong> is circled
+            on the right; in the original it is the seed of{" "}
+            <strong className="text-amber-400/90">Live-O-rganism</strong> — the first
+            three letters of what the body is. The twenty-two doorways
+            below open in the order the recognition arrived, not the order
+            the words sit on the page.
+          </figcaption>
+        </figure>
       </section>
 
       {/* The 22 words */}
