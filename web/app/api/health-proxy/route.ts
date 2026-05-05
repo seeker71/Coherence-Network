@@ -25,6 +25,26 @@ function resolveWebDeployedSha(): { value: string; source: string } {
 
 const WEB_DEPLOYED_SHA = resolveWebDeployedSha();
 
+function stringField(source: Record<string, unknown>, key: string): string {
+  const value = source[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function resolveWebRuntimeSha(upstreamJson: Record<string, unknown>): { value: string; source: string } {
+  if (WEB_DEPLOYED_SHA.value !== "unknown") {
+    return WEB_DEPLOYED_SHA;
+  }
+  const upstreamSha = stringField(upstreamJson, "deployed_sha");
+  if (upstreamSha) {
+    return { value: upstreamSha, source: "api:deployed_sha" };
+  }
+  const upstreamUpdatedAt = stringField(upstreamJson, "updated_at");
+  if (upstreamUpdatedAt) {
+    return { value: upstreamUpdatedAt, source: "api:updated_at" };
+  }
+  return WEB_DEPLOYED_SHA;
+}
+
 function uptimeSeconds() {
   return Math.max(0, Math.floor((Date.now() - WEB_STARTED_AT.getTime()) / 1000));
 }
@@ -118,6 +138,7 @@ export async function GET() {
     }
     markHealthProxySuccess();
     const up = uptimeSeconds();
+    const webRuntimeSha = resolveWebRuntimeSha(upstreamJson);
     const response = NextResponse.json({
       api: upstreamJson,
       web: {
@@ -125,15 +146,16 @@ export async function GET() {
         started_at: WEB_STARTED_AT.toISOString(),
         uptime_seconds: up,
         uptime_human: uptimeHuman(up),
-        updated_at: WEB_DEPLOYED_SHA.value,
-        deployed_sha: WEB_DEPLOYED_SHA.value,
-        deployed_sha_source: WEB_DEPLOYED_SHA.source,
+        updated_at: webRuntimeSha.value,
+        deployed_sha: webRuntimeSha.value,
+        deployed_sha_source: webRuntimeSha.source,
       },
       checked_at: new Date().toISOString(),
     });
     const runtimeMs = Math.max(0.1, performance.now() - started);
     emitHealthProxyRuntimeEvent(response.status, runtimeMs, {
       health_proxy_mode: "live",
+      deployed_sha_source: webRuntimeSha.source,
     });
     return response;
   } catch (error) {

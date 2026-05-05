@@ -1,0 +1,86 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/web-health-proxy-api-sha-fallback",
+  "commit_scope": "Let the public web health proxy report the live API deployed SHA when local web config does not expose one.",
+  "files_owned": [
+    "web/app/api/health-proxy/route.ts",
+    "docs/system_audit/commit_evidence_2026-05-05_web_health_proxy_sha_fallback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npx tsc --noEmit --pretty false --incremental false",
+      "cd web && npm run build"
+    ],
+    "summary": "The web health-proxy fallback type-checks and the production Next build passes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending Hostinger auto-deploy and strict public SHA validation after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local web proof is complete; CI and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "deploy-readiness",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "deploy-readiness"
+  ],
+  "task_ids": [
+    "codex-thread-web-health-proxy-sha-fallback-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "After d627983d3c0e46b26829c210656502758c233eab deployed, strict public verification still failed because /api/health-proxy returned web.deployed_sha=unknown.",
+    "The same live health-proxy payload included api.deployed_sha=d627983d3c0e46b26829c210656502758c233eab from the upstream API health response.",
+    "The Hostinger deployment topology rebuilds API and web together from the same target SHA, so the web proxy now reports the upstream deployed SHA as api:deployed_sha when local web config is unavailable."
+  ],
+  "change_files": [
+    "web/app/api/health-proxy/route.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When local web config is unavailable but upstream API health exposes deployed_sha, /api/health-proxy reports web.deployed_sha and web.updated_at from api.deployed_sha with source api:deployed_sha.",
+    "public_endpoints": [
+      "GET https://coherencycoin.com/api/health-proxy",
+      "GET https://api.coherencycoin.com/api/gates/main-head"
+    ],
+    "test_flows": [
+      "Next.js production build",
+      "Strict public deploy verification with VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1"
+    ]
+  }
+}
