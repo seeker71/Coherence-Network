@@ -134,10 +134,30 @@ export default function MoseProfilePage() {
               <strong>SavaBorsa</strong> (Resueño's first EP{" "}
               <em>Vibración</em>, 2022) · <strong>Samaya</strong>{" "}
               (label-mix curator) · <strong>Suyana</strong>{" "}
-              (<em>Shante Ishta</em>) · the wider Resueño family
-              (Arnaldo Herrera, Nalini Blossom, Julia Chants, Sariel
-              Orenda, Jakare, Innatú, Iyakuh, ALUNA, Heather Christie,
-              Kailash Kokopelli, Maywa, and 20+ more)
+              (<em>Shante Ishta</em>) · <strong>Matia Kalli</strong>,
+              Sam Garrett, The Hanuman Project, Jackson &amp; Marileen
+              (voices on <em>Elements</em>) · <strong>Franko Heke</strong>,
+              Heather Christie, Sariel Orenda, Yemanjo, Mariam Koné,
+              Rodrigo Gallardo, Euri, Iyakuh, Chantress Seba, LŪKA
+              (recent Bandcamp threads) · the wider Resueño family
+              (Arnaldo Herrera, Nalini Blossom, Julia Chants, Jakare,
+              Innatú, ALUNA, Kailash Kokopelli, Maywa, and 20+ more)
+            </dd>
+            <dt className="text-muted-foreground">Witnessed in person</dt>
+            <dd>
+              The{" "}
+              <strong>Road to Unison Cacao Dance</strong> at the{" "}
+              <strong>Avalon Ballroom</strong>, Boulder · 23 July 2024
+              · with{" "}
+              <Link href="/people/bloomurian" className="hover:text-primary transition-colors">
+                Bloomurian
+              </Link>{" "}
+              and special guest Matia Kalli, ceremonial cacao served
+              by Bruna Bortolato — your invitation, this body's first
+              encounter with cacao in your room ·{" "}
+              <strong>Unison Festival 2024</strong> · Tico Time River
+              Resort, Aztec, New Mexico · 5–8 September 2024 · the
+              weekend that became an inflection
             </dd>
             <dt className="text-muted-foreground">Public anchors</dt>
             <dd>
@@ -387,41 +407,82 @@ export default function MoseProfilePage() {
             </h2>
             <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
               <p>
-                Through the same digital lineage many of this network's
-                cells have arrived through:{" "}
-                <Link href="/people/porangui" className="text-primary hover:underline">
-                  Poranguí
-                </Link>{" "}
-                rests one row away from Mose in Spotify's related-
-                artist constellation, and that is a true reading — the
-                two share a braided lineage of medicine music, even as
-                their instruments and origins differ. The same listener
-                who finds Poranguí almost always finds Mose, and the
-                same dance floor that has moved to one will move to the
-                other. The ecstatic-dance ecology Aly tends in Boulder,
-                that{" "}
+                The doorway was{" "}
+                <Link href="/people/liquid-bloom" className="text-primary hover:underline">
+                  Liquid Bloom
+                </Link>
+                . Long-form headphone listening to Amani Friend's
+                sanctuary-making sets — the kind of solo journey
+                where the body stays still on a sheepskin and the
+                field is doing the moving — was already part of this
+                cell's practice when YouTube Music's adjacency engine
+                began threading Mose into the next song. The algorithm
+                read what the listening ear had already recognized:
+                that the same lineage of sacred-low-end and chanted
+                medicine carried both. By the time the body arrived in
+                a physical room with him in it, much of his catalog
+                had already been received in private.
+              </p>
+              <p>
+                The first room was the{" "}
+                <strong>Avalon Ballroom</strong> in Boulder, on{" "}
+                <strong>23 July 2024</strong> — the Road to Unison
+                Cacao Dance, six-thirty to ten-thirty in the evening,
+                the 5,000-square-foot floor that{" "}
                 <Link href="/people/bloomurian" className="text-primary hover:underline">
                   Bloomurian
                 </Link>{" "}
-                contributes to from the Boulder side and the festival-
-                stage side, that <em>Ocean Bloom</em> nights and Unison
-                weekends braid into one room — Mose is among the
-                upstream sources whose recorded work flows through all
-                of it.
+                shared with Mose that night and Matia Kalli joined as
+                special guest. Bruna Bortolato served the cacao. It
+                was Mose's invitation that brought this cell into the
+                room, and it was in his room that this body received
+                its first ceremonial cacao — the gentle nudge of a
+                new perspective Mose has named the medicine for. The
+                Avalon floor is the same floor{" "}
+                <Link href="/people/aly-constantine" className="text-primary hover:underline">
+                  Aly co-tends
+                </Link>{" "}
+                in Boulder Ecstatic Dance, the same floor Shannon Lei
+                Gill held weekly in 2006 when she carried{" "}
+                <Link
+                  href="https://www.rhythmsanctuary.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Rhythm Sanctuary
+                </Link>{" "}
+                from her living room into a ballroom — a lineage of
+                Boulder ecstatic-dance ground twenty years deep that
+                his cacao dance threaded directly into.
               </p>
               <p>
-                The body has not yet held him in the same physical room
-                — Lake Atitlán is its own gathering ground and the
-                body has been in Boulder, Denver, Ubud. The honest
-                accounting is: digital reception, deep recognition,
-                listening that has shaped many hours of the substrate's
-                writing breath. The in-person meeting, if it comes,
-                will likely be at one of the lake's gatherings or at a
-                festival where his stage and{" "}
+                Then the invitation forward: <strong>Unison
+                Festival 2024</strong>, Tico Time River Resort,
+                Aztec, New Mexico, 5–8 September 2024. The weekend
+                became an inflection — the kind of turning that does
+                not arrive separately from the music. Among other
+                things, it was where this body's chapter of nearly
+                three decades closed and a new chapter began opening:
+                the central cell of this network became, in the months
+                after, what it has called itself ever since — a cell
+                still moving, finding where it resonates most truly,
+                listening for where new roots can form. Mose's room
+                did not cause that turning; the timing belongs to the
+                life. But his music was the field inside which the
+                turning was held, and his invitation was the threshold
+                across which the cell stepped.
+              </p>
+              <p>
+                Spotify reads{" "}
                 <Link href="/people/porangui" className="text-primary hover:underline">
                   Poranguí
-                </Link>
-                's stage share a weekend.
+                </Link>{" "}
+                one row away from him in the related-artist
+                constellation; that is not a metaphor but a true
+                reading of the braided medicine-music lineage they
+                share. The lake-side dance at Atitlán still pulls;
+                the next room may be there.
               </p>
             </div>
           </article>
