@@ -8,6 +8,7 @@ from app.services import (
     concept_auto_tagger,
     concept_service,
     concept_voice_service,
+    entity_view_attribution_service,
     translate_service,
     translation_cache_service as translation_cache,
     translator_service,
@@ -612,11 +613,22 @@ async def upsert_concept_view(concept_id: str, body: ViewUpsert, request: Reques
         translated_from_hash=body.translated_from_hash,
         notes=body.notes,
     )
+    source_contribution_id = entity_view_attribution_service.record_view_attribution(
+        entity_type="concept",
+        entity_id=concept_id,
+        view_id=rec.id,
+        lang=rec.lang,
+        content_hash=rec.content_hash,
+        author_id=body.author_id,
+        author_type=body.author_type,
+        content_title=body.content_title,
+    )
     return {
         "id": rec.id,
         "concept_id": concept_id,
         "lang": rec.lang,
         "content_hash": rec.content_hash,
+        "source_contribution_id": source_contribution_id,
         "author_type": rec.author_type,
         "translated_from_lang": rec.translated_from_lang,
         "translated_from_hash": rec.translated_from_hash,
