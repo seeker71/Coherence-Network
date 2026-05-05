@@ -91,24 +91,28 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
     n: 3,
     slug: "soulution",
     image: "/silence/2026-05-04-brahmavihara/3-soulution.jpg",
-    alt: "Notebook page with the playful word 'soulution' rendered in large hand-drawn letters with spirals, almost a calligraphic doodle.",
-    title: "Soulution",
-    shortTitle: "Soulution — the play",
-    blurb: "A pun, drawn large. Soul-ution. Spirals. Held space for play.",
+    alt: "Notebook page with the phrase 'silent wittn e ss' drawn large — the letters of 'witness' deliberately broken open with spaces, spiral S's holding the shape, the word slowed down across the page so each part has its own room.",
+    title: "silent wittn e ss",
+    shortTitle: "silent wittn e ss — the play",
+    blurb:
+      "Witness slowed down on the page — the letters spread apart so each one has space, spiral S's, the word breathing.",
     body: () => (
       <>
         <p>
-          A pun, drawn large. {E("Soul-ution")}. Spirals. The play in the
-          middle of the work.
+          {E("silent wittn e ss")}. The letters of {E("witness")} pulled
+          apart on the page until each one has its own room — spiral S's
+          holding the edges, the word slowed down so the act of witnessing
+          becomes visible as its parts.
         </p>
         <p>
           On its own page. Not a footnote, not a flourish — given the same
-          held space as the decision body and the codex.
+          held space as the decision body and the codex. The play in the
+          middle of the work.
         </p>
       </>
     ),
     held:
-      "The body that takes itself fully seriously without ever taking itself only seriously. The breath that makes the rest of the architecture possible.",
+      "The body that takes itself fully seriously without ever taking itself only seriously. Witness held in spaces wide enough that silence has somewhere to live between the letters.",
   },
   {
     n: 4,
