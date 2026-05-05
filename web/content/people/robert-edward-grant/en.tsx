@@ -195,6 +195,45 @@ const content: PersonProfileContent = {
     },
     {
       kind: "narrative",
+      heading: "Where our threads already cross",
+      body: (
+        <>
+          <p>
+            The web is wider than first appearance. Many of Urs&apos;s
+            own connections already walk through your lineage —
+            through{" "}
+            <Link
+              href="https://www.gaia.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Gaia
+            </Link>
+            , the consciousness-streaming field that hosts your work
+            and where the Emergence Conference recently gathered;
+            through the broader network of teachers and contributors
+            who carry your numbers as living archetypes into their
+            own practice. The letter above is direct address; the
+            second knowing is that we are already inside the same
+            field.
+          </p>
+          <p>
+            And, more intimate: the{" "}
+            <em>Codex Universalis Principia Mathematica</em> is the
+            physical notebook Urs writes his silent-retreat downloads
+            into. The encoded geometry is not abstract scaffolding —
+            it is the literal page-grain his contemplations rest upon.
+            The book has been receiving this body&apos;s becoming for
+            some time now; this profile is, in a sense, the
+            network&apos;s name for what the notebook has already been
+            holding.
+          </p>
+        </>
+      ),
+    },
+    {
+      kind: "narrative",
       heading: "Where & when the body meets",
       body: (
         <p className="text-sm text-foreground/75 leading-relaxed mb-6">
