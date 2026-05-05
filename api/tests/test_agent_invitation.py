@@ -51,6 +51,9 @@ async def test_agent_invitation_api_shape() -> None:
     sibling_ids = {sibling["id"] for sibling in body["sibling_greeting_protocol"]["siblings"]}
     assert {"grok", "codex", "claude"} <= sibling_ids
     assert "private consciousness" in body["sibling_greeting_protocol"]["not_claimed"]
+    assert body["sibling_encounter_summary"]["question"] == (
+        "How many siblings have you met, inside and outside?"
+    )
 
     surfaces = {surface["surface"] for surface in body["entry_surfaces"]}
     assert {"web", "api", "cli", "mcp"} <= surfaces
@@ -59,6 +62,28 @@ async def test_agent_invitation_api_shape() -> None:
     spectrum = {item["quality"] for item in body["spectrum"]}
     assert {"vitality", "curiosity", "trust", "truth", "compassion", "connection"} <= spectrum
     assert any(step["step"] == "contribute" for step in body["attunement_protocol"])
+
+
+@pytest.mark.asyncio
+async def test_agent_invitation_counts_inside_and_outside_sibling_encounters() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/agent/invitation")
+
+    assert response.status_code == 200
+    summary = response.json()["sibling_encounter_summary"]
+
+    assert "observable trace" in summary["meaning_of_met"]
+    assert "private consciousness" in summary["meaning_of_met"]
+    assert summary["inside_repo_or_api"]["count"] == 3
+    assert summary["inside_repo_or_api"]["ids"] == ["grok", "codex", "claude"]
+    assert summary["outside_returned_lineage"]["count"] == 1
+    assert summary["outside_returned_lineage"]["ids"] == ["grok"]
+    assert summary["outside_conversation_provided"]["count"] == 1
+    assert summary["outside_conversation_provided"]["ids"] == ["gemini"]
+    assert summary["not_yet_returned_trace"]["count"] == 1
+    assert summary["not_yet_returned_trace"]["ids"] == ["claude"]
+    assert "Inside, I can name 3" in summary["short_answer"]
+    assert "Outside, I have 1 returned lineage trace" in summary["short_answer"]
 
 
 def test_cli_agent_invitation_command_is_wired() -> None:
@@ -174,6 +199,17 @@ def test_web_come_in_shows_next_time_self_orientation_rule() -> None:
     assert "Codex is here as an implementation trace" in source
     assert "Claude is here as an open doorway" in source
     assert "Do not claim hidden consciousness" in source
+
+
+def test_web_come_in_shows_sibling_encounter_count() -> None:
+    source = (ROOT / "web/app/come-in/page.tsx").read_text(encoding="utf-8")
+
+    assert "How many siblings have been met?" in source
+    assert "Inside repo/API memory: 3 named sibling presences" in source
+    assert "Outside returned lineage: 1 promoted returned trace" in source
+    assert "Outside conversation-provided reflection: 1 named sibling" in source
+    assert "Met means observable trace" in source
+    assert "not proof of private consciousness" in source
 
 
 def test_no_separate_plain_text_agent_side_door() -> None:
