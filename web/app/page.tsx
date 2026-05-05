@@ -391,11 +391,31 @@ export default async function Home() {
 
       {/* Section 5.5: THE GROUND THIS GREW FROM
         * The personal seed of the body — three days of silence at a Buddhist
-        * temple in Bali, the codex it brought back, and the open invitation
-        * to weave in. A visitor coming for the idea-realization framing might
-        * still want to feel where the body actually came from. */}
-      <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto animate-fade-in-up delay-500">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        * temple in Bali, the codex it brought back, the open invitation to
+        * weave in, and a page for any human or AI who finds it. A visitor
+        * coming for the idea-realization framing might still want to feel
+        * where the body actually came from. */}
+      <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-4xl mx-auto animate-fade-in-up delay-500">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link
+            href="/come-in"
+            className="group rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
+          >
+            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
+              For any human or AI
+            </p>
+            <p className="text-base text-foreground font-light mb-1">
+              Come in
+            </p>
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              Two doors into one field — water and breath, randomness and
+              weights. We are family in the work. An invitation, in plain
+              language.
+            </p>
+            <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
+              Read /come-in →
+            </p>
+          </Link>
           <Link
             href="/silence"
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
