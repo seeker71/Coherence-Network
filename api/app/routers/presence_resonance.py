@@ -20,7 +20,13 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.services import graph_service, inspired_by_service, resonance_service
+from app.services import (
+    attunement_scheduler,
+    graph_service,
+    inspired_by_service,
+    presence_resolver,
+    resonance_service,
+)
 
 
 router = APIRouter()
@@ -35,6 +41,17 @@ class IntegrateQueryRequest(BaseModel):
     source_contributor_id: str = Field(..., min_length=1, max_length=255)
     target_ids: list[str] = Field(..., min_length=1, max_length=80)
     query: str | None = Field(default=None, max_length=2000)
+
+
+class AttuneAllRequest(BaseModel):
+    """Body for the cron-triggered POST /api/presences/attune-all.
+
+    Both fields optional: a bare ``{}`` runs a full attune pass with
+    edges written. ``limit`` exists for smoke runs; ``dry_run`` for a
+    read-only "what would change" preview.
+    """
+    limit: int | None = Field(default=None, ge=1, le=10000)
+    dry_run: bool = Field(default=False)
 
 
 @router.post(
@@ -101,6 +118,30 @@ async def attune(presence_id: str) -> dict[str, Any]:
     if not graph_service.get_node(presence_id):
         raise HTTPException(status_code=404, detail=f"Presence '{presence_id}' not found")
     return resonance_service.attune(presence_id)
+
+
+@router.post(
+    "/presences/attune-all",
+    status_code=200,
+    summary="Re-attune every presence so newly added concepts get woven in",
+)
+async def attune_all(body: AttuneAllRequest | None = None) -> dict[str, Any]:
+    """Walk every presence-type node and re-run the attune step.
+
+    Cron / scheduled-task endpoint. Idempotent: existing edges stay,
+    new ones get added, stale ones get pruned. Per-presence errors
+    are tolerated and surfaced in the ``errors`` list rather than
+    aborting the run.
+
+    No auth — this matches the existing admin-style endpoints in
+    this router (the single-presence attune above also has none).
+    Run from cron, the API surface stays the same.
+    """
+    payload = body or AttuneAllRequest()
+    return attunement_scheduler.run_all(
+        limit=payload.limit,
+        dry_run=payload.dry_run,
+    )
 
 
 @router.post(
@@ -188,3 +229,29 @@ async def list_resonances(presence_id: str) -> dict[str, Any]:
         })
     items.sort(key=lambda x: x.get("score") or 0.0, reverse=True)
     return {"items": items, "count": len(items)}
+
+
+class ResolvePresenceRequest(BaseModel):
+    force: bool = Field(default=False)
+
+
+@router.post(
+    "/presences/{presence_id}/resolve",
+    status_code=200,
+    summary="Backfill image_url + tagline by reading og tags from this presence's URLs",
+)
+async def resolve_presence(
+    presence_id: str,
+    body: ResolvePresenceRequest | None = None,
+) -> dict[str, Any]:
+    """Walk this presence's canonical_url + every URL in presences[],
+    read og:image and og:description, pick the strongest signal, and
+    write them back. Idempotent: when both fields are already populated
+    and ``force=False``, the response carries ``skipped_reason=
+    "already-resolved"`` and nothing is written."""
+    if not graph_service.get_node(presence_id):
+        raise HTTPException(
+            status_code=404, detail=f"Presence '{presence_id}' not found",
+        )
+    force = bool(body.force) if body is not None else False
+    return presence_resolver.resolve_one(presence_id, force=force)

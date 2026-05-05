@@ -90,6 +90,7 @@ from app.routers import constellation as constellation_router
 from app.routers import inspired_by as inspired_by_router
 from app.routers import gatherings as gatherings_router
 from app.routers import presence_resonance as presence_resonance_router
+from app.routers import places as places_router
 from app.routers import vitality as vitality_router
 from app.middleware.attribution import AttributionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -702,6 +703,7 @@ app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(inspired_by_router.router, prefix="/api", tags=["inspired-by"])
 app.include_router(gatherings_router.router, prefix="/api", tags=["gatherings"])
 app.include_router(presence_resonance_router.router, prefix="/api", tags=["presence-resonance"])
+app.include_router(places_router.router, prefix="/api", tags=["places"])
 
 # Auto-index repository content on startup
 @app.on_event("startup")
