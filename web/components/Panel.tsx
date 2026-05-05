@@ -38,6 +38,8 @@
 
 import type { ReactNode } from "react";
 
+import { AttributedExternalLink, AttributedInternalLink } from "@/components/content/AttributedExternalLink";
+
 export type PanelVariant = "warm" | "cool" | "neutral" | "empty";
 
 interface PanelProps {
@@ -222,13 +224,25 @@ export function PanelLink({
   const externalProps = external
     ? { target: "_blank" as const, rel: "noopener noreferrer" as const }
     : {};
+  const className = `inline-flex items-center gap-1 text-sm font-medium ${color}`;
+  if (external) {
+    return (
+      <AttributedExternalLink
+        href={href}
+        entityId={href}
+        {...externalProps}
+        className={className}
+      >
+        {children}
+      </AttributedExternalLink>
+    );
+  }
   return (
-    <a
+    <AttributedInternalLink
       href={href}
-      {...externalProps}
-      className={`inline-flex items-center gap-1 text-sm font-medium ${color}`}
+      className={className}
     >
       {children}
-    </a>
+    </AttributedInternalLink>
   );
 }

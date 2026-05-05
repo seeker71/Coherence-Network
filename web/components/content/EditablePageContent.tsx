@@ -212,12 +212,18 @@ export function PageReadPing({
 export function EditablePageMarkdown({
   pageId,
   className,
+  containerClassName,
 }: {
   pageId: string;
   className?: string;
+  containerClassName?: string;
 }) {
   const view = usePageView(pageId);
   const markdown = view?.content_markdown?.trim() || "";
   if (!markdown) return null;
-  return <MarkdownBlocks content={markdown} className={className} />;
+  const blocks = <MarkdownBlocks content={markdown} className={className} />;
+  if (containerClassName) {
+    return <div className={containerClassName}>{blocks}</div>;
+  }
+  return blocks;
 }

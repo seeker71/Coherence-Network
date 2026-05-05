@@ -6,6 +6,7 @@ import json
 import uuid
 
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 
@@ -151,6 +152,7 @@ def test_idea_detail_projects_canonical_content_view():
     body = detail.json()
     assert body["name"] == "Projected idea title"
     assert body["description"] == "Projected idea description"
+    assert body["content_markdown"] == "# Projected idea"
 
 
 def test_page_entity_view_records_source_and_attention():
@@ -186,6 +188,88 @@ def test_page_entity_view_records_source_and_attention():
             "entity_type": "page",
             "entity_id": page_id,
             "source_page": f"/{page_id}",
+        },
+        headers={"X-Contributor-Id": viewer_id},
+    )
+
+    assert ping.status_code == 200, ping.text
+    ping_body = ping.json()
+    assert ping_body["credited_source_contribution_id"] == source_contribution_id
+    assert ping_body["attention_contribution_id"].startswith("clr_")
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "entity_id", "asset_id", "source_page"),
+    [
+        ("page", "home", "page:home", "/"),
+        ("page", "automation", "page:automation", "/automation"),
+        ("page", "begin", "page:begin", "/begin"),
+        ("page", "blog", "page:blog", "/blog"),
+        ("page", "come-in", "page:come-in", "/come-in"),
+        ("page", "contribute", "page:contribute", "/contribute"),
+        ("page", "feed", "page:feed", "/feed"),
+        ("page", "feed-you", "page:feed-you", "/feed/you"),
+        ("page", "friction", "page:friction", "/friction"),
+        ("page", "here", "page:here", "/here"),
+        ("page", "identity", "page:identity", "/identity"),
+        ("page", "invest", "page:invest", "/invest"),
+        ("page", "nodes", "page:nodes", "/nodes"),
+        ("page", "one-sheet", "page:one-sheet", "/one-sheet"),
+        ("page", "people", "page:people", "/people"),
+        ("page", "pipeline", "page:pipeline", "/pipeline"),
+        ("page", "propose", "page:propose", "/propose"),
+        ("page", "resonance", "page:resonance", "/resonance"),
+        ("page", "search", "page:search", "/search"),
+        ("page", "share", "page:share", "/share"),
+        ("page", "silence", "page:silence", "/silence"),
+        ("page", "specs", "page:specs", "/specs"),
+        ("page", "treasury", "page:treasury", "/treasury"),
+        ("page", "vision", "page:vision", "/vision"),
+        ("page", "with-us", "page:with-us", "/with-us"),
+        ("idea", "oss-interface-alignment", "oss-interface-alignment", "/ideas/oss-interface-alignment"),
+        ("idea", "portfolio-governance", "portfolio-governance", "/ideas/portfolio-governance"),
+        ("idea", "social-platform-bots", "social-platform-bots", "/ideas/social-platform-bots"),
+        ("concept", "lc-pulse", "lc-pulse", "/vision/lc-pulse"),
+        ("concept", "lc-nourishing", "lc-nourishing", "/meet/concept/lc-nourishing"),
+        ("spec", "006-overnight-backlog", "006-overnight-backlog", "/specs/006-overnight-backlog"),
+        ("asset", "api-docs", "api-docs", "https://api.coherencycoin.com/docs"),
+        ("asset", "github-coherence-network", "github-coherence-network", "https://github.com/seeker71/Coherence-Network"),
+        ("asset", "npm:coherence-cli", "npm:coherence-cli", "https://www.npmjs.com/package/coherence-cli"),
+        ("asset", "npm:coherence-mcp-server", "npm:coherence-mcp-server", "https://www.npmjs.com/package/coherence-mcp-server"),
+        ("asset", "openclaw-skill:coherence-network", "openclaw-skill:coherence-network", "https://clawhub.ai/skills/coherence-network"),
+    ],
+)
+def test_home_link_entities_record_source_and_attention(
+    entity_type: str,
+    entity_id: str,
+    asset_id: str,
+    source_page: str,
+):
+    author_id = f"{entity_type}-author-{uuid.uuid4().hex[:8]}"
+    viewer_id = f"{entity_type}-viewer-{uuid.uuid4().hex[:8]}"
+
+    view = client.post(
+        f"/api/entity-views/{entity_type}/{entity_id}",
+        json={
+            "lang": "en",
+            "content_title": f"Attributed {entity_type} title",
+            "content_description": f"Attributed {entity_type} description",
+            "content_markdown": "## Home-linked body\n\nThis copy came from the content API.",
+            "author_type": "original_human",
+            "author_id": author_id,
+        },
+    )
+    assert view.status_code == 200, view.text
+    source_contribution_id = view.json()["source_contribution_id"]
+    assert source_contribution_id.startswith("clr_")
+
+    ping = client.post(
+        "/api/views/ping",
+        json={
+            "asset_id": asset_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "source_page": source_page,
         },
         headers={"X-Contributor-Id": viewer_id},
     )

@@ -187,6 +187,10 @@ class Idea(BaseModel):
 class IdeaWithScore(Idea):
     free_energy_score: float = Field(ge=0.0)
     value_gap: float = Field(ge=0.0)
+    content_markdown: str = Field(
+        default="",
+        description="Canonical attributed content body for this idea, when supplied through entity views.",
+    )
     marginal_cc_score: float = Field(default=0.0, ge=0.0)
     selection_weight: float = Field(
         default=0.0,

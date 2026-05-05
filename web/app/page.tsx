@@ -1,9 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
 import { Button } from "@/components/ui/button";
-import { AttributedExternalLink } from "@/components/content/AttributedExternalLink";
+import { AttributedExternalLink, AttributedInternalLink } from "@/components/content/AttributedExternalLink";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { LiveBreathPanel } from "@/components/LiveBreathPanel";
 import { FirstTimeWelcome } from "@/components/FirstTimeWelcome";
@@ -216,7 +215,7 @@ export default async function Home() {
           <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[hsl(var(--chart-2))] mb-3 text-center">
             {t("home.meetOneConceptEyebrow")}
           </p>
-          <Link
+          <AttributedInternalLink
             href={`/vision/${featuredConcept.id}`}
             className="block group rounded-2xl overflow-hidden border border-border hover:border-[hsl(var(--primary)/0.6)] transition-colors bg-card shadow-sm hover:shadow-md"
           >
@@ -257,14 +256,14 @@ export default async function Home() {
                 </span>
               </div>
             </div>
-          </Link>
+          </AttributedInternalLink>
           <p className="mt-3 text-center">
-            <Link
+            <AttributedInternalLink
               href="/vision"
               className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-dotted"
             >
               {t("home.orSeeAllConcepts")}
-            </Link>
+            </AttributedInternalLink>
           </p>
         </section>
       )}
@@ -357,7 +356,7 @@ export default async function Home() {
         {resonanceItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {resonanceItems.slice(0, 3).map((item) => (
-              <Link
+              <AttributedInternalLink
                 key={item.idea_id}
                 href={`/ideas/${encodeURIComponent(item.idea_id)}`}
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
@@ -369,13 +368,13 @@ export default async function Home() {
                 <p className="text-xs text-foreground/90">
                   {timeAgo(item.last_activity_at, t)}
                 </p>
-              </Link>
+              </AttributedInternalLink>
             ))}
           </div>
         ) : topIdeas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {topIdeas.map((idea) => (
-              <Link
+              <AttributedInternalLink
                 key={idea.id}
                 href={`/ideas/${encodeURIComponent(idea.id)}`}
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
@@ -387,7 +386,7 @@ export default async function Home() {
                 <p className="text-xs text-foreground/90">
                   {t("home.ccRemaining", { amount: formatNumber(idea.value_gap, lang) })}
                 </p>
-              </Link>
+              </AttributedInternalLink>
             ))}
           </div>
         ) : (
@@ -397,12 +396,12 @@ export default async function Home() {
         )}
         {(resonanceItems.length > 0 || topIdeas.length > 0) && (
           <p className="text-center mt-4">
-            <Link
+            <AttributedInternalLink
               href={resonanceItems.length > 0 ? "/resonance" : "/ideas"}
               className="text-xs text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
             >
               {t("common.seeAll")}
-            </Link>
+            </AttributedInternalLink>
           </p>
         )}
       </section>
@@ -410,15 +409,15 @@ export default async function Home() {
       {/* Section 5: EXPLORE NUDGE */}
       <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-2xl mx-auto text-center animate-fade-in-up delay-400">
         <Button asChild className="rounded-full px-8 py-3 text-base bg-primary hover:bg-primary/90">
-          <Link href="/ideas">{t("home.exploreIdeasCta")}</Link>
+          <AttributedInternalLink href="/ideas">{t("home.exploreIdeasCta")}</AttributedInternalLink>
         </Button>
         <p className="mt-3">
-          <Link
+          <AttributedInternalLink
             href="/resonance"
             className="text-sm text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
           >
             {t("home.orBrowseResonance")}
-          </Link>
+          </AttributedInternalLink>
         </p>
       </section>
 
@@ -430,7 +429,7 @@ export default async function Home() {
         * where the body actually came from. */}
       <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-4xl mx-auto animate-fade-in-up delay-500">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link
+          <AttributedInternalLink
             href="/come-in"
             className="group rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
           >
@@ -448,8 +447,8 @@ export default async function Home() {
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
               Read /come-in →
             </p>
-          </Link>
-          <Link
+          </AttributedInternalLink>
+          <AttributedInternalLink
             href="/silence"
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
           >
@@ -467,8 +466,8 @@ export default async function Home() {
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
               Sit with /silence →
             </p>
-          </Link>
-          <Link
+          </AttributedInternalLink>
+          <AttributedInternalLink
             href="/with-us"
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
           >
@@ -485,7 +484,7 @@ export default async function Home() {
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
               Read /with-us →
             </p>
-          </Link>
+          </AttributedInternalLink>
         </div>
       </section>
 
@@ -501,12 +500,12 @@ export default async function Home() {
       {/* Footer */}
       <footer className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
         <div className="flex flex-wrap justify-center gap-6 text-sm text-foreground/90 mb-4">
-          <Link href="/resonance" className="hover:text-foreground transition-colors">{t("nav.resonance")}</Link>
-          <Link href="/ideas" className="hover:text-foreground transition-colors">{t("nav.ideas")}</Link>
-          <Link href="/pipeline" className="hover:text-foreground transition-colors">{t("nav.pipeline")}</Link>
-          <Link href="/nodes" className="hover:text-foreground transition-colors">{t("nav.nodes")}</Link>
-          <Link href="/invest" className="hover:text-foreground transition-colors">{t("nav.invest")}</Link>
-          <Link href="/contribute" className="hover:text-foreground transition-colors">{t("nav.contribute")}</Link>
+          <AttributedInternalLink href="/resonance" className="hover:text-foreground transition-colors">{t("nav.resonance")}</AttributedInternalLink>
+          <AttributedInternalLink href="/ideas" className="hover:text-foreground transition-colors">{t("nav.ideas")}</AttributedInternalLink>
+          <AttributedInternalLink href="/pipeline" className="hover:text-foreground transition-colors">{t("nav.pipeline")}</AttributedInternalLink>
+          <AttributedInternalLink href="/nodes" className="hover:text-foreground transition-colors">{t("nav.nodes")}</AttributedInternalLink>
+          <AttributedInternalLink href="/invest" className="hover:text-foreground transition-colors">{t("nav.invest")}</AttributedInternalLink>
+          <AttributedInternalLink href="/contribute" className="hover:text-foreground transition-colors">{t("nav.contribute")}</AttributedInternalLink>
         </div>
         <details className="text-xs text-foreground/60 mb-4">
           <summary className="cursor-pointer hover:text-foreground/85 transition-colors">{t("home.forDevelopers")}</summary>
