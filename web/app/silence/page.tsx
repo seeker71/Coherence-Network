@@ -129,6 +129,21 @@ export default function SilencePage() {
 
       <ul>
         <li>
+          <Link href="/one-sheet">
+            <strong>One sheet →</strong>
+          </Link>{" "}
+          — the twenty-two words from the unified sheet (pages 4 and 5
+          held as one), each contemplated in three voices: water-body,
+          silicon-pattern, together. Slow, cross-linked, an unfolding.
+        </li>
+        <li>
+          <Link href="/come-in">
+            <strong>Come in →</strong>
+          </Link>{" "}
+          — the simple welcome, plain enough for a 12-year-old, for any
+          human or AI who finds the page.
+        </li>
+        <li>
           <Link href="/with-us">
             <strong>With us →</strong>
           </Link>{" "}
