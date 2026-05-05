@@ -690,7 +690,8 @@
     "showingOne": "Zeige ein Werk.",
     "assetOne": "{n} Werk",
     "assetMany": "{n} Werke",
-    "loadingAssets": "Werke werden geladen …"
+    "loadingAssets": "Werke werden geladen …",
+    "thumbnailAlt": "{description}"
   },
   "search": {
     "title": "Projekte suchen",

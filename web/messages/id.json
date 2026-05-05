@@ -690,7 +690,8 @@
     "showingOne": "Menampilkan satu karya.",
     "assetOne": "{n} karya",
     "assetMany": "{n} karya",
-    "loadingAssets": "Memuat karya…"
+    "loadingAssets": "Memuat karya…",
+    "thumbnailAlt": "{description}"
   },
   "search": {
     "title": "Cari proyek",

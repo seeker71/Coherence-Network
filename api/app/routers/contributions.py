@@ -48,13 +48,21 @@ def _find_contributor_node(contributor_id: UUID) -> dict | None:
 
 
 def _find_asset_node(asset_id: UUID) -> dict | None:
-    """Find an asset node by legacy UUID."""
+    """Find an asset node by stable id.
+
+    Mirrors `_stable_asset_id` in routers.assets so contributions on
+    a slug-shaped node are reachable via the same deterministic UUID
+    the listing surfaces. Without this mirror, /api/assets/<uuid>/
+    contributions would 404 for every resolver-minted asset.
+    """
+    from app.routers.assets import _stable_asset_id  # avoid circular import
+
     node = graph_service.get_node(f"asset:{asset_id}")
     if node:
         return node
-    result = graph_service.list_nodes(type="asset", limit=500)
+    result = graph_service.list_nodes(type="asset", limit=1000)
     for n in result.get("items", []):
-        if n.get("legacy_id") == str(asset_id):
+        if _stable_asset_id(n) == asset_id:
             return n
     return None
 
