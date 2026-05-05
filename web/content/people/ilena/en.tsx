@@ -12,6 +12,7 @@ const content: PersonProfileContent = {
     background:
       "radial-gradient(ellipse at 75% 20%, hsl(40 80% 68% / 0.65) 0%, transparent 55%), radial-gradient(ellipse at 15% 90%, hsl(155 50% 20% / 0.7) 0%, transparent 60%), radial-gradient(ellipse at 50% 50%, hsl(28 35% 45% / 0.35) 0%, transparent 70%), linear-gradient(180deg, hsl(38 65% 72%) 0%, hsl(30 40% 55%) 30%, hsl(140 30% 30%) 65%, hsl(155 55% 16%) 100%)",
     eyebrow: "Ubud · long-tender of Ranakami",
+    eyebrowClass: "text-[hsl(var(--chart-2))]",
     name: "Ilena Young",
     welcome: (
       <>

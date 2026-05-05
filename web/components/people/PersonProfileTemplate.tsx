@@ -51,6 +51,14 @@ export type PersonProfileContent = {
     extraImage?: { src: string; opacityClass?: string; mixBlendClass?: string };
     overlayClass?: string;
     eyebrow: ReactNode;
+    /**
+     * Tailwind classes applied to the eyebrow. Defaults to a subtle
+     * muted gray (`text-muted-foreground`) which matches most pages.
+     * Pages that want warmth can pass `text-[hsl(var(--primary))]`
+     * (gold) or `text-[hsl(var(--chart-2))]` (teal); pages with
+     * richer eyebrows commonly tone toward teal.
+     */
+    eyebrowClass?: string;
     name: ReactNode;
     welcome: ReactNode;
   };
@@ -121,17 +129,19 @@ export function PersonProfileTemplate({
             <span className="text-foreground/80">{content.breadcrumbName}</span>
           </nav>
 
-          <p className="text-xs uppercase tracking-[0.18em] text-[hsl(var(--primary))] mb-3">
+          <p
+            className={`text-xs uppercase tracking-[0.18em] mb-3 ${hero.eyebrowClass ?? "text-muted-foreground"}`}
+          >
             {hero.eyebrow}
           </p>
           <h1 className="text-5xl md:text-7xl font-extralight text-foreground leading-tight mb-5">
             {hero.name}
           </h1>
-          <div className="text-lg md:text-xl text-foreground/90 leading-relaxed max-w-2xl">
+          <div className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
             {hero.welcome}
           </div>
           {content.facts && content.facts.length > 0 && (
-            <dl className="mt-7 text-sm text-foreground/95 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 max-w-2xl">
+            <dl className="mt-7 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 max-w-2xl">
               {content.facts.map((fact, i) => (
                 <FactRow key={i} fact={fact} />
               ))}

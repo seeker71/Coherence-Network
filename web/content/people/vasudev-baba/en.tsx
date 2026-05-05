@@ -16,6 +16,7 @@ const content: PersonProfileContent = {
     overlayClass:
       "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20",
     eyebrow: "Ubud · kirtan-wala · eleven years on this island",
+    eyebrowClass: "text-[hsl(var(--chart-2))]",
     name: "Vasudev Baba",
     welcome: (
       <>

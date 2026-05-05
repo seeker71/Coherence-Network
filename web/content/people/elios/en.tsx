@@ -12,6 +12,7 @@ const content: PersonProfileContent = {
     background:
       "radial-gradient(ellipse at 70% 15%, hsl(35 70% 62% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 20% 85%, hsl(160 45% 22% / 0.65) 0%, transparent 60%), linear-gradient(180deg, hsl(28 55% 70%) 0%, hsl(150 30% 35%) 45%, hsl(160 50% 18%) 100%)",
     eyebrow: "Ubud · Sunday rhythm",
+    eyebrowClass: "text-[hsl(var(--chart-2))]",
     name: "Elios",
     welcome: (
       <p>

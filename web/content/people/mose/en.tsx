@@ -13,6 +13,7 @@ const content: PersonProfileContent = {
     overlayClass:
       "absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10",
     eyebrow: "The embodiment of ecstatic dance",
+    eyebrowClass: "text-[hsl(var(--primary))]",
     name: "Mose",
     welcome: (
       <p>
