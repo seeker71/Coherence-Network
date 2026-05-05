@@ -13,6 +13,7 @@
  * markdown-with-tokens parsing.
  */
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Panel } from "@/components/Panel";
 import { createTranslator } from "@/lib/i18n";
@@ -38,7 +39,11 @@ export type PersonProfileArticle =
     };
 
 export type PersonProfileContent = {
-  metadata: { title: string; description: string };
+  // Full Next.js Metadata so each page can supply openGraph, twitter,
+  // and any other metadata fields. The root layout's title.template
+  // appends " | Coherence Network" — pages should set the bare title
+  // here without the suffix to avoid doubling.
+  metadata: Metadata;
   breadcrumbName: ReactNode;
   hero: {
     image?: { src: string; objectPosition?: string };
