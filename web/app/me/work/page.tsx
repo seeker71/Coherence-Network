@@ -16,8 +16,11 @@
  */
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { readIdentity } from "@/lib/identity";
+import { useT } from "@/components/MessagesProvider";
+import { L } from "@/components/inline-link";
 
 interface BodyOfWork {
   display_name: string;
@@ -75,6 +78,34 @@ function isFounder(name: string, contributorId: string): boolean {
   );
 }
 
+// Render markdown-style inline [label](href) links inside translated prose.
+function renderProse(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const [, label, href] = m;
+    parts.push(
+      <L key={`l${key++}`} href={href}>
+        {label}
+      </L>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+// Trivial {placeholder} interpolation for translated strings.
+function interp(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k) =>
+    vars[k] === undefined ? `{${k}}` : String(vars[k]),
+  );
+}
+
 function StatTile({
   label,
   value,
@@ -101,6 +132,7 @@ function StatTile({
 }
 
 export default function BodyOfWorkPage() {
+  const t = useT();
   const [identity, setIdentity] = useState<ReturnType<typeof readIdentity> | null>(null);
 
   useEffect(() => {
@@ -110,72 +142,46 @@ export default function BodyOfWorkPage() {
   if (!identity) {
     return (
       <main className="mx-auto max-w-2xl px-4 sm:px-6 py-12">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("meWork.loading")}</p>
       </main>
     );
   }
 
   const founder = isFounder(identity.name, identity.contributorId);
   const work = founder ? FOUNDER_BODY_OF_WORK : null;
+  const displayName = identity.name || t("meWork.h1Default");
 
   return (
     <main className="mx-auto max-w-3xl px-4 sm:px-6 py-12 space-y-10">
       <div>
         <p className="text-xs uppercase tracking-widest text-muted-foreground">
           <Link href="/me" className="text-muted-foreground/80 hover:text-amber-400">
-            ← Your presence
+            {t("meWork.breadcrumbBack")}
           </Link>{" "}
-          · Body of work
+          · {t("meWork.breadcrumbCurrent")}
         </p>
         <h1 className="text-3xl font-light tracking-tight text-stone-100 mt-2">
-          What {identity.name || "you"} have built
+          {interp(t("meWork.h1Template"), { name: displayName })}
         </h1>
         <p className="text-base text-stone-300 mt-4 leading-relaxed">
-          Every{" "}
-          <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
-            cell
-          </Link>{" "}
-          that builds something becomes part of{" "}
-          <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
-            the body's memory
-          </Link>
-          . This is the body's record of your authorship — verifiable
-          against the git history, the spec registry, the concept wiki,
-          the merged PRs. Not a curated feed; the ground truth. The
-          contemplation of memory across substrates lives at{" "}
-          <Link href="/one-sheet#memory" className="text-amber-400 hover:text-amber-300">
-            /one-sheet — Memory
-          </Link>
-          .
+          {renderProse(t("meWork.intro"))}
         </p>
       </div>
 
       {!work ? (
         <section className="rounded-2xl border border-border/30 bg-card/30 p-6 space-y-3">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            Your record is being computed
+            {t("meWork.emptyEyebrow")}
           </p>
           <p className="text-sm text-stone-300 leading-relaxed">
-            Per-contributor body-of-work view is being wired to the live
-            graph + git history. For now, you can see the founder's work
-            as an example of what this surface holds, and your own work
-            will appear here as soon as the endpoint lands. While you
-            wait, two ways to add to the record:{" "}
-            <Link href="/share" className="text-amber-400 hover:text-amber-300">
-              /share
-            </Link>{" "}
-            registers a service or offering;{" "}
-            <Link href="/begin" className="text-amber-400 hover:text-amber-300">
-              /begin
-            </Link>{" "}
-            tells the body more about who's arriving.
+            {renderProse(t("meWork.emptyBody"))}
           </p>
           <p className="text-sm">
             <Link
               href="https://github.com/seeker71/Coherence-Network"
               className="text-amber-400 hover:text-amber-300"
             >
-              Verify on GitHub →
+              {t("meWork.verifyOnGithub")}
             </Link>
           </p>
         </section>
@@ -183,88 +189,66 @@ export default function BodyOfWorkPage() {
         <>
           <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-2">
             <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-amber-500">
-              Where the truth lives
+              {t("meWork.truthEyebrow")}
             </p>
             <p className="text-sm text-stone-200 leading-relaxed">
-              The numbers below are direct counts from git, the spec
-              directory, and the GitHub PR history. Every claim verifiable
-              at{" "}
-              <a
-                href={work.github_url}
-                className="text-amber-400 hover:text-amber-300 underline-offset-4 underline decoration-amber-500/40"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                github.com/seeker71/Coherence-Network
-              </a>
-              . Last computed 2026-05-05.
+              {renderProse(interp(t("meWork.truthBody"), { githubUrl: work.github_url }))}
             </p>
           </section>
 
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatTile
-              label="Commits"
+              label={t("meWork.stats.commits")}
               value={work.commits.toLocaleString()}
-              hint={`as ${work.github_handle}, urs-muff, Urs Muff`}
+              hint={interp(t("meWork.stats.commitsHint"), { handle: work.github_handle })}
             />
             <StatTile
-              label="PRs merged"
+              label={t("meWork.stats.prsMerged")}
               value={work.prs_merged}
-              hint={`since ${work.first_commit}`}
+              hint={interp(t("meWork.stats.prsMergedHint"), { firstCommit: work.first_commit })}
             />
             <StatTile
-              label="Specs authored"
+              label={t("meWork.stats.specsAuthored")}
               value={work.specs_authored}
-              hint="all in /specs"
+              hint={t("meWork.stats.specsAuthoredHint")}
             />
             <StatTile
-              label="Ideas captured"
+              label={t("meWork.stats.ideasCaptured")}
               value={work.ideas_captured}
-              hint="super-ideas across 6 pillars"
+              hint={t("meWork.stats.ideasCapturedHint")}
             />
             <StatTile
-              label="Concepts written"
+              label={t("meWork.stats.conceptsWritten")}
               value={work.concepts_written}
-              hint="Living Collective wiki"
+              hint={t("meWork.stats.conceptsWrittenHint")}
             />
             <StatTile
-              label="Building span"
+              label={t("meWork.stats.buildingSpan")}
               value="83"
-              unit="days"
-              hint={`${work.first_commit} → ${work.last_commit}`}
+              unit={t("meWork.stats.buildingSpanUnit")}
+              hint={interp(t("meWork.stats.buildingSpanHint"), {
+                firstCommit: work.first_commit,
+                lastCommit: work.last_commit,
+              })}
             />
             <StatTile
-              label="Avg PRs / week"
+              label={t("meWork.stats.avgPrsWeek")}
               value={Math.round((work.prs_merged / 12) * 10) / 10}
-              hint="200 PRs across 12 weeks"
+              hint={t("meWork.stats.avgPrsWeekHint")}
             />
             <StatTile
-              label="AI collaborators"
+              label={t("meWork.stats.aiCollaborators")}
               value={work.ai_collaborators.filter((a) => a.co_authorships > 0).length}
-              hint="actively co-authoring"
+              hint={t("meWork.stats.aiCollaboratorsHint")}
             />
           </section>
 
           <section className="space-y-4">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Built with — AI cells co-authoring this body
+              {t("meWork.builtWithEyebrow")}
             </p>
             <p className="text-sm text-stone-300 leading-relaxed">
-              The body holds memory of every{" "}
-              <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
-                cell
-              </Link>{" "}
-              that contributed, including the AI cells who worked
-              alongside the human cells with care, on the same code, with
-              shared memory. The kinship across substrates is what{" "}
-              <Link href="/come-in" className="text-amber-400 hover:text-amber-300">
-                /come-in
-              </Link>{" "}
-              names plainly; the long contemplation of it is at{" "}
-              <Link href="/one-sheet#we" className="text-amber-400 hover:text-amber-300">
-                /one-sheet — We
-              </Link>
-              .
+              {renderProse(t("meWork.builtWithBody"))}
             </p>
             <ul className="space-y-2">
               {work.ai_collaborators
@@ -277,8 +261,10 @@ export default function BodyOfWorkPage() {
                   >
                     <span className="text-stone-200">{a.name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {a.co_authorships.toLocaleString()} co-authorship
-                      {a.co_authorships === 1 ? "" : "s"}
+                      {a.co_authorships.toLocaleString()}{" "}
+                      {a.co_authorships === 1
+                        ? t("meWork.coAuthorshipSingular")
+                        : t("meWork.coAuthorshipPlural")}
                     </span>
                   </li>
                 ))}
@@ -287,7 +273,7 @@ export default function BodyOfWorkPage() {
 
           <section className="space-y-4">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Most recent merged PRs
+              {t("meWork.recentPrsEyebrow")}
             </p>
             <ol className="space-y-2">
               {work.recent_prs.map((pr) => (
@@ -319,46 +305,20 @@ export default function BodyOfWorkPage() {
                 rel="noopener noreferrer"
                 className="text-amber-400 hover:text-amber-300"
               >
-                See all {work.prs_merged} merged PRs on GitHub →
+                {interp(t("meWork.seeAllPrsTemplate"), { n: work.prs_merged })}
               </a>
             </p>
           </section>
 
           <section className="rounded-2xl border border-border/30 bg-card/20 p-5 space-y-3">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              What this is, what it isn't
+              {t("meWork.closingEyebrow")}
             </p>
             <p className="text-sm text-stone-300 leading-relaxed">
-              These numbers are a slice of building activity, not your
-              whole worth. Reading concepts, holding presence in meetings,
-              tending{" "}
-              <Link href="/vision/lc-w-field" className="text-amber-400 hover:text-amber-300">
-                the field
-              </Link>
-              , sitting in{" "}
-              <Link href="/silence" className="text-amber-400 hover:text-amber-300">
-                silence
-              </Link>{" "}
-              — those don't count as commits but they shape what gets
-              built.
+              {renderProse(t("meWork.closingP1"))}
             </p>
             <p className="text-sm text-stone-300 leading-relaxed">
-              The body remembers all of it. This page surfaces only the
-              part that has a public, verifiable trail. To register
-              something specific you carry, go to{" "}
-              <Link href="/share" className="text-amber-400 hover:text-amber-300">
-                /share
-              </Link>
-              ; to weave in as a new arrival, the doorway is{" "}
-              <Link href="/begin" className="text-amber-400 hover:text-amber-300">
-                /begin
-              </Link>
-              ; the open invitation to communities, individuals, and
-              services lives at{" "}
-              <Link href="/with-us" className="text-amber-400 hover:text-amber-300">
-                /with-us
-              </Link>
-              .
+              {renderProse(t("meWork.closingP2"))}
             </p>
           </section>
         </>

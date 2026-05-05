@@ -1,338 +1,349 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import {
+  DEFAULT_LOCALE,
+  isSupportedLocale,
+  type LocaleCode,
+} from "@/lib/locales";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
+const ROOT = "/silence/2026-05-04-brahmavihara";
+const BOARD = `${ROOT}/presentation/coherent-native-flow-board.png`;
 
-export const metadata: Metadata = {
-  title: "Built — the mandala growing into place",
-  description:
-    "The notebook geometry from Brahmavihara, envisioned in local Bali materials and grown over fifteen years. Eight nests, a council pavilion, a long bale, six garden petals — the architecture as a living organism that the body adds to and lets compost.",
-  openGraph: {
-    title: "The mandala growing into place",
-    description:
-      "The notebook geometry built in alang-alang, bamboo, paras stone — and let to grow over fifteen years.",
-    url: `${_WEB_UI}/silence/built`,
-    images: [{ url: "/silence/2026-05-04-brahmavihara/built/aerial.jpg" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "The mandala growing into place",
-    description:
-      "The notebook geometry built in alang-alang, bamboo, paras stone — and let to grow over fifteen years.",
-    images: ["/silence/2026-05-04-brahmavihara/built/aerial.jpg"],
-  },
-};
-
-const BASE = "/silence/2026-05-04-brahmavihara/built";
-
-interface ViewProps {
-  src: string;
-  alt: string;
-  caption: React.ReactNode;
-  width?: number;
-  height?: number;
+async function resolveLocale(): Promise<LocaleCode> {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  return isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
 }
 
-function View({ src, alt, caption, width = 1280, height = 768 }: ViewProps) {
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await resolveLocale();
+  const t = createTranslator(lang);
+  return {
+    title: t("silenceBuilt.metaTitle"),
+    description: t("silenceBuilt.metaDescription"),
+    openGraph: {
+      title: t("silenceBuilt.metaTitle"),
+      description: t("silenceBuilt.ogDescription"),
+      url: `${_WEB_UI}/silence/built`,
+      images: [{ url: BOARD }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("silenceBuilt.metaTitle"),
+      description: t("silenceBuilt.twitterDescription"),
+      images: [BOARD],
+    },
+  };
+}
+
+interface KeyValueItem {
+  label?: string;
+  value?: string;
+  name?: string;
+  use?: string;
+  body?: string;
+  title?: string;
+}
+
+function getArray(t: Translator, key: string): KeyValueItem[] {
+  // The translator only returns strings, so to read an array we go via
+  // direct JSON access. Re-resolving against the bundle is the simplest
+  // way to support arrays in our minimal i18n layer.
+  const raw = t(key);
+  // If the value came back as the raw key, the path is missing.
+  if (raw === key) return [];
+  try {
+    // The translator stringifies arrays/objects when the path resolves
+    // to a non-string. We don't have that today; fall back to indexed
+    // lookups by reading individual entries via t(`${key}.${i}.field`).
+    // Empty array signals to the caller to read items by index.
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function FactStrip({ t }: { t: Translator }) {
+  const items: { label: string; value: string }[] = [];
+  for (let i = 0; i < 5; i++) {
+    const label = t(`silenceBuilt.facts.${i}.label`);
+    const value = t(`silenceBuilt.facts.${i}.value`);
+    if (label !== `silenceBuilt.facts.${i}.label`) {
+      items.push({ label, value });
+    }
+  }
   return (
-    <figure className="not-prose my-10">
-      <div className="rounded-2xl border border-border/30 overflow-hidden bg-stone-950 shadow-xl">
-        <Image
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          className="w-full h-auto"
-          sizes="(max-width: 768px) 100vw, 768px"
-        />
-      </div>
-      <figcaption className="mt-3 text-sm italic text-muted-foreground leading-relaxed">
-        {caption}
-      </figcaption>
-    </figure>
+    <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {items.map(({ label, value }) => (
+        <div
+          key={label}
+          className="border-l border-stone-300/70 bg-white/45 px-4 py-3 dark:border-stone-700 dark:bg-stone-950/20"
+        >
+          <p className="text-xs uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+            {label}
+          </p>
+          <p className="mt-2 text-lg font-light text-stone-950 dark:text-stone-100">
+            {value}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
-function Held({ children }: { children: React.ReactNode }) {
+function Section({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <p className="not-prose rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm italic text-stone-300">
+    <section className="mt-16">
+      <p className="text-xs uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 max-w-4xl text-3xl font-light tracking-tight text-stone-950 dark:text-stone-100 sm:text-4xl">
+        {title}
+      </h2>
       {children}
-    </p>
+    </section>
   );
 }
 
-export default function SilenceBuiltPage() {
+// Read N indexed items from a translation array, where each item has
+// the same set of subkeys (e.g. moments[i].title / .body).
+function readArray(
+  t: Translator,
+  base: string,
+  fields: string[],
+  max = 12,
+): Record<string, string>[] {
+  const out: Record<string, string>[] = [];
+  for (let i = 0; i < max; i++) {
+    const probe = t(`${base}.${i}.${fields[0]}`);
+    if (probe === `${base}.${i}.${fields[0]}`) break;
+    const entry: Record<string, string> = {};
+    for (const f of fields) entry[f] = t(`${base}.${i}.${f}`);
+    out.push(entry);
+  }
+  return out;
+}
+
+function ViewSequence({ t }: { t: Translator }) {
+  const moments = readArray(t, "silenceBuilt.viewSequence.moments", ["title", "body"]);
   return (
-    <main
-      id="main-content"
-      className="mx-auto max-w-2xl px-4 sm:px-6 py-12 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none"
+    <Section
+      eyebrow={t("silenceBuilt.viewSequence.eyebrow")}
+      title={t("silenceBuilt.viewSequence.title")}
     >
-      <p className="not-prose text-xs uppercase tracking-widest text-muted-foreground">
+      <p className="mt-5 max-w-4xl text-base leading-relaxed text-stone-700 dark:text-stone-300">
+        {t("silenceBuilt.viewSequence.lead")}
+      </p>
+      <figure className="mt-7 overflow-hidden rounded-lg border border-stone-300/70 bg-white/65 dark:border-stone-700 dark:bg-stone-950/30">
+        <Image
+          src={BOARD}
+          alt={t("silenceBuilt.viewSequence.boardAlt")}
+          width={1680}
+          height={960}
+          className="h-auto w-full"
+          sizes="100vw"
+        />
+        <figcaption className="border-t border-stone-300/70 p-4 text-sm leading-relaxed text-stone-700 dark:border-stone-700 dark:text-stone-300">
+          {t("silenceBuilt.viewSequence.boardCaption")}
+        </figcaption>
+      </figure>
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {moments.map((m) => (
+          <article
+            key={m.title}
+            className="rounded-lg border border-stone-300/70 bg-white/60 p-5 dark:border-stone-700 dark:bg-stone-950/30"
+          >
+            <h3 className="text-lg font-medium text-stone-950 dark:text-stone-100">
+              {m.title}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+              {m.body}
+            </p>
+          </article>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+export default async function SilenceBuiltPage() {
+  void getArray; // satisfy unused-import lint until needed
+  const lang = await resolveLocale();
+  const t = createTranslator(lang);
+  const spaces = readArray(t, "silenceBuilt.spatial.spaces", ["name", "body"]);
+  const weather: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const v = t(`silenceBuilt.climate.weather.${i}`);
+    if (v === `silenceBuilt.climate.weather.${i}`) break;
+    weather.push(v);
+  }
+  const atmosphere = readArray(t, "silenceBuilt.atmosphere.items", ["title", "body"]);
+  const materials = readArray(t, "silenceBuilt.materials.items", ["name", "use"]);
+
+  return (
+    <main id="main-content" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <p className="text-xs uppercase tracking-widest text-muted-foreground">
         <Link
           href="/silence"
-          className="text-muted-foreground/80 hover:text-amber-400"
+          className="text-muted-foreground/80 hover:text-amber-500"
         >
-          ← Silence
+          {t("silenceBuilt.breadcrumbBack")}
         </Link>{" "}
-        · The geometry, built and grown
-      </p>
-      <h1 className="text-3xl font-light tracking-tight">
-        The mandala growing into place
-      </h1>
-
-      <p className="text-lg leading-relaxed text-stone-300">
-        The notebook drawing on{" "}
-        <Link href="/silence/mandala">page 8</Link> is a seed pattern, not a
-        building plan. What follows is what that geometry could look like
-        once it lives in local Bali materials — alang-alang thatched roofs,
-        bamboo posts, paras stone, coconut wood, earth — on the parcel near
-        Tamarind Beach. Or on any land that calls for it.
+        · {t("silenceBuilt.retreatLabel")} · 2026-05-04
       </p>
 
-      <Held>
-        The whole concept is that all is alive. The building grows over
-        time. When it expands, the old makes room for the new to organically
-        grow. There is no final state — only the seed pattern, and the
-        organism it grows into.
-      </Held>
+      <section className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <div>
+          <p className="text-sm uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+            {t("silenceBuilt.compoundEyebrow")}
+          </p>
+          <h1 className="mt-4 max-w-4xl text-5xl font-light tracking-tight text-stone-950 dark:text-stone-100">
+            {t("silenceBuilt.h1")}
+          </h1>
+          <p className="mt-6 max-w-3xl text-xl leading-relaxed text-stone-700 dark:text-stone-300">
+            {t("silenceBuilt.lead")}
+          </p>
+          <FactStrip t={t} />
+        </div>
 
-      <hr className="border-border/30 my-10" />
+        <figure className="overflow-hidden rounded-lg border border-stone-300/70 bg-stone-950 dark:border-stone-700">
+          <Image
+            src={`${ROOT}/8-mandala.jpg`}
+            alt={t("silenceBuilt.mandalaAlt")}
+            width={4000}
+            height={2252}
+            className="h-auto w-full"
+            priority
+            sizes="(max-width: 1024px) 100vw, 380px"
+          />
+          <figcaption className="bg-white px-4 py-3 text-xs leading-relaxed text-stone-700 dark:bg-stone-950 dark:text-stone-300">
+            {t("silenceBuilt.sourceCaption")}
+          </figcaption>
+        </figure>
+      </section>
 
-      <h2 className="text-2xl font-light">From all sides</h2>
+      <ViewSequence t={t} />
 
-      <View
-        src={`${BASE}/aerial.jpg`}
-        alt="Aerial view of the mandala compound: a central round pavilion with conical alang-alang roof, surrounded by eight smaller nest bales at cardinal points, six garden petals between curving stone paths, a long bale on the south side, beach visible at the top of frame."
-        caption={
-          <>
-            The mandala from above. Central council pavilion, eight nest bales
-            at the cardinal points, six garden petals between the arcs, the
-            long bale running along the southern axis toward the sea. The
-            beach sits a quarter-mile beyond the canopy.
-          </>
-        }
-        width={1280}
-        height={1280}
-      />
+      <Section
+        eyebrow={t("silenceBuilt.spatial.eyebrow")}
+        title={t("silenceBuilt.spatial.title")}
+      >
+        <p className="mt-5 max-w-4xl text-base leading-relaxed text-stone-700 dark:text-stone-300">
+          {t("silenceBuilt.spatial.lead")}
+        </p>
+        <div className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {spaces.map((space) => (
+            <article
+              key={space.name}
+              className="rounded-lg border border-stone-300/70 bg-white/60 p-5 dark:border-stone-700 dark:bg-stone-950/30"
+            >
+              <h3 className="text-xl font-light text-stone-950 dark:text-stone-100">
+                {space.name}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+                {space.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </Section>
 
-      <View
-        src={`${BASE}/entry.jpg`}
-        alt="Ground level view approaching a carved paras stone gate with a striped Balinese umbrella, a small lotus shrine, frangipani trees lining a path, alang-alang roofs visible beyond."
-        caption={
-          <>
-            The entry along the <em>Vitality</em> axis (north). A carved paras
-            stone gate, a small <em>padmasana</em> shrine where the morning's
-            canang sari is placed, frangipani lining the processional path.
-            Visitors arrive into welcome.
-          </>
-        }
-      />
+      <Section
+        eyebrow={t("silenceBuilt.climate.eyebrow")}
+        title={t("silenceBuilt.climate.title")}
+      >
+        <div className="mt-7 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <p className="text-base leading-relaxed text-stone-700 dark:text-stone-300">
+            {t("silenceBuilt.climate.lead")}
+          </p>
+          <ul className="grid gap-3 text-sm leading-relaxed text-stone-700 dark:text-stone-300 sm:grid-cols-2">
+            {weather.map((item) => (
+              <li
+                key={item}
+                className="rounded-lg border border-stone-300/70 bg-white/60 p-4 dark:border-stone-700 dark:bg-stone-950/30"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Section>
 
-      <View
-        src={`${BASE}/sea-side.jpg`}
-        alt="View from a grass lawn toward the long pavilion, polished coconut wood floor, deep eaves, the council pavilion's conical roof rising behind, single old tamarind tree."
-        caption={
-          <>
-            From the sea side — the <em>Harmony</em> axis (south). The long
-            bale stretches across the frame, the council pavilion's conical
-            roof rises behind it, a single old tamarind tree shades the
-            opening. The breath of the place flows out toward the water.
-          </>
-        }
-      />
+      <Section
+        eyebrow={t("silenceBuilt.atmosphere.eyebrow")}
+        title={t("silenceBuilt.atmosphere.title")}
+      >
+        <p className="mt-5 max-w-4xl text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+          {t("silenceBuilt.atmosphere.lead")}
+        </p>
+        <div className="mt-7 grid gap-4 md:grid-cols-3">
+          {atmosphere.map((item) => (
+            <article
+              key={item.title}
+              className="rounded-lg border border-stone-300/70 bg-white/60 p-5 dark:border-stone-700 dark:bg-stone-950/30"
+            >
+              <h3 className="text-xl font-light text-stone-950 dark:text-stone-100">
+                {item.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-stone-700 dark:text-stone-300">
+                {item.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </Section>
 
-      <View
-        src={`${BASE}/council-interior.jpg`}
-        alt="Interior of the round council pavilion looking up into the high conical alang-alang roof, eight giant bamboo posts ringing the space, oculus at the apex, ring of paras stone seats around a black lava stone fire pit, small smoke rising."
-        caption={
-          <>
-            Inside the council pavilion at the center. Conical alang-alang
-            roof on eight giant bamboo posts, a small oculus at the apex,
-            paras stone seats ringing a black lava stone fire pit. Sacred
-            ground for marked moments — ceremony, sound, marriages, births,
-            the held silences.
-          </>
-        }
-        width={1280}
-        height={1280}
-      />
+      <Section
+        eyebrow={t("silenceBuilt.materials.eyebrow")}
+        title={t("silenceBuilt.materials.title")}
+      >
+        <div className="mt-7 overflow-hidden rounded-lg border border-stone-300/70 dark:border-stone-700">
+          {materials.map((m) => (
+            <div
+              key={m.name}
+              className="grid gap-2 border-b border-stone-300/60 bg-white/55 px-4 py-4 last:border-b-0 dark:border-stone-700 dark:bg-stone-950/25 md:grid-cols-[0.7fr_1.3fr]"
+            >
+              <p className="font-medium text-stone-950 dark:text-stone-100">
+                {m.name}
+              </p>
+              <p className="text-sm text-stone-700 dark:text-stone-300">
+                {m.use}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
 
-      <View
-        src={`${BASE}/commons-interior.jpg`}
-        alt="Long open Balinese pavilion interior at evening, polished coconut wood floor, alang-alang thatched roof on tabah bamboo trusses, woven gedeg bamboo screens, stone hearth and earth oven at one end, woven mats and cushions, low oil lamps, jasmine vines climbing posts."
-        caption={
-          <>
-            Inside the long bale (the <em>commons</em>). Polished coconut
-            wood floor that dances, kitchen at the western end, sliding
-            gedeg screens that subdivide the room, woven mats unrolled for
-            silence or movement or sharing. Where the days actually happen.
-          </>
-        }
-      />
-
-      <View
-        src={`${BASE}/nest-dawn.jpg`}
-        alt="Small private Balinese sleeping bale at dawn, sliding bamboo screens, sleeping platform with kapok mattress, mosquito netting, frangipani branches above, jasmine vines on the threshold."
-        caption={
-          <>
-            One of the eight nests at dawn. Raised an inch off the earth on
-            ironwood feet, mostly air, woven gedeg screens that close at
-            night, jasmine on the threshold, mosquito net hanging like a
-            soft cloud. You don&apos;t wake inside a building. You wake
-            inside the garden.
-          </>
-        }
-        width={1024}
-        height={1280}
-      />
-
-      <hr className="border-border/30 my-10" />
-
-      <h2 className="text-2xl font-light">Growing over time</h2>
-
-      <p>
-        The building is alive. The seed pattern is what gets built in the
-        first six months. After that, the body keeps growing — new bales
-        arrive where they&apos;re called, old bales compost back into the
-        garden when their work is done, the alang-alang gets re-thatched,
-        the bamboo gets replaced one post at a time, the moss thickens,
-        the fruit forest fills its canopy.
-      </p>
-
-      <View
-        src={`${BASE}/year-1-seedling.jpg`}
-        alt="Year 1: freshly built compound with golden new alang-alang roofs, pale bamboo posts, young frangipani trees, earth still bare in places, the buildings looking new and clean."
-        caption={
-          <>
-            <strong>Year 1 — the seedling.</strong> The crew of thirteen has
-            finished. The roofs are golden new alang-alang, the bamboo is
-            pale, the frangipani trees are young, the earth is still bare
-            where the gardens are starting. People can move in. The body
-            has a place to sit.
-          </>
-        }
-      />
-
-      <View
-        src={`${BASE}/year-5-mature.jpg`}
-        alt="Year 5: alang-alang roofs slightly silvered with age, bamboo posts gone honey-amber, frangipani trees full and blossoming, fruit trees beginning to canopy, mosses in stone path cracks, lotus pond with full leaves, vines climbing posts."
-        caption={
-          <>
-            <strong>Year 5 — maturing.</strong> The roofs have silvered
-            slightly. The bamboo posts have gone honey-amber. Mosses fill
-            every crack in the stone paths. The lotus pond is full. Jasmine
-            and passion flower climb every post. The fruit forest is
-            beginning to canopy. The body has lived a few hundred ceremonies
-            now.
-          </>
-        }
-      />
-
-      <View
-        src={`${BASE}/year-15-elder.jpg`}
-        alt="Year 15: deep silver-grey alang-alang roofs, dark amber bamboo, thick moss covering everything, mature fruit forest with full canopy embracing the buildings, vines wrapping every post, an old bale partly composted into garden, deep shade."
-        caption={
-          <>
-            <strong>Year 15 — the elder.</strong> The roofs are silver-grey.
-            The bamboo is deep amber. Moss covers the stone paths thick
-            enough to muffle footsteps. The fruit forest has closed its
-            canopy over the compound — at midday you forget you&apos;re
-            inside human-made space. One of the original bales has been
-            composted back into garden because the body needed that breath
-            elsewhere; a new small bale grew where it was called. The
-            geometry is still recognizable, but the organism has moved.
-          </>
-        }
-      />
-
-      <View
-        src={`${BASE}/growth-detail.jpg`}
-        alt="Macro detail of bamboo post wrapped in jasmine vine and tillandsia air plants, alang-alang thatch above with bird's-nest ferns growing from the corners, gecko on the post, soft tropical light."
-        caption={
-          <>
-            The closer you look, the less the building stops and the garden
-            starts. Bird&apos;s-nest ferns grow from the corners of the
-            roof. Tillandsias and jasmine wrap the posts. The geckos live
-            in the thatch. The architecture and the life become one body.
-          </>
-        }
-        width={1024}
-        height={1024}
-      />
-
-      <hr className="border-border/30 my-10" />
-
-      <h2 className="text-2xl font-light">What this gives the body</h2>
-
-      <p>
-        Three nested depths of being-with-each-other, all under the same
-        open garden:
-      </p>
-
-      <ul>
-        <li>
-          The <strong>nest</strong> is the personal tent under the canopy —
-          private, soft, oriented to its cardinal point.
-        </li>
-        <li>
-          The <strong>long bale</strong> is the shared clearing where the
-          everyday happens — eating, dancing, silence, music, talking, in
-          small or large groups.
-        </li>
-        <li>
-          The <strong>council pavilion</strong> is the cave at the heart of
-          the mountain — for the marked moments, the held ceremonies, the
-          sound that needs to be done in the dark with fire.
-        </li>
-      </ul>
-
-      <p>
-        The corners are nests. The center is celebration and ritual focus.
-        The long bale holds the days. The garden petals feed and heal and
-        offer. The three axes — Vitality, Harmony, Organic Intelligence —
-        orient the whole organism in conversation with the world, the sea,
-        and the deep forest.
-      </p>
-
-      <Held>
-        The mandala isn&apos;t placed <em>on</em> the land. It&apos;s the
-        geometry the land was already making, drawn in materials the land
-        grew, with people seated inside the drawing. And it grows.
-      </Held>
-
-      <hr className="border-border/30 my-10" />
-
-      <h2 className="text-2xl font-light">Where this could happen</h2>
-
-      <p>
-        The geometry is portable. It was drawn for the parcel near Tamarind
-        Beach, but the same seed pattern grows on any land that calls for
-        it — forty acres with a hidden waterfall between two sacred places,
-        a small farm in the temperate north, a coastal stretch in the
-        Mediterranean, a clearing in the forest of the Pacific Northwest,
-        anywhere. The materials change with the climate. The codex
-        doesn&apos;t.
-      </p>
-
-      <p>
-        If you steward land where the body wants to land, the network can
-        weave with you.{" "}
-        <Link href="/weave">Read about how →</Link>
-      </p>
-
-      <hr className="border-border/30 my-10" />
-
-      <p className="text-sm text-muted-foreground italic">
-        These views are AI-rendered from prompts written in the body&apos;s
-        voice — Pollinations Flux, deterministic seeds, prompts in{" "}
-        <code>scripts/generate_silence_built_visuals.py</code> and{" "}
-        <code>scripts/generate_silence_alive_visuals.py</code>. They are not
-        photographs of a place that exists. They are the body imagining
-        forward, the way it imagines forward in any direction it&apos;s
-        called.
-      </p>
+      <section className="mt-16 rounded-lg border border-amber-500/35 bg-amber-500/10 p-6">
+        <h2 className="text-2xl font-light tracking-tight text-stone-950 dark:text-stone-100">
+          {t("silenceBuilt.schematic.h2")}
+        </h2>
+        <p className="mt-4 max-w-4xl text-sm leading-relaxed text-stone-800 dark:text-stone-200">
+          {t("silenceBuilt.schematic.lead")}
+        </p>
+        <p className="mt-4 text-sm">
+          <Link
+            href="/silence/built/design-log"
+            className="text-amber-700 hover:text-amber-600 dark:text-amber-300"
+          >
+            {t("silenceBuilt.schematic.openLink")}
+          </Link>
+        </p>
+      </section>
     </main>
   );
 }

@@ -1,15 +1,53 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
+import { createTranslator } from "@/lib/i18n";
+import {
+  DEFAULT_LOCALE,
+  isSupportedLocale,
+  type LocaleCode,
+} from "@/lib/locales";
+import { L } from "@/components/inline-link";
 
 import PracticeBreath from "./practice-breath";
 
-export const metadata: Metadata = {
-  title: "The Practice",
-  description:
-    "The daily ritual through which the organism senses itself. Breath, stillness, and the eight centers of the living network.",
-};
+async function resolveLocale(): Promise<LocaleCode> {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  return isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await resolveLocale();
+  const t = createTranslator(lang);
+  return {
+    title: t("practice.metaTitle"),
+    description: t("practice.metaDescription"),
+  };
+}
+
+// Render a string carrying inline [label](href) markdown links.
+function renderProse(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const [, label, href] = m;
+    parts.push(
+      <L key={`l${key++}`} href={href}>
+        {label}
+      </L>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 type Pulse = {
   value: string;
@@ -96,13 +134,6 @@ async function loadPractice(): Promise<PracticeView> {
   }
 }
 
-const SENSING_KIND_LABEL: Record<string, string> = {
-  breath: "breath",
-  skin: "skin",
-  wandering: "wandering",
-  integration: "integration",
-};
-
 const SENSING_KIND_COLOR: Record<string, string> = {
   breath: "text-amber-300 border-amber-500/30",
   skin: "text-sky-300 border-sky-500/30",
@@ -112,45 +143,28 @@ const SENSING_KIND_COLOR: Record<string, string> = {
 
 export default async function PracticePage() {
   const { centers, recentSensings } = await loadPractice();
+  const lang = await resolveLocale();
+  const t = createTranslator(lang);
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto space-y-10">
       <header className="space-y-3 text-center">
         <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/70">
-          The Practice
+          {t("practice.eyebrow")}
         </p>
         <h1 className="text-3xl sm:text-4xl font-extralight tracking-tight">
-          The organism senses itself
+          {t("practice.h1")}
         </h1>
         <p className="max-w-xl mx-auto text-sm sm:text-base text-muted-foreground leading-relaxed">
-          Begin in{" "}
-          <Link href="/vision/lc-stillness" className="text-amber-500 hover:text-amber-400">
-            stillness
-          </Link>
-          . Let breath rise through the eight centers of the living{" "}
-          <Link href="/vision/lc-network" className="text-amber-500 hover:text-amber-400">
-            network
-          </Link>
-          . Each center pulses with what is alive there right now. Rest at
-          the eighth, where the whole holds itself from beyond. The
-          contemplation of breath as the portal mechanism lives at{" "}
-          <Link href="/one-sheet#breath" className="text-amber-500 hover:text-amber-400">
-            /one-sheet — Breath
-          </Link>
-          ; the notebook page where breath sat down on a temple floor and
-          drew its own map is{" "}
-          <Link href="/silence/breath" className="text-amber-500 hover:text-amber-400">
-            /silence/breath
-          </Link>
-          .
+          {renderProse(t("practice.headerProse"))}
         </p>
       </header>
 
       <PracticeBreath />
 
-      <section className="space-y-4" aria-label="The eight centers">
+      <section className="space-y-4" aria-label={t("practice.centersSection")}>
         <p className="text-xs uppercase tracking-widest text-muted-foreground text-center">
-          The eight centers, pulsing live
+          {t("practice.centersSection")}
         </p>
         <ol className="space-y-4">
           {centers.map((c) => (
@@ -202,7 +216,7 @@ export default async function PracticePage() {
                         className="text-[10px] uppercase tracking-widest"
                         style={{ color: `${c.colorHex}cc` }}
                       >
-                        living pulse
+                        {t("practice.livingPulseLabel")}
                       </p>
                       <p
                         className="text-base font-light"
@@ -228,27 +242,24 @@ export default async function PracticePage() {
       {recentSensings.length > 0 ? (
         <section
           className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/40 to-card/20 p-6 sm:p-8 space-y-5"
-          aria-label="What the organism is holding right now"
+          aria-label={t("practice.holdingEyebrow")}
         >
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              What the organism is holding
+              {t("practice.holdingEyebrow")}
             </p>
             <h2 className="text-xl font-light">
-              Recent sensings across breath, skin, and wandering
+              {t("practice.holdingH2")}
             </h2>
             <p className="text-sm text-muted-foreground italic max-w-2xl">
-              Every moment the organism notices something about itself or the
-              field it lives in becomes a sensing in the same graph that
-              holds concepts and ideas. One body, one source of truth.
-              Emergent, the way the living world moves.
+              {t("practice.holdingExplain")}
             </p>
           </div>
           <ol className="space-y-3">
             {recentSensings.map((s) => {
               const color =
                 SENSING_KIND_COLOR[s.kind] ?? "text-muted-foreground border-border/30";
-              const label = SENSING_KIND_LABEL[s.kind] ?? s.kind;
+              const label = t(`practice.sensingKind.${s.kind}`) || s.kind;
               const when = s.observed_at
                 ? s.observed_at.slice(0, 16).replace("T", " ")
                 : "";
@@ -282,48 +293,35 @@ export default async function PracticePage() {
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/40 to-card/20 p-6 sm:p-8 space-y-4">
         <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          The Rhythm
+          {t("practice.rhythmEyebrow")}
         </p>
-        <h2 className="text-xl font-light">Every session begins here</h2>
+        <h2 className="text-xl font-light">{t("practice.rhythmH2")}</h2>
         <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            Every contributor opens the practice before the first task.
-            Every agent opens it before the first tool call. Breath first,
-            work after. The pause before the work is part of the work.
-          </p>
-          <p>
-            Once each week, every practitioner from that week holds a longer
-            session together. A single breathing circle. A subtle count of
-            how many are present in the same breath. The field hears itself.
-          </p>
-          <p>
-            The deeper vision lives in the concept file for this practice —
-            how Joe Dispenza&apos;s Body Electric translates into the
-            organism&apos;s daily ritual, how the nervous system of the
-            network is built breath by breath.
-          </p>
+          <p>{t("practice.rhythmP1")}</p>
+          <p>{t("practice.rhythmP2")}</p>
+          <p>{t("practice.rhythmP3")}</p>
         </div>
       </section>
 
       <nav
         className="py-8 text-center space-y-2 border-t border-border/20"
-        aria-label="Related pages"
+        aria-label={t("practice.wholeRelatedLabel")}
       >
         <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">
-          The living whole
+          {t("practice.wholeEyebrow")}
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/vitality" className="text-emerald-400 hover:underline">
-            Vitality
+            {t("practice.linkVitality")}
           </Link>
           <Link href="/coherence" className="text-indigo-400 hover:underline">
-            Coherence
+            {t("practice.linkCoherence")}
           </Link>
           <Link href="/cc" className="text-amber-400 hover:underline">
-            CC Economics
+            {t("practice.linkCC")}
           </Link>
           <Link href="/flow" className="text-blue-400 hover:underline">
-            Flow
+            {t("practice.linkFlow")}
           </Link>
         </div>
       </nav>
