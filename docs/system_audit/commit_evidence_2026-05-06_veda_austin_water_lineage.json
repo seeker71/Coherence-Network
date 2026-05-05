@@ -1,0 +1,91 @@
+{
+  "date": "2026-05-06",
+  "thread_branch": "codex/veda-austin-water-lineage-20260506",
+  "commit_scope": "Add Veda Austin and Gaia water-record-keeper teaching as ordinary source-backed profile graph data.",
+  "files_owned": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "specs/veda-austin-water-lineage.md",
+    "docs/system_audit/commit_evidence_2026-05-06_veda_austin_water_lineage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "web.open https://www.gaia.com/video/water-akashic-record-keeper",
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+      "python3 scripts/validate_spec_quality.py --file specs/veda-austin-water-lineage.md",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main (blocked by intended unstaged edits)",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_veda_austin_water_lineage.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api https://api.coherencycoin.com --source contributor:seeker71",
+      "curl -sS https://api.coherencycoin.com/api/graph/nodes/interested-person%3Aveda-austin",
+      "curl -sS https://api.coherencycoin.com/api/graph/nodes/concept%3Awater-as-record-keeper",
+      "curl -sS 'https://api.coherencycoin.com/api/profile/contributor%3Aseeker71/verify?hash=refresh'",
+      "curl -sS https://api.coherencycoin.com/api/profile/seeker71"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before local gates, CI, and production replay validation complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "veda-austin-water-lineage"
+  ],
+  "task_ids": [
+    "veda-austin-water-lineage-20260506"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "trust-attestation-source",
+        "profile-data-source"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "manifest-update",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://www.gaia.com/video/water-akashic-record-keeper",
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "specs/veda-austin-water-lineage.md"
+  ],
+  "change_files": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "specs/veda-austin-water-lineage.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
