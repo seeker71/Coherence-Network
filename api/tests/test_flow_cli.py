@@ -371,3 +371,32 @@ class TestSmokeTests:
         assert result.returncode == 0, (
             f"coh identity exited {result.returncode}: {result.stderr}"
         )
+
+    def test_cli_content_set_preserves_command_lang_flag(self, tmp_path: Path) -> None:
+        """coh content set keeps its --lang flag after global flag extraction."""
+        content_file = tmp_path / "view.md"
+        content_file.write_text("CLI content smoke body.", encoding="utf-8")
+        entity_id = f"cli-lang-smoke-{int(time.time())}"
+        with _serve_app() as api_base:
+            result = _run_cli(
+                api_base,
+                "content",
+                "set",
+                "page",
+                entity_id,
+                "--lang",
+                "en",
+                "--file",
+                str(content_file),
+                "--by",
+                "cli-test-author",
+                "--title",
+                "CLI content smoke",
+            )
+        output = ANSI_RE.sub("", result.stdout)
+        assert result.returncode == 0, (
+            f"coh content set exited {result.returncode}: {result.stderr}"
+        )
+        assert "Usage:" not in output
+        assert "content view canonical" in output
+        assert "attribution:" in output

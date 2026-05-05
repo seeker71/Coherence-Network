@@ -1,0 +1,88 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/home-content-cli-lang-fix",
+  "commit_scope": "Preserve command-level --lang for attributed content CLI writes so coh content set can reach the entity-view API.",
+  "files_owned": [
+    "api/tests/test_flow_cli.py",
+    "cli/bin/coh.mjs",
+    "docs/system_audit/commit_evidence_2026-05-05_cli_content_lang_flag_fix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+      "node --check cli/bin/coh.mjs && node --check cli/lib/commands/content.mjs",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+      "tmp=$(mktemp); printf '%s\\n' 'CLI production smoke verifies attributed editable content.' > \"$tmp\"; entity=\"codex-cli-smoke-$(date +%s)\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content set page \"$entity\" --lang en --file \"$tmp\" --by codex-cli-smoke-author --title \"Codex CLI smoke\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content views page \"$entity\"; rm -f \"$tmp\""
+    ],
+    "summary": "Prompt gate passed on a fresh branch from deployed main. The new regression test failed before implementation because global flag extraction consumed content --lang, then passed after the fix. CLI syntax checks passed, the full flow CLI test file passed, and the local CLI successfully wrote and listed attributed page content against the production API."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public deploy validation after PR merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "home-content-contribution-attribution"
+  ],
+  "spec_ids": [
+    "home-content-contribution-attribution"
+  ],
+  "task_ids": [
+    "codex-thread-home-content-cli-lang-fix-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "The production CLI smoke created page/codex-cli-smoke-* and printed source attribution clr_76561d940eb3.",
+    "The regression test proves coh content set page <id> --lang en --file <path> reaches the attributed content write path."
+  ],
+  "change_files": [
+    "api/tests/test_flow_cli.py",
+    "cli/bin/coh.mjs",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Command-specific --lang remains available to content and translate subcommands while global locale --lang before the command is still consumed by top-level flag handling.",
+    "public_endpoints": [
+      "POST /api/entity-views/page/{page_id}",
+      "GET /api/entity-views/page/{page_id}"
+    ],
+    "test_flows": [
+      "Failing regression test before implementation",
+      "Passing full CLI smoke suite",
+      "Production CLI content set/list smoke"
+    ]
+  }
+}
