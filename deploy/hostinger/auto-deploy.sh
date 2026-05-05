@@ -29,12 +29,21 @@ require_file "$COMPOSE_ROOT/.env"
 
 cd "$REPO_DIR"
 OLD_SHA="$(git rev-parse HEAD)"
-git fetch origin "$BRANCH" --quiet
+git fetch --prune origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --quiet
 
 if [[ -z "$TARGET_SHA" ]]; then
   TARGET_SHA="$(git rev-parse "origin/${BRANCH}")"
 fi
 
+if ! git cat-file -e "${TARGET_SHA}^{commit}" 2>/dev/null; then
+  log "Target ${TARGET_SHA:0:12} missing after branch fetch; fetching explicit target"
+  if ! git fetch origin "$TARGET_SHA" --quiet; then
+    if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+      log "Explicit target fetch failed; unshallowing ${BRANCH}"
+      git fetch origin "$BRANCH" --unshallow --quiet || true
+    fi
+  fi
+fi
 git cat-file -e "${TARGET_SHA}^{commit}"
 
 # Sense whether the RUNNING API is already at the target SHA. The previous
