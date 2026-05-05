@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { EditablePageMarkdown, PageReadPing } from "@/components/content/EditablePageContent";
 import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { getApiBase } from "@/lib/api";
@@ -492,6 +493,7 @@ export default async function VisionPage({
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-950 to-stone-900 text-stone-100">
+      <PageReadPing pageId="vision" sourcePage="/vision" />
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(234,179,8,0.08)_0%,_transparent_70%)]" />
@@ -520,6 +522,10 @@ export default async function VisionPage({
           </svg>
         </div>
       </section>
+      <EditablePageMarkdown
+        pageId="vision"
+        className="mx-auto max-w-3xl px-6 pb-12 space-y-4 text-base text-stone-400 leading-relaxed"
+      />
 
       {/* How It Knows */}
       <section className="max-w-3xl mx-auto px-6 py-24 text-center space-y-8">

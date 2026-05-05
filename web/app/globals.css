@@ -246,3 +246,79 @@ body {
 main {
   animation: fadeInUp 0.4s ease-out;
 }
+
+/* ── Hero motion: ken-burns breath, radial pulse, reveal-up ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes hero-breath {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+  }
+
+  @keyframes hero-pulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.7; }
+  }
+
+  @keyframes hero-reveal {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-breath {
+    animation: hero-breath 20s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .hero-pulse {
+    animation: hero-pulse 8s ease-in-out infinite;
+    will-change: opacity;
+  }
+
+  .hero-reveal {
+    animation: hero-reveal 0.8s ease-out 0.2s both;
+  }
+}
+
+/* ── Type-tone card lift: hover translate + colored glow ── */
+.tone-card {
+  --tone-glow: hsl(36 72% 58% / 0.25);
+  position: relative;
+  transition:
+    transform 250ms ease-out,
+    box-shadow 250ms ease-out,
+    border-color 250ms ease-out,
+    background 250ms ease-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) {
+    .tone-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px -8px var(--tone-glow);
+    }
+  }
+  .tone-card:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px -4px var(--tone-glow);
+  }
+  /* Touch viewports: keep glow + lighter lift to avoid jitter */
+  @media (hover: none) {
+    .tone-card:active {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px -8px var(--tone-glow);
+    }
+  }
+}
+
+/* Tone-glow CSS variables — one per type, used by tone-card */
+.tone-amber  { --tone-glow: hsl(38 92% 50% / 0.32); }
+.tone-teal   { --tone-glow: hsl(173 80% 40% / 0.32); }
+.tone-sky    { --tone-glow: hsl(199 89% 48% / 0.32); }
+.tone-rose   { --tone-glow: hsl(347 89% 60% / 0.32); }
+.tone-orange { --tone-glow: hsl(25 95% 53% / 0.32); }
+.tone-emerald{ --tone-glow: hsl(160 84% 39% / 0.32); }
+.tone-slate  { --tone-glow: hsl(215 20% 55% / 0.32); }
+.tone-indigo { --tone-glow: hsl(239 84% 67% / 0.32); }
+.tone-pink   { --tone-glow: hsl(330 81% 60% / 0.32); }
+.tone-violet { --tone-glow: hsl(258 90% 66% / 0.32); }
+.tone-stone  { --tone-glow: hsl(25 5% 45% / 0.20); }

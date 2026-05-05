@@ -6,7 +6,7 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
       "port": 8000,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/silence-3d/api"
+      "cwd": "api"
     },
     {
       "name": "web",
@@ -14,7 +14,10 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/silence-3d/web"
+      "cwd": "web",
+      "env": {
+        "API_URL": "http://localhost:8000"
+      }
     },
     {
       "name": "pulse",

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
 import { useT } from "@/components/MessagesProvider";
@@ -281,12 +282,12 @@ export default function ContributePage() {
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{t("contribute.title")}</h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          {t("contribute.introLede")}
-        </p>
-      </div>
+      <EditablePageIntro
+        pageId="contribute"
+        sourcePage="/contribute"
+        title={t("contribute.title")}
+        description={t("contribute.introLede")}
+      />
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <h2 className="text-xl font-semibold">{t("contribute.registerHeading")}</h2>

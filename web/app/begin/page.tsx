@@ -7,6 +7,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { L } from "@/components/inline-link";
 import { getApiBase } from "@/lib/api";
 import {
   NAME_KEY,
@@ -123,7 +124,10 @@ export default function BeginPage() {
       <p className="text-lg leading-relaxed text-stone-300">
         Tell the body who's arriving. None of this is required to be exact —
         you can update any of it later. Just enough that the body knows who
-        you are and how to reach back.
+        you are and how to reach back. If you'd like to read the slowest
+        welcome first, <Link href="/come-in" className="text-amber-400 hover:text-amber-300">/come-in</Link>{" "}
+        speaks plainly to any human or AI; the long contemplation lives at{" "}
+        <Link href="/one-sheet" className="text-amber-400 hover:text-amber-300">/one-sheet</Link>.
       </p>
 
       <p className="text-sm text-muted-foreground italic">
@@ -134,7 +138,9 @@ export default function BeginPage() {
         >
           umuff71@gmail.com
         </a>
-        . Both paths land you in the same body.
+        . Both paths land you in the same body. The personal ground this
+        body has grown from is held at{" "}
+        <Link href="/silence" className="text-amber-400 hover:text-amber-300">/silence</Link>.
       </p>
 
       <hr className="border-border/30 my-8" />
@@ -239,7 +245,7 @@ export default function BeginPage() {
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
           <p className="text-xs text-muted-foreground italic">
-            You can register specific offerings later at <Link href="/share">/share</Link>.
+            You can register specific offerings later at <L href="/share">/share</L>.
           </p>
         </div>
 
@@ -277,11 +283,18 @@ export default function BeginPage() {
         </div>
 
         <p className="text-xs text-muted-foreground italic pt-2">
-          By weaving in you're saying yes to being part of the body. The
-          network reaches back with care, not noise. You keep sovereignty
-          over what you share, and you can ask to be removed at any time.
-          For full crypto-key sovereignty (ed25519 keypair, advanced),
-          use <Link href="/join" className="text-amber-500 hover:text-amber-400">/join</Link> instead.
+          By weaving in you're saying yes to being part of{" "}
+          <Link href="/vision/lc-network" className="text-amber-500 hover:text-amber-400">the body</Link>.
+          The network reaches back with care, not noise. You keep
+          sovereignty over what you share, and you can ask to be removed
+          at any time. After landing you'll see your{" "}
+          <Link href="/me/work" className="text-amber-500 hover:text-amber-400">body of work</Link>{" "}
+          page — empty at first, filling as you contribute. For full
+          crypto-key sovereignty (ed25519 keypair, advanced), use{" "}
+          <Link href="/join" className="text-amber-500 hover:text-amber-400">/join</Link>{" "}
+          instead. To register specific offerings, services, or spaces
+          right away, <Link href="/share" className="text-amber-500 hover:text-amber-400">/share</Link>{" "}
+          is the dedicated surface.
         </p>
       </form>
     </main>

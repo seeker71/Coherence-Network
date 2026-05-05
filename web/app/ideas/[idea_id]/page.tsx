@@ -25,6 +25,7 @@ import { ReactionBar } from "@/components/ReactionBar";
 import { ProposalOrigin } from "@/components/ProposalOrigin";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
+import { IdeaReadPing } from "./IdeaReadPing";
 
 const { fetchDefaults: FETCH_DEFAULTS, webUiBaseUrl: BASE_URL } = loadPublicWebConfig();
 const FETCH_TIMEOUT_MS = FETCH_DEFAULTS.timeoutMs;
@@ -330,6 +331,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-6">
+      <IdeaReadPing ideaId={idea.id} />
+
       {/* Breadcrumb */}
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">

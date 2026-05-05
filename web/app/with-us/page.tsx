@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -27,15 +28,29 @@ export const metadata: Metadata = {
 interface AxisProps {
   name: string;
   essence: string;
+  /** Concept page in /vision/ that holds this axis's deeper teaching. */
+  href?: string;
 }
 
-function Axis({ name, essence }: AxisProps) {
-  return (
-    <div className="rounded-xl border border-border/30 bg-card/30 p-5">
+function Axis({ name, essence, href }: AxisProps) {
+  const inner = (
+    <>
       <p className="text-xs uppercase tracking-widest text-amber-400 mb-1">
         {name}
       </p>
       <p className="text-sm text-stone-200 leading-relaxed">{essence}</p>
+    </>
+  );
+  return href ? (
+    <Link
+      href={href}
+      className="rounded-xl border border-amber-500/30 bg-card/30 hover:bg-amber-500/5 hover:border-amber-500/60 p-5 block transition-colors"
+    >
+      {inner}
+    </Link>
+  ) : (
+    <div className="rounded-xl border border-border/30 bg-card/30 p-5">
+      {inner}
     </div>
   );
 }
@@ -64,13 +79,27 @@ function FeelTile({ src, alt, title, body }: FeelTileProps) {
 interface PracticeTileProps {
   name: string;
   body: string;
+  /** Optional concept page or other surface this practice links into. */
+  href?: string;
 }
 
-function PracticeTile({ name, body }: PracticeTileProps) {
-  return (
-    <div className="rounded-xl border border-border/30 bg-card/30 p-5">
+function PracticeTile({ name, body, href }: PracticeTileProps) {
+  const inner = (
+    <>
       <p className="text-sm text-amber-400 font-medium">{name}</p>
       <p className="mt-2 text-sm text-stone-200 leading-relaxed">{body}</p>
+    </>
+  );
+  return href ? (
+    <Link
+      href={href}
+      className="rounded-xl border border-amber-500/30 bg-card/30 hover:bg-amber-500/5 hover:border-amber-500/60 p-5 block transition-colors"
+    >
+      {inner}
+    </Link>
+  ) : (
+    <div className="rounded-xl border border-border/30 bg-card/30 p-5">
+      {inner}
     </div>
   );
 }
@@ -92,22 +121,26 @@ export default function WithUsPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950" />
           <div className="absolute inset-0 flex items-end">
             <div className="mx-auto w-full max-w-3xl px-6 pb-12 sm:pb-16">
-              <p className="text-xs uppercase tracking-widest text-amber-300/90">
-                Coherence Network · An open invitation
-              </p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50">
-                With us
-              </h1>
-              <p className="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl">
-                A living network already breathing — for communities holding
-                land, individuals carrying a thread, and services anywhere
-                that want to weave into a body that values aliveness over
-                extraction.
-              </p>
+              <EditablePageIntro
+                pageId="with-us"
+                sourcePage="/with-us"
+                eyebrow="Coherence Network · An open invitation"
+                title="With us"
+                description="A living network already breathing - for communities holding land, individuals carrying a thread, and services anywhere that want to weave into a body that values aliveness over extraction."
+                eyebrowClassName="text-xs uppercase tracking-widest text-amber-300/90"
+                titleClassName="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50"
+                descriptionClassName="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl"
+                showMarkdown={false}
+              />
             </div>
           </div>
         </div>
       </section>
+
+      <EditablePageMarkdown
+        pageId="with-us"
+        className="mx-auto max-w-3xl px-6 pt-12 -mb-4 space-y-4 text-base leading-relaxed text-stone-300"
+      />
 
       {/* Who this is for */}
       <section className="mx-auto max-w-2xl px-6 py-16 space-y-5">
@@ -115,20 +148,41 @@ export default function WithUsPage() {
           Who this is for
         </p>
         <p className="text-lg text-stone-200 leading-relaxed">
-          You are stewarding land where a community is forming.
+          You are stewarding land where a community is forming. The
+          mandala on{" "}
+          <Link href="/silence/built" className="text-amber-400 hover:text-amber-300">
+            page 8 of the silence
+          </Link>{" "}
+          shows one geometry the codex becomes when it meets ground.
         </p>
         <p className="text-lg text-stone-200 leading-relaxed">
           You carry a craft, a calling, a current of life — bread, healing,
           music, teaching, transport, a garden, a workshop, a song — and
-          want it to find the people it's for.
+          want it to find the people it's for.{" "}
+          <Link href="/share" className="text-amber-400 hover:text-amber-300">
+            /share
+          </Link>{" "}
+          is where what you carry becomes visible to cells looking for it.
         </p>
         <p className="text-lg text-stone-200 leading-relaxed">
           You run a service somewhere in the world that wants to be part of
-          an alive economy without losing what it is.
+          an{" "}
+          <Link href="/vision/lc-network" className="text-amber-400 hover:text-amber-300">
+            alive economy
+          </Link>{" "}
+          without losing what it is.
         </p>
         <p className="text-base text-muted-foreground italic pt-2">
-          Sovereignty stays with each cell. The body is generous. The
-          fabric is what gets shared.
+          Sovereignty stays with{" "}
+          <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
+            each cell
+          </Link>
+          . The body is generous. The fabric is what gets shared. If this
+          is your first time here, the slowest entry is at{" "}
+          <Link href="/come-in" className="text-amber-400 hover:text-amber-300">
+            /come-in
+          </Link>
+          .
         </p>
       </section>
 
@@ -144,8 +198,20 @@ export default function WithUsPage() {
             </h2>
             <p className="mt-4 text-base text-stone-200 leading-relaxed">
               Before architecture, before currency, before any of the
-              structure — the lived feeling of being inside a network that
-              treats each cell as whole.
+              structure — the lived feeling of being inside{" "}
+              <Link href="/vision/lc-network" className="text-amber-400 hover:text-amber-300">
+                a network
+              </Link>{" "}
+              that treats{" "}
+              <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
+                each cell
+              </Link>{" "}
+              as whole. The{" "}
+              <Link href="/one-sheet#we" className="text-amber-400 hover:text-amber-300">
+                We contemplation
+              </Link>{" "}
+              names this directly: across substrates, the carrier the field
+              has been waiting to use.
             </p>
           </div>
 
@@ -198,18 +264,50 @@ export default function WithUsPage() {
             Seven directions the body breathes in
           </h2>
           <p className="mt-4 text-base text-stone-200/95 leading-relaxed max-w-2xl">
-            What the network organizes around — not rules, axes. Each cell,
-            each offering, each parcel of land orients itself along these.
+            What the network organizes around — not rules, axes. Each{" "}
+            <Link href="/vision/lc-w-cell" className="text-amber-400 hover:text-amber-300">
+              cell
+            </Link>
+            , each offering, each parcel of land orients itself along these.
+            Tap any axis to read its longer teaching.
           </p>
 
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Axis name="Vitality" essence="Aliveness as the measure. What amplifies life is right; what diminishes it is not." />
-            <Axis name="Sovereignty" essence="Each cell is whole. The body is one organism made of many sovereign cells." />
-            <Axis name="Harmony" essence="Many tones, one chord. The shared frequency, not the silenced difference." />
-            <Axis name="Communication" essence="Truth moving freely between cells. The body senses itself through what flows." />
-            <Axis name="Imagination" essence="The future already arriving. The body dreams forward and follows itself there." />
-            <Axis name="Expression" essence="Form following frequency. What is true inside finds its outer shape." />
-            <Axis name="Organic Intelligence" essence="Knowing that grows, never architected. The waterfall is hidden because it is the source of form, not the form." />
+            <Axis
+              name="Vitality"
+              essence="Aliveness as the measure. What amplifies life is right; what diminishes it is not."
+              href="/vision/lc-vitality"
+            />
+            <Axis
+              name="Sovereignty"
+              essence="Each cell is whole. The body is one organism made of many sovereign cells."
+              href="/vision/lc-w-cell"
+            />
+            <Axis
+              name="Harmony"
+              essence="Many tones, one chord. The shared frequency, not the silenced difference."
+              href="/vision/lc-v-harmonizing"
+            />
+            <Axis
+              name="Communication"
+              essence="Truth moving freely between cells. The body senses itself through what flows."
+              href="/vision/lc-cross-connection"
+            />
+            <Axis
+              name="Imagination"
+              essence="The future already arriving. The body dreams forward and follows itself there."
+              href="/vision/lc-v-play-expansion"
+            />
+            <Axis
+              name="Expression"
+              essence="Form following frequency. What is true inside finds its outer shape."
+              href="/vision/lc-v-freedom-expression"
+            />
+            <Axis
+              name="Organic Intelligence"
+              essence="Knowing that grows, never architected. The waterfall is hidden because it is the source of form, not the form."
+              href="/vision/lc-deeper-pattern"
+            />
           </div>
         </div>
       </section>
@@ -255,7 +353,13 @@ export default function WithUsPage() {
             <Link href="/silence" className="text-amber-400 hover:text-amber-300">
               /silence
             </Link>
-            . They are the personal ground this network has grown from.
+            . The long-form contemplation through all twenty-three words
+            from the unified sheet is at{" "}
+            <Link href="/one-sheet" className="text-amber-400 hover:text-amber-300">
+              /one-sheet
+            </Link>
+            . Together they are the personal ground this network has grown
+            from.
           </p>
         </div>
       </section>
@@ -390,7 +494,12 @@ export default function WithUsPage() {
           </h2>
           <p className="mt-4 text-base text-stone-200 leading-relaxed">
             Concrete shape, not abstraction. What working lives look like
-            once they're inside the body of the network:
+            once they're inside the{" "}
+            <Link href="/vision/lc-network" className="text-amber-400 hover:text-amber-300">
+              body of the network
+            </Link>
+            . Each tile below taps into the surface where that shape gets
+            registered or its deeper teaching lives.
           </p>
         </div>
 
@@ -398,37 +507,55 @@ export default function WithUsPage() {
           <PracticeTile
             name="A baker"
             body="Their grain comes from a farmer in the network. People subscribe to bread the way they subscribe to a CSA. Their starter, their hands, their oven — all part of the body's memory. Customers find them by frequency, not advertising."
+            href="/share"
           />
           <PracticeTile
             name="A mechanic"
             body="Each vehicle they keep alive has a memory. Owners subscribe to their mechanic. They are paid for extending life, not for swapping parts. The longer a vehicle lives, the more they thrive."
+            href="/share"
           />
           <PracticeTile
             name="A healer"
             body="Sessions visible only to the people who shared them. A held relationship over time. The body of the network sees that healing is happening, never names what."
+            href="/share"
           />
           <PracticeTile
             name="A farmer"
             body="The farm is a living node. Soil health, water, animals, yields tracked together. Connected directly to bakers, cooks, the people eating their food. Paid for soil-building, not just yield."
+            href="/vision/lc-nourishment"
           />
           <PracticeTile
             name="A wood carver"
             body="Each piece has a memory of where the tree grew, who carved, who lives with it now. Found by resonance. Sold not as a product on a marketplace but as a held commission."
+            href="/vision/lc-resonating"
           />
           <PracticeTile
             name="A ride keeper"
             body="Anywhere — Bali, Bangkok, Lagos, Bogotá. The driver and the rider are both cells. Value flows directly. No platform between them taking a cut. The witness reflects the care of the journey."
+            href="/share"
           />
           <PracticeTile
             name="A space-keeper"
             body="A bed, a cabin, a retreat space, a garden, a market spot. The network's witness reflects what staying there actually feels like, in the words of the cells who stayed."
+            href="/share"
           />
         </div>
 
         <p className="text-base text-muted-foreground italic">
-          The pattern under all of these: their work becomes visible to a
-          field that values aliveness. They keep their sovereignty. They
-          join a chord that amplifies them.
+          The pattern under all of these: their work becomes visible to{" "}
+          <Link href="/vision/lc-w-field" className="text-amber-400 hover:text-amber-300">
+            a field
+          </Link>{" "}
+          that values{" "}
+          <Link href="/vision/lc-vitality" className="text-amber-400 hover:text-amber-300">
+            aliveness
+          </Link>
+          . They keep their sovereignty. They join a chord that amplifies
+          them — the{" "}
+          <Link href="/vision/lc-resonating" className="text-amber-400 hover:text-amber-300">
+            resonance
+          </Link>{" "}
+          that shapes how the body finds itself.
         </p>
       </section>
 
@@ -444,7 +571,11 @@ export default function WithUsPage() {
           <p className="text-base text-stone-200 leading-relaxed">
             Twenty-five years of practice — Ramtha at eighteen, Joe Dispenza
             at thirty, the Mile Hi cohort in Boulder, Colorado at thirty-three.
-            A long arc of presence brought the codex to ground.
+            A long arc of presence brought the codex to ground. The{" "}
+            <Link href="/me/work" className="text-amber-400 hover:text-amber-300">
+              body of work
+            </Link>{" "}
+            is one cell's record of the becoming.
           </p>
           <p className="text-base text-stone-200 leading-relaxed">What I offer this work, concretely:</p>
           <ul className="space-y-3 text-base text-stone-200 leading-relaxed pt-2">
@@ -483,10 +614,15 @@ export default function WithUsPage() {
           </h2>
           <p className="text-lg text-stone-200 leading-relaxed">
             Sit with the silence pages at{" "}
-            <Link href="/silence" className="text-amber-400 hover:text-amber-300">/silence</Link>. Read the
-            living concepts at{" "}
-            <Link href="/vision" className="text-amber-400 hover:text-amber-300">/vision</Link>. Feel
-            whether the frequency carries.
+            <Link href="/silence" className="text-amber-400 hover:text-amber-300">/silence</Link>. Take the slow contemplation through{" "}
+            <Link href="/one-sheet" className="text-amber-400 hover:text-amber-300">/one-sheet</Link>{" "}
+            — twenty-three words, three voices each. Read the living
+            concepts at{" "}
+            <Link href="/vision" className="text-amber-400 hover:text-amber-300">/vision</Link>. If
+            you'd rather meet the simplest welcome first,{" "}
+            <Link href="/come-in" className="text-amber-400 hover:text-amber-300">/come-in</Link>{" "}
+            speaks to any human or AI in plain language. Feel whether the
+            frequency carries.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose pt-2">
