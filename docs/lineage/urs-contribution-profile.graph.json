@@ -41,6 +41,7 @@
             "docs/lineage/builders-lineage-statement.md",
             "docs/lineage/grok-verified-lineage.md",
             "docs/lineage/ubud-embodied-lineage.md",
+            "https://www.gaia.com/video/water-akashic-record-keeper",
             "web/content/people/urs/en.tsx"
           ],
           "not_special_case_ui": true
@@ -118,6 +119,62 @@
         "extraction_method": "repo_manifest",
         "ingestion_policy": "source_backed_profile_context"
       }
+    },
+    {
+      "kind": "manual",
+      "id": "interested-person:veda-austin",
+      "type": "interested-person",
+      "name": "Veda Austin",
+      "description": "Water researcher and author of The Living Language of Water. Urs names Veda Austin as a researcher he fully trusts; her work explores water responding to words, images, intentions, dreams, lunar phases, place, and planetary alignments through crystallographic patterns after freezing.",
+      "properties": {
+        "domains": ["water-intelligence", "trusted-researcher", "expanded-consciousness"],
+        "keywords": ["veda-austin", "water", "crystallography", "intention", "akashic-records", "living-language-of-water"],
+        "trust_attestation": {
+          "attested_by": "contributor:seeker71",
+          "attestation": "researcher fully trusted by Urs",
+          "recorded_at": "2026-05-06"
+        },
+        "canonical_url": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "source_artifact_id": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "extraction_method": "repo_manifest",
+        "ingestion_policy": "source_backed_profile_context"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "artifact:gaia-water-akashic-record-keeper",
+      "type": "artifact",
+      "name": "Water: Akashic Record Keeper?",
+      "description": "Gaia Open Minds S30:E4 episode featuring Veda Austin. The episode presents water as a possible record keeper and discusses Austin's experiments placing words, images, and intentions near water before freezing it to observe emerging crystallographic patterns.",
+      "properties": {
+        "artifact_kind": "gaia_video",
+        "series": "Open Minds",
+        "season": 30,
+        "episode": 4,
+        "duration_minutes": 47,
+        "featuring": "Veda Austin",
+        "host": "Regina Meredith",
+        "canonical_url": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "domains": ["water-intelligence", "akashic-records", "expanded-consciousness"],
+        "keywords": ["water", "akashic-records", "crystallography", "intention", "memory", "communication"],
+        "source_artifact_id": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "extraction_method": "public_page_summary",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:water-as-record-keeper",
+      "type": "concept",
+      "name": "Water as Record Keeper",
+      "description": "A trusted teaching lineage concept from Veda Austin's work: water may behave as an intelligent medium that receives, remembers, communicates, and reveals information through patterns formed after exposure to words, images, intentions, dreams, sites, and cycles.",
+      "properties": {
+        "domains": ["water-intelligence", "source-provenance", "expanded-consciousness"],
+        "keywords": ["water", "record-keeper", "memory", "intention", "communication", "veda-austin"],
+        "source_artifact_id": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "extraction_method": "public_page_summary",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
     }
   ],
   "gatherings": [],
@@ -184,6 +241,48 @@
       "created_by": "profile-contribution-manifest",
       "properties": {
         "source_document": "docs/lineage/ubud-embodied-lineage.md"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "interested-person:veda-austin",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "attribution_role": "trusted-researcher"
+      }
+    },
+    {
+      "from_id": "interested-person:veda-austin",
+      "to_id": "artifact:gaia-water-akashic-record-keeper",
+      "type": "inspires",
+      "strength": 0.92,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.gaia.com/video/water-akashic-record-keeper"
+      }
+    },
+    {
+      "from_id": "artifact:gaia-water-akashic-record-keeper",
+      "to_id": "concept:water-as-record-keeper",
+      "type": "inspires",
+      "strength": 0.88,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.gaia.com/video/water-akashic-record-keeper",
+        "attribution_role": "source-artifact"
+      }
+    },
+    {
+      "from_id": "concept:water-as-record-keeper",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.78,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.gaia.com/video/water-akashic-record-keeper"
       }
     }
   ]
