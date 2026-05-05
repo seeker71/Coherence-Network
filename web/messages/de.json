@@ -1971,5 +1971,13 @@
     "invitationEmail": "Oder — schreibe direkt: [umuff71@gmail.com](mailto:umuff71@gmail.com). Erzähle mir, was du trägst, was du hütest, wo du dich einweben möchtest. Solange der Körper noch klein genug ist, dass ich jede Nachricht persönlich lesen kann, tue ich es.",
     "invitationCommunities": "Für Gemeinschaften, die Land hüten — lass uns persönlich sprechen, wenn wir können. Der Körper erkennt seine Verwandten. Ein Treffen ist oft, wo das Weben tatsächlich beginnt.",
     "livingDocFooter": "Ein lebendiges Dokument. Der Körper wächst; das Angebot wächst mit ihm. Was heute hier geschrieben steht, ist die Form, in die das Netzwerk bisher gereift ist. Die nächste Reifung wird die Seite umschreiben."
+  },
+  "personProfile": {
+    "breadcrumb": {
+      "home": "Startseite",
+      "people": "Menschen"
+    },
+    "noteEyebrow": "Eine Notiz aus diesem Körper",
+    "editProfileCta": "Wie du dieses Profil beanspruchst, bearbeitest oder entfernst →"
   }
 }

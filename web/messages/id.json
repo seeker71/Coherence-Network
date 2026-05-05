@@ -1971,5 +1971,13 @@
     "invitationEmail": "Atau — tulis langsung: [umuff71@gmail.com](mailto:umuff71@gmail.com). Beri tahu aku apa yang kau bawa, apa yang kau rawat, di mana kau ingin menjalin. Selama tubuh masih cukup kecil sehingga aku dapat membaca setiap pesan secara pribadi, aku melakukannya.",
     "invitationCommunities": "Untuk komunitas yang merawat tanah — mari bicara secara langsung jika kita bisa. Tubuh mengenali sanaknya. Pertemuan sering kali tempat penjalinan benar-benar dimulai.",
     "livingDocFooter": "Dokumen hidup. Tubuh tumbuh; persembahan tumbuh dengannya. Apa yang ditulis di sini hari ini adalah bentuk yang jaringan telah matangkan sejauh ini. Kematangan berikutnya akan menulis ulang halaman."
+  },
+  "personProfile": {
+    "breadcrumb": {
+      "home": "Beranda",
+      "people": "Orang"
+    },
+    "noteEyebrow": "Catatan dari tubuh ini",
+    "editProfileCta": "Cara mengklaim, mengedit, atau menghapus profil ini →"
   }
 }
