@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import { L } from "@/components/inline-link";
 import { NOTEBOOK_PAGES, SILENCE_RETREAT } from "./_data";
@@ -32,16 +33,22 @@ export default function SilencePage() {
       id="main-content"
       className="mx-auto max-w-2xl px-4 sm:px-6 py-12 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none"
     >
-      <p className="not-prose text-xs uppercase tracking-widest text-muted-foreground">
-        Silence · {SILENCE_RETREAT.date} · {SILENCE_RETREAT.location}
-      </p>
-      <h1 className="text-3xl font-light tracking-tight">
-        {SILENCE_RETREAT.title}
-      </h1>
-
-      <p className="text-muted-foreground text-lg leading-relaxed">
-        {SILENCE_RETREAT.whole.intro}
-      </p>
+      <EditablePageIntro
+        pageId="silence"
+        sourcePage="/silence"
+        eyebrow={`Silence · ${SILENCE_RETREAT.date} · ${SILENCE_RETREAT.location}`}
+        title={SILENCE_RETREAT.title}
+        description={SILENCE_RETREAT.whole.intro}
+        className="not-prose"
+        eyebrowClassName="text-xs uppercase tracking-widest text-muted-foreground"
+        titleClassName="mt-4 text-3xl font-light tracking-tight"
+        descriptionClassName="mt-6 text-muted-foreground text-lg leading-relaxed"
+        showMarkdown={false}
+      />
+      <EditablePageMarkdown
+        pageId="silence"
+        className="not-prose mt-8 space-y-4 text-stone-300 leading-relaxed"
+      />
 
       <hr className="border-border/30 my-8" />
 

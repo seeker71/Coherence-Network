@@ -61,6 +61,7 @@ import {
 } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
+import { handleContent } from "../lib/commands/content.mjs";
 import { ontology } from "../lib/commands/ontology.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
@@ -158,6 +159,7 @@ if (_invokedAs === 'cc') {
 function _extractGlobalFlags(argv) {
   const out = [];
   const TAKES_VALUE = new Set(["--workspace", "--api-url", "--api-key", "--timeout", "--lang"]);
+  const COMMAND_LANG_CONSUMERS = new Set(["content", "translate"]);
   const APPLY = {
     "--workspace": setActiveWorkspaceOverride,
     "--api-url": setApiUrlOverride,
@@ -165,8 +167,45 @@ function _extractGlobalFlags(argv) {
     "--timeout": setTimeoutOverride,
     "--lang": () => {}, // locale already resolved at module load; swallow value
   };
+  let commandIndex = -1;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
+    if (TAKES_VALUE.has(a) && i + 1 < argv.length) {
+      i++;
+      continue;
+    }
+    let globalAssignment = false;
+    for (const flag of TAKES_VALUE) {
+      if (typeof a === "string" && a.startsWith(`${flag}=`)) {
+        globalAssignment = true;
+        break;
+      }
+    }
+    if (globalAssignment) continue;
+    commandIndex = i;
+    break;
+  }
+  const commandName = commandIndex >= 0 ? argv[commandIndex] : null;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (
+      COMMAND_LANG_CONSUMERS.has(commandName) &&
+      i > commandIndex &&
+      a === "--lang"
+    ) {
+      out.push(a);
+      if (i + 1 < argv.length) out.push(argv[++i]);
+      continue;
+    }
+    if (
+      COMMAND_LANG_CONSUMERS.has(commandName) &&
+      i > commandIndex &&
+      typeof a === "string" &&
+      a.startsWith("--lang=")
+    ) {
+      out.push(a);
+      continue;
+    }
     if (TAKES_VALUE.has(a) && i + 1 < argv.length) {
       APPLY[a](argv[++i]);
       continue;
@@ -208,6 +247,7 @@ const COMMANDS = {
   specs:         () => listSpecs(args),
   spec:          () => showSpec(args),
   contribute:    () => contribute(args),
+  content:       () => handleContent(args),
   ontology:      () => ontology(args),
   status:        () => showStatus(args),
   resonance:     () => showResonance(),
@@ -665,6 +705,7 @@ function showHelp() {
   blueprint apply <id>    Seed a full roadmap from a template
   contribute              Record contribution (interactive)
   contribute --type code --cc 5 --idea <id> --desc "what I did"
+  content set <type> <id> --lang en --file view.md --by <id>
   collab                  Interactive collaboration dashboard for focused idea
   collab broadcast        Signal interest in focused idea to others
   collab list             List active collaborators for focused idea

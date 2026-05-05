@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { getApiBase } from "@/lib/api";
 import {
   formatUsd,
@@ -191,14 +192,12 @@ export default async function IdeasPage({
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          {t("ideas.title")}
-        </h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          {t("ideas.lede")}
-        </p>
-      </div>
+      <EditablePageIntro
+        pageId="ideas"
+        sourcePage="/ideas"
+        title={t("ideas.title")}
+        description={t("ideas.lede")}
+      />
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">

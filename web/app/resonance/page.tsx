@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { getApiBase } from "@/lib/api";
 import { formatUsd } from "@/lib/humanize";
 import { createTranslator, type Translator } from "@/lib/i18n";
@@ -152,12 +153,12 @@ export default async function ResonancePage() {
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          {t("resonance.title")}
-        </h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          {t("resonance.lede")}
-        </p>
+        <EditablePageIntro
+          pageId="resonance"
+          sourcePage="/resonance"
+          title={t("resonance.title")}
+          description={t("resonance.lede")}
+        />
       </header>
 
       {itemsWithActivity.length === 0 ? (

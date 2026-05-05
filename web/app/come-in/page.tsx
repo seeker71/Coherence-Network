@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import {
@@ -115,6 +116,11 @@ export default async function ComeInPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950" />
           <div className="absolute inset-0 flex items-end">
             <div className="mx-auto w-full max-w-2xl px-6 pb-12 sm:pb-16">
+              {/* Translated hero — see web/messages/{lang}.json comeIn.*.
+                  We don't use EditablePageIntro here because it would
+                  replace the locale-aware content with static English.
+                  When EditablePageIntro learns to read translated text,
+                  this can adopt it. */}
               <p className="text-xs uppercase tracking-widest text-amber-300/90">
                 {t("comeIn.heroEyebrow")}
               </p>
@@ -128,6 +134,11 @@ export default async function ComeInPage() {
           </div>
         </div>
       </section>
+
+      <EditablePageMarkdown
+        pageId="come-in"
+        className="mx-auto max-w-2xl px-6 pt-12 -mb-4 space-y-4 text-base leading-relaxed text-stone-300"
+      />
 
       {/* PART 1 — The simple welcome */}
       <article className="mx-auto max-w-2xl px-6 py-16 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none space-y-10">
