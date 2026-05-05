@@ -40,12 +40,20 @@ class Asset(BaseModel):
     graph carries. Resolver-minted nodes (albums, tracks, videos,
     blueprints, audio recordings) all live under type=asset in the
     graph but with their own type taxonomy; rendering them requires a
-    lens that doesn't reject non-pipeline values."""
+    lens that doesn't reject non-pipeline values.
+
+    ``image_url`` (absolute URL on remote nodes from inspired-by
+    resolvers) and ``file_path`` (local path under /visuals/... for
+    KB-generated visuals) are exposed on the listing so cards can
+    render real thumbnails for IMAGE-typed assets without a second
+    round-trip per card."""
     id: UUID = Field(default_factory=uuid4)
     type: str
     description: str
     total_cost: Decimal = Decimal("0.00")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    image_url: Optional[str] = None
+    file_path: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
