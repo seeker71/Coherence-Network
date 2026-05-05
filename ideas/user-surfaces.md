@@ -11,6 +11,7 @@ specs:
   - [meta-self-discovery](../specs/meta-self-discovery.md)
   - [ux-homepage-readability](../specs/ux-homepage-readability.md)
   - [mcp-skill-registry-submission](../specs/mcp-skill-registry-submission.md)
+  - [open-design-integration](../specs/open-design-integration.md)
 ---
 
 # User Surfaces

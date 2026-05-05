@@ -1,6 +1,6 @@
 # Spec Index
 
-> 91 specs (79 done, 8 draft, 4 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 94 specs (79 done, 8 draft, 5 active, 2 unaccounted — drift to reconcile next pass). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (22 ideas → 91 specs)
 
@@ -74,11 +74,12 @@
 - [value-lineage-and-payout-attribution](value-lineage-and-payout-attribution.md) — value lineage chain
 - [story-protocol-integration](story-protocol-integration.md) — Story Protocol IP + x402 micropayments + Arweave storage
 
-### user-surfaces (6 specs)
+### user-surfaces (7 specs)
 - [coherence-cli-comprehensive](coherence-cli-comprehensive.md) — CLI 35+ commands
 - [mcp-skill-registry-submission](mcp-skill-registry-submission.md) — MCP skill registry
 - [meta-self-discovery](meta-self-discovery.md) — system self-discovery endpoints
 - [node-task-visibility](node-task-visibility.md) — node task visibility dashboard
+- [open-design-integration](open-design-integration.md) — artifact loop (decks/prototypes/posters) via open-design daemon as sidecar
 - [ux-homepage-readability](ux-homepage-readability.md) — homepage readability UX
 - [web-ideas-specs-usage-pages](web-ideas-specs-usage-pages.md) — web ideas/specs/usage pages
 
