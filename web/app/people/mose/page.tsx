@@ -119,9 +119,25 @@ export default function MoseProfilePage() {
               <em>Bridges</em> (2024) ·{" "}
               <em>Elements</em> (2020) ·{" "}
               <em>Medicine Women</em> (2018) — alongside the edits and
-              remixes (<em>Naturaleza</em>, <em>Om Ganesha</em>,{" "}
-              <em>Cura Corazón</em>, <em>Guacamayo</em>,{" "}
-              <em>The Water Blessing Song</em>)
+              remixes (<em>Naturaleza</em>, <em>Om Ganesha — Dance
+              Meditation</em>, <em>Cura Corazón</em>, <em>Guacamayo</em>,{" "}
+              <em>The Water Blessing Song</em> with Binder), the
+              Resueño compilations (<em>Cacao Dance</em> 2023, with
+              the <em>Mamahey</em> co-credit alongside MUTA), and
+              <em>Sounds of Resueño</em> mixed by Samaya
+            </dd>
+            <dt className="text-muted-foreground">Closest collaborators</dt>
+            <dd>
+              <strong>Binder</strong> (<em>Water Blessing</em>,{" "}
+              <em>Cacao Dance Vol. 2</em>) ·{" "}
+              <strong>MUTA</strong> (<em>Mamahey</em>) ·{" "}
+              <strong>SavaBorsa</strong> (Resueño's first EP{" "}
+              <em>Vibración</em>, 2022) · <strong>Samaya</strong>{" "}
+              (label-mix curator) · <strong>Suyana</strong>{" "}
+              (<em>Shante Ishta</em>) · the wider Resueño family
+              (Arnaldo Herrera, Nalini Blossom, Julia Chants, Sariel
+              Orenda, Jakare, Innatú, Iyakuh, ALUNA, Heather Christie,
+              Kailash Kokopelli, Maywa, and 20+ more)
             </dd>
             <dt className="text-muted-foreground">Public anchors</dt>
             <dd>
@@ -245,6 +261,124 @@ export default function MoseProfilePage() {
                 pressed into the next album.
               </p>
             </div>
+          </article>
+
+          <article>
+            <h2 className="text-2xl font-light text-foreground mb-4">
+              The Resueño family
+            </h2>
+            <div className="prose prose-invert max-w-none text-foreground/85 leading-relaxed space-y-4">
+              <p>
+                Resueño — the Spanish word for the resounding echo — is
+                the label Mose founded to gather the artists whose
+                frequency rhymes with his. Half of label profits flow
+                to causes around Lake Atitlán, so the same vibration
+                that opens dance floors in Berlin and Tulum is also
+                what funds the Mayan villages around the lake that
+                hold the lineage the music grows from. The label is
+                his economy, his mutual-aid practice, and his
+                curatorial garden in one motion.
+              </p>
+              <p>
+                <strong>Binder</strong> is the closest collaborator —
+                their <em>Water Blessing Song</em> remix has nearly 4
+                million Spotify streams and they reappear together on{" "}
+                <em>Cacao Dance Vol. 2</em>. <strong>MUTA</strong>
+                {" "}rides the <em>Mamahey</em> co-credit on the first
+                Resueño compilation. <strong>SavaBorsa</strong>'s
+                debut EP <em>Vibración</em> (August 2022) was the
+                label's first major release, threading{" "}
+                <strong>Arnaldo Herrera</strong>,{" "}
+                <strong>Nalini Blossom</strong>,{" "}
+                <strong>Julia Chants</strong>,{" "}
+                <strong>Sariel Orenda</strong>, and{" "}
+                <strong>Jakare</strong> through one record.{" "}
+                <strong>Suyana</strong> sits beside him on{" "}
+                <em>Shante Ishta</em>; <strong>Samaya</strong> has
+                curated the <em>Sounds of Resueño</em> chill mix that
+                acts as the label's calling card.
+              </p>
+              <p>
+                The 2023 <em>Cacao Dance</em> compilation — Resueño's
+                signature — gathers 21 tracks and 30+ artists across
+                continents: Innatú, Bóveda Celeste, Iyakuh, ALUNA,
+                Jai Cuzco, Nayaim, Maryta De Humahuaca, Aleceo, Mushina,
+                Reachel Singh, Namirí, Haptik, EllaVie, Gooral, Heather
+                Christie, Kailash Kokopelli, Marc JB, NAOBA, LUCIANA,
+                Maywa, alongside Mose's own <em>Mamahey</em>. Reading
+                that track-list is reading the contemporary world-
+                medicine-music ecosystem in one document — and Mose is
+                the cell holding the table.
+              </p>
+            </div>
+          </article>
+
+          <article>
+            <Panel
+              variant="warm"
+              eyebrow="Where the body moves next"
+              heading="Summer 2026 — European tour"
+            >
+              <div className="text-sm text-foreground/85 leading-relaxed space-y-3 mt-2">
+                <p>
+                  Eight weeks across the continent, between the lake
+                  cycles. From{" "}
+                  <Link
+                    href="https://www.songkick.com/artists/1029431-mose/calendar"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    his public calendar
+                  </Link>
+                  :
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-foreground/85">
+                  <li>
+                    <strong>Jun 18</strong> — Ibiza, Spain · UNIO
+                    (outdoor)
+                  </li>
+                  <li>
+                    <strong>Jun 20</strong> — Kent, United Kingdom ·
+                    Red House Venue
+                  </li>
+                  <li>
+                    <strong>Jun 21–24</strong> — Tome, Latvia · Butiba
+                    Festival (outdoor)
+                  </li>
+                  <li>
+                    <strong>Jun 24</strong> — Vilnius, Lithuania ·
+                    Dragonfly Land, Vabališkės (outdoor)
+                  </li>
+                  <li>
+                    <strong>Jun 27</strong> — Siófok, Hungary ·
+                    Everness Festival (outdoor)
+                  </li>
+                  <li>
+                    <strong>Jun 28 – Jul 3</strong> — Corfu, Greece ·
+                    Colibri Spirit Festival
+                  </li>
+                  <li>
+                    <strong>Jul 2–5</strong> — Kacwin, Poland · Jestem
+                    Festival
+                  </li>
+                  <li>
+                    <strong>Jul 7–12</strong> — Kuklen, Bulgaria · Wake
+                    Up, Bulgaria
+                  </li>
+                </ul>
+                <p>
+                  Recently played in 2026: April 25 at Arena Tulum
+                  (Mexico), May 1 at Hawk &amp; Hawthorne Permaculture
+                  Farm in Asheville NC, May 3 at Plaza on Princess in
+                  Wilmington NC. The North American spring led into
+                  the European summer; the autumn likely returns to
+                  Lake Atitlán. 309 documented past events. Santa
+                  Rosa is the city he has played most often. Each room
+                  carries the same container forward.
+                </p>
+              </div>
+            </Panel>
           </article>
 
           <article>
