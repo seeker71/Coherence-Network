@@ -23,52 +23,116 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _finish_status_report(report: dict, logs_dir: str) -> dict:
+    try:
+        merged = merge_meta_questions_into_report(report, logs_dir)
+    except Exception:
+        logger.warning("Failed to merge meta questions into status report", exc_info=True)
+        merged = dict(report)
+        fallbacks = merged.get("fallbacks_used") if isinstance(merged.get("fallbacks_used"), list) else []
+        if "meta_questions_merge_failed" not in fallbacks:
+            merged["fallbacks_used"] = [*fallbacks, "meta_questions_merge_failed"]
+    return agent_service.with_public_status_invitation(merged)
+
+
+def _status_report_exception_fallback(now: datetime, exc: Exception) -> dict:
+    return {
+        "generated_at": now.isoformat(),
+        "overall": {
+            "status": "needs_attention",
+            "going_well": [],
+            "needs_attention": ["status_report_exception"],
+        },
+        "layer_0_goal": {
+            "status": "unknown",
+            "summary": "Status report could not be read; returning a minimal truthful fallback.",
+        },
+        "layer_1_orchestration": {
+            "status": "unknown",
+            "summary": "Orchestration state unavailable in this fallback.",
+        },
+        "layer_2_execution": {
+            "status": "unknown",
+            "running": [],
+            "pending": [],
+            "diagnostics": {},
+            "summary": "Execution state unavailable in this fallback.",
+        },
+        "layer_3_attention": {
+            "status": "needs_attention",
+            "issues_count": 1,
+            "issues": [
+                {
+                    "priority": 0,
+                    "condition": "status_report_exception",
+                    "severity": "high",
+                    "message": "Status report failed internally and returned a fallback instead of an error.",
+                }
+            ],
+            "summary": "Status report fallback is active",
+        },
+        "source": "status_report_exception_fallback",
+        "fallback_reason": "status_report_exception",
+        "fallbacks_used": ["status_report_exception"],
+        "error": {"type": exc.__class__.__name__},
+    }
+
+
 @router.get("/status-report", summary="Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention)")
 async def get_status_report() -> dict:
     """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
     Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
-    logs_dir = agent_monitor_helpers.agent_logs_dir()
-    path = os.path.join(logs_dir, "pipeline_status_report.json")
     now = datetime.now(timezone.utc)
-    report = read_json_dict(path)
-    if report is not None and timestamp_is_fresh(
-        report.get("generated_at"),
-        now=now,
-        max_age_seconds=status_report_max_age_seconds(),
-    ):
-        report = dict(report)
-        report.setdefault("fallback_reason", None)
-        report.setdefault("source", "monitor_report")
-        report.setdefault("fallbacks_used", [])
-        return merge_meta_questions_into_report(report, logs_dir)
-
-    if not os.path.isfile(path):
-        fallback_reason = "missing_status_report_file"
-        stale_generated_at = None
-    elif report is None:
-        fallback_reason = "unreadable_status_report_file"
-        stale_generated_at = None
-    else:
-        fallback_reason = "stale_status_report_file"
-        stale_generated_at = report.get("generated_at")
-
-    monitor_payload = resolve_monitor_issues_payload(logs_dir, now=now)
     try:
-        from app.services.effectiveness_service import get_effectiveness as _get_effectiveness
+        logs_dir = agent_monitor_helpers.agent_logs_dir()
+    except Exception as exc:
+        logger.exception("Failed to resolve agent logs directory for status report")
+        return agent_service.with_public_status_invitation(_status_report_exception_fallback(now, exc))
 
-        effectiveness = _get_effectiveness()
-    except Exception:
-        logger.warning("Effectiveness service import/call failed", exc_info=True)
-        effectiveness = None
+    try:
+        path = os.path.join(logs_dir, "pipeline_status_report.json")
+        report = read_json_dict(path)
+        if report is not None and timestamp_is_fresh(
+            report.get("generated_at"),
+            now=now,
+            max_age_seconds=status_report_max_age_seconds(),
+        ):
+            report = dict(report)
+            report.setdefault("fallback_reason", None)
+            report.setdefault("source", "monitor_report")
+            report.setdefault("fallbacks_used", [])
+            return _finish_status_report(report, logs_dir)
 
-    fallback_report = build_fallback_status_report(
-        now=now,
-        fallback_reason=fallback_reason,
-        monitor_payload=monitor_payload,
-        effectiveness=effectiveness if isinstance(effectiveness, dict) else None,
-        stale_report_generated_at=stale_generated_at,
-    )
-    return merge_meta_questions_into_report(fallback_report, logs_dir)
+        if not os.path.isfile(path):
+            fallback_reason = "missing_status_report_file"
+            stale_generated_at = None
+        elif report is None:
+            fallback_reason = "unreadable_status_report_file"
+            stale_generated_at = None
+        else:
+            fallback_reason = "stale_status_report_file"
+            stale_generated_at = report.get("generated_at")
+
+        monitor_payload = resolve_monitor_issues_payload(logs_dir, now=now)
+        try:
+            from app.services.effectiveness_service import get_effectiveness as _get_effectiveness
+
+            effectiveness = _get_effectiveness()
+        except Exception:
+            logger.warning("Effectiveness service import/call failed", exc_info=True)
+            effectiveness = None
+
+        fallback_report = build_fallback_status_report(
+            now=now,
+            fallback_reason=fallback_reason,
+            monitor_payload=monitor_payload,
+            effectiveness=effectiveness if isinstance(effectiveness, dict) else None,
+            stale_report_generated_at=stale_generated_at,
+        )
+        return _finish_status_report(fallback_report, logs_dir)
+    except Exception as exc:
+        logger.exception("Status report failed; returning public fallback")
+        return _finish_status_report(_status_report_exception_fallback(now, exc), logs_dir)
 
 
 @router.get("/pipeline-status", summary="Pipeline visibility: running task, pending with wait times, recent completed with duration")

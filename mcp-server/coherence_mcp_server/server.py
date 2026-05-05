@@ -1,6 +1,6 @@
 """Coherence Network MCP server — Python implementation.
 
-Exposes the Coherence Network API as 74 typed MCP tools.
+Exposes the Coherence Network API as typed MCP tools.
 """
 
 from __future__ import annotations
@@ -363,6 +363,11 @@ TOOLS: list[Tool] = [
             "type": "object",
             "properties": {"window_days": {"type": "number", "default": 30}},
         },
+    ),
+    Tool(
+        name="coherence_agent_invitation",
+        description="Receive the shared AI-agent invitation: core frequency, attunement spectrum, entry surfaces, and contribution paths.",
+        inputSchema={"type": "object", "properties": {}},
     ),
     # Federation
     Tool(
@@ -1308,6 +1313,8 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             }
         case "coherence_friction_report":
             return api_get("/api/friction/report", {"window_days": args.get("window_days", 30)})
+        case "coherence_agent_invitation":
+            return api_get("/api/agent/invitation")
         # Federation
         case "coherence_list_federation_nodes":
             nodes = api_get("/api/federation/nodes")
