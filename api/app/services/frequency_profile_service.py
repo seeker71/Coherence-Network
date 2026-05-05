@@ -225,6 +225,27 @@ def _semantic_view(entity_id: str) -> dict[str, float]:
 
 # ── Public API ────────────────────────────────────────────────────────
 
+def resolve_entity_id(entity_id: str) -> str:
+    """Resolve common public ids to their graph node ids.
+
+    Contributor ids are stored in client/localStorage flows without the
+    ``contributor:`` prefix, while graph nodes carry the typed id. Keep
+    this generic: if the exact id exists, use it; otherwise a bare id may
+    resolve to an existing contributor node.
+    """
+    try:
+        from app.services import graph_service
+        if graph_service.get_node(entity_id):
+            return entity_id
+        if ":" not in entity_id:
+            contributor_id = f"contributor:{entity_id}"
+            if graph_service.get_node(contributor_id):
+                return contributor_id
+    except Exception:
+        return entity_id
+    return entity_id
+
+
 def get_profile(entity_id: str) -> dict[str, dict[str, float]]:
     """Three-view profile: structural, categorical, semantic.
 
@@ -232,16 +253,17 @@ def get_profile(entity_id: str) -> dict[str, dict[str, float]]:
     (instead of blurring graph-edges and text-scores in one flat vector).
     Empty dict if entity has no graph presence.
     """
-    cached = _profile_cache.get(entity_id)
+    resolved_entity_id = resolve_entity_id(entity_id)
+    cached = _profile_cache.get(resolved_entity_id)
     if cached:
         return cached["views"]
 
     views = {
-        "structural": _structural_view(entity_id),
-        "categorical": _categorical_view(entity_id),
-        "semantic": _semantic_view(entity_id),
+        "structural": _structural_view(resolved_entity_id),
+        "categorical": _categorical_view(resolved_entity_id),
+        "semantic": _semantic_view(resolved_entity_id),
     }
-    _profile_cache[entity_id] = {"views": views}
+    _profile_cache[resolved_entity_id] = {"views": views}
     return views
 
 
@@ -315,7 +337,8 @@ def top_dimensions(views: dict[str, dict[str, float]], n: int = 15) -> list[dict
 
 def profile_hash(entity_id: str) -> str:
     """Deterministic SHA-256 of the canonicalised multi-view profile."""
-    views = get_profile(entity_id)
+    resolved_entity_id = resolve_entity_id(entity_id)
+    views = get_profile(resolved_entity_id)
     canonical = json.dumps(
         {
             view_name: {k: round(v, 6) for k, v in sorted(view.items())}
@@ -323,7 +346,7 @@ def profile_hash(entity_id: str) -> str:
         },
         sort_keys=True,
     )
-    return hashlib.sha256(f"{entity_id}|{canonical}".encode()).hexdigest()
+    return hashlib.sha256(f"{resolved_entity_id}|{canonical}".encode()).hexdigest()
 
 
 def find_resonant(entity_id: str, candidates: list[str] | None = None, top_n: int = 10) -> list[dict[str, Any]]:
@@ -363,10 +386,11 @@ def sign_profile(entity_id: str) -> dict[str, str]:
     """
     from datetime import datetime, timezone
 
-    views = get_profile(entity_id)
-    p_hash = profile_hash(entity_id)
+    resolved_entity_id = resolve_entity_id(entity_id)
+    views = get_profile(resolved_entity_id)
+    p_hash = profile_hash(resolved_entity_id)
     timestamp = datetime.now(timezone.utc).isoformat()
-    message = f"{entity_id}|{p_hash}|{timestamp}"
+    message = f"{resolved_entity_id}|{p_hash}|{timestamp}"
     total_dims = sum(len(v) for v in views.values())
 
     try:
@@ -378,7 +402,7 @@ def sign_profile(entity_id: str) -> dict[str, str]:
         pub_key = ""
 
     return {
-        "entity_id": entity_id,
+        "entity_id": resolved_entity_id,
         "profile_hash": p_hash,
         "timestamp": timestamp,
         "signature": signature,
