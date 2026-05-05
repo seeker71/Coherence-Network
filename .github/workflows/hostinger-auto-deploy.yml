@@ -60,8 +60,18 @@ jobs:
 
       - name: Roll forward VPS
         run: |
-          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" \
+          set +e
+          ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "${HOSTINGER_SSH_HOST}" \
             "COMPOSE_ROOT=${HOSTINGER_DEPLOY_PATH} REPO_DIR=${HOSTINGER_DEPLOY_PATH}/repo BRANCH=main ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${TARGET_SHA}"
+          rc=$?
+          set -e
+          if [[ "$rc" -ne 0 ]]; then
+            echo "::group::Remote deploy log tail"
+            ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=2 "${HOSTINGER_SSH_HOST}" \
+              "tail -240 ${HOSTINGER_DEPLOY_PATH}/deploy.log" || true
+            echo "::endgroup::"
+            exit "$rc"
+          fi
 
       - name: Verify public deployment
         run: |
