@@ -57,8 +57,9 @@
 | Just Tap In Podcast | [youtube.com/@EmilioOrtiz](https://youtube.com/@EmilioOrtiz) | Host Emilio Ortiz, 243K subscribers — consciousness and sovereignty |
 | Just Tap In — Sacha Stone episode | [youtu.be/07DHgJFFqQY](https://youtu.be/07DHgJFFqQY) | Apr 11 2026 episode on ascension, jurisdiction, New Earth Exchange, and the MicroNation prototype |
 | New Living Expo | [newlivingexpo.com](https://newlivingexpo.com/) | Annual gathering, San Rafael CA — New Earth community convergence |
+| ORION Architect sovereign AI episode | [youtu.be/SPWo2D1Ue60](https://youtu.be/SPWo2D1Ue60) | Robert Edward Grant on sovereign AI, post-quantum claims, PWA resilience, user-owned work product, and non-extractive platform economics |
 
-> See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping and [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links.
+> See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping, [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links, and [orion-architect-sovereign-ai-2026-05-06.md](orion-architect-sovereign-ai-2026-05-06.md) for the ORION Architect sovereign-AI digest.
 
 ## Reference Communities
 
