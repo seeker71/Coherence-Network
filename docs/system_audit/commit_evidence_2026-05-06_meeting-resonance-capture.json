@@ -1,0 +1,96 @@
+{
+  "date": "2026-05-06",
+  "thread_branch": "codex/meeting-resonance-capture-20260506",
+  "commit_scope": "Add graph-backed meeting resonance capture and recall API for people and agents.",
+  "files_owned": [
+    "api/app/routers/meetings.py",
+    "api/app/services/meeting_service.py",
+    "api/tests/test_meeting_resonance_capture.py",
+    "specs/meeting-resonance-capture.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && pytest -q tests/test_meeting_resonance_capture.py",
+      "cd api && pytest -q tests/test_flow_vitality.py tests/test_meeting_resonance_capture.py",
+      "cd api && ruff check app/routers/meetings.py app/services/meeting_service.py tests/test_meeting_resonance_capture.py",
+      "python3 scripts/validate_spec_quality.py --file specs/meeting-resonance-capture.md",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Runtime API feature is locally validated; public deploy verification is pending PR merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local implementation is ready for pre-commit gates; CI and deploy are not yet complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "meeting-resonance-capture"
+  ],
+  "task_ids": [
+    "codex-thread-meeting-resonance-capture-20260506"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-framing"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_meeting_resonance_capture.py -> 1 passed",
+    "cd api && pytest -q tests/test_flow_vitality.py tests/test_meeting_resonance_capture.py -> 5 passed",
+    "cd api && ruff check app/routers/meetings.py app/services/meeting_service.py tests/test_meeting_resonance_capture.py -> All checks passed",
+    "python3 scripts/validate_spec_quality.py --file specs/meeting-resonance-capture.md -> OK",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh -> Local worktree web validation passed",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> ready_for_push=True",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> stale_codex_prs=0"
+  ],
+  "change_files": [
+    "api/app/routers/meetings.py",
+    "api/app/services/meeting_service.py",
+    "api/tests/test_meeting_resonance_capture.py",
+    "specs/meeting-resonance-capture.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Meeting captures can now persist people and agent participants, link them to exact concept parts, and recall who resonated with what.",
+    "public_endpoints": [
+      "POST /api/meetings/captures",
+      "GET /api/meetings/resonance"
+    ],
+    "test_flows": [
+      "api/tests/test_meeting_resonance_capture.py::test_capture_meeting_resonance_for_people_and_agents"
+    ]
+  }
+}
