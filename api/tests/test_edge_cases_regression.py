@@ -482,6 +482,28 @@ async def test_cors_not_wildcard() -> None:
 
 
 @pytest.mark.asyncio
+async def test_views_ping_allows_attribution_headers_cors_preflight() -> None:
+    """Browser read pings need attribution headers allowed by CORS."""
+    requested_headers = (
+        "content-type,x-contributor-id,x-session-fingerprint,"
+        "x-referrer-contributor-id"
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.options(
+            "/api/views/ping",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": requested_headers,
+            },
+        )
+        assert r.status_code == 200, r.text
+        allow_headers = r.headers.get("access-control-allow-headers", "").lower()
+        for header in requested_headers.split(","):
+            assert header in allow_headers
+
+
+@pytest.mark.asyncio
 async def test_request_id_propagated() -> None:
     """Send X-Request-ID header, verify it is echoed back."""
     req_id = f"test-{uuid4().hex[:12]}"

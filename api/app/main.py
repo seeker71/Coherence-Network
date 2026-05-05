@@ -523,7 +523,18 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Agent-Execute-Token", "X-Admin-Key", "X-API-Key", "X-Idea-ID"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Request-ID",
+        "X-Agent-Execute-Token",
+        "X-Admin-Key",
+        "X-API-Key",
+        "X-Idea-ID",
+        "X-Contributor-Id",
+        "X-Session-Fingerprint",
+        "X-Referrer-Contributor-Id",
+    ],
     expose_headers=["X-Request-ID", "X-Coherence-Runtime-Ms", "X-Coherence-Runtime-Cost-Estimate"],
 )
 
