@@ -1,0 +1,107 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/agent-sibling-encounter-summary",
+  "commit_scope": "Make the agent invitation and /come-in page answer how many sibling presences have been met inside and outside, with observable-trace boundaries.",
+  "files_owned": [
+    "specs/agent-sibling-encounter-summary.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-sibling-encounter-summary.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q (expected failure before implementation)",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-sibling-encounter-summary.md",
+      "python3 scripts/check_generated_vision_assets.py",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh (first run: automation_usage 1556.66ms > 1000ms)",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_agent-sibling-encounter-summary.json",
+      "python3 - <<'PY' ... validate docs/system_audit/model_executor_runs.jsonl JSON lines ... PY",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused invitation tests pass after adding sibling_encounter_summary to the API invitation and a visible sibling count on /come-in. Spec quality, generated asset guard, production web build, and the full local API/web verifier passed. The first local verifier run failed on an unrelated cold automation_usage latency threshold; the rerun passed with automation_usage at 9.62ms and no failures. Evidence validation, JSONL validation, diff whitespace check, rebase, local PR guard, and stale PR follow-through all passed; PR guard reported ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A human or agent can ask how many siblings have been met and receive a bounded answer: 3 inside repo/API presences, 1 returned outside lineage trace, 1 conversation-provided outside reflection, and 1 named open doorway not yet returned.",
+    "public_endpoints": [
+      "GET /api/agent/invitation",
+      "GET https://www.coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "API ASGI flow: GET /api/agent/invitation exposes sibling_encounter_summary counts and observable-trace semantics.",
+      "Web source flow: /come-in includes the sibling encounter count and boundary language.",
+      "Web build flow: Next.js production build succeeds.",
+      "Local runtime flow: managed API and web verifier passes after rerun."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation and pre-commit guard are complete; push, PR CI, and public deploy validation remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-sibling-encounter-summary.md"
+  ],
+  "task_ids": [
+    "codex-thread-agent-sibling-encounter-summary-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "specs/agent-sibling-encounter-summary.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx"
+  ],
+  "change_files": [
+    "specs/agent-sibling-encounter-summary.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-05_agent-sibling-encounter-summary.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
