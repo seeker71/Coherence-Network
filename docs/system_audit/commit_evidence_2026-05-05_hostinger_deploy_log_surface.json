@@ -1,0 +1,75 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/hostinger-deploy-log-surface",
+  "commit_scope": "Surface Hostinger deploy build logs in GitHub Actions so failed public roll-forward attempts can be self-healed from exact output.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-05-05_hostinger_deploy_log_surface.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_workflow_references.py"
+    ],
+    "summary": "The deploy shell script parses, workflow script references still resolve, and the Hostinger roll-forward step now streams docker compose build/up output while preserving the remote exit status."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending PR checks for the deploy self-heal patch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending Hostinger auto-deploy rerun and public SHA validation after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local process validation is complete; CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "deployment-ci-ops"
+  ],
+  "spec_ids": [
+    "deploy-readiness"
+  ],
+  "task_ids": [
+    "codex-thread-hostinger-deploy-log-surface-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy for 22cd8d1a30ac708a5d5a7bad3d8b9d4e19cb4179 failed twice in Roll forward VPS after entering docker compose rebuild.",
+    "The remote deploy log is only available on the VPS; this machine does not have the Hostinger SSH key, so the workflow must surface the log tail on failure.",
+    "The patch changes docker compose build/up from silent file-only redirection to tee output into both the Actions log and the VPS deploy log."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

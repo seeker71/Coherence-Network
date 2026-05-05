@@ -32,13 +32,13 @@
 | Index | Files | Purpose |
 |---|---|---|
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 121 | API routers — every HTTP endpoint surface |
-| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 211 | API services — business logic and graph operations |
+| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 212 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 55 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 94 | API tests — flow-centric |
-| [web/lib/INDEX.md](web/lib/INDEX.md) | 24 | Web library — shared client/server helpers |
-| [web/components/INDEX.md](web/components/INDEX.md) | 43 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 143 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 77 | Scripts — operational tools, generators, syncers |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 96 | API tests — flow-centric |
+| [web/lib/INDEX.md](web/lib/INDEX.md) | 28 | Web library — shared client/server helpers |
+| [web/components/INDEX.md](web/components/INDEX.md) | 46 | Web components — shared React surfaces |
+| [web/app/INDEX.md](web/app/INDEX.md) | 148 | Web routes — every visible page in the app |
+| [scripts/INDEX.md](scripts/INDEX.md) | 78 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 

@@ -494,7 +494,9 @@ def get_concept_edges(concept_id: str) -> list[dict[str, Any]]:
             "created_by": neighbor.get("created_by", ""),
         })
     # Fallback: if graph_service.get_neighbors doesn't return the shape we
-    # need, query edges directly
+    # need, query edges directly. Edge.to_dict() returns from_id/to_id (the
+    # column names); the API contract is {from, to} so the primary path and
+    # the fallback agree on a single shape downstream.
     if not edges:
         try:
             from app.services.unified_db import session
@@ -506,7 +508,17 @@ def get_concept_edges(concept_id: str) -> list[dict[str, Any]]:
                     .limit(100)
                     .all()
                 )
-                edges = [e.to_dict() for e in db_edges]
+                edges = [
+                    {
+                        "id": e.id,
+                        "from": e.from_id,
+                        "to": e.to_id,
+                        "type": e.type,
+                        "strength": e.strength,
+                        "created_by": e.created_by,
+                    }
+                    for e in db_edges
+                ]
         except Exception:
             pass
     return edges

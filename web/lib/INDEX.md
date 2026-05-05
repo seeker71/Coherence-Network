@@ -4,15 +4,19 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 24
+**Total files**: 28
 
 | File | Purpose |
 |---|---|
 | [api.ts](api.ts) | _no top-of-file purpose_ |
 | [app-config.ts](app-config.ts) | _no top-of-file purpose_ |
+| [asset-types.ts](asset-types.ts) | Pure helpers for asset types — kept out of any component file so |
+| [attribution-ping-dedupe.ts](attribution-ping-dedupe.ts) | _no top-of-file purpose_ |
+| [attribution-target.ts](attribution-target.ts) | _no top-of-file purpose_ |
 | [automation-page-data.ts](automation-page-data.ts) | _no top-of-file purpose_ |
 | [egress.ts](egress.ts) | _no top-of-file purpose_ |
 | [fetch.ts](fetch.ts) | _no top-of-file purpose_ |
+| [html-entities.ts](html-entities.ts) | Many imported asset descriptions arrive carrying WordPress HTML |
 | [humanize.ts](humanize.ts) | _no top-of-file purpose_ |
 | [i18n.ts](i18n.ts) | Locale-text-as-data helpers. |
 | [identity.ts](identity.ts) | Soft-identity helpers shared across client surfaces. |

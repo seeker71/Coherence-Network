@@ -1,8 +1,18 @@
 "use client";
 
-import type { AnchorHTMLAttributes, ReactNode } from "react";
+import Link from "next/link";
+import {
+  forwardRef,
+  type AnchorHTMLAttributes,
+  type ReactNode,
+} from "react";
 
 import { getApiBase } from "@/lib/api";
+import { markRecentAttributionPing } from "@/lib/attribution-ping-dedupe";
+import {
+  attributionTargetFromHref,
+  type AttributionTarget,
+} from "@/lib/attribution-target";
 
 const CURRENT_CONTRIBUTOR_KEY = "cc-contributor-id";
 const LEGACY_CONTRIBUTOR_KEY = "coherence_contributor_id";
@@ -36,7 +46,13 @@ function getOrCreateSessionFingerprint(): string {
   }
 }
 
-function pingExternalAsset(entityId: string, sourcePage: string) {
+function currentSourcePage(sourcePage?: string): string {
+  if (sourcePage) return sourcePage;
+  if (typeof window === "undefined") return "/";
+  return `${window.location.pathname}${window.location.search || ""}`;
+}
+
+function pingAttribution(target: AttributionTarget, sourcePage?: string) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const contributorId = getContributorId();
   const sessionFingerprint = getOrCreateSessionFingerprint();
@@ -47,20 +63,21 @@ function pingExternalAsset(entityId: string, sourcePage: string) {
     method: "POST",
     headers,
     body: JSON.stringify({
-      asset_id: entityId,
-      entity_type: "asset",
-      entity_id: entityId,
-      source_page: sourcePage,
+      asset_id: target.assetId,
+      concept_id: target.conceptId || null,
+      entity_type: target.entityType,
+      entity_id: target.entityId,
+      source_page: currentSourcePage(sourcePage),
     }),
     keepalive: true,
   }).catch(() => {
-    /* external navigation should never depend on attribution sensing */
+    /* navigation should never depend on attribution sensing */
   });
 }
 
 type AttributedExternalLinkProps = Omit<
   AnchorHTMLAttributes<HTMLAnchorElement>,
-  "href" | "children" | "onClick"
+  "href" | "children"
 > & {
   href: string;
   entityId: string;
@@ -68,20 +85,82 @@ type AttributedExternalLinkProps = Omit<
   children: ReactNode;
 };
 
-export function AttributedExternalLink({
+export const AttributedExternalLink = forwardRef<HTMLAnchorElement, AttributedExternalLinkProps>(function AttributedExternalLink({
   href,
   entityId,
-  sourcePage = "/",
+  sourcePage,
   children,
+  onClick,
   ...props
-}: AttributedExternalLinkProps) {
+}, ref) {
   return (
     <a
       {...props}
       href={href}
-      onClick={() => pingExternalAsset(entityId, sourcePage)}
+      ref={ref}
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        pingAttribution({
+          entityType: "asset",
+          entityId,
+          assetId: entityId,
+        }, sourcePage);
+      }}
     >
       {children}
     </a>
   );
-}
+});
+
+type AttributedInternalLinkProps = Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  "href" | "children"
+> & {
+  href: string;
+  sourcePage?: string;
+  entityType?: string;
+  entityId?: string;
+  assetId?: string;
+  children: ReactNode;
+};
+
+export const AttributedInternalLink = forwardRef<HTMLAnchorElement, AttributedInternalLinkProps>(function AttributedInternalLink({
+  href,
+  sourcePage,
+  entityType,
+  entityId,
+  assetId,
+  children,
+  onClick,
+  ...props
+}, ref) {
+  const inferred = attributionTargetFromHref(href);
+  const explicit = entityType && entityId
+    ? {
+        entityType,
+        entityId,
+        assetId: assetId || (entityType === "page" ? `page:${entityId}` : entityId),
+        conceptId: entityType === "concept" ? entityId : null,
+      }
+    : null;
+  const target = explicit || inferred;
+
+  return (
+    <Link
+      {...props}
+      href={href}
+      ref={ref}
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        if (target) {
+          pingAttribution(target, sourcePage);
+          markRecentAttributionPing(target.assetId);
+        }
+      }}
+    >
+      {children}
+    </Link>
+  );
+});

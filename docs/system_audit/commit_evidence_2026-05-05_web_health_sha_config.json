@@ -1,0 +1,86 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/web-health-sha-config",
+  "commit_scope": "Stamp the deployed SHA into the config file consumed by the public web health proxy during Hostinger deploys.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-05-05_web_health_sha_config.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "tmpdir=$(mktemp -d); mkdir -p \"$tmpdir/api/config\"; cp api/config/api.json \"$tmpdir/api/config/api.json\"; TARGET_SHA=0123456789abcdef REPO_DIR=\"$tmpdir\" python3 - <<'PY' ... PY; jq -e --arg sha 0123456789abcdef '.deployed_sha == $sha and .web.deployed_sha == $sha and .web.updated_at == $sha' \"$tmpdir/api/config/api.json\" >/dev/null; rm -rf \"$tmpdir\""
+    ],
+    "summary": "The deploy script parses correctly and the SHA-stamping logic updates root deployed_sha plus web.deployed_sha and web.updated_at in a temporary config copy."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending Hostinger auto-deploy and strict public web health-proxy SHA validation after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local deploy-script proof is complete; CI and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "deploy-readiness",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "deploy-readiness"
+  ],
+  "task_ids": [
+    "codex-thread-web-health-sha-config-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Strict public verification passed API SHA parity at 91e9a592a29da430d21011d14c1272992f0fdd79 but failed because the web health proxy exposed deployed_sha=unknown.",
+    "The web health proxy reads WEB_CONFIG.deployedSha from api/config/api.json, while the Hostinger deploy script only stamped .env before this change.",
+    "The deploy script now stamps the target SHA into the config consumed by the web route before docker compose build/up."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "After the next Hostinger deploy, /api/health-proxy reports web.deployed_sha equal to /api/gates/main-head deployed_sha.",
+    "public_endpoints": [
+      "GET https://coherencycoin.com/api/health-proxy",
+      "GET https://api.coherencycoin.com/api/gates/main-head"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy",
+      "Strict public deploy verification with VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1"
+    ]
+  }
+}

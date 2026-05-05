@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/components/MessagesProvider";
+import { AttributedInternalLink } from "@/components/content/AttributedExternalLink";
 
 /**
  * MobileBottomNav — thumb-zone nav for phones.
@@ -50,7 +50,7 @@ export function MobileBottomNav() {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <Link
+            <AttributedInternalLink
               key={item.href}
               href={item.href}
               className={[
@@ -63,7 +63,7 @@ export function MobileBottomNav() {
             >
               <span className="text-base leading-none" aria-hidden="true">{item.icon}</span>
               <span className="truncate max-w-full">{t(item.labelKey)}</span>
-            </Link>
+            </AttributedInternalLink>
           );
         })}
       </div>

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 43
+**Total files**: 46
 
 | File | Purpose |
 |---|---|
@@ -39,10 +39,13 @@
 | [SinceLastVisit.tsx](SinceLastVisit.tsx) | _no top-of-file purpose_ |
 | [active_nav_link.tsx](active_nav_link.tsx) | _no top-of-file purpose_ |
 | [expert-mode-context.tsx](expert-mode-context.tsx) | _no top-of-file purpose_ |
+| [hash-scroller.tsx](hash-scroller.tsx) | _no top-of-file purpose_ |
 | [idea_share.tsx](idea_share.tsx) | _no top-of-file purpose_ |
 | [idea_stake_form.tsx](idea_stake_form.tsx) | _no top-of-file purpose_ |
 | [idea_submit_form.tsx](idea_submit_form.tsx) | _no top-of-file purpose_ |
+| [inline-link.tsx](inline-link.tsx) | Shared inline-link helper for prose paragraphs. |
 | [live_updates_controller.tsx](live_updates_controller.tsx) | _no top-of-file purpose_ |
+| [markdown-prose.tsx](markdown-prose.tsx) | Tiny markdown subset renderer for translated body prose. |
 | [mobile-bottom-nav.tsx](mobile-bottom-nav.tsx) | _no top-of-file purpose_ |
 | [mode-switcher.tsx](mode-switcher.tsx) | _no top-of-file purpose_ |
 | [page_context_links.tsx](page_context_links.tsx) | _no top-of-file purpose_ |

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 143
+**Total files**: 148
 
 | Route | File | Purpose |
 |---|---|---|
@@ -16,17 +16,20 @@
 | `/analytics` | [page.tsx](analytics/page.tsx) | _no top-of-file purpose_ |
 | `/api-coverage` | [page.tsx](api-coverage/page.tsx) | _no top-of-file purpose_ |
 | `/api-health` | [page.tsx](api-health/page.tsx) | _no top-of-file purpose_ |
+| `/arrival/[id]` | [page.tsx](arrival/[id]/page.tsx) | /arrival/[id] — the moment of being received. After /begin lands, the |
 | `/assets/[asset_id]` | [page.tsx](assets/[asset_id]/page.tsx) | _no top-of-file purpose_ |
 | `/assets/[asset_id]/proof` | [page.tsx](assets/[asset_id]/proof/page.tsx) | _no top-of-file purpose_ |
 | `/assets` | [page.tsx](assets/page.tsx) | _no top-of-file purpose_ |
 | `/assets/upload` | [page.tsx](assets/upload/page.tsx) | _no top-of-file purpose_ |
 | `/automation` | [page.tsx](automation/page.tsx) | _no top-of-file purpose_ |
+| `/begin` | [page.tsx](begin/page.tsx) | _no top-of-file purpose_ |
 | `/beliefs` | [page.tsx](beliefs/page.tsx) | _no top-of-file purpose_ |
 | `/blog/ana-walks` | [page.tsx](blog/ana-walks/page.tsx) | _no top-of-file purpose_ |
 | `/blog` | [page.tsx](blog/page.tsx) | _no top-of-file purpose_ |
 | `/breath` | [page.tsx](breath/page.tsx) | _no top-of-file purpose_ |
 | `/cc` | [page.tsx](cc/page.tsx) | _no top-of-file purpose_ |
 | `/coherence` | [page.tsx](coherence/page.tsx) | _no top-of-file purpose_ |
+| `/come-in` | [page.tsx](come-in/page.tsx) | _no top-of-file purpose_ |
 | `/concepts/[id]` | [page.tsx](concepts/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/concepts/garden` | [page.tsx](concepts/garden/page.tsx) | _no top-of-file purpose_ |
 | `/concepts` | [page.tsx](concepts/page.tsx) | _no top-of-file purpose_ |
@@ -82,6 +85,7 @@
 | `/nodes/[id]` | [page.tsx](nodes/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/nodes` | [page.tsx](nodes/page.tsx) | _no top-of-file purpose_ |
 | `/onboarding` | [page.tsx](onboarding/page.tsx) | _no top-of-file purpose_ |
+| `/one-sheet` | [page.tsx](one-sheet/page.tsx) | _no top-of-file purpose_ |
 | `/ontology` | [page.tsx](ontology/page.tsx) | _no top-of-file purpose_ |
 | `/` | [page.tsx](page.tsx) | _no top-of-file purpose_ |
 | `/peers` | [page.tsx](peers/page.tsx) | _no top-of-file purpose_ |
@@ -95,6 +99,7 @@
 | `/people/ilena` | [page.tsx](people/ilena/page.tsx) | _no top-of-file purpose_ |
 | `/people/lex-fridman` | [page.tsx](people/lex-fridman/page.tsx) | _no top-of-file purpose_ |
 | `/people/matias-de-stefano` | [page.tsx](people/matias-de-stefano/page.tsx) | _no top-of-file purpose_ |
+| `/people/mose` | [page.tsx](people/mose/page.tsx) | _no top-of-file purpose_ |
 | `/people` | [page.tsx](people/page.tsx) | _no top-of-file purpose_ |
 | `/people/porangui` | [page.tsx](people/porangui/page.tsx) | _no top-of-file purpose_ |
 | `/people/portal` | [page.tsx](people/portal/page.tsx) | _no top-of-file purpose_ |
@@ -121,9 +126,9 @@
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settlement` | [page.tsx](settlement/page.tsx) | _no top-of-file purpose_ |
+| `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
-| `/silence/built/design-log` | [page.tsx](silence/built/design-log/page.tsx) | _no top-of-file purpose_ |
 | `/silence/built` | [page.tsx](silence/built/page.tsx) | _no top-of-file purpose_ |
 | `/silence` | [page.tsx](silence/page.tsx) | _no top-of-file purpose_ |
 | `/specs/[spec_id]` | [page.tsx](specs/[spec_id]/page.tsx) | _no top-of-file purpose_ |

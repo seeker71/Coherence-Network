@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-29 | **Concepts**: 86 | **Status**: 57 expanding, 29 seed | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-05 | **Concepts**: 87 | **Status**: 57 expanding, 29 seed, 1 deepening (lc-open-design) | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -43,6 +43,7 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 - **[Energy](concepts/lc-energy.md)** ★ — 417 Hz — field metabolism | `status: deepening`
 - **[Health](concepts/lc-health.md)** ★ — 285 Hz — vitality care | `status: deepening`
 - **[Instruments](concepts/lc-instruments.md)** ★ — 639 Hz — tools that bridge | `status: expanding`
+- **[Open Design](concepts/lc-open-design.md)** — 639 Hz — the artifact loop entering the body (prompt → deck / prototype / printable, locally, openly) | `status: deepening`
 
 **Activities & practices:**
 - **[Nervous System](concepts/lc-nervous-system.md)** — 432 Hz — the daily practice through which the organism senses itself (root → crown → eighth) | `status: seed`
@@ -168,7 +169,7 @@ Concepts marked with ★ are being deeply enriched with: resources, materials & 
 | 417 | Transmutation | phase transitions, field edge, energy, phase-transition |
 | 432 | Natural harmony | pulse, coherence, wu wei, rhythm, space, attunement, spiraling, living-spaces |
 | 528 | Transformation | vitality, resonating, shakti, spanda, offering, circulation, comfort-joy |
-| 639 | Connection | network, intimacy, joining, mycorrhizal, instruments, inclusion |
+| 639 | Connection | network, intimacy, joining, mycorrhizal, instruments, inclusion, open-design |
 | 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing |
 | 852 | Intuition | elders, discovery, transmission |
 | 963 | Unity | field, beauty, ceremony, ceremony-vision |

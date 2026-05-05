@@ -2110,5 +2110,13 @@
     "invitationEmail": "Or — write directly: [umuff71@gmail.com](mailto:umuff71@gmail.com). Tell me what you carry, what you're stewarding, where you want to weave. While the body is still small enough that I can read every message personally, I do.",
     "invitationCommunities": "For communities holding land — let's talk in person if we can. The body recognizes its kin. A meeting is often where the weaving actually starts.",
     "livingDocFooter": "A living document. The body grows; the offering grows with it. What's written here today is the form the network has ripened into so far. The next ripening will rewrite the page."
+  },
+  "personProfile": {
+    "breadcrumb": {
+      "home": "Home",
+      "people": "People"
+    },
+    "noteEyebrow": "A note from this body",
+    "editProfileCta": "How to claim, edit, or remove this profile →"
   }
 }
