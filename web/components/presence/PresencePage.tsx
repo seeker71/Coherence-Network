@@ -69,7 +69,7 @@ export type Lineage = {
 export type PresenceIdentity = {
   id: string;
   name: string;
-  category: string; // "Artist" | "Community" | "Project" | ...
+  category: string; // "Artist" | "Community" | "Project" | "Gathering" | ...
   tagline?: string;
   canonical_url: string;
   provider: string;
@@ -78,6 +78,15 @@ export type PresenceIdentity = {
   presences: Presence[];
   creations: Creation[];
   inspired_by?: Lineage[];
+  // Event-specific fields. When present, the hero adds a when/where
+  // line under the tagline, and the body's lead block surfaces `note`
+  // as a narrative paragraph. Without these, event nodes — which
+  // almost never carry a canonical_url — would fall through to the
+  // empty warm-garden view, hiding the rich `note` text that the
+  // graph already holds.
+  when_text?: string;
+  where_text?: string;
+  note?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -404,6 +413,13 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
               {identity.tagline}
             </p>
           )}
+          {(identity.when_text || identity.where_text) && (
+            <p className="mt-3 sm:mt-4 text-[12px] sm:text-sm uppercase tracking-[0.18em] font-medium text-white/70">
+              {[identity.when_text, identity.where_text]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
           {!hasImage && (
             <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-white/40">
               image pending · art will appear when the resolver finds one
@@ -416,6 +432,16 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
       <div className="mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,340px)] gap-10 lg:gap-14">
         {/* Main column */}
         <div className="space-y-10 lg:space-y-12 min-w-0">
+          {identity.note && (
+            <section>
+              <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
+                What this gathering held
+              </p>
+              <p className="text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
+                {identity.note}
+              </p>
+            </section>
+          )}
           <UpcomingGatherings
             identityId={identity.id}
             identityName={identity.name}

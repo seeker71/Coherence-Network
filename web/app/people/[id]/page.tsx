@@ -172,6 +172,10 @@ function nodeToPresenceIdentity(
     community: "Community",
     "network-org": "Project",
     asset: "Work",
+    event: "Gathering",
+    scene: "Place",
+    practice: "Practice",
+    place: "Place",
   };
   const nodeType = (node.type as string) || "contributor";
   // tagline comes from the node's `tagline` property only — never
@@ -183,6 +187,35 @@ function nodeToPresenceIdentity(
   const tagline =
     typeof node.tagline === "string" && node.tagline.trim()
       ? (node.tagline as string)
+      : undefined;
+  // Event-specific fields. These ride on event-type nodes and were
+  // previously invisible because the renderer had no slot for them.
+  // Surface them on identity so PresencePage can render the gathering's
+  // when, where, and the `note` field that holds its actual story.
+  // Also: when description is non-trivial AND not a duplicate of name,
+  // promote it to `note` so older event nodes whose history sits in
+  // description get rendered too.
+  const note: string | undefined = (() => {
+    const n = node.note;
+    if (typeof n === "string" && n.trim()) return n.trim();
+    const desc = node.description;
+    const name = node.name;
+    if (
+      typeof desc === "string" &&
+      desc.trim() &&
+      desc.trim() !== (typeof name === "string" ? name.trim() : "")
+    ) {
+      return desc.trim();
+    }
+    return undefined;
+  })();
+  const when_text =
+    typeof node.when === "string" && node.when.trim()
+      ? (node.when as string)
+      : undefined;
+  const where_text =
+    typeof node.where === "string" && node.where.trim()
+      ? (node.where as string)
       : undefined;
   return {
     id: (node.id as string) || "",
@@ -196,6 +229,9 @@ function nodeToPresenceIdentity(
     presences,
     creations,
     inspired_by: inspiredBy,
+    when_text,
+    where_text,
+    note,
   };
 }
 
@@ -302,11 +338,29 @@ export default async function PersonPage({
     notFound();
   }
 
-  // When the graph node carries a canonical_url, this identity has an
-  // outward-facing presence. Render the polished presence page —
-  // hero, platforms, creations, lineage — instead of the warm garden
-  // view. Data flows from the graph; no fields are hardcoded.
-  if (graphNode && typeof graphNode.canonical_url === "string" && graphNode.canonical_url) {
+  // When the graph node has outward-facing presence (canonical_url) OR
+  // is one of the field types whose own properties carry the rendered
+  // content (events, scenes, places, communities, network-orgs,
+  // practices), render the polished presence page. Earlier the gate
+  // was canonical_url-only, which meant gatherings with rich `note`,
+  // `when`, `where` fields fell through to the warm-garden view that
+  // expects voices — and rendered as empty scaffolds, hiding the
+  // history alive in the graph.
+  const NODE_TYPES_THAT_RENDER_AS_PRESENCE = new Set([
+    "event",
+    "scene",
+    "place",
+    "community",
+    "network-org",
+    "practice",
+    "asset",
+  ]);
+  const graphNodeType = (graphNode?.type as string) || "";
+  const hasCanonicalUrl =
+    !!graphNode &&
+    typeof graphNode.canonical_url === "string" &&
+    !!graphNode.canonical_url;
+  if (graphNode && (hasCanonicalUrl || NODE_TYPES_THAT_RENDER_AS_PRESENCE.has(graphNodeType))) {
     const nodeId = (graphNode.id as string) || id;
     const [creations, inspiredBy] = await Promise.all([
       fetchCreations(nodeId),
