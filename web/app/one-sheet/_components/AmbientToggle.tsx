@@ -7,7 +7,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function AmbientToggle() {
+interface AmbientToggleProps {
+  /** Locale-translated labels passed in from the server-rendered parent. */
+  startLabel: string;
+  stopLabel: string;
+}
+
+export function AmbientToggle({ startLabel, stopLabel }: AmbientToggleProps) {
   const [on, setOn] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -105,7 +111,7 @@ export function AmbientToggle() {
       aria-pressed={on}
       className="fixed bottom-5 right-5 z-30 rounded-full border border-amber-500/40 bg-stone-950/85 backdrop-blur-sm px-4 py-2.5 text-xs uppercase tracking-widest text-amber-300 hover:bg-stone-900/95 transition-colors shadow-lg"
     >
-      {on ? "Stop drone" : "Add drone"}
+      {on ? stopLabel : startLabel}
     </button>
   );
 }
