@@ -665,7 +665,7 @@ import { getHubUrl } from "../lib/config.mjs";
 function showHelp() {
   const hubUrl = getHubUrl();
   console.log(`
-\x1b[1mcc\x1b[0m — Coherence Network CLI
+\x1b[1mcoh\x1b[0m — Coherence Network CLI
 
 \x1b[1m${t("help.usage")}\x1b[0m ${t("help.usageLine")}
 
