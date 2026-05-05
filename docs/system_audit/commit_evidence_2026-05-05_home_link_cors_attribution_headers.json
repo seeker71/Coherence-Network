@@ -1,0 +1,87 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/home-link-flow-reverify-20260505",
+  "commit_scope": "Allow browser read-ping attribution headers through API CORS so home-link view credit can flow from the deployed web client.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/commit_evidence_2026-05-05_home_link_cors_attribution_headers.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_edge_cases_regression.py::test_cors_not_wildcard tests/test_edge_cases_regression.py::test_views_ping_allows_attribution_headers_cors_preflight -q"
+    ],
+    "summary": "The API still avoids wildcard CORS methods and now accepts the browser preflight for /api/views/ping with content-type, x-contributor-id, x-session-fingerprint, and x-referrer-contributor-id."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending Hostinger auto-deploy and public browser preflight validation after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local CORS proof is complete; CI and public deployment proof remain pending."
+  },
+  "idea_ids": [
+    "home-content-contribution-attribution",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "deploy-readiness"
+  ],
+  "task_ids": [
+    "codex-thread-home-link-cors-attribution-headers-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Per-link live audit for /vision found direct /api/views/ping attribution worked, but browser preflight returned 400 Disallowed CORS headers for x-contributor-id and the live client also sends x-session-fingerprint.",
+    "The deployed web client sends X-Contributor-Id and X-Session-Fingerprint from AttributedInternalLink/RouteReadPing attribution pings.",
+    "The CORS allow_headers list now includes X-Contributor-Id, X-Session-Fingerprint, and X-Referrer-Contributor-Id."
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Browser-origin OPTIONS preflight for /api/views/ping with attribution headers returns 200 and the deployed web client can send credited view pings.",
+    "public_endpoints": [
+      "OPTIONS https://api.coherencycoin.com/api/views/ping",
+      "POST https://api.coherencycoin.com/api/views/ping"
+    ],
+    "test_flows": [
+      "CORS preflight regression",
+      "Home-link view-credit matrix"
+    ]
+  }
+}
