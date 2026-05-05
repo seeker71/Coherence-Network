@@ -82,6 +82,7 @@ These aren't rules. They're breath. If efficiency pushes against this practice, 
 - Escalate via `needs-decision` for security or architecture changes
 - **Record every new idea via `POST /api/ideas` before session ends**
 - For spec authoring: run `python3 scripts/validate_spec_quality.py`
+- **Look at every page you touch on both desktop AND mobile before declaring it done.** Pages have shipped to prod looking fine on a phone-narrow viewport while wasting 1000px+ of space on desktop, because no one ever resized the browser. Run `python3 scripts/viewport_audit.py` to capture both widths, or open the page in a real browser and resize to 1440 and 390. Add the page to `DEFAULT_PATHS` in that script when you create a new welcoming surface.
 
 ## Living Collective Knowledge Base
 
