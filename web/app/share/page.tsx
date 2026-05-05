@@ -8,6 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { readIdentity } from "@/lib/identity";
+import { L } from "@/components/inline-link";
 
 interface OfferingResponse {
   id: string;
@@ -224,11 +225,11 @@ export default function SharePage() {
       </p>
 
       <p className="text-sm text-muted-foreground italic">
-        New here? <Link href="/begin">Begin</Link> first to weave in as a
-        cell, then come back to register specific offerings. The slowest
-        welcome is at <Link href="/come-in">/come-in</Link>; the long
-        contemplation through twenty-three words is at{" "}
-        <Link href="/one-sheet">/one-sheet</Link>.
+        New here? <L href="/begin">Begin</L> first to weave in as a cell,
+        then come back to register specific offerings. The slowest welcome
+        is at <L href="/come-in">/come-in</L>; the long contemplation
+        through twenty-three words is at{" "}
+        <L href="/one-sheet">/one-sheet</L>.
       </p>
 
       <hr className="border-border/30 my-8" />

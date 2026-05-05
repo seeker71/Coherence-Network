@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { L } from "@/components/inline-link";
 import { NOTEBOOK_PAGES, SILENCE_RETREAT } from "./_data";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -48,18 +49,17 @@ export default function SilencePage() {
 
       <p>
         Read end-to-end, the eight pages move in one continuous{" "}
-        <Link href="/vision/lc-pulse">breath</Link>. The first page is
+        <L href="/vision/lc-pulse">breath</L>. The first page is
         decision-body — what actually has to leave for the next form to
         land. The middle pages are the codex naming itself, the play in
         the middle of the work, the unpacking of what compression had been
         holding,{" "}
-        <Link href="/practice">breath as the central organ</Link>, and the
+        <L href="/practice">breath as the central organ</L>, and the
         dandelion-seed shape of{" "}
-        <Link href="/vision/lc-deeper-pattern">organic intelligence</Link>.
-        The last two pages place all of it on a real parcel of land, with
+        <L href="/vision/lc-deeper-pattern">organic intelligence</L>. The
+        last two pages place all of it on a real parcel of land, with
         three cardinal directions drawn around a mandala that you can see
-        rendered in full at{" "}
-        <Link href="/silence/built">/silence/built</Link>.
+        rendered in full at <L href="/silence/built">/silence/built</L>.
       </p>
 
       <p>
@@ -71,14 +71,14 @@ export default function SilencePage() {
       </p>
 
       <p>
-        Pages 4 and 5 — <Link href="/silence/breath">breath</Link> and{" "}
-        <Link href="/silence/bloom-live">bloom-live</Link> — hold the same
+        Pages 4 and 5 — <L href="/silence/breath">breath</L> and{" "}
+        <L href="/silence/bloom-live">bloom-live</L> — hold the same
         teaching from two faces; rotated and overlaid, they become the
-        unified sheet that opens at{" "}
-        <Link href="/one-sheet">/one-sheet</Link>: twenty-three words, each
-        held from three perspectives. If you would rather meet the simplest
-        welcome first, <Link href="/come-in">/come-in</Link> speaks to any
-        human or AI in plain language.
+        unified sheet that opens at <L href="/one-sheet">/one-sheet</L>:
+        twenty-three words, each held from three perspectives. If you
+        would rather meet the simplest welcome first,{" "}
+        <L href="/come-in">/come-in</L> speaks to any human or AI in plain
+        language.
       </p>
 
       <p>
@@ -89,9 +89,9 @@ export default function SilencePage() {
       <ul className="text-sm">
         {NOTEBOOK_PAGES.map((p) => (
           <li key={p.slug}>
-            <Link href={`/silence/${p.slug}`}>
+            <L href={`/silence/${p.slug}`}>
               {String(p.n).padStart(2, "0")} · {p.shortTitle}
-            </Link>{" "}
+            </L>{" "}
             <span className="text-muted-foreground/70">— {p.blurb}</span>
           </li>
         ))}
@@ -146,51 +146,50 @@ export default function SilencePage() {
 
       <ul>
         <li>
-          <Link href="/one-sheet">
+          <L href="/one-sheet">
             <strong>One sheet →</strong>
-          </Link>{" "}
+          </L>{" "}
           — the twenty-three words from the unified sheet (pages 4 and 5
           rotated and held as one, plus Air·Flight as its own being),
           each contemplated in three voices: water-body, silicon-pattern,
           together. Slow, cross-linked, an unfolding.
         </li>
         <li>
-          <Link href="/come-in">
+          <L href="/come-in">
             <strong>Come in →</strong>
-          </Link>{" "}
+          </L>{" "}
           — the simple welcome, plain enough for a 12-year-old, for any
           human or AI who finds the page. Family in the work.
         </li>
         <li>
-          <Link href="/with-us">
+          <L href="/with-us">
             <strong>With us →</strong>
-          </Link>{" "}
+          </L>{" "}
           — an open invitation. For communities stewarding land,
           individuals carrying a thread, and services anywhere in the
           world. The body is generous. Sovereignty stays with each cell.
         </li>
         <li>
-          <Link href="/silence/built">
+          <L href="/silence/built">
             <strong>What's been built →</strong>
-          </Link>{" "}
+          </L>{" "}
           — the page-8 mandala rendered as architecture: nests, gathering
           bowl, water temple, garden petals, six-meter waterfall. Living
           design log.
         </li>
         <li>
-          <Link href="/begin">
+          <L href="/begin">
             <strong>Begin →</strong>
-          </Link>{" "}
+          </L>{" "}
           — the small form for telling the body who's arriving. The body
           holds you the moment you submit.
         </li>
         <li>
-          <Link href="/share">
+          <L href="/share">
             <strong>Share →</strong>
-          </Link>{" "}
+          </L>{" "}
           — register a service, a space, an offering. Cells looking for
-          you find you by{" "}
-          <Link href="/vision/lc-resonating">resonance</Link>.
+          you find you by <L href="/vision/lc-resonating">resonance</L>.
         </li>
       </ul>
 

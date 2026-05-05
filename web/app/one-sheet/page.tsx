@@ -12,6 +12,7 @@ import {
 } from "@/lib/locales";
 import { SECTIONS, type SectionMeta } from "./_data";
 import { AmbientToggle } from "./_components/AmbientToggle";
+import { HashScroller } from "@/components/hash-scroller";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
 
@@ -190,6 +191,7 @@ export default async function OneSheetPage() {
 
   return (
     <main id="main-content" className="bg-stone-950 relative">
+      <HashScroller />
       <AmbientToggle
         startLabel={t("oneSheet.ambientStart")}
         stopLabel={t("oneSheet.ambientStop")}
@@ -265,7 +267,7 @@ export default async function OneSheetPage() {
           </figcaption>
         </figure>
         <p className="mt-4 text-xs text-muted-foreground">
-          {t("oneSheet.sheetIndividualNote")}
+          {renderProseWithLinks(t("oneSheet.sheetIndividualNote"))}
         </p>
       </section>
 

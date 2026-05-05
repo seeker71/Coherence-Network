@@ -7,6 +7,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { L } from "@/components/inline-link";
 import { getApiBase } from "@/lib/api";
 import {
   NAME_KEY,
@@ -244,7 +245,7 @@ export default function BeginPage() {
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
           <p className="text-xs text-muted-foreground italic">
-            You can register specific offerings later at <Link href="/share">/share</Link>.
+            You can register specific offerings later at <L href="/share">/share</L>.
           </p>
         </div>
 

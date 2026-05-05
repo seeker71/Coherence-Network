@@ -1,19 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-
-// Inline link helper — keeps the data file readable while giving each
-// paragraph its 1-3 cross-links into the rest of the body. Cross-links
-// are documented in docs/SITE_MAP.md.
-function L({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="text-amber-500 hover:text-amber-400 dark:text-amber-400 dark:hover:text-amber-300 underline-offset-4 underline decoration-amber-500/40"
-    >
-      {children}
-    </Link>
-  );
-}
+import { L } from "@/components/inline-link";
 
 export const SILENCE_RETREAT = {
   date: "2026-05-04",
