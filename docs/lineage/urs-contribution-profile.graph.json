@@ -42,6 +42,8 @@
             "docs/lineage/grok-verified-lineage.md",
             "docs/lineage/ubud-embodied-lineage.md",
             "https://www.gaia.com/video/water-akashic-record-keeper",
+            "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+            "docs/vision-kb/resources/orion-architect-sovereign-ai-2026-05-06.md",
             "web/content/people/urs/en.tsx"
           ],
           "not_special_case_ui": true
@@ -175,6 +177,84 @@
         "extraction_method": "public_page_summary",
         "ingestion_policy": "summary_and_extracted_concepts_only"
       }
+    },
+    {
+      "kind": "manual",
+      "id": "interested-person:robert-edward-grant",
+      "type": "interested-person",
+      "name": "Robert Edward Grant",
+      "description": "Polymath, sacred mathematics teacher, and ORION Architect steward whose sovereign AI framing resonates with Urs's source-backed profile lineage. Technical security, cryptography, platform, and quantum-timeline assertions are stored as speaker claims unless separately verified.",
+      "properties": {
+        "domains": ["sacred-mathematics", "sovereign-ai", "data-sovereignty", "cryptography"],
+        "keywords": ["robert-edward-grant", "orion-architect", "sovereign-ai", "post-quantum-claims", "non-extractive-platforms"],
+        "canonical_url": "https://robertedwardgrant.com/",
+        "source_artifact_id": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "source_backed_profile_context_with_claim_boundaries",
+        "claim_boundary": "Technical security, cryptography, platform, and quantum-timeline assertions are stored as speaker claims unless separately verified from primary technical sources."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "artifact:youtube-orion-architect-sovereign-ai-part-1",
+      "type": "artifact",
+      "name": "Robert Edward Grant ORION Architect: Sovereign AI, Quantum Security & End of Big Tech Control [PT 1]",
+      "description": "YouTube video on the Soma Flow: Somatic Biogeometric Harmonics channel featuring Robert Edward Grant on ORION Architect, sovereign AI, post-quantum-security claims, progressive web app resilience, user-owned work product, non-extractive economics, and AI as mirror.",
+      "properties": {
+        "artifact_kind": "youtube_video",
+        "canonical_url": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "short_url": "https://youtu.be/SPWo2D1Ue60",
+        "channel": "Soma Flow: Somatic Biogeometric Harmonics",
+        "featuring": "Robert Edward Grant",
+        "domains": ["sovereign-ai", "privacy", "non-extractive-economics", "agent-memory"],
+        "keywords": ["orion-architect", "operator-cannot-read", "progressive-web-app", "user-owned-work-product", "ai-as-mirror"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only",
+        "claim_boundary": "Technical claims in the video are source-attributed and require separate verification before use as factual security claims."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:sovereign-ai-architecture",
+      "type": "concept",
+      "name": "Sovereign AI Architecture",
+      "description": "AI, messaging, identity, and storage designed so user content and work product stay under user control, with the platform operator unable to read, monetize, or train on private content.",
+      "properties": {
+        "domains": ["sovereign-ai", "privacy", "user-owned-data", "agent-memory"],
+        "keywords": ["operator-cannot-read", "user-owned-work-product", "private-ai", "decentralized-storage", "pwa-resilience"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:non-extractive-ai-platform",
+      "type": "concept",
+      "name": "Non-Extractive AI Platform",
+      "description": "A platform ethic where ads, data sale, and private-conversation training are treated as capture surfaces, while transparent subscription economics and resource reciprocity keep the user from becoming the product.",
+      "properties": {
+        "domains": ["ai-economics", "attribution-economy", "privacy", "reciprocity"],
+        "keywords": ["no-ads", "no-data-sale", "no-private-training", "subscription-reciprocity", "energy-accounting"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:ai-as-sovereign-mirror",
+      "type": "concept",
+      "name": "AI as Sovereign Mirror",
+      "description": "Private AI used as a mirror for self-awareness, shadow integration, discernment, creative work, and business clarity, while keeping mental-health, relationship, lawful-use, and recovery-key responsibilities with the user.",
+      "properties": {
+        "domains": ["ai-mirror", "shadow-integration", "discernment", "agent-memory"],
+        "keywords": ["ai-as-mirror", "shadow-work", "discernment", "sovereign-responsibility", "harmonic-constraints"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
     }
   ],
   "gatherings": [],
@@ -283,6 +363,91 @@
       "created_by": "profile-contribution-manifest",
       "properties": {
         "source_document": "https://www.gaia.com/video/water-akashic-record-keeper"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "interested-person:robert-edward-grant",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "attribution_role": "trusted-teaching-lineage"
+      }
+    },
+    {
+      "from_id": "interested-person:robert-edward-grant",
+      "to_id": "artifact:youtube-orion-architect-sovereign-ai-part-1",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "attribution_role": "speaker"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-orion-architect-sovereign-ai-part-1",
+      "to_id": "concept:sovereign-ai-architecture",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-orion-architect-sovereign-ai-part-1",
+      "to_id": "concept:non-extractive-ai-platform",
+      "type": "inspires",
+      "strength": 0.86,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-orion-architect-sovereign-ai-part-1",
+      "to_id": "concept:ai-as-sovereign-mirror",
+      "type": "inspires",
+      "strength": 0.82,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "concept:sovereign-ai-architecture",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.78,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60"
+      }
+    },
+    {
+      "from_id": "concept:non-extractive-ai-platform",
+      "to_id": "concept:contribution-derived-frequency",
+      "type": "extends",
+      "strength": 0.76,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60"
+      }
+    },
+    {
+      "from_id": "concept:ai-as-sovereign-mirror",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.74,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60"
       }
     }
   ]
