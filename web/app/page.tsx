@@ -184,13 +184,13 @@ export default async function Home() {
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-1">
             <Button asChild size="sm" className="rounded-full px-5">
-              <Link href="/come-in">Enter the invitation</Link>
+              <AttributedInternalLink href="/come-in">Enter the invitation</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="outline" className="rounded-full px-5">
-              <Link href="/with-us">Learn how to weave in</Link>
+              <AttributedInternalLink href="/with-us">Learn how to weave in</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="ghost" className="rounded-full px-5">
-              <Link href="/contribute">Contribute</Link>
+              <AttributedInternalLink href="/contribute">Contribute</AttributedInternalLink>
             </Button>
           </div>
         </div>
