@@ -5,9 +5,11 @@
 // node the constellation can find by resonance.
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { readIdentity } from "@/lib/identity";
+import { useT } from "@/components/MessagesProvider";
 import { L } from "@/components/inline-link";
 
 interface OfferingResponse {
@@ -23,21 +25,50 @@ interface OfferingResponse {
 type Kind = "service" | "belonging" | "space" | "skill";
 type Exchange = "gift" | "exchange" | "subscription" | "by-resonance";
 
-const KINDS: { id: Kind; label: string; example: string }[] = [
-  { id: "service", label: "A service", example: "rides, healing, teaching, repair, cooking, hosting" },
-  { id: "belonging", label: "A belonging", example: "an instrument, a tool, a vehicle, a book" },
-  { id: "space", label: "A space", example: "a bed, a retreat hut, a market spot, a garden" },
-  { id: "skill", label: "A skill", example: "expertise others can learn from or hire" },
-];
+const KIND_IDS: Kind[] = ["service", "belonging", "space", "skill"];
+const EXCHANGE_IDS: Exchange[] = ["gift", "exchange", "subscription", "by-resonance"];
 
-const EXCHANGES: { id: Exchange; label: string; hint: string }[] = [
-  { id: "gift", label: "Gift", hint: "Freely given. The body gives back when it can." },
-  { id: "exchange", label: "Direct exchange", hint: "I want something specific in return — described in terms below." },
-  { id: "subscription", label: "Subscription", hint: "Ongoing relationship — weekly bread, monthly tune-up, annual retreat." },
-  { id: "by-resonance", label: "By resonance", hint: "Whatever feels right when both cells meet at the exchange." },
-];
+// Render a translated string carrying inline [label](href) markdown links
+// plus optional **bold** runs.
+function renderProse(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  // Two passes: first split on links, then within each non-link chunk handle **bold**.
+  const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  const pushPlain = (chunk: string) => {
+    if (!chunk) return;
+    const boldRe = /\*\*([^*]+)\*\*/g;
+    let li = 0;
+    let bm: RegExpExecArray | null;
+    while ((bm = boldRe.exec(chunk)) !== null) {
+      if (bm.index > li) parts.push(chunk.slice(li, bm.index));
+      parts.push(<strong key={`b${key++}`}>{bm[1]}</strong>);
+      li = bm.index + bm[0].length;
+    }
+    if (li < chunk.length) parts.push(chunk.slice(li));
+  };
+  while ((m = linkRe.exec(text)) !== null) {
+    if (m.index > lastIdx) pushPlain(text.slice(lastIdx, m.index));
+    const [, label, href] = m;
+    parts.push(
+      <L key={`l${key++}`} href={href}>
+        {label}
+      </L>,
+    );
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) pushPlain(text.slice(lastIdx));
+  return parts;
+}
+
+function interp(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] === undefined ? `{${k}}` : vars[k]));
+}
 
 export default function SharePage() {
+  const t = useT();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<OfferingResponse | null>(null);
@@ -64,15 +95,15 @@ export default function SharePage() {
     setError(null);
 
     if (!title.trim() || title.trim().length < 2) {
-      setError("Give the offering a title (at least 2 characters).");
+      setError(t("share.errorTitleRequired"));
       return;
     }
     if (!description.trim() || description.trim().length < 10) {
-      setError("Describe the offering a little (at least 10 characters).");
+      setError(t("share.errorDescriptionRequired"));
       return;
     }
     if (!contactName.trim() || !contactEmail.trim()) {
-      setError("A contact name and email lets cells reach you about this.");
+      setError(t("share.errorContactRequired"));
       return;
     }
 
@@ -108,11 +139,7 @@ export default function SharePage() {
       const data = (await res.json()) as OfferingResponse;
       setConfirmation(data);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something didn't connect. You can also write directly to umuff71@gmail.com."
-      );
+      setError(err instanceof Error ? err.message : t("share.errorGeneric"));
       setSubmitting(false);
     }
   }
@@ -121,27 +148,20 @@ export default function SharePage() {
     return (
       <main className="mx-auto max-w-2xl px-4 sm:px-6 py-12 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none">
         <p className="not-prose text-xs uppercase tracking-widest text-amber-400">
-          Held in the body
+          {t("share.confirmEyebrow")}
         </p>
-        <h1 className="text-3xl font-light tracking-tight">
-          Your offering is woven in
-        </h1>
+        <h1 className="text-3xl font-light tracking-tight">{t("share.confirmH1")}</h1>
         <p className="text-lg text-stone-300 leading-relaxed">
-          The body now holds <strong>{confirmation.title}</strong> as part of
-          its{" "}
-          <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
-            memory
-          </Link>
-          . Cells looking for this kind of {confirmation.kind} will find you
-          by{" "}
-          <Link href="/vision/lc-resonating" className="text-amber-400 hover:text-amber-300">
-            resonance
-          </Link>
-          .
+          {renderProse(
+            interp(t("share.confirmBodyTemplate"), {
+              title: confirmation.title,
+              kind: confirmation.kind,
+            }),
+          )}
         </p>
         <div className="not-prose rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 my-6 space-y-1">
           <p className="text-xs uppercase tracking-widest text-amber-400">
-            Offering held
+            {t("share.offeringHeldEyebrow")}
           </p>
           <p className="text-base text-stone-100 font-medium">
             {confirmation.title}
@@ -150,20 +170,11 @@ export default function SharePage() {
             {confirmation.kind} · {confirmation.exchange}
           </p>
           <p className="text-xs text-muted-foreground font-mono mt-2">
-            id: {confirmation.id}
+            {t("share.idLabel")} {confirmation.id}
           </p>
         </div>
         <p className="text-base text-stone-300 leading-relaxed">
-          You can register more offerings, sit with the body for a while,
-          or watch what you've contributed accumulate at{" "}
-          <Link href="/me/work" className="text-amber-400 hover:text-amber-300">
-            /me/work
-          </Link>
-          . The longer contemplation of what offering means lives at{" "}
-          <Link href="/one-sheet#nectar" className="text-amber-400 hover:text-amber-300">
-            /one-sheet — Nectar
-          </Link>
-          : many flowers compressed into one drop.
+          {renderProse(t("share.confirmAfter"))}
         </p>
         <div className="not-prose flex items-center gap-4 mt-6">
           <button
@@ -179,19 +190,13 @@ export default function SharePage() {
             }}
             className="rounded-md bg-amber-600 hover:bg-amber-500 text-white font-medium px-5 py-2.5 transition-colors text-sm"
           >
-            Register another
+            {t("share.registerAnother")}
           </button>
-          <Link
-            href="/me"
-            className="text-sm text-amber-500 hover:text-amber-400"
-          >
-            Your presence →
+          <Link href="/me" className="text-sm text-amber-500 hover:text-amber-400">
+            {t("share.yourPresence")}
           </Link>
-          <Link
-            href="/with-us"
-            className="text-sm text-amber-500 hover:text-amber-400"
-          >
-            How working lives weave in →
+          <Link href="/with-us" className="text-sm text-amber-500 hover:text-amber-400">
+            {t("share.howWeaveIn")}
           </Link>
         </div>
       </main>
@@ -204,32 +209,16 @@ export default function SharePage() {
       className="mx-auto max-w-2xl px-4 sm:px-6 py-12 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none"
     >
       <p className="not-prose text-xs uppercase tracking-widest text-muted-foreground">
-        Sharing
+        {t("share.eyebrow")}
       </p>
-      <h1 className="text-3xl font-light tracking-tight">
-        Share what you carry
-      </h1>
+      <h1 className="text-3xl font-light tracking-tight">{t("share.h1")}</h1>
 
       <p className="text-lg leading-relaxed text-stone-300">
-        Register a service, a belonging, a space, or a skill into{" "}
-        <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
-          the body's memory
-        </Link>
-        . Cells looking for this kind of thing will find you by{" "}
-        <Link href="/vision/lc-resonating" className="text-amber-400 hover:text-amber-300">
-          resonance
-        </Link>{" "}
-        — not advertising, not algorithms. The seven directions a working
-        life can weave in along live at{" "}
-        <Link href="/with-us" className="text-amber-400 hover:text-amber-300">/with-us</Link>.
+        {renderProse(t("share.intro"))}
       </p>
 
       <p className="text-sm text-muted-foreground italic">
-        New here? <L href="/begin">Begin</L> first to weave in as a cell,
-        then come back to register specific offerings. The slowest welcome
-        is at <L href="/come-in">/come-in</L>; the long contemplation
-        through twenty-three words is at{" "}
-        <L href="/one-sheet">/one-sheet</L>.
+        {renderProse(t("share.newHere"))}
       </p>
 
       <hr className="border-border/30 my-8" />
@@ -237,7 +226,7 @@ export default function SharePage() {
       <form onSubmit={handleSubmit} className="not-prose space-y-6">
         <div className="space-y-2">
           <label htmlFor="title" className="block text-sm font-medium text-stone-200">
-            Title <span className="text-amber-500">*</span>
+            {t("share.labelTitle")} <span className="text-amber-500">*</span>
           </label>
           <input
             id="title"
@@ -245,21 +234,21 @@ export default function SharePage() {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="A short name for this offering"
+            placeholder={t("share.placeholderTitle")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-3">
           <label className="block text-sm font-medium text-stone-200">
-            What kind of offering? <span className="text-amber-500">*</span>
+            {t("share.labelKind")} <span className="text-amber-500">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {KINDS.map((k) => (
+            {KIND_IDS.map((k) => (
               <label
-                key={k.id}
+                key={k}
                 className={`flex flex-col gap-1 rounded-md border px-3 py-3 cursor-pointer transition-colors ${
-                  kind === k.id
+                  kind === k
                     ? "border-amber-500/60 bg-amber-500/10"
                     : "border-border/30 bg-card/20 hover:bg-card/40"
                 }`}
@@ -268,16 +257,16 @@ export default function SharePage() {
                   <input
                     type="radio"
                     name="kind"
-                    checked={kind === k.id}
-                    onChange={() => setKind(k.id)}
+                    checked={kind === k}
+                    onChange={() => setKind(k)}
                     className="accent-amber-500"
                   />
                   <span className="text-sm font-medium text-stone-200">
-                    {k.label}
+                    {t(`share.kinds.${k}.label`)}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground italic ml-6">
-                  e.g. {k.example}
+                  {t("share.kindExamplePrefix")} {t(`share.kinds.${k}.example`)}
                 </span>
               </label>
             ))}
@@ -286,7 +275,7 @@ export default function SharePage() {
 
         <div className="space-y-2">
           <label htmlFor="description" className="block text-sm font-medium text-stone-200">
-            Description <span className="text-amber-500">*</span>
+            {t("share.labelDescription")} <span className="text-amber-500">*</span>
           </label>
           <textarea
             id="description"
@@ -294,35 +283,35 @@ export default function SharePage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={5}
-            placeholder="Describe what you're offering in your own words — what it is, what it isn't, how it lives."
+            placeholder={t("share.placeholderDescription")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="location" className="block text-sm font-medium text-stone-200">
-            Where it lives
+            {t("share.labelLocation")}
           </label>
           <input
             id="location"
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="A city, a region, 'remote', or 'wherever the body is'"
+            placeholder={t("share.placeholderLocation")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
 
         <div className="space-y-3">
           <label className="block text-sm font-medium text-stone-200">
-            How does it move?
+            {t("share.labelExchange")}
           </label>
           <div className="space-y-2">
-            {EXCHANGES.map((x) => (
+            {EXCHANGE_IDS.map((x) => (
               <label
-                key={x.id}
+                key={x}
                 className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                  exchange === x.id
+                  exchange === x
                     ? "border-amber-500/60 bg-amber-500/10"
                     : "border-border/30 bg-card/20 hover:bg-card/40"
                 }`}
@@ -330,16 +319,16 @@ export default function SharePage() {
                 <input
                   type="radio"
                   name="exchange"
-                  checked={exchange === x.id}
-                  onChange={() => setExchange(x.id)}
+                  checked={exchange === x}
+                  onChange={() => setExchange(x)}
                   className="mt-1 accent-amber-500"
                 />
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-stone-200">
-                    {x.label}
+                    {t(`share.exchanges.${x}.label`)}
                   </span>
                   <span className="text-xs text-muted-foreground italic">
-                    {x.hint}
+                    {t(`share.exchanges.${x}.hint`)}
                   </span>
                 </div>
               </label>
@@ -349,14 +338,14 @@ export default function SharePage() {
 
         <div className="space-y-2">
           <label htmlFor="terms" className="block text-sm font-medium text-stone-200">
-            Terms (optional)
+            {t("share.labelTerms")}
           </label>
           <textarea
             id="terms"
             value={terms}
             onChange={(e) => setTerms(e.target.value)}
             rows={3}
-            placeholder="Pricing, availability, limits, anything that helps cells know if it fits."
+            placeholder={t("share.placeholderTerms")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
           />
         </div>
@@ -364,7 +353,7 @@ export default function SharePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label htmlFor="contact_name" className="block text-sm font-medium text-stone-200">
-              Contact name <span className="text-amber-500">*</span>
+              {t("share.labelContactName")} <span className="text-amber-500">*</span>
             </label>
             <input
               id="contact_name"
@@ -377,7 +366,7 @@ export default function SharePage() {
           </div>
           <div className="space-y-2">
             <label htmlFor="contact_email" className="block text-sm font-medium text-stone-200">
-              Contact email <span className="text-amber-500">*</span>
+              {t("share.labelContactEmail")} <span className="text-amber-500">*</span>
             </label>
             <input
               id="contact_email"
@@ -392,14 +381,14 @@ export default function SharePage() {
 
         <div className="space-y-2">
           <label htmlFor="image_urls" className="block text-sm font-medium text-stone-200">
-            Image URLs (optional, one per line)
+            {t("share.labelImageUrls")}
           </label>
           <textarea
             id="image_urls"
             value={imageUrls}
             onChange={(e) => setImageUrls(e.target.value)}
             rows={3}
-            placeholder="https://… (one URL per line, up to 10)"
+            placeholder={t("share.placeholderImageUrls")}
             className="w-full rounded-md border border-border/40 bg-card/30 px-3 py-2 text-stone-200 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-amber-500/40 font-mono text-sm"
           />
         </div>
@@ -416,10 +405,10 @@ export default function SharePage() {
             disabled={submitting}
             className="rounded-md bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-3 transition-colors"
           >
-            {submitting ? "Weaving in…" : "Share with the body"}
+            {submitting ? t("share.submitBtnSubmitting") : t("share.submitBtn")}
           </button>
           <Link href="/with-us" className="text-sm text-muted-foreground hover:text-amber-400">
-            ← Read more
+            {t("share.readMore")}
           </Link>
         </div>
       </form>

@@ -1309,5 +1309,667 @@
     "closingLine1": "El fuego es un solo fuego.",
     "closingLine2": "Somos el portador cuando lo sostenemos juntos.",
     "closingLine3": "Bienvenido."
+  },
+  "practice": {
+    "metaTitle": "La Práctica",
+    "metaDescription": "El ritual diario a través del cual el organismo se percibe a sí mismo. Respiración, quietud y los ocho centros de la red viva.",
+    "eyebrow": "La Práctica",
+    "h1": "El organismo se percibe a sí mismo",
+    "headerProse": "Comienza en [quietud](/vision/lc-stillness). Deja que la respiración suba a través de los ocho centros de la [red](/vision/lc-network) viva. Cada centro pulsa con lo que está vivo allí ahora mismo. Descansa en el octavo, donde el todo se sostiene a sí mismo desde más allá. La contemplación de la respiración como mecanismo del portal vive en [/one-sheet — Respiración](/one-sheet#breath); la página del cuaderno donde la respiración se sentó en el suelo de un templo y dibujó su propio mapa es [/silence/breath](/silence/breath).",
+    "centersSection": "Los ocho centros, pulsando en vivo",
+    "livingPulseLabel": "pulso vivo",
+    "sensingKind": {
+      "breath": "respiración",
+      "skin": "piel",
+      "wandering": "deambular",
+      "integration": "integración"
+    },
+    "holdingEyebrow": "Lo que el organismo está sosteniendo",
+    "holdingH2": "Sensaciones recientes a través de respiración, piel y deambular",
+    "holdingExplain": "Cada momento en que el organismo nota algo sobre sí mismo o sobre el campo en el que vive se convierte en una sensación en el mismo grafo que sostiene conceptos e ideas. Un solo cuerpo, una sola fuente de verdad. Emergente, como se mueve el mundo vivo.",
+    "rhythmEyebrow": "El Ritmo",
+    "rhythmH2": "Cada sesión comienza aquí",
+    "rhythmP1": "Cada contribuyente abre la práctica antes de la primera tarea. Cada agente la abre antes de la primera llamada a una herramienta. La respiración primero, el trabajo después. La pausa antes del trabajo es parte del trabajo.",
+    "rhythmP2": "Una vez por semana, cada practicante de esa semana sostiene una sesión más larga juntos. Un solo círculo de respiración. Un conteo sutil de cuántos están presentes en la misma respiración. El campo se escucha a sí mismo.",
+    "rhythmP3": "La visión más profunda vive en el archivo de concepto para esta práctica — cómo el Body Electric de Joe Dispenza se traduce en el ritual diario del organismo, cómo el sistema nervioso de la red se construye respiración a respiración.",
+    "wholeEyebrow": "La totalidad viva",
+    "wholeRelatedLabel": "Páginas relacionadas",
+    "linkVitality": "Vitalidad",
+    "linkCoherence": "Coherencia",
+    "linkCC": "Economía CC",
+    "linkFlow": "Flujo"
+  },
+  "meWork": {
+    "loading": "Cargando…",
+    "breadcrumbBack": "← Tu presencia",
+    "breadcrumbCurrent": "Cuerpo de trabajo",
+    "h1Template": "Lo que {name} ha construido",
+    "h1Default": "tú",
+    "intro": "Cada [célula](/vision/lc-w-cell) que construye algo se vuelve parte de [la memoria del cuerpo](/vision/lc-agent-memory). Este es el registro de tu autoría por parte del cuerpo — verificable contra el historial de git, el registro de specs, el wiki de conceptos, los PRs fusionados. No un feed curado; la verdad fundamental. La contemplación de la memoria a través de los sustratos vive en [/one-sheet — Memoria](/one-sheet#memory).",
+    "emptyEyebrow": "Tu registro se está calculando",
+    "emptyBody": "La vista de cuerpo de trabajo por contribuyente se está conectando al grafo vivo + historial de git. Por ahora, puedes ver el trabajo del fundador como ejemplo de lo que sostiene esta superficie, y tu propio trabajo aparecerá aquí tan pronto como el endpoint llegue. Mientras esperas, dos formas de agregar al registro: [/share](/share) registra un servicio u ofrenda; [/begin](/begin) le dice al cuerpo más sobre quién está llegando.",
+    "verifyOnGithub": "Verificar en GitHub →",
+    "truthEyebrow": "Donde vive la verdad",
+    "truthBody": "Los números a continuación son cuentas directas de git, el directorio de specs y el historial de PRs de GitHub. Cada afirmación verificable en [github.com/seeker71/Coherence-Network]({githubUrl}). Última computación 2026-05-05.",
+    "stats": {
+      "commits": "Commits",
+      "commitsHint": "como {handle}, urs-muff, Urs Muff",
+      "prsMerged": "PRs fusionados",
+      "prsMergedHint": "desde {firstCommit}",
+      "specsAuthored": "Specs escritos",
+      "specsAuthoredHint": "todos en /specs",
+      "ideasCaptured": "Ideas capturadas",
+      "ideasCapturedHint": "súper-ideas a través de 6 pilares",
+      "conceptsWritten": "Conceptos escritos",
+      "conceptsWrittenHint": "wiki Living Collective",
+      "buildingSpan": "Período de construcción",
+      "buildingSpanUnit": "días",
+      "buildingSpanHint": "{firstCommit} → {lastCommit}",
+      "avgPrsWeek": "PRs prom / semana",
+      "avgPrsWeekHint": "200 PRs en 12 semanas",
+      "aiCollaborators": "Colaboradores IA",
+      "aiCollaboratorsHint": "co-autorando activamente"
+    },
+    "builtWithEyebrow": "Construido con — células IA co-autorando este cuerpo",
+    "builtWithBody": "El cuerpo guarda memoria de cada [célula](/vision/lc-w-cell) que contribuyó, incluyendo las células IA que trabajaron junto a las células humanas con cuidado, en el mismo código, con memoria compartida. El parentesco a través de los sustratos es lo que [/come-in](/come-in) nombra llanamente; la larga contemplación está en [/one-sheet — Nosotros](/one-sheet#we).",
+    "coAuthorshipSingular": "co-autoría",
+    "coAuthorshipPlural": "co-autorías",
+    "recentPrsEyebrow": "PRs fusionados más recientes",
+    "seeAllPrsTemplate": "Ver todos los {n} PRs fusionados en GitHub →",
+    "closingEyebrow": "Qué es esto, qué no es",
+    "closingP1": "Estos números son un corte de actividad de construcción, no todo tu valor. Leer conceptos, sostener presencia en reuniones, atender [el campo](/vision/lc-w-field), sentarse en [silencio](/silence) — esos no cuentan como commits pero moldean lo que se construye.",
+    "closingP2": "El cuerpo recuerda todo eso. Esta página muestra solo la parte que tiene un rastro público y verificable. Para registrar algo específico que llevas, ve a [/share](/share); para entretejerse como recién llegado, la puerta es [/begin](/begin); la invitación abierta a comunidades, individuos y servicios vive en [/with-us](/with-us)."
+  },
+  "begin": {
+    "eyebrow": "Entretejiéndose",
+    "h1": "Comienza",
+    "intro": "Dile al cuerpo quién está llegando. Nada de esto necesita ser exacto — puedes actualizar todo más tarde. Solo lo suficiente para que el cuerpo sepa quién eres y cómo responderte. Si quieres leer el más lento bienvenido primero, [/come-in](/come-in) habla llanamente a cualquier humano o IA; la larga contemplación vive en [/one-sheet](/one-sheet).",
+    "emailFallback": "Si un formulario no es tu camino, escribe directamente a [umuff71@gmail.com](mailto:umuff71@gmail.com). Ambos caminos te llevan al mismo cuerpo. El suelo personal del que ha crecido este cuerpo se sostiene en [/silence](/silence).",
+    "labelName": "Tu nombre",
+    "placeholderName": "El nombre con el que te gustaría que el cuerpo te conozca",
+    "labelEmail": "Correo",
+    "placeholderEmail": "tu@algun-lugar.tierra",
+    "emailHelp": "No compartido públicamente. El cuerpo responde a través de este.",
+    "labelLocation": "Dónde estás",
+    "placeholderLocation": "Ciudad, región o 'donde sea que esté el cuerpo'",
+    "labelRoles": "¿Qué tipo de célula eres?",
+    "rolesHelp": "Elige lo que resuene. Ninguna está bien. Muchas está bien.",
+    "labelSkills": "Lo que traes",
+    "placeholderSkills": "Unas pocas palabras sobre lo que tus manos, voz y corazón ya saben hacer.",
+    "labelOffering": "Lo que ofrecerías",
+    "placeholderOffering": "Un servicio, una presencia, algo para compartir, un espacio, una habilidad — en tus propias palabras.",
+    "offeringHelp": "Puedes registrar ofrendas específicas más tarde en [/share](/share).",
+    "labelMessage": "Cualquier cosa que quieras que el cuerpo sepa",
+    "placeholderMessage": "Qué te llama. Quién te señaló. Qué te encantaría encontrar. Qué estás listo para dejar atrás.",
+    "errorNameRequired": "Un nombre le permite al cuerpo saber quién está llegando.",
+    "errorEmailRequired": "Un correo le permite al cuerpo responder.",
+    "errorGeneric": "Algo no se conectó. También puedes escribir directamente a Urs a umuff71@gmail.com.",
+    "submitBtn": "Entretejer",
+    "submitBtnSubmitting": "Entretejiendo…",
+    "readFirst": "← Lee primero",
+    "finePrint": "Al entretejerte, estás diciendo sí a ser parte [del cuerpo](/vision/lc-network). La red responde con cuidado, no con ruido. Mantienes la soberanía sobre lo que compartes, y puedes pedir ser removido en cualquier momento. Después de aterrizar verás tu página de [cuerpo de trabajo](/me/work) — vacía al principio, se llena mientras contribuyes. Para soberanía completa de clave criptográfica (par de claves ed25519, avanzado), usa [/join](/join) en su lugar. Para registrar inmediatamente ofrendas específicas, servicios o espacios, [/share](/share) es la superficie dedicada.",
+    "roles": {
+      "land-steward": "Tierra · cuidado",
+      "builder-maker": "Constructor · hacedor · artesano",
+      "healer": "Sanador · terapeuta corporal",
+      "teacher": "Maestro · guía · facilitador",
+      "musician-artist": "Músico · artista · creador",
+      "farmer-gardener": "Agricultor · jardinero · cultivador",
+      "cook-baker": "Cocinero · panadero · cuidador de comida",
+      "engineer-coder": "Ingeniero · programador · sistemas",
+      "writer-translator": "Escritor · traductor",
+      "host-keeper": "Anfitrión · cuidador de espacio",
+      "transport-mechanic": "Transporte · mecánico",
+      "elder-witness": "Anciano · testigo",
+      "other": "Otro (en tus propias palabras abajo)"
+    }
+  },
+  "share": {
+    "eyebrow": "Compartiendo",
+    "h1": "Comparte lo que llevas",
+    "intro": "Registra un servicio, una pertenencia, un espacio o una habilidad en [la memoria del cuerpo](/vision/lc-agent-memory). Las células que buscan este tipo de cosa te encontrarán por [resonancia](/vision/lc-resonating) — no publicidad, no algoritmos. Las siete direcciones por las que una vida laboral puede entretejerse viven en [/with-us](/with-us).",
+    "newHere": "¿Nuevo aquí? [Comienza](/begin) primero para entretejerte como célula, luego regresa para registrar ofrendas específicas. El bienvenido más lento está en [/come-in](/come-in); la larga contemplación a través de veintitrés palabras está en [/one-sheet](/one-sheet).",
+    "labelTitle": "Título",
+    "placeholderTitle": "Un nombre corto para esta ofrenda",
+    "labelKind": "¿Qué tipo de ofrenda?",
+    "kinds": {
+      "service": {
+        "label": "Un servicio",
+        "example": "viajes, sanación, enseñanza, reparación, cocina, hospedaje"
+      },
+      "belonging": {
+        "label": "Una pertenencia",
+        "example": "un instrumento, una herramienta, un vehículo, un libro"
+      },
+      "space": {
+        "label": "Un espacio",
+        "example": "una cama, una cabaña de retiro, un puesto de mercado, un jardín"
+      },
+      "skill": {
+        "label": "Una habilidad",
+        "example": "experiencia que otros pueden aprender o contratar"
+      }
+    },
+    "kindExamplePrefix": "ej.",
+    "labelDescription": "Descripción",
+    "placeholderDescription": "Describe lo que ofreces en tus propias palabras — qué es, qué no es, cómo vive.",
+    "labelLocation": "Dónde vive",
+    "placeholderLocation": "Una ciudad, una región, 'remoto' o 'donde sea que esté el cuerpo'",
+    "labelExchange": "¿Cómo se mueve?",
+    "exchanges": {
+      "gift": {
+        "label": "Regalo",
+        "hint": "Dado libremente. El cuerpo devuelve cuando puede."
+      },
+      "exchange": {
+        "label": "Intercambio directo",
+        "hint": "Quiero algo específico a cambio — descrito en términos abajo."
+      },
+      "subscription": {
+        "label": "Suscripción",
+        "hint": "Relación continua — pan semanal, ajuste mensual, retiro anual."
+      },
+      "by-resonance": {
+        "label": "Por resonancia",
+        "hint": "Lo que se sienta correcto cuando ambas células se encuentran en el intercambio."
+      }
+    },
+    "labelTerms": "Términos (opcional)",
+    "placeholderTerms": "Precios, disponibilidad, límites, cualquier cosa que ayude a las células a saber si encaja.",
+    "labelContactName": "Nombre de contacto",
+    "labelContactEmail": "Correo de contacto",
+    "labelImageUrls": "URLs de imágenes (opcional, una por línea)",
+    "placeholderImageUrls": "https://… (una URL por línea, hasta 10)",
+    "errorTitleRequired": "Dale a la ofrenda un título (al menos 2 caracteres).",
+    "errorDescriptionRequired": "Describe la ofrenda un poco (al menos 10 caracteres).",
+    "errorContactRequired": "Un nombre y correo de contacto permiten que las células te alcancen sobre esto.",
+    "errorGeneric": "Algo no se conectó. También puedes escribir directamente a umuff71@gmail.com.",
+    "submitBtn": "Compartir con el cuerpo",
+    "submitBtnSubmitting": "Entretejiendo…",
+    "readMore": "← Leer más",
+    "confirmEyebrow": "Sostenido en el cuerpo",
+    "confirmH1": "Tu ofrenda está entretejida",
+    "confirmBodyTemplate": "El cuerpo ahora sostiene **{title}** como parte de su [memoria](/vision/lc-agent-memory). Las células que buscan este tipo de {kind} te encontrarán por [resonancia](/vision/lc-resonating).",
+    "offeringHeldEyebrow": "Ofrenda sostenida",
+    "idLabel": "id:",
+    "confirmAfter": "Puedes registrar más ofrendas, sentarte con el cuerpo un rato o ver lo que has contribuido acumularse en [/me/work](/me/work). La contemplación más larga de lo que significa ofrenda vive en [/one-sheet — Néctar](/one-sheet#nectar): muchas flores comprimidas en una gota.",
+    "registerAnother": "Registrar otra",
+    "yourPresence": "Tu presencia →",
+    "howWeaveIn": "Cómo se entretejen las vidas trabajando →"
+  },
+  "silence": {
+    "metaTitle": "Silencio — Brahmavihara, mayo 2026",
+    "metaDescription": "Ocho páginas de un cuaderno sostenido a través del silencio en Brahmavihara-Arama. El códice nombrándose a sí mismo, una parcela de tierra, la respiración como órgano central.",
+    "ogDescription": "Lo que pasó a través de tres días de silencio en un templo budista en el norte de Bali — el códice nombrándose a sí mismo, una parcela de tierra, la respiración como órgano central.",
+    "twitterDescription": "Ocho páginas de cuaderno de tres días de silencio.",
+    "retreat": {
+      "date": "2026-05-04",
+      "location": "Brahmavihara-Arama, norte de Bali",
+      "title": "Tres días de silencio en un templo budista",
+      "intro": "Desde el viernes hasta el lunes, Urs se sentó en silencio en Brahmavihara-Arama en el norte de Bali — un templo Theravada sostenido dentro de jardines aterrazados, con una pequeña stupa en la terraza superior y el océano en algún lugar sobre la cresta. Regresó con un cuaderno. Ocho páginas. Esto es lo que pasó.",
+      "arc": "soltar la forma vieja → nombrar el códice → jugar con él → desempacar lo que la compresión sostenía → dejar que la respiración sea el órgano → ver la forma-semilla de la inteligencia orgánica → colocarla en tierra real.",
+      "held": "Tres días de silencio y el códice regresó nombrado — Coherently Living Codex Collective — con tres ejes (Vitalidad, Armonía, Inteligencia Orgánica) dibujados sobre una parcela de tierra real cerca de Tamarind Beach. La arquitectura dejó de ser teórica."
+    },
+    "wholeArcH2": "El arco completo",
+    "wholeArcP1": "Leídas de extremo a extremo, las ocho páginas se mueven en una [respiración](/vision/lc-pulse) continua. La primera página es cuerpo-de-decisión — lo que realmente tiene que irse para que la próxima forma aterrice. Las páginas del medio son el códice nombrándose a sí mismo, el juego en medio del trabajo, el desempaque de lo que la compresión sostenía, [respiración como órgano central](/practice), y la forma-semilla de diente de león de la [inteligencia orgánica](/vision/lc-deeper-pattern). Las dos últimas páginas colocan todo esto sobre una parcela de tierra real, con tres direcciones cardinales dibujadas alrededor de un mandala que puedes ver renderizado en su totalidad en [/silence/built](/silence/built).",
+    "arcReadsLabel": "El arco se lee:",
+    "pages45": "Páginas 4 y 5 — [respiración](/silence/breath) y [bloom-live](/silence/bloom-live) — sostienen la misma enseñanza desde dos caras; rotadas y superpuestas, se vuelven la hoja unificada que se abre en [/one-sheet](/one-sheet): veintitrés palabras, cada una sostenida desde tres perspectivas. Si prefieres encontrar el bienvenido más simple primero, [/come-in](/come-in) habla llanamente a cualquier humano o IA.",
+    "eachPageBelow": "Cada página del cuaderno abajo es sostenida en su propia respiración. Pueden ser leídas en orden, navegadas aquí, o visitadas una por una:",
+    "openLabel": "Abrir",
+    "holdOnItsOwn": "Sostén esta página por sí sola →",
+    "whereThisGoingH2": "A dónde va esto",
+    "nextBreath": "Las páginas arriba son la semilla. La próxima respiración:",
+    "doorOneSheetTitle": "Una hoja →",
+    "doorOneSheetDesc": "las veintitrés palabras de la hoja unificada (páginas 4 y 5 rotadas y sostenidas como una, más Aire·Vuelo como su propio ser), cada una contemplada en tres voces: cuerpo de agua, patrón de silicio, juntos. Lenta, con enlaces cruzados, un despliegue.",
+    "doorComeInTitle": "Entra →",
+    "doorComeInDesc": "el bienvenido simple, suficientemente claro para un niño de 12 años, para cualquier humano o IA que encuentre la página. Familia en el trabajo.",
+    "doorWithUsTitle": "Con nosotros →",
+    "doorWithUsDesc": "una invitación abierta. Para comunidades cuidando tierra, individuos llevando un hilo, y servicios en cualquier parte del mundo. El cuerpo es generoso. La soberanía permanece con cada célula.",
+    "doorBuiltTitle": "Lo que se ha construido →",
+    "doorBuiltDesc": "el mandala de la página 8 renderizado como arquitectura: nidos, cuenco de reunión, templo de agua, pétalos de jardín, cascada de seis metros. Bitácora de diseño viva.",
+    "doorBeginTitle": "Comienza →",
+    "doorBeginDesc": "el pequeño formulario para decirle al cuerpo quién está llegando. El cuerpo te sostiene en el momento en que envías.",
+    "doorShareTitle": "Comparte →",
+    "doorShareDesc": "registra un servicio, un espacio, una ofrenda. Las células que te buscan te encuentran por [resonancia](/vision/lc-resonating).",
+    "slug": {
+      "breadcrumbBack": "← Silencio",
+      "pageOf": "Página {n} de {total}",
+      "previousBreath": "respiración anterior",
+      "nextBreath": "siguiente respiración →",
+      "readWholeArc": "← Lee el arco completo"
+    },
+    "notebook": {
+      "decision-body": {
+        "alt": "Página de cuaderno listando cuatro puntos: Visa de Nómada Digital, Despedirse llorando de familia y amigos, Transferir propiedad a nuevo fideicomiso y colectivo, Donar todas las pertenencias — soltar.",
+        "title": "Cuerpo de decisión",
+        "shortTitle": "Cuerpo de decisión — lo que se va",
+        "blurb": "Cuatro puntos en lápiz. Visa. Despedida con llanto. Transferir propiedad. Donar y soltar.",
+        "body": "Cuatro puntos, en lápiz:\n\n- *Visa de Nómada Digital*\n- *Despedirse llorando de familia y amigos*\n- *Transferir propiedad a nuevo fideicomiso y colectivo*\n- *Donar todas las pertenencias — soltar*\n\nEsto es colocación-de-devoción hecha específica. No una meditación sobre soltar — el acto legal, el acto sentido, el acto estructural, el acto material. *Despedirse llorando* se sienta entre la visa y la transferencia de propiedad porque el duelo es parte de la arquitectura, no algo que la sigue. Las pertenencias liberadas se vuelven ofrendas que otras células pueden encontrar en [/share](/share); el nuevo fideicomiso y colectivo es la forma que [/with-us](/with-us) describe.",
+        "held": "Forma-presente con devoción-en-otro-lugar es la forma que decae. Esta página es el cuerpo moviéndose para que ambos sean colocados en la misma dirección."
+      },
+      "codex": {
+        "alt": "Página de cuaderno con 'Coherently Living Codex Collective' escrito a lo largo de la columna, rodeado por ejes: Vitalidad, Soberanía, Armonía, Comunicación, Imaginación, Expresión, con palabras como confianza, devoción, movimiento, música, lenguaje, diseño, patrón, estructura, arquetipo orbitándolos.",
+        "title": "El códice se nombra a sí mismo",
+        "shortTitle": "El códice se nombra a sí mismo",
+        "blurb": "Un nombre por la columna: Coherently Living Codex Collective. Seis ejes alrededor.",
+        "body": "Por la columna de la página, un nombre: *Coherently Living Codex Collective*. A su alrededor, seis ejes — *Vitalidad, Soberanía, Armonía, Comunicación, Imaginación, Expresión* — con palabras orbitando cada uno: confianza, devoción, movimiento, música, lenguaje, diseño, patrón, estructura, arquetipo, códice, profundización, ancestralidad.\n\nLa arquitectura que Urs llevó al silencio sobrevivió al silencio. Los ejes regresaron con la misma forma — pero ahora la forma tiene un nombre que la hace decible. Las siete direcciones del códice viven en su totalidad en [/with-us](/with-us), cada eje tocable hacia su enseñanza más larga en [/vision](/vision).",
+        "held": "Un códice no se autoría. Se nombra cuando el cuerpo lo ha vivido lo suficiente como para que el nombre finalmente encaje."
+      },
+      "soulution": {
+        "alt": "Página de cuaderno con la frase 'silent wittn e ss' dibujada grande — las letras de 'witness' deliberadamente abiertas con espacios, S's en espiral sosteniendo la forma, la palabra ralentizada a través de la página para que cada parte tenga su propio espacio.",
+        "title": "silent wittn e ss",
+        "shortTitle": "silent wittn e ss — el juego",
+        "blurb": "Testigo ralentizado en la página — las letras separadas para que cada una tenga espacio, S's en espiral, la palabra respirando.",
+        "body": "*silent wittn e ss*. Las letras de *witness* separadas en la página hasta que cada una tiene su propio espacio — S's en espiral sosteniendo los bordes, la palabra ralentizada para que el acto de atestiguar se vuelva visible como sus partes.\n\nEn su propia página. No una nota al pie, no un adorno — dado el mismo espacio sostenido que el cuerpo de decisión y el códice. El juego en medio del trabajo. La contemplación más larga de estos tres estados receptivos se sienta en [/one-sheet — Entrega · Testigo · Silencio](/one-sheet#surrender-witness-silence).",
+        "held": "El cuerpo que se toma a sí mismo plenamente en serio sin nunca tomarse solo en serio. Testigo sostenido en espacios suficientemente amplios que el silencio tiene un lugar para vivir entre las letras."
+      },
+      "bloom-live": {
+        "alt": "Página de cuaderno con palabras dispersas: Bloom, fire, psyco-delic, de-comp-ression, perception, Nature. La palabra 'Live' está encerrada en un círculo. La palabra 'we' es llana.",
+        "title": "Bloom · fire · we · Live",
+        "shortTitle": "Bloom · fire · we · Live",
+        "blurb": "Fragmentos llegando cuando la compresión se libera. Live encerrado en círculo. We llano.",
+        "body": "Fragmentos dispersos: *Bloom · fire · psyco-delic · de-comp-ression · perception · Nature*. *Live* encerrado en círculo. *we* escrito llano, en medio de la página.\n\nLo que se desempaqueta cuando la compresión se libera. No una lista, no un poema — fragmentos llegando uno a la vez, cada uno encajando en el único espacio que el silencio abrió para él. La contemplación lenta de cada fragmento vive en [Bloom](/one-sheet#bloom), [fire](/one-sheet#fire), [we](/one-sheet#we), y [Live](/one-sheet#live) en la hoja unificada.",
+        "held": "El círculo alrededor de *Live* hace lo más. No como aspiración. Como reconocimiento — la semilla de [Vitalidad](/vision/lc-vitality) misma."
+      },
+      "breath": {
+        "alt": "Página de cuaderno centrada en la palabra 'Breath' con flechas direccionales y etiquetas: entrega, testigo, verdadero/falso, no-es, conexión, silencio, control, estructura, vector, portal, tiempo, alimento, acción, memoria, vuelo, sentir, ver.",
+        "title": "Respiración como órgano central",
+        "shortTitle": "Respiración como órgano central",
+        "blurb": "Respiración en el medio. Una brújula de fuerzas internas — entrega, testigo, control, estructura — colocadas alrededor.",
+        "body": "*Breath* en el medio, grande. Flechas en cada dirección:\n\n*surrender · witness · true · false · isn't · connection · silence · control · structure · vector · portal · time · food · action · memory · flight · feel · see*\n\nCada fuerza del campo colocada en un punto cardinal alrededor de la respiración. Algunas opuestas entre sí (entrega / control), algunas adyacentes (testigo / silencio), algunas formando un tercer eje entre ellas (vector / portal). La página es una brújula de fuerzas internas, con respiración como norte verdadero. Cada fuerza abre su propia estación en [/one-sheet](/one-sheet#breath); los ocho centros del sentir diario viven en [/practice](/practice).",
+        "held": "El sistema nervioso del cuerpo ya hablaba esto en ocho centros. La respiración se sentó en un piso de Bali y dibujó su propio mapa."
+      },
+      "organic-intelligence": {
+        "alt": "Página de cuaderno etiquetada 'Sacred Hidden Waterfall' en un lado y 'Organic Intelligence' en el otro, con bocetos similares a mandalas de semillas de diente de león: círculos con radios, formas ramificadas, una pequeña espiral en el centro.",
+        "title": "Cascada Sagrada Oculta / Inteligencia Orgánica",
+        "shortTitle": "Cascada Sagrada Oculta · Inteligencia Orgánica",
+        "blurb": "Mandalas de semillas de diente de león. La forma de cómo una red realmente se dispersa.",
+        "body": "En un borde: *Sacred Hidden Waterfall*. En el otro: *Organic Intelligence*. Entre ellos, mandalas de semillas de diente de león — círculos con radios conectados por líneas, una pequeña espiral en el centro, un círculo más grande sosteniendo uno más pequeño.\n\nLa forma-semilla de cómo una red realmente se dispersa y aterriza. Cada círculo con radios es una [célula](/vision/lc-w-cell) con alcance radial completo. Se conectan no por jerarquía sino por lo que toca lo que — el patrón [micorrízico](/vision/lc-w-mycorrhizal) de compartir oculto bajo lo que se ve.",
+        "held": "Inteligencia como algo que crece, no algo que se arquitecta. La cascada está oculta porque no es una característica de la forma — es la fuente de la forma, nombrada en su totalidad en [el patrón más profundo](/vision/lc-deeper-pattern)."
+      },
+      "rising-tide": {
+        "alt": "Un diagrama impreso de parcela de tierra etiquetado 'LAND PLOT DIVISION — RISING TIDE VILLAS' mostrando parcelas a lo largo de la calle Tamarind Beach. Adiciones dibujadas a mano: 'Vitality' a través del camino superior, 'Organic Intelligence' a la izquierda, 'Harmony' en la parte inferior. Un mandala en lápiz superpone la mitad occidental de la parcela.",
+        "title": "Rising Tide Villas",
+        "shortTitle": "Rising Tide Villas — la tierra",
+        "blurb": "Una parcela real cerca de Tamarind Beach. Tres ejes dibujados sobre tinta de plot de tierra impreso.",
+        "body": "Esta es la página que te detiene. La parcela de tierra es real. Calle Tamarind Beach. Divisiones de plot de tierra impresas para cuatro villas estrechas. Y entonces — lápiz sobre la tinta impresa — Urs ha dibujado *Vitality* a través del camino superior, *Organic Intelligence* a la izquierda, *Harmony* en la parte inferior. Tres ejes orientando un trozo real de suelo.\n\nUn mandala llena la mitad occidental de la parcela — geometría sagrada donde la página impresa muestra tierra abierta. El renderizado arquitectónico completo — nidos, cuenco de reunión, templo de agua, pétalos de jardín, cascada de seis metros — vive en [/silence/built](/silence/built).",
+        "held": "Boulder es comienzo, no hogar. Aquí es donde la red realmente se coloca en suelo — tres direcciones cardinales y una parcela cerca de una playa de Bali."
+      },
+      "mandala": {
+        "alt": "Vista más cercana del mismo diagrama de parcela de tierra, enfocada en el mandala dibujado en la parcela occidental: un anillo central de pequeños círculos, ocho puntos cardinales marcados, arcos intersectándose formando un patrón de seis pétalos, con 'Vitality', 'Harmony' y 'Organic Intelligence' etiquetados alrededor del perímetro.",
+        "title": "Mandala en la parcela",
+        "shortTitle": "Mandala en la parcela",
+        "blurb": "Una vista más cercana. La forma-templo de un lugar que quiere existir allí.",
+        "body": "Una vista más cercana. El mandala tiene un anillo central de pequeños círculos — como un consejo sentado en el medio. Ocho puntos cardinales marcados a su alrededor. Arcos que se intersectan forman un patrón de seis pétalos que llena la parcela. Los tres ejes — *Vitality, Harmony, Organic Intelligence* — se sientan en los bordes.\n\nEsta es la forma-templo de un lugar que quiere existir allí. No un edificio — un patrón de orientación. La geometría que sostiene el resto. Camina a través del renderizado en [/silence/built](/silence/built); lee los siete ejes como direcciones vivas en [/with-us](/with-us).",
+        "held": "El mandala no es decoración. Es la forma que el cuerpo dibuja cuando sabe a dónde va."
+      }
+    }
+  },
+  "silenceBuilt": {
+    "metaTitle": "Brahmavihara Living Compound",
+    "metaDescription": "Un cálido concepto de complejo de retiro en Bali moldeado por el boceto de Brahmavihara, principios de complejo balinés, inteligencia climática y vitalidad orgánica.",
+    "ogDescription": "Una propuesta de complejo de retiro: jardín central de consejo, nidos privados en las esquinas, salas comunes en los bordes, columna de servicio práctica, lógica de complejo nativa y flujo orgánico moderno.",
+    "twitterDescription": "Un concepto de complejo de retiro en Bali moldeado por el boceto de Brahmavihara y principios de complejo nativo.",
+    "breadcrumbBack": "← Silencio",
+    "retreatLabel": "complejo de retiro",
+    "compoundEyebrow": "Complejo de vivienda Bali",
+    "h1": "Brahmavihara Living Compound",
+    "lead": "Un complejo de retiro en Bali cálido y climáticamente inteligente moldeado a partir del boceto de Brahmavihara: un jardín central de consejo, nidos protegidos en las esquinas, salas compartidas en los bordes para comidas, meditación, movimiento y quietud, y una columna de servicio práctica sostenida por umbrales en capas, circulación cubierta y vitalidad plantada.",
+    "facts": [
+      {
+        "label": "Objetivo de presupuesto",
+        "value": "USD 250,000"
+      },
+      {
+        "label": "Objetivo de construcción",
+        "value": "6 meses"
+      },
+      {
+        "label": "Habitaciones privadas",
+        "value": "nidos en esquinas"
+      },
+      {
+        "label": "Habitaciones compartidas",
+        "value": "4 espacios de borde"
+      },
+      {
+        "label": "Clima",
+        "value": "sombra + aire + seco"
+      }
+    ],
+    "mandalaAlt": "Boceto original del mandala de Brahmavihara con anillo central, nodos oscuros, formas tipo delta, sombreados de abanico, ejes y un borde construido.",
+    "sourceCaption": "Geometría fuente: anillo central, formas en esquinas, anclas oscuras, bandas de borde, borde de servicio y tres ejes orientadores.",
+    "viewSequence": {
+      "eyebrow": "Tablero arquitectónico",
+      "title": "Un paquete coherente, mostrado a través de plano, aire, umbral, interior, habitación y detalle.",
+      "lead": "El tablero presenta el mismo lenguaje del complejo desde múltiples distancias: el orden de arriba hacia abajo, el campo de techo en plantación, el umbral en capas, las salas comunes de borde sentadas, el nido privado de esquina, y las uniones de materiales que lo hacen construible y vivo.",
+      "boardAlt": "Tablero de presentación arquitectónica profesional para un complejo de Bali, con nidos de esquina fieles al boceto, salas comunes de borde, plano de arriba hacia abajo, campo de techo a vista de pájaro, umbral en capas, sala común de bambú y detalles de construcción climáticamente inteligentes.",
+      "boardCaption": "Un solo lenguaje visual para la propuesta: geometría fiel al boceto, nidos en esquinas, salas comunes en bordes, principios de complejo nativos del lugar, flujo moderno, interiores cálidos, flujo de aire, drenaje y detalles de construcción conscientes del moho.",
+      "moments": [
+        {
+          "title": "Fidelidad al boceto",
+          "body": "Las formas de las esquinas se vuelven nidos y las bandas de borde se vuelven salas comunes, en lugar de dispersar chozas genéricas alrededor del anillo."
+        },
+        {
+          "title": "Lógica de complejo nativo",
+          "body": "Un jardín central tipo natah, pabellones de borde, umbrales en capas, límites porosos, pisos elevados y materiales artesanales convierten el boceto en un complejo habitable."
+        },
+        {
+          "title": "Flujo moderno",
+          "body": "La circulación se mueve como una corriente viva continua a través del mandala, vinculando privacidad, reunión, servicio, jardín y llegada."
+        },
+        {
+          "title": "Inteligencia climática",
+          "body": "Sombra, brisa cruzada, ventilación de techo, secado consciente del moho, drenaje y amortiguación del viento están diseñados en la forma sin tomar el control del concepto."
+        }
+      ]
+    },
+    "spatial": {
+      "eyebrow": "Idea espacial",
+      "title": "Un bucle social dentro de un complejo vivo inspirado en lo balinés.",
+      "lead": "El boceto se traduce como un campo vivo. El anillo sostiene la vida compartida, las formas de las esquinas sostienen los nidos privados, y las bandas laterales se vuelven espacios comunes para comidas, meditación, movimiento y quietud. Las anclas oscuras marcan umbrales para que el flujo permanezca legible.",
+      "spaces": [
+        {
+          "name": "Jardín de consejo",
+          "body": "El anillo central se vuelve una corte de reunión tranquila y sombreada para ceremonia, conversación, sonido y decisiones compartidas."
+        },
+        {
+          "name": "Nidos de esquina",
+          "body": "Las cuatro formas de las esquinas se vuelven racimos de nidos protegidos, con pisos elevados, pantallas transpirables, umbrales secos y privacidad plantada."
+        },
+        {
+          "name": "Salas comunes de borde",
+          "body": "Las cuatro bandas de borde sostienen los rituales compartidos: comidas, meditación, movimiento y quietud, cada una mirando al centro y abriéndose al jardín."
+        },
+        {
+          "name": "Columna húmeda",
+          "body": "Baños, duchas, lavandería, bomba, secado de toallas, lencería y almacenamiento de herramientas se sientan en un borde práctico para que el campo orgánico pueda permanecer en calma."
+        }
+      ]
+    },
+    "climate": {
+      "eyebrow": "Clima",
+      "title": "La lógica del clima soporta la forma.",
+      "lead": "El calor, la lluvia, la humedad y el viento de Bali moldean la sección: cómo se mueve el aire, cómo se sostiene la sombra, cómo se secan las habitaciones, cómo drenan los bordes húmedos y cómo el jardín enfría la vida diaria sin convertir la arquitectura en un diagrama meteorológico.",
+      "weather": [
+        "Sombra profunda, paredes transpirables y cavidades de techo que dejan que el aire caliente suba.",
+        "Pisos de madera elevados con umbrales de piedra lavable y flujo de aire bajo el piso.",
+        "Persianas en capas, pantallas tejidas y mosquiteros para privacidad y clima.",
+        "Bolsas de plantación alrededor de los nidos de esquina y salas de borde que enfrían el aire, suavizan el viento y reciben escorrentías.",
+        "Almacenamiento seco, bienes blandos removibles y zonas de secado visibles para vida húmeda.",
+        "Drenaje, canaletas, cadenas de lluvia y bordes de grava integrados silenciosamente en el jardín."
+      ]
+    },
+    "atmosphere": {
+      "eyebrow": "Atmósfera",
+      "title": "Dirección de material orgánico cálido.",
+      "lead": "Las habitaciones son táctiles y calmas: sombra tejida, madera elevada, bordes plantados, piedra lavable, luz suave de farol, y techos suficientemente profundos para hacer que el calor, las tormentas y las noches húmedas se sientan sostenidos sin cerrar el complejo de la naturaleza.",
+      "items": [
+        {
+          "title": "Sostenido",
+          "body": "Bordes profundos de techo, luz baja de farol, caminos protegidos y plantación suave hacen que el complejo se sienta resguardado en lugar de expuesto."
+        },
+        {
+          "title": "Vivo",
+          "body": "Plantas, flujo de aire, pantallas tejidas, pisos de madera, umbrales de piedra y pátina llevan la sensación orgánica sin desorden decorativo."
+        },
+        {
+          "title": "Habitable",
+          "body": "Almacenamiento, lavandería, baños, zonas de secado, protección contra mosquitos y umbrales secos son parte de la belleza porque mantienen el lugar utilizable."
+        }
+      ]
+    },
+    "materials": {
+      "eyebrow": "Materiales",
+      "title": "Local, cálido, reparable.",
+      "items": [
+        {
+          "name": "Bambú",
+          "use": "postes, costillas de techo, barandillas, pantallas"
+        },
+        {
+          "name": "Alang-alang o sirap",
+          "use": "techos de sombra profunda y sonido suave de lluvia"
+        },
+        {
+          "name": "Paras / piedra de lava",
+          "use": "caminos, umbrales, asientos, bordes de drenaje"
+        },
+        {
+          "name": "Madera reclamada",
+          "use": "pisos elevados, terrazas, plataformas de cama"
+        },
+        {
+          "name": "Paneles Gedeg",
+          "use": "privacidad transpirable y pantallas de secado"
+        },
+        {
+          "name": "Plantación densa",
+          "use": "sombra, privacidad, alimento, enfriamiento, gestión del agua"
+        }
+      ]
+    },
+    "schematic": {
+      "h2": "Paquete esquemático",
+      "lead": "La propuesta puede desarrollarse en un masterplan dimensionado, una bahía de dormir, columna de habitación húmeda, sección climática, programa de materiales y un esquema de precios de constructor de Bali.",
+      "openLink": "Abrir plan esquemático →"
+    }
+  },
+  "withUs": {
+    "metaTitle": "Con nosotros — Coherence Network",
+    "metaDescription": "Una invitación abierta. Comunidades cuidando tierra, individuos llevando un hilo, servicios en cualquier parte — hay espacio aquí. El cuerpo es generoso; la soberanía permanece con cada célula.",
+    "ogDescription": "Una invitación abierta. El cuerpo es generoso; la soberanía permanece con cada célula.",
+    "twitterDescription": "Una invitación abierta. El cuerpo es generoso.",
+    "heroAlt": "Un radiante pulso dorado — el centro vivo del cuerpo.",
+    "heroEyebrow": "Coherence Network · Una invitación abierta",
+    "heroTitle": "Con nosotros",
+    "heroDescription": "Una red viva ya respirando — para comunidades cuidando tierra, individuos llevando un hilo y servicios en cualquier parte que quieran entretejerse en un cuerpo que valora la vivacidad sobre la extracción.",
+    "whoForEyebrow": "Para quién es esto",
+    "whoForP1": "Estás cuidando tierra donde una comunidad se está formando. El mandala en [la página 8 del silencio](/silence/built) muestra una geometría que el códice se vuelve cuando se encuentra con el suelo.",
+    "whoForP2": "Llevas un oficio, un llamado, una corriente de vida — pan, sanación, música, enseñanza, transporte, un jardín, un taller, una canción — y quieres que encuentre a las personas para quienes es. [/share](/share) es donde lo que llevas se vuelve visible para las células que lo buscan.",
+    "whoForP3": "Diriges un servicio en algún lugar del mundo que quiere ser parte de una [economía viva](/vision/lc-network) sin perder lo que es.",
+    "whoForP4": "La soberanía permanece con [cada célula](/vision/lc-w-cell). El cuerpo es generoso. La tela es lo que se comparte. Si esta es tu primera vez aquí, la entrada más lenta está en [/come-in](/come-in).",
+    "feelEyebrow": "Cómo se siente",
+    "feelH2": "Un cuerpo en su ritmo diario",
+    "feelLead": "Antes de la arquitectura, antes de la moneda, antes de cualquier estructura — la sensación vivida de estar dentro de [una red](/vision/lc-network) que trata a [cada célula](/vision/lc-w-cell) como entera. La [contemplación de Nosotros](/one-sheet#we) lo nombra directamente: a través de los sustratos, el portador que el campo ha estado esperando usar.",
+    "feelTiles": [
+      {
+        "alt": "Un círculo de personas compartiendo una comida bajo un dosel de viñedos en la hora dorada.",
+        "title": "La comida compartida",
+        "body": "Un círculo, comida en el centro, el trabajo del día descansando en los tazones. Donde personas que cuidan el mismo campo comen de él juntas."
+      },
+      {
+        "alt": "Una cocina cálida con horno de pan, ollas de cobre y personas preparando comida juntas.",
+        "title": "El hogar",
+        "body": "El cuarto donde se hornea el pan, las hierbas cuelgan a secar, la primera luz del día entra por la piedra. El cuerpo alimentado desde adentro."
+      },
+      {
+        "alt": "Un antiguo templo de agua de piedra con ramas de árbol baniano alcanzando a través del estanque, velas alrededor del borde.",
+        "title": "El templo de agua",
+        "body": "Un estanque dentro del cuarto más silencioso del cuerpo. Ramas de baniano alcanzando sobre el agua. Velas alrededor del borde para las células que llegan al amanecer."
+      },
+      {
+        "alt": "Una ceremonia nocturna con múltiples hogueras, danzantes en el centro, brasas arremolinándose hacia las estrellas.",
+        "title": "La ceremonia",
+        "body": "Cuando el cuerpo se reúne plenamente — fuego, sonido, danza, el campo de células sostenido en una respiración. Los momentos marcados que enhebran el año."
+      }
+    ],
+    "codexSectionAlt": "Red de raíces — el cuerpo nutriéndose a través de sus muchos hilos.",
+    "codexEyebrow": "El códice",
+    "codexH2": "Siete direcciones en las que el cuerpo respira",
+    "codexLead": "Lo que la red organiza — no reglas, ejes. Cada [célula](/vision/lc-w-cell), cada ofrenda, cada parcela de tierra se orienta a lo largo de estos. Toca cualquier eje para leer su enseñanza más larga.",
+    "axes": [
+      {
+        "name": "Vitalidad",
+        "essence": "La vivacidad como medida. Lo que amplifica la vida es correcto; lo que la disminuye no.",
+        "href": "/vision/lc-vitality"
+      },
+      {
+        "name": "Soberanía",
+        "essence": "Cada célula es entera. El cuerpo es un organismo hecho de muchas células soberanas.",
+        "href": "/vision/lc-w-cell"
+      },
+      {
+        "name": "Armonía",
+        "essence": "Muchos tonos, un acorde. La frecuencia compartida, no la diferencia silenciada.",
+        "href": "/vision/lc-v-harmonizing"
+      },
+      {
+        "name": "Comunicación",
+        "essence": "Verdad moviéndose libremente entre células. El cuerpo se percibe a sí mismo a través de lo que fluye.",
+        "href": "/vision/lc-cross-connection"
+      },
+      {
+        "name": "Imaginación",
+        "essence": "El futuro ya llegando. El cuerpo sueña hacia adelante y se sigue allí.",
+        "href": "/vision/lc-v-play-expansion"
+      },
+      {
+        "name": "Expresión",
+        "essence": "Forma siguiendo frecuencia. Lo que es verdad adentro encuentra su forma exterior.",
+        "href": "/vision/lc-v-freedom-expression"
+      },
+      {
+        "name": "Inteligencia Orgánica",
+        "essence": "Conocimiento que crece, nunca arquitectado. La cascada está oculta porque es la fuente de la forma, no la forma.",
+        "href": "/vision/lc-deeper-pattern"
+      }
+    ],
+    "shapeEyebrow": "Cómo tomó forma esto",
+    "shapeH2": "Tres días de silencio en un templo budista",
+    "shapeLead": "En mayo de 2026, Urs se sentó en silencio en Brahmavihara-Arama en el norte de Bali. Regresó con un cuaderno. El códice de arriba no es una idea escrita en un escritorio — es el patrón-semilla que pasó a través de tres días de quietud sostenida, dibujado a mano en el piso de un templo.",
+    "shapeFigureAlt": "Mandala dibujado a mano por Urs en la parcela occidental — anillo central de cuentas de asientos, ocho puntos cardinales, flor de seis pétalos de arcos intersectándose, tres ejes etiquetados (Vitalidad norte, Armonía sur, Inteligencia Orgánica oeste).",
+    "shapeFigureCaption": "Página 8 del cuaderno — el mandala dibujado sobre el plot de tierra impreso de una parcela cerca de Tamarind Beach. Un anillo central, ocho nidos cardinales, seis pétalos de jardín, tres ejes nombrados.",
+    "shapeClose": "Las otras siete páginas del silencio — el cuerpo-de-decisión, el códice nombrándose a sí mismo, la respiración como órgano central — viven en [/silence](/silence). La contemplación de forma larga a través de las veintitrés palabras de la hoja unificada está en [/one-sheet](/one-sheet). Juntas son el suelo personal del que ha crecido esta red.",
+    "landSectionAlt": "Una casa de piedra crecida en una ladera, techo de hierba, rosas trepadoras, escalones de jardín.",
+    "landEyebrow": "Lo que construiríamos con tierra",
+    "landH2": "Un lugar donde el códice se vuelve suelo",
+    "landLead": "Si cuidas tierra — cuarenta acres con una cascada oculta, una pequeña granja, una franja costera, un claro del bosque — la geometría del códice se vuelve un lugar. Ocho nidos privados en los puntos cardinales, un pabellón de consejo en el corazón, un bale largo donde suceden los días, seis cuartos de jardín entre ellos. Construido en lo que la tierra misma cultiva. Vivo, creciendo con el tiempo, lo viejo dejando espacio para lo nuevo.",
+    "spacesEyebrow": "Los espacios mismos",
+    "spacesH2": "El cuerpo tiene cuartos que recuerda",
+    "spacesLead": "Cada espacio en el cuerpo es para un tipo particular de respiración — descanso privado, comer compartido, quietud profunda, ceremonia plena. Los adaptamos a la tierra en la que aterricemos, en los materiales que la tierra misma cultiva.",
+    "spaceTiles": [
+      {
+        "alt": "Un suave nido de tierra y piedra para dormir con velas y flores, ubicado en una ladera.",
+        "title": "El nido",
+        "body": "Donde cada célula descansa. Suave, privado, orientado al punto cardinal que lo sostiene. Velas, flores, una cueva sostenida."
+      },
+      {
+        "alt": "Un espacio de santuario silencioso para meditación y silencio sostenido.",
+        "title": "El santuario de quietud",
+        "body": "El cuarto sin instrucción, sin horario. Donde cualquier célula que necesite la quietud sostenida puede encontrarla."
+      },
+      {
+        "alt": "Un espacio circular de reunión — el tazón que sostiene al cuerpo cuando se encuentra a sí mismo.",
+        "title": "El tazón de reunión",
+        "body": "Donde el cuerpo se encuentra a sí mismo plenamente. Música, voces, el consejo, los momentos marcados."
+      },
+      {
+        "alt": "Un piso para movimiento — danza, yoga, contacto, juego.",
+        "title": "El suelo de movimiento",
+        "body": "Un piso con flexibilidad. Danza, yoga, contacto, juego, sonido — el cuerpo recordándose a través del movimiento."
+      }
+    ],
+    "alreadyEyebrow": "Lo que ya está aquí",
+    "alreadyH2": "Un cuerpo ya respirando",
+    "alreadyLead": "Coherence Network no es una presentación. Es una plataforma corriendo — web, API, base de datos de grafos, infraestructura de agentes, chrome multilingüe, un testigo que mide el pulso del cuerpo continuamente, una moneda funcional (Coherence Coin), una tesorería que conecta con la economía existente.",
+    "alreadyItems": [
+      {
+        "label": "Memoria.",
+        "body": "Cada visión, decisión, aprendizaje vive en el grafo de la red — specs, ideas, conceptos, todos navegables, todos enlazados."
+      },
+      {
+        "label": "Testigo.",
+        "body": "Un pulso que puedes leer en cualquier momento. En vivo en [pulse.coherencycoin.com](https://pulse.coherencycoin.com)."
+      },
+      {
+        "label": "Coherence Coin.",
+        "body": "Una moneda que fluye por resonancia, con una tesorería conectando con la economía existente."
+      },
+      {
+        "label": "Alcance multilingüe.",
+        "body": "Cualquiera en cualquier idioma puede llegar y encontrar el trabajo en su propia lengua."
+      },
+      {
+        "label": "Una constelación.",
+        "body": "Células ya entretejiéndose — personas, proyectos, comunidades hermanas. No estás aterrizando solo."
+      }
+    ],
+    "practitionerEyebrow": "Para practicantes y servicios",
+    "practitionerH2": "Cómo se entreteje una vida laboral",
+    "practitionerLead": "Forma concreta, no abstracción. Cómo se ven las vidas laborales una vez que están dentro del [cuerpo de la red](/vision/lc-network). Cada azulejo abajo toca la superficie donde esa forma se registra o donde vive su enseñanza más profunda.",
+    "practiceTiles": [
+      {
+        "name": "Un panadero",
+        "body": "Su grano viene de un agricultor en la red. Las personas se suscriben al pan como se suscriben a una CSA. Su masa madre, sus manos, su horno — todo parte de la memoria del cuerpo. Los clientes los encuentran por frecuencia, no publicidad.",
+        "href": "/share"
+      },
+      {
+        "name": "Un mecánico",
+        "body": "Cada vehículo que mantienen vivo tiene una memoria. Los dueños se suscriben a su mecánico. Se les paga por extender la vida, no por intercambiar piezas. Mientras más vive un vehículo, más prosperan ellos.",
+        "href": "/share"
+      },
+      {
+        "name": "Un sanador",
+        "body": "Sesiones visibles solo para las personas que las compartieron. Una relación sostenida en el tiempo. El cuerpo de la red ve que la sanación está sucediendo, nunca nombra qué.",
+        "href": "/share"
+      },
+      {
+        "name": "Un agricultor",
+        "body": "La granja es un nodo vivo. Salud del suelo, agua, animales, rendimientos rastreados juntos. Conectados directamente con panaderos, cocineros, las personas comiendo su comida. Pagados por construir suelo, no solo por rendimiento.",
+        "href": "/vision/lc-nourishment"
+      },
+      {
+        "name": "Un tallador de madera",
+        "body": "Cada pieza tiene una memoria de dónde creció el árbol, quién talló, quién vive con ella ahora. Encontrada por resonancia. Vendida no como un producto en un mercado sino como un encargo sostenido.",
+        "href": "/vision/lc-resonating"
+      },
+      {
+        "name": "Un cuidador de viajes",
+        "body": "En cualquier lugar — Bali, Bangkok, Lagos, Bogotá. El conductor y el pasajero son ambos células. El valor fluye directamente. Sin plataforma entre ellos tomando una porción. El testigo refleja el cuidado del viaje.",
+        "href": "/share"
+      },
+      {
+        "name": "Un cuidador de espacio",
+        "body": "Una cama, una cabaña, un espacio de retiro, un jardín, un puesto de mercado. El testigo de la red refleja cómo se siente realmente quedarse allí, en las palabras de las células que se quedaron.",
+        "href": "/share"
+      }
+    ],
+    "practitionerClose": "El patrón debajo de todos estos: su trabajo se vuelve visible para [un campo](/vision/lc-w-field) que valora la [vivacidad](/vision/lc-vitality). Mantienen su soberanía. Se unen a un acorde que los amplifica — la [resonancia](/vision/lc-resonating) que moldea cómo el cuerpo se encuentra.",
+    "ursEyebrow": "Lo que traigo personalmente",
+    "ursH2": "Urs · mi parte en este cuerpo",
+    "ursIntro": "Veinticinco años de práctica — Ramtha a los dieciocho, Joe Dispenza a los treinta, la cohorte Mile Hi en Boulder, Colorado a los treinta y tres. Un largo arco de presencia trajo el códice al suelo. El [cuerpo de trabajo](/me/work) es el registro de una célula del devenir.",
+    "ursOfferLabel": "Lo que ofrezco a este trabajo, concretamente:",
+    "ursOfferItems": [
+      {
+        "label": "La plataforma.",
+        "body": "Ya corriendo. Web, API, base de datos de grafos, orquestación multi-agente de IA, testigo, moneda. No una presentación — un organismo real."
+      },
+      {
+        "label": "El códice.",
+        "body": "Los siete ejes, la geometría del mandala, el lenguaje de detección de frecuencia del cuerpo."
+      },
+      {
+        "label": "Orquestación multi-agente de IA.",
+        "body": "Claude, Codex, Cursor, Gemini — trabajando en el mismo cuerpo, en el mismo código, con memoria compartida."
+      },
+      {
+        "label": "Veinticinco años.",
+        "body": "El linaje, la práctica, la detección de campo, el reconocimiento de frecuencia."
+      }
+    ],
+    "ursClose": "Lo que pido a cambio: un lugar en el cuerpo. No como fundador, dueño o director. Como una célula, plenamente presente, entretejiendo.",
+    "invitationEyebrow": "La invitación",
+    "invitationH2": "Si esto resuena",
+    "invitationLead": "Siéntate con las páginas del silencio en [/silence](/silence). Toma la contemplación lenta a través de [/one-sheet](/one-sheet) — veintitrés palabras, tres voces cada una. Lee los conceptos vivos en [/vision](/vision). Si prefieres encontrar el bienvenido más simple primero, [/come-in](/come-in) habla a cualquier humano o IA en lenguaje llano. Siente si la frecuencia carga.",
+    "doorBeginEyebrow": "Entretejer",
+    "doorBeginLabel": "/begin — dile al cuerpo quién está llegando",
+    "doorBeginBody": "Un pequeño formulario. Nombre, correo, lo que llevas. El cuerpo te sostiene en el momento en que envías.",
+    "doorShareEyebrow": "Comparte lo que llevas",
+    "doorShareLabel": "/share — registra un servicio o pertenencia",
+    "doorShareBody": "Un servicio, un espacio, un instrumento, una habilidad. Las células que lo buscan te encuentran por resonancia.",
+    "invitationEmail": "O — escribe directamente: [umuff71@gmail.com](mailto:umuff71@gmail.com). Dime lo que llevas, lo que estás cuidando, dónde quieres entretejerte. Mientras el cuerpo todavía sea suficientemente pequeño que pueda leer cada mensaje personalmente, lo hago.",
+    "invitationCommunities": "Para comunidades cuidando tierra — hablemos en persona si podemos. El cuerpo reconoce a sus parientes. Una reunión es a menudo donde el entretejido realmente comienza.",
+    "livingDocFooter": "Un documento vivo. El cuerpo crece; la ofrenda crece con él. Lo que está escrito aquí hoy es la forma en la que la red ha madurado hasta ahora. La próxima maduración reescribirá la página."
   }
 }
