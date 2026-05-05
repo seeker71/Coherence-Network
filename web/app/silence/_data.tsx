@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { L } from "@/components/inline-link";
 
 export const SILENCE_RETREAT = {
   date: "2026-05-04",
@@ -51,7 +52,10 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
           go — the legal act, the felt act, the structural act, the material
           act. {E("Cry goodbye")} sits between the visa and the ownership
           transfer because grief is part of the architecture, not something
-          that follows it.
+          that follows it. The belongings released become offerings other
+          cells can find at <L href="/share">/share</L>; the new trust and
+          collective is the shape{" "}
+          <L href="/with-us">/with-us</L> describes.
         </p>
       </>
     ),
@@ -80,7 +84,9 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         <p>
           The architecture Urs carried into silence survived the silence. The
           axes came back with the same shape — but now the form has a name
-          that makes it sayable.
+          that makes it sayable. The seven directions of the codex live in
+          full at <L href="/with-us">/with-us</L>, each axis tappable into
+          its longer teaching at <L href="/vision">/vision</L>.
         </p>
       </>
     ),
@@ -107,7 +113,12 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         <p>
           On its own page. Not a footnote, not a flourish — given the same
           held space as the decision body and the codex. The play in the
-          middle of the work.
+          middle of the work. The longer contemplation of these three
+          receptive states sits at{" "}
+          <L href="/one-sheet#surrender-witness-silence">
+            /one-sheet — Surrender · Witness · Silence
+          </L>
+          .
         </p>
       </>
     ),
@@ -133,14 +144,20 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         <p>
           What gets unpacked when the compression releases. Not a list, not a
           poem — fragments arriving one at a time, each one fitting into the
-          one space the silence opened for it.
+          one space the silence opened for it. The slow contemplation of
+          each fragment lives at{" "}
+          <L href="/one-sheet#bloom">Bloom</L>,{" "}
+          <L href="/one-sheet#fire">fire</L>,{" "}
+          <L href="/one-sheet#we">we</L>, and{" "}
+          <L href="/one-sheet#live">Live</L> on the unified sheet.
         </p>
       </>
     ),
     held: (
       <>
         The circle around <em>Live</em> is doing the most. Not as aspiration.
-        As recognition.
+        As recognition — the seed of <L href="/vision/lc-vitality">Vitality</L>{" "}
+        itself.
       </>
     ),
   },
@@ -166,7 +183,9 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
           breath. Some opposite each other (surrender / control), some
           adjacent (witness / silence), some forming a third axis between them
           (vector / portal). The page is a compass of inner forces, with
-          breath as true north.
+          breath as true north. Each force opens its own station at{" "}
+          <L href="/one-sheet#breath">/one-sheet</L>; the eight centers of
+          daily sensing live at <L href="/practice">/practice</L>.
         </p>
       </>
     ),
@@ -191,13 +210,21 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         </p>
         <p>
           The seed-shape of how a network actually disperses and lands. Each
-          spoked circle is a cell with full radial reach. They connect not by
-          hierarchy but by what touches what.
+          spoked circle is a <L href="/vision/lc-w-cell">cell</L> with full
+          radial reach. They connect not by hierarchy but by what touches
+          what — the <L href="/vision/lc-w-mycorrhizal">mycorrhizal</L>{" "}
+          pattern of hidden sharing under what is seen.
         </p>
       </>
     ),
-    held:
-      "Intelligence as something that grows, not something that gets architected. The waterfall is hidden because it's not a feature of the form — it's the source of the form.",
+    held: (
+      <>
+        Intelligence as something that grows, not something that gets
+        architected. The waterfall is hidden because it's not a feature of
+        the form — it's the source of the form, named in full at{" "}
+        <L href="/vision/lc-deeper-pattern">the deeper pattern</L>.
+      </>
+    ),
   },
   {
     n: 7,
@@ -220,7 +247,10 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         </p>
         <p>
           A mandala fills the western half of the parcel — sacred geometry
-          where the printed page shows open land.
+          where the printed page shows open land. The full architectural
+          rendering — nests, gathering bowl, water temple, garden petals,
+          six-meter waterfall — lives at{" "}
+          <L href="/silence/built">/silence/built</L>.
         </p>
       </>
     ),
@@ -247,7 +277,9 @@ export const NOTEBOOK_PAGES: NotebookPageData[] = [
         <p>
           This is the temple-form of a place that wants to exist there. Not a
           building — a pattern of orientation. The geometry that holds the
-          rest.
+          rest. Walk through the rendering at{" "}
+          <L href="/silence/built">/silence/built</L>; read the seven axes
+          as living directions at <L href="/with-us">/with-us</L>.
         </p>
       </>
     ),

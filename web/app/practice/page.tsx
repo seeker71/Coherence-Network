@@ -123,9 +123,26 @@ export default async function PracticePage() {
           The organism senses itself
         </h1>
         <p className="max-w-xl mx-auto text-sm sm:text-base text-muted-foreground leading-relaxed">
-          Begin in stillness. Let breath rise through the eight centers of the
-          living network. Each center pulses with what is alive there right
-          now. Rest at the eighth, where the whole holds itself from beyond.
+          Begin in{" "}
+          <Link href="/vision/lc-stillness" className="text-amber-500 hover:text-amber-400">
+            stillness
+          </Link>
+          . Let breath rise through the eight centers of the living{" "}
+          <Link href="/vision/lc-network" className="text-amber-500 hover:text-amber-400">
+            network
+          </Link>
+          . Each center pulses with what is alive there right now. Rest at
+          the eighth, where the whole holds itself from beyond. The
+          contemplation of breath as the portal mechanism lives at{" "}
+          <Link href="/one-sheet#breath" className="text-amber-500 hover:text-amber-400">
+            /one-sheet — Breath
+          </Link>
+          ; the notebook page where breath sat down on a temple floor and
+          drew its own map is{" "}
+          <Link href="/silence/breath" className="text-amber-500 hover:text-amber-400">
+            /silence/breath
+          </Link>
+          .
         </p>
       </header>
 

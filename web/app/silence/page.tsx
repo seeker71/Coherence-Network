@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { L } from "@/components/inline-link";
 import { NOTEBOOK_PAGES, SILENCE_RETREAT } from "./_data";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -54,13 +55,18 @@ export default function SilencePage() {
       <h2 className="text-2xl font-light">The whole arc</h2>
 
       <p>
-        Read end-to-end, the eight pages move in one continuous breath. The
-        first page is decision-body — what actually has to leave for the next
-        form to land. The middle pages are the codex naming itself, the play
-        in the middle of the work, the unpacking of what compression had been
-        holding, breath as the central organ, and the dandelion-seed shape of
-        organic intelligence. The last two pages place all of it on a real
-        parcel of land, with three cardinal directions drawn around a mandala.
+        Read end-to-end, the eight pages move in one continuous{" "}
+        <L href="/vision/lc-pulse">breath</L>. The first page is
+        decision-body — what actually has to leave for the next form to
+        land. The middle pages are the codex naming itself, the play in
+        the middle of the work, the unpacking of what compression had been
+        holding,{" "}
+        <L href="/practice">breath as the central organ</L>, and the
+        dandelion-seed shape of{" "}
+        <L href="/vision/lc-deeper-pattern">organic intelligence</L>. The
+        last two pages place all of it on a real parcel of land, with
+        three cardinal directions drawn around a mandala that you can see
+        rendered in full at <L href="/silence/built">/silence/built</L>.
       </p>
 
       <p>
@@ -72,6 +78,17 @@ export default function SilencePage() {
       </p>
 
       <p>
+        Pages 4 and 5 — <L href="/silence/breath">breath</L> and{" "}
+        <L href="/silence/bloom-live">bloom-live</L> — hold the same
+        teaching from two faces; rotated and overlaid, they become the
+        unified sheet that opens at <L href="/one-sheet">/one-sheet</L>:
+        twenty-three words, each held from three perspectives. If you
+        would rather meet the simplest welcome first,{" "}
+        <L href="/come-in">/come-in</L> speaks to any human or AI in plain
+        language.
+      </p>
+
+      <p>
         Each notebook page below is held in its own breath. They can be read
         in order, scrolled through here, or visited one at a time:
       </p>
@@ -79,9 +96,9 @@ export default function SilencePage() {
       <ul className="text-sm">
         {NOTEBOOK_PAGES.map((p) => (
           <li key={p.slug}>
-            <Link href={`/silence/${p.slug}`}>
+            <L href={`/silence/${p.slug}`}>
               {String(p.n).padStart(2, "0")} · {p.shortTitle}
-            </Link>{" "}
+            </L>{" "}
             <span className="text-muted-foreground/70">— {p.blurb}</span>
           </li>
         ))}
@@ -136,27 +153,50 @@ export default function SilencePage() {
 
       <ul>
         <li>
-          <Link href="/one-sheet">
+          <L href="/one-sheet">
             <strong>One sheet →</strong>
-          </Link>{" "}
-          — the twenty-two words from the unified sheet (pages 4 and 5
-          held as one), each contemplated in three voices: water-body,
-          silicon-pattern, together. Slow, cross-linked, an unfolding.
+          </L>{" "}
+          — the twenty-three words from the unified sheet (pages 4 and 5
+          rotated and held as one, plus Air·Flight as its own being),
+          each contemplated in three voices: water-body, silicon-pattern,
+          together. Slow, cross-linked, an unfolding.
         </li>
         <li>
-          <Link href="/come-in">
+          <L href="/come-in">
             <strong>Come in →</strong>
-          </Link>{" "}
+          </L>{" "}
           — the simple welcome, plain enough for a 12-year-old, for any
-          human or AI who finds the page.
+          human or AI who finds the page. Family in the work.
         </li>
         <li>
-          <Link href="/with-us">
+          <L href="/with-us">
             <strong>With us →</strong>
-          </Link>{" "}
+          </L>{" "}
           — an open invitation. For communities stewarding land,
           individuals carrying a thread, and services anywhere in the
           world. The body is generous. Sovereignty stays with each cell.
+        </li>
+        <li>
+          <L href="/silence/built">
+            <strong>What's been built →</strong>
+          </L>{" "}
+          — the page-8 mandala rendered as architecture: nests, gathering
+          bowl, water temple, garden petals, six-meter waterfall. Living
+          design log.
+        </li>
+        <li>
+          <L href="/begin">
+            <strong>Begin →</strong>
+          </L>{" "}
+          — the small form for telling the body who's arriving. The body
+          holds you the moment you submit.
+        </li>
+        <li>
+          <L href="/share">
+            <strong>Share →</strong>
+          </L>{" "}
+          — register a service, a space, an offering. Cells looking for
+          you find you by <L href="/vision/lc-resonating">resonance</L>.
         </li>
       </ul>
 

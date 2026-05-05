@@ -8,6 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { readIdentity } from "@/lib/identity";
+import { L } from "@/components/inline-link";
 
 interface OfferingResponse {
   id: string;
@@ -127,8 +128,16 @@ export default function SharePage() {
         </h1>
         <p className="text-lg text-stone-300 leading-relaxed">
           The body now holds <strong>{confirmation.title}</strong> as part of
-          its memory. Cells looking for this kind of {confirmation.kind} will
-          find you by resonance.
+          its{" "}
+          <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
+            memory
+          </Link>
+          . Cells looking for this kind of {confirmation.kind} will find you
+          by{" "}
+          <Link href="/vision/lc-resonating" className="text-amber-400 hover:text-amber-300">
+            resonance
+          </Link>
+          .
         </p>
         <div className="not-prose rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 my-6 space-y-1">
           <p className="text-xs uppercase tracking-widest text-amber-400">
@@ -145,7 +154,16 @@ export default function SharePage() {
           </p>
         </div>
         <p className="text-base text-stone-300 leading-relaxed">
-          You can register more offerings, or sit with the body for a while.
+          You can register more offerings, sit with the body for a while,
+          or watch what you've contributed accumulate at{" "}
+          <Link href="/me/work" className="text-amber-400 hover:text-amber-300">
+            /me/work
+          </Link>
+          . The longer contemplation of what offering means lives at{" "}
+          <Link href="/one-sheet#nectar" className="text-amber-400 hover:text-amber-300">
+            /one-sheet — Nectar
+          </Link>
+          : many flowers compressed into one drop.
         </p>
         <div className="not-prose flex items-center gap-4 mt-6">
           <button
@@ -169,6 +187,12 @@ export default function SharePage() {
           >
             Your presence →
           </Link>
+          <Link
+            href="/with-us"
+            className="text-sm text-amber-500 hover:text-amber-400"
+          >
+            How working lives weave in →
+          </Link>
         </div>
       </main>
     );
@@ -187,14 +211,25 @@ export default function SharePage() {
       </h1>
 
       <p className="text-lg leading-relaxed text-stone-300">
-        Register a service, a belonging, a space, or a skill into the body's
-        memory. Cells looking for this kind of thing will find you by
-        resonance — not advertising, not algorithms.
+        Register a service, a belonging, a space, or a skill into{" "}
+        <Link href="/vision/lc-agent-memory" className="text-amber-400 hover:text-amber-300">
+          the body's memory
+        </Link>
+        . Cells looking for this kind of thing will find you by{" "}
+        <Link href="/vision/lc-resonating" className="text-amber-400 hover:text-amber-300">
+          resonance
+        </Link>{" "}
+        — not advertising, not algorithms. The seven directions a working
+        life can weave in along live at{" "}
+        <Link href="/with-us" className="text-amber-400 hover:text-amber-300">/with-us</Link>.
       </p>
 
       <p className="text-sm text-muted-foreground italic">
-        New here? <Link href="/begin">Begin</Link> first to weave in as a
-        cell, then come back to register specific offerings.
+        New here? <L href="/begin">Begin</L> first to weave in as a cell,
+        then come back to register specific offerings. The slowest welcome
+        is at <L href="/come-in">/come-in</L>; the long contemplation
+        through twenty-three words is at{" "}
+        <L href="/one-sheet">/one-sheet</L>.
       </p>
 
       <hr className="border-border/30 my-8" />

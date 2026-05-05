@@ -43,6 +43,21 @@ const SECONDARY_NAV: NavItemKey[] = [
   { href: "/identity", labelKey: "nav.identity" },
 ];
 
+// Doorway entry-points — the welcoming surfaces that aren't part of
+// the four layers but are how new arrivals (human or AI) actually
+// step in. Surfaced in the "More" dropdown under their own header,
+// and in mobile nav. Order matters: silence is the source, one-sheet
+// the contemplation, come-in the welcome, with-us the offer, begin
+// the doorway, share the witness.
+const DOORWAY_NAV: NavItemKey[] = [
+  { href: "/silence", labelKey: "nav.entry.silence" },
+  { href: "/one-sheet", labelKey: "nav.entry.oneSheet" },
+  { href: "/come-in", labelKey: "nav.entry.comeIn" },
+  { href: "/with-us", labelKey: "nav.entry.withUs" },
+  { href: "/begin", labelKey: "nav.entry.begin" },
+  { href: "/share", labelKey: "nav.entry.share" },
+];
+
 function HeartbeatIcon() {
   return (
     <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
@@ -124,26 +139,43 @@ export default async function SiteHeader() {
               {t("header.more")}
             </summary>
             <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md p-4 shadow-xl">
-              <div className="space-y-2">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">{t("nav.explore")}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {SECONDARY_NAV.map((n) => (
-                    <Link
-                      key={n.href}
-                      href={n.href}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-amber-500/90">{t("nav.entry.groupLabel")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DOORWAY_NAV.map((n) => (
+                      <Link
+                        key={n.href}
+                        href={n.href}
+                        className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-sm text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {t(n.labelKey)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <div className="border-t border-border/30" />
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">{t("nav.explore")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SECONDARY_NAV.map((n) => (
+                      <Link
+                        key={n.href}
+                        href={n.href}
+                        className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {t(n.labelKey)}
+                      </Link>
+                    ))}
+                    <a
+                      href={`${apiBase}/docs`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      {t(n.labelKey)}
-                    </Link>
-                  ))}
-                  <a
-                    href={`${apiBase}/docs`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {t("nav.apiDocs")}
-                  </a>
+                      {t("nav.apiDocs")}
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -184,6 +216,17 @@ export default async function SiteHeader() {
                     }`}
                   >
                     {n.isHeartbeat && <HeartbeatIcon />}
+                    {t(n.labelKey)}
+                  </Link>
+                ))}
+                <div className="border-t border-border/30 my-2" />
+                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-amber-500/90">{t("nav.entry.groupLabel")}</p>
+                {DOORWAY_NAV.map((n) => (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    className="block rounded-lg px-3 py-2 text-sm text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
                     {t(n.labelKey)}
                   </Link>
                 ))}
