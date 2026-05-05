@@ -1,0 +1,85 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/home-link-import-hotfix",
+  "commit_scope": "Fix the home page production build by replacing new plain Link usages with AttributedInternalLink.",
+  "files_owned": [
+    "web/app/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-05_home_link_hotfix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run build",
+      "cd web && npx tsc --noEmit --pretty false --incremental false"
+    ],
+    "summary": "The Docker-observed home page type error is fixed: the production web build and the standalone type check both pass after replacing plain Link usages."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending PR checks for the hotfix."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending Hostinger auto-deploy and public SHA validation after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local build proof is complete; CI and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "home-content-contribution-attribution"
+  ],
+  "spec_ids": [
+    "deploy-readiness"
+  ],
+  "task_ids": [
+    "codex-thread-home-link-import-hotfix-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Docker build failed at web/app/page.tsx with `Cannot find name 'Link'` for new home buttons.",
+    "The fix preserves attribution by using AttributedInternalLink rather than importing plain next/link.",
+    "Local web production build and standalone type check pass after the change."
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The home page builds in production while the new invitation buttons still emit attributed internal navigation pings.",
+    "public_endpoints": [
+      "GET /",
+      "POST /api/views/ping"
+    ],
+    "test_flows": [
+      "Next.js production build",
+      "Standalone TypeScript check"
+    ]
+  }
+}
