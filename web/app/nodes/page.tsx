@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
 import { createTranslator } from "@/lib/i18n";
@@ -248,12 +249,12 @@ export default async function NodesPage() {
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{t("nodes.title")}</h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          {t("nodes.lede")}
-        </p>
-      </div>
+      <EditablePageIntro
+        pageId="nodes"
+        sourcePage="/nodes"
+        title={t("nodes.title")}
+        description={t("nodes.lede")}
+      />
 
       {/* Fleet summary */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm">

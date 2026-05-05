@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
+import { EditablePageIntro } from "@/components/content/EditablePageContent";
 import { readActiveWorkspaceFromCookie, withWorkspaceScope } from "@/lib/workspace";
 import { useT } from "@/components/MessagesProvider";
 
@@ -316,13 +317,17 @@ function PipelineDashboardContent() {
         {/* Header */}
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">{t("pipeline.liveView")}</p>
-              <h1 className="text-3xl md:text-4xl font-light tracking-tight">{t("pipeline.title")}</h1>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-                {t("pipeline.liveLede")}
-              </p>
-            </div>
+            <EditablePageIntro
+              pageId="pipeline"
+              sourcePage="/pipeline"
+              eyebrow={t("pipeline.liveView")}
+              title={t("pipeline.title")}
+              description={t("pipeline.liveLede")}
+              className="space-y-1"
+              eyebrowClassName="text-sm text-muted-foreground"
+              titleClassName="text-3xl md:text-4xl font-light tracking-tight"
+              descriptionClassName="max-w-2xl text-sm text-muted-foreground sm:text-base"
+            />
             {lastRefresh && (
               <p className="text-xs text-muted-foreground shrink-0 tabular-nums pt-1">
                 {t("pipeline.updated", { time: elapsed(lastRefresh.toISOString()) })}

@@ -18,6 +18,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.services import entity_view_attribution_service
 from app.services import translation_cache_service
 
 router = APIRouter(prefix="/translations", tags=["translations"])
@@ -61,6 +62,7 @@ class TranslationView(BaseModel):
     translated_from_hash: Optional[str]
     status: str
     notes: Optional[str]
+    source_contribution_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -70,7 +72,7 @@ class TranslationListResponse(BaseModel):
     total: int
 
 
-def _record_to_view(rec) -> TranslationView:
+def _record_to_view(rec, source_contribution_id: str | None = None) -> TranslationView:
     return TranslationView(
         id=rec.id,
         entity_type=rec.entity_type,
@@ -87,6 +89,7 @@ def _record_to_view(rec) -> TranslationView:
         translated_from_hash=rec.translated_from_hash,
         status=rec.status,
         notes=rec.notes,
+        source_contribution_id=source_contribution_id,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
@@ -122,7 +125,17 @@ async def submit_translation(body: TranslationSubmit) -> TranslationView:
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    return _record_to_view(rec)
+    source_contribution_id = entity_view_attribution_service.record_view_attribution(
+        entity_type=body.entity_type,
+        entity_id=body.entity_id,
+        view_id=rec.id,
+        lang=rec.lang,
+        content_hash=rec.content_hash,
+        author_id=body.author_id,
+        author_type=body.author_type,
+        content_title=body.content_title,
+    )
+    return _record_to_view(rec, source_contribution_id=source_contribution_id)
 
 
 @router.get(

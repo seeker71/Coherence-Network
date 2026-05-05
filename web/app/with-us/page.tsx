@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -92,22 +93,26 @@ export default function WithUsPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950" />
           <div className="absolute inset-0 flex items-end">
             <div className="mx-auto w-full max-w-3xl px-6 pb-12 sm:pb-16">
-              <p className="text-xs uppercase tracking-widest text-amber-300/90">
-                Coherence Network · An open invitation
-              </p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50">
-                With us
-              </h1>
-              <p className="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl">
-                A living network already breathing — for communities holding
-                land, individuals carrying a thread, and services anywhere
-                that want to weave into a body that values aliveness over
-                extraction.
-              </p>
+              <EditablePageIntro
+                pageId="with-us"
+                sourcePage="/with-us"
+                eyebrow="Coherence Network · An open invitation"
+                title="With us"
+                description="A living network already breathing - for communities holding land, individuals carrying a thread, and services anywhere that want to weave into a body that values aliveness over extraction."
+                eyebrowClassName="text-xs uppercase tracking-widest text-amber-300/90"
+                titleClassName="mt-3 text-4xl sm:text-5xl font-light tracking-tight text-stone-50"
+                descriptionClassName="mt-4 text-lg sm:text-xl text-stone-200/95 leading-relaxed max-w-2xl"
+                showMarkdown={false}
+              />
             </div>
           </div>
         </div>
       </section>
+
+      <EditablePageMarkdown
+        pageId="with-us"
+        className="mx-auto max-w-3xl px-6 pt-12 -mb-4 space-y-4 text-base leading-relaxed text-stone-300"
+      />
 
       {/* Who this is for */}
       <section className="mx-auto max-w-2xl px-6 py-16 space-y-5">

@@ -61,6 +61,7 @@ import {
 } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
+import { handleContent } from "../lib/commands/content.mjs";
 import { ontology } from "../lib/commands/ontology.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
@@ -208,6 +209,7 @@ const COMMANDS = {
   specs:         () => listSpecs(args),
   spec:          () => showSpec(args),
   contribute:    () => contribute(args),
+  content:       () => handleContent(args),
   ontology:      () => ontology(args),
   status:        () => showStatus(args),
   resonance:     () => showResonance(),
@@ -665,6 +667,7 @@ function showHelp() {
   blueprint apply <id>    Seed a full roadmap from a template
   contribute              Record contribution (interactive)
   contribute --type code --cc 5 --idea <id> --desc "what I did"
+  content set <type> <id> --lang en --file view.md --by <id>
   collab                  Interactive collaboration dashboard for focused idea
   collab broadcast        Signal interest in focused idea to others
   collab list             List active collaborators for focused idea

@@ -97,7 +97,7 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
     from app.services import translator_service
     from app.services import translation_cache_service as _tcache
 
-    if not lang or not translator_service.is_supported(lang) or lang == translator_service.DEFAULT_LOCALE:
+    if not lang or not translator_service.is_supported(lang):
         return resp
     for idea in resp.ideas:
         rec = _tcache.canonical_view("idea", idea.id, lang)
@@ -109,6 +109,8 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
                     idea.description = rec.content_description
                 except Exception:
                     pass
+            continue
+        if lang == translator_service.DEFAULT_LOCALE:
             continue
         # No canonical view — fall back to live snippet translation so
         # the listing speaks the viewer's language. Cached in-process.
@@ -126,6 +128,23 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
                 except Exception:
                     pass
     return resp
+
+
+def _apply_idea_view(idea: IdeaWithScore, lang: str | None) -> IdeaWithScore:
+    """Project a single idea from its canonical entity view when present."""
+    from app.services import translator_service
+    from app.services import translation_cache_service as _tcache
+
+    if not lang or not translator_service.is_supported(lang):
+        return idea
+    rec = _tcache.canonical_view("idea", idea.id, lang)
+    if not rec or not rec.content_hash:
+        return idea
+    if rec.content_title:
+        idea.name = rec.content_title
+    if rec.content_description:
+        idea.description = rec.content_description
+    return idea
 
 
 @router.get("/ideas/tags", response_model=IdeaTagCatalogResponse, summary="Return the normalized idea tag catalog with idea counts (spec 129)")
@@ -752,11 +771,15 @@ async def get_idea_breath(idea_id: str) -> dict:
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore, summary="Get Idea")
-async def get_idea(idea_id: str) -> IdeaWithScore:
+async def get_idea(
+    idea_id: str,
+    request: Request,
+    lang: str | None = Query(None, description="Target language view. When set and a canonical idea view exists, name/description come from the view."),
+) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
     if idea is None:
         raise HTTPException(status_code=404, detail="Idea not found")
-    return idea
+    return _apply_idea_view(idea, resolve_caller_lang(request, lang))
 
 
 @router.post("/ideas", response_model=IdeaWithScore, status_code=201, summary="Create Idea")

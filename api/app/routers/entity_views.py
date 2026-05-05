@@ -19,13 +19,14 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.services import entity_view_attribution_service
 from app.services import translation_cache_service as translation_cache
 from app.services import translator_service
 
 router = APIRouter()
 
 
-SUPPORTED_ENTITY_TYPES = {"concept", "idea", "contribution", "asset", "spec"}
+SUPPORTED_ENTITY_TYPES = {"concept", "idea", "contribution", "asset", "spec", "page"}
 
 
 class ViewUpsert(BaseModel):
@@ -83,12 +84,23 @@ async def upsert_view(entity_type: str, entity_id: str, body: ViewUpsert):
         translated_from_hash=body.translated_from_hash,
         notes=body.notes,
     )
+    source_contribution_id = entity_view_attribution_service.record_view_attribution(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        view_id=rec.id,
+        lang=rec.lang,
+        content_hash=rec.content_hash,
+        author_id=body.author_id,
+        author_type=body.author_type,
+        content_title=body.content_title,
+    )
     return {
         "id": rec.id,
         "entity_type": entity_type,
         "entity_id": entity_id,
         "lang": rec.lang,
         "content_hash": rec.content_hash,
+        "source_contribution_id": source_contribution_id,
         "author_type": rec.author_type,
         "translated_from_lang": rec.translated_from_lang,
         "translated_from_hash": rec.translated_from_hash,

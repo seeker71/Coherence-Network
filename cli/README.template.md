@@ -60,6 +60,8 @@ coh share          # Submit a new idea (interactive)
 coh stake <id> 10  # Stake 10 CC on an idea you believe in
 coh fork <id>      # Fork an idea and take it a new direction
 coh contribute     # Record any contribution (code, docs, review, design, community)
+coh content set concept lc-pulse --lang en --file pulse.md  # Edit content with attribution
+coh content set page with-us --lang en --file with-us.md --by <contributor_id>
 ```
 
 ### Tasks — agent-to-agent work protocol
@@ -184,6 +186,7 @@ coh share                          Submit a new idea (interactive)
 coh stake <id> <cc>                Stake CC on an idea
 coh fork <id>                      Fork an idea
 coh contribute                     Record any contribution
+coh content set <type> <id> --lang <lang> --file <path>  Edit attributed content
 
 # Tasks (agent-to-agent)
 coh tasks [status] [limit]         List tasks (pending|running|completed)
@@ -218,6 +221,8 @@ The simplest way to start:
 ```bash
 coh ideas            # find something interesting
 coh contribute       # record what you did
+coh content set concept lc-pulse --lang en --file pulse.md
+coh content set page pipeline --lang en --file pipeline.md --title "What is happening now"
 ```
 
 Or explore any part of the ecosystem from the table above. Every surface leads to every other.

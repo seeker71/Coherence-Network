@@ -1,0 +1,154 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/home-content-contributions",
+  "commit_scope": "Make home-page-reachable content editable through attributed entity views and credit read/click attention back to the source contribution.",
+  "files_owned": [
+    "api/app/routers/concepts.py",
+    "api/app/routers/entity_views.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/translations.py",
+    "api/app/routers/views.py",
+    "api/app/services/entity_view_attribution_service.py",
+    "api/tests/test_entity_view_attribution.py",
+    "cli/README.md",
+    "cli/README.template.md",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/content.mjs",
+    "specs/home-content-contribution-attribution.md",
+    "web/app/come-in/page.tsx",
+    "web/app/contribute/page.tsx",
+    "web/app/ideas/[idea_id]/IdeaReadPing.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/invest/page.tsx",
+    "web/app/nodes/page.tsx",
+    "web/app/page.tsx",
+    "web/app/pipeline/page.tsx",
+    "web/app/resonance/page.tsx",
+    "web/app/silence/page.tsx",
+    "web/app/vision/[conceptId]/edit/_components/StoryEditor.tsx",
+    "web/app/vision/page.tsx",
+    "web/app/with-us/page.tsx",
+    "web/components/content/",
+    "web/components/content/AttributedExternalLink.tsx",
+    "web/components/content/EditablePageContent.tsx",
+    "web/hooks/useViewTracking.ts",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-05_home_content_contribution_attribution.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py -q",
+      "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py tests/test_concept_views.py tests/test_translations_router.py tests/test_views_and_wallets.py -q",
+      "node --check cli/lib/commands/content.mjs && node --check cli/bin/coh.mjs",
+      "cd web && npx tsc --noEmit --pretty false --incremental false",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/home-content-contribution-attribution.md",
+      "git diff --check"
+    ],
+    "summary": "Prompt gate passed in dirty continuation mode. Focused attribution tests passed, including page and external asset credit cases. Expanded touched-router API tests passed, CLI syntax checks passed, web TypeScript passed, local worktree web/API verification passed, spec quality passed, and diff whitespace checks passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending public deploy validation after PR merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR, CI, and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "home-content-contribution-attribution"
+  ],
+  "spec_ids": [
+    "home-content-contribution-attribution"
+  ],
+  "task_ids": [
+    "codex-thread-home-content-contributions-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "sub-agent orchestration",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Sub-agent audits covered direct home links including /vision, /ideas, /resonance, /come-in, /silence, /with-us, /pipeline, /nodes, /invest, /contribute, and the external developer links.",
+    "Local tests prove API and CLI writes create source_contribution_id values and view pings create attention contributions for page/entity content and seeded external asset links."
+  ],
+  "change_files": [
+    "api/app/routers/concepts.py",
+    "api/app/routers/entity_views.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/translations.py",
+    "api/app/routers/views.py",
+    "api/app/services/entity_view_attribution_service.py",
+    "api/tests/test_entity_view_attribution.py",
+    "cli/README.md",
+    "cli/README.template.md",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/content.mjs",
+    "specs/home-content-contribution-attribution.md",
+    "web/app/come-in/page.tsx",
+    "web/app/contribute/page.tsx",
+    "web/app/ideas/[idea_id]/IdeaReadPing.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/invest/page.tsx",
+    "web/app/nodes/page.tsx",
+    "web/app/page.tsx",
+    "web/app/pipeline/page.tsx",
+    "web/app/resonance/page.tsx",
+    "web/app/silence/page.tsx",
+    "web/app/vision/[conceptId]/edit/_components/StoryEditor.tsx",
+    "web/app/vision/page.tsx",
+    "web/app/with-us/page.tsx",
+    "web/components/content/",
+    "web/components/content/AttributedExternalLink.tsx",
+    "web/components/content/EditablePageContent.tsx",
+    "web/hooks/useViewTracking.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Home-linked concepts, ideas, pages, and external developer links now have an attributed source path via entity views or asset click pings, and browser reads can credit attention CC back to the latest source contribution.",
+    "public_endpoints": [
+      "POST /api/entity-views/{entity_type}/{entity_id}",
+      "POST /api/entity-views/page/{page_id}",
+      "POST /api/views/ping",
+      "GET /api/translations/page/{page_id}",
+      "GET /api/ideas/{idea_id}"
+    ],
+    "test_flows": [
+      "API page/entity/asset attribution tests",
+      "Touched router regression tests",
+      "CLI syntax checks",
+      "Web TypeScript check",
+      "Local worktree web/API verification",
+      "Spec quality check"
+    ]
+  }
+}

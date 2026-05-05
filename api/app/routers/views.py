@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, Query
 from pydantic import BaseModel, Field
 
+from app.services import entity_view_attribution_service
 from app.services import read_tracking_service
 from app.services import discovery_reward_service
 
@@ -18,6 +19,8 @@ router = APIRouter()
 class PingBody(BaseModel):
     asset_id: str = Field(..., description="Concept or asset id being read, e.g. lc-sensing")
     concept_id: str | None = Field(None, description="Concept id when asset_id refers to a concept surface")
+    entity_type: str | None = Field(None, description="Optional explicit entity type for attribution, e.g. concept or idea")
+    entity_id: str | None = Field(None, description="Optional explicit entity id for attribution")
     source_page: str | None = Field(None, description="The page route the read happened on, e.g. /vision/lc-sensing")
 
 
@@ -50,7 +53,28 @@ async def views_ping(
         concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
         contributor_id=x_contributor_id or None,
     )
-    return {"ok": True, "event_id": event_id}
+    if body.entity_type and body.entity_id:
+        entity_type, entity_id = body.entity_type, body.entity_id
+    else:
+        entity_type, entity_id = entity_view_attribution_service.infer_entity_from_view_ping(
+            asset_id=body.asset_id,
+            concept_id=body.concept_id,
+            source_page=body.source_page,
+        )
+    credit = entity_view_attribution_service.credit_view_source(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        asset_id=body.asset_id,
+        view_event_id=event_id,
+        viewer_contributor_id=x_contributor_id or None,
+        source_page=body.source_page,
+    )
+    return {
+        "ok": True,
+        "event_id": event_id,
+        "credited_source_contribution_id": credit["source_contribution_id"] if credit else None,
+        "attention_contribution_id": credit["attention_contribution_id"] if credit else None,
+    }
 
 
 @router.get(

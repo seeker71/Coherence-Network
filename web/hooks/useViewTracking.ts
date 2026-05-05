@@ -63,7 +63,13 @@ function getReferrerContributorId(): string {
 
 interface ReadPingOptions {
   /** Concept id the reader is meeting (e.g. lc-sensing). Also used as asset_id. */
-  conceptId: string;
+  conceptId?: string;
+  /** Generic asset/entity id when the read is not a concept. */
+  assetId?: string;
+  /** Explicit entity type for attribution credit, e.g. idea, asset, page. */
+  entityType?: string;
+  /** Explicit entity id for attribution credit. */
+  entityId?: string;
   /** The page route the ping is happening on — e.g. /vision/lc-sensing. */
   sourcePage?: string;
 }
@@ -73,10 +79,17 @@ interface ReadPingOptions {
  * mounts. Safe to call on every render; the effect only runs once per
  * (conceptId, sourcePage) pair.
  */
-export function useReadPing({ conceptId, sourcePage }: ReadPingOptions) {
+export function useReadPing({
+  conceptId,
+  assetId: explicitAssetId,
+  entityType,
+  entityId,
+  sourcePage,
+}: ReadPingOptions) {
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!conceptId) return;
+    const assetId = conceptId || explicitAssetId || entityId || "";
+    if (!assetId) return;
 
     const contributorId = getContributorId();
     const sessionFingerprint = getOrCreateSessionFingerprint();
@@ -90,8 +103,10 @@ export function useReadPing({ conceptId, sourcePage }: ReadPingOptions) {
     if (referrerId) headers["X-Referrer-Contributor-Id"] = referrerId;
 
     const body = {
-      asset_id: conceptId,
-      concept_id: conceptId.startsWith("lc-") ? conceptId : null,
+      asset_id: assetId,
+      concept_id: conceptId && conceptId.startsWith("lc-") ? conceptId : null,
+      entity_type: entityType ?? null,
+      entity_id: entityId ?? null,
       source_page: sourcePage ?? window.location.pathname,
     };
 
@@ -103,5 +118,5 @@ export function useReadPing({ conceptId, sourcePage }: ReadPingOptions) {
     }).catch(() => {
       /* read sensing is observational — failures are acceptable */
     });
-  }, [conceptId, sourcePage]);
+  }, [conceptId, explicitAssetId, entityType, entityId, sourcePage]);
 }

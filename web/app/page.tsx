@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
 import { Button } from "@/components/ui/button";
+import { AttributedExternalLink } from "@/components/content/AttributedExternalLink";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { LiveBreathPanel } from "@/components/LiveBreathPanel";
 import { FirstTimeWelcome } from "@/components/FirstTimeWelcome";
@@ -97,11 +98,16 @@ async function loadNodeCount(): Promise<number> {
  */
 async function loadFeaturedConcept(lang: LocaleCode): Promise<Concept | null> {
   const qs = lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`;
-  return fetchJsonOrNull<Concept>(
-    `${getApiBase()}/api/concepts/lc-pulse${qs}`,
-    {},
-    5000,
-  );
+  try {
+    const response = await fetch(`${getApiBase()}/api/concepts/lc-pulse${qs}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as Concept;
+  } catch {
+    return null;
+  }
 }
 
 function formatNumber(value: number | undefined, locale: string): string {
@@ -478,11 +484,11 @@ export default async function Home() {
         <details className="text-xs text-foreground/60 mb-4">
           <summary className="cursor-pointer hover:text-foreground/85 transition-colors">{t("home.forDevelopers")}</summary>
           <div className="flex flex-wrap justify-center gap-4 mt-2">
-            <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devGithub")}</a>
-            <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devCli")}</a>
-            <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devMcp")}</a>
-            <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devDocs")}</a>
-            <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devOpenClaw")}</a>
+            <AttributedExternalLink href="https://github.com/seeker71/Coherence-Network" entityId="github-coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devGithub")}</AttributedExternalLink>
+            <AttributedExternalLink href="https://www.npmjs.com/package/coherence-cli" entityId="npm:coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devCli")}</AttributedExternalLink>
+            <AttributedExternalLink href="https://www.npmjs.com/package/coherence-mcp-server" entityId="npm:coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devMcp")}</AttributedExternalLink>
+            <AttributedExternalLink href="https://api.coherencycoin.com/docs" entityId="api-docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devDocs")}</AttributedExternalLink>
+            <AttributedExternalLink href="https://clawhub.ai/skills/coherence-network" entityId="openclaw-skill:coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devOpenClaw")}</AttributedExternalLink>
           </div>
         </details>
         <p className="text-xs text-foreground/85 leading-relaxed">
