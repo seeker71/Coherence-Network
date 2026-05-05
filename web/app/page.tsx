@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
 import { Button } from "@/components/ui/button";
