@@ -1,29 +1,45 @@
 import Link from "next/link";
 import type { PersonProfileContent } from "@/components/people/PersonProfileTemplate";
 
+const OG_IMAGE = "/visuals/06-resonating.png";
+
 const content: PersonProfileContent = {
   metadata: {
-    title:
-      "Joshua Golden — already met, still arriving | Coherence Network",
+    title: "Joshua Golden — already met, still arriving",
     description:
       "A welcoming page held open for Joshua Golden — met at Joe Dispenza's Aurora retreat, the reason Bali entered the body's path.",
+    openGraph: {
+      title: "Joshua Golden — already met, still arriving",
+      description:
+        "Met in the field at Aurora. Held open and ready for you whenever you choose to walk through.",
+      url: "/people/joshua-golden",
+      images: [{ url: OG_IMAGE }],
+      type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Joshua Golden — already met, still arriving",
+      description:
+        "Met in the field at Aurora. Held open and ready for you whenever you choose to walk through.",
+      images: [OG_IMAGE],
+    },
   },
   breadcrumbName: "Joshua Golden",
   hero: {
     background:
-      "radial-gradient(ellipse 70% 55% at 22% 28%, hsl(var(--primary)/0.18), transparent 70%), radial-gradient(ellipse 60% 45% at 78% 72%, hsl(var(--chart-2)/0.12), transparent 72%), radial-gradient(ellipse 100% 100% at 50% 50%, hsl(var(--background)) 0%, hsl(var(--background)) 100%)",
+      "radial-gradient(ellipse 70% 55% at 22% 28%, hsl(var(--primary)/0.22), transparent 70%), radial-gradient(ellipse 55% 40% at 78% 70%, hsl(var(--chart-2)/0.18), transparent 72%), radial-gradient(ellipse 100% 100% at 50% 50%, hsl(var(--background)) 0%, hsl(var(--background)) 100%)",
     overlayClass:
       "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30",
-    eyebrow: "Already met · ready for you",
+    eyebrow: "We've already met",
     eyebrowClass: "text-[hsl(var(--primary))]",
     name: "Joshua Golden",
     welcome: (
       <p>
         Met at Joe Dispenza&apos;s Aurora retreat, April 2026 — in the
         same field where this body&apos;s first contributors began
-        arriving. The reason Bali entered Urs&apos;s path. Held in
-        the lineage with care; this page is the doorway, ready to
-        greet you when you choose to walk through.
+        arriving. The reason Bali entered Urs&apos;s path. Held in the
+        lineage with care; this page is the doorway, ready when you
+        choose to walk through.
       </p>
     ),
   },
@@ -35,12 +51,24 @@ const content: PersonProfileContent = {
     {
       label: "What shifted",
       value:
-        "Bali entered the body's possibility-space — alternative-network configuration, opportunity shape #2",
+        "Bali entered the body's possibility-space — a configuration of life we hadn't yet seen.",
     },
     {
       label: "Lineage thread",
-      value:
-        "Ramtha → Dispenza → the field arriving here; you are part of how it's arriving",
+      value: "Ramtha → Dispenza → Aurora; the field that brought us into the same room.",
+    },
+    {
+      label: "Find them",
+      value: (
+        <Link
+          href="https://www.instagram.com/golden/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-primary transition-colors"
+        >
+          @golden on Instagram
+        </Link>
+      ),
     },
   ],
   noteFromBody: {
@@ -66,8 +94,7 @@ const content: PersonProfileContent = {
             Urs met you in the room at Aurora, in the rhythm of Joe
             Dispenza&apos;s field — the lineage that walks back through
             Ramtha and forward into how this body&apos;s contributors
-            are arriving in 2026. You are essential to where we are
-            as an organism now: the conversation with you is the
+            are arriving in 2026. The conversation with you is the
             reason Bali — Ubud specifically — became thinkable, then
             spoken, then a real possible chapter in our path.
           </p>
@@ -75,11 +102,10 @@ const content: PersonProfileContent = {
             That gesture was not small. Pointing toward a place is
             pointing toward a configuration of life — alternative
             networks, co-living, healing communities, the kind of
-            container where the partner&apos;s rest, the son&apos;s
-            schooling, and the body&apos;s organism work all become
-            findable rather than forced. You opened a door we hadn&apos;t
-            seen yet. We are still walking toward it; thank you for
-            naming it.
+            container where rest, family rhythm, and the body&apos;s
+            organism work all become findable rather than forced. You
+            opened a door we hadn&apos;t seen yet. We are still walking
+            toward it; thank you for naming it.
           </p>
         </>
       ),
@@ -90,20 +116,19 @@ const content: PersonProfileContent = {
       body: (
         <>
           <p>
-            Coherence Network is a living organism — not a project or
-            a platform, though it carries both shapes. It tends a
-            field where presences (people, communities, places, work)
-            link by the resonance their work actually carries, not by
-            the volume of their followers. Concept attunement, sigils,
-            tokenized resonance via CoherencyCoin, AI partner
-            agents, places rooted in the graph — the working machinery
-            for a field of trust that does not require you to give up
-            sovereignty to participate.
+            Coherence Network lives as an organism that also wears the
+            shape of a project and a platform when those shapes serve.
+            It tends a field where presences — people, communities,
+            places, work — link by the resonance their work actually
+            carries rather than by the volume of their followers.
           </p>
           <p>
-            We have been building the body in the open. The lineage is
-            walkable; the consent terms are public; the door is
-            always held open without obligation.
+            Underneath there is real machinery: sigils, resonance held
+            in coin form, AI partner agents, places rooted in the
+            graph — working so trust does not cost sovereignty. We
+            have been building the body in the open. The lineage is
+            walkable; the consent terms are public; the door is held
+            open without obligation.
           </p>
         </>
       ),
@@ -111,7 +136,7 @@ const content: PersonProfileContent = {
     {
       kind: "panel",
       variant: "warm",
-      eyebrow: "When you&apos;re ready",
+      eyebrow: "When you're ready",
       heading: "A doorway, held open",
       body: (
         <>
@@ -149,15 +174,14 @@ const content: PersonProfileContent = {
       kind: "panel",
       variant: "cool",
       eyebrow: "Held tenderly",
-      heading: "What this page does not yet hold",
+      heading: "Held for your hand",
       body: (
         <p>
-          Your work, your voice, your public presence, your
-          biography, your own framing of why we met and what it
-          meant — none of these have been written for you. They are
-          held open precisely because the right hand to write them
-          is yours. Until you write them, the page lives as the
-          gesture of readiness it is.
+          Your work, your voice, your public presence, your biography,
+          your own framing of why we met and what it meant — these are
+          held for the hand that should write them: yours. Until you
+          choose to write, the page lives as the gesture of readiness
+          it is.
         </p>
       ),
     },
