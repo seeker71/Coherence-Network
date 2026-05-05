@@ -16,10 +16,12 @@
 import { useEffect } from "react";
 
 import { getApiBase } from "@/lib/api";
+import { consumeRecentAttributionPing } from "@/lib/attribution-ping-dedupe";
 
 const CURRENT_CONTRIBUTOR_KEY = "cc-contributor-id";
 const LEGACY_CONTRIBUTOR_KEY = "coherence_contributor_id";
 const SESSION_KEY = "cc-presence-session";
+const sentReadPings = new Set<string>();
 
 function getOrCreateSessionFingerprint(): string {
   if (typeof window === "undefined") return "";
@@ -90,6 +92,17 @@ export function useReadPing({
     if (typeof window === "undefined") return;
     const assetId = conceptId || explicitAssetId || entityId || "";
     if (!assetId) return;
+    const resolvedSourcePage = sourcePage ?? window.location.pathname;
+    const pingKey = JSON.stringify({
+      assetId,
+      sourcePage: resolvedSourcePage,
+    });
+    if (sentReadPings.has(pingKey)) return;
+    if (consumeRecentAttributionPing(assetId)) {
+      sentReadPings.add(pingKey);
+      return;
+    }
+    sentReadPings.add(pingKey);
 
     const contributorId = getContributorId();
     const sessionFingerprint = getOrCreateSessionFingerprint();
@@ -107,7 +120,7 @@ export function useReadPing({
       concept_id: conceptId && conceptId.startsWith("lc-") ? conceptId : null,
       entity_type: entityType ?? null,
       entity_id: entityId ?? null,
-      source_page: sourcePage ?? window.location.pathname,
+      source_page: resolvedSourcePage,
     };
 
     fetch(`${getApiBase()}/api/views/ping`, {

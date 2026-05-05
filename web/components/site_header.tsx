@@ -1,8 +1,11 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import { ActiveNavLink } from "./active_nav_link";
+import {
+  AttributedExternalLink,
+  AttributedInternalLink,
+} from "@/components/content/AttributedExternalLink";
 import { ThemeToggle } from "./theme-toggle";
 import { ModeSwitcher } from "./mode-switcher";
 import { WorkspacePicker } from "./workspace-picker";
@@ -78,7 +81,7 @@ export default async function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/85 backdrop-blur-md" role="banner">
       <div className="mx-auto max-w-6xl px-2 sm:px-4 md:px-8">
         <div className="flex h-14 items-center gap-1.5 sm:gap-2 md:gap-4 min-w-0">
-          <Link
+          <AttributedInternalLink
             href="/"
             className="flex items-center gap-1.5 sm:gap-2 font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300 shrink-0"
             aria-label={t("header.brandHome")}
@@ -89,7 +92,7 @@ export default async function SiteHeader() {
             </span>
             <span className="hidden xs:inline sm:inline">Coherence</span>
             <span className="hidden md:inline">Network</span>
-          </Link>
+          </AttributedInternalLink>
 
           <nav className="hidden md:flex items-center gap-1 text-sm" aria-label={t("nav.primary")}>
             {PRIMARY_NAV.map((n) => (
@@ -144,13 +147,13 @@ export default async function SiteHeader() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-amber-500/90">{t("nav.entry.groupLabel")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {DOORWAY_NAV.map((n) => (
-                      <Link
+                      <AttributedInternalLink
                         key={n.href}
                         href={n.href}
                         className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-sm text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {t(n.labelKey)}
-                      </Link>
+                      </AttributedInternalLink>
                     ))}
                   </div>
                 </div>
@@ -159,22 +162,23 @@ export default async function SiteHeader() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">{t("nav.explore")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {SECONDARY_NAV.map((n) => (
-                      <Link
+                      <AttributedInternalLink
                         key={n.href}
                         href={n.href}
                         className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         {t(n.labelKey)}
-                      </Link>
+                      </AttributedInternalLink>
                     ))}
-                    <a
+                    <AttributedExternalLink
                       href={`${apiBase}/docs`}
+                      entityId="api-docs"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {t("nav.apiDocs")}
-                    </a>
+                    </AttributedExternalLink>
                   </div>
                 </div>
               </div>
@@ -206,7 +210,7 @@ export default async function SiteHeader() {
                 </div>
                 <div className="border-t border-border/30 my-2" />
                 {PRIMARY_NAV.map((n) => (
-                  <Link
+                  <AttributedInternalLink
                     key={n.href}
                     href={n.href}
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring ${
@@ -217,38 +221,39 @@ export default async function SiteHeader() {
                   >
                     {n.isHeartbeat && <HeartbeatIcon />}
                     {t(n.labelKey)}
-                  </Link>
+                  </AttributedInternalLink>
                 ))}
                 <div className="border-t border-border/30 my-2" />
                 <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-amber-500/90">{t("nav.entry.groupLabel")}</p>
                 {DOORWAY_NAV.map((n) => (
-                  <Link
+                  <AttributedInternalLink
                     key={n.href}
                     href={n.href}
                     className="block rounded-lg px-3 py-2 text-sm text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {t(n.labelKey)}
-                  </Link>
+                  </AttributedInternalLink>
                 ))}
                 <div className="border-t border-border/30 my-2" />
                 <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">{t("header.more")}</p>
                 {SECONDARY_NAV.map((n) => (
-                  <Link
+                  <AttributedInternalLink
                     key={n.href}
                     href={n.href}
                     className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {t(n.labelKey)}
-                  </Link>
+                  </AttributedInternalLink>
                 ))}
-                <a
+                <AttributedExternalLink
                   href={`${apiBase}/docs`}
+                  entityId="api-docs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {t("nav.apiDocs")}
-                </a>
+                </AttributedExternalLink>
               </div>
             </nav>
           </details>

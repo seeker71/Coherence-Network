@@ -14,6 +14,7 @@ import {
   humanizeIdeaPriority,
   humanizeManifestationStatus,
 } from "@/lib/humanize";
+import { inlineMarkdownToHtml } from "@/lib/vision-utils";
 import IdeaDsssSpecBuilder from "@/components/ideas/IdeaDsssSpecBuilder";
 import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
@@ -109,6 +110,60 @@ type InvestmentData = {
   contributor_id: string;
   ideas: Record<string, StakeRecord[]>;
 };
+
+function IdeaContentMarkdown({ content }: { content?: string | null }) {
+  const blocks = (content || "").split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+  if (blocks.length === 0) return null;
+
+  return (
+    <section className="max-w-3xl rounded-xl border border-border/30 bg-card/40 p-5 text-sm text-muted-foreground leading-relaxed space-y-4">
+      {blocks.map((block, index) => {
+        if (block.startsWith("# ") && !block.startsWith("## ")) return null;
+        if (block.startsWith("## ") || block.startsWith("### ")) {
+          const isH3 = block.startsWith("### ");
+          const lines = block.split("\n");
+          const heading = lines[0].slice(isH3 ? 4 : 3).trim();
+          const rest = lines.slice(1).join("\n").trim();
+          return (
+            <div key={`${heading}-${index}`} className="space-y-2">
+              {isH3 ? (
+                <h3 className="text-base font-medium text-foreground">{heading}</h3>
+              ) : (
+                <h2 className="text-xl font-semibold text-foreground">{heading}</h2>
+              )}
+              {rest && (
+                <p dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(rest) }} />
+              )}
+            </div>
+          );
+        }
+        if (block.startsWith("- ")) {
+          const items = block
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.startsWith("- "));
+          return (
+            <ul key={`list-${index}`} className="space-y-2 pl-5">
+              {items.map((item, itemIndex) => (
+                <li
+                  key={`${index}-${itemIndex}`}
+                  className="list-disc"
+                  dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item.slice(2).trim()) }}
+                />
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p
+            key={`p-${index}`}
+            dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(block) }}
+          />
+        );
+      })}
+    </section>
+  );
+}
 
 type ActivityEvent = {
   type: string;
@@ -346,6 +401,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{idea.name}</h1>
         <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
+        <IdeaContentMarkdown content={idea.content_markdown} />
         <p className="text-sm text-muted-foreground">
           Current proof level: {humanizeManifestationStatus(idea.manifestation_status)}
         </p>

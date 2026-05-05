@@ -22,6 +22,7 @@ export type IdeaWithScore = {
   id: string;
   name: string;
   description: string;
+  content_markdown?: string;
 
   // Economics — all always present on the API response.
   potential_value: number;

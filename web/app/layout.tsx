@@ -5,6 +5,8 @@ import RuntimeBeacon from "@/components/runtime-beacon";
 
 import SiteHeader from "@/components/site_header";
 import LiveUpdatesController from "@/components/live_updates_controller";
+import { RouteEditablePageContent } from "@/components/content/RouteEditablePageContent";
+import { RouteReadPing } from "@/components/content/RouteReadPing";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -116,12 +118,14 @@ export default async function RootLayout({
         </a>
         <RuntimeBeacon />
         <MessagesProvider lang={lang} messages={messages} fallback={fallback}>
+          <RouteReadPing />
           <ThemeProvider>
             <ExpertModeProvider>
               <SiteHeader />
               <LiveUpdatesController />
               <main id="main-content" className="pb-16 md:pb-0">
                 {children}
+                <RouteEditablePageContent />
               </main>
               <MobileBottomNav />
             </ExpertModeProvider>

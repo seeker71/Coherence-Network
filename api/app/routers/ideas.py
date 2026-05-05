@@ -144,6 +144,8 @@ def _apply_idea_view(idea: IdeaWithScore, lang: str | None) -> IdeaWithScore:
         idea.name = rec.content_title
     if rec.content_description:
         idea.description = rec.content_description
+    if rec.content_markdown:
+        idea.content_markdown = rec.content_markdown
     return idea
 
 

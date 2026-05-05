@@ -1,0 +1,144 @@
+{
+  "date": "2026-05-05",
+  "thread_branch": "codex/home-link-content-flow-audit",
+  "commit_scope": "Make every home-page-reachable internal route and developer asset participate in attributed editable content and attention credit flow.",
+  "files_owned": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_entity_view_attribution.py",
+    "scripts/verify_worktree_local_web.sh",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/layout.tsx",
+    "web/app/page.tsx",
+    "web/components/FirstTimeWelcome.tsx",
+    "web/components/LiveBreathPanel.tsx",
+    "web/components/Panel.tsx",
+    "web/components/active_nav_link.tsx",
+    "web/components/content/AttributedExternalLink.tsx",
+    "web/components/content/EditablePageContent.tsx",
+    "web/components/content/RouteEditablePageContent.tsx",
+    "web/components/content/RouteReadPing.tsx",
+    "web/components/mobile-bottom-nav.tsx",
+    "web/components/site_header.tsx",
+    "web/hooks/useViewTracking.ts",
+    "web/lib/attribution-ping-dedupe.ts",
+    "web/lib/attribution-target.ts",
+    "web/lib/types/ideas.ts",
+    "web/tests/attribution-target.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-05_home_link_content_flow_audit.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npx vitest run tests/attribution-target.test.ts",
+      "cd web && npx tsc --noEmit --pretty false --incremental false",
+      "cd web && npm run build",
+      "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+      "npm view coherence-cli version dist-tags --json",
+      "npm view coherence-mcp-server version dist-tags --json",
+      "npx --yes coherence-cli@latest content set --help",
+      "./scripts/verify_worktree_local_web.sh --start"
+    ],
+    "summary": "All targeted API and web tests passed, the production web build passed, the worktree-local API/web contract passed after repairing stale route-copy assertions, and npm registry checks showed the CLI and MCP package latest tags match the local package versions."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main, public API/web deploy validation, and final npm no-op/publish decision based on package diff."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; remote CI, merge, and public deploy proof remain pending."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance",
+    "social-platform-bots",
+    "home-content-contribution-attribution"
+  ],
+  "spec_ids": [
+    "home-content-contribution-attribution",
+    "006-overnight-backlog"
+  ],
+  "task_ids": [
+    "codex-thread-home-link-content-flow-audit-20260505"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "sub-agent-orchestration",
+        "implementation",
+        "validation",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "36 home-page links were audited with one sub-agent per live link, including internal pages, ideas, concepts, API docs, GitHub, npm CLI, npm MCP, and ClawHub.",
+    "Internal Link usage from the home page and global navigation now routes through AttributedInternalLink, which pings /api/views/ping with a route-derived attribution target.",
+    "RouteReadPing records page reads globally and deduplicates click-then-route credit; RouteEditablePageContent adds API/CLI-editable markdown to page routes that do not already own an editable content block.",
+    "Idea detail responses now expose content_markdown and the idea page renders canonical attributed idea content from the entity-view API.",
+    "The CLI content surface was verified from npm latest via `coh content set <entity_type> <entity_id> --lang <lang> --file <path> [--by <contributor_id>]`."
+  ],
+  "change_files": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_entity_view_attribution.py",
+    "scripts/verify_worktree_local_web.sh",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/layout.tsx",
+    "web/app/page.tsx",
+    "web/components/FirstTimeWelcome.tsx",
+    "web/components/LiveBreathPanel.tsx",
+    "web/components/Panel.tsx",
+    "web/components/active_nav_link.tsx",
+    "web/components/content/AttributedExternalLink.tsx",
+    "web/components/content/EditablePageContent.tsx",
+    "web/components/content/RouteEditablePageContent.tsx",
+    "web/components/content/RouteReadPing.tsx",
+    "web/components/mobile-bottom-nav.tsx",
+    "web/components/site_header.tsx",
+    "web/hooks/useViewTracking.ts",
+    "web/lib/attribution-ping-dedupe.ts",
+    "web/lib/attribution-target.ts",
+    "web/lib/types/ideas.ts",
+    "web/tests/attribution-target.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Home-page-reachable content can be edited through the entity-view API/CLI with source attribution, then reads and link clicks credit attention back to the source contribution.",
+    "public_endpoints": [
+      "POST /api/entity-views/{entity_type}/{entity_id}",
+      "GET /api/entity-views/{entity_type}/{entity_id}",
+      "POST /api/views/ping",
+      "GET /api/ideas/{idea_id}"
+    ],
+    "test_flows": [
+      "API attribution matrix for all home-page link targets",
+      "Web route-target mapping unit tests",
+      "CLI content set command regression",
+      "Full local API/web deployment contract"
+    ]
+  }
+}

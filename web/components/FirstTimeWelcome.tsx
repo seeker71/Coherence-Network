@@ -14,10 +14,10 @@
  * "what is this place?" answered before they scroll.
  */
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/components/MessagesProvider";
 import { Panel } from "@/components/Panel";
+import { AttributedInternalLink } from "@/components/content/AttributedExternalLink";
 
 const DISMISS_KEY = "cc-welcome-dismissed";
 const NAME_KEY = "cc-reaction-author-name";
@@ -74,20 +74,20 @@ export function FirstTimeWelcome() {
       className="mt-4"
       cta={
         <div className="flex flex-wrap items-center gap-2">
-          <Link
+          <AttributedInternalLink
             href="/meet/concept/lc-nourishing"
             className="inline-flex items-center gap-1.5 rounded-full bg-amber-600/90 hover:bg-amber-500/90 text-stone-950 px-4 py-2 text-sm font-medium transition-colors"
             onClick={dismiss}
           >
             {t("welcome.startCta")} →
-          </Link>
-          <Link
+          </AttributedInternalLink>
+          <AttributedInternalLink
             href="/vision"
             className="inline-flex items-center gap-1.5 rounded-full border border-stone-700/60 hover:bg-stone-800/40 text-sm text-stone-300 px-4 py-2 transition-colors"
             onClick={dismiss}
           >
             {t("welcome.walkCta")}
-          </Link>
+          </AttributedInternalLink>
         </div>
       }
     >

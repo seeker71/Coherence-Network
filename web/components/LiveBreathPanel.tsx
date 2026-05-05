@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import type { LocaleCode } from "@/lib/locales";
+import { AttributedInternalLink } from "@/components/content/AttributedExternalLink";
 
 /**
  * LiveBreathPanel — the "organism is alive, step in" banner for the home page.
@@ -128,24 +128,24 @@ export async function LiveBreathPanel({ lang }: Props) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Link
+          <AttributedInternalLink
             href="/here"
             className="rounded-full bg-[hsl(var(--chart-2))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
           >
             {t("homeBreath.goHere")}
-          </Link>
-          <Link
+          </AttributedInternalLink>
+          <AttributedInternalLink
             href="/vision"
             className="rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
           >
             {t("homeBreath.goExplore")}
-          </Link>
-          <Link
+          </AttributedInternalLink>
+          <AttributedInternalLink
             href="/propose"
             className="rounded-full border border-[hsl(var(--chart-2)/0.4)] hover:bg-[hsl(var(--chart-2)/0.1)] text-[hsl(var(--chart-2))] px-4 py-2 text-sm font-medium transition-colors"
           >
             {t("homeBreath.goPropose")}
-          </Link>
+          </AttributedInternalLink>
         </div>
       </div>
     </section>
