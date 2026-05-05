@@ -1,0 +1,76 @@
+{
+  "date": "2026-05-06",
+  "thread_branch": "codex/hostinger-fetch-target-sha-20260506",
+  "commit_scope": "Repair Hostinger deploy target SHA fetching so freshly merged main commits can be deployed by manual workflow dispatch.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "specs/hostinger-deploy-target-fetch.md",
+    "docs/system_audit/commit_evidence_2026-05-06_hostinger_deploy_target_fetch.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "rg -n 'refs/heads/\\$\\{BRANCH\\}:refs/remotes/origin/\\$\\{BRANCH\\}|git fetch origin \"\\$TARGET_SHA\"' deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/hostinger-deploy-target-fetch.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_hostinger_deploy_target_fetch.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks --watch"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "gh workflow run hostinger-auto-deploy.yml --repo seeker71/Coherence-Network --ref main -f sha=<latest-main-sha>",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Evidence created before local gates, CI, merge, and production deployment validation complete."
+  },
+  "idea_ids": [
+    "deploy-reliability"
+  ],
+  "spec_ids": [
+    "hostinger-deploy-target-fetch"
+  ],
+  "task_ids": [
+    "hostinger-fetch-target-sha-20260506"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "deploy-hotfix",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/hostinger/auto-deploy.sh",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/25391361203"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "specs/hostinger-deploy-target-fetch.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
