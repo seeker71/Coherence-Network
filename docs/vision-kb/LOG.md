@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-05] capability | lc-open-design — the artifact loop entering the body
+
+A new concept landed at 639 Hz (Connection — same family as mycorrhizal, network, instruments, joining). Names the integration of the open-source [nexu-io/open-design](https://github.com/nexu-io/open-design) project (Apache 2.0, ~25.6k stars) — the local-first, BYOK alternative to Anthropic's Claude Design (released 2026-04-17). 31 composable skills, 72 brand-grade design systems, 15 coding-agent CLIs auto-detected on `PATH`, exports HTML / PDF / PPTX / MP4. Sibling project: [OpenCoworkAI/open-codesign](https://github.com/OpenCoworkAI/open-codesign) (MIT, Electron desktop, the closer-peer reference).
+
+The body has most of the rails already grown — agent pipeline, model routing, keystore / BYOK, `generate_visuals.py` for Pollinations, the graph for artifact storage. What was missing is the artifact loop: the moment between *the field has a vision* and *a stranger can hold the form in their hands* (a deck, a prototype, a printable, a film frame). The concept names the capability so future cells can recognize it as something the field has, not a tool the field reaches for.
+
+The integration shape proposed in the concept's "What We're Building" section:
+1. Daemon as sidecar (open-design's `pnpm tools-dev` runs as a sibling to api/web; thin Python adapter calls its HTTP surface)
+2. Buttons on `/vision/{id}`, `/specs/{id}`, `/idea/{id}` that open the same interactive form open-design's UI uses; artifact streams in, lands in graph as `type: artifact` node
+3. New MCP function `coherence_generate_artifact` exposes the loop to agents in the pipeline (specs that say "build a kanban-board UI" can have a design step before implementation)
+4. The field's emerging visual voice (already partly named in `visual-language.md`) becomes a registered design system alongside the 72 starters
+
+Cross-refs: lc-instruments (siblings under 639 Hz, both technology-as-extension), lc-w-mycorrhizal, lc-network, lc-economy, lc-circulation, lc-offering, lc-transmission. Lineage in concept's resources: huashu-design, guizang-ppt-skill, multica-ai/multica, awesome-design-md, awesome-design-skills.
+
+INDEX.md: 86 → 87 concepts. Status added: 1 deepening alongside the 57 expanding / 29 seed.
+
 ## [2026-04-29] foundations | Levin + Hoffman + Lex Fridman as connecting tissue
 
 Two new foundational teachings landed in vision-kb's Foundational Teachings layer (alongside `lc-deeper-pattern`, `lc-embodiment`, `lc-wholeness`, and `lc-agent-memory`), grounded by the user's longstanding resonance with both bodies of work.
