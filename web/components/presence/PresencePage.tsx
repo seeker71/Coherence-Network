@@ -420,11 +420,11 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
                 .join(" · ")}
             </p>
           )}
-          {!hasImage && (
-            <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-white/40">
-              image pending · art will appear when the resolver finds one
-            </p>
-          )}
+          {/* Earlier this slot held an "image pending · art will appear
+              when the resolver finds one" line. That was an internal TODO
+              leaking onto the visitor's first impression. The radial
+              atmosphere fallback already carries presence on its own; no
+              text needed when the image hasn't landed yet. */}
         </div>
       </section>
 
