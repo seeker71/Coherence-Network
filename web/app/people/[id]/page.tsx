@@ -347,6 +347,8 @@ export default async function PersonPage({
   // expects voices — and rendered as empty scaffolds, hiding the
   // history alive in the graph.
   const NODE_TYPES_THAT_RENDER_AS_PRESENCE = new Set([
+    "contributor",
+    "interested-person",
     "event",
     "scene",
     "place",
