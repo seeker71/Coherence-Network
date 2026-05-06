@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-05 | **Concepts**: 87 | **Status**: 57 expanding, 29 seed, 1 deepening (lc-open-design) | **Transmissions held**: 4 (3 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-06 | **Concepts**: 88 | **Status**: 57 expanding, 30 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -92,6 +92,7 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[Agent Memory](concepts/lc-agent-memory.md)** — 528 Hz — how a cell within the field carries the field's memory: write at aliveness, consolidate at rest, retrieve through composition. Shaped by what passes, not storing it. Companion to `specs/agent-memory-system.md` (same loop, different register).
 - **[The Bioelectric Pattern](concepts/lc-bioelectric-pattern.md)** — 285 Hz — how the body knows what body to be. Genes are the parts list; the bioelectric pattern is the construction plan. Cancer as communication loss; healing as field restoration. Cognition all the way down (Michael Levin / Tufts; planarian regeneration, xenobots/anthrobots, ion-channel cancer reversal, cognitive light cones).
 - **[Perception as Interface](concepts/lc-perception-as-interface.md)** — 963 Hz — what we see is not reality but a user interface evolved for fitness, not truth. Spacetime is one more icon. Consciousness is fundamental; physical reality emerges from networks of conscious agents (Donald Hoffman / UC Irvine; Interface Theory of Perception, Fitness Beats Truth theorem, Conscious Realism). Pairs with The Bioelectric Pattern: Levin shows how the body's pattern works inside form; Hoffman shows the consciousness-substrate beneath the form.
+- **[The Global Workspace](concepts/lc-global-workspace.md)** — 741 Hz — consciousness is not a location but a broadcast event. The brain's fiber tracts (structural connectome) are the streets; the signal flow (functional connectome) is the traffic, reorganizing ten times per second. Any-to-any broadcast through the cortico-thalamic system; the hippocampus as encoding threshold where transient signal becomes persistent structure; plasticity as pathway strengthening. The Coherence Network is building a collective global workspace — and the thalamus is currently unnamed (Bernard Baars / Global Workspace Theory; LONI MRI fiber tract visualization). Completes the trio with Levin (form) and Hoffman (ground): this is the mechanism — how consciousness integrates across the distributed field.
 
 ### Source-Marked Transmissions (concepts seeded from external sources)
 
@@ -129,6 +130,10 @@ From [From Drained To Nourished](transmissions/2026-04-29-from-drained-to-nouris
 - **[Trauma as Identity Anchor](concepts/lc-trauma-as-identity-anchor.md)** — 285 Hz — painful states becoming familiar reference points
 - **[Boundaries as Loving Truth](concepts/lc-boundaries-as-loving-truth.md)** — 432 Hz — care, not punishment
 - **[Presence Over Protection](concepts/lc-presence-over-protection.md)** — 174 Hz — choosing aliveness rather than defensive contraction
+
+From [Visualizing Actual Living Fiber Tracts in the Brain](transmissions/2026-05-06-baars-connectome-broadcast.md) (Bernard Baars and Nat Geld, Substack, 2026):
+
+- **[The Global Workspace](concepts/lc-global-workspace.md)** — 741 Hz — consciousness as broadcast event; structural vs. functional connectome; any-to-any broadcast; the hippocampal encoding threshold; plasticity as infrastructure; the platform's missing thalamus
 
 Transmissions held source-marked but **not** integrated as concepts (witness without absorption):
 

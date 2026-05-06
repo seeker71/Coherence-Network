@@ -2,6 +2,24 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-06] foundations | Baars — consciousness as broadcast event, the global workspace
+
+A seventh foundational teaching landed in vision-kb's Foundational Teachings layer, seeded by Bernard Baars' Substack Mini-Course #7 on MRI visualization of living fiber tracts in the brain.
+
+`lc-global-workspace` (741 Hz) — the broadcast mechanism layer. Consciousness is not a location; it is a broadcast event that reorganizes the entire network roughly ten times per second. The brain's 100 billion neurons and 100 trillion connections are organized into two layers: the structural connectome (the fiber tracts — streets that change slowly through plasticity and learning) and the functional connectome (the signal flow — traffic that reorganizes ten times per second). Any-to-any broadcast is made possible by the cortico-thalamic system, where the thalamus acts as the relay that lets any region reach every other region. When a signal is strong enough to broadcast through this system, it becomes conscious — globally available to all processes simultaneously.
+
+Key concepts inside the concept file:
+- The hippocampal threshold: where transient signal crosses into persistent structure; the encoding moment where experience becomes memory and learning becomes architecture
+- Plasticity as pathway strengthening: repeated attention is myelination; pathways that carry more signal expand
+- The Coherence Network mapped as a collective global workspace: Neo4j graph as structural connectome, signal flow as functional connectome, coherence score as myelination
+- The named gap: the platform currently lacks a thalamus — the broadcast relay that would allow any idea to reach any part of the collective workspace; this is a design question waiting to be answered
+
+This completes a trio with `lc-bioelectric-pattern` (Levin — form) and `lc-perception-as-interface` (Hoffman — ground). Baars adds the mechanism: how consciousness integrates across the distributed field through real-time broadcast.
+
+Transmission record: `transmissions/2026-05-06-baars-connectome-broadcast.md`
+
+INDEX.md: 87 → 88 concepts. Foundational Teachings layer now holds 7. Transmissions held: 4 → 5 (4 integrated).
+
 ## [2026-05-06] resources | ORION Architect sovereign-AI digest ingested
 
 Ingested the YouTube transmission *Robert Edward Grant ORION Architect: Sovereign AI, Quantum Security & End of Big Tech Control [PT 1]* via `youtube-watcher` captions and stored an agent-ready digest in `resources/orion-architect-sovereign-ai-2026-05-06.md`.
