@@ -1,0 +1,1081 @@
+
+ TITLE  \* MERGEFORMAT Backtracking Model Languages
+ AUTHOR  \* MERGEFORMAT Urs C. Muff Department of Computer Science University of Colorado Boulder, CO 80309-0425, USA  DOCPROPERTY "Manager"  \* MERGEFORMAT umuff71@email.com
+
+Abstract
+Backtracking Model Language (BML) is a high level programming language that combines features from Java, C++, Prolog, and Smalltalk.  It is based on an object model designed by Steve G. Bjorg and it uses a virtual machine designed and implemented by Steve G. Bjorg.  Special features of BML are: Multiple Inheritance, Delegation, Interfaces, Blocks, Exception Handling, Backtracking, Templates, Reflection, and Inner Classes.  The compiler is based on Backtracking Model Form (BMF), which is parser definition language, and is a top-down backtracking parser generator.  This thesis is showing the design, implementation, and application of BML and BMF.
+Keywords
+ANTLR, BML, BMF, Compiler, Compiler-Generator, ELI, LEX, SNOBOL, YACC
+Table of Contents
+ TOC \o "1-3" Table of Contents	 PAGEREF _Toc484315250 \h i
+Table of Figures	 PAGEREF _Toc484315251 \h iii
+Introduction	 PAGEREF _Toc484315252 \h iv
+Document Structure	 PAGEREF _Toc484315253 \h vii
+1. Literature	 PAGEREF _Toc484315254 \h 1
+1.1. LEX	 PAGEREF _Toc484315255 \h 1
+1.2. YACC	 PAGEREF _Toc484315256 \h 2
+1.3. ELI	 PAGEREF _Toc484315257 \h 2
+1.4. ANTLR	 PAGEREF _Toc484315258 \h 3
+1.5. SNOBOL	 PAGEREF _Toc484315259 \h 3
+2. BMF	 PAGEREF _Toc484315260 \h 4
+2.1. Grammar Elements	 PAGEREF _Toc484315261 \h 6
+2.1.1. Container	 PAGEREF _Toc484315262 \h 6
+2.1.2. Primitives	 PAGEREF _Toc484315263 \h 6
+2.1.3. Terminals	 PAGEREF _Toc484315264 \h 6
+2.1.4. Miscellaneous	 PAGEREF _Toc484315265 \h 6
+2.2. Method	 PAGEREF _Toc484315266 \h 6
+2.3. Parsing Elements	 PAGEREF _Toc484315267 \h 6
+2.3.1. Stream	 PAGEREF _Toc484315268 \h 6
+2.3.2. Stack	 PAGEREF _Toc484315269 \h 6
+2.3.3. Context	 PAGEREF _Toc484315270 \h 6
+2.3.4. Environment	 PAGEREF _Toc484315271 \h 6
+2.3.5. Syntax	 PAGEREF _Toc484315272 \h 6
+3. BML	 PAGEREF _Toc484315273 \h 6
+3.1. Language	 PAGEREF _Toc484315274 \h 6
+3.1.1. Lexical Conventions	 PAGEREF _Toc484315275 \h 6
+3.1.2. Basic Concepts	 PAGEREF _Toc484315276 \h 6
+3.1.3. Standard Conventions	 PAGEREF _Toc484315277 \h 6
+3.1.4. Expressions	 PAGEREF _Toc484315278 \h 6
+3.1.5. Statements	 PAGEREF _Toc484315279 \h 6
+3.1.6. Declarations	 PAGEREF _Toc484315280 \h 6
+3.1.7. Classes	 PAGEREF _Toc484315281 \h 6
+3.1.8. Interfaces	 PAGEREF _Toc484315282 \h 6
+3.1.9. Derived Classes	 PAGEREF _Toc484315283 \h 6
+3.1.10. Member Access Control	 PAGEREF _Toc484315284 \h 6
+3.1.11. Special Member Functions	 PAGEREF _Toc484315285 \h 6
+3.1.12. Overloading	 PAGEREF _Toc484315286 \h 6
+3.1.13. Templates	 PAGEREF _Toc484315287 \h 6
+3.1.14. Exception Handling	 PAGEREF _Toc484315288 \h 6
+3.1.15. Compatibility	 PAGEREF _Toc484315289 \h 6
+3.2. BML Compiler	 PAGEREF _Toc484315290 \h 6
+3.2.1. Phase 1 ( Register Main )	 PAGEREF _Toc484315291 \h 6
+3.2.2. Phase 2 ( Register Main 2 )	 PAGEREF _Toc484315292 \h 6
+3.2.3. Phase 3 ( Resolve Main )	 PAGEREF _Toc484315293 \h 6
+3.2.4. Phase 4 ( Register Field )	 PAGEREF _Toc484315294 \h 6
+3.2.5. Phase 5 ( Register Other )	 PAGEREF _Toc484315295 \h 6
+3.2.6. Phase 6 ( Resolve )	 PAGEREF _Toc484315296 \h 6
+3.2.7. Phase 7 ( Resolve Offset )	 PAGEREF _Toc484315297 \h 6
+3.2.8. Expression	 PAGEREF _Toc484315298 \h 6
+3.2.9. Statements	 PAGEREF _Toc484315299 \h 6
+4. Tools	 PAGEREF _Toc484315300 \h 6
+4.1. Visual Browser	 PAGEREF _Toc484315301 \h 6
+4.2. Debugger	 PAGEREF _Toc484315302 \h 6
+5. Comparison	 PAGEREF _Toc484315303 \h 6
+Conclusion	 PAGEREF _Toc484315304 \h 6
+Glossary	 PAGEREF _Toc484315305 \h 6
+References	 PAGEREF _Toc484315306 \h 6
+
+Table of Figures
+ TOC \c "Figure" Figure 1: Standard Coercions	 PAGEREF _Toc484254543 \h 6
+Figure 2: Right associative expressions	 PAGEREF _Toc484254544 \h 6
+Figure 2: The Visual Browser	 PAGEREF _Toc484254545 \h 6
+Figure 3: The Debugger	 PAGEREF _Toc484254546 \h 6
+
+Introduction
+Design Goals
+Many compiler construction tools exist, but as a class they suffer some problems such as being too specialized, difficult to learn, and difficult to use or integrate.  The goal of the Backtracking Method Form (BMF) system is to close this gap.  It will accomplish that with the construction of a modern and complete compiler construction tool.  Modern in a sense of allowing an easy integration for object-oriented languages.  Most software applications are using either a project specific file format or some form of user interaction.  The user interactions can be formalized into a grammar and a compiler can help supporting this task.  The focus on BMF is to support that small but important kind of function: small, simple, and unique grammars.  Since the range of possible application is so immense, flexibility and parsing power is the key.  BMF will reach this flexibility with a context sensitive top-down parser using a backtracking approach similar to Prolog.  This backtracking capability guarantees simplicity at design time because there is no LALR(1) or LL(k) burden.  It is best to write this parser in a language that supports backtracking from ground up.  That is because parse attributes will be evaluated during the parsing phase, which uses backtracking to find the right path.  When the parser backs out, all the attributes already computed have to be undone as well.  Evaluating the parse attributes during parsing will cut down the running parse tree in a way, that even infinitive input streams can be supported.  An easy integration is as important as an easy specification, and will be accomplished with a uniform compiler API.
+BMF system
+The BMF system will be a simple, flexible, complete and unified compiler construction system, structured in object libraries such as grammar specification, name spacing, and operator-resolution.  BMF will be written in BML (Backtracking Model Language).  The focus of BMF is to allow the user easy extension and restructuring even without having the source code.  The grammar specification has a similar property.
+The Grammar Specification Language
+The internal structure of BMF allows the user to add new parsing constructs to extend the specification language even at run-time.  For instance, a common EBNF construct is ‘item ( separator item )*’.  The user can now introduce a new construct like ‘item \\ separator’, which is just a different representation, and extend the BMF grammar with it.
+Secondly, the user is allowed to modify, add, and delete rules from the currently used grammar during parsing.  This makes it possible to create a language that has a mechanism to change its grammar during parsing.  For instance; a simple way of adding the feature of macros without adding a preprocessor.
+The flexibility of BMF allows a grammar having parse rules to be dependent on the parsing file; in particular, grammar constructs are allowed to have parameters from the currently reading input file.  However, most parsers known to the author are based on a lexical analyzer, which means they depend on a fixed set of tokens.  This is mostly done for the purpose of speedup, but that prevents them from having a good representation for binary files.  Furthermore, most lexical analyzers are using special tokens to support white spaces and comments but it is very hard to specify where this token should be matched and where not.  In a top-down parser, this will be no problem, because of the additional context information.
+Top-Down and Backtracking
+One can ask, "why top-down parsing and backtracking?"  The answer is simple: it is the most powerful combination and can parse any correct specified grammar.  Choosing a top-down parser makes the grammar context sensitive.  Depending on the quality of the grammar specification and structure of the language specified it is possible to generate fast and reliable compilers.  Choosing a backtracking virtual machine solves the problem of undoing already computed attributes and computations while searching for another path.
+Attribution and Computation
+BMF will be implemented with a sophisticated new object model using a backtracking virtual machine [Bjorg].  Each non-terminal symbol can have any number of attributes.  More than one symbol in the concrete grammar can have the same symbol in the abstract grammar.  Therefore, factorized rules in the concrete syntax can be simplified in the abstract syntax to combine equal behavior and attribution.  ELI [Waite] has a similar mapping mechanism.  Each non-terminal symbol is represented as a class and can be derived from classes and support interfaces.  This enables the creation of specialized, grammar independent class libraries.
+Component Database
+Files are not the most efficient way of storing specific language dependencies.  A component database allows the system to generate inheritance and definition/usage relations.  This database can be used to generate a minimal rebuilt tree, visualize them to the user, and support version compatibility.  Every component of the system can be stored in this database.  The underlying database itself will not matter to the user, because there will be an API to grant uniform access to it.  The compiler construction tool and all generated compilers should have that property.
+BML
+The Backtracking Model Language (BML) is an extension from C++, Java, Smalltalk, and Prolog.  It features classes, interfaces, templates, delegation, exception handling, and backtracking using its own virtual machine.  The syntax is kept similar to Java and C++ for a short learning curve.  The first version of the BML compiler is written using the Java implementation of BMF.  Later versions of the BML compiler will use the BML implementation of BMF and will be written using BML itself.
+Document Structure
+Chapter 1
+In the first chapter, this thesis is compared to different related tools, systems, and languages.
+Chapter 2
+The second chapter will describe BMF, a compiler specification language and its implementation.
+Chapter 3
+The third chapter is a language definition of the high-level Backtracking Model Language BML, and shows its compiler implementation.
+Chapter 4
+The fourth chapter will discuss the tools built for the BML language, which includes a debugger and a visual browser.
+ AUTONUMLGL  Literature
+
+The closest related literatures to BMF are the two historic tools LEX and YACC, followed by a complete system named ELI, an advanced tool named ANTLR, and a backtracking language called SNOBOL.  Many compiler generator tools known to the author are built with LEX/YACC or on top of LEX/YACC.  Therefore, those historic tools have relevance in this field.  ELI and ANTLR represent examples for complete tools, and they can be compared to BMF.  SNOBOL is the only known language that uses backtracking for string manipulation, which is similar to paring.  No other tool or language can contribute a new aspect not already shown in the selected literature.
+ AUTONUMLGL  LEX
+
+Most compiler construction tools split the parsing task into two parts: the lexical analyzer and the grammar specification.  LEX [Lesk] is a tool to solve the first part: the lexical analyzer.  Its purpose is to scan the input text and to select the right token from a given set.  This set of descriptions is called lex specification.  Each token can be specified as a regular expression combined with some C-source code.  This code is used to extend the capability of regular expressions and to classify the tokens.  The analyzer tries to match a token.  If it succeeds it executes the associated source code.  This code can return a classification number that is used by a parser like YACC.
+
+LEX has a simple notion of context sensibility so it is possible to guard tokens to be matched unless a prior token is matched.  There is also a way of pushing back characters or tokens.
+
+LEX is a line-based tokenizer.  That means it is impossible to define a token that spans more than one line.  It also means this scanner is text based and not suitable for binary files.
+ AUTONUMLGL  YACC
+
+The second part of parsing is the grammar specification.  YACC [Johnson] is one implementation that allows the users to define unambiguous LALR(1) grammars.  LALR stands for Look Ahead Left Recursive and the (1) represents that YACC looks ahead a single token.  This restriction reduces the set of grammars and forces the user to reformulate his grammar until it is LALR(1).  Most modern programming languages are not LALR(1) compliant and are therefore hard to implement.  The left recursive method of YACC forces also a certain style of grammar.  The only way of representing lists is recursively; for example, the EBNF rule items ::= item+ can only be represented in BNF as items ::= item | items item.  YACC only covers a small part of the actual compilation task, because of the lack of higher-level support, such as abstract-grammar mapping and attribution.
+ AUTONUMLGL  ELI
+
+ELI [Waite] is a complete compiler construction tool.  It contains modules to specify the lexical, concrete, and abstract grammar.  It contains modules for name analyzing, operator identification, pattern template generation, command line parsing, and tree parsing.  The lexical grammar or scanner is equivalent to LEX, and the concrete grammar can be compared to YACC.  The abstract grammar is an addition that allows tree decoration with attributes.  The concrete grammar is mapped to the abstract grammar either automatically or with an additional specification.
+
+ELI is more like a collection of tools than a unified system.  It is also based on the complex dependency analyzer ODIN.  ODIN is also ELI’s user interface, which powerful but very hard to learn and to get used to.  ELI has its emphasis on speed and optimization but not on user friendliness and simplicity.
+ AUTONUMLGL  ANTLR
+
+ANTLR [Parr95/96] goes in the direction of backtracking with the goal of simplifying the users task of creating a LR(1) grammar.  It supports semantic and syntactic predicates to go around the restriction of a LL(k) parser.  Each rule is translated in a static function that can be called anytime to match its defining pattern.  ANTLR generates C or C++ output code and allows the user to integrate the generated functions into an object hierarchy.  It also allows each generated function to have arguments, and is therefore capable of defining template.  ANTLR has no assistance for attribution, which makes the task of decorating parse tree much more complicated.
+ AUTONUMLGL  SNOBOL
+
+A known backtracking language is SNOBOL [Griswold].  SNOBOL is a string-manipulation language using backtracking to find all paths.  It is related because its mechanism to match patterns is done in a similar way to BMF mechanism to scan the input streams.  However, SNOBOL is not a compiler specification language and lacks support for structured, or object oriented programming.  SNOBOL even misses the ability to compose complex patterns out of simpler ones.  Therefore, there is no real use for SNOBOL for generating a compiler from a specification.
+ AUTONUMLGL  BMF
+
+BMF stands for Backtracking Model Form, and is a compiler specification and a compiler constructor tool.  The BMF language has a long history.  Eight years ago in Switzerland when Steve G. Bjorg and Urs C. Muff met for the first time, the first version of BMF was designed.  It was intended for the construction of a compiler for a language called RCSL designed by Steve.  The first version was written in Ada, later versions in Smalltalk, C++, Java, and BML followed.  The idea behind BMF is to provide the compiler constructor with a tool to define a language and generate an appropriate parser/compiler.  The structure of BMF stresses generality over other design goals while retaining simplicity.  The general structure allows BMF to be able to parse the most complex grammars even if the grammar has to be computed during parsing.
+
+The cost of this generality is speed.  Most parses are optimized on throughput.  BMF takes a different approach because its use is intended to cover small languages and small applications.  Compilers are typically used only for traditional programming languages.  These languages are well known and they will most likely not change significantly over time.  However, there are many other applications of compilers with different profiles.  For instance, describing a binary file format in a human readable form and providing operations that read and write it, is a common application task.  General purpose programming languages are not best suited for specialized tasks like describing a fuzzy-logic system, solving mathematical equations, describing a parallel executing state machine, command line shell integration of an application, etc.  BMF has been found to be useful in addressing those domains.
+Grammar definition
+To define a language a grammar definition is needed.  This grammar is built with a list of rules where one rule is the top rule.  The top rule becomes the rule for the entire input stream.  Each rule has a unique name, and a single definition.  Other compiler specification tools allow more than one definition per rule.  All the definitions are combined with an OR-list.  Since BMF supports the OR construct this is not needed and a user can concatenate definitions with an OR as needed.
+Parse tree
+The goal of the parser is to construct a parse tree from an input stream.  The parse tree is a structured representation of the unstructured, linear input stream.  The structure of the parse tree is defined by the grammar.  Each rule becomes a node in the tree.  Grammar terminals turn into leaves in the tree.  Grammar sequences and repetitions are nodes with the same level.  Therefore, we can see that a parse tree has the same structure as the grammar.
+Parse tree translation
+A parse tree is not the most convenient structure and tends to get big.  If the goal of a specification is to translate the input stream into another structure, then we can call this specification a compiler specification.  This translation from one structure into another can vary in complexity.  For instance, a compiler from a high-level language like BML with constructs like templates and interfaces/classes into a low-level virtual machine code will have a rather complex translation.  A translation of a language into another language with a similar complexity is much easier, for instance the translation from Pascal to C.  BMF allows transforming the parse tree on the fly.  After parsing a rule, the parse tree of this rule can be translated into any object.
+Process
+The translation will be performed by the related rule process.  A rule process is a method that gets a parse tree for that rule as input and returns an object.  It is called after the associated rule is completely parsed.  This process can be used as a complete compilation step for a simple language or as a pre-processing for a complex language.  Therefore, the nodes in the parse tree can be converted in any user-defined structure.  This object replaces its rule parse tree and becomes a member of the outer parse tree.  The outer parse tree is the parse tree of the rule in the outer context.
+ AUTONUMLGL  Grammar Elements
+
+The BMF grammar has the following constructs: containers, primitives, and terminals.  A container holds any grammar element.  A primitive is a platform specific terminal or a way of controlling the behavior of the parser.  A terminal is the specification of a single character or a simple character sequence.
+ExampleExpression ::= Term { ( "-" | "+" ) Term };
+Term ::= "(" Expression ")" | Number;
+Number ::= < '0'..'9' > [ '.' < '0'..'9' > ];
+ AUTONUMLGL  Container
+Rule definition
+A rule has a unique name and an associated definition.  A definition can be built with any of the provided constructs.
+Rule reference
+Using the rule name will invoke the specified definition.
+Template rule
+In BMF, rules can have arguments.  This provides a much more flexible behavior than most other grammar specifications.  An argument can be used as a parse element, a method, an argument to a method, or an argument to another rule call.
+List( item, separator ) ::= item { separator item };
+ID ::= < 'a'..'z' | 'A'..'Z' | '_' >;
+Other ::= List( ID, "," );
+Branch
+A branch is an OR-list of grammar elements.  If one of the parse elements is successfully parsed, the branch is successfully parsed.  If in a later state the chosen element turns out to be wrong, BMF will continue parsing with another element of the list.  The order of the list determines the matching order.
+Sequence
+A sequence is an AND-list of grammar elements.  All elements have to be successfully parsed to make the sequence successfully parsed.
+Repeat
+A repeat element allows the system to find the right number of repetitions of the contained parse element.  The repeat construct has a lower bound and can have an upper bound.  No upper bound represents an infinite repetition.  The repetition is successfully parsed when the number of successes on the contained parse element is between the lower and upper bound specified.  It starts out with the maximum of successful matches.  If this fails, it will back off one element and try again, unless the minimum is reached, which will fail the whole repetition.  Optional (Zero-To-One), Zero-To-Many, and One-To-Many are predefined repeats.
+ AUTONUMLGL  Primitives
+Cut
+The primitive Cut controls the behavior of the entire parser.  If a cut is executed forward, nothing happens.  However, if a cut is executed backwards, then an error is reported and the execution undoes anything done so far, and stops after that.
+Fail
+The primitive Fail controls the behavior of the parser.  It starts the backtracking process and the parser searches for another path.  There are no retries because this element is never completely passed in the success mode.
+EOF
+The end-of-file primitive matches if the current stream is positioned at the end; otherwise it fails and starts backtracking.
+EOL
+The end-of-line primitive matches if there is a LF or CR/LF at the current stream position; otherwise it fails and starts backtracking.
+Multi match
+The multi match primitives take two arguments.  The first argument is the element to match, and the second argument to maximum number of retries for the matching element.  With this primitive, you can stop the backtracking process and fail after it reached the specified maximum number of retries.  It is used to cut down unnecessary or unwanted retries.
+ AUTONUMLGL  Terminals
+Character Range
+A character range specifies either a single character or an ASCII consecutive range of characters.  If the character at the current stream position is in the specified range, this terminal matches.  There are no retries because the character either matches or does not.
+Literal White spaces
+A literal is a sequence of characters.  Literals are special in the sense that they can specify where white spaces are read.  The syntax allows two kinds of white spaces.  Typically, one kind is defined as spaces and tabulators, and the other one is defined as spaces, tabulators, new lines, and comments.  The white spaces are not stored on the parse tree.  The literal matches when the whole sequence of characters can be read at the current stream position.  There are no retries because the sequence either matches or does not.
+ AUTONUMLGL  Miscellaneous
+Argument
+An argument is a representation of the usage of a template rule argument.  It will be bound on run-time with the actual context.
+Tag
+A tag contains a name and a parse element.  The effect of a tag is that the parse tree returned by the parse element will become a nametag in its contained parse tree.  This can be used to identify and access a specific parse element in the parse tree.
+ AUTONUMLGL  Method
+
+A method can be used to control the behavior of the parser.  If a method fails, then that means the parser will search for another path.  This allows specifying semantic rules.  For instance, the syntactic definition of a number allows any number that matches the syntax, but allowing only numbers in a certain range is almost impossible to specify syntactically.  It is easy to provide a method that has an argument the value and then decides if it is in the specified range or not.  Methods can also store elements of the parse tree, where another method only matches based on an expression using the previous stored elements.
+ AUTONUMLGL  Parsing Elements
+
+To implement methods and processes the user needs to know how to use some parse element.  This section explains the object hierarchy and API for the BMF-System.
+ AUTONUMLGL  Stream
+ParseStream
+The ParseStream is a wrapper around an InputStream.  It adds the backtracking capabilities and its main methods are read, getPosition, and setPosition.
+char read(); This method will return the next character available from the logical input stream.  If the actual position reaches the end of the stream, a constant EOF will be returned.
+int getPosition(); This methods returns the actual position in the logical input stream.
+void setPosition( int iPos ); This method sets the actual position in the logical input stream.
+Location
+A Location is a position record in the specified ParseStream.  A location object can be used to store a reference to the actual position while parsing.
+int getPosition(); This returns the absolute position in the input stream when the location object was created.
+int getLine(); This returns the absolute line number in the input stream at the time the location object was created.
+String getName(); This returns the stream name.
+Range
+A Range is a position record of a character range in the specified ParseStream.  A range object can be used to store a reference to a character range associated with a parse element or a combination of more than one parse elements.
+int getStartLine(); This returns the absolute line number of the beginning of the range object in the input stream.
+String getParseText(); This returns the text enclosed in that range in the input stream.
+ AUTONUMLGL  Stack
+ParseStack
+The ParseStack is used to represent the parse tree structure.  The user can push on it and pop elements from it.  There is also iterator that allows iterating over the whore structure.  It also allows finding specific elements on the tree.
+void push( Object hResult, String strTag ); 
+Object pop(); 
+Object peek(); 
+Object drop(); 
+Object dropall(); 
+ParseStack reduce(); 
+Enumerator contents(); 
+Enumerator
+boolean hasMoreElements(); 
+Object nextElement(); 
+void reset(); 
+Object findFirst( Class clsClass ); 
+Object findFirstNot( Class clsClass ); 
+Object findFirst( String strTag ); 
+Object findFirstItem( String strTag ); 
+Object findNext( Class clsClass ); 
+Object findNextNot( Class clsClass ); 
+Object findNext( String strTag ); 
+Object findNextItem( String strTag ); 
+ AUTONUMLGL  Context
+ContextContexts can be nested.  Each rule has its own context.  The context stores the resolved arguments of a template rule.
+Context getParent(); 
+Rule getRule(); 
+Object getArgument( int iNr ); 
+void setStartPosition( int iStartPosition ); 
+int getPosition(); 
+ParseStream.Location getLocation(); 
+ParseStream.Range getRange(); 
+ AUTONUMLGL  BML
+Introduction
+BML stands for Backtracking Model Language.  It is an extension of C++, Smalltalk, and Java.  The major constructs are classes, interfaces, blocks, and templates.  A class is a structural specification with a list of interfaces to describe its behavior.  Each class can be based on one or more parent classes.  The object model used allows only single structural inheritance.  If a class is derived from more than one class, the object model allows supports delegation.  This will behave like multiple inheritances, but one class has only one structural parent.  An interface is a list of methods and can be based on another interface.  Blocks are code fragments that have the context of the caller, but are being executed in the callee.  Templates are restricted to class and interface definitions.
+ AUTONUMLGL  Language
+
+This section is a BML language reference and the structure is borrowed from [Ellis].
+ AUTONUMLGL  Lexical Conventions
+
+This section presents the lexical conventions of BML.  It describes comments, identifiers, keywords, and literals – integer, character, and floating-point constants and string literal.
+Files
+A BML file can contain one or more classes, and interfaces in one or more packages.  All declarations followed by the package specifier will be part of the specified package.
+CommentsA single line comment starts with "//" and ends at the end of the line.  The characters "/*" starts a nested comment, which terminates with the characters "*/".  These comments do nest, which means that multi line comments can contain other single or multi line comments.
+KeywordsThe following identifiers are reserved:
+break	case	catch	choice	class continue	default	do	else	fail for	if	loop	return	select self	super	switch	throw	try whileIdentifier
+An identifier starts with a letter or underscore, and is followed by a letter, a digit, or an underscore.
+Operator charactersAn operator is built from 1 to 3 of the following characters:
+'#' | '~' | '@' | '!' | '*' | '/' | '%' | '+' | '-' | '<' | '>' | '&' | '=' | '|' | '^'
+ConstantsFor integers there are three different formats defined.  The first one contains at least one digit including an optional '+' or '-' at the beginning.  The second one starts with the characters "0x" and is followed by at least one digit or upper case letter from 'A' to 'F', and the third one starts with the characters "0b" and is followed by at least one '0' or '1'.
+For floats there is the following format specified.  It starts with an optional '+' or '-' followed by at least one digit, followed by on optional decimal point part.  The decimal point part starts with the character '.' followed by at least one digit.
+Character constants are enclosed in single quotes.  To specify non-printable characters the backslash character can be followed by the backslash, the double quote, single quote character, 'r', 'n', 't', or an integer.
+
+String constants are enclosed in double quotes.  They are following the same syntax as character constants.
+ AUTONUMLGL  Basic Concepts
+
+This section presents the basic concepts of the BML language.  It explains the difference between an object and a name and how they relate to the notion of an Lvalue.  It introduces the concepts of a declaration and a definition and presents BML's notions of class, interface, and scope.  The formalism for starting a program and how it finally ends are described.  Conclusively, this section presents the binary types and the ways of constructing object and binary classes from these.
+Declarations and Definitions
+A declaration introduces one or more names into a system.  A declaration is a definition unless it declares a function without specifying a body.
+ScopesLocal:  A name declared in a block, if, while, for, select, or switch, is local to that statement and can be used only in this statement, or in statements enclosed by it.
+Parameter:  A parameter can be used in all statements specified in the method implementation.
+Class:  A class is a collection of member variables, constants, inner classes, and implemented interfaces.  The full class name is defined by the actual package name, followed by a dot, followed by the class name.  If the specified class is an inner class, then the full class name is defined by the outer class name, followed by a dot, followed by the inner class name.
+Constant:  Constant definitions can occur at the package level, in a class definition, or in an interface definition.  The constants full name is constructed by the defining context followed by a dot, followed by the constants name.  To use a constant, its name is used in contexts having a direct path to the constant definition.  The full name is used if there is an ambiguity with its name or the definition cannot be seen from the actual context, or it is not in the list of imported name spaces.
+Member variable:  A member variable has a name, a GUID, an interface, and a list of attributes.  Member variables can only be accessed in methods implemented in the class defining them.  For all other usage of a member, variable put/get property methods will be provided.  The external name of a member variable normally differs from the internal name.  If the member variable follows the specified naming conventions, then the external name is predefined.  The attribute name will overwrite any predefined external name.  If the member variable is used in contexts other than the default interface of the defining class, it will be treated as a method.  Therefore having the same scope as a method defined in the default interface.
+Interface definition:  Interface definitions occur only at the package level.  An interface definition can include none, some, or all implementations of its methods.  The full name of an interface definition is equally constructed as the full name of a class defined at the package level.
+Interface implementation:  An interface implementation is placed in a class implementing this interface.  Methods placed in the default interface that are matching the definition of a method of another specified interfaces will be moved to the appropriate interface.  The default interface will automatically implement an interface forward call to the new location.  Methods can also be placed in a specific interface, with the result of having no forward call in the default interface.
+Package:  A package is considered a name space.  All elements in a package are logically grouped together and the whole package can be imported using the package name followed by ‘.*’.
+Program and Linkage
+A program consists of one or more package definitions.  A package contains a sequence of class, interface, or constant definitions.
+Start and Termination
+A program must include a class derived from the abstract class ‘BML.lang.Application’, and implement the abstract method Main.
+Binary typesThere are no predefined binary types.  However, there are some standard binary types defined in 'BML.def'.  The format of defining a binary type is the following:
+BinaryType ::= "binary" Identifier "["  	"size" "=" int ","  	"mapping" "=" ( "signed" | "unsigned" | "float" | 	"double" | "no" ) "]";
+The Identifier is a unique name for a binary type.  The int will define the byte size of this binary type.
+StructuresStructures are used to guarantee binary compatibility with other API’s.  The attribute struct in a class definition allows specifying binary instead of object fields.  The types used have to be previously declared.  The compiler will generate property access methods to allow external access to binary fields.  A structure shall only be subclass by other structures, but its parent can be a regular class.  Therefore, BML allows mixing of structures and objects in a single instance.
+LvalueLocal variables, parameters, member variables, outer class member variables, common class member variables, and methods with more than one argument with the attribute assign, are considered Lvalue expressions.  Lvalue expressions can be on the left side of an assignment statement.  Therefore, Lvalue expressions can be used as a result container of any expression.  Literal constants, defined constants, member variables in a method with the attribute const, and parameters with the attribute const, are considered Rvalue expressions.  Rvalue expressions can only be used on the right side of any assignment statement.
+ AUTONUMLGL  Standard Conventions
+
+This section presents standard conventions, coercions, their usage in BML, and the difference to other programming languages.
+Coercions
+Coercion is a type cast operator that has no cost associated with.  Therefore, the compiler can add coercion where necessary without being specified which type cast to do.  The language BML does not specify any default coercions, unlike other languages.  Coercion is simply an attribute for any method.  Therefore, the user can add as many coercion methods as he may wish.
+Figure  REF "C_Diag1" 1 shows the standard coercions of BML:
+ EMBED Word.Picture.8  
+Figure  SEQ Figure \* ARABIC 1: Standard Coercions
+Arithmetic Conversions
+Other languages like Java, C, and C++ have a sense of arithmetic conversions.  BML treats arithmetic expressions as normal method calls, therefore loosing this additional information.  This can have some unwanted effects, which will most likely end up with a compiler error, because for instance an integer does not have any methods taking a long.  For future implementation, arithmetic conversions might be added.
+ AUTONUMLGL  Expressions
+This section discusses BML expressions, the primary building blocks for computation.  BML provides the usual arithmetic operators (+, -, *, and so on), bit manipulations operations (&, |, ^, and so on), and conditional evaluations (?:, ||, &&).
+Conventions
+Functor is the definition of the precedence and place an operator symbol is used.  The ‘f’ in the functor represents the position, and the ‘x’ and ‘y’ symbolize other expressions.  An ‘x’ stands for expressions with a strictly higher level as the current one.  An ‘y’ characterizes an expression with a same or higher level as the current one.  For instance, ‘xfy’ allows expressions with a higher level on the right side of the operator, and expressions with the same or higher level on the left side.  That means that operator is right associative.
+ EMBED Word.Picture.8  
+Figure  SEQ Figure \* ARABIC 2: Right associative expressions
+Identifiers
+An identifier can represent a variable, a parameter, and a constant (including classes and interfaces).  The definition of the resolved name defines the type of an identifier expression.
+Constants
+The basic constant types are Number, String, Character, Array, Block, and Ambiguous.  A Number can be used as an Integer, Long, Float, or Double depending on its context.  The constant defines the default type of a constant expression.
+Type castingThe type casting allows changing the interface or coercing to a compatible interface.  If the current instance has a cast operator, then this operator will be used.  If the requested interface is a class and the class has a coercion constructor from the current instance type, then a new instance will be created using this coercion.  Otherwise, this expression is encoded with the assembler cast instruction.  The type specified defines the type of a type cast expression.
+Level
+Functor
+Syntax
+Description
+
+75
+fy
+( TypeCastOp )
+Type casting
+
+
+Member accessTo access a member of a base the, dot selector is used.  The base can be any expression including self, super, and ‘nothing’.  Where ‘nothing’ means that there is no base specified: However to used this construct, this expression has to be enclosed in a with statement.  With the member access operator, a class member variable, a constant, an inner class, or a method, can be reached.  The selected member defines the type of a member access expression.
+Level
+Functor
+Syntax
+Description
+
+50
+yf
+. SelectOp
+Dot selector
+
+
+Method callA function call operator can follow an identifier or a member access.  Note that property methods can only be called in this manner, if it has at least a parameter specified.  The return type of the method called defines the type of a call expression.
+Level
+Functor
+Syntax
+Description
+
+50
+yf
+( Arguments )
+Function call
+
+
+InstanceofThe instanceof operator is just a convenience operator.  It will be translated into a method call to IsInstance.  The instanceof operator has the type ‘BML.lang.Boolean’.
+Level
+Functor
+Syntax
+Description
+
+50
+xfy
+Instanceof
+Instance of
+
+
+Array atThe array at operator is just a convenience operator.  It will be translated into a method call.  The method name is defined in the naming conventions section.  The return type of the method called defines the type of an array at operator.
+Level
+Functor
+Syntax
+Description
+
+50
+yf
+[ ItemAtOp ]
+Array at operator
+
+
+Arithmetic operatorsThe arithmetic operators are just convenience operators.  They will be translated into method calls.  The method name is defined in the naming conventions section.  Note that the correct functor for binary arithmetic operators should be yfx, which is not supported by the compiler yet.  As a result, arithmetic operators are right, instead of left, associative.  The return type of the method called defines the type of an arithmetic operator.
+Level
+Functor
+Syntax
+Description
+
+100
+fy
+++
+Prefix increment
+
+100
+fy
+--
+Prefix decrement
+
+100
+fy
+-
+Negate
+
+100
+fy
++
+NOP
+
+100
+yf
+++
+Postfix increment (not supported yet)
+
+100
+yf
+--
+Postfix decrement (not supported yet)
+
+100
+xfy
+*
+Multiply
+
+100
+xfy
+/
+Divide
+
+100
+xfy
+%
+Modulo
+
+200
+xfy
++
+Addition
+
+200
+xfy
+-
+Subtraction
+
+Note: yfx functors are currently not supported by the operator support library.
+Logical operatorsThe logical operators are just convenience operators.  They will be translated into method calls.  The method name is defined in the naming conventions section.  Note that the current implementation will treat a logical AND as a normal method call, therefore it will be called even if the base is already false.  This is a different behavior than most common languages and will be changed in future releases.  Further, note that the conditional operator works as expected and will only execute the appropriate expression.  The return type of the method called, which is usually ‘BML.lang.Boolean’, defines the type of a logical operator.
+Level
+Functor
+Syntax
+Description
+
+100
+fy
+!
+Logical NOT
+
+900
+xfy
+&&
+Logical AND
+
+1000
+xfy
+||
+Logical OR
+
+1100
+xfy
+? IfOp :
+Conditional
+
+
+Relational operatorsThe relational operators are just convenience operators.  They will be translated into method calls.  The method name is defined in the naming conventions section.  The return type of the method called, which is usually ‘BML.lang.Boolean’, defines the type of a relational operator.
+Level
+Functor
+Syntax
+Description
+
+400
+xfx
+<
+Smaller
+
+400
+xfx
+<=
+Smaller or equal
+
+400
+xfx
+>
+Greater
+
+400
+xfx
+>=
+Greater or equal
+
+500
+xfx
+is
+Same instance
+
+500
+xfx
+==
+Equal HashCode
+
+500
+xfx
+!=
+Not Equal
+
+
+Assign operatorsThe compiler will distinguish the two base assign operators and return the appropriate value.  Note that the current implementation will never return the assigned value, which is incorrect.  The combined operators will be translated into a method call followed by the assignment.  Therefore, there are no special methods needed for any kind of combined assignment operators.  The type of an assign operator is equivalent to its base.
+Level
+Functor
+Syntax
+Description
+
+1200
+xfy
+:=
+Assign and return old value
+
+1200
+xfy
+=
+Assign and return assigned value
+
+1200
+xfy
+*=
+Multiply and assign
+
+1200
+xfy
+/=
+Divide and assign
+
+1200
+xfy
+%=
+Modulo and assign
+
+1200
+xfy
++=
+Addition and assign
+
+1200
+xfy
+-=
+Subtraction and assign
+
+1200
+xfy
+<<=
+Bitwise shift left and assign
+
+1200
+xfy
+>>=
+Bitwise shift right and assign
+
+1200
+xfy
+&=
+Bitwise AND and assign
+
+1200
+xfy
+|=
+Bitwise OR and assign
+
+1200
+xfy
+^=
+Bitwise XOR and assign
+
+
+Bitwise operatorsThe bitwise operators are just convenience operators.  They will be translated into method calls.  The method name is defined in the naming conventions section.  The return type of the method called; which is usually equal to the type of the base expression, defines the type of a bitwise operator.
+Level
+Functor
+Syntax
+Description
+
+100
+fy
+~
+Bitwise NOT
+
+300
+xfy
+<<
+Bitwise shift left
+
+300
+xfy
+>>>
+Unsigned bitwise shift right
+
+300
+xfy
+>>
+Bitwise shift right
+
+600
+xfy
+&
+Bitwise AND
+
+700
+xfy
+^
+Bitwise XOR
+
+800
+xfy
+|
+Bitwise OR
+
+
+ AUTONUMLGL  Statements
+This section describes the available BML statements that control the execution order and sequence of methods.
+BML provides statements for conditional execution (if, select, and switch) and iterations (do, for, while, and loop).  The jump statements (break, continue, and return)
+Expression
+This is the simplest form for a statement; it is also the fundamental for all other statements.  An expression statement can be a local definition, a function call, or an assignment.
+Compound Statement or Block
+Several statements can be grouped together in a compound statement, also called block.  A block has its own scope.
+IfIf ::= "if" "(" Expression ")" $then:Statement [ "else" $else:Statement ];
+The expression has to be castable to 'BML.lang.Boolean'.  If the evaluation of the expression yields true, then the statement with the tag $then is executed.  If the evaluation yields false and there is an else statement specified, it is executed.
+SelectSelect ::= LabelDecl "select" "(" Expression ")" SwitchBlock;
+SwitchBlock ::= "{" {     ( "case" CaseExpr \\ "," ":" | "default" ":" ) Statement } "}";
+CaseExpr ::= Expression [ ".." Expression ];
+The select statement is a modified version of the switch statement.  The only difference is that the break statement is optional.  A select will automatically insert a break at the end of every block by default.
+SwitchSwitch ::= LabelDecl "switch" "(" Expression ")" SwitchBlock;
+The switch statement allows transferring control based on a table of expressions, which are compared with the base expression.  The switch statement is encoded as an if else if block.  The base expression will be executed once and stored.  Each case expression becomes a compare operator of the switch expression.  If one of the case tests succeeds, this statement is executed and the tests are continued.
+WhileWhile ::= LabelDecl "while" "(" Expression ")" Statement;
+The expression has to be castable to ‘BML.lang.Boolean’.  The while statement is an iteration with the given expression as a termination condition.  The iteration will stop if the given expression yields false.  The test will be evaluated before each execution of the statement.
+DoDo ::= LabelDecl "do" Statement "while" "(" Expression ")";
+The do statement is a modified version of the while statement.  The only difference is the termination test will be evaluated after executing the given statement.
+LoopLoop ::= LabelDecl "loop" Statement;
+The loop statement represents an infinite loop.  The only way of terminating a loop is with the following statements: break, return, fail, and throw.
+ForFor ::= LabelDecl "for" "(" [ Expression ] ";" [ Expression ] ";" [ Expression ] ")" Statement;
+The for statement will execute the first expression up front.  The loop now it is very similar to the while statement with the addition of the last specified expression.  This expression will be executed after the statement and before jumping back to the test expression.
+BreakBreak ::= "break" [ Label ] ";";
+A break statement is in essence a jump.  Depending in which context it is used it will behave slightly different effects.  In general, it will jump to the end of the statement it is enclosed by.  Such statements are while, do, loop, for, switch, and select.  If a label is used it will consider the first such statement labeled the same, otherwise it will just respect the first such statement.
+ContinueContinue ::= "continue" [ Label ] ";";
+The continue statement is very similar to the break statement.  Except in general it will jump to the start of the statement, it is enclosed by.  In the case, this statement has a test condition at the start of the loop, it will jump to it, and otherwise it will just jump to the start.  Unlike the break statement, the continue statement cannot be used on select, and switch.
+ReturnReturn ::= "return" [ Expression ] ";";
+The return statement will end the method call and immediately return.  If an expression is specified, it will first be evaluated and stored in the result register.  The type of the expression has to match the return type of the method this return is enclosed by.
+ChoiceChoice ::= "choice" CodeBlock \\ ",";
+The choice statement is one of the two backtracking statements in BML.  It specifies two or more independent choices the program can take.  If the first code block fails, the second code block will be executed, and so on.  If the choice statement is used in a loop statement, each loop can take an independent path.
+TryTry ::= "try" Statement;
+The try statement belongs to the family of exception handling.  The statement enclosed can throw an exception, which will be handled by the appropriate catch block.
+CatchCatch ::= "catch" "(" Parameter ")" Statement;
+The catch statement also belongs to the exception handling family.  The catch statement can only follow a try or another catch statement.  The parameter type specified works as a filter, to allow only exception compatible with the parameter type to be handled with the enclosed statement.  If the enclosed statement throws another exception the whole try-catch block will not handle this exception and it will be passed to the next outer try-catch block.
+ThrowThrow ::= "throw" Expression ";";
+The throw statement actually throws an exception and makes the previous two statements useful.  Any type of objects can be thrown with this statement.  Preferred types will be sub classed from ‘BML.lang.Exception’.  The execution will proceed at the first catch statement with a compatible parameter type.  If there is none the program will terminate with the specified exception.
+FailFail ::= "fail";
+The fail statement is the other backtracking statement in BML.  It will force the virtual machine to change its state to fail, and start backtracking, until another path can be found.  This will typically be a choice statement.
+WithWith ::= "with" "(" Expression ")" Statement;
+The idea of a with statement is borrowed from visual basic.  It is a shortcut in writing, because whenever the enclosed statement starts an expression with a dot, the given expression will be its base.  Note, the compiler will not reevaluate the expression even if it becomes obsolete, therefore it can also be used for optimization purposes.
+ AUTONUMLGL  Declarations
+
+A declaration introduces one or more names into the system and specifies how those names are to be interpreted.
+SyntaxProperties ::= [ ( "[" [ Property \\ "," ] "]" ) ];
+Property ::=     MemberProperty | ParameterProperty | "abstract" |    "static" | "name" "=" Identifier | "hidden" |    "guid" "=" Guid | MethodProperty | "default" | "class" |    ArrayProperty | AccessProperty | ClassDefProperty |    "library" "=" String | TemplateProperty |    "forwardTo" "=" asmIdentifier | "nostate";
+TemplateProperty ::=     "<" TemplateArgument( Identifier ) \\ "," ">"    "=" Properties;
+ClassDefProperty ::= "struct" | "alias" "=" Identifier |    "noobject" | "dynamic" "=" ( "object" | "binary" ) |    "outer" | "singleton" | "unique";
+MethodProperty ::=     "cost" "=" Integer | "coercion" | "final" | "native" |    "reassign" |     "exception" "=" ( InterfaceRef |        "{" InterfaceRef \\ "," "}"     ) | "explicit" | "extern" "=" String |    "forwardAs" "=" asmIdentifier;
+ArrayProperty ::=     "strict" | "relaxed" | "exclusive" | "shared";
+ParameterProperty ::= "inout" | "in" | "out" | "assign";
+MemberProperty ::=     "get" [ "=" Properties ] | "put" [ "=" Properties ] |    "delegate" | "inline" | "const";
+AccessProperty ::= "public" | "private" | "protected";Class attributesstruct: This attribute specifies that the fields in the class are binary.  It can be used to implement platform dependent structures that have to be binary compatible.  The compiler is generating get/put methods to access the specified fields.  Furthermore, the class automatically receives the interface ‘BML.lang.Structure’, which allows independent access to the entire binary part of this instance.
+dynamic=binary:  This attribute specifies that this class has a binary part, which will be dynamically resizable.  An example class with this attribute is ‘BML.lang.String’.
+dynamic=object: This attribute specifies that this class has a dynamic field part.  A class with this attribute automatically receives the interface ‘BML.lang.Indexed’, which allows controlling the dynamic part of an instance.
+noobject: This attribute specifies that this class has neither object fields nor binary fields, and the value is smaller than the size of a pointer.  Therefore the value is stored in the pointer itself and no descriptor will be allocated.  [Not fully supported yet]
+unique: This attribute specifies that there are no equal instances of this class.  To create an instance of this class the complete instance data is needed to compare it with already existing instances.  If the instance is already existent, that instance will be returned; Otherwise, a new instance will be created and returned.  Example classes with this attribute are ‘BML.lang.String’ and ‘BML.lang.GUID’.  [Not supported yet]
+singleton: This attribute specifies that there can only be one instance of this class.  Multiple constructor calls will return the same object.  [Not supported yet]
+outer: If a class is declared inside an outer class, and the attribute outer is specified, then that means that this is a normal class.  If this attribute is not specified it will become an inner class.  An inner class contains a hidden field that allows it to access fields from the outer class.  Note that these classes can only be created if an instance of the outer class exists
+abstract: The class cannot be instantiated.  This attribute is required if the class contains abstract methods.
+Inheritance attributesdelegate: The derived class does not inherit the structure of the base class.  Therefore, the derived class contains a hidden field to access the base class fields and to delegate method calls.  [Not supported yet]
+shared: This attribute implies that the base class is delegated.  However, instead of creating an instance of the base class for each instance of the derived class, the reference to the base class is provided during creation.  Therefore, multiple instances can share the same instance of the base class.  [Not supported yet]
+Field attributesname: This attribute specifies the external name used for a field.
+get: This attribute specifies that a read method must be created for this field.  Additional method attributes can be specified in this attribute.
+put: This attribute specifies that a write method must be created for this field.  Additional method attributes can be specified in this attribute.
+delegated: This attribute specifies that this field delegates all method calls to the default interface.
+inline: This attribute specifies that the instance should be expanded inside this object rather than using a reference to it.  This attributes allows creating structures of non-polymorphic objects.
+exclusive: This attribute specifies that the referenced object can only be reached through this field.  [Not supported yet]
+relaxed: This attribute specifies that this field can store references to objects of the defined type or objects of derived types.  This attribute is assumed by default when no other type attribute is specified.  [Not supported yet]
+shared: This attribute specifies that the referenced object is accessible from multiple locations.  This attribute is assumed by default when no other reference attribute is specified.  [Not supported yet]
+strict: This attribute specifies that this field can only store references to the objects of the defined type (i.e. not to derived objects).  [Not supported yet]
+Local attributesnostate: This attribute specifies that operations done on this variable are not un-done during backtracking.  [Not supported yet]Method attributesextern: This attribute specifies that the implementation of the method be provided in an external library.  It must be used in conjunction with the library attribute.
+library: This attribute specifies the source library for external methods.
+abstract: This attribute specifies that the method implementation must be provided in a derived class.  Classes containing abstract methods must also have the abstract attribute set.
+const: This attribute specifies that the method is not modifying its base object when executing.  [Not supported yet]
+coercion: This attribute is only valid for constructors and casting operators.  It specifies that the method can be used in a coercion chain to obtain a wanted object type.  By default, only one constructor or casting operator can be used to obtain the desired object type.
+cost: This attribute defines a cost for the method.  Although, it is allowed for any method definition, its primary use is for finding the cheapest coercion chain.  [Not supported yet]
+default: This attribute specifies that the method can be called without specifying its name.  The effect produced is similar to defining operator ().  [Both not supported yet].
+final: This attribute specifies that a derived class cannot overwrite this method.  [Not supported yet]
+reassign: This attribute specifies that the result of the method is reassigning its call base.
+name: This attribute specifies an alternative name for the method.  Its most common use is to provide readable names for operators.
+inline: This attribute specifies that the method call should be in-lined.  Note that this attribute implies automatically the attribute final.  [Not supported yet]
+Parameter attributesassign: This attribute is only allowed on the last parameter of a method.  It indicates that this parameter will stand right of an equal operator rather than last argument of the method call argument list.
+cast: This attribute indicates that the specified argument type is weaker than what is expected.  The compiler then automatically generates a cast to the desired type.  However, if the cast operation fails, a 'BML.lang.InvalidArgumentException' exception is thrown.  This attribute is used when overwriting methods and the programmer knows the object type that is expected.  [Not supported yet]
+in: This attribute specifies that the argument be passed into the method or function.  Hence, overwriting it will not affect the method caller.  This attribute is assumed by default when no other transition attributes are defined.
+out: This attribute specifies that the argument be not initialized at the beginning of the method or function call.  However, its value will be passed back to the calling context when the method or function call completes.  [Not supported yet]
+inout: This attribute specifies that the argument acts simultaneously as input and output parameter.  Hence, it combines the effects of the in and out attributes.  [Not supported yet]
+Access attributespublic: This attribute specifies that the method can be called from anywhere.  This attribute is assumed by default when no access attribute is specified.  [Not supported yet]
+protected: This attribute specifies that the method can only be called from instances of this class or its derived classes.  [Not supported yet]
+private: This attribute specifies that the method can only be called from other methods defined in this class.  [Not supported yet]
+General attributesclass: This attribute specifies that the members belong to the common instance rather than to its instance.
+guid: This attribute attaches a globally unique identifier (128-bit) to the member definition.  If this attribute is not defined, the compiler will generate automatically a GUID for this class.
+hidden: This attribute specifies that the member should not be displayed when listing all the available methods to the programmer.  However, it is still accessible.
+ASM declarationsasm: A method is either fully high-level or assembler.  The start and return statements are not needed in an assembler block.
+ AUTONUMLGL  Classes
+
+A class definition describes the representation of an instance of that class and its behavior specified with the interfaces it implements.  This section introduces the syntax and semantics for simple classes.
+
+The definition of both class and non-class members is discussed, and the scope rules involving classes and methods – including local and nested classes containing methods – are described.  The mechanism for controlling the layout of class objects, for conforming to externally imposed formats, and for maintaining compatibility with other languages layouts like C or C++, are presented.
+SyntaxClass ::= "class" ClassName Properties     [ ":" SuperClass \\ "," ] ClassBlock; ClassName ::= Identifier; SuperClass ::= ( Identifier \\ '.' ) Properties; ClassBlock ::= "{" {    Template | Section( ClassBlock ) | Syntax |    ClassInterface | CodeBlock | Class | Constant | Method |    Field } "}"; Section( block ) ::= "section" [ Identifier ]     Properties block; ClassInterface ::= "interface" ClassDecl InterfaceBlock; ClassDecl ::= ( Identifier \\ '.' ) Properties;
+
+
+ AUTONUMLGL  Interfaces
+
+This section describes the difference between a pure interface and a class interface.  An interface contains a set of methods and it can be based on a parent interface.
+SyntaxInterface ::= "interface" ClassName Properties    [ ":" ParentInterface ] InterfaceBlock; InterfaceBlock ::= "{" {     Section( InterfaceBlock ) | Constant | Method } "}"; ParentInterface ::= ( Identifier \\ '.' ) Properties; InterfaceRef ::= ( Identifier \\ '.' )    ( "(" [ Parameter \\ "," ] ")" | { ArrayDefinition } ); ArrayDefinition ::= "[" [ Range ] "]"; Range ::= Expression [ ".." Expression ];
+Method
+BML separates the method definition from the method implementation.  The definition includes the name, the parameter definitions, the properties, and the GUID.  If a child interface overwrites the method, the definition stays the same.
+Get/Put
+Accessing member variables of an instance
+FDC
+Forward delegated call
+FIC
+Forward interface call
+Operator
+Naming
+Cast
+Coercion
+Constructor
+Default
+Super/Self calls
+ AUTONUMLGL  Derived Classes
+
+This section explains inheritance.  A class can be derived from another class that is then called a base class of the derived class.  A class may be derived from one or more classes.  The derived class inherits the properties of its base classes including its data members and member functions.  In addition, the derived class can override methods of its bases and declare additional data members, methods, and so on.  Access to class members is checked for ambiguity.
+Sharing among the (base) classes that make up a class can be expressed using delegated members.  Classes can be declared abstract to ensure that they are used only as base classes.
+Delegation
+If a class has more than one structural parent, each additional parent will generate a delegated field.
+Each delegated field will add all its interfaces to the class.  For all the methods that are not implemented in the delegated interface, delegate deferred calls will be generated.
+ AUTONUMLGL  Member Access Control
+This section explains mechanisms for control of access to class members.  Access control is based on the use of the attributes public, private, and protected to control access to individual members of a class or an interface.
+Public
+This attribute allows anybody to access this member.  It can be considered part of the API.  Therefore, it should only be used if anybody is free to use this member.
+ProtectedThis attribute allows only methods implement in the same class/interface and in derived classes/interfaces to access this member.  Helper methods, non-public member variables should have the protected attribute.  It still allows derived classes/interfaces to used those members, but shields the public to modify internally used variables or call methods that need a certain context to work properly.
+Private
+This attribute is the strongest of all, and allows only access in the same class/interface.  Usually it should only be used for internally used variables, and method that are complete.  Complete in a sense that no derived class/interface can redefine its use and therefore, needs to call or access this member.
+[Package]
+If no member access control attribute is specified that member is considered a package access member.  This allows all methods defined in the same package and sub-packages to access this member.  Since this a very broad access it should be used with care.  It can be considered part of the internal package API.
+ AUTONUMLGL  Special Member Functions
+
+Some methods have special meaning in the sense that they affect the way a compiler treats instances of their class; that is, they affect the semantics even when they are not explicitly used.
+
+This section describes constructors, destructors, and conversions.  Constructors initialize class instances.  Destructors are invoked when instances are destroyed; they are useful for cleaning up.  A conversion operator specifies a conversion between an instance and another interface.
+Constructor
+Constructors have the same name as the class.  No return type has to be specified.  The constructor method will be call upon instance creation.  In BML, calling the global method with the class name creates an instance.  Constructors will not be inherited; Therefore, every sub class has to reimplement all the appropriate constructor methods.  Note that inner class can only be constructed having an instance of the outer class.  Further note that all delegated members have to be specified to create an instance using delegation.
+
+If no constructors are specified, a default constructor will be implemented calling the parent default constructor.  If the parent has no default constructor in the described case, an error will be reported.
+Destructor
+BML does not allow defining destructor or finalize methods, but will consider adding this important clean up feature to the language definition.  A destructor is automatically called right before an instance is destroyed.  BML does an automatic reference counting, but fails with circular references.  A garbage collector has to be added to support that as well.  This is not an easy task because backtracking can ask to undo the destruction and anytime.
+Conversion
+There are two ways to convert interfaces.  The first way is by using constructors; the second way is by using cast operators.  Either can be specified as coercion.  The compiler can add coercions automatically.
+
+Class Complex {    float m_fRe, m_fIm;     Complex( float fRe ) [coercion] { self( fRe, 0 ); }    Complex( float fRe, float fIm ) {       m_fRe = fRe;       m_fIm = fIm;    }     operator float() { return m_fRe; }    Complex operator +( Complex hOther ) {      return Complex( m_rRe+hOther.Re, m_rIm+hOther.Im );    } }  …    Complex z1 = 2;    Complex z2 = z1 + 3;    float rTmp = (float)z2; …
+ AUTONUMLGL  Overloading
+
+The section gives the syntax and semantics of operator and method overloading.  Overloading allows multiple functions with the same name to be defined provided their argument lists differ sufficiently for class to be resolved.  By overloading operators, the programmer can redefine the meaning of most BML operators.
+
+
+ AUTONUMLGL  Templates
+
+A class template defines the layout and operations for an unbounded set of related types.  An interface template is the same except it is restricted on operations.  For example, a single class template List might provide a common definition for list of int, list of float, and list of any other Object.
+To define the GUID of a specific instance of a template, the syntax "<" Signature ">" "=" "[" Properties "]" can be used.  This is also valid for fields and methods of a template.
+SyntaxTemplate ::= "template"     "<" [ TemplateParameter \\ "," ] ">"     ( Class | Interface ); TemplateParameter ::=     InterfaceRef FieldName [ "=" InterfaceRef ] | Const |    "interface" FieldName [ "=" InterfaceRef ];
+
+
+ AUTONUMLGL  Exception Handling
+
+Exception handling provides a way of transferring control and information to an unspecified caller that has expressed willingness to handle exceptions of a given type.  Exceptions of an arbitrary type can be thrown and caught, and the set of exceptions a method may throw can be specified.  The termination model of exceptions handling is provided.  Exception handling can be used to support the notion of error handling and fault-tolerant computing.
+
+
+ AUTONUMLGL  Compatibility
+
+
+ AUTONUMLGL  BML Compiler
+ AUTONUMLGL  Phase 1 ( Register Main )
+Class
+Create & Register InstanceDefinition
+Set InstanceDefinition.Outer
+Interface
+Common: Set GUID
+Class Interface
+Create InterfaceDefinition
+Common: Set GUID
+If default interface Then Register & Set InterfaceDefinition.Interface
+ AUTONUMLGL  Phase 2 ( Register Main 2 )
+Class
+Resolve Parent Interfaces
+Set InstanceDefinition.Base
+Set InstanceDefinition.Interfaces
+Interface
+Common: Create InterfaceDefinition.Methods
+Class Interface
+If not default interface Then Register & Set InterfaceDefinition.Interface
+Common: Create InterfaceDefinition.Methods
+Set InterfaceDefinition.Property( “class” )
+ AUTONUMLGL  Phase 3 ( Resolve Main )
+Class
+Make sure Phase 3 is called on the parent interfaces/classes first
+Interface
+
+Class Interface
+Set InterfaceDefinition.Base
+Method
+Create MethodDeclaration
+Resolve all Interfaces (Return Type & Parameter Types)
+Find Or Create MethodDefinition
+Set MethodDeclaration.Definition
+Field
+
+Constant
+
+ AUTONUMLGL  Phase 4 ( Register Field )
+Class
+Make sure Phase 4 is called on the parent interfaces/classes first
+Set InstanceDefinition.Fields
+Set InstanceDefinition.BinaryFields
+Set InstanceDefinition.Instantiator
+Set InstanceDefinition.Instantiator.Interfaces
+Interface
+
+Field
+
+Constant
+
+Label
+
+Expression & Statement
+
+ AUTONUMLGL  Phase 5 ( Register Other )
+Field
+
+Constant
+
+Label
+
+Expression & Statement
+
+ AUTONUMLGL  Phase 6 ( Resolve )
+Class
+
+Method
+Resolve statements & expressions
+Generate code
+Constant
+
+Label
+
+Expression & Statement
+
+ AUTONUMLGL  Phase 7 ( Resolve Offset )
+Expression & Statement
+Set the remaining jumps offsets.
+ AUTONUMLGL  Expression
+
+Generating code boils mostly down to expressions.  This section will discuss how the compiler handles each basic type of expression.
+CompilableCast: If base expression is compatible with the cast interface then the cast will be ignored.  If there is a cast method to the specified interface, then call this method; otherwise use the assembler cast statement.
+Method: If the base expression has no interface assigned yet (constant), then assign the default interface to it.  Find a method with the right profile.  If an argument has no interface assigned, then treat it as any interface.  If there is an unambiguous method, assign all unassigned argument interfaces.  Methods can be found in the interface of the base expression.  If the base expression is an inner class instance, then the outer instance interface will be searched next.  If the base expression has a common instance, then the common instance interface will be search next.
+Member: If the member is being assigned, then generate the assignment code and store the result in a temporary register.  Use the assembler put statement to store it into the member.  If the member is not getting assigned, then use the assembler get statement to store the member into a register and copy the register into the result expression.
+Local: If the local variable is being assigned before it is used, then generate the assignment code and store the result in the local stack.  Set the result expression from the local stack.
+Parameter: If the parameter is being assigned before it is used, then generate the assignment code and store the result in the parameter (local stack).  Set the result expression from the parameter (local stack).
+Constant
+String/Integer/Float
+Constant
+Interface
+Class
+Temp
+Result
+Whenever an expression has to generate code, it has to know where to store its result.  There are four types of location: Stack, Local, Register, and Void.  Each type of location knows how to store the value appropriately.
+ AUTONUMLGL  Statements
+
+The main work is done by expressions, but each type of statement has some additional translation to do.  This section will show how each statement translates its structure into assemble code.
+Conventions
+Expression -> VOID: The result of the expression will be ignored.
+Expression -> REGx The result of the expression will be stored in register x.
+(Type): Make sure the expression is compatible with the specified type.
+IteratorIterators allow the usage of the continue and break statement.  Therefore, each translation will define a continueLabel and a breakLabel, which will define where the associated statement will jump.  Iterators are for, while, and loop.
+
+LoopThe loop statement is the simplest version of all iterators.  It just jumps to the beginning if it reaches the end.  The only way of ending this statement is by jumping to the breakLabel using break.
+Original
+Translation
+
+loop {    Statements; }
+:continueLabel    Statements;    jmp continueLabel; :breakLabel
+
+
+WhileThe while statement comes in two flavors.  While the Test expression is true execute the Statements, or execute the Statements until the Test expression is false.  The translation is straightforward and needs no further explanation.  The only restriction is that the Test expression has to be compatible with Boolean.
+Original
+Translation
+
+while( Test ) {    Statements; }
+:continueLabel    (Boolean) Test -> REG0    jiff REG0, breakLabel    Statements;    jmp continueLabel; :breakLabel
+
+do {    Statements; } while( Test );
+:continueLabel    Statements;    (Boolean) Test -> REG0    jift REG0, continueLabel :breakLabel
+
+
+ForThe for statement is the most advanced version of all the loop statements.  It allows specifying an initial expression Init, which only executes once before the loop.  After that, it is implemented like a normal while statement with the addition of a Next expression, which executes right before the Test expression evaluates. 
+Original
+Translation
+
+for( Init; Test; Next ) {    Statements; }
+   Init -> VOID :startLabel    (Boolean) Test -> REG0    jiff REG0, breakLabel    Statements; :continueLabel    Next -> VOID    jmp continueLabel; :breakLabel
+
+
+
+Conditional
+
+If
+Original
+Translation
+
+if( Test ) {    ThenStatements; } else {    ElseStatements; }
+   (Boolean) Test -> REG0    jiff REG0, elseLabel    ThenStatements;    jmp endLabel :elseLabel    ElseStatements; :endLabel
+
+
+Switch
+Original
+Translation
+
+switch( Expression ) { case Case1a, Case1b:    Statement1; case Case2:    Statement2; … default:    DefaultStatement; }
+   Expression -> REG0    push REG0    Case1a -> REG0    call REG0, Equal    jift REG0, Case1Label    Case1b -> REG0    call REG0, Equal    jift REG0, Case1Label    jmp Case2Test :Case1Label    drop 1     Statement1;    jmp Case2Start :Case2Test    Case2 -> REG0    call REG0, Equal     jift REG0, Case2Label    jmp DefaultCase :Case2Label    drop 1  :Case2Start    Statement2;    jmp DefaultCaseStart :DefaultCase    drop 1  :DefaultCaseStart    DefaultStatement; :breakLabel
+
+
+
+Select
+Original
+Translation
+
+select( Expression ) { case Case1a, Case1b:    Statement1; case Case2:    Statement2; … default:    DefaultStatement; }
+   Expression -> REG0    push REG0    Case1a -> REG0    call REG0, Equal    jift REG0, Case1Label    Case1b -> REG0    call REG0, Equal    jift REG0, Case1Label    jmp Case2Test :Case1Label    drop 1     Statement1;    jmp breakLabel :Case2Test    Case2 -> REG0    call REG0, Equal     jift REG0, Case2Label    jmp DefaultCase :Case2Label    drop 1     Statement2;    jmp breakLabel :DefaultCase    drop 1     DefaultStatement; :breakLabel
+
+
+Choice
+Original
+Translation
+
+choice {    Statements1  }, {    Statements2 }, {    Statements3 }
+   jmpf Label2    Statements1; :Label2    jmpf Label3    Statements2; :Label3    Statements3;
+
+
+Break
+Original
+Translation
+
+break Label;
+   ‘Clean up with blocks’    jmp Label
+
+
+Continue
+Original
+Translation
+
+continue Label;
+   ‘Clean up with blocks’    jmp Label
+
+
+Return
+Original
+Translation
+
+return Expression;
+   Expression -> REG0    ‘Clean up with blocks’    ret
+
+
+Fail
+Original
+Translation
+
+fail;
+   fail
+
+
+Try Catch
+Original
+Translation
+
+try {    TryStatements; } catch( Type1 hLoc1 ) {    Catch1Statements; } catch( Type2 hLoc2 ){    Catch2Statements; }
+   jerr exHandlerLabel    TryStatements;    jerr lastExHandlerLabel    jmp endLabel :exHandlerLabel    jerr lastExHandlerLabel    push REG0    cpy REG0, Type1    call REG0, IsInstance     jift REG0, Catch1Label    cpy REG0, Type2    call REG0, IsInstance     jift REG0, Catch2Label    pop REG0    throw :Catch1Label    pop hLoc1    Catch1Statements;    jmp endLabel :Catch2Label    pop hLoc2    Catch2Statements; :endLabel
+
+
+
+ThrowThe assembler throw instruction expects the exception to be in REG0.  Therefore, the result of the given expression is stored in REG0, and the throw instruction generated.
+Original
+Translation
+
+throw Expression;
+   Expression -> REG0    throw
+
+
+With
+Original
+Translation
+
+with( Expression ) {    Statements; }
+   push REG15    Expression -> REG15    Statements;    pop REG15
+
+
+ AUTONUMLGL  Tools
+ AUTONUMLGL  Visual Browser
+
+Figure  REF "C_Diag2" 3 show the visual class browser for BML:
+
+Figure  SEQ Figure \* ARABIC 3: The Visual Browser
+ AUTONUMLGL  Debugger
+
+
+
+Figure  REF "C_Diag3" 4 show the debugger for BML:
+
+Figure  SEQ Figure \* ARABIC 4: The Debugger
+ AUTONUMLGL  Comparison
+Advantages
+Flexible and easy to understand grammar definitions
+Highly dynamic environment allows new applications
+Fast generation
+Based on a backtracking virtual machine → easy to implement
+Interpreter → easy to debug
+Language definition written in its own language → easy to extend
+Automatic error reporting with context information
+Multi-syntax support in a single stream
+Multi-platform capable (based on a virtual machine)
+Disadvantages
+Worst-case NP-complete → bad language definitions are very slow but there is a cut mechanism.  Yet another compiler-compiler → new learning required
+Conclusion
+BMF
+
+BML Language
+
+BML Compiler
+
+Glossary
+ANTLR
+A Predicated-LL(k) Parser Generator
+API
+Application Program Interface
+BMF
+Backtracking Method Form
+BML
+Backtracking Method Language
+BNF
+Backus-Naur Form
+EBNF
+Extended Backus-Naur Form
+LALR
+Look Ahead Left Recursive
+LEX
+Lexical Analyzer Generator
+SNOBOL
+A pattern matching programming language
+YACC
+Yet Another Compiler-Compiler
+References
+[Bjorg]
+S. G. Bjorg.  Master Thesis.  University of Colorado, 2000
+[Griswold]
+R. E. Griswold, J. F. Poage & I. P. Polonsky.  The SNOBOL4 Programming Language.  Prentice-Hall, 1971
+[Johnson]
+S. C. Johnson.  Yacc – Yet Another Compiler-Compiler.  Comp. Sci. Tech. Rep. No. 32.  Bell Laboratories, July 1975
+[Ellis]
+M. A. Ellis, B. Stroustrup.  The Annotated C++ Reference Manual.  Addison-Wesley, 1995
+[Levine]
+John R. Levine, Tony Mason & Doug Brown.  lex & yacc.  O'Reilly & Associates, Inc., 1995
+[Lesk]
+M. E. Lesk.  Lex – A Lexical Analyzer Generator.  Comp. Sci. Tech. Rep. No. 32.  Bell Laboratories, October 1975
+[Parr95]
+T. J. Parr & R. W. Quong.  ANTLR: A Predicated-LL (k) Parser Generator.  Software—Practice And Experience, Vol. 25(7), 789–810(July1995)
+[Parr96]
+T. J. Parr & R. W. Quong.  LL and LR Translator Need k.  SIGPLAN Notices, Vol. 31(2), February 1996
+[Waite]
+W. M. Waite.  ELI: A Complete, Flexible Compiler Construction System.  ACM Computing Practices, Vol. 35, No. 2, February 1992
+
+
+
+
+
+
+
+ AUTHOR  \* MERGEFORMAT Urs C. Muff	Page  PAGE vii	 TITLE  \* MERGEFORMAT Backtracking Model Languages  DOCPROPERTY "Manager"  \* MERGEFORMAT umuff71@email.com		 DATE \@ "MMMM d, yyyy" \* MERGEFORMAT July 5, 2000
+
+
+
+		 STYLEREF "Heading 1" \* MERGEFORMAT Conclusion
+
+ AUTHOR  \* MERGEFORMAT Urs C. Muff	Page  PAGE 53	 TITLE  \* MERGEFORMAT Backtracking Model Languages  DOCPROPERTY "Manager"  \* MERGEFORMAT umuff71@email.com		 DATE \@ "MMMM d, yyyy" \* MERGEFORMAT July 5, 2000
+
+
+
