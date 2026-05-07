@@ -14,6 +14,11 @@ describe("anonymous meeting trace client", () => {
     expect(source).toContain("ensureFingerprint()");
     expect(source).toContain("sessionStorage");
     expect(source).toContain("duration_ms");
+    expect(source).toContain("started_at");
+    expect(source).toContain("ended_at");
+    expect(source).toContain("referrer_domain");
+    expect(source).toContain("document.referrer");
+    expect(source).toContain("referrer.hostname");
     expect(source).not.toContain("geolocation");
     expect(source).not.toContain("navigator.userAgent");
   });

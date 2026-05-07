@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import re
+from urllib.parse import urlparse
 
 from app.models.graph import Node
 from app.services import unified_db as _udb
@@ -34,7 +36,58 @@ def _normalize_duration(value: int | float | None) -> int:
     return max(0, min(duration, 24 * 60 * 60 * 1000))
 
 
-def _merge_surface_duration(surfaces: list[dict], surface: str, duration_ms: int) -> list[dict]:
+def _duration_bucket(duration_ms: int) -> str:
+    if duration_ms < 10_000:
+        return "under_10s"
+    if duration_ms < 60_000:
+        return "10s_to_1m"
+    if duration_ms < 5 * 60_000:
+        return "1m_to_5m"
+    if duration_ms < 15 * 60_000:
+        return "5m_to_15m"
+    return "15m_plus"
+
+
+def _normalize_referrer_domain(value: str | None) -> str | None:
+    raw = str(value or "").strip().lower()[:300]
+    if not raw:
+        return None
+    if "://" in raw:
+        raw = urlparse(raw).hostname or ""
+    else:
+        raw = raw.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    raw = raw.strip().strip(".")
+    if not raw or len(raw) > 255:
+        return None
+    if not re.fullmatch(r"[a-z0-9.-]+", raw):
+        return None
+    return raw
+
+
+def _surface_sequence(surfaces: list[dict]) -> list[str]:
+    sequence: list[str] = []
+    for item in surfaces:
+        name = _normalize_surface(str(item.get("surface") or ""))
+        if name not in sequence:
+            sequence.append(name)
+    return sequence
+
+
+def _referrer_domains(surfaces: list[dict]) -> list[str]:
+    domains: list[str] = []
+    for item in surfaces:
+        domain = _normalize_referrer_domain(str(item.get("referrer_domain") or ""))
+        if domain and domain not in domains:
+            domains.append(domain)
+    return domains
+
+
+def _merge_surface_duration(
+    surfaces: list[dict],
+    surface: str,
+    duration_ms: int,
+    referrer_domain: str | None,
+) -> list[dict]:
     normalized: list[dict] = []
     seen = False
     for raw in surfaces:
@@ -42,12 +95,20 @@ def _merge_surface_duration(surfaces: list[dict], surface: str, duration_ms: int
             continue
         existing_surface = _normalize_surface(str(raw.get("surface") or ""))
         existing_duration = _normalize_duration(raw.get("duration_ms"))
+        existing_referrer_domain = _normalize_referrer_domain(raw.get("referrer_domain"))
         if existing_surface == surface:
             existing_duration = max(existing_duration, duration_ms)
+            existing_referrer_domain = existing_referrer_domain or referrer_domain
             seen = True
-        normalized.append({"surface": existing_surface, "duration_ms": existing_duration})
+        item = {"surface": existing_surface, "duration_ms": existing_duration}
+        if existing_referrer_domain:
+            item["referrer_domain"] = existing_referrer_domain
+        normalized.append(item)
     if not seen:
-        normalized.append({"surface": surface, "duration_ms": duration_ms})
+        item = {"surface": surface, "duration_ms": duration_ms}
+        if referrer_domain:
+            item["referrer_domain"] = referrer_domain
+        normalized.append(item)
     return normalized
 
 
@@ -62,14 +123,20 @@ def _anonymous_trace_node_id(source_point_id: str, session_id: str) -> str:
 
 def _trace_item(node: Node) -> dict:
     props = dict(node.properties or {})
-    surfaces = [
-        {
+    surfaces = []
+    for item in props.get("surfaces", []):
+        if not isinstance(item, dict):
+            continue
+        surface_item = {
             "surface": _normalize_surface(str(item.get("surface") or "")),
             "duration_ms": _normalize_duration(item.get("duration_ms")),
         }
-        for item in props.get("surfaces", [])
-        if isinstance(item, dict)
-    ]
+        referrer_domain = _normalize_referrer_domain(item.get("referrer_domain"))
+        if referrer_domain:
+            surface_item["referrer_domain"] = referrer_domain
+        surfaces.append(surface_item)
+    sequence = _surface_sequence(surfaces)
+    referrers = _referrer_domains(surfaces)
     duration_ms = sum(item["duration_ms"] for item in surfaces)
     return {
         "id": node.id,
@@ -78,8 +145,14 @@ def _trace_item(node: Node) -> dict:
         "first_seen_at": props.get("first_seen_at"),
         "last_seen_at": props.get("last_seen_at"),
         "duration_ms": duration_ms,
+        "duration_bucket": _duration_bucket(duration_ms),
+        "entry_surface": props.get("entry_surface") or (sequence[0] if sequence else None),
         "surface_count": len(surfaces),
+        "surface_sequence": sequence,
+        "page_count": len(sequence),
         "surfaces": surfaces,
+        "referrer_domain": props.get("entry_referrer_domain") or (referrers[0] if referrers else None),
+        "referrer_domains": referrers,
         "folded_into_contributor_id": props.get("folded_into_contributor_id"),
         "raw_keys_stored": "visitor_key" in props or "session_key" in props,
     }
@@ -88,6 +161,7 @@ def _trace_item(node: Node) -> dict:
 def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None = None) -> dict:
     items = [_trace_item(node) for node in nodes]
     surfaces: list[str] = []
+    referrers: list[str] = []
     folded_into = None
     first_seen = None
     last_seen = None
@@ -107,6 +181,9 @@ def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None
             name = surface["surface"]
             if name not in surfaces:
                 surfaces.append(name)
+        for domain in item.get("referrer_domains", []):
+            if domain not in referrers:
+                referrers.append(domain)
     return {
         "source_point_id": source_point_id,
         "source_point_count": len(source_points),
@@ -114,7 +191,13 @@ def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None
         "first_seen_at": first_seen,
         "last_seen_at": last_seen,
         "total_duration_ms": total_duration_ms,
+        "duration_bucket": _duration_bucket(total_duration_ms),
+        "entry_surface": surfaces[0] if surfaces else None,
         "surfaces_met": surfaces,
+        "surface_sequence": surfaces,
+        "page_count": len(surfaces),
+        "referrer_domain": referrers[0] if referrers else None,
+        "referrer_domains": referrers,
         "folded_into_contributor_id": folded_into,
         "continuity_note": "source_point_id is a same-browser continuity hint, not identity proof",
     }
@@ -157,6 +240,7 @@ def record_anonymous_meeting_trace(body: dict) -> dict:
     node_id = _anonymous_trace_node_id(source_point_id, session_id)
     surface = _normalize_surface(str(body.get("surface") or "/"))
     duration_ms = _normalize_duration(body.get("duration_ms"))
+    referrer_domain = _normalize_referrer_domain(body.get("referrer_domain"))
     now = _iso_now()
     contributor_id = str(body.get("contributor_id") or "").strip() or None
 
@@ -169,13 +253,19 @@ def record_anonymous_meeting_trace(body: dict) -> dict:
             props.get("surfaces") if isinstance(props.get("surfaces"), list) else [],
             surface,
             duration_ms,
+            referrer_domain,
         )
+        sequence = _surface_sequence(surfaces)
+        referrers = _referrer_domains(surfaces)
         merged_props = {
             _ANONYMOUS_MEETING_TRACE: True,
             "source_point_id": source_point_id,
             "session_id": session_id,
             "first_seen_at": str(first_seen_at),
             "last_seen_at": str(last_seen_at),
+            "entry_surface": props.get("entry_surface") or (sequence[0] if sequence else surface),
+            "entry_referrer_domain": props.get("entry_referrer_domain")
+            or (referrers[0] if referrers else None),
             "surfaces": surfaces,
             "folded_into_contributor_id": contributor_id or props.get("folded_into_contributor_id"),
         }
