@@ -1278,6 +1278,19 @@ def import_inspired_by(
     )
     edge_existed = edge_result.get("error") == "edge_exists"
 
+    # Auto-attune the new identity against vision concepts so the
+    # influence ↔ concept resonance edges flow without a separate call.
+    # Each external influence (book, talk, song, gathering) the
+    # network honors enters carrying its own keyword spectrum; the
+    # concepts it shares frequency with become visible immediately on
+    # both the concept side and the influence side.
+    if identity_created:
+        try:
+            from app.services import resonance_service
+            resonance_service.attune(identity_id)
+        except Exception:  # noqa: BLE001 — attune failure doesn't block the encounter
+            log.debug("auto-attune on inspired-by import non-fatal error", exc_info=True)
+
     return {
         "identity": identity_node,
         "identity_created": identity_created,
