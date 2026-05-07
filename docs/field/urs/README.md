@@ -10,6 +10,9 @@ Private local workspace for analyzing what entered Urs's field through Audible, 
   - `audible-listen-history.json` - visible web listen history.
   - `audible-purchase-history-2016-2026.json` - year-filtered purchases for the last ten years plus current year.
   - `audible-library.json` - current library holdings from all visible library pages.
+- `trace/audible_history_spectrum.json` carries an effective Audible listening trace:
+  - direct visible listen-history rows where Audible exposes them.
+  - purchase-date approximation for purchased works that do not have a direct visible listen row.
 - No local Google Takeout / YouTube history export was found under `Downloads`, `Documents`, or `Desktop`.
 
 ## Input Slots
