@@ -1291,3 +1291,34 @@ def test_stratify_returns_breadth_when_source_returns_more_than_cap():
     # Below the cap: pass through unchanged.
     small = list(range(10))
     assert _stratify(small, target=30) == small
+
+
+def test_stratify_lifts_high_view_items_into_the_sample():
+    """Sampling discipline: when items carry view counts, the
+    high-loudness ones rise into the sample even when they fall in
+    the temporally-spread middle band that would otherwise be
+    skipped. The presence's "general signal" — what they actually
+    broadcast loudest into the field — stays visible.
+    """
+    from dataclasses import dataclass
+    from app.services.creations_importer import _stratify
+
+    @dataclass
+    class Item:
+        idx: int
+        view_count: int | None = None
+
+    items = [Item(idx=i, view_count=10) for i in range(100)]
+    # Plant a clear loudness signal mid-list: items 40..43 have very
+    # high view counts. They sit outside the newest/oldest bands.
+    for i in (40, 41, 42, 43):
+        items[i] = Item(idx=i, view_count=1_000_000)
+
+    out = _stratify(items, target=30)
+    out_idx = [it.idx for it in out]
+    assert any(i in out_idx for i in (40, 41, 42, 43)), (
+        f"loud items missing from sample: out_idx={out_idx}"
+    )
+    # Newest + oldest bands still represented.
+    assert 0 in out_idx
+    assert 99 in out_idx
