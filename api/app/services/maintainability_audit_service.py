@@ -197,6 +197,8 @@ def _should_ignore_placeholder_line(path: Path, line: str) -> bool:
         return True
     if "placeholder:text-" in text.lower():
         return True
+    if path.suffix.lower() in {".tsx", ".jsx"} and "placeholder-" in text.lower():
+        return True
     if "command templates" in text.lower() and "placeholder" in text.lower():
         return True
     # Regex pattern declarations are scanner internals, not runtime placeholders.

@@ -1,9 +1,10 @@
 """Agent pipeline status: running, pending, completed with attention and diagnostics."""
 
-from datetime import datetime, timezone
 import json
 import shutil
 import subprocess
+import time
+from datetime import datetime, timezone
 from typing import Any
 
 from app.models.agent import (
@@ -167,7 +168,11 @@ def _minutes_since_github_time(value: str, now: datetime) -> float:
     return max(0.0, (now - parsed).total_seconds() / 60.0)
 
 
-def _gh_json(args: list[str], *, timeout: int = 5) -> Any:
+_FOLLOWTHROUGH_CACHE: dict[tuple[str, float], tuple[float, dict[str, Any]]] = {}
+_FOLLOWTHROUGH_CACHE_TTL_SECONDS, _FOLLOWTHROUGH_GH_TIMEOUT_SECONDS = 30.0, 0.75
+
+
+def _gh_json(args: list[str], *, timeout: float = 5) -> Any:
     out = subprocess.check_output(["gh", *args], text=True, timeout=timeout)
     return json.loads(out or "null")
 
@@ -265,46 +270,31 @@ def collect_followthrough_status(
     stale_minutes: float = 90.0,
 ) -> dict[str, Any]:
     """Best-effort live follow-through view for open Codex PRs."""
+    cache_key = (repo, float(stale_minutes))
+    now_monotonic = time.monotonic()
+    cached = _FOLLOWTHROUGH_CACHE.get(cache_key)
+    if cached and now_monotonic - cached[0] <= _FOLLOWTHROUGH_CACHE_TTL_SECONDS:
+        return dict(cached[1])
+
     if shutil.which("gh") is None:
-        return {
-            "status": "unknown",
-            "collector_available": False,
-            "reason": "gh_not_available",
-            "blockers": [],
-        }
+        return {"status": "unknown", "collector_available": False, "reason": "gh_not_available", "blockers": []}
     try:
         payload = _gh_json(
-            [
-                "pr",
-                "list",
-                "--repo",
-                repo,
-                "--state",
-                "open",
-                "--limit",
-                "200",
-                "--json",
-                "number,title,headRefName,updatedAt,url,isDraft",
-            ]
+            ["pr", "list", "--repo", repo, "--state", "open", "--limit", "200", "--json",
+             "number,title,headRefName,updatedAt,url,isDraft"],
+            timeout=_FOLLOWTHROUGH_GH_TIMEOUT_SECONDS,
         )
     except Exception as exc:
-        return {
-            "status": "unknown",
-            "collector_available": False,
-            "reason": f"gh_query_failed:{type(exc).__name__}",
-            "blockers": [],
-        }
+        result = {"status": "unknown", "collector_available": False,
+                  "reason": f"gh_query_failed:{type(exc).__name__}", "blockers": []}
+        _FOLLOWTHROUGH_CACHE[cache_key] = (now_monotonic, dict(result))
+        return result
     rows = payload if isinstance(payload, list) else []
     blockers = [
         blocker
         for row in rows
         if isinstance(row, dict)
-        for blocker in [_followthrough_blocker_from_pr(
-            row,
-            repo=repo,
-            now=now,
-            stale_minutes=stale_minutes,
-        )]
+        for blocker in [_followthrough_blocker_from_pr(row, repo=repo, now=now, stale_minutes=stale_minutes)]
         if blocker is not None
     ]
     codex_open_count = len([
@@ -313,7 +303,7 @@ def collect_followthrough_status(
         and str(row.get("headRefName") or "").startswith("codex/")
         and not bool(row.get("isDraft"))
     ])
-    return {
+    result = {
         "status": "blocked" if blockers else "clear",
         "collector_available": True,
         "repo": repo,
@@ -321,6 +311,8 @@ def collect_followthrough_status(
         "codex_open_prs": codex_open_count,
         "blockers": blockers,
     }
+    _FOLLOWTHROUGH_CACHE[cache_key] = (now_monotonic, dict(result))
+    return result
 
 
 def _orchestration_tissue(

@@ -1,7 +1,7 @@
 {
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "MCP server for the Coherence Network — 89 typed tools for AI agents to browse ideas, receive the shared invitation, trace value chains, manage tasks, link identities, and navigate the universal graph.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
@@ -30,7 +30,7 @@
     {
       "registry": "npm",
       "name": "coherence-mcp-server",
-      "version": "0.5.1"
+      "version": "0.5.2"
     }
   ],
   "tools": [

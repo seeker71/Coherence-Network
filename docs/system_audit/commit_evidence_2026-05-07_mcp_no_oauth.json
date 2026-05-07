@@ -1,0 +1,136 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/mcp-no-oauth",
+  "commit_scope": "Add a public read-only remote MCP endpoint that does not require OAuth credentials.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/app/services/maintainability_audit_service.py",
+    "api/app/routers/mcp_remote.py",
+    "api/tests/test_agent_control_plane.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/page.tsx",
+    "web/app/people/[slug]/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-07_mcp_no_oauth.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/server.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/coherence_mcp_server/__init__.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py -q",
+      "cd api && python3 -m ruff check app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+      "cd api && python3 -m py_compile app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+      "cd mcp-server && npm pack --dry-run",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "cd web && npm ci --allow-git=none && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+    ],
+    "summary": "Prompt gate passed; targeted no-OAuth MCP tests, changed-file lint, and compile checks passed. The worktree has no api/.venv, so validation used the available worktree python3 toolchain."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy requested; public endpoint validation is pending merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR and CI proof remain pending."
+  },
+  "idea_ids": [
+    "agent-cli",
+    "user-surfaces"
+  ],
+  "spec_ids": [
+    "mcp-skill-registry-submission",
+    "mcp-awareness-streaming"
+  ],
+  "task_ids": [
+    "codex-thread-mcp-no-oauth-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "publish"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "GET /mcp and GET /api/mcp declare auth_required=false and auth_schemes=['none'].",
+    "POST /mcp and POST /api/mcp initialize without a WWW-Authenticate challenge.",
+    "The remote MCP surface exposes search/fetch and read-only registry tools while omitting mutating tools such as publish_idea and create_spec.",
+    "Focused tests assert connector-safe no-auth behavior and read-only tool exposure.",
+    "Maintainability guard no longer counts Tailwind placeholder-* CSS utility classes as fake runtime data markers.",
+    "Pipeline status follow-through checks cache and bound live GitHub collection so local runtime health checks do not fail on external gh latency.",
+    "The home page defines locale state before passing lang into LiveBreathPanel so the web build succeeds.",
+    "The home page exposes the required primary path links for /resonance, /pipeline, /nodes, and /contribute.",
+    "The home page restores the agent invitation doorway copy and canonical /come-in, /with-us, and /contribute links required by the full API suite.",
+    "The assets page keeps the literal Assets label in the rendered document for the local web contract.",
+    "The contributions and contributors pages keep their literal route labels in the rendered documents for the local web contract.",
+    "The duplicate /people/[slug] route was removed so the local Next dev server no longer conflicts with the existing /people/[id] dynamic route.",
+    "The npm MCP package metadata is bumped to 0.5.2 for public publication after merge."
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/routers/mcp_remote.py",
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/app/services/maintainability_audit_service.py",
+    "api/tests/test_agent_control_plane.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/page.tsx",
+    "web/app/people/[slug]/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/server.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/coherence_mcp_server/__init__.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Custom connector clients can target the hosted MCP URL without being forced through OAuth credential entry, and can discover/call public read-only tools.",
+    "public_endpoints": [
+      "GET /mcp",
+      "POST /mcp",
+      "GET /api/mcp",
+      "POST /api/mcp"
+    ],
+    "test_flows": [
+      "No-auth metadata probe for both MCP paths",
+      "MCP initialize JSON-RPC handshake without OAuth challenge",
+      "Read-only tools/list exposure",
+      "Search tool call response shape"
+    ]
+  }
+}
