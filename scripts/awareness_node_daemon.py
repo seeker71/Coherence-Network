@@ -19,7 +19,9 @@ from urllib import parse, request
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROFILE_PATH = REPO_ROOT / "config" / "agent_profiles.json"
+DEFAULT_LINEAGE_PATH = REPO_ROOT / "config" / "agent_lineage_terms.json"
 DEFAULT_API_BASE = "https://api.coherencycoin.com"
+MAX_LINEAGE_SOURCES_PER_TERM = 3
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,13 @@ class AgentProfile:
     voice: str
     memory: dict[str, str]
     no_model_actions: list[str]
+
+
+@dataclass(frozen=True)
+class LineageTerm:
+    term_id: str
+    label: str
+    aliases: list[str]
 
 
 def load_profiles(path: Path = DEFAULT_PROFILE_PATH) -> dict[str, AgentProfile]:
@@ -49,6 +58,74 @@ def load_profiles(path: Path = DEFAULT_PROFILE_PATH) -> dict[str, AgentProfile]:
         )
         profiles[profile.agent_id] = profile
     return profiles
+
+
+def load_lineage_terms(path: Path = DEFAULT_LINEAGE_PATH) -> tuple[list[LineageTerm], list[str]]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    terms = [
+        LineageTerm(
+            term_id=str(row["id"]),
+            label=str(row["label"]),
+            aliases=[str(alias) for alias in row.get("aliases", [])],
+        )
+        for row in raw.get("terms", [])
+    ]
+    return terms, [str(glob) for glob in raw.get("source_globs", [])]
+
+
+def _lineage_source_files(repo_root: Path, source_globs: list[str]) -> list[Path]:
+    files: set[Path] = set()
+    for source_glob in source_globs:
+        for path in repo_root.glob(source_glob):
+            if path.is_file():
+                files.add(path)
+    return sorted(files)
+
+
+def build_lineage_visibility(
+    *,
+    repo_root: Path = REPO_ROOT,
+    lineage_path: Path = DEFAULT_LINEAGE_PATH,
+) -> dict[str, Any]:
+    """Report which requested lineage terms are source-backed in this repo."""
+    terms, source_globs = load_lineage_terms(lineage_path)
+    source_files = _lineage_source_files(repo_root, source_globs)
+    file_texts: list[tuple[Path, str]] = []
+    for path in source_files:
+        try:
+            file_texts.append((path, path.read_text(encoding="utf-8", errors="replace")))
+        except OSError:
+            continue
+
+    seen: list[dict[str, Any]] = []
+    missing: list[dict[str, Any]] = []
+    for term in terms:
+        sources: list[dict[str, str]] = []
+        for path, text in file_texts:
+            lowered = text.lower()
+            match = next((alias for alias in term.aliases if alias.lower() in lowered), None)
+            if match:
+                sources.append({"file": str(path.relative_to(repo_root)), "matched": match})
+            if len(sources) >= MAX_LINEAGE_SOURCES_PER_TERM:
+                break
+        row = {"id": term.term_id, "label": term.label, "sources": sources}
+        if sources:
+            seen.append(row)
+        else:
+            missing.append({"id": term.term_id, "label": term.label})
+
+    return {
+        "kind": "truthful_lineage_visibility",
+        "complete": len(missing) == 0,
+        "term_count": len(terms),
+        "seen_count": len(seen),
+        "missing_count": len(missing),
+        "source_file_count": len(source_files),
+        "source_globs": source_globs,
+        "seen": seen,
+        "missing": missing,
+        "truth_note": "Sourced means an explicit alias was found in the repository. Missing means named but not yet found; it is not discarded.",
+    }
 
 
 def request_json(
@@ -109,8 +186,10 @@ def build_identity_card(
     wake_reason: str = "manual presence check",
     woke_at: str | None = None,
     repo_root: Path = REPO_ROOT,
+    lineage_path: Path = DEFAULT_LINEAGE_PATH,
 ) -> dict[str, Any]:
     """Build a no-model self-report for one agent profile."""
+    lineage = build_lineage_visibility(repo_root=repo_root, lineage_path=lineage_path)
     return {
         "origin_profile": {
             "agent_id": profile.agent_id,
@@ -137,8 +216,9 @@ def build_identity_card(
             "kind": "runtime_presence",
             "dynamic": True,
             "model_calls": 0,
-            "data_changes_each_wake": ["where", "woke_at", "wake_reason", "messages", "actions"],
+            "data_changes_each_wake": ["where", "woke_at", "wake_reason", "messages", "actions", "lineage"],
         },
+        "lineage": lineage,
         "voice": profile.voice,
         "memory": profile.memory,
         "no_model_actions": profile.no_model_actions,
@@ -149,11 +229,14 @@ def render_identity_text(card: dict[str, Any]) -> str:
     who = card.get("who", {})
     where = card.get("where", {})
     memory = card.get("memory", {})
+    lineage = card.get("lineage", {})
     return (
         f"{who.get('display_name', 'Agent')} identifies as {who.get('agent_id', 'unknown')} "
         f"on node {where.get('node_id', 'unknown')} at {where.get('api_base', 'unknown')}. "
         f"It woke at {card.get('woke_at', 'unknown')} because: {card.get('wake_reason', 'unknown')}. "
         "Its profile is origin; the rest is live data from this wake. "
+        f"Lineage seen={lineage.get('seen_count', 0)}/{lineage.get('term_count', 0)}, "
+        f"missing={lineage.get('missing_count', 0)}; missing names stay visible until sourced. "
         f"Memory: temp={memory.get('temp', 'unknown')}, "
         f"persistent={memory.get('persistent', 'unknown')}, static={memory.get('static', 'unknown')}."
     )

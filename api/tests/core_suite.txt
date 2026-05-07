@@ -22,6 +22,7 @@ tests/test_flow_notifications.py
 tests/test_flow_personal_feed.py
 tests/test_flow_pipeline.py
 tests/test_flow_presence.py
+tests/test_presence_invitation.py
 tests/test_flow_projects.py
 tests/test_flow_proposals.py
 tests/test_flow_reactions.py

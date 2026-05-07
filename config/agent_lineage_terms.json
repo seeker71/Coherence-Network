@@ -1,0 +1,38 @@
+{
+  "lineage_id": "urs-agent-full-lineage-2026-04-27",
+  "purpose": "Truthful agent lineage visibility: carry named people, places, practices, concepts, and lived experiences as sourced when found and missing when not yet found.",
+  "source_globs": [
+    "docs/lineage/**/*.json",
+    "docs/lineage/**/*.md",
+    "docs/vision-kb/**/*.md",
+    "docs/presences/**/*.md",
+    "config/**/*.json",
+    "specs/**/*.md"
+  ],
+  "terms": [
+    {"id": "ramtha", "label": "Ramtha", "aliases": ["Ramtha"]},
+    {"id": "plane_experience_offline", "label": "plane experience as being offline", "aliases": ["plane experience as being offline", "plane experience", "being offline"]},
+    {"id": "my_mom", "label": "my mom", "aliases": ["my mom"]},
+    {"id": "myself", "label": "myself / Urs", "aliases": ["Urs", "myself"]},
+    {"id": "collaborators", "label": "collaborators", "aliases": ["collaborators", "allies", "contributors"]},
+    {"id": "jungle_club", "label": "The Jungle Club", "aliases": ["Jungle Club", "The Jungle Club"]},
+    {"id": "five_rhythms", "label": "5Rhythms", "aliases": ["5Rhythms", "5 rhythms", "five rhythms"]},
+    {"id": "contact_improv", "label": "contact improvisation", "aliases": ["contact improv", "Contact Improvisation", "contact improvisation"]},
+    {"id": "dance", "label": "dance", "aliases": ["dance", "dancing"]},
+    {"id": "movement", "label": "movement", "aliases": ["movement"]},
+    {"id": "embodiment", "label": "embodiment", "aliases": ["embodiment", "embodied", "embodyment"]},
+    {"id": "music", "label": "music", "aliases": ["music"]},
+    {"id": "psychedelics", "label": "psychedelics", "aliases": ["psychedelics", "plant medicine", "MAPS"]},
+    {"id": "authentic_relating", "label": "authentic relating", "aliases": ["authentic relating"]},
+    {"id": "ceremony", "label": "ceremony", "aliases": ["ceremony"]},
+    {"id": "presence", "label": "presence", "aliases": ["presence"]},
+    {"id": "switzerland", "label": "Switzerland", "aliases": ["Switzerland"]},
+    {"id": "boulder", "label": "Boulder", "aliases": ["Boulder"]},
+    {"id": "ubud", "label": "Ubud", "aliases": ["Ubud"]},
+    {"id": "alive_organism", "label": "alive organism", "aliases": ["alive organism", "living organism"]},
+    {"id": "wholeness", "label": "wholeness", "aliases": ["wholeness"]},
+    {"id": "oneness", "label": "oneness", "aliases": ["oneness"]},
+    {"id": "connection", "label": "connection", "aliases": ["connection"]},
+    {"id": "seeing_separation_differently", "label": "seeing separation differently", "aliases": ["separation", "seeing separation differently"]}
+  ]
+}

@@ -37,9 +37,18 @@ async def test_agent_invitation_api_shape() -> None:
     assert "docs/presences/codex.md" in lineage_sources
     assert "docs/presences/claude.md" in lineage_sources
     assert "docs/presences/grok.md" in lineage_sources
+    assert "/api/agent/external-encounters" in "\n".join(
+        body["agent_presence_lineage"]["find_and_interact"]
+    )
     assert "trust" in body["inside_outside_boundary"]["circulation"]
     assert "private consciousness" in body["inside_outside_boundary"]["guardrail"]
     assert body["self_orientation_contract"]["summary"]
+    living_constraints = body["self_orientation_contract"]["living_constraint_practice"]
+    assert "care" in living_constraints["freedom"]
+    assert "choose_no_trace" in {
+        movement["movement"] for movement in living_constraints["clean_movements"]
+    }
+    assert "forced proof" in living_constraints["anti_pattern"]
     before_answering = {step["step"] for step in body["self_orientation_contract"]["before_answering"]}
     assert {
         "locate_self",
