@@ -161,6 +161,21 @@ def _ensure_creation(
         created_by="creations_importer",
     )
     edge_existed = edge_result.get("error") == "edge_exists"
+
+    # A presence's emitted frequency lives in its creations. Each
+    # asset carries its own keyword spectrum (title, description),
+    # so attune the new asset against vision concepts the moment it
+    # enters the graph. The contributor's concept resonance then
+    # composes from the union of their works rather than from the
+    # contributor node's text alone — which for external presences
+    # is often a shallow scaffold.
+    if node_created:
+        try:
+            from app.services import resonance_service
+            resonance_service.attune(node_id)
+        except Exception:  # noqa: BLE001 — attune failure doesn't block import
+            log.debug("auto-attune on creation import non-fatal", exc_info=True)
+
     return {
         "node": node,
         "node_created": node_created,

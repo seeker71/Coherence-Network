@@ -54,6 +54,13 @@ type Props = {
   presenceId: string;
   /** External presence links (presences[] on the graph node). */
   externalPresences?: ExternalPresence[];
+  /** When true, asset nodes (creations) appear as chips in the
+   *  influence web. Default false — on a presence page the creations
+   *  render in their own dedicated section, so showing them again
+   *  here would double the surface. On a concept page the creations
+   *  ARE the primary frequency a presence emits, so they belong
+   *  alongside the contributors who made them. */
+  showAssets?: boolean;
 };
 
 type GroupedRelative = {
@@ -64,7 +71,7 @@ type GroupedRelative = {
   strength?: number | null;
 };
 
-export function InfluenceWeb({ presenceId, externalPresences = [] }: Props) {
+export function InfluenceWeb({ presenceId, externalPresences = [], showAssets = false }: Props) {
   const [edges, setEdges] = useState<EdgeRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -97,8 +104,8 @@ export function InfluenceWeb({ presenceId, externalPresences = [] }: Props) {
   // Y" and "Y resonates with X" both surface the OTHER node from
   // this presence's point of view.
   const grouped = useMemo(
-    () => groupByFamily(edges, presenceId),
-    [edges, presenceId],
+    () => groupByFamily(edges, presenceId, { showAssets }),
+    [edges, presenceId, showAssets],
   );
 
   const totalRelatives = Object.values(grouped).reduce(
@@ -310,6 +317,7 @@ function isSystemNode(id: string | undefined | null): boolean {
 function groupByFamily(
   edges: EdgeRow[],
   selfId: string,
+  opts: { showAssets?: boolean } = {},
 ): Partial<Record<EdgeFamilySlug, GroupedRelative[]>> {
   const acc: Partial<Record<EdgeFamilySlug, GroupedRelative[]>> = {};
   for (const e of edges) {
@@ -317,11 +325,13 @@ function groupByFamily(
     const isOutgoing = e.from_id === selfId;
     const other = isOutgoing ? e.to_node : e.from_node;
     if (!other) continue;
-    // Hide self-loops, assets, and system tissue (visitors, runners,
-    // test fixtures). Assets render as creations elsewhere on the
-    // page, not as relationship chips.
+    // Hide self-loops and system tissue (visitors, runners, test
+    // fixtures). Assets are hidden by default — they render as
+    // creations elsewhere on a presence page — but are surfaced when
+    // `showAssets` is true (concept pages, where each creation is a
+    // primary frequency emitter the concept met through).
     if (other.id === selfId) continue;
-    if (other.type === "asset") continue;
+    if (other.type === "asset" && !opts.showAssets) continue;
     if (isSystemNode(other.id)) continue;
     const slug = (other as { slug?: string | null }).slug;
     const href = slug
