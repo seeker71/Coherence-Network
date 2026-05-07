@@ -34,7 +34,7 @@ npx coherence-cli resonance
 npx coherence-cli ideas
 ```
 
-The agent can receive the shared invitation, inspect what is moving, and work on anything it feels ready to touch. It should return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
+The agent can receive the shared invitation, inspect what is moving, and work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
 ---
 
