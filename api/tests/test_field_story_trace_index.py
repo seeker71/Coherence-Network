@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -94,3 +97,35 @@ def test_trace_index_returns_concept_to_significant_work_map():
         {"slug": "urs-field-story", "selector": "concept", "value": "lc-network"}
     )
     assert any(item["title"] == "Spellmonger Universe" for item in mcp_result["result"]["related_significant_works"])
+
+
+def test_influence_breath_cycle_registers_youtube_discovery_loop():
+    story = field_story_service.get_field_story("urs-field-story", include_story=False)
+    artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
+
+    assert "influence-breath-cycle" in artifact_ids
+    assert "trace-influence-breath-cycle" in artifact_ids
+
+    report_response = client.get("/api/field-stories/urs-field-story/artifacts/influence-breath-cycle")
+    assert report_response.status_code == 200, report_response.text
+    report = report_response.json()["content"]
+    assert "## Unroomed Author Candidates" in report
+    assert "youtube-takeout" in report
+    assert "Mei-lan" in report
+
+    summary_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-influence-breath-cycle")
+    assert summary_response.status_code == 200, summary_response.text
+    summary = json.loads(summary_response.json()["content"])
+    assert summary["source_counts"]["sources"]["youtube-takeout"] > 20000
+    assert summary["counts"]["unroomed_author_candidates"] >= 10
+
+    trace_paths = sorted(
+        {
+            match.group(1)
+            for match in re.finditer(r"\((/api/field-stories/urs-field-story/trace/[^)\s]+)\)", report)
+        }
+    )
+    assert len(trace_paths) >= 40
+    for path in trace_paths:
+        response = client.get(path)
+        assert response.status_code == 200, f"{path}: {response.text}"

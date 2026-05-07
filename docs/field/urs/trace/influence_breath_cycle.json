@@ -1,0 +1,3236 @@
+{
+  "breaths": [
+    {
+      "name": "source body",
+      "purpose": "Know which traces are feeding the awareness loop before interpreting them.",
+      "read": [
+        "output/ten_year_events.jsonl",
+        "trace/monthly_spectrum.json",
+        "trace/author_index.jsonl",
+        "trace/work_index.jsonl",
+        "trace/significant_work_index.jsonl"
+      ],
+      "result": {
+        "event_sources": {
+          "audible-browser": 60,
+          "audible-library": 233,
+          "audible-listen-history": 50,
+          "audible-purchase-history": 198,
+          "manual-anchor": 15,
+          "youtube-browser": 77,
+          "youtube-music-browser": 28,
+          "youtube-music-myactivity": 120,
+          "youtube-myactivity": 363,
+          "youtube-takeout": 27030
+        },
+        "platform_spaces": {
+          "audible": 541,
+          "manual-lineage": 15,
+          "youtube": 27470,
+          "youtube-music": 148
+        },
+        "privacy_boundary": "Raw Takeout, browser sessions, cookies, and paid text stay outside the repo."
+      }
+    },
+    {
+      "name": "already held rooms",
+      "purpose": "Avoid rediscovering what the story already links.",
+      "result": {
+        "top_roomed_authors": [
+          {
+            "already_roomed": true,
+            "events": 1658,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:yaima-topic-79b40e08",
+            "impact": 6915,
+            "last_month": "2026-05",
+            "name": "Yaima - Topic",
+            "peak_months": [
+              [
+                "2024-07",
+                217
+              ],
+              [
+                "2025-06",
+                158
+              ],
+              [
+                "2024-10",
+                150
+              ],
+              [
+                "2024-08",
+                96
+              ]
+            ],
+            "plain_name": "Yaima",
+            "top_works": [
+              {
+                "events": 57,
+                "id": "work:paradise-4f101e5a",
+                "title": "Paradise"
+              },
+              {
+                "events": 55,
+                "id": "work:gajumaru-1603cb6e",
+                "title": "Gajumaru"
+              },
+              {
+                "events": 51,
+                "id": "work:rebirth-f5a707c2",
+                "title": "Rebirth"
+              },
+              {
+                "events": 49,
+                "id": "work:odonata-46360a02",
+                "title": "Odonata"
+              },
+              {
+                "events": 48,
+                "id": "work:force-4499c9fc",
+                "title": "Force"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 1385,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "author:mose-topic-578ba32d",
+            "impact": 6647,
+            "last_month": "2026-05",
+            "name": "Mose - Topic",
+            "peak_months": [
+              [
+                "2025-11",
+                191
+              ],
+              [
+                "2026-04",
+                169
+              ],
+              [
+                "2026-03",
+                114
+              ],
+              [
+                "2026-02",
+                82
+              ]
+            ],
+            "plain_name": "Mose",
+            "top_works": [
+              {
+                "events": 51,
+                "id": "work:om-ganesha-dance-meditation-6bec0fc1",
+                "title": "Om Ganesha (Dance Meditation)"
+              },
+              {
+                "events": 47,
+                "id": "work:te-nande-mose-remix-a4ddaa5f",
+                "title": "Te Nande (Mose Remix)"
+              },
+              {
+                "events": 45,
+                "id": "work:vuela-con-el-viento-mose-remix-f39a975a",
+                "title": "Vuela con el Viento (Mose Remix)"
+              },
+              {
+                "events": 41,
+                "id": "work:spirit-divine-42006e3e",
+                "title": "Spirit Divine"
+              },
+              {
+                "events": 40,
+                "id": "work:cura-coraz-n-b075869d",
+                "title": "Cura Corazón"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 643,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:liquid-bloom-topic-ced4eda5",
+            "impact": 3821,
+            "last_month": "2026-05",
+            "name": "Liquid Bloom - Topic",
+            "peak_months": [
+              [
+                "2024-09",
+                107
+              ],
+              [
+                "2024-11",
+                62
+              ],
+              [
+                "2024-12",
+                58
+              ],
+              [
+                "2025-01",
+                58
+              ]
+            ],
+            "plain_name": "Liquid Bloom",
+            "top_works": [
+              {
+                "events": 33,
+                "id": "work:eternal-horizons-temple-step-project-remix-b88922a3",
+                "title": "Eternal Horizons (Temple Step Project Remix)"
+              },
+              {
+                "events": 26,
+                "id": "work:ceremony-of-the-heart-32ca26bd",
+                "title": "Ceremony of the Heart"
+              },
+              {
+                "events": 25,
+                "id": "work:the-face-of-love-sacred-blessing-85bb6850",
+                "title": "The Face of Love: Sacred Blessing"
+              },
+              {
+                "events": 22,
+                "id": "work:temple-of-the-goddess-67aa5d24",
+                "title": "Temple of the Goddess"
+              },
+              {
+                "events": 21,
+                "id": "work:sacred-blessing-5d94cab0",
+                "title": "Sacred Blessing"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 724,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:porangu-topic-c9cc4328",
+            "impact": 3040,
+            "last_month": "2026-05",
+            "name": "Poranguí - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                50
+              ],
+              [
+                "2025-01",
+                50
+              ],
+              [
+                "2025-08",
+                50
+              ],
+              [
+                "2025-07",
+                49
+              ]
+            ],
+            "plain_name": "Porangui",
+            "top_works": [
+              {
+                "events": 50,
+                "id": "work:iluminar-f1cd583b",
+                "title": "Iluminar"
+              },
+              {
+                "events": 40,
+                "id": "work:danza-del-viento-live-00933062",
+                "title": "Danza Del Viento (Live)"
+              },
+              {
+                "events": 31,
+                "id": "work:arcoiris-a5dbe9b2",
+                "title": "Arcoiris"
+              },
+              {
+                "events": 30,
+                "id": "work:iluminar-j-pool-remix-84d933e2",
+                "title": "Iluminar (J. Pool Remix)"
+              },
+              {
+                "events": 28,
+                "id": "work:canto-de-la-selva-mose-remix-38ac6d05",
+                "title": "Canto De La Selva (Mose Remix)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Porangu%C3%AD%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 492,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:ajeet-topic-caa3e33e",
+            "impact": 2532,
+            "last_month": "2026-05",
+            "name": "Ajeet - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                56
+              ],
+              [
+                "2024-06",
+                52
+              ],
+              [
+                "2024-07",
+                49
+              ],
+              [
+                "2024-08",
+                37
+              ]
+            ],
+            "plain_name": "Ajeet",
+            "top_works": [
+              {
+                "events": 41,
+                "id": "work:healing-song-2f9db08e",
+                "title": "Healing Song"
+              },
+              {
+                "events": 34,
+                "id": "work:akaal-2c774026",
+                "title": "Akaal"
+              },
+              {
+                "events": 30,
+                "id": "work:light-of-my-soul-263ca10e",
+                "title": "Light of My Soul"
+              },
+              {
+                "events": 29,
+                "id": "work:dance-of-the-moon-8c17ca6e",
+                "title": "Dance of the Moon"
+              },
+              {
+                "events": 27,
+                "id": "work:adi-shakti-bhakti-mantra-09844950",
+                "title": "Adi Shakti - Bhakti Mantra"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 429,
+            "first_month": "2024-05",
+            "frequency": "consciousness-threshold",
+            "id": "author:malte-marten-topic-a85ffe18",
+            "impact": 1866,
+            "last_month": "2026-05",
+            "name": "Malte Marten - Topic",
+            "peak_months": [
+              [
+                "2025-06",
+                38
+              ],
+              [
+                "2025-07",
+                36
+              ],
+              [
+                "2024-08",
+                34
+              ],
+              [
+                "2025-03",
+                31
+              ]
+            ],
+            "plain_name": "Malte Marten",
+            "top_works": [
+              {
+                "events": 32,
+                "id": "work:a-message-from-the-stars-1111-hz-9e439ddb",
+                "title": "A Message from the Stars (1111 Hz)"
+              },
+              {
+                "events": 22,
+                "id": "work:sky-sand-dea1c6a6",
+                "title": "Sky & Sand"
+              },
+              {
+                "events": 19,
+                "id": "work:loosing-myself-6f4794d3",
+                "title": "Loosing Myself"
+              },
+              {
+                "events": 19,
+                "id": "work:seeds-of-growth-1111-hz-ce66aa5d",
+                "title": "Seeds of Growth (1111 Hz)"
+              },
+              {
+                "events": 19,
+                "id": "work:secret-of-the-woods-1111-hz-46f37d8c",
+                "title": "Secret of the Woods (1111 Hz)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 364,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:ayla-schafer-topic-d261f6f3",
+            "impact": 1589,
+            "last_month": "2026-05",
+            "name": "Ayla Schafer - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                59
+              ],
+              [
+                "2024-06",
+                22
+              ],
+              [
+                "2025-02",
+                21
+              ],
+              [
+                "2025-07",
+                21
+              ]
+            ],
+            "plain_name": "Ayla Schafer",
+            "top_works": [
+              {
+                "events": 38,
+                "id": "work:fluyendo-6a6f39a6",
+                "title": "Fluyendo"
+              },
+              {
+                "events": 37,
+                "id": "work:guiding-and-protecting-8ee9f1e8",
+                "title": "Guiding and Protecting"
+              },
+              {
+                "events": 29,
+                "id": "work:grandmother-i-am-the-earth-e862eb5d",
+                "title": "Grandmother (I Am the Earth)"
+              },
+              {
+                "events": 26,
+                "id": "work:like-the-river-729e9ff1",
+                "title": "Like the River"
+              },
+              {
+                "events": 26,
+                "id": "work:rose-4210d1d7",
+                "title": "Rose"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 346,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:maneesh-de-moor-topic-3f4b70d0",
+            "impact": 1462,
+            "last_month": "2026-04",
+            "name": "Maneesh De Moor - Topic",
+            "peak_months": [
+              [
+                "2026-01",
+                28
+              ],
+              [
+                "2026-03",
+                27
+              ],
+              [
+                "2024-08",
+                26
+              ],
+              [
+                "2024-07",
+                25
+              ]
+            ],
+            "plain_name": "Maneesh De Moor",
+            "top_works": [
+              {
+                "events": 44,
+                "id": "work:mother-s-heartbeat-6a2aa99b",
+                "title": "Mother's Heartbeat"
+              },
+              {
+                "events": 38,
+                "id": "work:silent-awakening-8b52b726",
+                "title": "Silent Awakening"
+              },
+              {
+                "events": 32,
+                "id": "work:madre-de-la-selva-0f6e32d7",
+                "title": "Madre De La Selva"
+              },
+              {
+                "events": 23,
+                "id": "work:white-tara-mariri-658447bd",
+                "title": "White Tara Mariri"
+              },
+              {
+                "events": 23,
+                "id": "work:listen-to-the-silence-e39f25d1",
+                "title": "Listen to the Silence"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Maneesh%20De%20Moor%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 283,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "author:karunesh-topic-f11240bd",
+            "impact": 1201,
+            "last_month": "2026-01",
+            "name": "Karunesh - Topic",
+            "peak_months": [
+              [
+                "2024-06",
+                94
+              ],
+              [
+                "2024-10",
+                39
+              ],
+              [
+                "2024-12",
+                27
+              ],
+              [
+                "2024-07",
+                22
+              ]
+            ],
+            "plain_name": "Karunesh",
+            "top_works": [
+              {
+                "events": 31,
+                "id": "work:heaven-earth-c34c847a",
+                "title": "Heaven & Earth"
+              },
+              {
+                "events": 29,
+                "id": "work:horizon-a0ea3bba",
+                "title": "Horizon"
+              },
+              {
+                "events": 26,
+                "id": "work:the-circle-0c52d65d",
+                "title": "The Circle"
+              },
+              {
+                "events": 24,
+                "id": "work:expansion-456bf4c1",
+                "title": "Expansion"
+              },
+              {
+                "events": 24,
+                "id": "work:here-now-82fcd850",
+                "title": "Here & Now"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Karunesh%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 202,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:parijat-topic-e689c694",
+            "impact": 1100,
+            "last_month": "2026-01",
+            "name": "Parijat - Topic",
+            "peak_months": [
+              [
+                "2024-06",
+                44
+              ],
+              [
+                "2024-05",
+                26
+              ],
+              [
+                "2024-08",
+                26
+              ],
+              [
+                "2024-10",
+                19
+              ]
+            ],
+            "plain_name": "Parijat",
+            "top_works": [
+              {
+                "events": 20,
+                "id": "work:hearts-awakening-e3be066c",
+                "title": "Hearts Awakening"
+              },
+              {
+                "events": 20,
+                "id": "work:reiki-healing-waves-660e36de",
+                "title": "Reiki Healing Waves"
+              },
+              {
+                "events": 12,
+                "id": "work:forgiving-75d1c1b4",
+                "title": "Forgiving"
+              },
+              {
+                "events": 11,
+                "id": "work:healing-senses-f50d12d6",
+                "title": "Healing Senses"
+              },
+              {
+                "events": 8,
+                "id": "work:circles-cff21d25",
+                "title": "Circles"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Parijat%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 211,
+            "first_month": "2024-05",
+            "frequency": "shadow-power",
+            "id": "author:alexia-chellun-topic-94a40e4d",
+            "impact": 992,
+            "last_month": "2026-04",
+            "name": "Alexia Chellun - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                26
+              ],
+              [
+                "2025-02",
+                26
+              ],
+              [
+                "2024-07",
+                25
+              ],
+              [
+                "2024-05",
+                19
+              ]
+            ],
+            "plain_name": "Alexia Chellun",
+            "top_works": [
+              {
+                "events": 49,
+                "id": "work:the-power-is-here-now-299786b7",
+                "title": "The Power Is Here Now"
+              },
+              {
+                "events": 22,
+                "id": "work:healing-song-12ff280c",
+                "title": "Healing Song"
+              },
+              {
+                "events": 18,
+                "id": "work:allowing-18a4f888",
+                "title": "Allowing"
+              },
+              {
+                "events": 17,
+                "id": "work:abundance-3725a3d0",
+                "title": "Abundance"
+              },
+              {
+                "events": 16,
+                "id": "work:surrender-f041a876",
+                "title": "Surrender"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Alexia%20Chellun%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 211,
+            "first_month": "2024-05",
+            "frequency": "consciousness-threshold",
+            "id": "author:east-forest-topic-ea4f8b42",
+            "impact": 877,
+            "last_month": "2026-01",
+            "name": "East Forest - Topic",
+            "peak_months": [
+              [
+                "2025-03",
+                62
+              ],
+              [
+                "2024-05",
+                32
+              ],
+              [
+                "2024-08",
+                24
+              ],
+              [
+                "2024-07",
+                13
+              ]
+            ],
+            "plain_name": "East Forest",
+            "top_works": [
+              {
+                "events": 27,
+                "id": "work:we-are-truth-562c72d5",
+                "title": "We Are Truth"
+              },
+              {
+                "events": 24,
+                "id": "work:i-am-loving-awareness-d83d2a4e",
+                "title": "I Am Loving Awareness"
+              },
+              {
+                "events": 12,
+                "id": "work:dark-thoughts-22e73270",
+                "title": "Dark Thoughts"
+              },
+              {
+                "events": 11,
+                "id": "work:please-pass-the-bliss-2038b137",
+                "title": "Please Pass the Bliss"
+              },
+              {
+                "events": 8,
+                "id": "work:can-t-fall-out-of-love-d34010f3",
+                "title": "Can't Fall out of Love"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/East%20Forest%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 176,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:alex-serra-topic-c91cb74a",
+            "impact": 690,
+            "last_month": "2026-05",
+            "name": "Alex Serra - Topic",
+            "peak_months": [
+              [
+                "2026-04",
+                30
+              ],
+              [
+                "2024-10",
+                13
+              ],
+              [
+                "2026-03",
+                13
+              ],
+              [
+                "2026-02",
+                11
+              ]
+            ],
+            "plain_name": "Alex Serra",
+            "top_works": [
+              {
+                "events": 29,
+                "id": "work:sana-coraz-n-6b48d817",
+                "title": "Sana Corazón"
+              },
+              {
+                "events": 28,
+                "id": "work:luna-b61be0e5",
+                "title": "Luna"
+              },
+              {
+                "events": 26,
+                "id": "work:outter-space-eff6351d",
+                "title": "Outter Space"
+              },
+              {
+                "events": 21,
+                "id": "work:trance-life-ba64cfc5",
+                "title": "Trance Life"
+              },
+              {
+                "events": 16,
+                "id": "work:que-te-parece-dc5eb187",
+                "title": "Que te Parece?"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Alex%20Serra%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 257,
+            "first_month": "2024-05",
+            "frequency": "consciousness-threshold",
+            "id": "author:anne-tucker-990407e7",
+            "impact": 659,
+            "last_month": "2026-05",
+            "name": "Anne Tucker",
+            "peak_months": [
+              [
+                "2025-12",
+                41
+              ],
+              [
+                "2025-11",
+                20
+              ],
+              [
+                "2025-01",
+                18
+              ],
+              [
+                "2025-02",
+                14
+              ]
+            ],
+            "plain_name": "Anne Tucker",
+            "top_works": [
+              {
+                "events": 7,
+                "id": "work:happy-monday-fe5ce04e",
+                "title": "Happy Monday!"
+              },
+              {
+                "events": 5,
+                "id": "work:the-treasure-angels-are-holding-for-us-60ee23fb",
+                "title": "The Treasure Angels Are Holding For Us"
+              },
+              {
+                "events": 5,
+                "id": "work:channeled-details-about-our-future-and-steps-to-get-there-0f875051",
+                "title": "Channeled: Details About Our Future and Steps to Get There!"
+              },
+              {
+                "events": 5,
+                "id": "work:channeled-meditation-to-find-balance-and-freedom-d43a5731",
+                "title": "Channeled Meditation to Find Balance and Freedom"
+              },
+              {
+                "events": 4,
+                "id": "work:a-post-386cf1cf",
+                "title": "a post"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Anne%20Tucker"
+          },
+          {
+            "already_roomed": true,
+            "events": 100,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "author:ram-dass-topic-14d42eaa",
+            "impact": 575,
+            "last_month": "2026-04",
+            "name": "Ram Dass - Topic",
+            "peak_months": [
+              [
+                "2024-05",
+                21
+              ],
+              [
+                "2024-10",
+                19
+              ],
+              [
+                "2024-07",
+                10
+              ],
+              [
+                "2025-03",
+                7
+              ]
+            ],
+            "plain_name": "Ram Dass",
+            "top_works": [
+              {
+                "events": 35,
+                "id": "work:heart-takes-flight-30e114db",
+                "title": "Heart Takes Flight"
+              },
+              {
+                "events": 22,
+                "id": "work:the-water-poem-3db7cbf5",
+                "title": "The Water Poem"
+              },
+              {
+                "events": 16,
+                "id": "work:to-become-born-50e63b0e",
+                "title": "To Become Born"
+              },
+              {
+                "events": 2,
+                "id": "work:and-now-he-has-wings-59f79d4e",
+                "title": "And Now He Has Wings"
+              },
+              {
+                "events": 2,
+                "id": "work:opening-reimagined-b8fd3720",
+                "title": "Opening Reimagined"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Ram%20Dass%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 117,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:jesse-cook-topic-7c043f44",
+            "impact": 461,
+            "last_month": "2025-09",
+            "name": "Jesse Cook - Topic",
+            "peak_months": [
+              [
+                "2025-06",
+                22
+              ],
+              [
+                "2024-11",
+                21
+              ],
+              [
+                "2024-05",
+                18
+              ],
+              [
+                "2025-04",
+                16
+              ]
+            ],
+            "plain_name": "Jesse Cook",
+            "top_works": [
+              {
+                "events": 14,
+                "id": "work:virtue-05ad4cac",
+                "title": "Virtue"
+              },
+              {
+                "events": 12,
+                "id": "work:solace-1f32a163",
+                "title": "Solace"
+              },
+              {
+                "events": 8,
+                "id": "work:tempest-25-065495ab",
+                "title": "Tempest 25"
+              },
+              {
+                "events": 7,
+                "id": "work:luna-llena-live-e7b4cd12",
+                "title": "Luna Llena (Live)"
+              },
+              {
+                "events": 6,
+                "id": "work:onward-till-dawn-61a1694c",
+                "title": "Onward Till Dawn"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Jesse%20Cook%20-%20Topic"
+          },
+          {
+            "already_roomed": true,
+            "events": 96,
+            "first_month": "2024-08",
+            "frequency": "devotional-body",
+            "id": "author:mose-aaeaa992",
+            "impact": 382,
+            "last_month": "2026-05",
+            "name": "Mose",
+            "peak_months": [
+              [
+                "2024-11",
+                17
+              ],
+              [
+                "2025-02",
+                11
+              ],
+              [
+                "2025-06",
+                9
+              ],
+              [
+                "2026-04",
+                9
+              ]
+            ],
+            "plain_name": "Mose",
+            "top_works": [
+              {
+                "events": 18,
+                "id": "work:mose-live-at-babakamp-oba-gathering-w-onanya-damla-k-leo-lu-turkey-d32142cb",
+                "title": "Mose Live at @Babakamp | Oba Gathering w/ Onanya & Damla Köleoğlu | Turkey"
+              },
+              {
+                "events": 6,
+                "id": "work:mose-cacao-dance-eagles-nest-atitl-n-617a6fab",
+                "title": "Mose - Cacao Dance @ Eagles Nest Atitlán"
+              },
+              {
+                "events": 6,
+                "id": "work:mose-envision-costa-rica-live-set-3108ed53",
+                "title": "Mose - Envision : Costa Rica (Live Set)"
+              },
+              {
+                "events": 5,
+                "id": "work:mose-sam-garrett-live-at-sonidosdellago-in-mexico-e395589a",
+                "title": "Mose & Sam Garrett - Live at @SonidosdelLago in Mexico"
+              },
+              {
+                "events": 5,
+                "id": "work:mose-ft-janax-pacha-gratitude-for-life-1hr-organic-downtempo-nature-improvisatio-66a42a52",
+                "title": "Mose ft. Janax Pacha - Gratitude for Life(1hr) Organic Downtempo Nature Improvisation @Corfu, Greece"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Mose"
+          },
+          {
+            "already_roomed": true,
+            "events": 91,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:liquid-bloom-58282fa1",
+            "impact": 345,
+            "last_month": "2026-05",
+            "name": "Liquid Bloom",
+            "peak_months": [
+              [
+                "2025-04",
+                15
+              ],
+              [
+                "2024-12",
+                10
+              ],
+              [
+                "2024-11",
+                9
+              ],
+              [
+                "2025-01",
+                9
+              ]
+            ],
+            "plain_name": "Liquid Bloom",
+            "top_works": [
+              {
+                "events": 5,
+                "id": "work:liquid-bloom-darma-friend-the-face-of-love-a-guided-spirit-journey-a0d0d2c6",
+                "title": "Liquid Bloom & Darma Friend - The Face of Love - A Guided Spirit Journey"
+              },
+              {
+                "events": 5,
+                "id": "work:liquid-bloom-being-gathering-2024-dance-set-57140b9f",
+                "title": "Liquid Bloom @ Being Gathering 2024 (Dance Set)"
+              },
+              {
+                "events": 4,
+                "id": "work:liquid-bloom-deep-ambient-set-2-for-10-000-buddhas-yoga-ed9bab16",
+                "title": "Liquid Bloom Deep Ambient Set #2 for 10,000 Buddhas Yoga"
+              },
+              {
+                "events": 4,
+                "id": "work:liquid-bloom-porangu-kuya-sessions-samadhi-visual-odyssey-1-hour-movie-4eb4a465",
+                "title": "Liquid Bloom & Poranguí - Kuya Sessions Samadhi - Visual Odyssey 1 Hour Movie"
+              },
+              {
+                "events": 3,
+                "id": "work:medicine-sound-journey-4-44-hours-of-transformational-music-visuals-b9419a14",
+                "title": "Medicine Sound Journey | 4:44 Hours of Transformational Music & Visuals"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unroomed high-signal authors",
+      "purpose": "Find repeated YouTube/YouTube Music presences that have impact but are not easy to enter yet.",
+      "result": {
+        "candidates": [
+          {
+            "already_roomed": false,
+            "events": 217,
+            "first_month": "2024-05",
+            "frequency": "consciousness-threshold",
+            "id": "author:mei-lan-topic-ce22b3aa",
+            "impact": 1070,
+            "last_month": "2026-05",
+            "name": "Mei-lan - Topic",
+            "peak_months": [
+              [
+                "2025-01",
+                29
+              ],
+              [
+                "2025-03",
+                28
+              ],
+              [
+                "2025-04",
+                23
+              ],
+              [
+                "2024-10",
+                19
+              ]
+            ],
+            "plain_name": "Mei-lan",
+            "top_works": [
+              {
+                "events": 29,
+                "id": "work:song-for-a-pure-heart-f40ddecc",
+                "title": "Song For A Pure Heart"
+              },
+              {
+                "events": 23,
+                "id": "work:bring-me-back-to-love-99bdf56a",
+                "title": "Bring Me Back To Love"
+              },
+              {
+                "events": 22,
+                "id": "work:freedom-feat-ali-pervez-mehdi-20acb8e3",
+                "title": "Freedom (feat. Ali Pervez Mehdi)"
+              },
+              {
+                "events": 21,
+                "id": "work:crossroads-ed92f021",
+                "title": "Crossroads"
+              },
+              {
+                "events": 16,
+                "id": "work:i-am-in-everything-df2bfc6a",
+                "title": "I Am In Everything"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 267,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:danit-topic-88e32e40",
+            "impact": 1048,
+            "last_month": "2026-05",
+            "name": "Danit - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                28
+              ],
+              [
+                "2024-07",
+                21
+              ],
+              [
+                "2025-04",
+                19
+              ],
+              [
+                "2024-06",
+                18
+              ]
+            ],
+            "plain_name": "Danit",
+            "top_works": [
+              {
+                "events": 71,
+                "id": "work:naturaleza-mose-edit-8119cff0",
+                "title": "Naturaleza (Mose Edit)"
+              },
+              {
+                "events": 56,
+                "id": "work:cuatro-vientos-rey-kjavik-remix-b335c7f4",
+                "title": "Cuatro Vientos (Rey & Kjavik Remix)"
+              },
+              {
+                "events": 36,
+                "id": "work:cuatro-vientos-963012d6",
+                "title": "Cuatro Vientos"
+              },
+              {
+                "events": 23,
+                "id": "work:tierra-1b00aee7",
+                "title": "Tierra"
+              },
+              {
+                "events": 19,
+                "id": "work:guacamayo-44af49df",
+                "title": "Guacamayo"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 225,
+            "first_month": "2024-05",
+            "frequency": "roots-resilience",
+            "id": "author:yatao-topic-3627471e",
+            "impact": 1029,
+            "last_month": "2026-04",
+            "name": "Yatao - Topic",
+            "peak_months": [
+              [
+                "2024-06",
+                22
+              ],
+              [
+                "2024-08",
+                19
+              ],
+              [
+                "2025-04",
+                19
+              ],
+              [
+                "2024-10",
+                18
+              ]
+            ],
+            "plain_name": "Yatao",
+            "top_works": [
+              {
+                "events": 43,
+                "id": "work:phoenix-2bc12938",
+                "title": "Phoenix"
+              },
+              {
+                "events": 30,
+                "id": "work:listen-to-the-mountains-349fa04c",
+                "title": "Listen to the Mountains"
+              },
+              {
+                "events": 21,
+                "id": "work:follow-the-moon-23175301",
+                "title": "Follow The Moon"
+              },
+              {
+                "events": 17,
+                "id": "work:song-of-soulshine-418427dd",
+                "title": "Song of Soulshine"
+              },
+              {
+                "events": 15,
+                "id": "work:shadows-of-the-great-tree-feat-nadia-simon-7f15b7d0",
+                "title": "Shadows of the Great Tree (feat. Nadia Simon)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 181,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "author:chantress-seba-topic-0e304068",
+            "impact": 999,
+            "last_month": "2026-05",
+            "name": "Chantress Seba - Topic",
+            "peak_months": [
+              [
+                "2025-03",
+                25
+              ],
+              [
+                "2025-11",
+                20
+              ],
+              [
+                "2026-02",
+                15
+              ],
+              [
+                "2024-10",
+                12
+              ]
+            ],
+            "plain_name": "Chantress Seba",
+            "top_works": [
+              {
+                "events": 12,
+                "id": "work:rising-into-light-e1d5f749",
+                "title": "Rising Into Light"
+              },
+              {
+                "events": 12,
+                "id": "work:find-peace-b17ccbd5",
+                "title": "Find Peace"
+              },
+              {
+                "events": 11,
+                "id": "work:dream-prayer-8389fe40",
+                "title": "Dream Prayer"
+              },
+              {
+                "events": 9,
+                "id": "work:water-sound-healing-live-40d5ce5d",
+                "title": "Water Sound Healing (Live)"
+              },
+              {
+                "events": 8,
+                "id": "work:forest-spirits-live-eccb0603",
+                "title": "Forest Spirits (Live)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 234,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "author:nessi-gomes-topic-d91210ae",
+            "impact": 924,
+            "last_month": "2026-04",
+            "name": "Nessi Gomes - Topic",
+            "peak_months": [
+              [
+                "2024-07",
+                26
+              ],
+              [
+                "2024-10",
+                24
+              ],
+              [
+                "2025-09",
+                19
+              ],
+              [
+                "2024-08",
+                17
+              ]
+            ],
+            "plain_name": "Nessi Gomes",
+            "top_works": [
+              {
+                "events": 32,
+                "id": "work:as-you-will-shye-ben-tzur-cover-ae2b6dbc",
+                "title": "As You Will [Shye Ben Tzur Cover]"
+              },
+              {
+                "events": 30,
+                "id": "work:all-related-dd3e07ec",
+                "title": "All Related"
+              },
+              {
+                "events": 28,
+                "id": "work:these-walls-11c47b2d",
+                "title": "These Walls"
+              },
+              {
+                "events": 26,
+                "id": "work:morning-mirrors-kareem-ra-hani-remix-5ff03028",
+                "title": "Morning Mirrors [Kareem Raïhani Remix]"
+              },
+              {
+                "events": 23,
+                "id": "work:all-related-heartbeat-mix-8622b5e0",
+                "title": "All Related (Heartbeat Mix)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 202,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "author:sam-garrett-topic-cc54009c",
+            "impact": 831,
+            "last_month": "2026-05",
+            "name": "Sam Garrett - Topic",
+            "peak_months": [
+              [
+                "2024-10",
+                19
+              ],
+              [
+                "2025-04",
+                18
+              ],
+              [
+                "2025-02",
+                16
+              ],
+              [
+                "2025-01",
+                12
+              ]
+            ],
+            "plain_name": "Sam Garrett",
+            "top_works": [
+              {
+                "events": 25,
+                "id": "work:asatoma-2e0ceedf",
+                "title": "Asatoma"
+              },
+              {
+                "events": 22,
+                "id": "work:mama-937b9de4",
+                "title": "Mama"
+              },
+              {
+                "events": 22,
+                "id": "work:higher-than-the-mountains-f11c88cb",
+                "title": "Higher Than The Mountains"
+              },
+              {
+                "events": 20,
+                "id": "work:om-ganesha-cfdaee7f",
+                "title": "Om Ganesha"
+              },
+              {
+                "events": 13,
+                "id": "work:root-down-deep-487e9661",
+                "title": "Root Down Deep"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 177,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "author:deya-dova-topic-197425ee",
+            "impact": 783,
+            "last_month": "2026-04",
+            "name": "Deya Dova - Topic",
+            "peak_months": [
+              [
+                "2025-07",
+                17
+              ],
+              [
+                "2024-09",
+                16
+              ],
+              [
+                "2025-01",
+                16
+              ],
+              [
+                "2024-10",
+                15
+              ]
+            ],
+            "plain_name": "Deya Dova",
+            "top_works": [
+              {
+                "events": 37,
+                "id": "work:valley-of-the-ancients-mose-remix-4f87f1a2",
+                "title": "Valley of the Ancients (Mose Remix)"
+              },
+              {
+                "events": 24,
+                "id": "work:footsteps-in-the-stars-6c51384b",
+                "title": "Footsteps In The Stars"
+              },
+              {
+                "events": 23,
+                "id": "work:grandmother-tree-the-feathered-serpent-3b5e3646",
+                "title": "Grandmother Tree & The Feathered Serpent"
+              },
+              {
+                "events": 18,
+                "id": "work:myth-of-the-cave-a0ccba64",
+                "title": "Myth of the Cave"
+              },
+              {
+                "events": 11,
+                "id": "work:footsteps-in-the-stars-temple-step-project-dakini-remix-078f7a41",
+                "title": "Footsteps In The Stars (Temple Step Project & Dakini Remix)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 188,
+            "first_month": "2024-08",
+            "frequency": "unclassified",
+            "id": "author:tetouze-topic-0aa4edfa",
+            "impact": 742,
+            "last_month": "2026-04",
+            "name": "Tetouze - Topic",
+            "peak_months": [
+              [
+                "2024-11",
+                47
+              ],
+              [
+                "2025-04",
+                22
+              ],
+              [
+                "2025-01",
+                17
+              ],
+              [
+                "2026-01",
+                17
+              ]
+            ],
+            "plain_name": "Tetouze",
+            "top_works": [
+              {
+                "events": 13,
+                "id": "work:dune-caravan-599c03d7",
+                "title": "Dune caravan"
+              },
+              {
+                "events": 13,
+                "id": "work:asian-yantra-da47da7b",
+                "title": "Asian yantra"
+              },
+              {
+                "events": 11,
+                "id": "work:dasan-feat-anello-capuano-c7506ac8",
+                "title": "Dasan (feat. Anello Capuano)"
+              },
+              {
+                "events": 8,
+                "id": "work:sahoti-feat-lehna-e39008a5",
+                "title": "Sahoti (feat. Lehna)"
+              },
+              {
+                "events": 7,
+                "id": "work:candrasekhara-feat-gaiea-sanskrit-505cf159",
+                "title": "Candrasekhara (feat. Gaiea Sanskrit)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 171,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "author:little-whale-topic-48a7a636",
+            "impact": 664,
+            "last_month": "2026-05",
+            "name": "Little Whale - Topic",
+            "peak_months": [
+              [
+                "2024-08",
+                17
+              ],
+              [
+                "2024-06",
+                13
+              ],
+              [
+                "2024-07",
+                13
+              ],
+              [
+                "2024-10",
+                13
+              ]
+            ],
+            "plain_name": "Little Whale",
+            "top_works": [
+              {
+                "events": 63,
+                "id": "work:aguila-de-oro-6d16ccca",
+                "title": "Aguila De Oro"
+              },
+              {
+                "events": 24,
+                "id": "work:tejedora-c-smica-9682a606",
+                "title": "Tejedora Cósmica"
+              },
+              {
+                "events": 12,
+                "id": "work:terra-99583209",
+                "title": "Terra"
+              },
+              {
+                "events": 11,
+                "id": "work:aguila-de-oro-ecstatic-mix-7ac0b1b4",
+                "title": "Aguila de Oro (Ecstatic Mix)"
+              },
+              {
+                "events": 11,
+                "id": "work:canci-n-de-protecci-n-f9a5e08e",
+                "title": "Canción de Protección"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Little%20Whale%20-%20Topic"
+          },
+          {
+            "already_roomed": false,
+            "events": 180,
+            "first_month": "2024-05",
+            "frequency": "consciousness-threshold",
+            "id": "author:emilio-ortiz-714b1f9b",
+            "impact": 500,
+            "last_month": "2026-05",
+            "name": "Emilio Ortiz",
+            "peak_months": [
+              [
+                "2025-01",
+                16
+              ],
+              [
+                "2024-08",
+                13
+              ],
+              [
+                "2024-12",
+                13
+              ],
+              [
+                "2024-05",
+                11
+              ]
+            ],
+            "plain_name": "Emilio Ortiz",
+            "top_works": [
+              {
+                "events": 5,
+                "id": "work:angelic-beings-speak-channeler-reveals-the-prophecy-of-the-great-shift-anne-tuck-8364f8ee",
+                "title": "ANGELIC BEINGS Speak! Channeler REVEALS the PROPHECY of the GREAT Shift | Anne Tucker"
+              },
+              {
+                "events": 3,
+                "id": "work:this-man-just-leaked-the-god-formula-first-ever-public-disclosure-robert-edward-660a67b0",
+                "title": "This Man Just LEAKED the \"God Formula\" - First EVER Public Disclosure | Robert Edward Grant"
+              },
+              {
+                "events": 3,
+                "id": "work:quantum-jump-in-2025-top-intuitive-reveals-massive-3d-5d-split-coming-neelam-sar-6994b429",
+                "title": "QUANTUM JUMP in 2025: Top Intuitive REVEALS Massive 3D/5D SPLIT Coming! | Neelam Sareen"
+              },
+              {
+                "events": 2,
+                "id": "work:what-just-happened-the-architect-activated-metatron-mode-robert-edward-grant-308400f8",
+                "title": "WHAT JUST HAPPENED?! The ARCHITECT Activated METATRON Mode | Robert Edward Grant"
+              },
+              {
+                "events": 2,
+                "id": "work:angels-warn-earth-is-cracking-open-if-you-re-seeing-this-you-re-first-wave-flash-9989ec87",
+                "title": "Angels WARN: Earth Is CRACKING Open — If You’re Seeing This, You’re FIRST WAVE (Flash UPDATE)"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Emilio%20Ortiz"
+          },
+          {
+            "already_roomed": false,
+            "events": 152,
+            "first_month": "2024-08",
+            "frequency": "time-attention",
+            "id": "author:daniel-scranton-895e17ab",
+            "impact": 335,
+            "last_month": "2026-04",
+            "name": "Daniel Scranton",
+            "peak_months": [
+              [
+                "2024-11",
+                18
+              ],
+              [
+                "2025-02",
+                16
+              ],
+              [
+                "2024-09",
+                13
+              ],
+              [
+                "2024-12",
+                13
+              ]
+            ],
+            "plain_name": "Daniel Scranton",
+            "top_works": [
+              {
+                "events": 2,
+                "id": "work:the-solar-flash-3-days-of-darkness-are-they-coming-thymus-the-collective-of-asce-cbdd3f20",
+                "title": "The Solar Flash & 3 Days of Darkness…Are They Coming? ∞Thymus: The Collective of Ascended Masters"
+              },
+              {
+                "events": 2,
+                "id": "work:your-blockages-challenges-the-creators-channeled-by-daniel-scranton-88595205",
+                "title": "Your Blockages & Challenges ∞The Creators, Channeled by Daniel Scranton"
+              },
+              {
+                "events": 2,
+                "id": "work:the-11-11-energies-what-they-ll-do-the-9d-arcturian-council-channeled-by-daniel-97904329",
+                "title": "The 11/11 Energies & What They’ll Do ∞The 9D Arcturian Council, Channeled by Daniel Scranton"
+              },
+              {
+                "events": 2,
+                "id": "work:what-type-of-lightworker-are-you-the-9d-arcturian-council-channeled-by-daniel-sc-4e5944b2",
+                "title": "What Type of Lightworker Are You? ∞The 9D Arcturian Council, Channeled by Daniel Scranton"
+              },
+              {
+                "events": 2,
+                "id": "work:introducing-quan-yin-ascended-master-the-divine-feminine-quan-yin-channeled-by-d-3eff4d68",
+                "title": "Introducing Quan Yin: Ascended Master & The Divine Feminine ∞Quan Yin, Channeled by Daniel Scranton"
+              }
+            ],
+            "trace": "/api/field-stories/urs-field-story/trace/author/Daniel%20Scranton"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unroomed high-signal works",
+      "purpose": "Find individual works that repeatedly carried a state and may need direct concept links.",
+      "result": {
+        "candidates": [
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 51,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "work:om-ganesha-dance-meditation-6bec0fc1",
+            "impact": 351,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2025-01",
+                6
+              ],
+              [
+                "2024-12",
+                5
+              ],
+              [
+                "2025-11",
+                5
+              ],
+              [
+                "2025-12",
+                5
+              ]
+            ],
+            "title": "Om Ganesha (Dance Meditation)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aom-ganesha-dance-meditation-6bec0fc1"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 37,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "work:the-water-blessing-song-mose-binder-remix-3b4700c4",
+            "impact": 330,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-07",
+                4
+              ],
+              [
+                "2025-02",
+                4
+              ],
+              [
+                "2024-09",
+                3
+              ],
+              [
+                "2024-11",
+                3
+              ]
+            ],
+            "title": "The Water Blessing Song (Mose & Binder Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Athe-water-blessing-song-mose-binder-remix-3b4700c4"
+          },
+          {
+            "already_roomed": false,
+            "author": "Danit - Topic",
+            "events": 71,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:naturaleza-mose-edit-8119cff0",
+            "impact": 278,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2026-04",
+                8
+              ],
+              [
+                "2025-12",
+                6
+              ],
+              [
+                "2025-11",
+                5
+              ],
+              [
+                "2024-07",
+                4
+              ]
+            ],
+            "title": "Naturaleza (Mose Edit)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Anaturaleza-mose-edit-8119cff0"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 39,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "work:all-my-life-is-a-ceremony-mose-remix-9263505b",
+            "impact": 273,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-10",
+                3
+              ],
+              [
+                "2025-11",
+                3
+              ],
+              [
+                "2024-07",
+                2
+              ],
+              [
+                "2024-08",
+                2
+              ]
+            ],
+            "title": "All My Life is a Ceremony (Mose Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aall-my-life-is-a-ceremony-mose-remix-9263505b"
+          },
+          {
+            "already_roomed": false,
+            "author": "Ram Dass - Topic",
+            "events": 35,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:heart-takes-flight-30e114db",
+            "impact": 245,
+            "last_month": "2026-03",
+            "peak_months": [
+              [
+                "2024-10",
+                8
+              ],
+              [
+                "2024-07",
+                5
+              ],
+              [
+                "2024-05",
+                2
+              ],
+              [
+                "2024-09",
+                2
+              ]
+            ],
+            "title": "Heart Takes Flight",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aheart-takes-flight-30e114db"
+          },
+          {
+            "already_roomed": false,
+            "author": "Little Whale - Topic",
+            "events": 63,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:aguila-de-oro-6d16ccca",
+            "impact": 238,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-07",
+                6
+              ],
+              [
+                "2024-08",
+                6
+              ],
+              [
+                "2025-02",
+                6
+              ],
+              [
+                "2024-05",
+                5
+              ]
+            ],
+            "title": "Aguila De Oro",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aaguila-de-oro-6d16ccca"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yaima - Topic",
+            "events": 57,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:paradise-4f101e5a",
+            "impact": 226,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                12
+              ],
+              [
+                "2025-11",
+                10
+              ],
+              [
+                "2025-12",
+                6
+              ],
+              [
+                "2025-10",
+                5
+              ]
+            ],
+            "title": "Paradise",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aparadise-4f101e5a"
+          },
+          {
+            "already_roomed": false,
+            "author": "Danit - Topic",
+            "events": 56,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:cuatro-vientos-rey-kjavik-remix-b335c7f4",
+            "impact": 222,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-07",
+                5
+              ],
+              [
+                "2025-02",
+                5
+              ],
+              [
+                "2024-08",
+                4
+              ],
+              [
+                "2024-10",
+                4
+              ]
+            ],
+            "title": "Cuatro Vientos (Rey & Kjavik Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Acuatro-vientos-rey-kjavik-remix-b335c7f4"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yaima - Topic",
+            "events": 55,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:gajumaru-1603cb6e",
+            "impact": 218,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2026-03",
+                5
+              ],
+              [
+                "2026-04",
+                5
+              ],
+              [
+                "2025-08",
+                4
+              ],
+              [
+                "2025-09",
+                4
+              ]
+            ],
+            "title": "Gajumaru",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Agajumaru-1603cb6e"
+          },
+          {
+            "already_roomed": false,
+            "author": "Poranguí - Topic",
+            "events": 50,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:iluminar-f1cd583b",
+            "impact": 200,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                10
+              ],
+              [
+                "2025-06",
+                5
+              ],
+              [
+                "2024-05",
+                4
+              ],
+              [
+                "2024-11",
+                3
+              ]
+            ],
+            "title": "Iluminar",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Ailuminar-f1cd583b"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 47,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "work:te-nande-mose-remix-a4ddaa5f",
+            "impact": 186,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                8
+              ],
+              [
+                "2025-11",
+                8
+              ],
+              [
+                "2024-07",
+                3
+              ],
+              [
+                "2024-11",
+                3
+              ]
+            ],
+            "title": "Te Nande (Mose Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Ate-nande-mose-remix-a4ddaa5f"
+          },
+          {
+            "already_roomed": false,
+            "author": "Pai Tunes",
+            "events": 45,
+            "first_month": "2025-06",
+            "frequency": "unclassified",
+            "id": "work:the-most-beautiful-voices-in-the-universe-relaxation-music-ethereal-vocal-music-c953e187",
+            "impact": 180,
+            "last_month": "2025-11",
+            "peak_months": [
+              [
+                "2025-07",
+                25
+              ],
+              [
+                "2025-08",
+                14
+              ],
+              [
+                "2025-06",
+                4
+              ],
+              [
+                "2025-10",
+                1
+              ]
+            ],
+            "title": "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Athe-most-beautiful-voices-in-the-universe-relaxation-music-ethereal-vocal-music-c953e187"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 45,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "work:vuela-con-el-viento-mose-remix-f39a975a",
+            "impact": 178,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-10",
+                4
+              ],
+              [
+                "2025-08",
+                4
+              ],
+              [
+                "2025-11",
+                4
+              ],
+              [
+                "2024-07",
+                3
+              ]
+            ],
+            "title": "Vuela con el Viento (Mose Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Avuela-con-el-viento-mose-remix-f39a975a"
+          },
+          {
+            "already_roomed": false,
+            "author": "Maneesh De Moor - Topic",
+            "events": 44,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:mother-s-heartbeat-6a2aa99b",
+            "impact": 176,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-12",
+                7
+              ],
+              [
+                "2025-01",
+                6
+              ],
+              [
+                "2025-02",
+                3
+              ],
+              [
+                "2025-03",
+                3
+              ]
+            ],
+            "title": "Mother's Heartbeat",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Amother-s-heartbeat-6a2aa99b"
+          },
+          {
+            "already_roomed": false,
+            "author": "Xuqutopi - Topic",
+            "events": 46,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:agradezco-cc0f5e3e",
+            "impact": 172,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-05",
+                4
+              ],
+              [
+                "2024-08",
+                4
+              ],
+              [
+                "2025-01",
+                4
+              ],
+              [
+                "2026-05",
+                4
+              ]
+            ],
+            "title": "Agradezco",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aagradezco-cc0f5e3e"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yatao - Topic",
+            "events": 43,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:phoenix-2bc12938",
+            "impact": 172,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2025-06",
+                6
+              ],
+              [
+                "2024-06",
+                5
+              ],
+              [
+                "2024-10",
+                5
+              ],
+              [
+                "2025-03",
+                5
+              ]
+            ],
+            "title": "Phoenix",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aphoenix-2bc12938"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 41,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "work:spirit-divine-42006e3e",
+            "impact": 162,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                5
+              ],
+              [
+                "2025-11",
+                5
+              ],
+              [
+                "2024-07",
+                3
+              ],
+              [
+                "2026-04",
+                3
+              ]
+            ],
+            "title": "Spirit Divine",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aspirit-divine-42006e3e"
+          },
+          {
+            "already_roomed": false,
+            "author": "Poranguí - Topic",
+            "events": 40,
+            "first_month": "2024-06",
+            "frequency": "unclassified",
+            "id": "work:danza-del-viento-live-00933062",
+            "impact": 160,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                4
+              ],
+              [
+                "2025-07",
+                4
+              ],
+              [
+                "2025-08",
+                4
+              ],
+              [
+                "2024-07",
+                3
+              ]
+            ],
+            "title": "Danza Del Viento (Live)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Adanza-del-viento-live-00933062"
+          },
+          {
+            "already_roomed": false,
+            "author": "Sariel Orenda - Topic",
+            "events": 40,
+            "first_month": "2024-06",
+            "frequency": "unclassified",
+            "id": "work:azul-fedad4da",
+            "impact": 158,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-09",
+                4
+              ],
+              [
+                "2025-06",
+                4
+              ],
+              [
+                "2025-11",
+                4
+              ],
+              [
+                "2024-08",
+                3
+              ]
+            ],
+            "title": "Azul",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aazul-fedad4da"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yaima - Topic",
+            "events": 40,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:citadella-401b45c8",
+            "impact": 158,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2026-04",
+                6
+              ],
+              [
+                "2024-10",
+                4
+              ],
+              [
+                "2025-02",
+                3
+              ],
+              [
+                "2026-01",
+                3
+              ]
+            ],
+            "title": "Citadella",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Acitadella-401b45c8"
+          },
+          {
+            "already_roomed": false,
+            "author": "Mose - Topic",
+            "events": 40,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "work:cura-coraz-n-b075869d",
+            "impact": 158,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2025-11",
+                5
+              ],
+              [
+                "2024-07",
+                4
+              ],
+              [
+                "2024-11",
+                3
+              ],
+              [
+                "2025-01",
+                3
+              ]
+            ],
+            "title": "Cura Corazón",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Acura-coraz-n-b075869d"
+          },
+          {
+            "already_roomed": false,
+            "author": "Sukhmani - Topic",
+            "events": 39,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:ash-bone-9e964639",
+            "impact": 156,
+            "last_month": "2026-02",
+            "peak_months": [
+              [
+                "2024-10",
+                6
+              ],
+              [
+                "2024-07",
+                5
+              ],
+              [
+                "2024-06",
+                4
+              ],
+              [
+                "2024-05",
+                3
+              ]
+            ],
+            "title": "Ash + Bone",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aash-bone-9e964639"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yaima - Topic",
+            "events": 40,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:old-stories-gajumaru-revisioned-a3be4d1f",
+            "impact": 156,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2025-06",
+                8
+              ],
+              [
+                "2024-10",
+                7
+              ],
+              [
+                "2024-05",
+                4
+              ],
+              [
+                "2025-09",
+                4
+              ]
+            ],
+            "title": "Old Stories - Gajumaru (Revisioned)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aold-stories-gajumaru-revisioned-a3be4d1f"
+          },
+          {
+            "already_roomed": false,
+            "author": "Maneesh De Moor - Topic",
+            "events": 38,
+            "first_month": "2024-07",
+            "frequency": "unclassified",
+            "id": "work:silent-awakening-8b52b726",
+            "impact": 152,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2026-01",
+                5
+              ],
+              [
+                "2024-09",
+                3
+              ],
+              [
+                "2025-08",
+                3
+              ],
+              [
+                "2025-09",
+                3
+              ]
+            ],
+            "title": "Silent Awakening",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Asilent-awakening-8b52b726"
+          },
+          {
+            "already_roomed": false,
+            "author": "Ayla Schafer - Topic",
+            "events": 38,
+            "first_month": "2024-05",
+            "frequency": "devotional-body",
+            "id": "work:fluyendo-6a6f39a6",
+            "impact": 148,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                6
+              ],
+              [
+                "2024-09",
+                3
+              ],
+              [
+                "2025-06",
+                3
+              ],
+              [
+                "2024-05",
+                2
+              ]
+            ],
+            "title": "Fluyendo",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Afluyendo-6a6f39a6"
+          },
+          {
+            "already_roomed": false,
+            "author": "Deya Dova - Topic",
+            "events": 37,
+            "first_month": "2024-07",
+            "frequency": "devotional-body",
+            "id": "work:valley-of-the-ancients-mose-remix-4f87f1a2",
+            "impact": 148,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2025-01",
+                7
+              ],
+              [
+                "2024-12",
+                5
+              ],
+              [
+                "2024-07",
+                2
+              ],
+              [
+                "2024-09",
+                2
+              ]
+            ],
+            "title": "Valley of the Ancients (Mose Remix)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Avalley-of-the-ancients-mose-remix-4f87f1a2"
+          },
+          {
+            "already_roomed": false,
+            "author": "Ayla Schafer - Topic",
+            "events": 37,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "work:guiding-and-protecting-8ee9f1e8",
+            "impact": 146,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                10
+              ],
+              [
+                "2025-09",
+                3
+              ],
+              [
+                "2024-08",
+                2
+              ],
+              [
+                "2024-09",
+                2
+              ]
+            ],
+            "title": "Guiding and Protecting",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aguiding-and-protecting-8ee9f1e8"
+          },
+          {
+            "already_roomed": false,
+            "author": "Puentes - Topic",
+            "events": 37,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:q-antataita-77e803f5",
+            "impact": 146,
+            "last_month": "2026-04",
+            "peak_months": [
+              [
+                "2024-10",
+                8
+              ],
+              [
+                "2024-11",
+                4
+              ],
+              [
+                "2024-05",
+                3
+              ],
+              [
+                "2025-01",
+                3
+              ]
+            ],
+            "title": "Q’antataita",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Aq-antataita-77e803f5"
+          },
+          {
+            "already_roomed": false,
+            "author": "Yaima - Topic",
+            "events": 37,
+            "first_month": "2024-06",
+            "frequency": "devotional-body",
+            "id": "work:rebirth-revisioned-1bbd667e",
+            "impact": 146,
+            "last_month": "2026-01",
+            "peak_months": [
+              [
+                "2025-06",
+                9
+              ],
+              [
+                "2024-08",
+                3
+              ],
+              [
+                "2024-10",
+                3
+              ],
+              [
+                "2025-07",
+                3
+              ]
+            ],
+            "title": "Rebirth (Revisioned)",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Arebirth-revisioned-1bbd667e"
+          },
+          {
+            "already_roomed": false,
+            "author": "Danit - Topic",
+            "events": 36,
+            "first_month": "2024-05",
+            "frequency": "unclassified",
+            "id": "work:cuatro-vientos-963012d6",
+            "impact": 140,
+            "last_month": "2026-05",
+            "peak_months": [
+              [
+                "2024-06",
+                5
+              ],
+              [
+                "2024-11",
+                4
+              ],
+              [
+                "2024-05",
+                3
+              ],
+              [
+                "2024-08",
+                3
+              ]
+            ],
+            "title": "Cuatro Vientos",
+            "trace": "/api/field-stories/urs-field-story/trace/work/work%3Acuatro-vientos-963012d6"
+          }
+        ]
+      }
+    },
+    {
+      "name": "monthly wave compass",
+      "purpose": "Make time questions cheap: which wave was primary in a month, and what carried it?",
+      "result": {
+        "strongest_months": [
+          {
+            "axes": {
+              "insight": 16,
+              "inspiration": 290,
+              "intensity": 1825,
+              "pressure": 10,
+              "vitality": 3148
+            },
+            "events": 1659,
+            "frequency": "devotional-body",
+            "month": "2024-10",
+            "top_authors": [
+              {
+                "events": 150,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 71,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 59,
+                "id": "author:ayla-schafer-topic-d261f6f3",
+                "name": "Ayla Schafer - Topic"
+              },
+              {
+                "events": 56,
+                "id": "author:ajeet-topic-caa3e33e",
+                "name": "Ajeet - Topic"
+              },
+              {
+                "events": 55,
+                "id": "author:music-library-uploads-3d8f848f",
+                "name": "Music Library Uploads"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 12,
+                "id": "work:paradise-4f101e5a",
+                "title": "Paradise"
+              },
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 10,
+                "id": "work:emergence-live-colorado-sound-studios-7d44fce8",
+                "title": "Emergence - Live @ Colorado Sound Studios"
+              },
+              {
+                "author_id": "author:ayla-schafer-topic-d261f6f3",
+                "events": 10,
+                "id": "work:guiding-and-protecting-8ee9f1e8",
+                "title": "Guiding and Protecting"
+              },
+              {
+                "author_id": "author:porangu-topic-c9cc4328",
+                "events": 10,
+                "id": "work:iluminar-f1cd583b",
+                "title": "Iluminar"
+              },
+              {
+                "author_id": "author:akari-aryaca-topic-aa59671d",
+                "events": 9,
+                "id": "work:jupiter-day-5-844053d8",
+                "title": "Jupiter -Day 5"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 82,
+              "inspiration": 306,
+              "intensity": 1931,
+              "pressure": 28,
+              "vitality": 2838
+            },
+            "events": 1758,
+            "frequency": "devotional-body",
+            "month": "2025-01",
+            "top_authors": [
+              {
+                "events": 63,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 58,
+                "id": "author:liquid-bloom-topic-ced4eda5",
+                "name": "Liquid Bloom - Topic"
+              },
+              {
+                "events": 52,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 50,
+                "id": "author:porangu-topic-c9cc4328",
+                "name": "Poranguí - Topic"
+              },
+              {
+                "events": 29,
+                "id": "author:mei-lan-topic-ce22b3aa",
+                "name": "Mei-lan - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:porangu-topic-c9cc4328",
+                "events": 8,
+                "id": "work:stardust-mose-remix-5ec64d57",
+                "title": "Stardust (Mose Remix)"
+              },
+              {
+                "author_id": "author:akriza-topic-f985e28b",
+                "events": 7,
+                "id": "work:dhyana-6452aa17",
+                "title": "Dhyana"
+              },
+              {
+                "author_id": "author:baptiste-sejourne-topic-88feb0a5",
+                "events": 7,
+                "id": "work:tiden-inne-mose-remix-48356ac4",
+                "title": "Tiden Inne (Mose Remix)"
+              },
+              {
+                "author_id": "author:deya-dova-topic-197425ee",
+                "events": 7,
+                "id": "work:valley-of-the-ancients-mose-remix-4f87f1a2",
+                "title": "Valley of the Ancients (Mose Remix)"
+              },
+              {
+                "author_id": "author:porangu-topic-c9cc4328",
+                "events": 6,
+                "id": "work:arcoiris-a5dbe9b2",
+                "title": "Arcoiris"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 52,
+              "inspiration": 312,
+              "intensity": 1779,
+              "pressure": 8,
+              "vitality": 2874
+            },
+            "events": 1622,
+            "frequency": "devotional-body",
+            "month": "2024-07",
+            "top_authors": [
+              {
+                "events": 217,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 74,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 49,
+                "id": "author:ajeet-topic-caa3e33e",
+                "name": "Ajeet - Topic"
+              },
+              {
+                "events": 48,
+                "id": "author:empty-artist-topic-110e6fc4",
+                "name": "Empty Artist - Topic"
+              },
+              {
+                "events": 31,
+                "id": "author:liquid-bloom-topic-ced4eda5",
+                "name": "Liquid Bloom - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 11,
+                "id": "work:emergence-live-colorado-sound-studios-7d44fce8",
+                "title": "Emergence - Live @ Colorado Sound Studios"
+              },
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 9,
+                "id": "work:rebirth-live-colorado-sound-studios-7704cc46",
+                "title": "Rebirth - Live @ Colorado Sound Studios"
+              },
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 9,
+                "id": "work:the-sacred-live-colorado-sound-studios-1b750eac",
+                "title": "The Sacred - Live @ Colorado Sound Studios"
+              },
+              {
+                "author_id": "author:ape-chimba-topic-a18b6575",
+                "events": 8,
+                "id": "work:amoriri-feat-eby-n-e3a2aa81",
+                "title": "Amoriri (feat. Ebyän)"
+              },
+              {
+                "author_id": "author:yaima-topic-79b40e08",
+                "events": 8,
+                "id": "work:chasing-antares-live-colorado-sound-studios-2538e7d5",
+                "title": "Chasing Antares - Live @ Colorado Sound Studios"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 60,
+              "inspiration": 284,
+              "intensity": 1610,
+              "pressure": 6,
+              "vitality": 2524
+            },
+            "events": 1471,
+            "frequency": "devotional-body",
+            "month": "2025-04",
+            "top_authors": [
+              {
+                "events": 52,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 44,
+                "id": "author:porangu-topic-c9cc4328",
+                "name": "Poranguí - Topic"
+              },
+              {
+                "events": 37,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 31,
+                "id": "author:al-marconi-topic-ee254fde",
+                "name": "Al Marconi - Topic"
+              },
+              {
+                "events": 28,
+                "id": "author:liquid-bloom-topic-ced4eda5",
+                "name": "Liquid Bloom - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 7,
+                "id": "work:east-forest-2025-d72b6fe4",
+                "title": "east forest 2025"
+              },
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 6,
+                "id": "work:https-www-youtube-com-watch-v-f7576df5",
+                "title": "https://www.youtube.com/watch?v="
+              },
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 6,
+                "id": "work:peace-alysha-brilla-7b4ebf85",
+                "title": "peace alysha brilla"
+              },
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 4,
+                "id": "work:16-9-bet365bn-oao-generic-15s-us-8de2a876",
+                "title": "16 9 bet365BN OAO Generic 15s US"
+              },
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 4,
+                "id": "work:16-9-bet365bn-oao-generic-6s-us-0ee510f5",
+                "title": "16 9 bet365BN OAO Generic 6s US"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 14,
+              "inspiration": 260,
+              "intensity": 1587,
+              "pressure": 4,
+              "vitality": 2468
+            },
+            "events": 1457,
+            "frequency": "devotional-body",
+            "month": "2024-08",
+            "top_authors": [
+              {
+                "events": 96,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 46,
+                "id": "author:gabriel-lugo-english-7a678776",
+                "name": "Gabriel Lugo (English)"
+              },
+              {
+                "events": 37,
+                "id": "author:ajeet-topic-caa3e33e",
+                "name": "Ajeet - Topic"
+              },
+              {
+                "events": 35,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 34,
+                "id": "author:malte-marten-topic-a85ffe18",
+                "name": "Malte Marten - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:little-whale-topic-48a7a636",
+                "events": 6,
+                "id": "work:aguila-de-oro-6d16ccca",
+                "title": "Aguila De Oro"
+              },
+              {
+                "author_id": "author:alexia-chellun-topic-94a40e4d",
+                "events": 5,
+                "id": "work:healing-song-12ff280c",
+                "title": "Healing Song"
+              },
+              {
+                "author_id": "author:unknown-50d8b4a9",
+                "events": 4,
+                "id": "work:9-news-6bf8e467",
+                "title": "9 News"
+              },
+              {
+                "author_id": "author:xuqutopi-topic-88dd4b45",
+                "events": 4,
+                "id": "work:agradezco-cc0f5e3e",
+                "title": "Agradezco"
+              },
+              {
+                "author_id": "author:danit-topic-88e32e40",
+                "events": 4,
+                "id": "work:cuatro-vientos-rey-kjavik-remix-b335c7f4",
+                "title": "Cuatro Vientos (Rey & Kjavik Remix)"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 70,
+              "inspiration": 422,
+              "intensity": 1411,
+              "pressure": 16,
+              "vitality": 2246
+            },
+            "events": 1274,
+            "frequency": "devotional-body",
+            "month": "2025-07",
+            "top_authors": [
+              {
+                "events": 60,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 50,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 49,
+                "id": "author:porangu-topic-c9cc4328",
+                "name": "Poranguí - Topic"
+              },
+              {
+                "events": 49,
+                "id": "author:relaxing-music-topic-7dbd3b7c",
+                "name": "Relaxing Music - Topic"
+              },
+              {
+                "events": 39,
+                "id": "author:ananda-frequencies-789d011b",
+                "name": "Ananda Frequencies"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:pai-tunes-90ffc537",
+                "events": 25,
+                "id": "work:the-most-beautiful-voices-in-the-universe-relaxation-music-ethereal-vocal-music-c953e187",
+                "title": "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation"
+              },
+              {
+                "author_id": "author:ananda-frequencies-789d011b",
+                "events": 6,
+                "id": "work:arcturian-healing-frequency-light-codes-to-awaken-your-soul-heal-deep-pain-and-a-b15b5aa6",
+                "title": "Arcturian Healing Frequency | Light Codes to Awaken Your Soul, Heal Deep Pain and Activate Your DNA"
+              },
+              {
+                "author_id": "author:relaxing-music-topic-7dbd3b7c",
+                "events": 6,
+                "id": "work:heartbeat-of-the-earth-f6766222",
+                "title": "Heartbeat of the Earth"
+              },
+              {
+                "author_id": "author:topic-d039cb79",
+                "events": 6,
+                "id": "work:metamorphosis-1880924b",
+                "title": "Metamorphosis"
+              },
+              {
+                "author_id": "author:ananda-frequencies-789d011b",
+                "events": 4,
+                "id": "work:arcturian-song-starseed-light-codes-432hz-a-portal-to-higher-dimensions-6b99fc9a",
+                "title": "ARCTURIAN SONG | Starseed Light Codes (432Hz) A Portal to Higher Dimensions"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 56,
+              "inspiration": 258,
+              "intensity": 1410,
+              "pressure": 6,
+              "vitality": 2362
+            },
+            "events": 1290,
+            "frequency": "devotional-body",
+            "month": "2025-03",
+            "top_authors": [
+              {
+                "events": 62,
+                "id": "author:east-forest-topic-ea4f8b42",
+                "name": "East Forest - Topic"
+              },
+              {
+                "events": 62,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 36,
+                "id": "author:mose-topic-578ba32d",
+                "name": "Mose - Topic"
+              },
+              {
+                "events": 35,
+                "id": "author:porangu-topic-c9cc4328",
+                "name": "Poranguí - Topic"
+              },
+              {
+                "events": 31,
+                "id": "author:malte-marten-topic-a85ffe18",
+                "name": "Malte Marten - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:mei-lan-topic-ce22b3aa",
+                "events": 5,
+                "id": "work:crossroads-ed92f021",
+                "title": "Crossroads"
+              },
+              {
+                "author_id": "author:yatao-topic-3627471e",
+                "events": 5,
+                "id": "work:phoenix-2bc12938",
+                "title": "Phoenix"
+              },
+              {
+                "author_id": "author:mei-lan-topic-ce22b3aa",
+                "events": 4,
+                "id": "work:calling-3ba657d1",
+                "title": "Calling"
+              },
+              {
+                "author_id": "author:liquid-bloom-topic-ced4eda5",
+                "events": 4,
+                "id": "work:eternal-horizons-temple-step-project-remix-b88922a3",
+                "title": "Eternal Horizons (Temple Step Project Remix)"
+              },
+              {
+                "author_id": "author:jason-stephenson-guided-sleep-meditation-949d379a",
+                "events": 4,
+                "id": "work:guided-sleep-meditation-attract-miracles-as-you-sleep-c930e7a4",
+                "title": "Guided Sleep Meditation: Attract Miracles As You Sleep"
+              }
+            ]
+          },
+          {
+            "axes": {
+              "insight": 42,
+              "inspiration": 220,
+              "intensity": 1426,
+              "pressure": 12,
+              "vitality": 2158
+            },
+            "events": 1308,
+            "frequency": "devotional-body",
+            "month": "2024-06",
+            "top_authors": [
+              {
+                "events": 94,
+                "id": "author:karunesh-topic-f11240bd",
+                "name": "Karunesh - Topic"
+              },
+              {
+                "events": 70,
+                "id": "author:yaima-topic-79b40e08",
+                "name": "Yaima - Topic"
+              },
+              {
+                "events": 52,
+                "id": "author:ajeet-topic-caa3e33e",
+                "name": "Ajeet - Topic"
+              },
+              {
+                "events": 44,
+                "id": "author:parijat-topic-e689c694",
+                "name": "Parijat - Topic"
+              },
+              {
+                "events": 40,
+                "id": "author:dean-evenson-topic-0bf4972c",
+                "name": "Dean Evenson - Topic"
+              }
+            ],
+            "top_works": [
+              {
+                "author_id": "author:karunesh-topic-f11240bd",
+                "events": 14,
+                "id": "work:here-now-82fcd850",
+                "title": "Here & Now"
+              },
+              {
+                "author_id": "author:karunesh-topic-f11240bd",
+                "events": 14,
+                "id": "work:the-circle-0c52d65d",
+                "title": "The Circle"
+              },
+              {
+                "author_id": "author:karunesh-topic-f11240bd",
+                "events": 12,
+                "id": "work:coming-home-88a9d068",
+                "title": "Coming Home"
+              },
+              {
+                "author_id": "author:karunesh-topic-f11240bd",
+                "events": 12,
+                "id": "work:expansion-456bf4c1",
+                "title": "Expansion"
+              },
+              {
+                "author_id": "author:karunesh-topic-f11240bd",
+                "events": 12,
+                "id": "work:heaven-earth-c34c847a",
+                "title": "Heaven & Earth"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "next nourishment",
+      "purpose": "Keep the next pass small and alive.",
+      "result": {
+        "actions": [
+          "Promote the top unroomed authors into the story only when their trace shows repeated impact, not just one current fascination.",
+          "Use each candidate trace path before writing a room, so the room is contribution-derived.",
+          "For YouTube, prioritize author waves first, then works, then month-specific questions.",
+          "For chapter-level fiction questions, add lawful chapter notes before claiming exact chapter links."
+        ]
+      }
+    }
+  ],
+  "counts": {
+    "already_roomed_authors": 49,
+    "authors_indexed": 895,
+    "significant_works_indexed": 14,
+    "unroomed_author_candidates": 11,
+    "unroomed_work_candidates": 33,
+    "works_indexed": 1718
+  },
+  "generated_at": "2026-05-07T10:23:14.962975+00:00",
+  "schema_version": "influence-breath-cycle/v1",
+  "source_counts": {
+    "platform_spaces": {
+      "audible": 541,
+      "manual-lineage": 15,
+      "youtube": 27470,
+      "youtube-music": 148
+    },
+    "sources": {
+      "audible-browser": 60,
+      "audible-library": 233,
+      "audible-listen-history": 50,
+      "audible-purchase-history": 198,
+      "manual-anchor": 15,
+      "youtube-browser": 77,
+      "youtube-music-browser": 28,
+      "youtube-music-myactivity": 120,
+      "youtube-myactivity": 363,
+      "youtube-takeout": 27030
+    }
+  },
+  "story_slug": "urs-field-story",
+  "thresholds": {
+    "author_min_events_for_unroomed_candidate": 150,
+    "work_min_events_for_unroomed_candidate": 35
+  }
+}
