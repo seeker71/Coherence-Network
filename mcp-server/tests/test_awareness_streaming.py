@@ -16,9 +16,62 @@ def test_awareness_tools_are_registered() -> None:
         "coherence_awareness_stream",
         "coherence_node_message_send",
         "coherence_node_messages",
+        "coherence_get_field_story",
+        "coherence_get_field_story_artifact",
+        "coherence_contribute_field_story",
     }
 
     assert required <= set(mcp_server.TOOL_MAP)
+
+
+def test_field_story_tools_route_to_api(monkeypatch) -> None:
+    get_calls: list[tuple[str, dict | None]] = []
+    post_calls: list[tuple[str, dict]] = []
+
+    def fake_get(path: str, params: dict | None = None) -> dict:
+        get_calls.append((path, params))
+        return {"path": path}
+
+    def fake_post(path: str, body: dict) -> dict:
+        post_calls.append((path, body))
+        return {"ok": True}
+
+    monkeypatch.setattr(mcp_server, "api_get", fake_get)
+    monkeypatch.setattr(mcp_server, "api_post", fake_post)
+
+    assert mcp_server.dispatch("coherence_get_field_story", {"slug": "urs-field-story"}) == {
+        "path": "/api/field-stories/urs-field-story"
+    }
+    assert mcp_server.dispatch(
+        "coherence_get_field_story_artifact",
+        {"slug": "urs-field-story", "artifact_id": "chronological-story"},
+    ) == {"path": "/api/field-stories/urs-field-story/artifacts/chronological-story"}
+    assert mcp_server.dispatch(
+        "coherence_contribute_field_story",
+        {
+            "slug": "urs-field-story",
+            "contributor_id": "agent:test",
+            "artifact_id": "chronological-story",
+            "summary": "Clarify an anchor.",
+        },
+    ) == {"ok": True}
+
+    assert get_calls == [
+        ("/api/field-stories/urs-field-story", None),
+        ("/api/field-stories/urs-field-story/artifacts/chronological-story", None),
+    ]
+    assert post_calls == [
+        (
+            "/api/field-stories/urs-field-story/contributions",
+            {
+                "contributor_id": "agent:test",
+                "artifact_id": "chronological-story",
+                "contribution_type": "addition",
+                "summary": "Clarify an anchor.",
+                "content_markdown": "",
+            },
+        )
+    ]
 
 
 def test_agent_invitation_dispatch_routes_to_api(monkeypatch) -> None:

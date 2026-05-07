@@ -98,6 +98,8 @@ data/coherence.db
 
 # Runtime artifacts that pollute worktrees (don't commit)
 api/data/*.db
+api/data/field_story_contributions.jsonl
+api/output/
 **/tsconfig.tsbuildinfo
 test-results/
 web/test-results/

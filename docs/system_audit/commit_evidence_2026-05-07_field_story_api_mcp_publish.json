@@ -1,0 +1,171 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/field-story-api-mcp-20260507",
+  "commit_scope": "Publish the curated Urs field-story corpus with API, web, MCP, npm package metadata, attribution hooks, local verifier repairs, and guide-first agent flow aliases.",
+  "files_owned": [
+    "docs/field/urs/**",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_service.py",
+    "web/app/field/urs/page.tsx",
+    "mcp-server/**",
+    "AGENT.md",
+    "AGENTS.md",
+    "Makefile",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m json.tool docs/field/urs/manifest.json",
+      "cd api && python3 -m pytest -q tests/test_field_story_agent_surface.py tests/test_entity_view_attribution.py tests/test_meeting_resonance_capture.py",
+      "cd mcp-server && python3 -m pytest -q tests/test_awareness_streaming.py",
+      "cd web && npm run build",
+      "cd mcp-server && npm pack --dry-run",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh --start"
+    ],
+    "notes": [
+      "Local worktree web validation passed after repairing the existing people dynamic-route conflict and required root/list-page verifier text.",
+      "MCP npm dry-run package contains source files only; Python bytecode cache is excluded by package file globs.",
+      "prompt-guide/start-guide aliases keep older gate commands working while making the user-facing flow guide-first."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending GitHub PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI, merge, and public deploy validation are still pending. npm package publish completed separately."
+  },
+  "idea_ids": [
+    "profile-contribution-derived-data",
+    "coherence-network-agent-pipeline",
+    "idea-fecc6d087c4e-mcp-npm-pypi-publish"
+  ],
+  "spec_ids": [
+    "field-story-agent-surface"
+  ],
+  "task_ids": [
+    "field-story-api-mcp-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "source memory",
+        "field-story owner",
+        "requirements"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "packaging"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api pytest: 47 passed, 5 warnings",
+    "mcp pytest: 8 passed",
+    "web build: Next.js production build passed with /field/urs route",
+    "local verifier: Local worktree web validation passed",
+    "npm pack dry-run: coherence-mcp-server@0.5.3 tarball includes 8 source files",
+    "npm publish: coherence-mcp-server@0.5.3 published with latest tag"
+  ],
+  "change_files": [
+    ".gitignore",
+    "AGENT.md",
+    "AGENTS.md",
+    "Makefile",
+    "README.md",
+    "api/app/main.py",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_service.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/app/services/mcp_tool_registry.py",
+    "api/tests/test_field_story_agent_surface.py",
+    "docs/field/urs/README.md",
+    "docs/field/urs/anchors/education_anchors.json",
+    "docs/field/urs/anchors/event_meeting_anchors.json",
+    "docs/field/urs/anchors/influence_anchors.json",
+    "docs/field/urs/anchors/manual_reading_anchors.json",
+    "docs/field/urs/anchors/project_lineage_anchors.json",
+    "docs/field/urs/anchors/resource_timeline.json",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/audible_series_events.jsonl",
+    "docs/field/urs/output/audible_series_report.md",
+    "docs/field/urs/output/audible_series_summary.json",
+    "docs/field/urs/output/browser_trace_summary.json",
+    "docs/field/urs/output/chronological_story_with_frequency.md",
+    "docs/field/urs/output/clusters.md",
+    "docs/field/urs/output/current_frequency_spectrum.md",
+    "docs/field/urs/output/deep_frequency_reading.md",
+    "docs/field/urs/output/field_report.md",
+    "docs/field/urs/output/frequency_evolution_report.md",
+    "docs/field/urs/output/frequency_evolution_summary.json",
+    "docs/field/urs/output/frequency_summary.json",
+    "docs/field/urs/output/normalized_events.jsonl",
+    "docs/field/urs/output/ten_year_cluster_report.md",
+    "docs/field/urs/output/ten_year_cluster_summary.json",
+    "docs/field/urs/output/ten_year_events.jsonl",
+    "docs/field/urs/tools/audible_series_analyzer.py",
+    "docs/field/urs/tools/field_listening_analyzer.py",
+    "docs/field/urs/tools/local_browser_history_collector.py",
+    "docs/field/urs/tools/ten_year_field_cluster.py",
+    "docs/field/urs/tools/youtube_two_year_receiver.py",
+    "docs/field/urs/tools/youtube_two_year_scrape_expression.js",
+    "docs/shared/ecosystem-table.md",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/__init__.py",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/glama.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/server.json",
+    "mcp-server/smithery.yaml",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "skills/coherence-network/SKILL.md",
+    "scripts/prompt_entry_gate.sh",
+    "skills/coherence-network/SKILL.template.md",
+    "specs/field-story-agent-surface.md",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/field/urs/page.tsx",
+    "web/app/page.tsx",
+    "web/app/people/[id]/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents and people can read the contribution-derived field story through API, MCP, web, and packaged MCP metadata, and can submit attributed field-story contribution proposals.",
+    "public_endpoints": [
+      "/api/field-stories",
+      "/api/field-stories/urs-field-story",
+      "/api/field-stories/urs-field-story/artifacts/chronological-story",
+      "/api/field-stories/urs-field-story/spectrum",
+      "/field/urs"
+    ],
+    "test_flows": [
+      "API manifest/artifact/contribution tests",
+      "MCP field-story dispatch tests",
+      "Next.js production build",
+      "Worktree API/web verifier"
+    ]
+  }
+}
