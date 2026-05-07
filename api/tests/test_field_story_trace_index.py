@@ -176,3 +176,35 @@ def test_digital_influence_inventory_registers_full_history_attention():
     assert trace["youtube"]["published_gap"]["missing_2023_events"] > 10000
     assert trace["youtube"]["published_gap"]["missing_before_2024_05_07_events"] > 30000
     assert trace["publication_boundary"].startswith("This compact artifact publishes")
+
+
+def test_audible_history_spectrum_registers_captured_history_waves():
+    story = field_story_service.get_field_story("urs-field-story", include_story=False)
+    artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
+
+    assert "audible-history-spectrum" in artifact_ids
+    assert "trace-audible-history-spectrum" in artifact_ids
+    assert "audible-history-spectrum-builder" in artifact_ids
+
+    report_response = client.get("/api/field-stories/urs-field-story/artifacts/audible-history-spectrum")
+    assert report_response.status_code == 200, report_response.text
+    report = report_response.json()["content"]
+    assert "Library holdings: `233` rows" in report
+    assert "Visible web listen history: `50` rows" in report
+    assert "Ryk Brown: 92" in report
+
+    trace_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-audible-history-spectrum")
+    assert trace_response.status_code == 200, trace_response.text
+    trace = json.loads(trace_response.json()["content"])
+    capture = trace["capture_shape"]
+    assert trace["schema_version"] == "audible-history-spectrum/v1"
+    assert capture["library_rows"] == 233
+    assert capture["purchase_rows"] == 198
+    assert capture["visible_listen_history_rows"] == 50
+    assert capture["unique_titles_or_asins"] >= 250
+    assert len(trace["monthly"]) >= 80
+
+    ryk = next(row for row in trace["author_waves"] if row["value"] == "Ryk Brown")
+    assert ryk["events"] == 92
+    assert ryk["sources"]["audible-purchase-history"] == 40
+    assert ryk["wave_schema"] == ["month", "events", "pressure", "intensity", "inspiration", "insight", "vitality"]

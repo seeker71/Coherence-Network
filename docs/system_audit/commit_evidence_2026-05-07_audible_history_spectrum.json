@@ -1,0 +1,103 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/audible-full-history-20260507",
+  "commit_scope": "Add an Audible-specific history spectrum that turns captured library, 2016-2026 purchases, and visible listen-history rows into monthly author, series, and title waves.",
+  "files_owned": [
+    "specs/audible-history-spectrum.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/tools/audible_history_spectrum.py",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/system_audit/commit_evidence_2026-05-07_audible_history_spectrum.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "command -v npx >/dev/null 2>&1",
+      "playwright-cli state-load /Users/ursmuff/CoherenceFieldAnalysis/input/audible/playwright/audible-auth-state.json; playwright-cli goto https://www.audible.com/account/listen-history",
+      "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/audible_history_spectrum.py",
+      "python3 scripts/validate_spec_quality.py --file specs/audible-history-spectrum.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_audible_history_spectrum.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "Playwright auth-state probe redirects Audible account listen-history to Amazon sign-in, so no additional web rows were extracted in this breath.",
+      "Audible spectrum uses every local Audible source body currently captured: 233 library rows, 198 purchase rows, and 50 visible web listen-history rows.",
+      "The generated trace contains 481 Audible events, 259 unique titles or ASINs, and 85 monthly slices."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof passes; CI and public deploy proof are still pending."
+  },
+  "idea_ids": [
+    "audible-history-spectrum",
+    "profile-contribution-derived-data",
+    "story-frequency-influence-interlinks"
+  ],
+  "spec_ids": [
+    "audible-history-spectrum"
+  ],
+  "task_ids": [
+    "audible-full-history-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source memory",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 9 passed, 7 warnings",
+    "ruff: All checks passed",
+    "spec quality validation: OK",
+    "commit evidence validation: OK",
+    "rebase: current branch is up to date with origin/main",
+    "worktree_pr_guard local: ready_for_push=True",
+    "check_pr_followthrough strict: stale_codex_prs=0",
+    "audible spectrum: audible_events=481",
+    "audible spectrum: unique_titles_or_asins=259",
+    "source counts: library=233 purchase=198 visible-listen=50"
+  ],
+  "change_files": [
+    "specs/audible-history-spectrum.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/tools/audible_history_spectrum.py",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/system_audit/commit_evidence_2026-05-07_audible_history_spectrum.json"
+  ],
+  "change_intent": "docs_only"
+}
