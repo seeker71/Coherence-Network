@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 148
+**Total files**: 153
 
 | Route | File | Purpose |
 |---|---|---|
@@ -56,6 +56,7 @@
 | `/federation` | [page.tsx](federation/page.tsx) | _no top-of-file purpose_ |
 | `/feed` | [page.tsx](feed/page.tsx) | _no top-of-file purpose_ |
 | `/feed/you` | [page.tsx](feed/you/page.tsx) | _no top-of-file purpose_ |
+| `/field/urs` | [page.tsx](field/urs/page.tsx) | _no top-of-file purpose_ |
 | `/flow` | [page.tsx](flow/page.tsx) | _no top-of-file purpose_ |
 | `/friction` | [page.tsx](friction/page.tsx) | _no top-of-file purpose_ |
 | `/gates` | [page.tsx](gates/page.tsx) | _no top-of-file purpose_ |
@@ -89,14 +90,17 @@
 | `/ontology` | [page.tsx](ontology/page.tsx) | _no top-of-file purpose_ |
 | `/` | [page.tsx](page.tsx) | _no top-of-file purpose_ |
 | `/peers` | [page.tsx](peers/page.tsx) | _no top-of-file purpose_ |
+| `/people/[id]/edit` | [page.tsx](people/[id]/edit/page.tsx) | _no top-of-file purpose_ |
 | `/people/[id]` | [page.tsx](people/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/people/aly-constantine` | [page.tsx](people/aly-constantine/page.tsx) | _no top-of-file purpose_ |
 | `/people/aubrey-marcus` | [page.tsx](people/aubrey-marcus/page.tsx) | _no top-of-file purpose_ |
 | `/people/bloomurian` | [page.tsx](people/bloomurian/page.tsx) | _no top-of-file purpose_ |
 | `/people/edit-your-profile` | [page.tsx](people/edit-your-profile/page.tsx) | _no top-of-file purpose_ |
 | `/people/elios` | [page.tsx](people/elios/page.tsx) | _no top-of-file purpose_ |
+| `/people/elon-musk` | [page.tsx](people/elon-musk/page.tsx) | _no top-of-file purpose_ |
 | `/people/grab` | [page.tsx](people/grab/page.tsx) | _no top-of-file purpose_ |
 | `/people/ilena` | [page.tsx](people/ilena/page.tsx) | _no top-of-file purpose_ |
+| `/people/joshua-golden` | [page.tsx](people/joshua-golden/page.tsx) | _no top-of-file purpose_ |
 | `/people/lex-fridman` | [page.tsx](people/lex-fridman/page.tsx) | _no top-of-file purpose_ |
 | `/people/matias-de-stefano` | [page.tsx](people/matias-de-stefano/page.tsx) | _no top-of-file purpose_ |
 | `/people/mose` | [page.tsx](people/mose/page.tsx) | _no top-of-file purpose_ |
@@ -129,6 +133,7 @@
 | `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
+| `/silence/built/design-log` | [page.tsx](silence/built/design-log/page.tsx) | _no top-of-file purpose_ |
 | `/silence/built` | [page.tsx](silence/built/page.tsx) | _no top-of-file purpose_ |
 | `/silence` | [page.tsx](silence/page.tsx) | _no top-of-file purpose_ |
 | `/specs/[spec_id]` | [page.tsx](specs/[spec_id]/page.tsx) | _no top-of-file purpose_ |
