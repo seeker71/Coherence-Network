@@ -1,16 +1,23 @@
 # Chronological Story with Frequency Evolution
 
-Trace links: [reading](../anchors/manual_reading_anchors.json), [education](../anchors/education_anchors.json), [influences](../anchors/influence_anchors.json), [resources](../anchors/resource_timeline.json), [project lineage](../anchors/project_lineage_anchors.json), [events and meetings](../anchors/event_meeting_anchors.json), [frequency evolution](frequency_evolution_report.md), [ten-year clusters](ten_year_cluster_report.md), [audible series](audible_series_report.md).
+Trace links: [reading](../anchors/manual_reading_anchors.json), [education](../anchors/education_anchors.json), [influences](../anchors/influence_anchors.json), [resources](../anchors/resource_timeline.json), [project lineage](../anchors/project_lineage_anchors.json), [events and meetings](../anchors/event_meeting_anchors.json), [frequency evolution](frequency_evolution_report.md), [ten-year clusters](ten_year_cluster_report.md), [audible series](audible_series_report.md), [author waves](../trace/author_index.jsonl), [work waves](../trace/work_index.jsonl), [significant works](../trace/significant_work_index.jsonl), [concept-to-work map](../trace/concept_work_map.json).
+
+Influence discovery shortcuts:
+
+- Childhood and formative works: [Karl May stories](/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories), [Der Lederstrumpf](/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf), [Momo](/api/field-stories/urs-field-story/trace/significant-work/Momo), [Die unendliche Geschichte](/api/field-stories/urs-field-story/trace/significant-work/Die%20unendliche%20Geschichte).
+- Systems fiction and progression worlds: [Daemon](/api/field-stories/urs-field-story/trace/significant-work/Daemon), [Ringworld](/api/field-stories/urs-field-story/trace/significant-work/Ringworld), [The Expanse](/api/field-stories/urs-field-story/trace/significant-work/The%20Expanse), [The Viridian Gate Archives](/api/field-stories/urs-field-story/trace/significant-work/The%20Viridian%20Gate%20Archives), [Kingkiller Chronicle](/api/field-stories/urs-field-story/trace/significant-work/Kingkiller%20Chronicle), [Sword of Truth](/api/field-stories/urs-field-story/trace/significant-work/Sword%20of%20Truth), [First Law World](/api/field-stories/urs-field-story/trace/significant-work/First%20Law%20World), [Spellmonger](/api/field-stories/urs-field-story/trace/significant-work/Spellmonger), [Frontiers Saga](/api/field-stories/urs-field-story/trace/significant-work/Frontiers%20Saga), [Peter F. Hamilton systems fiction](/api/field-stories/urs-field-story/trace/significant-work/Peter%20F.%20Hamilton%20Systems%20Fiction).
+- Listening authors and state carriers: [Mose](/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic), [Yaima](/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic), [Porangui](/api/field-stories/urs-field-story/trace/author/porangui), [Liquid Bloom](/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic), [Ajeet](/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic), [Ayla Schafer](/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic), [Malte Marten](/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic).
+- To relate a vision concept to a work, start with `/api/field-stories/urs-field-story/trace/concept/{concept_id}` and then open the linked significant-work record. Exact chapter claims remain a later layer until chapter notes or lawful chapter summaries are added.
 
 ## Childhood: The Books That Had Weight
 
 Reading was difficult, so the books that made it through did not arrive lightly.
 
-Karl May and Der Lederstrumpf brought the frontier first: wilderness, testing, danger, honor, exile, courage, and the strange dignity of someone moving through a world that was not built for them. The frequency was not yet intellectual. It was path, fire, horse, forest, outsider, oath.
+[Karl May stories](/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories) and [Der Lederstrumpf](/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf) brought the frontier first: wilderness, testing, danger, honor, exile, courage, and the strange dignity of someone moving through a world that was not built for them. The frequency was not yet intellectual. It was path, fire, horse, forest, outsider, oath.
 
-Momo brought time. Not clock time, but living time. Attention could be stolen. Listening could heal. A quiet child could sense that speed was not the same as life. That frequency entered early as time-attention: the refusal to let the inner world be harvested by urgency.
+[Momo](/api/field-stories/urs-field-story/trace/significant-work/Momo) brought time. Not clock time, but living time. Attention could be stolen. Listening could heal. A quiet child could sense that speed was not the same as life. That frequency entered early as time-attention: the refusal to let the inner world be harvested by urgency.
 
-Die unendliche Geschichte brought imagination as a real country. It was not only a story about escape. It was a story where naming, forgetting, wishing, losing oneself, and finding one's way back all mattered. The magical signal was grounded in effort: if reading was hard, then crossing that story took energy, and the energy made the imprint deeper.
+[Die unendliche Geschichte](/api/field-stories/urs-field-story/trace/significant-work/Die%20unendliche%20Geschichte) brought imagination as a real country. It was not only a story about escape. It was a story where naming, forgetting, wishing, losing oneself, and finding one's way back all mattered. The magical signal was grounded in effort: if reading was hard, then crossing that story took energy, and the energy made the imprint deeper.
 
 At this point nothing had to be a system. Nothing had to be a mission. The field was learning by resonance: frontier, time, listening, imagination, moral testing.
 
@@ -88,7 +95,7 @@ This was not yet "the network." It was mobility, solar, storage, risk, manufactu
 
 The Audible trace from 2016 through 2021 shows a long systems-imagination phase.
 
-Ryk Brown's Frontiers Saga carried fleet, survival, distributed responsibility, and frontier resilience. Terry Mancour's Spellmonger carried defense, institutions, community-scale magic, and the problem of protecting a world while still building it. Terry Goodkind carried truth, will, moral pressure, and the danger of power. Peter F. Hamilton carried civilization at large scale: networks, abundance, post-scarcity, consequence. The Expanse carried politics, infrastructure, tribal tension, and the fragile human layer inside big systems. Daniel Suarez's Daemon brought autonomous systems, network power, and distributed agency.
+[Ryk Brown's Frontiers Saga](/api/field-stories/urs-field-story/trace/significant-work/Frontiers%20Saga) carried fleet, survival, distributed responsibility, and frontier resilience. [Terry Mancour's Spellmonger](/api/field-stories/urs-field-story/trace/significant-work/Spellmonger) carried defense, institutions, community-scale magic, and the problem of protecting a world while still building it. [Terry Goodkind's Sword of Truth](/api/field-stories/urs-field-story/trace/significant-work/Sword%20of%20Truth) carried truth, will, moral pressure, and the danger of power. [Peter F. Hamilton](/api/field-stories/urs-field-story/trace/significant-work/Peter%20F.%20Hamilton%20Systems%20Fiction) carried civilization at large scale: networks, abundance, post-scarcity, consequence. [The Expanse](/api/field-stories/urs-field-story/trace/significant-work/The%20Expanse) carried politics, infrastructure, tribal tension, and the fragile human layer inside big systems. [Daniel Suarez's Daemon](/api/field-stories/urs-field-story/trace/significant-work/Daemon) brought autonomous systems, network power, and distributed agency.
 
 The frequency was broad and scattered because the field was collecting world models. It did not yet know what they were for. It only knew that systems mattered: fleets, institutions, economies, protocols, civilizations, game worlds, magic rules, hidden constraints.
 
@@ -98,7 +105,7 @@ From inside the life, this could still look like reading, listening, studying, w
 
 From 2022 into 2023, the systems field intensified through progression worlds, magic systems, virtual realities, training arcs, institutions, enemies, alliances, and the cost of becoming capable.
 
-Viridian Gate Archives brought identity inside simulation and pressure inside game mechanics. Andrew Rowe sharpened rules, advancement, and explicit magic logic. Kel Kade, Ryk Brown, Terry Mancour, and Terry Goodkind kept agency under pressure active.
+[Viridian Gate Archives](/api/field-stories/urs-field-story/trace/significant-work/The%20Viridian%20Gate%20Archives) brought identity inside simulation and pressure inside game mechanics. Andrew Rowe sharpened rules, advancement, and explicit magic logic. Kel Kade, [Ryk Brown](/api/field-stories/urs-field-story/trace/author/Ryk%20Brown), [Terry Mancour](/api/field-stories/urs-field-story/trace/author/Terry%20Mancour), and [Terry Goodkind](/api/field-stories/urs-field-story/trace/author/Terry%20Goodkind) kept agency under pressure active.
 
 The question underneath was practical, even when dressed as fiction: how does a person become capable enough to participate in a world-scale problem without being consumed by it?
 
@@ -108,7 +115,7 @@ The frequency was pressure-training. It was not yet coherent in the later sense.
 
 Late 2023 into May 2024 is where the field begins to change texture.
 
-Music and teachings enter with a different function. Yaima, East Forest, Parijat, Ajeet, Ram Dass, Malte Marten, Alexia Chellun, Jesse Cook, Eckhart Tolle, Dr. Joe Dispenza, and related streams begin to pull attention from map into state.
+Music and teachings enter with a different function. [Yaima](/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic), East Forest, Parijat, [Ajeet](/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic), Ram Dass, [Malte Marten](/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic), Alexia Chellun, Jesse Cook, Eckhart Tolle, Dr. Joe Dispenza, and related streams begin to pull attention from map into state.
 
 Eckhart Tolle brought presence without drama: the now, ego, stillness, the ordinary doorway. Dr. Joe Dispenza brought meditation, neuroplasticity, self-healing, state change, and the idea that body and future were not separate. The older Ramtha current now had a more embodied neighbor: not only consciousness creating reality as teaching, but practice working on breath, nervous system, meditation, and state. MAPS, tantra, ecstatic dance, contact improv, and related practice fields brought stronger thresholds: altered states, embodiment, relational intelligence, healing, integration, surrender, discipline, discernment.
 
@@ -120,7 +127,7 @@ The frequency shifted from systems-imagination toward devotional-body and consci
 
 From June through December 2024, devotional-body becomes a stronger band.
 
-Yaima, Liquid Bloom, Mose, Ajeet, Karunesh, Porangui, Ayla Schafer, and related ceremonial or body-regulating music recur. Healing Song, The Power Is Here Now, Horizon, Emergence, Heaven & Earth, The Circle, Here & Now, Rebirth, and Expansion become repeated landing places.
+[Yaima](/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic), [Liquid Bloom](/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic), [Mose](/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic), [Ajeet](/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic), Karunesh, [Porangui](/api/field-stories/urs-field-story/trace/author/porangui), [Ayla Schafer](/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic), and related ceremonial or body-regulating music recur. Healing Song, The Power Is Here Now, Horizon, Emergence, Heaven & Earth, The Circle, Here & Now, Rebirth, and Expansion become repeated landing places.
 
 The magic here was not spectacle. It was repetition. The same songs and frequencies returned until the nervous system had places it could recognize.
 
@@ -130,7 +137,7 @@ On June 22, 2024, local git history shows Crypo-Coin-Coherency-Network already b
 
 ## 2025: Threshold Teachings and the First Two Attempts
 
-In 2025, devotional-body stabilizes rather than disappears. Yaima, Mose, Porangui, Liquid Bloom, Malte Marten, Ajeet, Anne Tucker, and Ayla Schafer remain strong. The field keeps returning to prayer, breath, rhythm, tenderness, and earth.
+In 2025, devotional-body stabilizes rather than disappears. [Yaima](/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic), [Mose](/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic), [Porangui](/api/field-stories/urs-field-story/trace/author/porangui), [Liquid Bloom](/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic), [Malte Marten](/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic), [Ajeet](/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic), Anne Tucker, and [Ayla Schafer](/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic) remain strong. The field keeps returning to prayer, breath, rhythm, tenderness, and earth.
 
 At the same time, the threshold band widens. Next Level Soul brings testimony, afterlife, awakening narratives, and discernment. Matias De Stefano brings cosmic memory, earth grids, lineage, and consciousness history. Robert Edward Grant brings new math, geometry, music, symbolic code, sovereignty, and AI. Donald Hoffman brings perception-as-interface. Ramtha brings field training and reality-creation pressure. Aubrey Marcus brings myth, medicine, masculine initiation, and embodied culture. Zach Bush brings soil, microbiome, regenerative health, and the earth-body connection. Emergence Conference brings private awakening toward collective architecture.
 
@@ -152,7 +159,7 @@ This third attempt changed the shape. It did not ask the system to carry everyth
 
 The frequency was still magical, but the container became more grounded. Ideas needed provenance. Views needed to flow back into source. Contributions needed attribution. Agents needed roles. Meetings needed memory. Resonance needed to become visible without being flattened.
 
-Mose becomes the strongest organizing channel in the 2026 listening trace, with Yaima, Porangui, Maneesh De Moor, Malte Marten, Alex Serra, Ayla Schafer, and others continuing the embodied line. Sita Ram, Feel the Love, Surrender to the Moment, Rise from it All, I Pray, Hare Krishna, Tu Hi Hai, and Odonata are not just songs in a log. They are repeated states the system-building body returned to while building.
+[Mose](/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic) becomes the strongest organizing channel in the 2026 listening trace, with [Yaima](/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic), [Porangui](/api/field-stories/urs-field-story/trace/author/porangui), Maneesh De Moor, [Malte Marten](/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic), Alex Serra, [Ayla Schafer](/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic), and others continuing the embodied line. Sita Ram, Feel the Love, Surrender to the Moment, Rise from it All, I Pray, Hare Krishna, Tu Hi Hai, and Odonata are not just songs in a log. They are repeated states the system-building body returned to while building.
 
 Michael Levin enters as science for distributed agency: bioelectricity, morphogenesis, basal cognition, regeneration. Lex Fridman enters as a bridge room where AI, science, engineering, consciousness, humility, and long-form attention can sit together. Elon Musk enters not only through podcasts, but through the already-lived Tesla current: vehicle, solar, Powerwall, manufacturing, capital, risk, and future timelines.
 
@@ -167,13 +174,13 @@ The GitHub record moved in parallel. On April 29, [PR 1273](https://github.com/s
 Now the earlier frequencies could start recognizing each other:
 
 - TheSeeker had entered a forming network before knowing why that mattered.
-- Momo had taught that attention and time must not be extracted.
-- Die unendliche Geschichte had taught that story can become world.
+- [Momo](/api/field-stories/urs-field-story/trace/significant-work/Momo) had taught that attention and time must not be extracted.
+- [Die unendliche Geschichte](/api/field-stories/urs-field-story/trace/significant-work/Die%20unendliche%20Geschichte) had taught that story can become world.
 - Tesla had made future infrastructure physical.
 - RCSL and Muzzle Velocity had already, in the early nineties, made language design, simulation, fuzzy-logic strategy, and progressive capability the verbs of building.
 - Backtracking Model Languages had then made choice, fail, structure, and possibility space technical.
 - Ramtha had brought reality training, mind discipline, and consciousness-as-creative into the field years before the later embodiment wave.
-- Daemon, The Expanse, Spellmonger, Frontiers Saga, and Hamilton had rehearsed autonomous systems, institutions, civilization, and distributed agency.
+- [Daemon](/api/field-stories/urs-field-story/trace/significant-work/Daemon), [The Expanse](/api/field-stories/urs-field-story/trace/significant-work/The%20Expanse), [Spellmonger](/api/field-stories/urs-field-story/trace/significant-work/Spellmonger), [Frontiers Saga](/api/field-stories/urs-field-story/trace/significant-work/Frontiers%20Saga), and [Hamilton](/api/field-stories/urs-field-story/trace/significant-work/Peter%20F.%20Hamilton%20Systems%20Fiction) had rehearsed autonomous systems, institutions, civilization, and distributed agency.
 - Devotional music and movement had taught the body how to regulate.
 - Tantra, contact improv, ecstatic dance, and ceremony had taught coherence relationally.
 - MAPS had kept altered states tied to integration and ethics.

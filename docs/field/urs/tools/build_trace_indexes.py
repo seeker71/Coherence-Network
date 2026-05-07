@@ -16,6 +16,40 @@ WAVE_SCHEMA = ["month", "events", *AXES]
 GENERIC_AUTHORS = {"unknown", "www.youtube.com", "music.youtube.com", "youtube.com"}
 
 SIGNIFICANT_WORK_RULES: dict[str, dict[str, Any]] = {
+    "Karl May stories": {
+        "canonical_title": "Karl May stories",
+        "authors": ["Karl May"],
+        "series_aliases": ["Karl May stories", "Karl May"],
+        "concepts": {
+            "lc-field-edge": ["frontier as moral testing ground", "outsider courage", "path through wilderness"],
+            "lc-boundaries-as-loving-truth": ["honor, oath, and line under pressure"],
+            "lc-discovery": ["movement through an unknown world as formation"],
+            "lc-transmission": ["difficult reading becoming deeper imprint"],
+        },
+        "chapter_probe_terms": {
+            "lc-field-edge": ["frontier", "wilderness", "horse", "trail", "exile"],
+            "lc-boundaries-as-loving-truth": ["honor", "oath", "danger", "courage"],
+            "lc-discovery": ["journey", "path", "stranger", "land"],
+            "lc-transmission": ["reading", "effort", "story", "imprint"],
+        },
+    },
+    "Der Lederstrumpf": {
+        "canonical_title": "Der Lederstrumpf",
+        "authors": ["James Fenimore Cooper"],
+        "series_aliases": ["Der Lederstrumpf", "Leatherstocking Tales"],
+        "concepts": {
+            "lc-field-edge": ["wilderness identity and frontier pressure"],
+            "lc-identity-dissolution": ["belonging between worlds"],
+            "lc-boundaries-as-loving-truth": ["moral line held in hostile terrain"],
+            "lc-transmission": ["challenging childhood reading becoming embodied memory"],
+        },
+        "chapter_probe_terms": {
+            "lc-field-edge": ["wilderness", "forest", "frontier", "trail"],
+            "lc-identity-dissolution": ["name", "tribe", "settler", "between"],
+            "lc-boundaries-as-loving-truth": ["honor", "line", "danger", "truth"],
+            "lc-transmission": ["reading", "effort", "story", "memory"],
+        },
+    },
     "Spellmonger": {
         "canonical_title": "Spellmonger Universe",
         "authors": ["Terry Mancour"],
