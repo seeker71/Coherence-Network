@@ -150,12 +150,34 @@ export default async function PeopleIndexPage({
       {directorySections.map((section) => {
         const items = groups[section.key] || [];
         if (items.length === 0) return null;
+        // Each section header doubles as a filter link — clicking
+        // it narrows the listing to just that section. Same view
+        // as visiting /people?kind={key} directly. When already
+        // filtered to that section, the link goes back to the full
+        // directory.
+        const isCurrentlyFiltered = kindFilter === section.key;
+        const linkHref = isCurrentlyFiltered
+          ? "/people"
+          : `/people?kind=${encodeURIComponent(section.key)}`;
         return (
           <section key={section.key} className="space-y-4">
             <div>
-              <h2 className="text-xs uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))]">
-                {section.title} · {items.length}
-              </h2>
+              <Link
+                href={linkHref}
+                className="group inline-flex items-baseline gap-2 hover:opacity-80 transition-opacity"
+                aria-label={
+                  isCurrentlyFiltered
+                    ? `Show all sections`
+                    : `Show only ${section.title}`
+                }
+              >
+                <h2 className="text-xs uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))]">
+                  {section.title} · {items.length}
+                </h2>
+                <span className="text-[10px] text-muted-foreground/60 group-hover:text-foreground/80 transition-colors">
+                  {isCurrentlyFiltered ? "← all" : "→ filter"}
+                </span>
+              </Link>
               <p className="text-xs text-muted-foreground/80 italic mt-1">
                 {section.lede}
               </p>
