@@ -1322,3 +1322,63 @@ def test_stratify_lifts_high_view_items_into_the_sample():
     # Newest + oldest bands still represented.
     assert 0 in out_idx
     assert 99 in out_idx
+
+
+def test_watch_history_clustering_filters_noise_and_matches_canonical():
+    """Sampling discipline at the encounter side: cluster the
+    watch history into main influences (one edge per channel),
+    filter one-off random watches, match channel names against
+    canonical contributors so the user's body of evidence attaches
+    to the field's existing identities — not to thousands of
+    individual video nodes.
+    """
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "cluster_watch_history",
+        Path(__file__).resolve().parent.parent.parent / "scripts" / "cluster_watch_history.py",
+    )
+    clu = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(clu)
+
+    # Synthetic history: heavy Lex (matches with podcast/official suffix
+    # noise that the normalizer must collapse), light Robert, scattered
+    # one-offs that must be filtered.
+    entries = (
+        [{"subtitles": [{"name": "Lex Fridman Podcast - Official",
+                         "url": "https://www.youtube.com/@lexfridman"}],
+          "title": f"Ep #{i}", "titleUrl": f"https://www.youtube.com/watch?v=lex{i}",
+          "time": "2024-01-15T10:00:00Z"} for i in range(50)]
+        + [{"subtitles": [{"name": "Robert Edward Grant",
+                           "url": "https://www.youtube.com/@RobertEdwardGrant"}],
+            "title": f"REG {i}", "titleUrl": f"https://www.youtube.com/watch?v=reg{i}",
+            "time": "2024-02-15T10:00:00Z"} for i in range(8)]
+        + [{"subtitles": [{"name": f"Random Channel {i}",
+                           "url": f"https://www.youtube.com/@random{i}"}],
+            "title": f"vid {i}", "titleUrl": f"https://www.youtube.com/watch?v=rnd{i}",
+            "time": "2024-03-01T10:00:00Z"} for i in range(3)]
+    )
+    clusters = clu._build_clusters(entries)
+    assert len(clusters) == 5  # Lex + Robert + 3 randoms
+    sig = {k: c for k, c in clusters.items() if len(c["watches"]) >= 5}
+    assert len(sig) == 2  # only Lex + Robert clear the threshold
+
+    # Matching: "Lex Fridman Podcast - Official" must collapse to the
+    # same key as "Lex Fridman" so a single graph edge resolves both.
+    by_name = {
+        "lex fridman": "contributor:lex-fridman",
+        "robert edward grant": "contributor:robert-edward-grant-f7e43ccfb4b0",
+    }
+    by_handle = {"@lexfridman": "contributor:lex-fridman"}
+    matched = [
+        clu._match_cluster(c, by_name, by_handle) for c in sig.values()
+    ]
+    assert "contributor:lex-fridman" in matched
+    assert "contributor:robert-edward-grant-f7e43ccfb4b0" in matched
+    assert all(m is not None for m in matched), (
+        f"every significant cluster should match a known contributor; got {matched}"
+    )
+
+    # Strength curve: more watches → higher strength, capped at 1.
+    assert clu._strength(50) > clu._strength(8) > clu._strength(0) == 0.0
+    assert clu._strength(10000) <= 1.0
