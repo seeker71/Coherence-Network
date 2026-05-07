@@ -65,6 +65,90 @@ def _ensure_app_path() -> None:
             sys.path.insert(0, p)
 
 
+# ── Format readers ────────────────────────────────────────────────────
+
+
+def _read_takeout(path: Path) -> list[dict]:
+    """Read a Google Takeout watch-history file in either format.
+
+    Google Takeout exports YouTube history as JSON or HTML depending
+    on the user's selection. Both carry the same shape — title, video
+    URL, channel name, channel URL, watch time. This reader detects
+    the format and returns a uniform list of entry dicts.
+    """
+    if path.suffix.lower() in (".json",):
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            raise ValueError(f"expected a JSON array, got {type(data).__name__}")
+        return data
+    if path.suffix.lower() in (".html", ".htm"):
+        return _parse_takeout_html(path.read_text(encoding="utf-8"))
+    # Best-effort: try JSON first, then HTML
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except json.JSONDecodeError:
+        pass
+    return _parse_takeout_html(raw)
+
+
+# Each entry in the HTML export wraps in
+# <div class="outer-cell..."> ... <div class="content-cell...body-1">
+# Watched <a href="VIDEO_URL">VIDEO_TITLE</a><br>
+# <a href="CHANNEL_URL">CHANNEL_NAME</a><br>
+# DATE_STRING<br>
+# </div> ...
+_ENTRY_RE = re.compile(
+    r'<div class="content-cell[^"]*body-1[^"]*">'
+    r'(?:Watched|Watched\s+at\s+)?'
+    r'\s*<a href="([^"]+)"[^>]*>(.*?)</a>'  # video URL + title
+    r'(?:<br\s*/?>)?\s*'
+    r'(?:<a href="([^"]*)"[^>]*>(.*?)</a>)?'  # optional channel URL + name
+    r'(?:<br\s*/?>)?\s*([^<]*?)<br',  # date text
+    re.DOTALL,
+)
+
+
+def _strip_html(text: str) -> str:
+    """Drop any nested tags + decode HTML entities."""
+    text = re.sub(r"<[^>]+>", "", text)
+    text = (text.replace("&amp;", "&").replace("&quot;", '"')
+                .replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&nbsp;", " "))
+    return text.strip()
+
+
+def _parse_takeout_html(html: str) -> list[dict]:
+    """Convert Takeout HTML → uniform entry dicts.
+
+    Each surviving match contributes one entry shaped like the JSON
+    export. Removed/private/ad entries that don't expose a watch URL
+    are skipped here so the rest of the pipeline (clustering,
+    matching) doesn't carry noise.
+    """
+    out: list[dict] = []
+    for m in _ENTRY_RE.finditer(html):
+        v_url, v_title, c_url, c_name, when = m.groups()
+        if not v_url or "youtube.com" not in v_url:
+            continue
+        entry = {
+            "title": _strip_html(v_title),
+            "titleUrl": v_url,
+            "time": (when or "").strip(),
+            "subtitles": [],
+        }
+        if c_url and c_name:
+            entry["subtitles"] = [{
+                "name": _strip_html(c_name),
+                "url": c_url,
+            }]
+        out.append(entry)
+    return out
+
+
 # ── Channel normalization & matching ──────────────────────────────────
 
 
@@ -239,14 +323,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"file not found: {args.file}", file=sys.stderr)
         return 2
 
-    raw = args.file.read_text(encoding="utf-8")
     try:
-        entries = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        print(f"could not parse {args.file} as JSON: {exc}", file=sys.stderr)
-        return 2
-    if not isinstance(entries, list):
-        print(f"expected a JSON array, got {type(entries).__name__}", file=sys.stderr)
+        entries = _read_takeout(args.file)
+    except (json.JSONDecodeError, ValueError) as exc:
+        print(f"could not parse {args.file}: {exc}", file=sys.stderr)
         return 2
 
     print(f"reading {len(entries)} watch entries from {args.file.name}")
@@ -311,10 +391,23 @@ def main(argv: list[str] | None = None) -> int:
         print("\n(dry-run — no graph mutations performed)")
         return 0
 
-    # Apply
-    _ensure_app_path()
-    from app.services import graph_service
-    from app.services import resonance_service
+    # Apply via HTTP API so the same script works against any
+    # environment from any machine — no DB credentials needed.
+    import urllib.error
+
+    def _post(path: str, body: dict) -> dict:
+        data = json.dumps(body).encode()
+        req = urllib.request.Request(
+            f"{args.api}{path}", data=data, method="POST",
+            headers={"Content-Type": "application/json", "User-Agent": "curl/8.7.1"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            return {"_err": e.code}
+        except Exception as e:  # noqa: BLE001
+            return {"_err": str(e)}
 
     landed = 0
     for row in plan:
@@ -322,44 +415,51 @@ def main(argv: list[str] | None = None) -> int:
             continue
         target_id = row["target_id"]
         if row["action"] == "stub":
-            # Generate a stable id from the channel handle or name
             handle = _channel_id_from_url(row.get("url"))
             slug = (handle or _normalize_name(row["name"] or "")).strip("@/").replace("/", "-")
             slug = re.sub(r"[^a-z0-9-]", "-", slug.lower()).strip("-") or "watched-channel"
             target_id = f"contributor:{slug}"
-            existing = graph_service.get_node(target_id)
+            # Check if it already exists; create if not
+            check = urllib.request.Request(
+                f"{args.api}/api/graph/nodes/{urllib.parse.quote(target_id)}",
+                headers={"User-Agent": "curl/8.7.1"},
+            )
+            try:
+                urllib.request.urlopen(check, timeout=10)
+                existing = True
+            except Exception:  # noqa: BLE001
+                existing = False
             if not existing:
-                graph_service.create_node(
-                    id=target_id,
-                    type="contributor",
-                    name=row["name"] or slug,
-                    description=row["name"] or slug,
-                    properties={
+                _post("/api/graph/nodes", {
+                    "id": target_id,
+                    "type": "contributor",
+                    "name": row["name"] or slug,
+                    "description": row["name"] or slug,
+                    "properties": {
                         "claimed": False,
                         "contributor_type": "HUMAN",
                         "presences": [{"provider": "youtube", "url": row["url"]}] if row.get("url") else [],
                         "imported_from": "watch_history_clustering",
-                        "image_url": None,
+                        "slug": slug,
                     },
-                )
-                # Attune the new identity against vision concepts
-                try:
-                    resonance_service.attune(target_id)
-                except Exception:  # noqa: BLE001
-                    pass
+                })
+                # Auto-attune against vision concepts
+                _post(f"/api/presences/{urllib.parse.quote(target_id)}/resonances/attune", {})
+
         # Create inspired-by edge
-        edge = graph_service.create_edge_strict(
-            from_id=args.contributor,
-            to_id=target_id,
-            type="inspired-by",
-            properties={
+        edge = _post("/api/edges", {
+            "from_id": args.contributor,
+            "to_id": target_id,
+            "type": "inspired-by",
+            "properties": {
                 "watch_count": row["count"],
                 "source": "youtube_watch_history_cluster",
             },
-            strength=row["strength"],
-            created_by="watch_history_clusterer",
-        )
-        if edge.get("error") != "edge_exists":
+            "strength": row["strength"],
+            "created_by": "watch_history_clusterer",
+        })
+        # 201/200 mean landed; 409 (conflict) means already exists
+        if "_err" not in edge or edge.get("_err") == 409:
             landed += 1
 
     print(f"\nlanded {landed} inspired-by edges to your main influences")
