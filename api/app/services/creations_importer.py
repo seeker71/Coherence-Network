@@ -43,6 +43,58 @@ log = logging.getLogger(__name__)
 # etc.) don't carry creations and would only generate noise.
 _PRESENCE_TYPES = ("contributor", "community", "scene", "network-org")
 
+# Sampling discipline. The body of public work a presence has emitted
+# is much larger than any single feed surfaces. Recency-biased feeds
+# return latest-N; without discipline a presence's "spectrum" becomes
+# whatever they happened to publish last week, not what they have
+# emitted across their career.
+#
+# The discipline:
+# - Per-source cap (`_PER_SOURCE_TARGET`) keeps any one platform from
+#   dominating the presence's emitted spectrum.
+# - When a source returns more than the cap, we stratify across the
+#   returned ordering — oldest, newest, plus an evenly-spaced middle
+#   sample — rather than truncating to first-N.
+# - Coverage gaps are recorded on the contributor node so the body
+#   knows where its sampling is thin and where the spectrum we're
+#   drawing is partial.
+_PER_SOURCE_TARGET = 30
+
+
+def _stratify(items: list[Any], target: int) -> list[Any]:
+    """Stratified sample across an ordered list.
+
+    When ``items`` has at most ``target`` entries the whole list is
+    returned. Otherwise the sample includes the oldest entries (tail
+    of the list, since most feeds list newest-first), the newest
+    entries (head), and an evenly-spaced middle slice — together
+    spanning the breadth of what the source returned rather than
+    concentrating on first-N.
+
+    Returns items in source order so dedupe keys stay stable.
+    """
+    n = len(items)
+    if n <= target or target <= 0:
+        return list(items)
+    # Reserve thirds: newest, evenly-spaced middle, oldest.
+    third = max(1, target // 3)
+    newest = list(range(0, third))
+    oldest = list(range(n - third, n))
+    middle_count = target - len(newest) - len(oldest)
+    if middle_count > 0:
+        # Evenly spaced indexes across the middle band.
+        lo = third
+        hi = n - third - 1
+        if hi <= lo:
+            middle = []
+        else:
+            step = (hi - lo) / (middle_count + 1)
+            middle = [int(lo + step * (i + 1)) for i in range(middle_count)]
+    else:
+        middle = []
+    chosen = sorted(set(newest + middle + oldest))
+    return [items[i] for i in chosen]
+
 
 def _gather_source_urls(presence: dict[str, Any]) -> list[str]:
     """Read every URL on the presence node that a creation source
@@ -244,6 +296,7 @@ def import_for_presence(
     invalid_kind_count = 0
     errors: list[dict[str, Any]] = []
 
+    coverage: dict[str, dict[str, Any]] = {}
     for url in source_urls:
         sources = _matching_sources(url, only=only_source)
         if not sources:
@@ -255,6 +308,19 @@ def import_for_presence(
                 log.warning("creation source %s failed on %s: %s", source.name, url, exc)
                 errors.append({"url": url, "source": source.name, "reason": "fetch_error"})
                 continue
+            # Sampling discipline — stratify across the full returned
+            # ordering when the source surfaced more than the per-source
+            # target. Records what we saw vs what we kept so the body
+            # can sense its own coverage gaps later.
+            returned_total = len(creations)
+            creations = _stratify(creations, _PER_SOURCE_TARGET)
+            entry = coverage.setdefault(
+                source.name,
+                {"returned": 0, "sampled": 0, "urls": []},
+            )
+            entry["returned"] += returned_total
+            entry["sampled"] += len(creations)
+            entry["urls"].append(url)
             for creation in creations:
                 # Normalize kind at the import boundary. `is_valid_kind`
                 # accepts case-insensitive input, but downstream the
@@ -299,12 +365,35 @@ def import_for_presence(
                     else:
                         imported.append(result)
 
+    # Record the coverage map on the presence so the next run, the
+    # rendering layer, and any humans looking at the data can sense
+    # what's been sampled vs what each source returned. Keeps gaps
+    # visible rather than silent.
+    if not dry_run and coverage:
+        from datetime import datetime, timezone
+        try:
+            graph_service.update_node(
+                node_id,
+                properties={
+                    "creations_coverage": {
+                        "by_source": coverage,
+                        "total_returned": sum(c["returned"] for c in coverage.values()),
+                        "total_sampled": sum(c["sampled"] for c in coverage.values()),
+                        "per_source_target": _PER_SOURCE_TARGET,
+                        "sampled_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                },
+            )
+        except Exception:  # noqa: BLE001 — coverage record isn't load-bearing
+            log.debug("coverage record write non-fatal", exc_info=True)
+
     return {
         "node_id": node_id,
         "source_urls": source_urls,
         "creations_imported": len(imported),
         "creations_skipped_dedupe": dedupe_count,
         "creations_skipped_invalid_kind": invalid_kind_count,
+        "creations_coverage": coverage,
         "errors": errors,
         "imported": imported,
         "dry_run": dry_run,

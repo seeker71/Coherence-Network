@@ -1261,3 +1261,33 @@ async def test_get_node_resolves_by_slug_when_id_misses():
             assert r.status_code == 404
     finally:
         _gs.delete_node(node_id)
+
+
+# ── Sampling discipline (creations stratification) ────────────────────
+
+
+def test_stratify_returns_breadth_when_source_returns_more_than_cap():
+    """Sampling discipline: when a source returns more than the
+    per-source target, the importer takes a stratified slice across
+    the full ordering — newest, evenly-spaced middle, oldest — rather
+    than truncating to first-N.
+
+    Without this discipline, a presence's "spectrum" becomes whatever
+    they happened to publish last week, not what they have emitted
+    across their career.
+    """
+    from app.services.creations_importer import _stratify
+
+    # 100 items, cap 30 — should pull a spread, including the very
+    # last item (oldest) and items from the middle band.
+    items = list(range(100))
+    out = _stratify(items, target=30)
+    assert len(out) == 30
+    assert 0 in out, "newest end must be sampled"
+    assert 99 in out, "oldest end must be sampled"
+    middle_hits = [i for i in out if 30 < i < 70]
+    assert middle_hits, "middle band must be represented"
+
+    # Below the cap: pass through unchanged.
+    small = list(range(10))
+    assert _stratify(small, target=30) == small
