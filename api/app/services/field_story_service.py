@@ -15,6 +15,12 @@ from uuid import uuid4
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIELD_ROOT = REPO_ROOT / "docs" / "field"
+FIELD_ROOT_CANDIDATES = (
+    FIELD_ROOT,
+    REPO_ROOT.parent / "docs" / "field",
+    Path("/app/docs/field"),
+    Path("/app/api/docs/field"),
+)
 CONTRIBUTION_LOG = REPO_ROOT / "api" / "data" / "field_story_contributions.jsonl"
 
 
@@ -23,10 +29,13 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _story_dir_for_slug(slug: str) -> Path:
-    for manifest_path in FIELD_ROOT.glob("*/manifest.json"):
-        manifest = _load_json(manifest_path)
-        if manifest.get("slug") == slug:
-            return manifest_path.parent
+    for root in FIELD_ROOT_CANDIDATES:
+        if not root.exists():
+            continue
+        for manifest_path in root.glob("*/manifest.json"):
+            manifest = _load_json(manifest_path)
+            if manifest.get("slug") == slug:
+                return manifest_path.parent
     raise KeyError(f"Unknown field story: {slug}")
 
 
@@ -48,20 +57,27 @@ def _safe_artifact_path(story_dir: Path, relative_path: str) -> Path:
 
 def list_field_stories() -> list[dict[str, Any]]:
     stories: list[dict[str, Any]] = []
-    for manifest_path in sorted(FIELD_ROOT.glob("*/manifest.json")):
-        manifest = _load_manifest(manifest_path.parent)
-        stories.append(
-            {
-                "slug": manifest["slug"],
-                "title": manifest.get("title", ""),
-                "contributor_id": manifest.get("contributor_id"),
-                "status": manifest.get("status", "published"),
-                "summary": manifest.get("summary", ""),
-                "artifact_count": manifest.get("artifact_count", 0),
-                "web": manifest.get("agent_use", {}).get("web"),
-                "read_api": manifest.get("agent_use", {}).get("read_api"),
-            }
-        )
+    seen: set[str] = set()
+    for root in FIELD_ROOT_CANDIDATES:
+        if not root.exists():
+            continue
+        for manifest_path in sorted(root.glob("*/manifest.json")):
+            manifest = _load_manifest(manifest_path.parent)
+            if manifest["slug"] in seen:
+                continue
+            seen.add(manifest["slug"])
+            stories.append(
+                {
+                    "slug": manifest["slug"],
+                    "title": manifest.get("title", ""),
+                    "contributor_id": manifest.get("contributor_id"),
+                    "status": manifest.get("status", "published"),
+                    "summary": manifest.get("summary", ""),
+                    "artifact_count": manifest.get("artifact_count", 0),
+                    "web": manifest.get("agent_use", {}).get("web"),
+                    "read_api": manifest.get("agent_use", {}).get("read_api"),
+                }
+            )
     return stories
 
 

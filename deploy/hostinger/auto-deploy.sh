@@ -136,6 +136,23 @@ docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
 log "docker compose up -d api web pulse"
 docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
 
+sync_field_docs() {
+  if [[ ! -d "$REPO_DIR/docs/field" ]]; then
+    log "field docs: no docs/field directory found (skipped)"
+    return 0
+  fi
+
+  for target_parent in /app/docs /app/api/docs; do
+    log "field docs: syncing docs/field to api:${target_parent}/field"
+    docker compose exec -T api sh -lc "mkdir -p '${target_parent}' && rm -rf '${target_parent}/field'" \
+      2>&1 | tee -a "$LOG_FILE"
+    docker compose cp "$REPO_DIR/docs/field" "api:${target_parent}/field" \
+      2>&1 | tee -a "$LOG_FILE"
+  done
+}
+
+sync_field_docs
+
 # Wait for both containers to reach the "running" state in docker compose.
 # The deeper health check is left to the workflow's Verify Public Deployment
 # step, which curls the real public domain through the full request path
