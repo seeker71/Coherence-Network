@@ -1,0 +1,107 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/influence-next-breath-20260507",
+  "commit_scope": "Extend the influence breath cycle with a generated encounter seed so top unroomed YouTube-derived influences can flow into the graph through the existing encounter CLI.",
+  "files_owned": [
+    "specs/influence-breath-cycle.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/influence_breath_cycle.py",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/input/",
+    "docs/field/urs/input/encounter_next_breath.txt",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/system_audit/commit_evidence_2026-05-07_encounter_next_breath.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/influence_breath_cycle.py --field-dir docs/field/urs",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/influence_breath_cycle.py",
+      "python3 scripts/validate_spec_quality.py --file specs/influence-breath-cycle.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_encounter_next_breath.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "The encounter seed is generated from derived trace indexes only.",
+      "The seed contains 8 reviewed unroomed author candidates and attaches trace evidence as encounter notes.",
+      "The API test verifies field-story artifact registration and parses the seed through scripts/encounter.py without writing graph data."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification if merged."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof passes; CI and deploy validation are still pending."
+  },
+  "idea_ids": [
+    "influence-breath-cycle",
+    "external-presence",
+    "profile-contribution-derived-data"
+  ],
+  "spec_ids": [
+    "influence-breath-cycle",
+    "external-influences-ingest"
+  ],
+  "task_ids": [
+    "influence-next-breath-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source memory",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 7 passed, 5 warnings",
+    "ruff: All checks passed",
+    "spec quality validation: OK",
+    "commit evidence validation: OK",
+    "rebase: branch rebased on origin/main",
+    "worktree_pr_guard local: ready_for_push=True",
+    "check_pr_followthrough strict: stale_codex_prs=0",
+    "encounter seed rows: 8",
+    "privacy boundary excludes raw Takeout archives, browser sessions, cookies, pixels, and paid text"
+  ],
+  "change_files": [
+    "specs/influence-breath-cycle.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/influence_breath_cycle.py",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/input/",
+    "docs/field/urs/input/encounter_next_breath.txt",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/system_audit/commit_evidence_2026-05-07_encounter_next_breath.json"
+  ],
+  "change_intent": "docs_only"
+}

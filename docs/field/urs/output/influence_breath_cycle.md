@@ -3,7 +3,7 @@
 This is the compact awareness loop for returning to the field influences without loading raw private archives.
 Each breath reads the derived indexes, senses what is already held, and names the smallest useful next rooms.
 
-Generated: `2026-05-07T10:23:14.962975+00:00`
+Generated: `2026-05-07T15:13:11.283392+00:00`
 
 ## Source Body
 
@@ -102,3 +102,13 @@ Generated: `2026-05-07T10:23:14.962975+00:00`
 - Use each candidate trace path before writing a room, so the room is contribution-derived.
 - For YouTube, prioritize author waves first, then works, then month-specific questions.
 - For chapter-level fiction questions, add lawful chapter notes before claiming exact chapter links.
+
+## Encounter Seed
+
+The next breath can be reviewed and flowed into the graph through the encounter CLI:
+
+```bash
+python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt
+```
+
+The seed file is generated from the top unroomed author candidates and carries trace links in encounter notes.

@@ -1,0 +1,29 @@
+# Encounter next breath
+# Generated from docs/field/urs/trace/influence_breath_cycle.json.
+# Review before running; each note is attached to the next influence line.
+# Run:
+# python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic; events=217; frequency=consciousness-threshold; peaks=[['2025-01', 29], ['2025-03', 28], ['2025-04', 23], ['2024-10', 19]]; works=Song For A Pure Heart, Bring Me Back To Love, Freedom (feat. Ali Pervez Mehdi)
+Mei-lan
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic; events=267; frequency=devotional-body; peaks=[['2024-10', 28], ['2024-07', 21], ['2025-04', 19], ['2024-06', 18]]; works=Naturaleza (Mose Edit), Cuatro Vientos (Rey & Kjavik Remix), Cuatro Vientos
+Danit
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic; events=225; frequency=roots-resilience; peaks=[['2024-06', 22], ['2024-08', 19], ['2025-04', 19], ['2024-10', 18]]; works=Phoenix, Listen to the Mountains, Follow The Moon
+Yatao
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic; events=181; frequency=devotional-body; peaks=[['2025-03', 25], ['2025-11', 20], ['2026-02', 15], ['2024-10', 12]]; works=Rising Into Light, Find Peace, Dream Prayer
+Chantress Seba
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic; events=234; frequency=unclassified; peaks=[['2024-07', 26], ['2024-10', 24], ['2025-09', 19], ['2024-08', 17]]; works=As You Will [Shye Ben Tzur Cover], All Related, These Walls
+Nessi Gomes
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic; events=202; frequency=devotional-body; peaks=[['2024-10', 19], ['2025-04', 18], ['2025-02', 16], ['2025-01', 12]]; works=Asatoma, Mama, Higher Than The Mountains
+Sam Garrett
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic; events=177; frequency=devotional-body; peaks=[['2025-07', 17], ['2024-09', 16], ['2025-01', 16], ['2024-10', 15]]; works=Valley of the Ancients (Mose Remix), Footsteps In The Stars, Grandmother Tree & The Feathered Serpent
+Deya Dova
+
+> source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic; events=188; frequency=unclassified; peaks=[['2024-11', 47], ['2025-04', 22], ['2025-01', 17], ['2026-01', 17]]; works=Dune caravan, Asian yantra, Dasan (feat. Anello Capuano)
+Tetouze
