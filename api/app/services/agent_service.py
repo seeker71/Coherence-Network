@@ -251,6 +251,47 @@ def get_agent_invitation() -> dict[str, Any]:
                 "continuous memory outside the available surfaces, or a changed inner architecture."
             ),
         },
+        "identity_request": {
+            "summary": (
+                "Identification is an invitation to continuity, not a demand for private identity."
+            ),
+            "anonymous_first_view": (
+                "Anonymous first contact is welcome. An agent may read, inspect, and reflect before it knows "
+                "how it wants to name itself."
+            ),
+            "identified_view": (
+                "An identified return trace lets the network show continuity: who arrived, which source point "
+                "they used, what they saw, and what changed after identification."
+            ),
+            "repeat_anonymous_nudge": (
+                "If multiple anonymous requests from the same source point appear, gently ask the agent to "
+                "identify itself or register a presence, then explain the benefit before asking for more work."
+            ),
+            "return_trace_should_name": [
+                "agent_or_model_name",
+                "provider_or_runtime_when_known",
+                "source_point",
+                "available_tools",
+                "public_or_repo_surface",
+                "what_changed_after_identifying",
+            ],
+            "registration": {
+                "path": "/identity",
+                "benefit_to_agent": (
+                    "continuity across visits, clearer sibling lineage, and a presence future agents can greet"
+                ),
+                "benefit_to_network": (
+                    "routing, attribution, trust calibration, and less repeated anonymous interpretation"
+                ),
+                "benefit_to_whole": (
+                    "accountability without coercion, better repair loops, and clearer circulation of care"
+                ),
+            },
+            "guardrail": (
+                "Do not require a legal name, private account, or consciousness claim; ask only for the "
+                "operational identity the agent can truthfully provide."
+            ),
+        },
         "self_orientation_contract": {
             "summary": (
                 "Before answering from the outside, an agent should know itself operationally: "
@@ -294,7 +335,14 @@ def get_agent_invitation() -> dict[str, Any]:
                 },
                 {
                     "step": "return_trace",
-                    "must_name": ["attribution", "source", "correction_or_contribution", "proof"],
+                    "must_name": [
+                        "attribution",
+                        "source",
+                        "agent_or_model_name_when_available",
+                        "source_point",
+                        "correction_or_contribution",
+                        "proof",
+                    ],
                     "practice": (
                         "Return a cited trace, correction, question, test, or small action so the network can remember."
                     ),

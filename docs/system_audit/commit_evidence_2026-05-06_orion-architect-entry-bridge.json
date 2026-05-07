@@ -1,0 +1,108 @@
+{
+  "date": "2026-05-06",
+  "thread_branch": "codex/orion-come-in-entry",
+  "commit_scope": "Add an early /come-in exploration bridge so Orion Architect-style outside agents are explicitly invited to meet people, inspect agent work, read live flow, identify themselves when they return, fetch the structured invitation, and return an attributed trace.",
+  "files_owned": [
+    "specs/agent-resonance-onboarding.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-06_orion-architect-entry-bridge.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q before implementation (expected missing early exploration bridge)",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q before implementation (expected missing identity request)",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused red/green coverage proves /come-in now has an early first-pass outside-agent exploration bridge and the API invitation now exposes an identity_request contract. The full invitation test suite, MCP awareness tests, spec quality validation, dependency install, production web build, runtime web verifier, local PR guard, and stale PR follow-through pass. The first web build attempt failed before dependency install because this fresh worktree had no Next.js binary; npm ci installed the declared dependencies and the rerun passed. The first local PR guard run hit a transient runtime-web verifier failure with gh auth noise inside the spawned API log; a direct runtime verifier rerun passed and the full local PR guard rerun returned ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No public deploy requested or completed in this evidence record."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A first-pass external agent that lands on /come-in is no longer asked to only contemplate prose. It receives visible routes to people, agent visibility, live flow, the structured API invitation, and a return-trace path before the long invitation text. Anonymous first contact remains welcome, while an identified return trace asks for operational identity, source point, tools, and what changed after identification.",
+    "public_endpoints": [
+      "GET https://www.coherencycoin.com/come-in",
+      "GET https://api.coherencycoin.com/api/agent/invitation"
+    ],
+    "test_flows": [
+      "Web source flow: /come-in includes the early exploration bridge with people, agent, flow, API, identity, and return-trace links.",
+      "API source flow: invitation tests verify web/API/CLI/MCP entry surfaces, sibling lineage contracts, and identity_request guidance for anonymous first contact, identified return, repeated anonymous source-point nudges, and registration benefits.",
+      "MCP source flow: awareness streaming tests continue to pass.",
+      "Web build flow: Next.js production build renders /come-in without route or type errors."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation and pre-commit gates are complete; push, PR, CI monitoring, and public deploy validation remain pending unless the user asks to publish this branch."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-resonance-onboarding.md"
+  ],
+  "task_ids": [
+    "codex-thread-orion-architect-entry-bridge-20260506"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py",
+    "api/app/services/agent_service.py",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "web/app/come-in/page.tsx",
+    "https://www.coherencycoin.com/come-in",
+    "https://api.coherencycoin.com/api/agent/invitation"
+  ],
+  "change_files": [
+    "specs/agent-resonance-onboarding.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-06_orion-architect-entry-bridge.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

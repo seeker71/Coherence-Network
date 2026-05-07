@@ -25,6 +25,7 @@ class WorktreeRisk:
     ahead_of_main: int
     behind_main: int
     has_upstream: bool
+    patch_equivalent_to_main: bool
     risks: list[str]
 
 
@@ -173,6 +174,20 @@ def _ahead_behind_vs_main(worktree_path: Path) -> tuple[int, int]:
     return ahead, behind
 
 
+def _patch_equivalent_to_main(worktree_path: Path) -> bool:
+    """Return true when ahead commits are already represented in origin/main.
+
+    Squash merges preserve the patch while changing the commit hash. `git cherry`
+    marks those commits with `-`; they should be treated as integrated work,
+    not stranded work.
+    """
+    proc = _run_git(["cherry", "-v", "origin/main", "HEAD"], worktree_path)
+    if proc.returncode != 0:
+        return False
+    rows = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    return bool(rows) and all(row.startswith("-") for row in rows)
+
+
 def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
     risks: list[WorktreeRisk] = []
     for row in _parse_worktrees(repo_root):
@@ -190,12 +205,15 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
         dirty = bool(meaningful_dirty_paths)
         ahead, behind = _ahead_behind_vs_main(wt_path)
         has_upstream = _upstream_exists(wt_path)
+        patch_equivalent = ahead > 0 and _patch_equivalent_to_main(wt_path)
         risk_labels: list[str] = []
         if detached:
             risk_labels.append("detached_head")
         if dirty:
             risk_labels.append("dirty_integration_candidate")
-        if ahead > 0 and not has_upstream:
+        if patch_equivalent:
+            risk_labels.append("integrated_patch_equivalent")
+        elif ahead > 0 and not has_upstream:
             risk_labels.append("ahead_without_upstream")
         if risk_labels:
             risks.append(
@@ -207,6 +225,7 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
                     ahead_of_main=ahead,
                     behind_main=behind,
                     has_upstream=has_upstream,
+                    patch_equivalent_to_main=patch_equivalent,
                     risks=risk_labels,
                 )
             )
@@ -242,6 +261,7 @@ def main() -> int:
                 "ahead_of_main": item.ahead_of_main,
                 "behind_main": item.behind_main,
                 "has_upstream": item.has_upstream,
+                "patch_equivalent_to_main": item.patch_equivalent_to_main,
                 "risks": item.risks,
                 "blocking": _is_blocking_risk(item.risks),
             }
