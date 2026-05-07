@@ -24,11 +24,25 @@ From inside the life, this did not need to become a coherent spiritual architect
 
 That thread would later find neighbors in Dr. Joe Dispenza, meditation, coherence practice, field work, and embodied state change. But its first entrance belongs here, in adolescence, as one of the early threshold teachings.
 
+## 1991-1997: HTL Brugg-Windisch, RCSL, and Muzzle Velocity
+
+Computer-science formation began in Switzerland in 1991, at HTL Brugg-Windisch — the applied-engineering school whose technical curriculum is now part of the Fachhochschule Nordwestschweiz. It was here that Urs first worked with Steve G. Bjorg, six years before the college tour that would bring them across the ocean. The first language they built together carried the name RCSL. The summary of these years is short and exact: two students who became one pair of hands designing languages.
+
+When Steve continued to CU Boulder, the work continued across the ocean. By the mid-nineties the collaboration had a third presence — Marc — and a name: digi4fun. The shared output of those years was [Muzzle Velocity](https://en.wikipedia.org/wiki/Muzzle_Velocity_(video_game)), a tactical-and-first-person World War II hybrid for MS-DOS that public sources describe as "in development for two years" before its 1997 release ([Internet Archive — Muzzle Velocity v1.10](https://archive.org/details/muzzle-velocity-v1_10), [MobyGames listing](https://www.mobygames.com/game/4736/muzzle-velocity/), [Tactical Wargamer review](https://tacticalwargamer.com/computergames/muzzlevelocity.htm)). In 1997 the three of them went on a college tour to find the game a publisher.
+
+The technical substrate of Muzzle Velocity already shows what these minds were doing: writing the layer underneath the layer. Fully C++. A custom memory manager. Custom keyboard and mouse handling. A unified file system using handles-to-pointers so memory could be swapped to disk without breaking references. DLL loading inside MS-DOS through the [Phar Lap TNT DOS Extender](https://en.wikipedia.org/wiki/Phar_Lap_(company)), reaching past the 640K limit and into 12-to-16 MB of physical RAM. A custom voxel graphics engine for the first-person sequences, with deformable terrain — public reviews note trees and lamp-posts snapping under tracks, civilians and trains in motion. A markdown-like language for rendering the UI. Fuzzy logic for group dynamics, with strategy attractors. A domain-specific language for vehicle simulation. Top-down strategic control and embodied 3D control unified in one game body — public sources confirm the player commanding "up to 100 units in overhead mode" while also being able to drop into a single tank or soldier and fight in first person. And a campaign progression in which players began with a single unit and were granted more command each campaign — capability widening with attention rather than handed over all at once.
+
+Two custom languages plus a fuzzy-logic strategy substrate, braided into one game, plus the runtime to make them speak. RCSL had been the practice. Muzzle Velocity was the demonstration. By the time the master's thesis arrived in 2000, BML and BMF were not the first language design these hands had done; they were the formal articulation of a verb the body had already been speaking for nearly a decade.
+
+In frequency terms, the pattern was already complete: language as the way to build capability, grammar as something a sovereign body extends, simulation and strategy as one unified field, and capability that opens progressively rather than being granted all at once. The Coherence Network's posture today — graph-as-grammar, agents progressing in scope, contribution unlocking attention — rehearses a shape Muzzle Velocity already carried.
+
+The artifact pointer for this chapter lives in the body as [`docs/field/urs/artifacts/muzzle-velocity-1997/`](../artifacts/muzzle-velocity-1997/README.md).
+
 ## 1997-2012: Backtracking Model Languages
 
 At the University of Colorado at Boulder, in the Department of Computer Science, the master's thesis carried the title Backtracking Model Languages. The full artifact — document, defense slides, and the photographs from the lawn — now lives in the body as [`docs/field/urs/artifacts/master-thesis-2000/`](../artifacts/master-thesis-2000/README.md). The document itself is dated July 5, 2000 — created May 22, last saved July 6, defended that summer. The slide deck carries an earlier 1997 marker from the working years before defense. In September 2012 the working folder resurfaced as a small constellation of artifacts: the .doc, Thesis defence.ppt, Group.jpg from the defense lawn, Urs in CU shirt.jpg, and the photographs labeled simply Water Project.
 
-The work was not solo. The object model and the virtual machine were designed and implemented by Steve G. Bjorg on his own master's thesis at the same university the same year. Two minds building one language. Cell beside cell, before that pattern had a name.
+The work was not solo, and it was not the beginning. The object model and the virtual machine were designed and implemented by Steve G. Bjorg on his own master's thesis at the same university the same year. By 2000 Urs and Steve had been collaborating on language and runtime design for nearly a decade — RCSL at HTL Brugg-Windisch, then Muzzle Velocity's engine through the mid-nineties. BML and BMF were the formal articulation of a verb their hands had been speaking together for years.
 
 Backtracking Model Language (BML) combined features from Java, C++, Prolog, and Smalltalk: multiple inheritance through delegation, interfaces, blocks, exception handling, templates, reflection, inner classes, and backtracking. Backtracking Model Form (BMF) was the companion — a top-down backtracking parser-generator written in BML, capable of supporting infinite input streams because parse attributes were evaluated as the stream arrived, not after.
 
@@ -154,7 +168,8 @@ Now the earlier frequencies could start recognizing each other:
 - Momo had taught that attention and time must not be extracted.
 - Die unendliche Geschichte had taught that story can become world.
 - Tesla had made future infrastructure physical.
-- Backtracking Model Languages had already made choice, fail, structure, and possibility space technical.
+- RCSL and Muzzle Velocity had already, in the early nineties, made language design, simulation, fuzzy-logic strategy, and progressive capability the verbs of building.
+- Backtracking Model Languages had then made choice, fail, structure, and possibility space technical.
 - Ramtha had brought reality training, mind discipline, and consciousness-as-creative into the field years before the later embodiment wave.
 - Daemon, The Expanse, Spellmonger, Frontiers Saga, and Hamilton had rehearsed autonomous systems, institutions, civilization, and distributed agency.
 - Devotional music and movement had taught the body how to regulate.
