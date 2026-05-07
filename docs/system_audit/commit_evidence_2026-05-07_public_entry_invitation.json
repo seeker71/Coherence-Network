@@ -1,0 +1,127 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/public-entry-invitation-20260507",
+  "commit_scope": "Carry the /come-in invitation into GitHub, npm, API, and MCP entry points so any human or agent can ask what is alive and contribute with attribution.",
+  "files_owned": [
+    "README.template.md",
+    "README.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.template.md",
+    "cli/README.md",
+    "cli/package.json",
+    "cli/package-lock.json",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/server.json",
+    "specs/agent-resonance-onboarding.md",
+    "docs/system_audit/commit_evidence_2026-05-07_public_entry_invitation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+      "python3 scripts/build_readmes.py --check",
+      "cd cli && npm pack --dry-run",
+      "cd mcp-server && npm pack --dry-run",
+      "git diff --check"
+    ],
+    "summary": "Public entry invitation checks passed. GitHub README, CLI/npm README and metadata, API invitation payload, and MCP/npm README/tool metadata carry the shared alive invitation. CLI dry-run packed coherence-cli@0.13.2; MCP dry-run packed coherence-mcp-server@0.5.4."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and post-merge deployment verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public GitHub/API/web/npm verification will be performed after merge and publish."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public GitHub, npm, API, and MCP entry points carry the same alive invitation: anyone or anything can arrive, ask what is alive, contribute with evidence and care, and adapt the practice to another repo with truthful boundaries.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network",
+      "https://www.npmjs.com/package/coherence-cli",
+      "https://www.npmjs.com/package/coherence-mcp-server",
+      "https://api.coherencycoin.com/api/agent/invitation",
+      "https://coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "github:README->Come in->What is alive here",
+      "npm:coherence-cli->README/package description->ask what is alive",
+      "npm:coherence-mcp-server->README/package description->coherence_agent_invitation",
+      "api:/api/agent/invitation->public_entry_invitation",
+      "mcp:coherence_agent_invitation->/api/agent/invitation"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, deploy, and npm publish remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-resonance-onboarding.md"
+  ],
+  "task_ids": [
+    "codex-thread-public-entry-invitation-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation",
+    "README.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "GET /api/agent/invitation public_entry_invitation",
+    "npm pack dry-run for coherence-cli@0.13.2 and coherence-mcp-server@0.5.4"
+  ],
+  "change_files": [
+    "README.template.md",
+    "README.md",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.template.md",
+    "cli/README.md",
+    "cli/package.json",
+    "cli/package-lock.json",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/server.json",
+    "specs/agent-resonance-onboarding.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
