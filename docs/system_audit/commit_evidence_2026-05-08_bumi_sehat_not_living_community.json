@@ -1,0 +1,96 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/remove-bumi-sehat-community-20260508",
+  "commit_scope": "Remove Bumi Sehat from hardcoded aligned-community detail routes so a Bali care institution is not presented as a living-community design example.",
+  "files_owned": [
+    "web/app/vision/aligned/[communityId]/page.tsx",
+    "web/tests/aligned-communities-static.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_bumi_sehat_not_living_community.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "curl -fsSL https://api.coherencycoin.com/api/vision/aligned | jq '.communities[]? | {slug,name,location,type}'",
+      "cd web && npm test -- tests/aligned-communities-static.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/aligned-communities-static.test.ts",
+      "cd web && npm run build",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_bumi_sehat_not_living_community.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main (first pass found transient automation_usage 1.281s > 1s)",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Bumi Sehat remains valid as a Bali care lineage note where explicitly held by Urs, but it no longer resolves as a /vision/aligned living-community detail route. Production /api/vision/aligned was checked and was not listing Bumi Sehat in the graph-backed community catalog. Local PR guard passed with ready_for_push=True on rerun after the known automation_usage warmup threshold."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A visitor or agent following aligned-community paths will not be given Bumi Sehat as a living-community or land-design example.",
+    "public_endpoints": [
+      "https://coherencycoin.com/vision/aligned/bumi-sehat",
+      "https://coherencycoin.com/vision/aligned",
+      "https://coherencycoin.com/vision"
+    ],
+    "test_flows": [
+      "open /vision/aligned/bumi-sehat after deploy -> not found",
+      "open /vision/aligned -> graph-backed community list remains available"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-collective"
+  ],
+  "spec_ids": [
+    "specs/db-backed-vision-aligned-content.md"
+  ],
+  "task_ids": [
+    "codex-thread-bumi-sehat-not-living-community-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/tests/aligned-communities-static.test.ts",
+    "web/app/vision/aligned/[communityId]/page.tsx",
+    "https://api.coherencycoin.com/api/vision/aligned"
+  ],
+  "change_files": [
+    "web/app/vision/aligned/[communityId]/page.tsx",
+    "web/tests/aligned-communities-static.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
