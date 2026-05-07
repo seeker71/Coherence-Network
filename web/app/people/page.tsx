@@ -41,7 +41,18 @@ type PresenceNode = {
   provider?: string;
   contributor_type?: string;
   asset_type?: string;
+  slug?: string | null;
 };
+
+/**
+ * Canonical href for a presence — slug when the graph node carries
+ * one, falling back to the graph id encoded in the path. The mapping
+ * lives in the graph as data, never in this codebase.
+ */
+function presenceHref(n: PresenceNode): string {
+  if (n.slug && typeof n.slug === "string") return `/people/${n.slug}`;
+  return `/people/${encodeURIComponent(n.id)}`;
+}
 
 async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
   try {
@@ -186,7 +197,7 @@ export default async function PeopleIndexPage({
               {items.map((n) => (
                 <li key={n.id}>
                   <Link
-                    href={`/people/${encodeURIComponent(n.id)}`}
+                    href={presenceHref(n)}
                     className="group flex items-center gap-3 rounded-xl border border-border/30 bg-card/40 hover:bg-card/70 hover:border-border p-3 transition-colors"
                   >
                     {n.image_url ? (

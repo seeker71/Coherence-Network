@@ -112,8 +112,18 @@ async def graph_stats():
 
 @router.get("/graph/nodes/{node_id}", summary="Get a single node")
 async def get_node(node_id: str):
-    """Get a single node."""
+    """Get a single node by id, falling back to slug lookup.
+
+    The path argument is treated as a graph id first. When that misses
+    and the value contains no namespace prefix (no colon), the lookup
+    retries against the `slug` property — the same human-readable
+    doorway used in `/people/{slug}` URLs. This lets every URL form
+    converge to one identity through one endpoint, with the mapping
+    living in the graph instead of a hand-curated table.
+    """
     node = graph_service.get_node(node_id)
+    if not node and ":" not in node_id:
+        node = graph_service.get_node_by_slug(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return node

@@ -1218,3 +1218,46 @@ async def test_place_endpoints_round_trip():
     finally:
         _graph_service.delete_node(presence_id)
         _graph_service.delete_node(place_id)
+
+
+# ── Slug-resolved lookup (data-driven canonical URL) ──────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_node_resolves_by_slug_when_id_misses():
+    """`GET /graph/nodes/{slug}` resolves to the node carrying that
+    slug property when no node has the literal id.
+
+    Lets `/people/{slug}` URLs converge to the canonical graph node
+    without a hand-curated slug→id mapping in code. The mapping lives
+    in the graph itself, editable through the same flow that edits
+    everything else.
+    """
+    from app.services import graph_service as _gs
+
+    node_id = "contributor:slug-lookup-test-fixture"
+    slug = "slug-lookup-test"
+    _gs.create_node(
+        id=node_id, type="contributor",
+        name="Slug Lookup Fixture",
+        properties={"slug": slug, "contributor_type": "TEST"},
+    )
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+            # Direct id still works.
+            r = await c.get(f"/api/graph/nodes/{node_id}")
+            assert r.status_code == 200
+            assert r.json()["id"] == node_id
+
+            # Slug resolves to the same node.
+            r = await c.get(f"/api/graph/nodes/{slug}")
+            assert r.status_code == 200
+            body = r.json()
+            assert body["id"] == node_id
+            assert body["slug"] == slug
+
+            # Unknown slug → 404.
+            r = await c.get("/api/graph/nodes/no-such-slug-anywhere")
+            assert r.status_code == 404
+    finally:
+        _gs.delete_node(node_id)

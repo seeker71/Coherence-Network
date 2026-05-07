@@ -179,6 +179,29 @@ def get_node(node_id: str) -> dict[str, Any] | None:
         return node.to_dict() if node else None
 
 
+def get_node_by_slug(slug: str) -> dict[str, Any] | None:
+    """Resolve a node by the `slug` property a presence carries.
+
+    The slug is the human-readable doorway URL (`/people/{slug}`).
+    Storing it as a node property keeps the URL→identity mapping in
+    the graph itself, so it stays editable through the same flow that
+    edits everything else; nothing about the public surface lives in
+    a hand-curated table in code.
+    """
+    if not slug:
+        return None
+    with session() as s:
+        # Postgres + SQLite both store properties as JSON; the SQLAlchemy
+        # JSON column adapter exposes ``Node.properties["slug"]`` as a
+        # comparable expression on either backend.
+        node = (
+            s.query(Node)
+            .filter(Node.properties["slug"].as_string() == slug)
+            .first()
+        )
+        return node.to_dict() if node else None
+
+
 # Types a PATCH may move a node between — the presence bucket. This
 # guards against a visitor rewriting their own contributor node as a
 # concept, idea, spec, or system identity via a rogue PATCH.

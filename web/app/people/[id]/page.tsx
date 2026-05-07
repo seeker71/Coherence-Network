@@ -387,12 +387,18 @@ export async function generateMetadata({
       },
     };
   }
-  // Best-effort: show a human-ish title. We don't fetch here to keep
-  // the metadata path cheap.
-  const display = id.replace(/-[a-z0-9]{6,}$/, "").replace(/-/g, " ");
+  // Declare the canonical URL when the graph node carries a slug.
+  // One presence, one doorway: shared link previews and search
+  // engines converge on `/people/{slug}` even when an inbound link
+  // arrives at the graph-id form. The mapping lives in the graph.
+  const node = await fetchGraphNode(id);
+  const slug = node && typeof node.slug === "string" ? node.slug : null;
+  const name = node && typeof node.name === "string" ? node.name : null;
+  const display = name || id.replace(/-[a-z0-9]{6,}$/, "").replace(/-/g, " ");
   return {
     title: `${display} — Coherence Network`,
     description: `A corner of the organism held by ${display}.`,
+    alternates: slug ? { canonical: `/people/${slug}` } : undefined,
   };
 }
 
@@ -529,6 +535,9 @@ export default async function PersonPage({
   // literal `%3A` still in place. Decode once so downstream fetches
   // don't re-encode into `%253A` and miss the node.
   const id = decodeRouteParam(rawId);
+  // The graph-id → human-slug redirect lives in middleware.ts;
+  // requests reaching this handler use either the slug directly
+  // (resolved here) or a graph id with no slug registered.
   const curatedPresence = CURATED_PRESENCES[id];
   if (curatedPresence) return renderCuratedPresence(curatedPresence);
 
