@@ -1,0 +1,65 @@
+{
+  "date": "2026-05-08T00:00:00Z",
+  "thread_branch": "codex/audible-purchase-approx-20260508",
+  "commit_scope": "docs(field): derive Audible listening trace from purchase history when direct listen rows are absent",
+  "files_owned": [
+    "docs/field/urs/README.md",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/tools/audible_history_spectrum.py",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Audible builder regenerated artifacts, py_compile passed, invariant check confirmed 211 effective listening events with 50 direct rows and 161 purchase approximations, and diff hygiene passed."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Documentation and generated field trace update only; CI-equivalent local artifact validation passed before PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "No runtime deploy required for this local artifact update. Repo-served field artifacts will publish through the normal branch/PR flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "urs-field-story",
+    "audible-history-spectrum"
+  ],
+  "spec_ids": [
+    "field-story-trace-index"
+  ],
+  "task_ids": [
+    "audible-purchase-approx-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Documentation",
+        "Evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+    "python3 -m py_compile docs/field/urs/tools/audible_history_spectrum.py",
+    "python3 - <<'PY' invariant check for 211 effective listening events and 161 purchase approximations"
+  ],
+  "change_files": [
+    "docs/field/urs/README.md",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/tools/audible_history_spectrum.py",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
