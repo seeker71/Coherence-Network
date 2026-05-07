@@ -2,13 +2,20 @@
 
 YouTube channel pages embed an enormous JSON blob in
 ``var ytInitialData = …`` that holds every recent upload's
-title, video id, and thumbnail. We extract video items from that
-blob — no API key, no rate-limited official endpoint, just the
-public page the same as any browser would.
+title, video id, thumbnail, view count, and published time text.
+We extract video items from that blob — no API key, no
+rate-limited official endpoint, just the public page the same as
+any browser would.
 
 Each match becomes an ``ImportedCreation`` with ``kind="video"``.
-Capped at 24 most recent (a presence page renders a band of recent
-videos, not a 600-video catalog).
+View counts ride along as a property so the rendering layer can
+weight a presence's emitted spectrum by which works actually
+broadcast loudest into the field.
+
+The cap is set generously so the importer's stratified-sampling
+discipline has material to spread across rather than just truncating
+to first-N. The body of work a YouTuber emits is never truly the
+last 24 uploads.
 """
 from __future__ import annotations
 
@@ -21,7 +28,7 @@ from .base import ImportedCreation
 from ._http import safe_get
 
 
-YOUTUBE_VIDEO_CAP = 24
+YOUTUBE_VIDEO_CAP = 60
 
 # Match `var ytInitialData = {…};` — content stops at the closing
 # `};` on its own line. Greedy match between the assignment and
@@ -104,6 +111,7 @@ def _extract_videos(html: str) -> list[ImportedCreation]:
             t = pt.get("simpleText")
             if isinstance(t, str):
                 published_text = t.strip()
+        view_count = _parse_view_count(node)
         seen_ids.add(vid)
         found.append(ImportedCreation(
             name=unescape(title)[:200],
@@ -111,10 +119,51 @@ def _extract_videos(html: str) -> list[ImportedCreation]:
             url=f"https://www.youtube.com/watch?v={vid}",
             image_url=image,
             when=published_text,
+            view_count=view_count,
         ))
         if len(found) >= YOUTUBE_VIDEO_CAP:
             break
     return found
+
+
+_VIEW_COUNT_NUM = re.compile(r"([0-9][0-9.,]*)\s*([KMB]?)\s*views?", re.IGNORECASE)
+
+
+def _parse_view_count(node: dict) -> int | None:
+    """Extract the integer view count from a YouTube videoRenderer.
+
+    The renderer carries view counts in two places — `viewCountText`
+    (visible label, e.g. "1.2M views") and `shortViewCountText`
+    (compact label). We try the visible one first and parse the
+    "K/M/B" suffix when present. Returns None when no count is
+    readable; that's normal for newly-published videos and shorts.
+    """
+    for key in ("viewCountText", "shortViewCountText"):
+        slot = node.get(key)
+        if not isinstance(slot, dict):
+            continue
+        text: str | None = None
+        if isinstance(slot.get("simpleText"), str):
+            text = slot["simpleText"]
+        else:
+            runs = slot.get("runs")
+            if isinstance(runs, list) and runs:
+                first = runs[0]
+                if isinstance(first, dict) and isinstance(first.get("text"), str):
+                    text = first["text"]
+        if not text:
+            continue
+        m = _VIEW_COUNT_NUM.search(text)
+        if not m:
+            continue
+        raw, suffix = m.group(1), (m.group(2) or "").upper()
+        try:
+            value = float(raw.replace(",", ""))
+        except ValueError:
+            continue
+        multiplier = {"K": 1_000, "M": 1_000_000, "B": 1_000_000_000}.get(suffix, 1)
+        return int(value * multiplier)
+    return None
 
 
 class YouTubeSource:
