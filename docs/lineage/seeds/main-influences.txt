@@ -1,0 +1,83 @@
+# Main influences — Urs's lived lineage, as named in
+# docs/lineage/formative-transmissions.md, builders-lineage-statement.md,
+# ubud-embodied-lineage.md, and the auto-loaded MEMORY.md context.
+#
+# Each line is fed to the inspired-by resolver. URLs preferred (the
+# resolver fetches OG metadata and creates the right node type);
+# bare names fall back to web-search resolution.
+#
+# Lines starting with `>` become encounter notes attached to the
+# next line — recording what was alive in the field at encounter.
+# Empty lines and `#` lines are ignored.
+
+# ── Conversations / podcasts (watch-history-named) ──
+
+> Long-form conversations as a bridge into many fields; explicit
+> in-conversation name from the founding contributor.
+Lex Fridman
+
+# ── Living teachers (in-person or current public field) ──
+
+> Mile Hi Church ~2005 + Aurora retreat April 2026; the bridge from
+> Ramtha lineage into the network's first contributors
+https://drjoedispenza.com/
+
+> Emergence Conference; "numbness has its own pain"; bridge from
+> partner's healing-thread to the network's bioelectric ground
+https://zachbushmd.com/
+
+> Peace Bathing — the Mother becoming aware through us in granted
+> sovereignty; arrival-frequency ground for the network. URL resolver
+> stalls on her site; bare-name path resolves to the existing
+> contributor:anne-tucker node.
+Anne Tucker
+
+> Bioelectric morphogenesis as computational substrate; the empirical
+> resonance line under the network's field-of-cells frame
+https://en.wikipedia.org/wiki/Michael_Levin_(biologist)
+
+> Aubrey Marcus podcast — the pull-thread that brought Robert Edward
+> Grant's voice into this body
+https://www.aubreymarcus.com/
+
+> Astrologer; May/June 2026 Scorpio full-moon and Uranus-Sedna readings
+https://www.pamgregory.com/
+
+> Inspired Evolution podcast; summer 2026 forecast; bridge to Zach
+> Bush via the "numbness has its own pain" quote
+https://www.amandawalsh.com/
+
+# ── Lineage source — Ramtha / RSE ──
+
+> Received in German at 18; The White Book; Ch 18/19/20 the consciousness
+> arc that runs through the existing teaching lineage
+https://www.ramtha.com/
+
+# ── Anthroposophy / Goetheanum ──
+
+> Week-long Faust performance ~1990 age 19; double-rooted spiritual
+> ground (Pacific-Northwest channeled stream + Central-European esoteric)
+https://www.goetheanum.ch/en
+
+> Anthroposophical foundation — Goethe → Steiner → anthroposophy
+https://en.wikipedia.org/wiki/Rudolf_Steiner
+
+# ── Childhood / adolescent formation (Swiss-German) ──
+
+> Winnetou, Old Shatterhand, the Orient cycle; the imaginal-frontier
+> substrate before Colorado was geography
+https://en.wikipedia.org/wiki/Karl_May
+
+> Hawkeye, Chingachgook, Uncas — honor, woods-wisdom, chosen brotherhood
+https://en.wikipedia.org/wiki/Leatherstocking_Tales
+
+# ── Movement / Ubud field ──
+
+> Movement-as-prayer; the intelligence of the moving body
+https://www.5rhythms.com/
+
+# ── Resonance edge mentioned in lineage docs ──
+
+> Light language / spontaneous coherent ancient language; tuning-fork
+> practitioner; cited by Pam Gregory
+https://www.eileenmccusick.com/

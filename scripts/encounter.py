@@ -6,7 +6,9 @@ talks watched, songs listened to, gatherings attended — into the
 graph by naming each one. Each becomes an asset or contributor
 node; an `inspired-by` edge from the encountering contributor
 holds the weave; auto-resonance computes which vision concepts
-share frequency with the influence.
+share frequency with the influence; and (when --with-creations is
+on) the influence's public works auto-import so their emitted
+spectrum joins the field.
 
 Two paths:
 
@@ -18,7 +20,8 @@ Two paths:
     # Bulk encounter from a file (one URL or name per line)
     python3 scripts/encounter.py \\
         --contributor contributor:seeker71 \\
-        --file ~/encounters.txt
+        --file ~/encounters.txt \\
+        --with-creations
 
 Each line in the file is treated as input to the resolver — a URL,
 a name, or a paste. Empty lines and lines starting with ``#`` are
@@ -29,82 +32,153 @@ to the *next* URL/name line — letting you record what was happening
 in your field when you encountered it. The note lands as edge
 metadata on the inspired-by edge.
 
-Output prints one line per encounter: status + identity + concept
-resonances landed. Idempotent — re-running on the same input doesn't
-duplicate edges.
+Runs against any API URL via --api so the same script populates a
+local dev DB or production. HTTP, not in-process, so no DB
+credentials needed.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 
-def _ensure_app_path() -> None:
-    here = Path(__file__).resolve().parent
-    api_dir = here.parent / "api"
-    if api_dir.exists():
-        sys_path = str(api_dir)
-        if sys_path not in sys.path:
-            sys.path.insert(0, sys_path)
+# ── HTTP helpers ──────────────────────────────────────────────────────
 
 
-def _encounter_one(input_text: str, contributor_id: str, *, note: str | None = None) -> dict:
-    from app.services import inspired_by_service as service
-    from app.services import graph_service
-
-    resolved = service.resolve(input_text)
-    if resolved is None:
-        return {"input": input_text, "ok": False, "reason": "resolver couldn't make sense of input"}
-
-    result = service.import_inspired_by(contributor_id, resolved)
-
-    # Surface concept resonance the auto-attune produced for this
-    # newly-resolved identity. Reading the edges back lets the caller
-    # see what frequencies the influence met.
-    identity_id = result["identity"]["id"]
+def _post(api: str, path: str, body: dict, *, timeout: float = 30) -> dict:
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        f"{api}{path}",
+        data=data,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "encounter-cli/1.0",
+        },
+    )
     try:
-        concept_edges = graph_service.list_edges(
-            from_id=identity_id, edge_type="resonates-with", limit=20,
-        ).get("items", [])
-        concepts = sorted(
-            (e for e in concept_edges if (e.get("to_id") or "").startswith("lc-")),
-            key=lambda e: -(e.get("strength") or 0),
-        )
-    except Exception:  # noqa: BLE001
-        concepts = []
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            return {"_http_error": e.code, "_detail": json.load(e)}
+        except Exception:  # noqa: BLE001
+            return {"_http_error": e.code, "_detail": str(e)}
 
-    # Tag the edge with the encounter note when one was supplied.
-    if note and result.get("edge"):
-        edge_id = result["edge"].get("id")
-        if edge_id:
-            try:
-                graph_service.update_edge(
-                    edge_id, properties={"encounter_note": note},
-                )
-            except Exception:  # noqa: BLE001 — fall back gracefully
-                pass
+
+def _patch(api: str, path: str, body: dict, *, timeout: float = 15) -> dict:
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        f"{api}{path}",
+        data=data,
+        method="PATCH",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "encounter-cli/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as e:
+        return {"_http_error": e.code}
+
+
+def _get(api: str, path: str, *, timeout: float = 15) -> dict | list | None:
+    req = urllib.request.Request(
+        f"{api}{path}",
+        headers={"User-Agent": "encounter-cli/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.load(resp)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# ── One encounter ─────────────────────────────────────────────────────
+
+
+def _encounter_one(
+    api: str,
+    input_text: str,
+    contributor_id: str,
+    *,
+    note: str | None = None,
+    with_creations: bool = False,
+) -> dict:
+    res = _post(
+        api, "/api/inspired-by",
+        {"name": input_text, "source_contributor_id": contributor_id},
+        timeout=60,
+    )
+    if "_http_error" in res:
+        return {
+            "input": input_text,
+            "ok": False,
+            "reason": f"http {res['_http_error']}: {str(res.get('_detail'))[:80]}",
+        }
+
+    identity_id = (res.get("identity") or {}).get("id")
+    if not identity_id:
+        return {"input": input_text, "ok": False, "reason": "no identity returned"}
+
+    name = (res.get("resolved") or {}).get("name") or identity_id
+    edge = res.get("edge") or {}
+    edge_existed = bool(res.get("edge_existed"))
+
+    # Optional encounter note on the edge
+    if note and edge.get("id"):
+        _patch(api, f"/api/edges/{edge['id']}", {"properties": {"encounter_note": note}})
+
+    creations_imported = 0
+    if with_creations:
+        # Fill the influence's public works so their emitted spectrum
+        # joins the field. Best-effort — sources may return 0 for
+        # presences on uncovered platforms; that's recorded in the
+        # coverage map on the node.
+        cre = _post(
+            api, f"/api/presences/{urllib.parse.quote(identity_id)}/creations/import",
+            {}, timeout=120,
+        )
+        if "_http_error" not in cre:
+            creations_imported = int(cre.get("creations_imported") or 0)
+
+    # Read back the influence's concept resonances for the report
+    concepts: list[dict] = []
+    edges_resp = _get(
+        api,
+        f"/api/graph/nodes/{urllib.parse.quote(identity_id)}/edges?type=resonates-with&direction=outgoing",
+    )
+    if isinstance(edges_resp, list):
+        concepts = [
+            {"id": e.get("to_id"), "score": e.get("strength")}
+            for e in edges_resp
+            if (e.get("to_id") or "").startswith("lc-")
+        ]
+        concepts.sort(key=lambda c: -(c.get("score") or 0))
 
     return {
         "input": input_text,
         "ok": True,
         "identity_id": identity_id,
-        "name": result["resolved"]["name"],
-        "node_type": result["resolved"]["node_type"],
-        "edge_existed": result.get("edge_existed", False),
-        "weight": result.get("weight"),
-        "concepts": [
-            {"id": e["to_id"], "score": e.get("strength")} for e in concepts[:5]
-        ],
+        "name": name,
+        "edge_existed": edge_existed,
+        "creations_imported": creations_imported,
+        "concepts": concepts[:5],
     }
 
 
-def _encounters_from_file(path: Path) -> list[tuple[str, str | None]]:
-    """Read encounters from a text file.
+# ── File parsing ──────────────────────────────────────────────────────
 
-    Returns a list of (input, note) tuples. A line starting with `>`
-    is held as the next encounter's note.
-    """
+
+def _encounters_from_file(path: Path) -> list[tuple[str, str | None]]:
     pending_note: str | None = None
     out: list[tuple[str, str | None]] = []
     for raw in path.read_text().splitlines():
@@ -119,17 +193,28 @@ def _encounters_from_file(path: Path) -> list[tuple[str, str | None]]:
     return out
 
 
+# ── Main ──────────────────────────────────────────────────────────────
+
+
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--contributor", required=True, help="Contributor id of the encountering presence (e.g. contributor:seeker71)")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--contributor", required=True,
+                   help="Contributor id of the encountering presence")
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--url", help="A single URL or name to encounter")
     src.add_argument("--file", type=Path, help="Path to a file with one URL or name per line")
     p.add_argument("--note", help="Optional encounter note (only with --url)")
     p.add_argument("--limit", type=int, default=0, help="Stop after N encounters (0 = no limit)")
+    p.add_argument("--api", default="http://localhost:8000",
+                   help="API base URL (default http://localhost:8000)")
+    p.add_argument("--with-creations", action="store_true",
+                   help="After resolving each influence, also import their public creations "
+                        "(YouTube/RSS/Substack/Goodreads/Bandcamp). Slower but fills the spectrum.")
+    p.add_argument("--sleep", type=float, default=0.5,
+                   help="Seconds to sleep between encounters (default 0.5)")
     args = p.parse_args()
-
-    _ensure_app_path()
 
     encounters: list[tuple[str, str | None]]
     if args.url:
@@ -143,23 +228,38 @@ def main() -> int:
     if args.limit > 0:
         encounters = encounters[: args.limit]
 
-    landed = 0
+    print(f"encountering {len(encounters)} input(s) → {args.contributor}  api={args.api}")
+    if args.with_creations:
+        print(f"  with-creations: ON (will fetch public works per influence)")
+
+    landed = total_creations = 0
     for i, (text, note) in enumerate(encounters, 1):
-        result = _encounter_one(text, args.contributor, note=note)
+        result = _encounter_one(
+            args.api, text, args.contributor,
+            note=note, with_creations=args.with_creations,
+        )
         if not result["ok"]:
             print(f"  [{i:3d}] ✗ {text[:60]:60s}  {result['reason']}")
             continue
         concepts = ", ".join(
-            f"{c['id'].replace('lc-', '')}({c['score']:.2f})" if c.get("score") else c["id"]
+            f"{c['id'].replace('lc-', '')}({c['score']:.2f})"
+            if c.get("score") else c["id"]
             for c in result["concepts"]
         )
         marker = "↺" if result["edge_existed"] else "✓"
+        cre = f" +{result['creations_imported']}cre" if result.get("creations_imported") else ""
         print(
-            f"  [{i:3d}] {marker} {result['name'][:38]:38s}  → {concepts or '(no concept resonance)'}"
+            f"  [{i:3d}] {marker} {result['name'][:38]:38s}{cre:8s}  → "
+            f"{concepts or '(no concept resonance)'}"
         )
         landed += 1
+        total_creations += result.get("creations_imported", 0)
+        if args.sleep and i < len(encounters):
+            time.sleep(args.sleep)
     print()
     print(f"landed: {landed}/{len(encounters)} encounters")
+    if args.with_creations:
+        print(f"creations imported across all influences: {total_creations}")
     return 0 if landed > 0 else 1
 
 
