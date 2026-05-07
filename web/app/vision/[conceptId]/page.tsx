@@ -352,11 +352,14 @@ export default async function VisionConceptPage({
 
             {/* Every related thread the field has woven through this
                 concept — concepts it bridges, presences carrying it,
-                external influences honoring it through shared
+                and the specific creations (talks, books, songs,
+                podcast episodes) honoring it through shared
                 vibrational resonance — painted in the spectrum color
-                of each relationship's family. */}
+                of each relationship's family. Each creation is a
+                primary frequency emitter; this is what an external
+                presence broadcasts into the field. */}
             <div className="max-w-3xl">
-              <InfluenceWeb presenceId={conceptId} />
+              <InfluenceWeb presenceId={conceptId} showAssets />
             </div>
 
             {/* Live signals from the world resonating with this concept */}
