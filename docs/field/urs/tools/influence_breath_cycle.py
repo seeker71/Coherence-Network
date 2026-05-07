@@ -14,6 +14,7 @@ from urllib.parse import quote
 AXES = ("pressure", "intensity", "inspiration", "insight", "vitality")
 AUTHOR_ROOM_THRESHOLD = 150
 WORK_ROOM_THRESHOLD = 35
+ENCOUNTER_SEED_LIMIT = 8
 PLACEHOLDER_AUTHOR_NAMES = {"empty artist", "unknown"}
 
 
@@ -232,6 +233,55 @@ def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def encounter_seed(payload: dict[str, Any]) -> dict[str, Any]:
+    candidates = payload["breaths"][2]["result"]["candidates"][:ENCOUNTER_SEED_LIMIT]
+    rows = []
+    for row in candidates:
+        works = ", ".join(work["title"] for work in row.get("top_works", [])[:3])
+        note = (
+            "source=trace-influence-breath-cycle; "
+            f"trace={row['trace']}; events={row['events']}; frequency={row['frequency']}; "
+            f"peaks={row['peak_months']}; works={works}"
+        )
+        rows.append(
+            {
+                "input": row["plain_name"],
+                "note": note,
+                "trace": row["trace"],
+                "events": row["events"],
+                "frequency": row["frequency"],
+                "peak_months": row["peak_months"],
+                "top_works": row.get("top_works", [])[:3],
+            }
+        )
+    return {
+        "schema_version": "encounter-next-breath/v1",
+        "generated_at": payload["generated_at"],
+        "source_artifact": "trace/influence_breath_cycle.json",
+        "contributor_hint": "contributor:seeker71",
+        "command": "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
+        "privacy_boundary": "Generated from derived trace indexes only; no raw archives, cookies, sessions, pixels, or paid text.",
+        "rows": rows,
+    }
+
+
+def write_encounter_seed(path: Path, seed: dict[str, Any]) -> None:
+    lines = [
+        "# Encounter next breath",
+        "# Generated from docs/field/urs/trace/influence_breath_cycle.json.",
+        "# Review before running; each note is attached to the next influence line.",
+        "# Run:",
+        f"# {seed['command']}",
+        "",
+    ]
+    for row in seed["rows"]:
+        lines.append(f"> {row['note']}")
+        lines.append(row["input"])
+        lines.append("")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines = [
         "# Influence Breath Cycle",
@@ -279,6 +329,20 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines.extend(["", "## Next Breath", ""])
     for action in payload["breaths"][5]["result"]["actions"]:
         lines.append(f"- {action}")
+    lines.extend(
+        [
+            "",
+            "## Encounter Seed",
+            "",
+            "The next breath can be reviewed and flowed into the graph through the encounter CLI:",
+            "",
+            "```bash",
+            "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
+            "```",
+            "",
+            "The seed file is generated from the top unroomed author candidates and carries trace links in encounter notes.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -287,10 +351,14 @@ def main() -> int:
     parser.add_argument("--field-dir", type=Path, default=Path("docs/field/urs"))
     args = parser.parse_args()
     payload = build(args.field_dir)
+    seed = encounter_seed(payload)
     write_json(args.field_dir / "trace" / "influence_breath_cycle.json", payload)
+    write_json(args.field_dir / "trace" / "encounter_next_breath.json", seed)
+    write_encounter_seed(args.field_dir / "input" / "encounter_next_breath.txt", seed)
     write_markdown(args.field_dir / "output" / "influence_breath_cycle.md", payload)
     print(f"authors={payload['counts']['authors_indexed']}")
     print(f"unroomed_authors={payload['counts']['unroomed_author_candidates']}")
+    print(f"encounter_seed={len(seed['rows'])}")
     print(args.field_dir / "output" / "influence_breath_cycle.md")
     return 0
 

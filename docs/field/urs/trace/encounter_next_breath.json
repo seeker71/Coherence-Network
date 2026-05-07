@@ -1,0 +1,346 @@
+{
+  "command": "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
+  "contributor_hint": "contributor:seeker71",
+  "generated_at": "2026-05-07T15:13:11.283392+00:00",
+  "privacy_boundary": "Generated from derived trace indexes only; no raw archives, cookies, sessions, pixels, or paid text.",
+  "rows": [
+    {
+      "events": 217,
+      "frequency": "consciousness-threshold",
+      "input": "Mei-lan",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic; events=217; frequency=consciousness-threshold; peaks=[['2025-01', 29], ['2025-03', 28], ['2025-04', 23], ['2024-10', 19]]; works=Song For A Pure Heart, Bring Me Back To Love, Freedom (feat. Ali Pervez Mehdi)",
+      "peak_months": [
+        [
+          "2025-01",
+          29
+        ],
+        [
+          "2025-03",
+          28
+        ],
+        [
+          "2025-04",
+          23
+        ],
+        [
+          "2024-10",
+          19
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 29,
+          "id": "work:song-for-a-pure-heart-f40ddecc",
+          "title": "Song For A Pure Heart"
+        },
+        {
+          "events": 23,
+          "id": "work:bring-me-back-to-love-99bdf56a",
+          "title": "Bring Me Back To Love"
+        },
+        {
+          "events": 22,
+          "id": "work:freedom-feat-ali-pervez-mehdi-20acb8e3",
+          "title": "Freedom (feat. Ali Pervez Mehdi)"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic"
+    },
+    {
+      "events": 267,
+      "frequency": "devotional-body",
+      "input": "Danit",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic; events=267; frequency=devotional-body; peaks=[['2024-10', 28], ['2024-07', 21], ['2025-04', 19], ['2024-06', 18]]; works=Naturaleza (Mose Edit), Cuatro Vientos (Rey & Kjavik Remix), Cuatro Vientos",
+      "peak_months": [
+        [
+          "2024-10",
+          28
+        ],
+        [
+          "2024-07",
+          21
+        ],
+        [
+          "2025-04",
+          19
+        ],
+        [
+          "2024-06",
+          18
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 71,
+          "id": "work:naturaleza-mose-edit-8119cff0",
+          "title": "Naturaleza (Mose Edit)"
+        },
+        {
+          "events": 56,
+          "id": "work:cuatro-vientos-rey-kjavik-remix-b335c7f4",
+          "title": "Cuatro Vientos (Rey & Kjavik Remix)"
+        },
+        {
+          "events": 36,
+          "id": "work:cuatro-vientos-963012d6",
+          "title": "Cuatro Vientos"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic"
+    },
+    {
+      "events": 225,
+      "frequency": "roots-resilience",
+      "input": "Yatao",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic; events=225; frequency=roots-resilience; peaks=[['2024-06', 22], ['2024-08', 19], ['2025-04', 19], ['2024-10', 18]]; works=Phoenix, Listen to the Mountains, Follow The Moon",
+      "peak_months": [
+        [
+          "2024-06",
+          22
+        ],
+        [
+          "2024-08",
+          19
+        ],
+        [
+          "2025-04",
+          19
+        ],
+        [
+          "2024-10",
+          18
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 43,
+          "id": "work:phoenix-2bc12938",
+          "title": "Phoenix"
+        },
+        {
+          "events": 30,
+          "id": "work:listen-to-the-mountains-349fa04c",
+          "title": "Listen to the Mountains"
+        },
+        {
+          "events": 21,
+          "id": "work:follow-the-moon-23175301",
+          "title": "Follow The Moon"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic"
+    },
+    {
+      "events": 181,
+      "frequency": "devotional-body",
+      "input": "Chantress Seba",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic; events=181; frequency=devotional-body; peaks=[['2025-03', 25], ['2025-11', 20], ['2026-02', 15], ['2024-10', 12]]; works=Rising Into Light, Find Peace, Dream Prayer",
+      "peak_months": [
+        [
+          "2025-03",
+          25
+        ],
+        [
+          "2025-11",
+          20
+        ],
+        [
+          "2026-02",
+          15
+        ],
+        [
+          "2024-10",
+          12
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 12,
+          "id": "work:rising-into-light-e1d5f749",
+          "title": "Rising Into Light"
+        },
+        {
+          "events": 12,
+          "id": "work:find-peace-b17ccbd5",
+          "title": "Find Peace"
+        },
+        {
+          "events": 11,
+          "id": "work:dream-prayer-8389fe40",
+          "title": "Dream Prayer"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic"
+    },
+    {
+      "events": 234,
+      "frequency": "unclassified",
+      "input": "Nessi Gomes",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic; events=234; frequency=unclassified; peaks=[['2024-07', 26], ['2024-10', 24], ['2025-09', 19], ['2024-08', 17]]; works=As You Will [Shye Ben Tzur Cover], All Related, These Walls",
+      "peak_months": [
+        [
+          "2024-07",
+          26
+        ],
+        [
+          "2024-10",
+          24
+        ],
+        [
+          "2025-09",
+          19
+        ],
+        [
+          "2024-08",
+          17
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 32,
+          "id": "work:as-you-will-shye-ben-tzur-cover-ae2b6dbc",
+          "title": "As You Will [Shye Ben Tzur Cover]"
+        },
+        {
+          "events": 30,
+          "id": "work:all-related-dd3e07ec",
+          "title": "All Related"
+        },
+        {
+          "events": 28,
+          "id": "work:these-walls-11c47b2d",
+          "title": "These Walls"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic"
+    },
+    {
+      "events": 202,
+      "frequency": "devotional-body",
+      "input": "Sam Garrett",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic; events=202; frequency=devotional-body; peaks=[['2024-10', 19], ['2025-04', 18], ['2025-02', 16], ['2025-01', 12]]; works=Asatoma, Mama, Higher Than The Mountains",
+      "peak_months": [
+        [
+          "2024-10",
+          19
+        ],
+        [
+          "2025-04",
+          18
+        ],
+        [
+          "2025-02",
+          16
+        ],
+        [
+          "2025-01",
+          12
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 25,
+          "id": "work:asatoma-2e0ceedf",
+          "title": "Asatoma"
+        },
+        {
+          "events": 22,
+          "id": "work:mama-937b9de4",
+          "title": "Mama"
+        },
+        {
+          "events": 22,
+          "id": "work:higher-than-the-mountains-f11c88cb",
+          "title": "Higher Than The Mountains"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic"
+    },
+    {
+      "events": 177,
+      "frequency": "devotional-body",
+      "input": "Deya Dova",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic; events=177; frequency=devotional-body; peaks=[['2025-07', 17], ['2024-09', 16], ['2025-01', 16], ['2024-10', 15]]; works=Valley of the Ancients (Mose Remix), Footsteps In The Stars, Grandmother Tree & The Feathered Serpent",
+      "peak_months": [
+        [
+          "2025-07",
+          17
+        ],
+        [
+          "2024-09",
+          16
+        ],
+        [
+          "2025-01",
+          16
+        ],
+        [
+          "2024-10",
+          15
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 37,
+          "id": "work:valley-of-the-ancients-mose-remix-4f87f1a2",
+          "title": "Valley of the Ancients (Mose Remix)"
+        },
+        {
+          "events": 24,
+          "id": "work:footsteps-in-the-stars-6c51384b",
+          "title": "Footsteps In The Stars"
+        },
+        {
+          "events": 23,
+          "id": "work:grandmother-tree-the-feathered-serpent-3b5e3646",
+          "title": "Grandmother Tree & The Feathered Serpent"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic"
+    },
+    {
+      "events": 188,
+      "frequency": "unclassified",
+      "input": "Tetouze",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic; events=188; frequency=unclassified; peaks=[['2024-11', 47], ['2025-04', 22], ['2025-01', 17], ['2026-01', 17]]; works=Dune caravan, Asian yantra, Dasan (feat. Anello Capuano)",
+      "peak_months": [
+        [
+          "2024-11",
+          47
+        ],
+        [
+          "2025-04",
+          22
+        ],
+        [
+          "2025-01",
+          17
+        ],
+        [
+          "2026-01",
+          17
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 13,
+          "id": "work:dune-caravan-599c03d7",
+          "title": "Dune caravan"
+        },
+        {
+          "events": 13,
+          "id": "work:asian-yantra-da47da7b",
+          "title": "Asian yantra"
+        },
+        {
+          "events": 11,
+          "id": "work:dasan-feat-anello-capuano-c7506ac8",
+          "title": "Dasan (feat. Anello Capuano)"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic"
+    }
+  ],
+  "schema_version": "encounter-next-breath/v1",
+  "source_artifact": "trace/influence_breath_cycle.json"
+}

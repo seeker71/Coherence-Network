@@ -32,6 +32,7 @@ YouTube history is especially large: the derived event trace contains tens of th
 - [x] Read only published derived artifacts, not raw Takeout archives, cookies, authenticated browser state, or paid text.
 - [x] Emit a JSON summary with source counts, already-roomed authors, unroomed author candidates, unroomed work candidates, strongest monthly waves, and next actions.
 - [x] Emit a Markdown report that is easy for a human to scan and easy for an agent to follow through trace links.
+- [x] Emit a reviewable encounter seed file for the top unroomed author candidates so `scripts/encounter.py` can flow the next breath into the graph through the existing CLI/API doorway.
 - [x] Register both artifacts in `docs/field/urs/manifest.json`.
 - [x] Register the builder tool in the manifest so the breath can be rerun after future Takeout/Audible/browser imports.
 - [x] Verify all emitted trace links resolve through the field story API.
@@ -41,14 +42,17 @@ YouTube history is especially large: the derived event trace contains tens of th
 - `docs/field/urs/tools/influence_breath_cycle.py` builds the compact awareness artifact.
 - `docs/field/urs/output/influence_breath_cycle.md` is the human-readable breath-cycle report.
 - `docs/field/urs/trace/influence_breath_cycle.json` is the machine-readable breath-cycle summary.
+- `docs/field/urs/input/encounter_next_breath.txt` is the reviewable CLI seed for the next encounter pass.
+- `docs/field/urs/trace/encounter_next_breath.json` is the machine-readable encounter seed summary.
 - `docs/field/urs/manifest.json` publishes the report, summary, and builder as field story artifacts.
 - `api/tests/test_field_story_trace_index.py` verifies registration, source counts, unroomed candidates, and generated trace links.
 
 ## Acceptance Criteria
 
 - The builder emits both Markdown and JSON from the derived field story trace indexes.
-- The manifest exposes `influence-breath-cycle`, `trace-influence-breath-cycle`, and `influence-breath-cycle-builder`.
+- The manifest exposes `influence-breath-cycle`, `trace-influence-breath-cycle`, `encounter-next-breath-seed`, `trace-encounter-next-breath`, and `influence-breath-cycle-builder`.
 - `api/tests/test_field_story_trace_index.py` proves the YouTube-derived source count is present and follows all generated trace links.
+- The generated encounter seed parses as eight reviewed `(input, note)` pairs for `scripts/encounter.py`.
 
 ## Risks
 
