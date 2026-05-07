@@ -14,7 +14,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@rainbow-me/rainbowkit": "^2.2.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
