@@ -15,9 +15,17 @@ The whole cluster lived together in a folder labeled *Water Project* on Urs's ma
 
 ## What it carries
 
-Backtracking Model Language (BML) is a high-level programming language synthesizing Java, C++, Prolog, and Smalltalk: multiple inheritance through delegation, interfaces, blocks, exception handling, templates, reflection, inner classes, and backtracking. Backtracking Model Form (BMF) is the companion — a top-down backtracking parser-generator written in BML, capable of supporting infinite input streams because parse attributes are evaluated as the stream arrives.
+The system is three layers, and each acronym carries both a public and a private reading.
 
-Co-built with **Steve G. Bjorg**, who designed and implemented the object model and the virtual machine on his own MS thesis at CU Boulder the same year.
+| Layer | Public name | Private (team) reading | What it is |
+|---|---|---|---|
+| Parser | **BMF** — Backtracking Model Form | **Bjorg Muff Form** (a play on BNF) | A top-down parser written in C++. BNF augmented with execution elements: when a rule matches, code fires. A stack supports backtracking on parse failures. Expressions are tagged and placed on a structured stack that each rule can transform into the target language's object model. The grammar is executable — parsing produces a full object tree as it goes, so even infinite input streams can be handled. |
+| Compiler-compiler | **BMC** | (Bjorg Muff Compiler-Compiler) | Sits on top of BMF as a general compiler-compiler. Takes a grammar described in BMF and produces a target compiler that emits whatever artifacts the target asks for. Turns BMF from a parser into a full compiler architecture. |
+| Language | **BML** — Backtracking Model Language | **Bjorg Muff Language** (a pun on the team initials) | The full forward-and-backward executable language, with assembly instructions and a virtual machine. Synthesizes features from Java, C++, Prolog, and Smalltalk: multiple inheritance through delegation, interfaces, blocks, exception handling, templates, reflection, inner classes, and backtracking. |
+
+The self-hosting loop: BMC consumes the BML grammar through BMF and produces the BML compiler. The BML compiler emits assembly opcodes. The virtual machine — designed and implemented by **Steve G. Bjorg** on his own MS thesis the same year — executes them. Three layers; the parser can parse the grammar that defined it; the compiler-compiler can generate the compiler that compiles the language whose grammar it was generated from.
+
+Co-built with **Steve G. Bjorg**: object model and virtual machine on his side, the language and the parser/compiler-compiler stack on Urs's side. The "BM" in every name is literally Bjorg-Muff.
 
 ## Why it lives in this body
 
@@ -31,7 +39,7 @@ Runtime grammar extension — the user can introduce new parsing constructs and 
 
 ## A note on the Conclusion
 
-The thesis Conclusion is left as three subheadings — `BMF`, `BML Language`, `BML Compiler` — with no body written in. An unfinished breath at the end of a long document. The conclusion was the defense itself, the photograph on the lawn in the CU shirt, the work entering the world through demonstration rather than summary.
+The thesis Conclusion is left as three subheadings — `BMF`, `BML Language`, `BML Compiler` — with no body written in. The three subheadings map cleanly onto the three layers above: the parser, the language, and the BMC-generated compiler that bridges them. An unfinished breath at the end of a long document. The conclusion was the defense itself, the photograph on the lawn in the CU shirt, the work entering the world through demonstration rather than summary.
 
 ## Where it is woven into the body
 
