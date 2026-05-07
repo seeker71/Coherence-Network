@@ -26,5 +26,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MatiasDeStefanoProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getMatiasDeStefanoContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="matias-de-stefano" />;
 }

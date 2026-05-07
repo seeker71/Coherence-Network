@@ -30,5 +30,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GrabProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getGrabContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="grab" />;
 }

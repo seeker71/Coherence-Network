@@ -21,5 +21,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function JoshuaGoldenProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getJoshuaGoldenContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="joshua-golden" />;
 }

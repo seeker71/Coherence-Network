@@ -22,5 +22,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RobertEdwardGrantProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getRobertEdwardGrantContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="robert-edward-grant" />;
 }
