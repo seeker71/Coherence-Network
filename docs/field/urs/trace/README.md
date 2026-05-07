@@ -10,6 +10,7 @@ Compact derived indexes for answering influence questions without loading raw li
 - `work_index.jsonl` - one work per line with ID, author link, peak months, and compact monthly wave.
 - `significant_work_index.jsonl` - one significant formative work/series per line with impact basis, linked vision concepts, children titles, and chapter-discovery probes.
 - `concept_work_map.json` - concept-first lookup from `lc-*` vision concepts to significant works and probe terms.
+- `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow
 
@@ -41,6 +42,12 @@ For "which works relate to `lc-network`?", load:
 
 ```bash
 jq '.concepts["lc-network"]' docs/field/urs/trace/concept_work_map.json
+```
+
+For reading the story and opening each influence as it appears, use:
+
+```bash
+rg '/api/field-stories/urs-field-story/trace' docs/field/urs/output/chronological_story_with_frequency.md
 ```
 
 The wave arrays use:

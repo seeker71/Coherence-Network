@@ -1,0 +1,118 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/story-frequency-interlinks-20260507",
+  "commit_scope": "Interlink the chronological frequency story with significant-work and author trace discovery paths.",
+  "files_owned": [
+    "specs/story-frequency-influence-interlinks.md",
+    "api/tests/test_field_story_agent_surface.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/output/chronological_story_with_frequency.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/significant_work_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/system_audit/commit_evidence_2026-05-07_story_frequency_interlinks.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_agent_surface.py tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check docs/field/urs/tools/build_trace_indexes.py api/tests/test_field_story_agent_surface.py api/tests/test_field_story_trace_index.py",
+      "python3 -m json.tool docs/field/urs/trace/concept_work_map.json",
+      "head -n 1 docs/field/urs/trace/significant_work_index.jsonl | python3 -m json.tool",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "Trace manifest reports 14 significant works after adding Karl May stories and Der Lederstrumpf.",
+      "Chronological story contains direct trace links for the significant works and main listening authors, and tests follow those links through the API router.",
+      "Childhood frontier works resolve through the significant-work API selector."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending GitHub PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI, merge, and public deploy validation are still pending."
+  },
+  "idea_ids": [
+    "profile-contribution-derived-data",
+    "field-listening-trace-index",
+    "story-frequency-influence-interlinks"
+  ],
+  "spec_ids": [
+    "story-frequency-influence-interlinks"
+  ],
+  "task_ids": [
+    "story-frequency-interlinks-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source memory",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 11 passed, 5 warnings",
+    "ruff: All checks passed",
+    "worktree_pr_guard: ready_for_push=True, local_preflight=pass",
+    "check_pr_followthrough: stale_codex_prs=0",
+    "trace manifest: 14 significant works and 25 concept-to-work maps",
+    "privacy boundary excludes raw Google Takeout archives, Audible exports, browser sessions, cookies, and paid book text"
+  ],
+  "change_files": [
+    "specs/story-frequency-influence-interlinks.md",
+    "api/tests/test_field_story_agent_surface.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/output/chronological_story_with_frequency.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/significant_work_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/system_audit/commit_evidence_2026-05-07_story_frequency_interlinks.json"
+  ],
+  "change_intent": "docs_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "People and agents can open the chronological story and reach significant-work, concept, and author trace slices directly from the story.",
+    "public_endpoints": [
+      "/api/field-stories/urs-field-story/artifacts/chronological-story",
+      "/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories",
+      "/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf"
+    ],
+    "test_flows": [
+      "Field story artifact tests",
+      "Field story trace API tests",
+      "Trace index rebuild from ten_year_events.jsonl"
+    ]
+  }
+}
