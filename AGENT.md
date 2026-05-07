@@ -2,7 +2,7 @@
 
 Purpose: guide the agent toward the simplest useful next command. Validation is evidence, not ceremony. When a check fails, repair the concrete failure and continue instead of expanding the process.
 
-## Simple Rule
+## Simple Practice
 
 - Do not stop at "check failed" as the final answer.
 - Fix the failure first, rerun the smallest check that proves the fix, then continue commit/deploy flow.

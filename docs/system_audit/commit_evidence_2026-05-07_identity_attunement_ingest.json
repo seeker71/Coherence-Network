@@ -1,0 +1,81 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/identity-attunement-ingest-20260507",
+  "commit_scope": "Integrate the remaining identity-attunement sibling worktree guidance into the prompt entry and arrival practices.",
+  "files_owned": [
+    "AGENT.md",
+    "scripts/arrival.py",
+    "scripts/prompt_entry_gate.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "bash -n scripts/prompt_entry_gate.sh",
+      "python3 -m py_compile scripts/arrival.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_identity_attunement_ingest.json"
+    ],
+    "notes": [
+      "The remaining dirty sibling held process/orientation guidance only: lineage-first lookup, least-energy coherence restoration, and softer wording for control-heavy shapes."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR checks, and merge."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Process guidance only; public deploy verification remains part of merge flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local checks pass; PR/CI/deploy pending."
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "agent-resonance-onboarding"
+  ],
+  "task_ids": [
+    "identity-attunement-ingest-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "flow guidance",
+        "lineage-first correction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "prompt gate: passed on clean branch before integration",
+    "prompt_entry_gate shell syntax: passed",
+    "arrival.py compile: passed",
+    "commit evidence validation: passed",
+    "continuity guard: remaining sibling identified as dirty_integration_candidate, no blocking risk"
+  ],
+  "change_files": [
+    "AGENT.md",
+    "docs/system_audit/commit_evidence_2026-05-07_identity_attunement_ingest.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/arrival.py",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "change_intent": "process_only"
+}
