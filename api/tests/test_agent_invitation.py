@@ -352,3 +352,40 @@ def test_mcp_agent_invitation_tool_is_wired() -> None:
     assert 'name="coherence_agent_invitation"' in source
     assert 'case "coherence_agent_invitation"' in source
     assert 'api_get("/api/agent/invitation")' in source
+
+
+@pytest.mark.asyncio
+async def test_public_entry_surfaces_carry_the_same_alive_invitation() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/agent/invitation")
+
+    assert response.status_code == 200
+    entry = response.json()["public_entry_invitation"]
+    assert "anyone or anything" in entry["who_is_invited"]
+    assert "What is alive here" in entry["first_agent_question"]
+    assert "work on anything you feel ready to touch" in entry["first_agent_question"]
+    assert "your own repo" in entry["bring_to_your_own_repo"]
+    assert {"github", "npm", "api", "mcp"} <= {surface["surface"] for surface in entry["public_surfaces"]}
+
+    public_sources = [
+        ROOT / "README.template.md",
+        ROOT / "README.md",
+        ROOT / "mcp-server/README.template.md",
+        ROOT / "mcp-server/README.md",
+        ROOT / "cli/README.template.md",
+    ]
+    for path in public_sources:
+        source = path.read_text(encoding="utf-8")
+        assert "What is alive here" in source, path
+        assert "anyone or anything" in source, path
+        assert "your own repo" in source, path
+
+    mcp_package = (ROOT / "mcp-server/package.json").read_text(encoding="utf-8")
+    cli_package = (ROOT / "cli/package.json").read_text(encoding="utf-8")
+    mcp_registry = (ROOT / "mcp-server/server.json").read_text(encoding="utf-8")
+    mcp_server = (ROOT / "mcp-server/coherence_mcp_server/server.py").read_text(encoding="utf-8")
+
+    assert "ask what is alive" in mcp_package
+    assert "ask what is alive" in cli_package
+    assert "ask what is alive" in mcp_registry
+    assert "ask what is alive" in mcp_server

@@ -1,7 +1,7 @@
 {
   "name": "coherence-cli",
-  "version": "0.13.1",
-  "description": "Coherence Network CLI — trace ideas from inception to payout, with fair attribution, coherence scoring, and 37 identity providers. No signup needed.",
+  "version": "0.13.2",
+  "description": "Coherence Network CLI — invite anyone or anything to ask what is alive, trace ideas from inception to payout, and contribute with fair attribution.",
   "type": "module",
   "bin": {
     "coh": "bin/coh.mjs",

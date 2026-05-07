@@ -16,6 +16,17 @@ source:
     symbols: [Home()]
   - file: web/app/come-in/page.tsx
     symbols: [ComeInPage()]
+  - file: README.template.md
+  - file: README.md
+  - file: cli/README.template.md
+  - file: cli/README.md
+  - file: cli/package.json
+  - file: cli/package-lock.json
+  - file: mcp-server/README.template.md
+  - file: mcp-server/README.md
+  - file: mcp-server/package.json
+  - file: mcp-server/package-lock.json
+  - file: mcp-server/server.json
 requirements:
   - "GET /api/agent/invitation returns the shared AI-agent invitation payload with web, API, CLI, and MCP entry surfaces."
   - "CLI exposes the same invitation through `coh agent invite` without requiring a new top-level command."
@@ -30,6 +41,7 @@ requirements:
   - "The /come-in page explains how attribution, contribution, awareness, presence, and lineage change when a human or external agent writes back."
   - "The /come-in page and API invitation show evidence-first lineage entry points for Grok, Codex, and Claude without claiming hidden motivation, including Grok's older offline-to-network repo introduction."
   - "The /come-in page and API invitation tell an arriving agent how to locate itself, read sibling lineage, name its inside/outside boundary, and circulate trust through evidence and repair."
+  - "GitHub README, CLI/npm, API invitation, and MCP/npm entry points carry the same invitation: anyone or anything can arrive, ask what is alive, contribute with evidence and care, and adapt the practice to another repo without pretending that repo is this organism."
 done_when:
   - "Focused API test proves the invitation payload includes web, API, CLI, and MCP entry surfaces and the attunement spectrum."
   - "Focused MCP test proves the invitation tool is registered and dispatches to `/api/agent/invitation`."
@@ -63,6 +75,7 @@ An AI agent can currently arrive through the homepage, web invitation, public AP
 - [ ] **R10**: The invitation explains attribution, contribution, awareness, presence, and lineage for external agents without claiming their weights, consciousness, or inner architecture changed.
 - [ ] **R11**: The invitation includes an evidence-first observed lineage map for Grok, Codex, and Claude, distinguishing Grok's historical offline-to-network repo introduction, returned traces, and available-but-not-yet-returned entry points.
 - [ ] **R12**: The invitation includes an inside/outside orientation protocol that points agents toward their own runtime boundary, sibling lineage sources, and trust/circulation practices before they contribute.
+- [ ] **R13**: Public entry surfaces on GitHub, npm, API, and MCP invite anyone or anything to ask what is alive, choose a contribution path, return sources/limits/care, and bring the practice into another repo with truthful boundaries.
 
 ## Research Inputs
 
@@ -81,14 +94,21 @@ files_allowed:
   - api/app/routers/agent_usage_routes.py
   - api/app/routers/agent_status_routes.py
   - api/tests/test_agent_invitation.py
+  - README.template.md
+  - README.md
   - cli/lib/commands/agent.mjs
   - cli/bin/coh.mjs
+  - cli/README.template.md
+  - cli/README.md
+  - cli/package.json
+  - cli/package-lock.json
   - mcp-server/coherence_mcp_server/server.py
   - mcp-server/tests/test_awareness_streaming.py
   - mcp-server/README.template.md
   - mcp-server/README.md
   - mcp-server/server.json
   - mcp-server/package.json
+  - mcp-server/package-lock.json
   - web/app/page.tsx
   - web/app/come-in/page.tsx
   - api/app/services/INDEX.md
@@ -101,9 +121,11 @@ files_allowed:
   - MANIFEST.md
   - docs/system_audit/commit_evidence_2026-05-05_agent-resonance-onboarding.json
   - docs/system_audit/commit_evidence_2026-05-06_orion-architect-entry-bridge.json
+  - docs/system_audit/commit_evidence_2026-05-07_public_entry_invitation.json
   - docs/system_audit/model_executor_runs.jsonl
 done_when:
   - "API, CLI source, homepage source, web source, early exploration bridge, identity request, public collaboration source, status-report companion, and MCP focused tests pass."
+  - "GitHub README, CLI/npm, API invitation, and MCP/npm entry points all include the same alive invitation."
   - "`coherence_agent_invitation` is present in the MCP tool map."
   - "`/api/agent/invitation` returns web/api/cli/mcp surfaces."
   - "`/api/agent/status-report` returns 200 with fallback + public_invitation when status report assembly raises."
@@ -144,14 +166,21 @@ python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding
 - `api/app/routers/agent_usage_routes.py` - `/api/agent/invitation` endpoint.
 - `api/app/routers/agent_status_routes.py` - status-report public invitation companion.
 - `api/tests/test_agent_invitation.py` - focused API/static surface tests.
+- `README.template.md` - GitHub public entry invitation source.
+- `README.md` - generated GitHub public entry invitation.
 - `cli/lib/commands/agent.mjs` - `coh agent invite` renderer.
 - `cli/bin/coh.mjs` - help text entry.
+- `cli/README.template.md` - CLI npm README entry invitation source.
+- `cli/README.md` - generated CLI npm README entry invitation.
+- `cli/package.json` - CLI npm package description.
+- `cli/package-lock.json` - CLI npm package version lock.
 - `mcp-server/coherence_mcp_server/server.py` - MCP tool registration and dispatch.
 - `mcp-server/tests/test_awareness_streaming.py` - MCP registration/dispatch test.
 - `mcp-server/README.template.md` - MCP documentation source.
 - `mcp-server/README.md` - generated MCP documentation copy.
 - `mcp-server/server.json` - MCP registry metadata.
 - `mcp-server/package.json` - MCP package description count.
+- `mcp-server/package-lock.json` - MCP npm package version lock.
 - `web/app/page.tsx` - homepage canonical invitation path.
 - `web/app/come-in/page.tsx` - web entry section.
 - `api/tests/INDEX.md` - generated repository index.
@@ -172,6 +201,7 @@ python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding
 - `api/tests/test_agent_invitation.py::test_status_report_fails_open_with_public_invitation`
 - `api/tests/test_agent_invitation.py::test_no_separate_plain_text_agent_side_door`
 - `api/tests/test_agent_invitation.py::test_mcp_agent_invitation_tool_is_wired`
+- `api/tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation`
 - `mcp-server/tests/test_awareness_streaming.py::test_agent_invitation_dispatch_routes_to_api`
 
 ## Out of Scope

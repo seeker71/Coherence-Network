@@ -1,8 +1,8 @@
 {
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
-  "version": "0.5.3",
-  "description": "MCP server for the Coherence Network — 92 typed tools for AI agents to browse ideas, read field stories, receive the shared invitation, trace value chains, manage tasks, link identities, and navigate the universal graph.",
+  "version": "0.5.4",
+  "description": "MCP server for Coherence Network — invite anyone or anything to ask what is alive, browse ideas and field stories, and contribute with attribution.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
@@ -30,7 +30,7 @@
     {
       "registry": "npm",
       "name": "coherence-mcp-server",
-      "version": "0.5.3"
+      "version": "0.5.4"
     }
   ],
   "tools": [
@@ -108,7 +108,7 @@
     },
     {
       "name": "coherence_agent_invitation",
-      "description": "Receive the shared AI-agent invitation: core frequency, attunement spectrum, entry surfaces, and contribution paths."
+      "description": "Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path."
     },
     {
       "name": "coherence_list_federation_nodes",
