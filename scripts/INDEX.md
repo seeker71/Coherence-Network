@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 78
+**Total files**: 84
 
 | File | Purpose |
 |---|---|
@@ -31,6 +31,7 @@
 | [context_budget.py](context_budget.py) | !/usr/bin/env python3 |
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
 | [demo_dual_identity.py](demo_dual_identity.py) | !/usr/bin/env python3 |
+| [encounter.py](encounter.py) | !/usr/bin/env python3 |
 | [ensure_worktree_start_clean.py](ensure_worktree_start_clean.py) | !/usr/bin/env python3 |
 | [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
 | [export_lineage.py](export_lineage.py) | !/usr/bin/env python3 |
@@ -44,6 +45,8 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
 | [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
+| [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
+| [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
 | [import_lineage.py](import_lineage.py) | !/usr/bin/env python3 |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [local_runner.py](local_runner.py) | !/usr/bin/env python3 |
@@ -57,10 +60,12 @@
 | [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
 | [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
+| [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | !/usr/bin/env python3 |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
+| [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | !/usr/bin/env python3 |
 | [seed_db.py](seed_db.py) | !/usr/bin/env python3 |
 | [seed_grant_ideas.py](seed_grant_ideas.py) | !/usr/bin/env python3 |
@@ -82,6 +87,7 @@
 | [validate_spec_quality.py](validate_spec_quality.py) | !/usr/bin/env python3 |
 | [validate_workflow_references.py](validate_workflow_references.py) | !/usr/bin/env python3 |
 | [verify_hashes.py](verify_hashes.py) | !/usr/bin/env python3 |
+| [viewport_audit.py](viewport_audit.py) | !/usr/bin/env python3 |
 | [wander.py](wander.py) | !/usr/bin/env python3 |
 | [wellness_check.py](wellness_check.py) | !/usr/bin/env python3 |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | !/usr/bin/env python3 |

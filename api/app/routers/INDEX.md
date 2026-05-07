@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 121
+**Total files**: 125
 
 | File | Purpose |
 |---|---|
@@ -14,6 +14,7 @@
 | [agent_auto_heal_routes.py](agent_auto_heal_routes.py) | Agent auto-heal stats route. |
 | [agent_diagnostics_routes.py](agent_diagnostics_routes.py) | Agent diagnostics routes. |
 | [agent_execute_routes.py](agent_execute_routes.py) | Agent task execute and pickup-and-execute routes. |
+| [agent_external_encounters.py](agent_external_encounters.py) | External agent encounter records. |
 | [agent_grounded_metrics_routes.py](agent_grounded_metrics_routes.py) | Routes for grounded idea portfolio metrics (spec 116). |
 | [agent_helpers.py](agent_helpers.py) | Shared helpers for agent router and sub-routers. No routes. |
 | [agent_issues_routes.py](agent_issues_routes.py) | Agent fatal issues, monitor issues, metrics, effectiveness, collective-health routes. |
@@ -61,6 +62,7 @@
 | [explore.py](explore.py) | Explore queue — serendipitous meetings, one after another. |
 | [fallbacks.py](fallbacks.py) | Fallback visibility — read the witness of silent degradation paths. |
 | [federation.py](federation.py) | Federation API routes for cross-instance data exchange. |
+| [field_stories.py](field_stories.py) | Field story router — source-backed narrative and frequency artifacts. |
 | [flow_renderer.py](flow_renderer.py) | Flow renderer data — real energy flows for visualization. |
 | [flow_simulator.py](flow_simulator.py) | Flow simulator — visualize how CC moves through the community. |
 | [friction.py](friction.py) | Friction ledger API routes. |
@@ -80,6 +82,7 @@
 | [lenses.py](lenses.py) | Worldview lens registry — spec-181. |
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
 | [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |
+| [mcp_remote.py](mcp_remote.py) | No-auth remote MCP endpoint for connector clients. |
 | [me_portfolio.py](me_portfolio.py) | Authenticated portfolio routes — same payloads as /api/contributors/{id}/… via X-API-Key. |
 | [meetings.py](meetings.py) | Meeting endpoint — the felt state of a viewer meeting an entity. |
 | [memberships.py](memberships.py) | Workspace membership routes — team edges between contributors and workspaces. |
@@ -96,6 +99,7 @@
 | [personal_feed.py](personal_feed.py) | Personal feed — your corner of the organism. |
 | [pipeline.py](pipeline.py) | Pipeline status routes for the agent pipeline loop. |
 | [pipeline_policies.py](pipeline_policies.py) | Pipeline policy CRUD endpoints. |
+| [places.py](places.py) | Places router — where presences are rooted. |
 | [practice.py](practice.py) | The organism's daily practice, served as a first-class endpoint. |
 | [presence.py](presence.py) | Presence — soft heartbeat + read endpoints. |
 | [presence_resonance.py](presence_resonance.py) | Presence ↔ vision-concept resonance threads. |
