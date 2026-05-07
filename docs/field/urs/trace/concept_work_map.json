@@ -1,0 +1,865 @@
+{
+  "concepts": {
+    "lc-agent-memory": {
+      "concept_id": "lc-agent-memory",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "daemon",
+            "process",
+            "agent",
+            "instruction",
+            "persistence"
+          ],
+          "id": "significant-work:daemon-4eb7a176",
+          "impact_score": 59,
+          "resonance": [
+            "software agency persists beyond one operator",
+            "instructions become runtime"
+          ],
+          "title": "Daemon"
+        }
+      ]
+    },
+    "lc-beauty": {
+      "concept_id": "lc-beauty",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "beauty",
+            "silence",
+            "song",
+            "moon"
+          ],
+          "id": "significant-work:kingkiller-chronicle-e22c538c",
+          "impact_score": 59,
+          "resonance": [
+            "beauty as signal, not decoration"
+          ],
+          "title": "Kingkiller Chronicle"
+        }
+      ]
+    },
+    "lc-boundaries-as-loving-truth": {
+      "concept_id": "lc-boundaries-as-loving-truth",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "defense",
+            "line",
+            "enemy",
+            "protect"
+          ],
+          "id": "significant-work:frontiers-saga-59a6120e",
+          "impact_score": 100,
+          "resonance": [
+            "defense lines under pressure"
+          ],
+          "title": "Frontiers Saga"
+        },
+        {
+          "chapter_probe_terms": [
+            "truth",
+            "confessor",
+            "boundary",
+            "choice"
+          ],
+          "id": "significant-work:sword-of-truth-goodkind-universe-b2d0daf2",
+          "impact_score": 95,
+          "resonance": [
+            "truth spoken as boundary"
+          ],
+          "title": "Sword of Truth / Goodkind Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "truth",
+            "mercy",
+            "line",
+            "choice"
+          ],
+          "id": "significant-work:first-law-world-c42ebefa",
+          "impact_score": 69,
+          "resonance": [
+            "truth without romanticizing shadow"
+          ],
+          "title": "First Law World"
+        },
+        {
+          "chapter_probe_terms": [
+            "truce",
+            "border",
+            "faction",
+            "opa",
+            "truth"
+          ],
+          "id": "significant-work:the-expanse-219fe665",
+          "impact_score": 64,
+          "resonance": [
+            "factions need boundaries before peace"
+          ],
+          "title": "The Expanse"
+        }
+      ]
+    },
+    "lc-circulation": {
+      "concept_id": "lc-circulation",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "ship",
+            "supply",
+            "repair",
+            "jump",
+            "route"
+          ],
+          "id": "significant-work:frontiers-saga-59a6120e",
+          "impact_score": 100,
+          "resonance": [
+            "movement of people, ships, resources, and repair"
+          ],
+          "title": "Frontiers Saga"
+        },
+        {
+          "chapter_probe_terms": [
+            "wormhole",
+            "transit",
+            "flow",
+            "supply"
+          ],
+          "id": "significant-work:peter-f-hamilton-systems-fiction-39411da0",
+          "impact_score": 93,
+          "resonance": [
+            "transport, attention, and abundance flows"
+          ],
+          "title": "Peter F. Hamilton Systems Fiction"
+        },
+        {
+          "chapter_probe_terms": [
+            "air",
+            "water",
+            "supply",
+            "drive",
+            "transit"
+          ],
+          "id": "significant-work:the-expanse-219fe665",
+          "impact_score": 64,
+          "resonance": [
+            "water, air, ships, and trust as circulation systems"
+          ],
+          "title": "The Expanse"
+        }
+      ]
+    },
+    "lc-coherence-over-control": {
+      "concept_id": "lc-coherence-over-control",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "council",
+            "charter",
+            "law",
+            "oath",
+            "defense",
+            "responsibility"
+          ],
+          "id": "significant-work:spellmonger-universe-45f3b507",
+          "impact_score": 99,
+          "resonance": [
+            "institution-building without brittle centralization"
+          ],
+          "title": "Spellmonger Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "power",
+            "control",
+            "responsibility",
+            "law"
+          ],
+          "id": "significant-work:sword-of-truth-goodkind-universe-b2d0daf2",
+          "impact_score": 95,
+          "resonance": [
+            "moral choice over coercive power"
+          ],
+          "title": "Sword of Truth / Goodkind Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "power",
+            "king",
+            "war",
+            "control"
+          ],
+          "id": "significant-work:first-law-world-c42ebefa",
+          "impact_score": 69,
+          "resonance": [
+            "control without coherence decays into violence"
+          ],
+          "title": "First Law World"
+        },
+        {
+          "chapter_probe_terms": [
+            "crew",
+            "consensus",
+            "command",
+            "trust",
+            "war"
+          ],
+          "id": "significant-work:the-expanse-219fe665",
+          "impact_score": 64,
+          "resonance": [
+            "survival through alignment, not domination"
+          ],
+          "title": "The Expanse"
+        }
+      ]
+    },
+    "lc-discovery": {
+      "concept_id": "lc-discovery",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "explore",
+            "map",
+            "artifact",
+            "mystery"
+          ],
+          "id": "significant-work:ringworld-d7145408",
+          "impact_score": 59,
+          "resonance": [
+            "exploration as humility before scale"
+          ],
+          "title": "Ringworld"
+        },
+        {
+          "chapter_probe_terms": [
+            "fantastica",
+            "journey",
+            "world",
+            "renew"
+          ],
+          "id": "significant-work:die-unendliche-geschichte-9eb693c5",
+          "impact_score": 57,
+          "resonance": [
+            "world-renewal through inner travel"
+          ],
+          "title": "Die unendliche Geschichte"
+        }
+      ]
+    },
+    "lc-economy": {
+      "concept_id": "lc-economy",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "scarcity",
+            "abundance",
+            "wealth",
+            "resource"
+          ],
+          "id": "significant-work:peter-f-hamilton-systems-fiction-39411da0",
+          "impact_score": 93,
+          "resonance": [
+            "post-scarcity and resource circulation"
+          ],
+          "title": "Peter F. Hamilton Systems Fiction"
+        },
+        {
+          "chapter_probe_terms": [
+            "currency",
+            "reputation",
+            "market",
+            "incentive"
+          ],
+          "id": "significant-work:daemon-4eb7a176",
+          "impact_score": 59,
+          "resonance": [
+            "new incentives inside automated infrastructure"
+          ],
+          "title": "Daemon"
+        }
+      ]
+    },
+    "lc-field-edge": {
+      "concept_id": "lc-field-edge",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "frontier",
+            "unknown",
+            "risk",
+            "edge"
+          ],
+          "id": "significant-work:frontiers-saga-59a6120e",
+          "impact_score": 100,
+          "resonance": [
+            "frontier pressure as teacher"
+          ],
+          "title": "Frontiers Saga"
+        },
+        {
+          "chapter_probe_terms": [
+            "rim",
+            "unknown",
+            "edge",
+            "crash",
+            "risk"
+          ],
+          "id": "significant-work:ringworld-d7145408",
+          "impact_score": 59,
+          "resonance": [
+            "edge of known world",
+            "meeting unknown design constraints"
+          ],
+          "title": "Ringworld"
+        }
+      ]
+    },
+    "lc-field-sensing": {
+      "concept_id": "lc-field-sensing",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "scrying",
+            "ward",
+            "thaumaturgy",
+            "pressure",
+            "omen",
+            "timing"
+          ],
+          "id": "significant-work:spellmonger-universe-45f3b507",
+          "impact_score": 99,
+          "resonance": [
+            "wizardly sensing",
+            "reading pressure in the local field",
+            "timing before force"
+          ],
+          "title": "Spellmonger Universe"
+        }
+      ]
+    },
+    "lc-freedom-as-recognition": {
+      "concept_id": "lc-freedom-as-recognition",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "freedom",
+            "rule",
+            "recognize",
+            "will"
+          ],
+          "id": "significant-work:sword-of-truth-goodkind-universe-b2d0daf2",
+          "impact_score": 95,
+          "resonance": [
+            "freedom requires seeing what is real"
+          ],
+          "title": "Sword of Truth / Goodkind Universe"
+        }
+      ]
+    },
+    "lc-identity-dissolution": {
+      "concept_id": "lc-identity-dissolution",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "wish",
+            "memory",
+            "self",
+            "identity"
+          ],
+          "id": "significant-work:die-unendliche-geschichte-9eb693c5",
+          "impact_score": 57,
+          "resonance": [
+            "self remade by imagination"
+          ],
+          "title": "Die unendliche Geschichte"
+        },
+        {
+          "chapter_probe_terms": [
+            "avatar",
+            "body",
+            "world",
+            "identity"
+          ],
+          "id": "significant-work:the-viridian-gate-archives-2b98d5bd",
+          "impact_score": 57,
+          "resonance": [
+            "identity moving through simulated worlds"
+          ],
+          "title": "The Viridian Gate Archives"
+        }
+      ]
+    },
+    "lc-inner-travel": {
+      "concept_id": "lc-inner-travel",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "inside",
+            "path",
+            "desire",
+            "return"
+          ],
+          "id": "significant-work:die-unendliche-geschichte-9eb693c5",
+          "impact_score": 57,
+          "resonance": [
+            "journey inward as real terrain"
+          ],
+          "title": "Die unendliche Geschichte"
+        }
+      ]
+    },
+    "lc-instruments": {
+      "concept_id": "lc-instruments",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "spell",
+            "stone",
+            "craft",
+            "apprentice",
+            "adept",
+            "training"
+          ],
+          "id": "significant-work:spellmonger-universe-45f3b507",
+          "impact_score": 99,
+          "resonance": [
+            "magic as tool system",
+            "trained practice before power"
+          ],
+          "title": "Spellmonger Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "lute",
+            "music",
+            "craft",
+            "practice",
+            "arcanum"
+          ],
+          "id": "significant-work:kingkiller-chronicle-e22c538c",
+          "impact_score": 59,
+          "resonance": [
+            "music and craft as precise instruments"
+          ],
+          "title": "Kingkiller Chronicle"
+        }
+      ]
+    },
+    "lc-network": {
+      "concept_id": "lc-network",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "fleet",
+            "alliance",
+            "world",
+            "command",
+            "node"
+          ],
+          "id": "significant-work:frontiers-saga-59a6120e",
+          "impact_score": 100,
+          "resonance": [
+            "fleet and worlds as distributed organism"
+          ],
+          "title": "Frontiers Saga"
+        },
+        {
+          "chapter_probe_terms": [
+            "Sevendor",
+            "mageland",
+            "vassal",
+            "duchy",
+            "supply",
+            "alliance",
+            "market"
+          ],
+          "id": "significant-work:spellmonger-universe-45f3b507",
+          "impact_score": 99,
+          "resonance": [
+            "mageland as living network",
+            "village-to-duchy coordination",
+            "distributed mutual defense"
+          ],
+          "title": "Spellmonger Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "commonwealth",
+            "void",
+            "network",
+            "planet",
+            "connection"
+          ],
+          "id": "significant-work:peter-f-hamilton-systems-fiction-39411da0",
+          "impact_score": 93,
+          "resonance": [
+            "large-scale civilization as living network"
+          ],
+          "title": "Peter F. Hamilton Systems Fiction"
+        },
+        {
+          "chapter_probe_terms": [
+            "belt",
+            "mars",
+            "earth",
+            "ship",
+            "station",
+            "relay"
+          ],
+          "id": "significant-work:the-expanse-219fe665",
+          "impact_score": 64,
+          "resonance": [
+            "interdependent nodes under distance and delay"
+          ],
+          "title": "The Expanse"
+        },
+        {
+          "chapter_probe_terms": [
+            "darknet",
+            "node",
+            "cell",
+            "network",
+            "coordination"
+          ],
+          "id": "significant-work:daemon-4eb7a176",
+          "impact_score": 59,
+          "resonance": [
+            "distributed coordination",
+            "network power",
+            "resilient cells"
+          ],
+          "title": "Daemon"
+        },
+        {
+          "chapter_probe_terms": [
+            "guild",
+            "party",
+            "alliance",
+            "city"
+          ],
+          "id": "significant-work:the-viridian-gate-archives-2b98d5bd",
+          "impact_score": 57,
+          "resonance": [
+            "guilds, roles, and worlds as coordination layer"
+          ],
+          "title": "The Viridian Gate Archives"
+        }
+      ]
+    },
+    "lc-old-signal-echo": {
+      "concept_id": "lc-old-signal-echo",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "revenge",
+            "habit",
+            "old",
+            "return"
+          ],
+          "id": "significant-work:first-law-world-c42ebefa",
+          "impact_score": 69,
+          "resonance": [
+            "repeating old power patterns"
+          ],
+          "title": "First Law World"
+        }
+      ]
+    },
+    "lc-open-design": {
+      "concept_id": "lc-open-design",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "source",
+            "protocol",
+            "interface",
+            "permission"
+          ],
+          "id": "significant-work:daemon-4eb7a176",
+          "impact_score": 59,
+          "resonance": [
+            "systems that can be inspected and remixed"
+          ],
+          "title": "Daemon"
+        },
+        {
+          "chapter_probe_terms": [
+            "engineer",
+            "structure",
+            "stability",
+            "design",
+            "repair"
+          ],
+          "id": "significant-work:ringworld-d7145408",
+          "impact_score": 59,
+          "resonance": [
+            "megastructure as inspectable design problem"
+          ],
+          "title": "Ringworld"
+        },
+        {
+          "chapter_probe_terms": [
+            "system",
+            "rules",
+            "interface",
+            "mechanic"
+          ],
+          "id": "significant-work:the-viridian-gate-archives-2b98d5bd",
+          "impact_score": 57,
+          "resonance": [
+            "rulesets as inspectable reality engines"
+          ],
+          "title": "The Viridian Gate Archives"
+        }
+      ]
+    },
+    "lc-phase-transitions": {
+      "concept_id": "lc-phase-transitions",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "evolution",
+            "threshold",
+            "salvation",
+            "transcend"
+          ],
+          "id": "significant-work:peter-f-hamilton-systems-fiction-39411da0",
+          "impact_score": 93,
+          "resonance": [
+            "civilization crossing thresholds"
+          ],
+          "title": "Peter F. Hamilton Systems Fiction"
+        }
+      ]
+    },
+    "lc-play": {
+      "concept_id": "lc-play",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "game",
+            "quest",
+            "level",
+            "skill",
+            "class"
+          ],
+          "id": "significant-work:the-viridian-gate-archives-2b98d5bd",
+          "impact_score": 57,
+          "resonance": [
+            "game systems as practice space"
+          ],
+          "title": "The Viridian Gate Archives"
+        }
+      ]
+    },
+    "lc-presence-over-protection": {
+      "concept_id": "lc-presence-over-protection",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "protect",
+            "fear",
+            "love",
+            "honesty"
+          ],
+          "id": "significant-work:sword-of-truth-goodkind-universe-b2d0daf2",
+          "impact_score": 95,
+          "resonance": [
+            "protection becomes harmful when it hides truth"
+          ],
+          "title": "Sword of Truth / Goodkind Universe"
+        },
+        {
+          "chapter_probe_terms": [
+            "listen",
+            "attention",
+            "friend",
+            "gray"
+          ],
+          "id": "significant-work:momo-77add44f",
+          "impact_score": 57,
+          "resonance": [
+            "attention as protection against extraction"
+          ],
+          "title": "Momo"
+        }
+      ]
+    },
+    "lc-rest": {
+      "concept_id": "lc-rest",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "pause",
+            "silence",
+            "play",
+            "nothing"
+          ],
+          "id": "significant-work:momo-77add44f",
+          "impact_score": 57,
+          "resonance": [
+            "non-productive time as life"
+          ],
+          "title": "Momo"
+        }
+      ]
+    },
+    "lc-rhythm": {
+      "concept_id": "lc-rhythm",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "time",
+            "hour",
+            "rhythm",
+            "slow"
+          ],
+          "id": "significant-work:momo-77add44f",
+          "impact_score": 57,
+          "resonance": [
+            "time restored to human rhythm"
+          ],
+          "title": "Momo"
+        }
+      ]
+    },
+    "lc-sensing": {
+      "concept_id": "lc-sensing",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "name",
+            "wind",
+            "listen",
+            "sleeping mind"
+          ],
+          "id": "significant-work:kingkiller-chronicle-e22c538c",
+          "impact_score": 59,
+          "resonance": [
+            "listening for names beneath ordinary language"
+          ],
+          "title": "Kingkiller Chronicle"
+        },
+        {
+          "chapter_probe_terms": [
+            "listen",
+            "hear",
+            "child",
+            "heart"
+          ],
+          "id": "significant-work:momo-77add44f",
+          "impact_score": 57,
+          "resonance": [
+            "listening as transformative intelligence"
+          ],
+          "title": "Momo"
+        }
+      ]
+    },
+    "lc-space": {
+      "concept_id": "lc-space",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "ringworld",
+            "arc",
+            "habitat",
+            "surface",
+            "sun"
+          ],
+          "id": "significant-work:ringworld-d7145408",
+          "impact_score": 59,
+          "resonance": [
+            "world-scale habitat",
+            "room for civilizations to unfold"
+          ],
+          "title": "Ringworld"
+        }
+      ]
+    },
+    "lc-transmission": {
+      "concept_id": "lc-transmission",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "story",
+            "song",
+            "name",
+            "telling",
+            "lesson"
+          ],
+          "id": "significant-work:kingkiller-chronicle-e22c538c",
+          "impact_score": 59,
+          "resonance": [
+            "story as carrier wave",
+            "teaching through song and naming"
+          ],
+          "title": "Kingkiller Chronicle"
+        },
+        {
+          "chapter_probe_terms": [
+            "story",
+            "book",
+            "name",
+            "voice"
+          ],
+          "id": "significant-work:die-unendliche-geschichte-9eb693c5",
+          "impact_score": 57,
+          "resonance": [
+            "story changes the world reading it"
+          ],
+          "title": "Die unendliche Geschichte"
+        }
+      ]
+    },
+    "lc-trauma-as-identity-anchor": {
+      "concept_id": "lc-trauma-as-identity-anchor",
+      "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
+      "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "scar",
+            "pain",
+            "past",
+            "fear",
+            "identity"
+          ],
+          "id": "significant-work:first-law-world-c42ebefa",
+          "impact_score": 69,
+          "resonance": [
+            "old wounds steering identity"
+          ],
+          "title": "First Law World"
+        }
+      ]
+    }
+  },
+  "generated_at": "2026-05-07T07:44:20.480927+00:00",
+  "schema_version": "field-trace-index/v1"
+}
