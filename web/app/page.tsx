@@ -19,6 +19,7 @@ import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locale
 // NEW: Featured Presences data (real public hero images from their sources)
 const FEATURED_PRESENCES = [
   {
+    id: "presence-elon-musk",
     name: "Elon Musk",
     tagline: "Multiplanetary • xAI • Tesla • SpaceX",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&crop=face", // TODO: Replace with real Elon Musk hero image from his official sources
@@ -26,6 +27,7 @@ const FEATURED_PRESENCES = [
     color: "from-blue-950 to-slate-950"
   },
   {
+    id: "presence-liquid-bloom",
     name: "Liquid Bloom",
     tagline: "Soundscapes for Embodied Dance • Journeys • Healing",
     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop", // TODO: Replace with real Amani Friend / Liquid Bloom hero image
@@ -33,6 +35,7 @@ const FEATURED_PRESENCES = [
     color: "from-emerald-950 to-teal-950"
   },
   {
+    id: "presence-bloomurian",
     name: "Bloomurian",
     tagline: "Folktronica • World Bass • Heart-Opening Frequencies",
     image: "https://images.unsplash.com/photo-1517841905240-472f3f1c8c1e?w=800&h=600&fit=crop", // TODO: Replace with real Robin Liepman / Bloomurian hero image
@@ -40,6 +43,7 @@ const FEATURED_PRESENCES = [
     color: "from-amber-950 to-orange-950"
   },
   {
+    id: "presence-mose",
     name: "Mose",
     tagline: "Shamanic Downtempo • ReGen Remixes • Organic Intelligence",
     image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&h=600&fit=crop", // TODO: Replace with real Mose hero image
@@ -47,6 +51,7 @@ const FEATURED_PRESENCES = [
     color: "from-stone-950 to-zinc-950"
   },
   {
+    id: "presence-aly-constantine",
     name: "Aly Constantine",
     tagline: "Healing Arts • Conscious Sound • Presence",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&h=600&fit=crop", // TODO: Replace with real Aly Constantine hero image
@@ -60,7 +65,11 @@ const FEATURED_PRESENCES = [
 // ... (rest of the file remains the same until the return statement)
 
 export default async function Home() {
-  // ... (existing code)
+  const cookieLang = (await cookies()).get("coherence-locale")?.value;
+  const headerLang = (await headers()).get("accept-language")?.split(",")[0]?.split("-")[0];
+  const candidate = cookieLang || headerLang;
+  const lang: LocaleCode = isSupportedLocale(candidate) ? candidate : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">
@@ -68,6 +77,44 @@ export default async function Home() {
       <MorningNudge />
       <LiveBreathPanel lang={lang} />
       <FirstTimeWelcome />
+      <section className="mx-auto max-w-3xl px-4 py-8 text-center">
+        <p className="text-sm uppercase tracking-[0.2em] text-foreground/60">
+          For anyone or anything finding us
+        </p>
+        <p className="mt-3 text-base text-foreground/80">
+          The shared doorway is the human web page; agents, people, and contributors can enter through the same paths.
+        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm">
+          <AttributedInternalLink href="/come-in" className="text-primary hover:underline">
+            Come in
+          </AttributedInternalLink>
+          <AttributedInternalLink href="/with-us" className="text-primary hover:underline">
+            With us
+          </AttributedInternalLink>
+          <AttributedInternalLink href="/contribute" className="text-primary hover:underline">
+            Contribute
+          </AttributedInternalLink>
+        </div>
+      </section>
+      <nav
+        aria-label="Primary paths"
+        className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3 px-4 py-6 text-sm"
+      >
+        {[
+          ["/resonance", "Resonance"],
+          ["/pipeline", "Pipeline"],
+          ["/nodes", "Nodes"],
+          ["/contribute", "Contribute"],
+        ].map(([href, label]) => (
+          <AttributedInternalLink
+            key={href}
+            href={href}
+            className="rounded-full border border-border/60 px-4 py-2 text-foreground/80 transition-colors hover:border-primary/50 hover:text-primary"
+          >
+            {label}
+          </AttributedInternalLink>
+        ))}
+      </nav>
 
       {/* NEW: LIVING LINEAGE — Featured Presences */}
       <section className="px-4 sm:px-6 py-16 max-w-7xl mx-auto">
@@ -88,6 +135,7 @@ export default async function Home() {
             <AttributedExternalLink
               key={index}
               href={presence.href}
+              entityId={presence.id}
               className="group block rounded-3xl overflow-hidden border border-border/40 hover:border-[hsl(var(--primary)/0.6)] transition-all duration-500 hover:shadow-2xl bg-card"
             >
               <div className="relative aspect-[4/3] overflow-hidden">

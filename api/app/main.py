@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
@@ -37,6 +36,7 @@ from app.routers import (
     inventory,
     lenses,
     marketplace,
+    mcp_remote,
     registry_discovery,
     news,
     peers,
@@ -99,7 +99,6 @@ from app.middleware.request_duration import RequestDurationMiddleware
 from app.middleware.request_outcomes import RequestOutcomesMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
-
 _startup_logger = logging.getLogger("coherence.api.slow")
 
 
@@ -692,6 +691,7 @@ app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
+app.include_router(mcp_remote.router, tags=["mcp"])
 app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
