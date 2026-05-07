@@ -17,6 +17,8 @@ def test_trace_index_artifacts_are_registered_and_queryable():
     assert "trace-monthly-spectrum" in artifact_ids
     assert "trace-author-index" in artifact_ids
     assert "trace-work-index" in artifact_ids
+    assert "trace-significant-work-index" in artifact_ids
+    assert "trace-concept-work-map" in artifact_ids
 
     month = field_story_service.get_field_story_trace_slice("urs-field-story", "month", "2026-04")
     assert month["selector"] == "month"
@@ -51,3 +53,32 @@ def test_trace_index_mcp_tool_exposes_small_slices():
     )
     assert result["result"]["month"] == "2026-04"
     assert result["result"]["primary_influence"]["frequency"]
+
+
+def test_trace_index_returns_significant_work_deep_discovery():
+    response = client.get("/api/field-stories/urs-field-story/trace/significant-work/Spellmonger")
+    assert response.status_code == 200, response.text
+    record = response.json()["result"]
+
+    assert record["title"] == "Spellmonger Universe"
+    assert record["impact_score"] >= 90
+    assert any(link["concept_id"] == "lc-network" for link in record["concept_links"])
+    assert record["deep_discovery"]["chapter_precision"] == "not-yet-evidence-backed"
+    assert "chapter_probe_terms" in record["concept_links"][0]
+    assert any(child["title"] == "Preceptor" for child in record["children"])
+
+
+def test_trace_index_returns_concept_to_significant_work_map():
+    response = client.get("/api/field-stories/urs-field-story/trace/concept/lc-network")
+    assert response.status_code == 200, response.text
+    concept = response.json()["result"]
+
+    titles = {item["title"] for item in concept["related_significant_works"]}
+    assert "Spellmonger Universe" in titles
+    spellmonger = next(item for item in concept["related_significant_works"] if item["title"] == "Spellmonger Universe")
+    assert "Sevendor" in spellmonger["chapter_probe_terms"]
+
+    mcp_result = TOOL_MAP["get_field_story_trace"]["handler"](
+        {"slug": "urs-field-story", "selector": "concept", "value": "lc-network"}
+    )
+    assert any(item["title"] == "Spellmonger Universe" for item in mcp_result["result"]["related_significant_works"])
