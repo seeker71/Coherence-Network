@@ -26,7 +26,7 @@ That thread would later find neighbors in Dr. Joe Dispenza, meditation, coherenc
 
 ## 1997-2012: Backtracking Model Languages
 
-At the University of Colorado at Boulder, in the Department of Computer Science, the master's thesis carried the title Backtracking Model Languages. The document itself is dated July 5, 2000 — created May 22, last saved July 6, defended that summer. The slide deck carries an earlier 1997 marker from the working years before defense. In September 2012 the working folder resurfaced as a small constellation of artifacts: the .doc, Thesis defence.ppt, Group.jpg from the defense lawn, Urs in CU shirt.jpg, and the photographs labeled simply Water Project.
+At the University of Colorado at Boulder, in the Department of Computer Science, the master's thesis carried the title Backtracking Model Languages. The full artifact — document, defense slides, and the photographs from the lawn — now lives in the body as [`docs/field/urs/artifacts/master-thesis-2000/`](../artifacts/master-thesis-2000/README.md). The document itself is dated July 5, 2000 — created May 22, last saved July 6, defended that summer. The slide deck carries an earlier 1997 marker from the working years before defense. In September 2012 the working folder resurfaced as a small constellation of artifacts: the .doc, Thesis defence.ppt, Group.jpg from the defense lawn, Urs in CU shirt.jpg, and the photographs labeled simply Water Project.
 
 The work was not solo. The object model and the virtual machine were designed and implemented by Steve G. Bjorg on his own master's thesis at the same university the same year. Two minds building one language. Cell beside cell, before that pattern had a name.
 
