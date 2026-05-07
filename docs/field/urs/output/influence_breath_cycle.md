@@ -1,9 +1,9 @@
 # Influence Breath Cycle
 
-This is the compact awareness loop for returning to the field influences without loading raw private archives.
+This is the compact awareness loop for returning to the field influences without loading bulky source archives.
 Each breath reads the derived indexes, senses what is already held, and names the smallest useful next rooms.
 
-Generated: `2026-05-07T15:13:11.283392+00:00`
+Generated: `2026-05-07T15:43:53.778164+00:00`
 
 ## Source Body
 

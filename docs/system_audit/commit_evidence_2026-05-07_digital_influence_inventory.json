@@ -1,0 +1,123 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/digital-history-inventory-20260507",
+  "commit_scope": "Add a compact digital influence inventory that maps all locally available YouTube, Audible, browser, Photos, project archive, and agent-history source bodies into queryable field-story artifacts.",
+  "files_owned": [
+    "specs/digital-influence-inventory.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/influence_breath_cycle.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/significant_work_index.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-07_digital_influence_inventory.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/field/urs",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "python3 docs/field/urs/tools/influence_breath_cycle.py --field-dir docs/field/urs",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/influence_breath_cycle.py docs/field/urs/tools/build_trace_indexes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/digital-influence-inventory.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_digital_influence_inventory.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "History-only YouTube Takeout contains 65,700 dated watch events from 2021-07-31 through 2026-05-07.",
+      "The current published two-year trace misses 39,144 earlier YouTube events, including 14,746 from 2023 and 4,861 from early 2024.",
+      "The highest-signal missing authors include Al Marconi, Ottmar Liebert, Guitarra Azul, Johannes Linstead, Armik, Oscar Lopez, Kevin Laliberte, Strunz & Farah, Gipsy Kings, and Luis Villegas."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof passes; CI and public deploy proof are still pending."
+  },
+  "idea_ids": [
+    "digital-influence-inventory",
+    "profile-contribution-derived-data",
+    "story-frequency-influence-interlinks"
+  ],
+  "spec_ids": [
+    "digital-influence-inventory"
+  ],
+  "task_ids": [
+    "digital-history-inventory-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source memory",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 8 passed, 5 warnings",
+    "ruff: All checks passed",
+    "spec quality validation: OK",
+    "commit evidence validation: OK",
+    "rebase: successfully rebased onto origin/main",
+    "worktree_pr_guard local: ready_for_push=True",
+    "check_pr_followthrough strict: stale_codex_prs=0",
+    "digital inventory: youtube_full_events=65700",
+    "digital inventory: missing_before_published=39144",
+    "publication boundary states watch and listen history are allowed to be public by contributor direction"
+  ],
+  "change_files": [
+    "specs/digital-influence-inventory.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/influence_breath_cycle.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/significant_work_index.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-07_digital_influence_inventory.json"
+  ],
+  "change_intent": "docs_only"
+}

@@ -118,6 +118,8 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
     assert "trace-influence-breath-cycle" in artifact_ids
     assert "encounter-next-breath-seed" in artifact_ids
     assert "trace-encounter-next-breath" in artifact_ids
+    assert "digital-influence-inventory" in artifact_ids
+    assert "trace-digital-influence-inventory" in artifact_ids
 
     report_response = client.get("/api/field-stories/urs-field-story/artifacts/influence-breath-cycle")
     assert report_response.status_code == 200, report_response.text
@@ -156,3 +158,21 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
     for path in trace_paths:
         response = client.get(path)
         assert response.status_code == 200, f"{path}: {response.text}"
+
+
+def test_digital_influence_inventory_registers_full_history_attention():
+    report_response = client.get("/api/field-stories/urs-field-story/artifacts/digital-influence-inventory")
+    assert report_response.status_code == 200, report_response.text
+    report = report_response.json()["content"]
+    assert "Watch and listen history are allowed to be public" in report
+    assert "2023 YouTube events" in report
+    assert "Al Marconi" in report
+
+    trace_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-digital-influence-inventory")
+    assert trace_response.status_code == 200, trace_response.text
+    trace = json.loads(trace_response.json()["content"])
+    assert trace["schema_version"] == "digital-influence-inventory/v1"
+    assert trace["youtube"]["history_only_takeout"]["events"] > 60000
+    assert trace["youtube"]["published_gap"]["missing_2023_events"] > 10000
+    assert trace["youtube"]["published_gap"]["missing_before_2024_05_07_events"] > 30000
+    assert trace["publication_boundary"].startswith("This compact artifact publishes")

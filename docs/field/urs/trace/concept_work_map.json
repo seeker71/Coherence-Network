@@ -338,7 +338,7 @@
           "chapter_probe_terms": [
             "frontier",
             "unknown",
-            "risk",
+            "attention",
             "edge"
           ],
           "id": "significant-work:frontiers-saga-59a6120e",
@@ -354,7 +354,7 @@
             "unknown",
             "edge",
             "crash",
-            "risk"
+            "attention"
           ],
           "id": "significant-work:ringworld-d7145408",
           "impact_score": 59,
@@ -975,6 +975,6 @@
       ]
     }
   },
-  "generated_at": "2026-05-07T08:09:35.471863+00:00",
+  "generated_at": "2026-05-07T15:43:51.984656+00:00",
   "schema_version": "field-trace-index/v1"
 }

@@ -22,9 +22,9 @@
     "web": "/field/urs",
     "cli": "coh content set page field-urs --lang en --file docs/field/urs/output/chronological_story_with_frequency.md --title \"Urs Field Story\" --by <contributor_id>"
   },
-  "privacy_boundary": {
+  "publication_boundary": {
     "published": "Curated story, anchors, summaries, reports, normalized event traces, and analyzer scripts.",
-    "not_published": "Raw Google Takeout archives, extracted HTML, authenticated browser sessions, cookies, local browser databases, and service login state."
+    "source_archives": "Raw Google Takeout archives, extracted HTML, authenticated browser sessions, cookies, local browser databases, and service login state remain source bodies unless a later breath promotes their shape directly."
   },
   "artifacts": [
     {"artifact_id": "readme", "path": "README.md", "kind": "method", "content_type": "text/markdown"},
@@ -35,6 +35,7 @@
     {"artifact_id": "ten-year-cluster-report", "path": "output/ten_year_cluster_report.md", "kind": "report", "content_type": "text/markdown"},
     {"artifact_id": "audible-series-report", "path": "output/audible_series_report.md", "kind": "report", "content_type": "text/markdown"},
     {"artifact_id": "influence-breath-cycle", "path": "output/influence_breath_cycle.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "digital-influence-inventory", "path": "output/digital_influence_inventory.md", "kind": "report", "content_type": "text/markdown"},
     {"artifact_id": "encounter-next-breath-seed", "path": "input/encounter_next_breath.txt", "kind": "encounter-seed", "content_type": "text/plain"},
     {"artifact_id": "field-report", "path": "output/field_report.md", "kind": "report", "content_type": "text/markdown"},
     {"artifact_id": "clusters", "path": "output/clusters.md", "kind": "report", "content_type": "text/markdown"},
@@ -57,6 +58,7 @@
     {"artifact_id": "trace-significant-work-index", "path": "trace/significant_work_index.jsonl", "kind": "index", "content_type": "application/x-ndjson"},
     {"artifact_id": "trace-concept-work-map", "path": "trace/concept_work_map.json", "kind": "index", "content_type": "application/json"},
     {"artifact_id": "trace-influence-breath-cycle", "path": "trace/influence_breath_cycle.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "trace-digital-influence-inventory", "path": "trace/digital_influence_inventory.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-encounter-next-breath", "path": "trace/encounter_next_breath.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "normalized-events", "path": "output/normalized_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
     {"artifact_id": "ten-year-events", "path": "output/ten_year_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
@@ -66,6 +68,7 @@
     {"artifact_id": "audible-series-analyzer", "path": "tools/audible_series_analyzer.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "trace-index-builder", "path": "tools/build_trace_indexes.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "influence-breath-cycle-builder", "path": "tools/influence_breath_cycle.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "digital-influence-inventory-builder", "path": "tools/digital_influence_inventory.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "local-browser-history-collector", "path": "tools/local_browser_history_collector.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "youtube-two-year-receiver", "path": "tools/youtube_two_year_receiver.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "youtube-two-year-scrape-expression", "path": "tools/youtube_two_year_scrape_expression.js", "kind": "tool", "content_type": "text/javascript"}

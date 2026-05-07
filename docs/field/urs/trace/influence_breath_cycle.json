@@ -29,7 +29,7 @@
           "youtube": 27470,
           "youtube-music": 148
         },
-        "privacy_boundary": "Raw Takeout, browser sessions, cookies, and paid text stay outside the repo."
+        "publication_boundary": "Raw Takeout, browser sessions, cookies, and paid text remain source bodies until their shape belongs directly in repo."
       }
     },
     {
@@ -3206,7 +3206,7 @@
     "unroomed_work_candidates": 33,
     "works_indexed": 1718
   },
-  "generated_at": "2026-05-07T15:13:11.283392+00:00",
+  "generated_at": "2026-05-07T15:43:53.778164+00:00",
   "schema_version": "influence-breath-cycle/v1",
   "source_counts": {
     "platform_spaces": {

@@ -97,7 +97,7 @@ SIGNIFICANT_WORK_RULES: dict[str, dict[str, Any]] = {
         "chapter_probe_terms": {
             "lc-space": ["ringworld", "arc", "habitat", "surface", "sun"],
             "lc-open-design": ["engineer", "structure", "stability", "design", "repair"],
-            "lc-field-edge": ["rim", "unknown", "edge", "crash", "risk"],
+            "lc-field-edge": ["rim", "unknown", "edge", "crash", "attention"],
             "lc-discovery": ["explore", "map", "artifact", "mystery"],
         },
     },
@@ -200,7 +200,7 @@ SIGNIFICANT_WORK_RULES: dict[str, dict[str, Any]] = {
             "lc-network": ["fleet", "alliance", "world", "command", "node"],
             "lc-circulation": ["ship", "supply", "repair", "jump", "route"],
             "lc-boundaries-as-loving-truth": ["defense", "line", "enemy", "protect"],
-            "lc-field-edge": ["frontier", "unknown", "risk", "edge"],
+            "lc-field-edge": ["frontier", "unknown", "attention", "edge"],
         },
     },
     "The Viridian Gate Archives": {
@@ -704,7 +704,7 @@ def build_indexes(events: list[dict[str, Any]], undated_events: int, source_path
             "significant_work_discovery": "Search significant_work_index.jsonl by id, title, or alias, then use concept links and chapter probes.",
             "concept_to_work_discovery": "Load concept_work_map.json -> concepts[lc-*] for related significant works.",
         },
-        "privacy_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain out of repo.",
+        "publication_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
     }
 
     significant = build_significant_work_indexes(field_dir_for_source(source_path), monthly["generated_at"])
