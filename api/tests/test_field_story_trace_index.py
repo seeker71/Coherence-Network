@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import importlib.util
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -11,6 +13,15 @@ from app.services.mcp_tool_registry import TOOL_MAP
 
 
 client = TestClient(app)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_encounter_script():
+    spec = importlib.util.spec_from_file_location("encounter_script", REPO_ROOT / "scripts" / "encounter.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_trace_index_artifacts_are_registered_and_queryable():
@@ -105,6 +116,8 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
 
     assert "influence-breath-cycle" in artifact_ids
     assert "trace-influence-breath-cycle" in artifact_ids
+    assert "encounter-next-breath-seed" in artifact_ids
+    assert "trace-encounter-next-breath" in artifact_ids
 
     report_response = client.get("/api/field-stories/urs-field-story/artifacts/influence-breath-cycle")
     assert report_response.status_code == 200, report_response.text
@@ -118,6 +131,20 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
     summary = json.loads(summary_response.json()["content"])
     assert summary["source_counts"]["sources"]["youtube-takeout"] > 20000
     assert summary["counts"]["unroomed_author_candidates"] >= 10
+
+    seed_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-encounter-next-breath")
+    assert seed_response.status_code == 200, seed_response.text
+    seed = json.loads(seed_response.json()["content"])
+    assert seed["schema_version"] == "encounter-next-breath/v1"
+    assert len(seed["rows"]) == 8
+    assert seed["rows"][0]["input"] == "Mei-lan"
+    assert seed["rows"][0]["trace"].startswith("/api/field-stories/urs-field-story/trace/author/")
+
+    seed_file = REPO_ROOT / "docs" / "field" / "urs" / "input" / "encounter_next_breath.txt"
+    encounters = _load_encounter_script()._encounters_from_file(seed_file)
+    assert len(encounters) == 8
+    assert encounters[0][0] == "Mei-lan"
+    assert "trace=/api/field-stories/urs-field-story/trace/author/Mei-lan" in encounters[0][1]
 
     trace_paths = sorted(
         {
