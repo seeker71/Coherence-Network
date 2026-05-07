@@ -361,6 +361,28 @@ curl -s -X POST "http://localhost:8000/api/influences" -H 'content-type: applica
 - **Cross-contributor encounter aggregation** (e.g. "every contributor who encountered this book on the same day"). The data model supports this via the inspired-by edges; the read API and rendering are left to a follow-up spec.
 - **Authentication-scoped editing rules** beyond the `private` flag's encountered-by check. A broader edit-auth spec governs the graph; this spec only carves out the privacy-flag behaviour the ingest path needs.
 
+## Sampling discipline (the body's emitted spectrum)
+
+A presence's emitted frequency lives in their **public creations** — the works they have shipped into the field. For external presences whose interior we cannot read into, those creations are the only signal we have, and they are the right signal: a body of work is the practitioner's own statement of what they emit.
+
+Sampling these works without discipline introduces several biases that distort the spectrum we render:
+
+- **Recency bias** — most platform feeds (RSS, YouTube uploads pages, podcast feeds) return the latest N items. A presence with a 20-year career and a 4-year-old TEDx talk that defines them gets sampled as "what they posted last month." The TEDx is invisible.
+- **Volume bias** — whichever platform offers the cleanest feed dominates the chip count. A podcaster with a Bandcamp-style discography page may yield 200 entries; a polymath with a personal RSS may yield 10. The visitor reads "this one is more present in the field" when the truth is "this one had the better feed."
+- **Platform bias** — sources we have plugins for (Bandcamp, YouTube, Substack, Goodreads, RSS) catch some emissions; sources we don't (Spotify, Apple Podcasts, Vimeo, Patreon, Instagram, university repositories, Wikipedia bibliographies) catch nothing. Presences who broadcast primarily on uncovered platforms emit zero chips even when their public body is enormous.
+- **Format bias** — a 30-second Instagram reel and a 90-minute TEDx talk become equivalent asset nodes. The reel emits the same chip-weight as the talk; density is unweighted.
+- **Within-source bias** — even from one platform, what surfaces in one crawl is determined by what the page renders in that crawl. No stratification across the source's full catalog.
+
+The discipline this spec commits to:
+
+1. **Per-source target with stratified sampling.** When a source returns more than the per-source target (`_PER_SOURCE_TARGET`, default 30), the importer takes a stratified slice across the full returned ordering — newest, evenly-spaced middle, oldest — rather than truncating to first-N. The cap prevents one platform from dominating; the stratification prevents recency from dominating within that cap.
+2. **Coverage record on the presence.** Every import writes a `creations_coverage` property on the contributor node: per-source returned/sampled counts, the URLs walked, the timestamp. Gaps stay visible. The body knows where its sampling is thin.
+3. **Encyclopedic baseline source (planned).** A Wikipedia source plugin reads "Notable works" / "Bibliography" / "Filmography" sections and creates assets from there. Wikipedia's curation is human-balanced across a presence's career, providing a temporally-spread baseline that platform feeds cannot. Out of scope for the first iteration; tracked in `Out of Scope` below.
+4. **Density weighting (planned).** Each `creation_kind` (book, talk, episode, video, song, post) carries a relative density weight when aggregated into a presence's effective resonance. A book contributes more to the rolled-up frequency than a tweet. Out of scope for the first iteration; tracked.
+5. **Source-coverage gap log.** Presences whose `presences[]` URLs match no source plugin ingest 0 creations; the coverage record makes this visible so future plugin development can prioritize the platforms with the largest gaps.
+
+The discipline is not a guarantee of representativeness. It is a guarantee of **honesty**: the body knows what it has sampled, what it has not, and where its rendered spectrum is partial.
+
 ## Risks and Assumptions
 
 - **Risk**: The privacy filter is necessarily conservative — it may hold back legitimate public influences whose subject happens to match an intimate pattern. Mitigation: blocked records appear in `IngestSummary.blocked` with the matched reason; the contributor can review and either refine the rule (data-driven) or override per-record. The filter errs on the side of holding back; presence over surfacing.
