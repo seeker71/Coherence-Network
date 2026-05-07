@@ -1,0 +1,856 @@
+
+BML Object System
+Steve Gunnar Bjorg bjorg@colorado.edu
+
+
+
+
+
+
+
+
+A thesis submitted to the Faculty of the Graduate School of the  University of Colorado in partial fulfillment of the requirement for the degree of Master of Science Department of Computer Science 2000
+
+
+This thesis entitled:
+BML Object System
+written by Steve Gunnar Bjorg
+has been approved for the Department of Computer Science
+
+
+_____________________________
+Michael Main
+
+
+_____________________________
+Amer Diwan
+
+______________________
+Date
+
+The final copy of this thesis has been examined by the signatories, and we find that both the content and the form meet acceptable presentation standards of scholarly work in the above mentioned discipline.
+
+Author	Bjorg, Steve Gunnar
+Title	BML Object System
+Advisor	Thesis directed by Professor Michael Main
+
+Abstract	Many different types of object models have been developed since the creation of the object-oriented paradigm.  This thesis introduces a new object model that borrows many properties from existing models and adds a few new interesting properties such as shared inheritance, tagging and detached interfaces.  Although, this thesis looks at some of the theoretical properties of this object model, an actual implementation of the model is provided as a proof of concept.
+
+Keywords:	Object Models, BML, C++, Smalltalk, Java, Inheritance, Shared Inheritance, Delegation Inheritance, Detached Interfaces
+
+
+
+
+
+
+
+To my parents for all their loving support.
+
+Table of Contents
+Table of Contents	v
+Table of Figures	vi
+Table of Tables	viii
+Introduction	1
+Design Goals	1
+Document Structure	2
+1. Literature	3
+1.1. C++	3
+1.2. Smalltalk-80	15
+1.3. Java	23
+1.4. Self with Viewpoints Extension	26
+1.5. Summary	29
+2. Object Architecture	31
+2.1. Object Structure	31
+2.2. References	33
+2.3. Descriptor	34
+2.4. Constants	36
+3. Objects	38
+3.1. Overview	38
+3.2. Instantiator	39
+3.3. Instance Definition	39
+3.4. Interface Definition	40
+3.5. Interface	41
+3.6. Method Definition	41
+3.7. Method Declaration	42
+3.8. Method	42
+4. Runtime Mechanics	43
+4.1. Method Dispatching	43
+4.2. Interface Casting	44
+4.3. Common Objects	44
+4.4. Constants Resolving	47
+5. Object Theory	48
+5.1. Structure-Behavior Separation	48
+5.2. Conventional Inheritance	49
+5.3. Delegation Inheritance	50
+5.4. Instantiation	57
+5.5. Detached Interfaces	57
+6. Conclusion	59
+6.1. Future Work	59
+References	63
+Appendices	64
+
+Table of Figures
+Figure 1: Object Structure	4
+Figure 2: C++ Object Structure	4
+Figure 3: Single Inheritance	5
+Figure 4: C++ Single Inheritance	5
+Figure 5: Multiple Direct Inheritance	6
+Figure 6: C++ Multiple Direct Inheritance	6
+Figure 7: Multiple-Inheritance	7
+Figure 8: C++ Multiple-Inheritance	8
+Figure 9: Multiple Indirect Inheritance	9
+Figure 10: C++ Multiple Indirect Inheritance	9
+Figure 11: Sample Object	10
+Figure 12: C++ Runtime Type Information	11
+Figure 13: C++ Typecasting	12
+Figure 14: COM Interface Inheritance	13
+Figure 15: COM Interfaces in C++	13
+Figure 16: C++ Interface Inheritance	14
+Figure 17: Smalltalk Object Structure	16
+Figure 18: Smalltalk Heap	17
+Figure 19: Smalltalk Class Structure	17
+Figure 20: Smalltalk Method Structure	18
+Figure 21: Smalltalk Instance Graph	19
+Figure 22: Smalltalk Instance Of Graph	20
+Figure 23: Smalltalk Instance Method Lookup Path	21
+Figure 24: Smalltalk Class Method Lookup Path	21
+Figure 25: Smalltalk Complete Inheritance Graph	22
+Figure 26: Java Heap	24
+Figure 27: Simple Joe Split Object	26
+Figure 28: Complete Joe Split Object	28
+Figure 29: Object Structure	32
+Figure 30: Object Organization	38
+Figure 31: Common Objects	46
+Figure 32: Delegated Invocation (step 1)	51
+Figure 33: Delegated Invocation (step 2)	52
+Figure 34: Delegated Inocation (step 3)	52
+Figure 35: Shared Inheritance	54
+Figure 36: Tagging (step 1)	55
+Figure 37: Tagging (step 2)	55
+Figure 38: Tagging with Normalization	56
+
+Table of Tables
+Table 1: Object Model Properties	30
+Table 2: Descriptor Variables	35
+Table 3: Dynamic & Binary Flags	36
+
+Introduction
+
+The BML project is an experimental testing ground for concepts applying to programming languages, compilers, virtual machines, and object systems.  However, the scope of this thesis is limited to the research done for the BML object system.  Additional information about the other components of the BML project can be found in appendix A and B.
+Design Goals
+
+The design of the BML object model had several goals, which are summarized in the following list:
+
+	•	The object structure should be simple.  This goal was motivated by studies of the Smalltalk and Self object models, where simplicity was key.  Furthermore, it also removed some complexities from the underlying virtual machine.
+	•	The model should allow multiple-inheritance.  This goal was mostly motivated by the fact that multiple-inheritance was not present in Java.
+	•	The model should support multiple interfaces per object.  This goal was motivated by the design of the Component Object Model (COM) where objects can easily adopt multiple roles.
+	•	The model should separate behavior from structure.  This goal was motivated by the fact that the same structure could expose several different behaviors.
+
+While designing the BML object model, several additional secondary goals where added.  These goals were mostly driven by prior working experience and BML lend itself perfectly as a testing ground for them.
+
+	•	Low coupling: object should minimize inter-object dependencies.
+	•	Strong structural encapsulation: objects can never expose structural properties.
+	•	Attributes: every definition (i.e. class, method, variable) can be enhanced with attributes.
+Document Structure
+Chapter 1
+The first chapter provides an overview of a few existing object systems.  This survey contains C++, Smalltalk-80, Java, and Self.  These systems have been chosen for how common their use it and the properties that they exhibit.  Furthermore, all of these systems (with the exception of Self) have been academically and commercially successful.
+Chapter 2
+The second chapter introduces the architecture of the BML object system.  It provides a structural description of objects, references, descriptors, and constants.
+Chapter 3
+The third chapter describes some of the fundamental runtime objects, such as instantiators, definition objects, and definition instances.
+Chapter 4
+The fourth chapter provides insight into the mechanics of the object system.  Topics covered by this chapter include method dispatching, interface casting, constants resolving, and access to common objects.
+Chapter 5
+The fifth chapter exposes the theoretical advantages of the BML object model.  The issue of behavior-structure separation is discussed and compared with other programming languages.  Furthermore, the new concept of delegation inheritance and its applications are explained in more detail.
+Chapter 6
+The sixth chapter concludes the research done on the BML object model and provides some ideas for future work.
+ Literature
+
+Many different object models have been developed over the last two decades.  Although, it would be appropriate to have a look under the hood for many of them, this study has been limited to the three most commonly encountered or influential class-based object systems, plus a representative of an object-base system; namely, C++, Smalltalk-80, Java, and Self.
+
+The discussion of these object systems has been intentionally limited to modeling virtual functions.  Virtual functions have the most interesting properties and are also at the heart of any object-oriented system.  Furthermore, non-virtual functions do not require any special representation inside the runtime system during execution.  Therefore, it would not be appropriate to mention more about them inside this document.
+
+The physical object model is governed by two main criteria: flexibility and efficiency.  As will be visible in the description of the different target object system, these criteria vary greatly in relative importance to each other.  For instance, C++ puts much more emphasis on efficiency than does Smalltalk-80.  The reason for this difference is that C++ works within a static, compiled environment, whereas Smalltalk-80 uses an interactive, interpreted environment.  The properties of these different runtime environments will be described in detail within the context of the modeled object relation.
+ C++
+
+Bjarne Stroutstroup designed C++ as the successor of C.  Although C++ supports object-oriented programming, it can be best described as a hybrid programming language supporting both structured and object-oriented programming.  Furthermore, it should be noted that the object structure presented here for C++ is only one variant of the multiple implementation models that currently exist.
+
+C++ does not have a runtime system as such when compared to Smalltalk-80 or Java.  C++, in concordance with its predecessor C, allows the programmer to delve directly into the heart of the computer and build extremely complex object structures.  One can safely say that, if the structure cannot be modeled in C/C++, it cannot be modeled on any computer.  This property of C++ is mostly due to the original design of C.  Although C might look like a high-level language, it is actually only an enhanced assembly language that enforces only minimal constraints on the programmer.  Conversely, C++ puts all the burden of managing the object-oriented system on the shoulders of the programmer.
+ Object Structure
+
+The study of C++ will begin with the most basic case: an instance of a root class.  Figures 1 and 2 show this case with an instance of class A.
+
+
+Figure 1: Object Structure
+
+Figure 2: C++ Object Structure
+
+The instance is composed of two parts: the virtual method table reference denoted by VMT and the instance attributes defined in class A.  Each instance’s VMT reference points to a globally unique VMT containing the instance's method references.  Each method in the VMT is associated with its corresponding index.  The method foo in the VMT has index zero, whereas the method goo has index one.  This numbering is consistent with the order in which the methods appear in class A.  The order that the methods appear in the VMT is critical since each method is associated statically with its index.  Hence, once a method has been associated with a specific index, it always appears at the same location inside the VMT -- unless it is overridden by a derived class, in which case it is replaced by its overriding method.
+ Single Inheritance
+
+The basic object structure introduced before showed how C++ organizes structural and behavioral information for its runtime environment.  The next step is to investigate how C++ models inheritance.  Figures 3 and 4 shows the case where class B is derived from class A, and an instance of class B is created.
+
+
+Figure 3: Single Inheritance
+
+Figure 4: C++ Single Inheritance
+
+The first thing to note from Figure 4 is how the attributes are organized inside the instance.  The attributes from class A immediately follow the VMT reference, whereas the attributes of class B follow the attributes of class A.  The reason for this organization can be justified quite easily: one of the properties of a derived class is that it can be used wherever its base class can be used.  Hence, both instances must be structurally compatible.  The organization shown in Figure 4 exactly achieves this goal.  The part of the instance comprised of the VMT reference and the attributes from class A is structurally identical to an instance of class A.  However, a close look at the VMT shows that the behavior of this instance differs from the behavior of an instance from class A.  An instance of class A would only contain methods defined in class A, whereas the instance of class B has methods defined from both class A and B.  It can be seen in Figure 4 that class B overrides the definition of the method foo from class A.  This organization remains even when the instance is used by code expecting an instance of A.  Again, this effect was intended by the behavioral inheritance model, which allows redefining functionality.
+ Multiple-Inheritance
+
+Two kinds of multiple-inheritance exist: direct and indirect.  Although both are modeled by the exact same hierarchy graph, their properties during runtime differ significantly.  Figures 5 and 6 show a class D derived from class B and C.  Both classes B and C are themselves derived from class A.
+
+
+Figure 5: Multiple Direct Inheritance
+
+Figure 6: C++ Multiple Direct Inheritance
+
+Figure 6 shows that the attributes of class A are present twice, once for the class B and once for the class C.  This duplication introduces an ambiguity when accessing the attributes of class A from within class D.  However, this ambiguity can be resolved by using the appropriate class qualifiers (e.g. B::attribute or C::attribute).  Note that the VMT reference occurs twice now.  Although the actual methods have been omitted from this diagram, it still conveys the difference in how the behavioral inheritance is implemented.  The reason the VMT reference appears twice is again directly linked to the structural integrity issue for direct inheritance.  When the instance of class D is referred to as class B, the first portion of the instance is used, like it is for single inheritance.  However, when the instance is referred to as class C, the second portion starting at the second VMT reference is actually used.  This shift is achieved by adding the offset where the definition of class C occurs to the instance pointer.  This computation enables existing code to refer to the attributes present in class C without knowing that it is contained within a derived class.  This property is primordial to ensure that existing code from base classes can be reused without modification.  Although this operation might seem trivial at first, it turns out that the compiler cannot anticipate when the pointer to the instance needs to be moved, or by how much it needs to be moved; the offset depends on the method called and the class in which the method was defined.  Consider Figure 7, which illustrates a simple example of multiple-inheritance.
+
+
+Figure 7: Multiple-Inheritance
+
+
+Figure 8: C++ Multiple-Inheritance
+
+The method goo, which is defined in class B, expects its instance pointer to refer to the beginning of the associated attributes.  Hence, when the method goo is invoked on class C, the instance pointer needs to be moved to the second VMT.  This offset is referred to as ΔB.  Likewise, when the method foo is invoked on class B, the instance pointer needs to be reset to the beginning of the instance since the method foo is defined in class D.  It seems natural to extend the VMT to hold these offsets, because the VMT is unique for each class and holds an entry for each method.  The first VMT in Figure 8 has a zero for method foo and +ΔB for method goo.  Consequently, the second VMT holds -ΔB for method foo and zero for method goo.  This technique is applicable to both direct and indirect inheritance.
+
+The next example emphasizes on indirect inheritance.  Figures 9 and 10 show class D, which is derived simultaneously from class A, B, and C.  Furthermore, the classes B and C are also derived from class A.  Hence, without indirect inheritance, class D would have three copies of class A.  However, as can be seen from the diagram, class A is only present once.  Consequently, the attributes of class A are shared among all the indirectly derived classes.
+
+
+Figure 9: Multiple Indirect Inheritance
+
+
+Figure 10: C++ Multiple Indirect Inheritance
+
+Although the required effect has been achieved from a structural point-of-view, the remaining problem is how classes B and C find the attributes of class A.  In direct inheritance, the layout of each class was known, whereas in indirect inheritance a base class can be located anywhere relative to its derived class.  Therefore, additional information must be introduced.  However, the problem is similar to finding the location of the base class with regard to method invocations.  Consequently, the solution is to enhance the VMT of each derived class with an offset to each of its indirect base classes.  From Figure 10, it can be seen that the VMT's of class B and C both have an additional entry labeled class A with an associated offset.  Whenever methods of class B or C access attributes of class A, they need to look up the offset for class A in the VMT and use it to find the actual location of the attributes.  This lookup step is the origin of the name indirect inheritance.  In contrast to direct inheritance, the compiler cannot generate the correct offset during compile time.  Therefore, the runtime system needs to perform this indirect step to compute the actual location of the attribute.
+ Typecasting
+
+The introduction of multiple-inheritance also creates an extra burden on the typecasting abilities of C++.  For example, consider the classes defined in Figure 11.
+
+
+Figure 11: Sample Object
+
+The IOObj class represents an object that is supported for input/output operations.  The abstract Shape class and its derived, concrete Circle class are graphical objects.  The combined IOCircle class represents a Circle class that can be read or written to an input/output stream.  In Figure 11, we are given an IOObj instance that is actually an IOCircle instance and we want to obtain the contained Circle instance.  The following C++ code illustrates this situation:
+
+void DrawObject( IOObj& io_obj ) { 	Circle& c = dynamic_cast<Circle&> io_obj; 	circle.draw(); }
+
+The dynamic_cast operation allows us to find the reference to the Circle instance within the IOObj instance.  If the IOObj instance is not an actual IOCircle instance, the dynamic_cast operation will trigger an exception.  The underlining technique used to perform this operation is called runtime type information, or RTTI for short.  Figure 12 shows where this information is stored during execution.
+
+
+Figure 12: C++ Runtime Type Information
+
+The VMT of the instance contains an additional reference to the RTTI structure, which contains the type identification and, optionally, the name of the type.  Furthermore, the RTTI structure holds a list of all contained unambiguous base and derived classes, and their respective offsets.  At runtime, the dynamic_cast operation checks this list for a type identification entry that matches the required class, and converts the provided reference appropriately.  This operation is further illustrated in Figure 13.
+
+
+Figure 13: C++ Typecasting
+ Interface Inheritance
+
+Multiple-inheritance could be called the predecessor of interfaces.  Both techniques allow the same class to support multiple, different behaviors.  However, multiple-inheritance also includes structural inheritance, whereas interfaces only promote behavioral inheritance.  Although the distinction seems minimal, it does have some important consequences.
+
+The Component Object Model (i.e. COM) strongly promotes an interface-oriented approach for the implementation of components.  Figure 14 shows a class A that simultaneously inherits its behavior from the IGraphics and ILottery interfaces.  Note that the IUnknown interface is a required base interface for all COM objects.
+
+
+Figure 14: COM Interface Inheritance
+
+This example is particularly interesting since it demonstrates the ability of interface inheritance to support two identical methods that have completely different meanings, depending on the currently active interface.  Figure 15 shows how the desired behavior can be achieved by using encapsulation of proxy classes.  The method QueryInterface from the IUnknown interface is used to gain access to the available interfaces.
+
+
+Figure 15: COM Interfaces in C++
+
+
+A similar behavior can be achieved with C++ by using its typecasting abilities.  Figure 16 shows how this construction can be done.  When using the typecasting abilities of C++, the base IUnknown interface is not necessary since C++ does not require a method to be defined to change the active interface.
+
+
+Figure 16: C++ Interface Inheritance
+
+In this example, the intermediate, abstract Graphics and Lottery classes are introduced to rename the clashing draw methods to g_draw and l_draw, respectively.  Without these intermediate classes, class A would not be able to distinguish between these methods and, therefore, would not be able to respond with the appropriate behavior.
+ Shortcomings
+
+C++ has a solid object model that allows a great architectural freedom.  Especially, it is the only object system of three presented ones that supports multiple-inheritance.  However, the C++ object model is also furthest away from a pure object system.
+Classes
+C++ classes are static constructs that are not objects by themselves.  Consequently, C++ does not provide introspection as does Smalltalk-80 and Java.  Furthermore, class methods are statically linked and can therefore not be overwritten by derived classes.
+Persistence
+Related to the lack of classes is the support for persistent objects.  Since C++ does not allow access to the definition of an instance’s structure, it cannot provide a generic mechanism for storing instances on streams.  This shortcoming forces developers to supply their own storage scheme.  Consequently, such storage schemes are poorly standardized and lead to problems for exchanging object streams among multiple applications.
+Interfaces
+Although, it is possible to mimic the behavior of interfaces in C++, the approach is rather cumbersome.  It either requires a framework such as COM or creates complicated multiple-inheritance structures.  It would be preferable to have an object model supporting inherently interfaces.
+Multiple-Inheritance
+The issue at hand with multiple-inheritance is to determine whether the attributes of a common base class should be shared or not.  Sadly, the C++ object model requires anticipating that use, because derived classes must inherit their attributes indirectly from their base class before they are used as base classes themselves.  However, it is not known until this later point whether a common base class is present.  One approach would be to simply use indirect inheritance for everything.  However, this approach fails too since sometimes the common base classes have to be independent.
+ Smalltalk-80
+
+Smalltalk-80 was a project conducted by Adele Goldberg and Xerox's Palo-Alto Research Center (PARC).  The intent behind Smalltalk-80 was to create a programming language with a visual interface and easily understandable semantics.  The most striking differences with C++ are that Smalltalk is a purely object-oriented language, it works entirely without any types, and it emphasizes flexibility rather than efficiency.
+
+Although, Smalltalk is no longer used in mainstream applications, it still conveys many important concepts of object-oriented systems that can only partially be found in C++ and Java.
+ Object Structure
+Instances
+Compared to C++, Smalltalk uses a very simple object structure.  However, it should not be mistaken for being too limited.  Smalltalk uses a very generic approach to modeling objects, allowing it to support a level of polymorphism that would be very hard to achieve in either C++ or Java.  Figure 17 shows the general structure of a Smalltalk instance.
+
+
+Figure 17: Smalltalk Object Structure
+
+Each instance has a size field, which contains the number of fields that are part of the instance.  Immediately following the size field is a reference to the class of the instance.  These two values comprise the header of the instance.  The rest of the space inside the instance is used to store programmer-defined references.  This part is referred to as the body of the instance.
+Smalltalk references
+At this point, it should be noted that a reference in Smalltalk is actually an index into an object pointer table (see Figure 18).  However, for consistency with previously introduced concepts, this document will continue to use the term reference.
+
+
+Figure 18: Smalltalk Heap
+
+Using indirection presents two main advantages for Smalltalk's runtime environment.  First, in order to reclaim fragmented space, instances can be moved around in memory.  This is a critical issue in Smalltalk, because the graphical interface, interpreter, and compiler all share the same environment.  Second, instances can be loaded from the disk image only when accessed.  This is similar to modern operating systems that use swap files to extend the physical amount of memory.
+Classes
+In Smalltalk, everything is an instance, including classes.  Figure 19 shows the general structure of a class.
+
+
+Figure 19: Smalltalk Class Structure
+
+Like instances, classes have a header part that specifies their size and class.  However, classes also have three predefined fields: the parent class, message dictionary, and instance specification fields.  The parent class is a reference to the base class.  The message dictionary is a reference to the method table associated with an instance of the class.  The method table organizes the selectors, which are unique numeric representations of the methods, as a sorted array.  Once the selector has been found at a given index in the dictionary, the reference of the compiled method is located in the MethodArray instance at that same index position.  Finally, the instance specification field contains the size of the instance and the names of its attributes.  This field is primarily used during the creation of new instances.
+Methods
+Although it might be surprising that classes are also instances, Smalltalk did not stop there.  Methods are also represented as instances in the Smalltalk runtime system.  Figure 20 shows the structure of a CompiledMethod instance.
+
+
+Figure 20: Smalltalk Method Structure
+
+The literal frame field describes the number of locals required by the method, and the bytecode section contains the actual instructions of the method.  Although Smalltalk's interpreter is fascinating in its abilities, it is sadly beyond the scope of this document.
+ Inheritance
+
+Smalltalk-80 only supports single inheritance.  However, its complexity is certainly astonishing.  Figure 21 shows an instance of class B.
+
+
+Figure 21: Smalltalk Instance Graph
+
+The mechanism used by Smalltalk to find a method during runtime is slightly more complex than to look up a value in the VMT, as in C++.  The Smalltalk interpreter first follows the reference to class B, where the message dictionary is examined.  If the method selector could not be found, the parent reference is followed to class A, where the same operation is repeated.  Eventually, the wanted selector is found in one of the message dictionaries or the lookup mechanism reaches class Object, which does not have a parent class and triggers a runtime exception.  A thorough examination of the class instance will reveal that the second field in each class is entitled metaclass.
+Metaclasses
+Metaclasses are the point where the object model of Smalltalk becomes slightly more complicated.  The metaclass field of a class instance refers to an instance of the MetaClass class.  The role of the MetaClass instance is to hold methods that belong to the class itself, rather than its instance.  As mentioned earlier, Smalltalk does not differentiate between classes and instances.  Therefore, classes can also have their own methods, referred to as class methods.  Furthermore, classes benefit from the behavioral and structural inheritance mechanism present for instances.  Hence, a class method or class attribute defined in the base class is accessible from its derived class.  Additionally, the derived class can override class methods from the base class.
+
+The MetaClass instance is unique for each class.  The instance does not contain any attributes other than the class message dictionary.  Therefore, the MetaClass instance can be created like any other instance; its only requirement is that it be initialized to hold the class methods of its associated class instance.  It is truly astonishing to see this circular object model fully unfold without violating any of the rules of the object model itself.
+
+Figure 22 shows the path followed by the instance of relation.  An instance of class A goes to class A; class A goes to metaclass A; metaclass A goes to class MetaClass.  However, class MetaClass is obviously a class.  Therefore, it must have an instance of relation with a metaclass MetaClass that is itself an instance of class MetaClass.  Although circularity is generally avoided in object-oriented systems, a careful use of it can unleash tremendous flexibility.  In this particular case, Smalltalk uses it to create an object model that is completely self-contained.
+
+
+Figure 22: Smalltalk Instance Of Graph
+
+Figures 23 and 24 contrast the method lookup chain for instances and classes.  A lookup for an instance method eventually ends up looking into the message dictionary of class Object.  However, when a lookup for a class method reaches the message dictionary of metaclass Object, it becomes a lookup in the instance message dictionary of class Class.  This approach is consistent with the idea that each class is also an instance of class Class.  Eventually, a class method lookup could also arrive at the instance message dictionary of class Object and fail.  However, the path followed is clearly different from the one taken by an instance of a class.
+
+
+Figure 23: Smalltalk Instance Method Lookup Path
+
+Figure 24: Smalltalk Class Method Lookup Path
+
+Figure 25 completes the picture of the Smalltalk object model and its hierarchical structure and relations.  The dark shadow boxes represent the MetaClass instances associated with each class and the arrows denote the parent relation.
+
+
+Figure 25: Smalltalk Complete Inheritance Graph
+
+The diagram shows again the fact that the metaclass Object has the class Class as a parent.  The Behavior and ClassDescription classes contain methods to create and edit classes.  However, they are not directly relevant to the discussion of the object model.  Nonetheless, they were included for reasons of completeness and correctness.
+ Shortcomings
+
+Smalltalk-80 has probably one of the most versatile object systems.  The only requirement it puts on instances is that they provide an implementation for messages that are send to them.  Furthermore, it treats classes as objects, providing such concepts as object introspection and object streaming.
+Types
+The major problem with Smalltalk, however, is its lack of type checking.  The absence of types prevents the compiler from detecting obvious errors, which might plague the development cycle of larger projects.  Furthermore, it prevents the language from supporting overloaded methods, which rely entirely on type checking.  Consequently, type checking has to be done manually within methods when such a behavior is desired.
+Symbolic Dispatching
+Smalltalk’s versatility comes mostly from its symbolic message dispatching.  However, this approach requires either a lot time spend finding the message handlers or demands an elaborate optimization scheme to cut the search time short.
+Multiple-Inheritance
+The Smalltalk object model circumvents the need for multiple-inheritance through its symbolic dispatching.  However, this approach requires additional care since messages are not automatically inherited when emulating multiple-inheritance.
+Interfaces
+Smalltalk does not provide any mechanism for handling multiple interfaces, although, a similar framework to COM could be implemented.
+Out Parameters
+Smalltalk’s methods invocation scheme does not provide support for out parameters.  Consequently, this forces programmers to either provide objects containing the desired output parameters, or returning lists of objects, which are prone to access errors.
+ Java
+
+Java was developed by Sun.  Although it is a proprietary language, Sun has put a great effort into promoting its use and acceptance as viable target platform by relaxing licensing issues.  The main advantages of Java are its machine independence and its similarities to C++.  These two properties have been the main driving force behind Java's success.
+
+A first look at Java reveals a striking similarity with C++.  However, this first impression is quite deceiving.  The core of the Java Virtual Machine (JVM) is actually closer to Smalltalk than C++.  For instance, Java does not support multiple-inheritance and uses a dynamic lookup mechanism to locate methods.  However, Java supports inheritance from multiple interfaces simultaneously by collecting the methods available from all the base interfaces and consolidating them into a single set of methods.
+ Object Structure
+Instances
+The JVM specification does not enforce a specific implementation of the object structure.  However, it can be assumed that an instance will either begin with a reference to its VMT or to its class, followed by the attributes defined in the class.
+
+Although the VMT seems to resemble the C++ architecture, the methods in the VMT are actually found by their symbolic representation rather than their index.  This mechanism is identical to the one used by Smalltalk with the distinction that it supports overloaded methods.
+Classes
+While Smalltalk uses the exact same object structure for instances and classes, Java clearly distinguishes between the two; it provides the necessary JVM instructions to perform operations on either instance attributes or instance methods, and class attributes or class methods.  Nonetheless, Java considers classes to be instances of the class Class.
+Heap
+An additional similarity with Smalltalk is that Sun's JVM also uses a level of indirection through an object table to resolve object references (see Figure 26).  However, Microsoft's JVM uses direct pointers instead.  It is likely that newer versions of Sun's JVM will adopt the same approach to improve the efficiency.
+
+
+Figure 26: Java Heap
+Primitive Types
+Clearly different from Smalltalk, however, is Java's support for primitive data types.  Whereas in Smalltalk everything is an object, Java has direct support at the assembly level for the following primitive types: booleans (1-bit), bytes (signed 8-bit), chars (16-bit Unicode), shorts (signed 16-bit), integers (signed 32-bit), longs (signed 64-bit), floats (32-bit), and doubles (64-bits).  Although the support for theses primitive types significantly increases the complexity of the JVM, the tradeoff is a noticeable increase in execution speed.
+ Shortcomings
+
+Java could certainly be considered being an improved Smalltalk: keeping garbage collection, introspection, and adding support for overloaded methods and types.  Furthermore, defining the language closely to the already established C++ syntax made the transition much easier for many programmers.
+Classes
+Although, Java allows working to some extends on classes as objects, it still does not provide the flexibility found in Smalltalk.  For instance, class methods cannot be overwritten since compiled code uses static references to them.  However, this shortcoming is much less severe when compared to C++, which does not provide any support for classes.
+Interfaces
+Java introduces the concept of multiple interfaces.  However, it falls short on providing a mechanism for differentiating between them.  Rather, it merges all the methods defined in base interfaces and combines them into a single interface.  This approach leads to the problem that methods with the same name, but different behavior, cannot be distinguished anymore.
+Native Types
+Although, native types have improved the execution efficiency, they have also broken the pure object model.  Generic methods, such as a Print method, cannot take an argument of type Object to cover all possible cases; rather, additional methods must be provided for each native type.  Also, generic collection types encounter the same problem.
+Out Parameters
+Java’s methods invocation scheme does not provide support for out parameters.  Consequently, this forces programmers to either provide objects containing the desired output parameters, or returning arrays of objects, which are prone to access errors.
+Operators
+The Java definition prohibits objects from providing their own operators.  Consequently, intuitive operations must be translated into method names, which are often not as convenient as the operators.
+ Self with Viewpoints Extension
+
+The object systems presented so far all use the class-based object model.  However, alternative approaches exist.  For instance, Self uses an object-based approach where classes do not exist.  An extension to this approach was proposed by Bardou et. Al. in [9] where objects are accessed through viewpoints.  This structure is referred to as split-objects.  The figures in this section have been adapted from [9].
+
+The approach used by Bardou et. Al. is to view objects as pieces of information.  Each piece is related to a parent piece by a delegation link, producing a hierarchical organization of the contained information.  Note that each piece can only have one delegation link: thus, the approach corresponds closely, but not quite, to the single inheritance model found in class-based systems. Figure 27 shows an example of a split object.
+
+
+Figure 27: Simple Joe Split Object
+
+The object Joe is represented by a collection of pieces.  These pieces represent different viewpoints of Joe that can be used.  For instance, if object Joe is viewed as an employee and the address attribute is accessed, the actual information returned is Joe’s working address.  The exact mechanism to determine the availability of information is described below in the Delegation Inheritance part.
+ Operations
+Access
+Only split objects can be directly accessed.  Access to a split object includes changing its name and manipulating its pieces.
+Creation
+A split object can be created by cloning an existing split object (described below), or by creating an empty split object and adding the required pieces to it.
+Cloning
+Cloning a split object creates a new split object that contains a copy of the entire hierarchy of pieces belonging to the base split object.  The copied pieces initially hold the same properties as the base split object.
+Modification
+Modifying a split object consists of adding, removing, or editing one of its pieces.  The following operations are supported:
+
+	•	A new empty piece can be added to an existing piece.  A parent piece is always required, unless the split object does not contain any pieces.
+	•	An existing piece can be deleted from its split object.  Deleting a piece implies deleting all the child pieces too.
+	•	An existing piece can be edited.  Editing consists of adding or deleting a property, editing the value of a property, or changing the body of a method stored in the piece.
+ Delegation Inheritance
+
+The properties of piece inheritance are closely related to those found in class-based inheritance.  However, split objects allow a greater degree of freedom for modeling complex structures.
+
+Consider the example given in Figure 28.  When accessing the split object Joe from a TennisPlayer viewpoint, we get a different value for the property skillLevel than from a Skier viewpoint.  Furthermore, when accessing the name property from a Skier viewpoint, the delegation links are followed until the requested property is found.  Hence, properties are inherited through the delegation link to the child pieces.
+
+
+Figure 28: Complete Joe Split Object
+
+As mentioned earlier, pieces can also store methods and thus perform a role similar to classes in a class-based system.  However, the major difference is that classes cannot usually be modified during runtime, whereas pieces can.  Furthermore, the properties and methods accessible from a piece are entirely dependent on its delegation link.  Thus, two pieces with the exact same definition can have two completely different behaviors and structures.
+ Shortcomings
+
+The described split-object model is fundamentally an object-based system.  Correspondingly, it uses a very simple and flexible structure.  Although, object-based systems do not require classes, the Self-language has been used for implementing Smalltalk, which is class-based.  This probably shows best the flexibility of this object structure.  The addition of viewpoints also demonstrates that this model can be used to handle cases where objects expose multiple interfaces.
+Classes
+Self dismisses entirely the concept of classes, although, they can be modeled.  However, the lack of classes directly translates into a lack of type checking.  Furthermore, object structures cannot be generalized since every object can be enhanced with and deprived of attributes/methods during runtime.
+Types
+Self suffers from the same shortcomings as Smalltalk with respect to types.  Please refer to “Smalltalk-80:Shortcomings:Types” for more information.
+Method Dispatching
+In the Self object model, attributes and methods are treated as equals.  Correspondingly, the search for a method now includes everything contained in an object.  As a result, increasingly complex optimization scheme have to be added to improve the performance of such an object system.
+ Summary
+
+Each of the presented languages suffers from deficiencies that we would like to avoid and properties we would like to see in an object model.  Table 1 summarizes the properties that were identified as desirable.
+ 
+
+
+Property
+Language
+Indexed method lookup
+C++
+Multiple Inheritance
+C++
+Classes as objects
+Smalltalk (Java)
+One class per file
+Java
+Interfaces (viewpoints)
+C++, Self
+Out parameters
+C++
+Table 1: Object Model Properties
+
+Some additional properties (e.g. operator overloading, class nesting, templates) where omitted from Table 1, because they are compiler related and not influenced by the object model.  However, the BML compiler addresses many of theses properties (see [B] for additional information about the BML compiler).
+ Object Architecture
+
+This chapter describes implementation details of the BML object model.  It covers the structure of objects, references, and other internal data structures.  The purpose of this chapter is twofold.  First, it is intended to provide to the reader an inside view of the BML object system.  Second, it provides the framework for describing properties, which rely on the chosen architecture.
+
+This chapter is divided into three sections:
+
+	•	Object Structure: this section describes the memory layout of BML objects during runtime.
+	•	References: this section describes how references work in the BML object model.
+	•	Descriptors: this section describes the structure of descriptors and how they are used by the runtime system.
+
+
+ Object Structure
+
+Each object is composed of two parts: a fixed part and a custom part.  The fixed part holds the object fields (i.e. member variables).  The custom part serves two purposes: it either contains additional dynamic fields or plain binary data.
+Fixed Part
+The fixed part of the object always begins at the beginning of the object structure.  It is empty when no object fields are defined.  New fields are added to the end of already existing fields during structural inheritance.  For instance, consider the following class declarations:
+
+Class A { 	int j; }  class B : A { 	int k; }
+
+Figure 29: Object Structure
+
+Figure 29 shows how instances of these classes would look like during runtime.  An instance of class B would have both the fields defined in class A and class B before the beginning of the custom part.
+
+Note that the custom part is actually empty with the above declarations; however, it is shown here to illustrate how its location shifts from one instance to another.  Hence, all object fields are always grouped together in the fixed part.
+Custom Part
+The custom part can be used for two different purposes: it can either serve as a dynamic list of additional fields similar to an array, or it can be used to store binary data.  Although, the custom part is optional, its defining class has to indicate that the instance will make use of it.  Otherwise, the runtime system will not allow creating/modifying the custom part.
+Dynamic Part
+The dynamic part refers to the custom part when it is used to store a dynamic amount of additional fields.  The dynamic part can be resized to accommodate up to 4 billion fields.  Although, this limit is rather constraining, it is sufficient for the purpose of this study.  Later implementations of BML should probably use 64-bit integers to store the dynamic size.  However at this point, common PCs will run out of memory before reaching the 32-bit limit.
+Binary Part
+The binary part refers to the custom part when it is used to store binary data.  The binary part is initially dynamic in size and can be resized to accommodate up to 4 GB.  However, the object has the option of freezing/locking its binary size.  Once, the binary size has been frozen/locked, the binary part cannot be resized anymore.  This behavior is particularly useful for binary data of variable length, which contents should not be modified (e.g. Strings).
+ References
+
+The BML object model only prescribes one data-type: the reference.  A reference is composed of three parts: the object identifier, the interface identifier, and the native flag.  Both identifiers are indices into the object look-up table; the native flag indicates that the object identifier part actually holds the object’s value (see Natives below).
+Objects
+The most common references during runtime are object references.  An object reference has the native flag cleared and the object identifier holds the index of the associated object descriptor.
+Natives
+The most fundamental references during runtime are native references.  A native reference has the native flag set and the object identifier contains the native value.  Consequently, a native reference does not have an associated object descriptor.  The lack of a common data area prevents two native references from referring to the same physical location.  Consequently, native references cannot be aliased.  BML uses native references for storing integers, floating-point numbers, and Boolean values.  Finally, native references are also referred to as ‘no-objects’ since they lack an object descriptor.
+Interface
+Both the object reference and the native reference have an interface identifier, which holds the index to the associated interface descriptor.
+The interface identifier could be compared to the virtual method table (VMT) pointer in C++ or the message table in Smalltalk.  However, whereas the VMT and message table are statically associated with the instance, BML uses a dynamic association.  For instance, two object references with the same object identifier could use two different interface identifiers.  Hence, the same object data would be used by different implementations.  This decoupling from behavior and structure has the advantage that existing structures can be enhanced with new behaviors without affecting existing behaviors.  An alternative to this approach would be to create a façade for every object.  The façade would then contain a reference to the actual object.  This approach was dismissed because it required the creation of many more instances.  However, since the interfaces and the object already exist, using the BML approach does not require any additional instances, although, it does require more memory per reference.
+Limitations
+The current implementation of BML uses 32-bit identifiers, which result in 64-bit references.  As a result, native values are limited to 32-bits.  Note that the native flag is stored in the most significant bit of the interface identifier.  This placement limits the total number of runtime objects that can be present at once to 231 objects or roughly 2 billion objects.
+ Descriptor
+
+Every object has an associated descriptor.  As the name indicates, the descriptor holds information describing some critical runtime aspects of the object.  This information includes the object’s memory location and size (see Table 2 for a complete description of the descriptor structure).
+Object Look-Up Table
+The collection of all descriptors is referred to at as the object look-up table (OLT).  Object identifiers are used as indices into the OLT to find the associated descriptor.  This indirect access mechanism allows an object memory location to be moved – like during a resize – without affecting existing references.  However, it is also slower during runtime since it uses an additional level of indirection.
+
+Runtime Checks
+Much of the information contained in the descriptor is used to perform runtime checks.  For instance, the FixedCount variable is used to determine valid access to the object’s fixed part, the Binary and Dynamic flags are used to determine valid operations on the custom part.  Most of these values are determined at creation time.  However, some values can be changed during execution (e.g. size).
+Descriptor Variables
+
+Variable
+Description
+Counter
+Holds the number of times this descriptor is being referred to by an object identifier.  This value is used to provide reference-counting garbage-collection.
+Size
+Contains the total size of the object in bytes.
+FixedCount
+Contains the number of fields in the fixed part,
+InUse
+This flag indicates that the descriptor is used.
+Binary
+This flag indicates that the custom part contains binary data (see Table 3 for additional information).
+Dynamic
+This flag indicates that the custom part can be dynamically resized (see Table 3 for additional information).
+Persistent
+This flag indicates that this descriptor refers to a persistent object and its state should be stored when the system is saved (i.e. shutdown)..
+Data
+Contains the pointer to the memory location containing the object data.
+Instantiator
+Contains a reference to the instantiator responsible for creating this object.
+Table 2: Descriptor Variables
+
+The Binary and Dynamic flags describe the structure of the object’s custom part.  Table 3 shows the four different, possible settings for these flags.
+Dynamic and Binary Flags
+
+Dynamic Flag
+Binary Flag
+Meaning
+Clear
+Clear
+The custom part is not present.
+Clear
+Set
+The custom part contains a fixed binary structure.
+Set
+Clear
+The custom part contains a dynamic amount of additional fields.
+Set
+Set
+The custom part contains a dynamic binary structure.
+Table 3: Dynamic & Binary Flags
+ Constants
+
+The term Constant refers to an object that can be referenced globally.  Although, some objects are automatically treated as constants (e.g. classes, fields, methods, etc.), any object can be declared as a constant.
+Globally Unique Identifier
+BML uses GUIDs (i.e. globally unique identifiers) to refer to constants.  A GUID is a unique 128-bit integer that is either generated or declared in the language.  The GUID is used as a key in the internal constant table to lookup the associated reference.  However, since GUIDs require a lot of storage space, the runtime system works with RUIDs or runtime unique identifiers.  The RUIDs are 20-bit integers that are automatically generated in sequence when constant objects are loaded.  Furthermore, RUIDs are not keys, but indices into the constant table, making them faster and more memory efficient than GUIDs.  However, RUIDs are only unique during runtime and can change for every program invocation.
+Names
+Constants can be optionally associated with a name.  However, the name must be unique.  Furthermore, the constant naming support is primarily available for compilers, which need to resolve constants by name.  The preferred method for referring to constants is to use GUIDs.
+Motivation
+The motivation for using GUIDs instead of names to refer to constants is to allow renaming.  Since compiled objects only use GUIDs, they are not affected by any name changes, which might occur during a design reiteration of existing classes.  Consequently, the GUID can be thought of a name that reflects the purpose and behavior of the object, and not it currently defined name.  This approach eliminates the worries associated with renaming constants and breaking existing code.  However, when the purpose or behavior of the constant object changes to a degree where existing code would not work anymore, a new GUID must be assigned to the object.
+ Objects
+
+This chapter introduces the most fundamental classes of the BML object model.  Each class is provided with a description of its purpose in the model and the data it contains.
+ Overview
+
+Figure 30 shows the associations between the fundamental BML objects.  Note that this diagram has been simplified for readability.  Every object has an association with its instantiator.  However, in this diagram, only the class Object is shown with this association.
+
+
+Figure 30: Object Organization
+
+The following paragraphs describe the purpose for each of the classes shown in Figure 30 with exception to the class Object, which acts only as a place holds for any class.
+ Instantiator
+
+The instantiator is probably the most central object in the BML object model.  Every instance is created by an instantiator and keeps a reference to it.  The instantiator is used by the system to determine the structure and the behavior of an object.
+Object Structure
+The description of the structure of the instance is given by the size of the fixed part and the definition of the custom part.  Correspondingly, the instantiator contains similar data to the descriptor.
+Interfaces
+The instantiator contains a list of interfaces.  These interfaces correspond to the interfaces supported by the created instance.  The interfaces are stored in the dynamic part of the instantiator.
+Definition
+The instantiator contains a reference to the definition of the instance.   The instance definition is used to initialize the instantiator and provide introspection (i.e. reflection) during runtime.
+Common
+The instantiator also contains a reference to the common part shared by all instances.  The common part acts as a storage area for class fields and methods.
+ Instance Definition
+
+The instance definition defines all the properties of the instance.  Hence, the instance definition can be most closely compared to a class.  However, it only contains the description for instances.  Consequently, a class that contains instance and class declarations is made of two instance definitions: one for the instance and one for the class instance.
+Object Fields
+The instance definition contains the list of object fields defined for this instance.  Note, that this does not include fields inherited from a base definition.
+Binary Fields
+The instance definition also contains a list of binary fields.  The presence of binary fields indicates that the instance has a binary part.  Even so BML does not support direct access to binary fields, they can be mapped by appropriate constructs into a high-level language definition.  Just like the object fields, the binary fields list only contains the binary fields defined for this instance.
+Interface Definitions
+The instance definition contains a list of all interfaces that have been defined or modified by the definition.  Note that this list does not contain interfaces that are inherited without modification.
+Base Definition
+The instance definition has a reference to its base definition.  The base definition is used to compute the actual object and binary fields, as well as the final interfaces.
+Outer Definition
+The instance definition also has a reference to another instance definition that acts as its outer context.  This reference is initialized when the current instance definition acts as an internal class.
+Attributes
+The instance definition can have additional attributes that influence its structure and behavior.
+ Interface Definition
+
+The interface definition defines the properties of an interface.  Although, interface definitions are always present in instance definitions, they can also exist by themselves.  Interface definitions, which are not related to an instance definition, are referred to as pure interfaces.
+Base Definition
+The interface definition has a reference to its base definition.  The base definition is used to find methods that have not been overwritten.
+ 
+Method Declarations
+The interface definition has a list of method declarations.  The list contains overwritten and new method declarations.  However, inherited method declarations are not present.
+Interface
+The interface definition has a reference to its instantiated interface.  The interface contains all methods that have been inherited and locally defined.
+Constants
+The interface definition contains a list of constants that are defined in its namespace.
+ Interface
+
+The interface holds references to all methods declared in the associated interface definition and its base definitions.  The interface provides the same primary services as a VMT in C++.
+Interface Definition
+The interface holds a reference to its interface definition.  The field can be accessed for introspection and dynamic dispatching.
+Base Interface
+The interface holds a reference to the interface defined by the base interface definition.  This reference is used when super methods must be accessed.
+ Method Definition
+
+The method definition provides only the signature definition for methods.  The actual implementation of a method is always provided by a method declaration.  Consequently, the method definition is only used to uniquely identify a method and can be referred to by many method declarations, which provide the actual implementation.  Although, the method definition is globally unique, multiple method definitions with the same name and signature can exist in unrelated interface definitions.
+Return Type
+The method definition holds a reference to the interface definition, which describes the return type.
+Object Fields
+The method definition holds the list of parameter names, types, and properties that are used.
+ Method Declaration
+
+The method declaration provides the implementation for a given method definition.  The method declaration is used as a blueprint for creating the actual methods.
+Method Definition
+The method declaration holds a reference to the method definition it is based on.
+Attributes
+The method declaration contains a list of attributes, which specify additional behavior and compiler related properties.
+ Method
+
+The method is used during runtime to execute code.  It is generated from a method declaration.
+Method Declaration
+The method holds a reference to its method declaration.  This field can be accessed for introspection and dynamic dispatching.
+Native
+The method contains a flag indicating if it is a native method or a byte-code method.  This flags determines the structure of the code part.
+Code
+The method can have two different code parts.  If the method is native, the code part contains three pointers to native functions: a do function, a redo function, and an undo function.  If the method contains byte-code instructions, the code part contains the virtual-machine instructions for this method.
+ Runtime Mechanics
+
+This chapter provides insights into the mechanics that make the BML object model work.  The topics covered by this chapter include method dispatching, interface casting, common object, and constant resolution.
+ Method Dispatching
+
+BML uses like C++ index based method dispatching.  This technique was chosen primarily for performance reasons.  However, it was also chosen, because it was a feasible alternative.  For instance, Java would not be able to use indexed method dispatching since it combines the methods from its base class and the implemented interfaces into a single method table.  Hence, it would not be possible to guarantee that the same method always occurred at the same index.  However, BML uses multiple interfaces, allowing it to distinguish the context in which methods are being invoked.  Consequently, methods can statically be associated with indices.
+
+Generally, methods can be viewed as regular functions, which take as first argument a reference to the object they operate on.  BML uses a slightly different approach.  Rather than having one base object reference, BML uses two.  The first argument refers to the behavioral base and the second argument refers to the structural base.
+
+The behavioral base is always used to dispatch methods.  The behavioral base is responsible for locating the appropriate structural base.  The structural base is always used for structural access.  Separating the behavior and structure references into two arguments has several advantages, which will be highlighted in a later chapter.
+ Interface Casting
+
+One important characteristic in the BML object model is its ability to change an object’s behavior without affecting its structure.  This operation is accomplished through interface casting.
+
+Every instance is associated with its instantiator, which holds references to all supported interfaces.  When a casting operation is performed, the runtime system retrieves the instantiator from the object and traverses its interface list until a compatible interface is found.
+
+If the desired interface is not found, a casting exception is triggered.  Otherwise, the runtime system creates a new object reference composed of the found interface and the original structure of the object.
+
+Although, this operation works for all object types, it does not work as simply for native types.  Native types do not have an associated instantiator in the runtime system since they lack a descriptor.  However, the default object interface requires an Instantiator method that allows native types to return their instantiator.  This method makes it possible for any type of object – generic or native – to provide their list of supported interfaces.  However, it also comes at an additional cost since it requires a method invocation.
+Limitations
+Currently, the virtual machine only supports casting at the instruction level with generic objects.  This limitation allows all virtual machine instructions to remain atomic.
+ Common Objects
+
+The previous chapter described the contents of the InstanceDefinition object.  Although, this object describes completely the structure and behavior of its instances, it does not provide the same information for the class structure (i.e. class members) and behavior (i.e. class methods).
+
+In the BML object model everything is treated as an object including the class structure and behavior that is accessible to all instances of the same type.  However, the BML object model has basically removed the distinction between classes and instances.  Consequently, the information contained in a custom class object is now stored in a common object.  Common objects fulfill the same role as class objects.  However, the BML object model does not have as stringent requirements on the relation between the common object and the instances as do regular object models, which bind both together.  Although, the BML language follows the conventional standards of defining class and instance related information inside the same syntactical structure, they are actually two instance definitions, which are weakly related during runtime.
+
+The definition of a common object must be derived from the definition of the common object of the base class.  Furthermore, the derived common object always uses delegation inheritance to its base common object.  This organization allows derived common objects to share the base common object among them.  Sharing the base common object ensures that the same physical fields are accessible from each common object.  This behavior complies with the behavior found in Smalltalk and C++.
+
+For instance, consider the example in Figure 31.  Assume the common object definition of A (i.e. A::Common) holds some variable that holds the last issued identifier for each object.  Classes derived from A should also access to the same variable to ensure that the same identifier is not issued twice.  Consequently, the B::Common and C::Common objects must share the data contained in the A::Common object.  The shared inheritance mechanism is explained in more detail in the next chapter.
+
+
+Figure 31: Common Objects
+
+The common object of an instance is found through the instance’s instantiator, which holds a reference to it.  This organization of objects makes the same common object accessible to all instances of that type.  However, the BML object model does not require that all instances of the same type have the same instantiator.  Consequently, it becomes possible to have groups of instances, which access one common object, while the others access another common object of the same type.  Although, the two common objects are separate, their base common object is still shared, creating a localized rift.
+
+The following example should illustrate the usefulness of creating multiple instantiators.  The class Vehicle defines a class member for holding the 3D model of the vehicle and an instance member for holding vehicle’s position.
+
+Class Vehicle { 	section [class] { 		Model3D	VehicleBody; 	} 	Coordinate	Position; }
+
+This design allows many vehicles with the same 3D model to exist without requiring each vehicle instance to hold its own reference to the 3D model (or other shared information common to all vehicles of the same type).  Although, this design seems to prevent us from having different kinds of vehicles roaming around, it actually does not.  The BML object model allows creating new instantiators with specific common objects, which can be used to group vehicles of different types together.  This approach allows creating families of instances, which are essentially the same, but which do not share the same common data.
+
+The common objects are a byproduct of the instance-class definition separation.  Although, the BML language makes only little use of this feature, it seems to have some promising properties, which are not available in other object models.
+ Constants Resolving
+Loading
+The BML virtual machine supports RUIDs at the instruction level.  However, since RUIDs are only unique during runtime, the stored instructions in a class description file use LUIDs (i.e. locally unique identifiers), which refer to the GUID table inside the file.  During load time, the LUIDs are translated into RUIDs and all instructions inside the file are updated to reflect the new value of the constant identifier.
+
+All constants that have not been loaded yet, but are encountered during the load process are scheduled for loading.  The load process terminates only once all constants have been loaded and resolved.
+ Object Theory
+
+This chapter contains the descriptions of the fundamental principles, which went into the design of the BML object model.  All of the presented principles where developed specifically for this object model and are the core of the research done for this project. 
+ Structure-Behavior Separation
+
+The heart of the BML object model is the separation of structure from behavior (or vice versa).  This approach enables the runtime system to work with objects of any structure, although, most objects use the general object structure for simplicity.
+
+When comparing BML to other languages, such as C++ or Smalltalk, one can see the fundamental change.  Although, C++ and Smalltalk use different mechanism to locate the desired code during method dispatching, both have the same property: the behavioral context is fully defined by the object reference.
+C++
+In C++, the VMT (or virtual method table) is located inside the instance.  Consequently, using different VMTs with the same instance requires some juggling with the object’s structure.  Although, it is possible to support multiple VMTs per instance, C++ does not allow an instance to be enhanced with a new additional VMT.
+Smalltalk
+In Smalltalk, the object contains a reference to its class, which holds a list of all supported methods.  Again, the instance defines statically the set of methods that are applicable to it.  In order to provide a new set of methods, one would have to modify the reference to the class, which would change the objects type and change its behavior system wide.
+
+BML
+In BML, the object only acts as a structural repository.  It does not define by itself the applicable set of methods.  Consequently, it is possible to enhance any object with a new interface.  However, it should be noted here that this empowerment also has it drawbacks: trying to prevent access to certain fields inside the object becomes impossible since any interface could be attached.  Therefore, the BML language does not allow simply casting any object to any interface, but rather uses the set of defined and inherited interfaces for each object.  However, the concept of detached interfaces, which is discussed in a later section, relies on this property.
+
+Another advantage of the behavior-structure separation becomes obvious when working with low-level APIs or operating system structures.  Since the runtime system does not need to know the structure of an object, such low-level structures can be created and passed directly to sub-systems of the current machine.  The behavioral part is then used to extract the desired information from the structure.  Hence, existing structures can be enhanced with new behavior to interface with the runtime system without affecting their prescribed composition.
+
+Finally, since the behavioral information is not part of the object, changing it will only affect the object within the local context.  Consequently, the same object can be referred to in other locations with different behaviors, yet the object identifier remains the same.  This identity property is not upheld when using proxy classes as would be necessary for Java or Smalltalk.
+ Conventional Inheritance
+
+The BML object model uses two kinds of inheritance: conventional and delegation.  This section just provides a short description of the conventional inheritance model since it is encountered in most object models.  Conventional inheritance can be divided into two sub-categories: structural and behavioral.
+Structural Inheritance
+Structural inheritance aggregates the structural definition of the base class with the derived class.  Consequently, instances of the derived class contain all fields defined by the structural base class and the derived class.  Structural inheritance is found in Smalltalk, Java, and C++.  However, C++ uses a slightly more involved mechanism to accommodate also multiple inheritance.
+Behavioral Inheritance
+Behavioral inheritance merges definitions found in the base class and the derived class, keeping only the most recent definition when going from the derived class to the root class.  Behavioral inheritance is found in all object models where method inheritance is provided.
+ Delegation Inheritance
+
+Delegation inheritance does not include the fields defined by the base classes; rather it uses a reference to the instances defined by them.  When accessing base fields or methods, the access is delegated to the appropriate reference.  However, the delegation mechanism is slightly different then found regularly in other languages.
+
+In C++, Java, and Smalltalk, the base object is always referred to by a single reference.  However, in BML, the base object is referred to by two references: the behavioral base and the structural base.  This distinction allows BML to delegate a call to another instance, yet retain the true object’s scope.
+
+Delegation inheritance is used primarily for multiple inheritance.  However, it also allows more exotic types of inheritances: shared inheritance and tagging.  Both of these types of inheritances are described in the next two sections, but first let us go through an example for multiple inheritance.
+
+Consider the following code where class E has a total of 4 base classes, where two of them are direct base classes.
+
+Class A { 	void foo() { goo(); } 	void goo() { … } }  class B {}  class C : A, B {}  class D {}  class E : C, D { 	void goo() { … } }
+
+The organization of an instance of class E is shown in Figure 32.  In this figure the self and this references both point to the instance of E on which a call is being issued on.  This is the starting situation for any initial call on an instance: both base references show to the same object.
+
+
+Figure 32: Delegated Invocation (step 1)
+
+In this example, let us assume that the foo method is invoked.  Since E does not implement it, it delegates the call to its C part (see Figure 33).  Note that E and C are two different objects that do not share the same memory space.
+
+
+Figure 33: Delegated Invocation (step 2)
+
+In Figure 33 we can see that the this reference has been moved to the C object, but the self reference continues pointing to the E object.  Similar to the previous situation, the C object delegates the foo call to the A object (see Figure 34), which provides the implementation for the method.
+
+
+Figure 34: Delegated Inocation (step 3)
+
+Note that now we are in the context of the A object and inside a method of A.  Consequently, the foo method can access all the fields defined in this context.  This situation should clarify why the this reference is also called the structural base: it always points to the structure that the code is operating on.  However, in this example, this is not the end of the story since the foo method invokes the goo method, which was overwritten by the E object.
+
+This is the scenario where the self reference comes into action.  The self reference is also called the behavioral base and is always used when a method is being invoked (not delegated).  The behavioral base always points to the true object.  This approach allows the E object to redefine the behavior of its base objects.  In our example, using the self reference, brings us back to our initial state (see Figure 32).  Note that the C object could also have overwritten the goo method; however, since we are starting in the initial state again, we are guaranteed to find the proper implementation of the wanted method.
+Efficiency
+The biggest issue with this method dispatching model is efficiency; especially, for methods which have been inherited, but never overwritten.  In the current model, the invocation always starts at the true object, progressively finding its way to the actual context where it is implemented.  Since this scenario occurs very often in the virtual machine, special instructions have been provided that allow the virtual machine to recycle the activation record so that the runtime stack depth does not grow during this process.
+
+ Shared Inheritance
+
+Shared inheritance is a byproduct of delegation inheritance.  As described earlier, a base object is an individual object when using delegation inheritance.  Consequently, it is possible to share a base object among two or more true objects.  This sharing creates a common region among a set of objects.  This common region is similar to the common object that is used to store class fields.  However, the major difference is that the set of true objects that share such an object can be easily controlled.  Figure 35 shows two objects sharing the same base object.
+
+
+Figure 35: Shared Inheritance
+
+Shared inheritance seems to be a very flexible inheritance mechanism.  However, at this point, it lacks applications.  The next section describes the only identified application where shared inheritance becomes a very valuable asset.
+ Tagging
+
+Tagging is an interesting application of shared inheritance.  The tagging technique allows enhancing the information found inside an object, without affecting the object itself.
+Normalization
+The tagging mechanism requires some additional logic to avoid unwanted situations.  Consider Figure 36 where object A has been enhanced with tag 1.
+
+
+Figure 36: Tagging (step 1)
+
+If we were to attach tags always to the current base object, we would end up with the situation in Figure 37 when we append tag 2.
+
+
+Figure 37: Tagging (step 2)
+
+However, tag 1 could unexpectedly modify the behavior of object A, which could potentially confuse the behavior of tag 2.  Consequently, tags should always be attached directly to the base they where intended for.  This process is referred to as normalization and it allows us to ensure that the tags are applied only to untagged objects.  Figure 38 shows how the tags are attached in a normalized way.  Furthermore, the normalization process also guarantees that no two tags of the same type are present.
+
+
+Figure 38: Tagging with Normalization
+Application
+As mentioned earlier, tags are useful for enhancing an object with additional information.  A simple example would be a container class.  The following code illustrates this application.
+
+Template <Object ITEM> class Container { 	class ContainerItem : ITEM [tag] { 		Container	Host; 		Integer	Index; 		ContainerItem( Container, Integer ) { … } 	} 	ContainerItem itemAt( Integer index ) { … } }
+
+The itemAt method returns a ContainerItem object, which is derived from the original contained element type.  Consequently, the ContainerItem object fully supports the original behavior of the item stored in the container.  However, it also provides additional information, such as the container it was stored in and the index it was stored at.
+Conclusion
+Although, this is only a brief introduction to tags, it can be easily seen that they can become very handy when additional information needs to be appended to objects without modifying them.  Sadly, BML only supports at this point shared inheritance without the necessary normalization mechanism.  Furthermore, additional research would be needed to fully understand all the implications of tagging objects.  However, the possibilities seem to be very promising.
+ Instantiation
+
+Instantiator objects are responsible for creating new instances.  However, the instantiator behavior can be modified to support different kinds of instantiations by sub-typing.  The following paragraphs describe the basic instantiator that are available in BML object model.
+Multiple Instances
+The default instantiator allows creating any number of instances.  This instantiator can create empty instances that need to be initialized by a constructor, as well as defined instances for which a blueprint is provided.  The blueprint is simply a container with the values for all the fields of the instance.  This mechanism is used, for instance, when restoring instances from streams.
+Single Instance
+The Singleton instantiator creates only one instance.  Subsequent instantiations return a reference to the already created instance.  Since this instantiator only creates a single instance, it does not allow creating an instance from a blueprint.
+Unique Instances
+The Unique instantiator guarantees that instances that are created with the same data have the same reference.  Since this instantiator requires knowledge of the contents of the instance, it works only with blueprints.  This instantiator is used, for example, for string objects to reduce memory clutter.
+ Detached Interfaces
+
+Detached interfaces are interfaces that are defined on top of an existing interface or class.  Although, these interfaces are not part of any class, they can be used for casting objects.  During the casting operation, the runtime system checks if the object supports the prerequisites of the detached interface.  If the prerequisites are met, the interface is added to the list of supported interfaces in the object’s instantiator and the casting operation completes.  Otherwise, the operation triggers an exception.
+Motivation
+The motivation for detached interfaces is that they allow existing classes or interfaces to be enhanced without having access to the source code.  This ability is especially useful in applications that rely on third-party class hierarchies.  Furthermore, they also provide a mechanism for providing legacy interfaces without affecting the actual class definition.  Using detached interfaces to provide support for legacy interfaces has two advantages: first, it reduces the complexity of the source code since only the new definition is provided with a class or interface; second, it reduces the memory clutter since the legacy interface will only be loaded if it is required.  The two properties should make detached interfaces an interesting tool for software evolution.
+BML
+Although, the BML object model supports detached interfaces by its architecture, the current language implementation does not have the necessary constructs to make detached interfaces available.  This shortcoming should be addressed in the future.
+ Conclusion
+Behavior-Structure Separation
+The dual base references provide a simple, yet, effective solution to the behavior-structure separation problem.  This approach allows any structure to be manipulated by the runtime system by abiding to the behavioral model.  However, this approach also restricts direct access in favor of a more generic model.  Consequently, this solution affects the runtime system performance.  However, it is simple enough to provide a starting point for more elaborate schemes.
+Delegation Inheritance
+The introduction of delegation inheritance has opened doors into new properties that were not available previously.  However, the gained flexibility has also come at the cost of considerable performance loss during runtime.  Consequently, research should be conducted that would aim at improving the runtime efficiency of the introduced delegation technique.  Although, this research would be mostly motivated by the presented findings, it is also very likely that additional properties will be found, making delegation inheritance even more attractive.
+
+The next section provides some starting points for future work on the BML object system.
+ Future Work
+
+This section describes some additional research topics that were identified during the development of the BML object system.  The proposed topics are independent from each other unless otherwise specified.
+ Native Types
+Native Flag
+The system identifies native types by a flag in the interface index.  This technique limits the object system to 231 objects rather than the expected 232.  Furthermore, it requires extra care to be taken when creating references from scratch.  An alternative approach would be to enhance the interface objects to hold a Boolean value to indicate if the object it operates on is native.  This approach would work since the interfaces must be aware of the type they operate on.  Although, this approach was determined as sound, it was not adopted, because it was identified too late in the development cycle.  However, future versions of the BML object system should probably adopt it.
+ References
+32-bit References
+The current model stores 64-bit references that are composed of an interface index and an object index.  However, for typed language such as BML, the type (i.e. interface) is known for each storage location.  Consequently, only the object index would need to be stored.  This approach would considerably reduce the amount of memory required to store objects with many fields.
+Translation
+Whenever, the object is retrieved from its location, the system would automatically cast the object to the desired interface.  This operation can be accomplished by searching the list of interfaces in the object’s instantiator, which is found through the object descriptor.  This mechanism is identical to the normal casting operation.  Consequently, objects could not be casted to interfaces they do not already support; hence, preserving their type’s identity.
+Native Types
+The above technique works only for objects that have an associated object descriptor.  However, native types are entirely stored inside the reference and, therefore, do not have a descriptor.  Consequently, a different technique must be used for native types.  The simplest approach would be to allow native types to be casted to any native type interface.  The only drawback with this approach is that it obliterates the type’s identity, allowing an integer object to be used as a pointer or floating-point object.  A more involved approach would query the defined type of the field through introspection and recover the missing interface index.  Although, this technique would preserve the type’s identity, it would also impose an important runtime overhead whenever native types were accessed.
+Native Flag
+The native flag in the reference prohibits the BML system from having more than 2 billion objects.  Although, this limit is rather high, it would be simple to extend it to 4 billion.  It suffices to have the complete 32-bits available to both identifiers.  This could be achieved by adding a ‘native’ field to the interface object.  This field could hold the native flag.  This approach would probably work since the interface must be aware of the object’s structure.
+Registers
+The virtual-machine registers would continue to hold the resolved 64-bit references.  This schema would remove the casting overhead once the values have been loaded into them.  Consequently, register based optimization would actually translate into improved execution efficiency.
+Local Variables
+Local variables should probably adopt the same structure as object fields.  Again, this approach would translate into smaller memory footprint for the runtime stack or, conversely, allow more method activation records to exist simultaneously.
+Parameters
+Since parameters are similar to local variable, they would adopt the same approach as local variables.
+Conclusion
+With the current casting model, the proposed 32-bit references would probably impose an unjustifiable overhead.  The current casting operation uses a simple traversal of the interface list inside the instantiator, checking each interface if it is compatible with the desired interface.  Consequently, the search requires O(n) time, where n is the number of supported interfaces, including base interfaces.  An alternative technique would be to use a binary search tree, which would reduce the overhead to O(log(n)) time, or a sparse table, which would crunch the overhead to O(1) time.  However, these support structures would also increase the memory requirements.  Consequently, unless a satisfying casting algorithm is found, 32-bit references would probably impose too much of a cost in performance or memory to be practical.
+References
+[1]
+Margareth A. Ellis & Bjarne Stroustroup. The Annotated C++ Reference Manual. Addison-Wesley, Readin, Mass., 1990.
+[2]
+David Flanagan. Java in a Nutshell. 2nd edition, O’Reilly and Associates, Inc., 1997.
+[3]
+Adele Goldberg & David Robson. SMALLTALK-80: The Language and its Implementation. Addison-Wesley, Reading, Mass., 1983.
+[4]
+James Gosling, Bill Joy & Guy Steele. The Java Language Specification. Addison-Wesley, Mass., 1996.
+[5]
+Jon Meyer & Troy Downing. Java Virtual Machine. 1st edition, O’Reilly and Associates, Inc., 1997.
+[6]
+James Rumbauch, Ivar Jacobson & Grady Booch. The Unified Modeling Language Reference Manual. 1st edition, Addison-Wesley, Mass., 1999.
+[7]
+Robert W. Sebesta. Concepts of Programming Languages. 3rd edition, Addison-Wesley, Mass., 1996.
+[8]
+Bjarne Stroutstroup. The C++ Programming Language. 3rd edition, Addison-Wesley, Reading, Mass., 1997.
+[9]
+Daniel Bardou & Christophe Dony. “Split Objects: A Disciplined Use of Delegation within Objects.” OOPLSA ’96 Conference Proceedings, pp. 122-137. ACM 1996.
+[10]
+David Ungar & Randall B. Smith. "Self: The Power of Simplicity." Lisp and Symbolic Computations: An International Journal, Vol. 4, No. 3, 1991.
+Appendices
+A
+Steve G. Bjorg. BMA Specification. University of Colorado, Boulder 2000. (provided on CD)
+B
+Urs C. Muff. Backtracking Model Languages. Master’s Thesis, University of Colorado, Boulder 2000. (preliminary version provided on CD)
+C
+BM Virtual Machine Source Code (provided on CD)
+D
+BML Object Hierarchy Source Code (provided on CD)
+E
+BML Object Hierarchy – Native Methods Source Code (provided on CD)
+F
+BM Debugger Source Code (provided on CD)
+

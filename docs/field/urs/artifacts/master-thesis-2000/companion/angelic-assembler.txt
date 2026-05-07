@@ -1,0 +1,203 @@
+Angelic Assembler
+Interpreter Specification
+Multithreaded Discussion
+A thread with a non-zero DF (i.e. degree of freedom) is executed until a zero DF is reached again. No other threads are executed during this speculation phase.
+
+Integer Instructions
+Data Types
+byte	unsigned 8 bit
+word	unsigned 16 bit
+dword	unsigned 32 bit
+qword	unsigned 64 bit
+tiny	signed 8 bit
+short	signed 16 bit
+int	signed 32 bit
+long	signed 64 bit
+char	Unicode character (16 bit)
+Arithmetic
+add	addition
+adc	addiction with carry
+sub	subtraction
+div/mod	division & modulo (unsigned)
+mul	multiply (unsigned)
+idiv/mod	division & modulo (signed)
+imul	multiply (signed)
+neg	negate
+inc	increase by 1
+dec	decrease by 1
+xadd	exchange and add
+(mmx instructions)
+Manipulation
+shr	shift right
+shar	shift arithmetic right
+shl	shift left
+ror	rotate right
+rol	rotate left
+swap	swap bytes
+b2w	byte to word
+w2d	word to double word
+d2q	double to quad
+
+Logical
+not	logical not
+and	logical and
+or	logical inclusive or
+xor	logical exclusive or
+(test)
+Comparison
+eq	equal
+ne	not equal
+ge	greater or equal (signed)
+le	less or equal (signed)
+gr	greater (signed)
+ls	less (signed)
+ae	above or equal (unsigned)
+be	below or equal (unsigned)
+ab	above (unsigned)
+bl	below (unsigned)
+bound	check array index against bounds
+(cmp)
+cmpxchg	compare and exchange
+Floating Point Instructions
+Data Types
+float	32 bit
+double	64 bit
+complex	2x32 bit
+Arithmetic
+add	addition
+sub	subtraction
+div	division
+mul	multiplication
+neg	negation
+(mmx instructions)
+Functions
+sin	sine
+cos	cosine
+log	logarithm base 10
+ln	logarithm base e
+exp	exponentiate
+sqrt	square root
+f2xm1	compute 2x - 1
+abs	absolute value
+tan	tangent
+atan	arc-tangent
+asin	arc-sine
+acos	arc-cosine
+rndint	round to integer
+sincos	sine and cosine
+xtract	extract exponent and significant
+yl2x	compute y * log2 x
+yl2xp1	compute y * log2 (x+1)
+(pow)
+f2d	float to double
+f2i	float to integer
+d2f	double to float
+d2l	double to long
+Comparison
+eq	equal
+ne	not equal
+ge	greater or equal
+le	less or equal
+gr	greater
+ls	less
+(cmp)
+Control Flow Instruction
+Jump
+jsuccess	jump on success
+jfailure	jump on failure
+jtrue	jump if true
+jfalse	jump if false
+jmp	jump
+je	jump if equal
+jne	jump if not equal
+jz	jump if zero
+jnz	jump if not zero
+jg	jump if greater (signed)
+jge	jump if greater of equal (signed)
+jl	jump if less (signed)
+jle	jump if less or equal (signed)
+ja	jump if above (unsigned)
+jae	jump if above of equal (unsigned)
+jb	jump if below (unsigned)
+jbe	jump if below or equal (unsigned)
+jc	jump if carry
+jnc	jump if not carry
+jo	jump if overflow
+jno	jump if not overflow
+jp	jump if parity
+jnp	jump if not parity
+js	jump if sign
+jns	jump if not sign
+General
+call	sub-routine call
+return	sub-routine exit
+enter	create local variables
+leave	clear local variables
+(start)	beginning of sub-routine
+halt	halt execution
+(debug)	raise debug event
+count	load upper & lower iteration registers
+loop	iterate
+fail	set failure mode
+raise	raise exception
+resume	resume from exception
+clc	clear carry flag
+stc	set carry flag
+cmc	complement carry flag
+vmid	virtual machine identification
+Methods
+invokevirtual	calls a virtual method
+invokespecial	calls a non-virtual method
+invokestate	calls a static method
+invokeinterface	calls an interface method
+Data
+Memory
+loada	load register with address contents
+storea	store register into address
+loadl	load local variable
+storel	store local variable
+xchg	exchange register with address
+move	copy memory
+movez	copy zero-terminated memory
+lea	load effective address
+Stack
+push	push value
+pop	pop value
+dropn	drop n values
+dupn	duplicate n values
+swapn	swap n values
+pushall	push all registers
+popall	pop all registers
+pconst	push constant
+
+State
+save	push n bits
+restore	pop n bits
+discard	drop n bits
+Array
+newarray	create a new array
+newmultiarray	create a new multi-array
+alength	length of array
+aload	load array value
+astore	store array value
+Object
+new	create a new object
+putfield	store field from object
+getfield	laod field from object
+putstatic	store static field
+getstatic	load static field
+instanceof	check if object is an instance of a given class
+cast	cast object to new object or interface
+VM Registers
+flags	state flags
+low	lower bound iteration register
+high	upper bound iteration register
+self	reference to current object
+any[4]	general purpose registers
+Assembler Specification
+Object
+‘class’ name
+‘superclass’ name
+‘field’ [ ‘public’ | ‘protected’ | ‘private’ ] [ ‘static’ ] type name [ ‘=’ expression ]
+‘method’ accessSpec methodSpec statements ‘end’ ‘method’
+‘limit’ [ ‘stack’ | ‘locals’ ] integer

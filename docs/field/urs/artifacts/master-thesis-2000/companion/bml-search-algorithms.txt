@@ -1,0 +1,1180 @@
+
+BML Search Algorithms
+Steve G. Bjorg Department of Computer Science University of Colorado Boulder, CO, 80309-0425, USA bjorg@colorado.edu
+
+
+Abstract	This document provides an introduction for using BML as a programming language for artificial intelligence related problems.  It contains an overview of the BML language and shows how BML can be used to solve complex problems.  Furthermore, sample code is provided for finding a shortest-path between two cities using a search algorithm that relies on backtracking.
+
+
+
+Keywords:	artificial intelligence, search algorithms, backtracking
+
+Table of Contents
+Table of Contents	i
+Introduction	ii
+BML Highlights	1
+Backtracking	1
+Local Functions	3
+Inner Classes	4
+Attributes	4
+Sections	10
+With Construct	11
+Syntax	11
+BML for Artificial Intelligence	12
+Source Code	14
+Search Algorithms	14
+Sample Application	21
+Standard Classes	25
+References	29
+
+Introduction
+What is BML?
+BML stands for Backtracking Model Language and is an object-oriented programming language that is being developed by Urs C. Muff and Steve G. Bjorg at CU Boulder.  The goal of BML is to merge concepts found in traditional, imperative programming languages such as C++ and Java with backtracking.  However, BML also includes several syntactic and semantic extensions that are aimed at handling file parsing and evolving object hierarchies.
+BML Overview
+BML is based on the following core technologies:
+	•	BMF: a programming language based on BNF for defining top-down parsers; this component is fully integrated into BML.
+	•	BMA: an abstract machine definition (see [1]) that provides the backtracking and object functionality.
+	•	BMO: an object model that promotes loose-coupling, multiple inheritance, shared inheritance, and method delegation; the BML definition is tightly coupled to the functionality of the BMO model.
+
+Although, object hierarchy evolution is one of the most important concepts addressed in BML, the focus of this document is to investigate how BML could be used to solve artificial intelligence related problems.  Therefore, the concept of software evolution will not be addressed.
+About this document
+This document presents BML based implementations of common artificial intelligence search algorithms.  The first section presents an overview of the BML syntax and some of the concepts found in the language.  The second section investigates how adequate BML is as a language for solving artificial intelligence related problems.  Finally, the third section provides the source code of implementation of the search algorithms.
+
+BML Highlights
+
+BML shares many features found in C++ and Java.  However, it also introduces some new concepts, such as delegation, local functions, and most notably, backtracking.  This section of the document describes these concepts to familiarize the reader with the possibilities of BML.  However, it is assumed that the reader be familiar with both C++ and Java.
+Backtracking
+
+Backtracking is certainly the feature that separates BML from other imperative programming languages.  Consequently, it is also the feature that has the biggest impact on the set of statements and objects available in BML.  This section aims at defining the most common constructs encountered when working with backtracking in BML.
+choose
+The first and most versatile statement is the choose construct.  It allows the programmer to provide multiple execution paths for the program.  BML tries the different paths in sequential order until a path either succeeds or the choose construct is abandoned and backtracking resumes.  The following example demonstrate a simple choose construct.
+
+Object hObject; choose { 	hObject = System.Console.In.Parse( int i = 0 ); }, { 	hObject = System.Console.In.Parse( String s = "" ); }, { 	System.Console.Out.PrintLn( "Can't read input." ); }
+
+In the above example, the program first tries to parse an integer from the console input.  If the parsing process fails, the next code block in the choose statement tries to parse a string.  Should this attempt fail too, execution will continue at the third code block, which prints out an error message.
+
+Although, the choose construct can be used for most instances where backtracking is desired, several short hand notations are available for reducing typing and improving readability.
+if_fail
+The if_fail construct allows executing a code block only if execution failed in some later statements.  Consider the following example.
+
+if_fail { 	System.Console.Out.PrintLn( "Can't read input." ); 	return; } Object hObject = System.Console.In.Parse( int i = 0 );
+
+This code is equivalent to the following choose construct.
+
+choose {}, { 	System.Console.Out.PrintLn( "Can't read input." ); 	return; } Object hObject = System.Console.In.Parse( int i = 0 );
+
+Clearly, the if_fail construct is more readable than the corresponding choose construct.  Furthermore, the empty code block could easily be overlooked when reading the code.
+while_success
+The while_success construct allows executing a loop until it fails.  This construct is commonly used when parsing an unknown number of objects from the input stream.  Consider the following example.
+
+Object[] hObjects; while_success { 	String s = ""; 	hObjects.AddLast( System.Console.In.Parse( s )); }
+
+The above code is identical to the following code using the if_fail construct.  However, it is intuitively less clear than using the while_success construct.
+
+Object[] hObjects; loop { 	if_fail break; 	String s = ""; 	hObjects.AddLast( System.Console.In.Parse( s )); }
+fail
+All of the above statements are designed to work with backtracking.  However, they do not force the backtracking to occur by themselves.  This operation is accomplished by the fail statement.  This statement forces the runtime system to go into retry mode, where all previous statements are given a chance to submit an alternative solution.
+cut & mark
+The cut statement disable retries when it is encountered during backtracking.  Consequently, all preceding statements are undone as if no alternative existed.  This operation continues until a corresponding mark statement is found.  The mark statement enables again the retry operations.
+Local Functions
+
+BML supports two kinds of local functions: named and anonymous.  Named local functions present themselves as simple functions in functions or methods.  However, anonymous functions are used as expressions and are generally directly passed as parameters to other methods or functions.  The following code illustrates named local functions.
+
+int Recursion( int iValue, int iMaxDepth ) { 	int Local( int iDepth ) { 		if( iDepth == iMaxDepth ) return iValue; 		return Local ( iDepth + 1 ); 	} 	return Local( 0 ); }
+
+As the above example illustrates, local functions can access parameters and variables declared in their defining function or method.  Furthermore, local functions can be nested up to certain depth (currently a depth of 8).  The following example illustrates the use of anonymous functions.
+
+int Sum( int[] hArray ) { 	int iSum = 0; 	hArray.ForEach( void ( int iValue ) { 		iSum += iValue; 	}); 	return iSum; }
+
+Almost all containers have methods for iterating through their contents.  In the above example the method ForEach is invoked with an anonymous function that sums up all the integers contained in the array.  This example represents the most common case in which anonymous functions are used.  However, the search algorithms presented in this document also take advantage of this flexible mechanism.
+Inner Classes
+
+BML borrows the concept of inner classes from Java.  Inner classes can access fields and methods from their outer class.  The following example demonstrates this concept.
+
+class Foo { 	int iValue; 	class Goo { 		int Value() { return iValue; } 	} }
+
+In this example an instance of class Goo exposes a method Value, which returns the field found in class Foo.  A good introduction to inner classes can be found in [2].
+Attributes
+
+One of the most powerful features of BML is the ability to define attributes for almost all declarations.  Attributes are enclosed in square brackets and always occur immediately following the declaration to which they apply.
+
+Seven different sets of attributes exist.  Each set corresponds to a certain type of declaration.  The following table summarized the sets and their respective contexts.
+
+
+
+Attribute Context
+Description
+
+Class
+These attributes occur directly after the name of the class.  They define how the class will operate inside the system.
+
+Inheritance
+These attributes occur directly after the name of a base class.  They define the relationship between the derived class and the base class.
+
+Method
+These attributes occur directly after the argument definition of a method.  They define how the method will behave during runtime, as well as additional information about the method (e.g. cost, exceptions that can be thrown, etc.).
+
+Field
+These attributes occur directly after an object field definition.  They define how the field can be accessed and what kind of references are allowed.
+
+Argument
+These attributes occur directly after a method argument declaration.  They describe how the argument will be treated during the call transition.
+
+Variable
+These attributes occur directly after a local variable definition.  They define special cases for working with local variables.
+
+Function
+These attributes occur directly after a local function or anonymous function declaration.  They specify how the function can be used.
+
+
+Class Attributes
+abstract
+The class cannot be instantiated.  This attribute is required if the class contains abstract methods.
+guid
+This attribute attaches a globally unique identifier (128-bit) to the class definition.  If this attribute is not defined, the compiler will generate automatically a GUID for this class.
+inner
+This class contains a hidden field that allows it to access fields from the outer class.  Note that these classes can only be created if an instance of the outer class exists.
+singleton
+This class can only have one instance.  Creating additional instances will result in getting the reference to the single instance.
+Inheritance Attributes
+delegate
+The derived class does not inherit the structure of the base class.  Therefore, the derived class contains a hidden field to access the base class fields and to delegate method calls.
+shared
+This attribute implies that the base class is delegated.  However, instead of creating an instance of the base class for each instance of the derived class, the reference to the base class is provided during creation.  Therefore, multiple instances can share the same instance of the base class.
+Method Attributes
+abstract
+This attribute specifies that the method implementation must be provided in a derived class.  Classes containing abstract methods must also have the abstract attribute set.
+class
+This attribute specifies that the method belongs to the class rather than to its instance.
+coercion
+This attribute is only valid for constructors and casting operators.  It specifies that the method can be used in a coercion chain to obtain a wanted object type.  By default, only one constructor or casting operator can be used to obtain the desired object type.
+const
+This attribute specifies that the method is not modifying its base object when executing.
+cost
+This attribute defines a cost for the method.  Although, it is allowed for any method definition, its primary use is for finding the cheapest coercion chain.
+default
+This attributes specifies that the method can be called without specifying its name.  The produced effect is similar to defining operator ().
+deferred
+This attribute specifies that the method implementation is provided by a derived class.  The derived class must have a delegation relation to the current class.  The difference between the deferred and the abstract attribute is that a class with deferred methods can be instantiated.  However, the deferred methods can only be called on its delegated derived class.
+exception
+This attribute specifies a set of exceptions that can be thrown by the method.
+explicit
+This attribute only applies to constructors and casting operators.  It specifies that this method can only be called if it is explicitly used.
+extern
+This attribute specifies that the implementation of the method is provided in an external library.  It must be used in conjunction with the library attribute.
+final
+This attribute specifies that the method cannot be overwritten by a derived class.
+guid
+This attribute attaches a globally unique identifier (128-bit) to the method definition.  If this attribute is not defined, the compiler will generate automatically a GUID for this method.
+hidden
+This attribute specifies that the method should not be displayed when listing all the available methods to the programmer.  However, it is still accessible.
+inline
+This attribute specifies that the method call should be inlined.  Note that this attributes implies automatically the attribute final.
+library
+This attribute specifies the source library for external methods.
+name
+This attribute specifies an alternative name for the method.  Its most common use is to provide readable names for operators.
+private
+This attribute specifies that the method can only be called from other methods defined in this class.
+protected
+This attributes specifies that the method can only be called from instances of this class or its derived classes.
+public
+This attribute specifies that the method can be called from anywhere.  This attribute is assumed by default when no access attribute is specified.
+Field Attributes
+exclusive
+This attribute specifies that the referenced object can only be reached through this field.
+get
+This attribute specifies that a read method must be created for this field.  Additional method attributes can be specified in this attribute.
+guid
+This attribute attaches a globally unique identifier (128-bit) to the field definition.  If this attribute is not defined, the compiler will generate automatically a GUID for this field.
+inline
+This attribute specifies that the instance should be expanded inside this object rather than using a reference to it.  This attributes allows creating structures of non-polymorphic objects.
+put
+This attribute specifies that a write method must be created for this field.  Additional method attributes can be specified in this attribute.
+relaxed
+This attribute specifies that this field can store references to objects of the defined type or objects of derived types.  This attribute is assumed by default when no other type attribute is specified.
+shared
+This attribute specifies that the referenced object is accessible from multiple locations.  This attribute is assumed by default when no other reference attribute is specified.
+strict
+This attribute specifies that this field can only store references to the objects of the defined type (i.e. not to derived objects).
+Argument Attributes
+cast
+This attribute indicates that the specified argument type is weaker than what is expected.  The compiler then automatically generates a cast to the desired type.  However, if the cast operation fails, an IllegalArgument exception is thrown.  This attribute is used when overwriting methods and the programmer knows the object type that is expected.
+in
+This attribute specifies that the argument is passed into the method or function.  Hence, overwriting it will not affect the method caller.  This attribute is assumed by default when no other transition attributes are defined.
+inout
+This attribute specifies that the argument acts simultaneously as input and output parameter.  Hence, it combines the effects of the in and out attributes.
+out
+This attribute specifies that the argument is not initialized at the beginning of the method or function call.  However, its value will be passed back to the calling context when the method or function call completes.
+Variable Attributes
+nostate
+This attribute specifies that operations done on this variable are not undone during backtracking.
+Function Attributes
+const
+This attribute specifies that the function is not modifying the base object of its context when executing.
+inline
+This attribute specifies that the function call should be inlined.
+nocontext
+This attribute specifies that the function does not access any values pertinent to the context of its method.  Hence, the parameters are the only values that can be accessed by the function.  However, these functions can survive their defining method.
+Sections
+
+Attributes can be combined into sections.  This reduces the amount of typing that is required to define sets of declarations that all share the same attributes.  The following are a few examples of anonymous sections.
+
+section [private] { 	void Foo() {} }  section [library="MYLIBRARY.DLL"] { 	void Goo() [extern="Goo1"]; 	void Noo() [extern="Goo2"]; }
+
+Furthermore, named sections can be used to group related fields or methods together.  Consider the following examples.
+
+section Insertion [public,abstract] { 	void AddFirst( Object jObject ); 	void AddLast( Object jObject ); 	void AddAt( Object jObject, int iIndex ); }
+
+In addition, sections can be arbitrarily nested to organize or share attributes.  Consequently, sections are a nice syntactical element that enhances the readability and expressiveness of BML.
+With Construct
+
+With constructs allow referencing multiple times the outcome of an expression without assigning it to a variable.  They serve mostly as a shortcut to reduce typing and variable declarations.  The following example demonstrates a with block.
+
+with( iValue.ToString()) { 	System.Console.Out.PrintLn( .ToUpperCase()); 	System.Console.Out.PrintLn( .self ); }
+
+The special syntax .self allows to access the reference of the with block without performing any actions on it.
+Syntax
+
+BML evolved from a previous language called BMF, which was designed to create top-down parsers.  Many concepts developed for BMF have found their way into BML.  However, covering all the aspects of the syntax component of BML is beyond the scope of this document.  Nonetheless, it is worthwhile noting that every object can have an arbitrary number of syntaxes attached to it.  The most common syntaxes found in objects are text and binary.  These syntaxes describe how the object can be parsed from a text or binary stream, respectively.
+BML for Artificial Intelligence
+
+Although, BML looks much alike an imperative programming language, its backtracking functionality makes it well suited to explore non-deterministic environments.  Consequently, BML would seem an appropriate choice to attack certain categories of artificial intelligence problems.
+Search Spaces
+A common category of problems in AI is related to search spaces.  Among these are search spaces where the algorithms have to speculate about the outcome.  This family of algorithms includes constraint satisfaction problems, inference based searches, planning, reasoning with uncertainty, and more.  Since the algorithms have to speculate about the outcome, they have to be able to recover from a bad decision.  Although, some problem spaces can use advanced heuristics to minimize such bad decisions, the algorithms have to be able to recover from them nonetheless.  Consequently, it seems natural to use a programming language that supports backtracking.  The most common choice would be Prolog.  However, Prolog is based on Horn clauses.  Therefore, the programmer must translate an imperative algorithm into its logic-based counterpart.  Not only is this translation process complicated, it also makes the produced code less intuitive (especially to imperative programmers).  Therefore, using an imperative based programming language that supports backtracking, such as BML, would be a preferable choice.
+Prolog
+Although, Prolog is not as suitable as BML for implementing imperative algorithms, it is a much better language for queries.  BML does not include a mechanism for unification.  Consequently, it does not support queries where parameters are unbound.  However, BML presents a good platform for implementing a Prolog interpreter since the backtracking mechanism is already taken care of implicitly.  Furthermore, such an implementation can be provided in form of a reusable library.  Such a library would allow BML programs to access the powerful query abilities of Prolog, combining the best of both worlds into a single platform.  Furthermore, since BML includes parsing extensions that can be used within the source code, it is possible to combine a BML program with a Prolog program inside the same source file.  A sample implementation of Prolog in BML is provided in [6].
+Agents
+BML is also a great tool for implementing agents.  Obviously, table and reflex based agents can be implemented in any imperative programming language.  However, knowledge and reasoning based agents require considerably more infrastructure.  For instance, knowledge based agents could use the above-described Prolog library as their knowledge database.  Consequently, knowledge inference could then be accomplished by a set of Prolog rules.  On the other hand, reasoning based agents could take advantage of algorithms that require speculation to explore complex search spaces.
+
+Although, BML is a general-purpose language, it seems that it is particularly useful in the domain of artificial intelligence.  The next section shows an example how BML can be used to solve search-based problems.
+Source Code
+
+The source code is presented in three parts: search algorithms, sample application, and standard classes.
+Search Algorithms
+
+The following source code implements several search algorithms.  Most of the search algorithms have implementations compatible to imperative languages.  However, the last search algorithm is also presented in an alternative form that uses backtracking.
+Search Algorithms
+The following search algorithms are provided:
+	•	Breadth First Search
+	•	Depth First Search
+	•	Depth Limited Search
+	•	Iterative Deepening Search
+	•	Uniform Cost Search
+	•	A* Search
+	•	Iterative Deepening A* Search
+
+Several intermediary search algorithms are also presented.  However, their primary purpose is to implement the above-mentioned algorithms.
+
+For simplicity, all of the imperative algorithms use a queue to achieve their wanted behavior (this approach is taken from [4]).  However, the algorithms based on a depth first exploration of the search space could also be implemented in a recursive fashion.  For instance, this approach is used for the iterative deepening algorithm with backtracking.  The following paragraph describe in detail how this algorithm works.
+Search with Backtracking
+The IDCostSearchWithBacktracking algorithm uses a local function Explore for the recursive exploration of the search space.  The algorithm first initializes the cost-limit by estimating the cost of the initial state node, which is then given to the Explore function.  The Explore function first computes the cost of its current state node and then checks if the cost is not above the cost-limit.  If this condition is not met, a new cost limit is estimated and the exploration fails.  However, if this condition is met, the function checks if this state is a goal state, in which case the node is returned as the result of the search.  Otherwise, if the state node is not a goal state, the function expands the state node into an array of new state nodes.  This array is converted into a choice-set.  A choice-set allows the function to select non-deterministically a new state node with the method Pick.  In the case of backtracking, this method returns another node until all nodes have been returned once.  This allows the Explore function to analyze new branches when a failure occurs.
+Advantages
+The backtracking approach does not yield significant advantages when a conventional search space is being explored.  However, when the search space is self-generating during the exploration, the backtracking approach takes automatically care of removing the generated states.  This removal simplifies considerably the complexity of the problem space's description since only the forward exploration process needs to be formulated.  Consequently, hard problems require less bookkeeping and improve the overall understanding of the algorithm.
+
+//////////////////////////////////////////////////////////////////////
+//
+// Name: Search.bml
+// Author: Steve G. Bjorg
+// Email: bjorg@colorado.edu
+// Date: 6-Dec-99
+//
+// Platform: Windows 95/NT
+// Compiler: BML v1.0
+//
+//////////////////////////////////////////////////////////////////////
+
+
+//   SearchProblem
+//
+// Description:
+//    This class describes a searcheable problem. All search algorithms
+//    require an instance of this type to perform searching.
+//
+// Requirements:
+//    The programmer must supply definitions for the State and Operator
+//    classes to make this class usable.  Furthermore, the Operator
+//    array must contain at leat one operator.
+//
+class SearchProblem [abstract] {
+
+   //--- Classes ---
+
+   //   State
+   //
+   // Description:
+   //
+   class State [abstract,inner] {
+
+      //--- Fields ---
+      State    m_hParentState [get=[public,name=ParentState]]  = null;
+      Operator m_hOperator    [get=[public,name=Operator]]     = null;
+      int      m_iDepth       [get=[public,name=Depth]]        = 0;
+      double   m_dCost        [get=[public,name=Cost]]         = 0.0;
+
+      //--- Constructors ---
+      State() {}
+
+      State( State hParentState, Operator hOperator, double dCost ) {
+
+         // use parameters to initialize fields
+         m_hParentState = hParentState;
+         m_hOperation = hOperator;
+         m_dCost = hParentState.Cost + dCost;
+
+         // compute depth based on parent depth
+         m_iDepth = hParentState.Depth + 1;
+      }
+
+      //--- Methods ---
+
+      //   Expand
+      //
+      // Description:
+      //    This class describes a state in the search space.  It includes
+      //    the a reference to the state from which it was generated, a
+      //    reference to the operator used to generate it, the depth at
+      //    which it was found, and the cost to reach this state.
+      //
+      // Requirements:
+      //    The programmer must supply the IsGoal method to check if
+      //    the current state is a goal state.
+      //    
+      State[] Expand() {
+         State[] hStates;
+
+         // loop over all problem define operators
+         Operators.ForEach( void ( Operator hOperator ) {
+
+            // loop over all states created by the operator
+            hOperator.Apply( self ).ForEach( void ( State hState ) {
+
+               // and add them to the state queue
+               hStates.AddLast( hState );
+            });
+         });
+         return hStates;
+      }
+
+      //--- Abstract Methods ---
+
+      //   IsGoal
+      //
+      // Description:
+      //    This method returns true if the current state is a goal state.
+      //
+      bool IsGoal() [abstract];
+   }
+
+   //   Operator
+   //
+   // Description:
+   //    This class represents an operation that can be performed on a state
+   //    instance to produce new state instances.
+   //
+   // Requirements:
+   //    The programmer must supply the Apply method to generate new states
+   //    with this operator.
+   //
+   class Operator [abstract,inner] {
+
+      //   Apply
+      //
+      // Description:
+      //    Returns an array of state instances that have been generated by
+      //    applying this operator to the input state.
+      //
+      State[] Apply( State hState ) [abstract];
+   }
+
+   //--- Fields ---
+   State       m_hInitialState   [get=[public,name=InitialState],
+                                  put=[public,name=InitialState]];
+   Operators   m_hOperators      [get=[public,name=Operators]];
+}
+
+
+/*
+ *   Search Algorithms
+ */
+
+
+//   QueuedSearch
+//
+// Description
+//    This class implements a generic search algorithm. It uses a queue to force 
+//    a sequence onto the state nodes that are being explored. The order in which
+//    the state nodes are explored is defined by he queuing function.
+//
+class QueuedSearch [abstract] {
+   typedef Queue<State,double> SearchQueue;
+
+   State operator () ( 
+      SearchProblem hSearchProblem, 
+      void fnQueuing( SearchQueue hQueue, State hState )
+   ) [class] {
+      SearchQueue hStates();
+
+      // add the initial problem state to the search queue
+      fnQueuing( hStates, hSearchProblem.InitialState );
+
+      // loop until the search queue is empty
+      while( !hStates.IsEmpty()) {
+
+         // remove the first state from the search queue
+         State hState = hStates.PopFirst();
+
+         // if a goal state is found, succceed by returning this state
+         if( hState.IsGoal()) return hState;
+
+         // otherwise, add all states that can be reached by expanding the current 
+         // node to the search queue
+         hState.Expand().ForEach( void ( State nState ) { fnQueuing( hStates, hState ); });
+      }
+      return null;
+   }
+}
+
+
+//   BreadthFirstSearch
+//
+// Description
+//    This class uses the QueuedSearch seach algorithm. The queuing function adds
+//    new state nodes to the end of the queue. Hence, new state nodes will only
+//    be explored after all previously discovered state nodes have been explored.
+//
+class BreadthFirstSearch [abstract] : QueuedSearch {
+   State operator () ( SearchProblem hSearchProblem ) [class] {
+
+      // use the queued search algorithm with AddLast as queuing function
+      return self( hSearchProblem, void ( SearchQueue hQueue, State hState ) {
+         hQueue.AddLast( hState );
+      });
+   }
+}
+
+
+//   DepthFirstSearch
+//
+// Description
+//    This class uses the QueuedSearch seach algorithm. The queuing function adds
+//    new state nodes to the beginning of the queue.  Hence, new state nodes will
+//    be explored directly before subsequent state nodes are explored. Note that
+//    this search will only succeed if some state nodes do not produce new state
+//    nodes or a goal state is always reachable from any path.  Furthermore, operators
+//    should guarantee that the new state nodes are not already being processed.
+//
+class DepthFirstSearch [abstract] : QueuedSearch {
+   State operator () ( SearchProblem hSearchProblem ) [class] {
+
+      // use the queued search algorithm with AddFirst as queuing function
+      return self( hSearchProblem, void ( SearchQueue hQueue, State hState ) {
+         hQueue.AddFirst( hState );
+      });
+   }
+}
+
+
+//   DepthLimitedSearch
+//
+// Description
+//    This class implements a search strategry similar to the one found in
+//    DepthFirstSearch. However, new states nodes are only explored if their
+//    depth does not exceed a given limit.
+//
+class DepthLimitedSearch [abstract] {
+   State operator () ( SearchProblem hSearchProblem, int iMaxDepth ) [class] {
+
+      // use the queued search algorithm with AddLast as queuing function;
+      // however, don't add new states that exceed the search depth
+      return QueuedSearch( 
+         hSearchProblem, 
+         void ( QueuedSearch.SearchQueue hQueue, State hState ) 
+      {
+         if( hState.Depth <= iMaxDepth ) hQueue.AddFirst( hState );
+      });
+   }
+}
+
+
+//   IterativeDeepeningSearch
+//
+// Description
+//    This class implements a search strategy based on the DepthLimitedSearch
+//    search. At every iteration the maximal depth is increased by one until
+//    a goal state is reached.
+//
+class IterativeDeepeningSearch [abstract] : DepthLimitedSearch {
+   State operator () ( SearchProblem hSearchProblem ) [class] {
+
+      // loop over the depth limited search with an indefinitly increasing depth
+      // until a goal state is reached
+      for( int iDepth = 0; ; ++iDepth ) {
+         State hState = self( hSearchProblem, iDepth );
+
+         // if a goal state was found, succeed by returning this state
+         if( hState != null ) return hState;
+      }
+   }
+}
+
+
+//   CostSearch
+//
+// Description
+//    This class uses the search queue as a priority queue, where the first
+//    state node has the lowest cost. New state nodes are inserted into the
+//    queue with respect to their cost. The cost of a state node is provided
+//    by the specified cost function.
+//
+class CostSearch [abstract] : QueuedSearch {
+   State operator () ( 
+      SearchProblem hSearchProblem, 
+      double fnCost( State hState )
+   ) [class] {
+
+      // use the queued search algorithm with AddSorted as queuing function
+      return self( hSearchProblem, void ( SearchQueue hQueue, State hState ) {
+
+         // use the fnCost block as cost estimation function for sorting
+         hQueue.AddSorted( hState, fnCost( hState ));
+      });
+   }
+}
+
+
+//   UniformCostSearch
+//
+// Description
+//    This class uses the CostSearch search. The cost function simply
+//    returns the total cost of the state node.
+//
+class UniformCostSearch [abstract] : CostSearch {
+   State operator () ( SearchProblem hSearchProblem ) [class] {
+
+      // use the cost search algorithm with the state cost as cost estimation function
+      return self( hSearchProblem, double ( State hState ) { return hState.Cost; });
+   }
+}
+
+
+//   AStarSearch
+//
+// Description
+//    This class uses the CostSearch search. The cost function returns the 
+//    total cost of the state node plus an estimated cost to the goal state.
+//    The estimated cost is provided by the specified heuristic function.
+//
+class AStarSearch [abstract] : CostSearch {
+   State operator () ( 
+      SearchProblem hSearchProblem, 
+      double fnHeuristic( State hState )
+   ) [class] {
+
+      // use the cost search algorithm with the state cost + heuristic cost function 
+      // as cost estimation function
+      return self( 
+         hSearchProblem, 
+         double ( State hState ) { return hState.Cost + fnHeuristic( hState ); }
+      );
+   }
+}
+
+
+//   IterativeDeepeningCostSearch
+//
+// Description
+//    This class uses a combination of iterative deepening and cost based
+//    searching.  The limit for the iterative deepening is defined by the 
+//    maximum cost that should be explored. During exploration a new cost
+//    limit is computed that is used in subsequent iterations until the
+//    goal state node is found. The cost of a state node is provided by
+//    the specified cost function.
+//
+class IterativeDeepeningCostSearch [abstract] : QueuedSearch {
+   State operator () (
+      SearchProblem hSearchProblem, 
+      double fnCost( State hState )
+   ) [class] {
+
+      // estimate the initial cost horizon
+      double dHorizon = fnCost( hSearchProblem.InitialState );
+
+      // loop until a goal state is found or search space has been exhausted
+      do {
+
+         // set new cost horizon to infinity
+         double dNewHorizon = double.MaxValue;
+
+         // use the queued search algorithm
+         State hState = self( hSearchProblem, void ( SearchQueue hQueue, State hState ) {
+
+            // estimate the cost of the new state
+            double dCost = fnCost( hState );
+
+            // if the cost is less than the horizon, add the state to the queue;
+            // otherwise, if the cost is less than the new cost horizon, update 
+            // the new cost horizon
+            if( dCost <= dHorizon ) hQueue.AddFirst( hState );
+            else if( dCost < dNewHorizon ) dNewHorizon = dCost;
+         });
+
+         // if a goal state was found, succeed by returning this state
+         if( hState != null ) return hState;
+
+         // update the cost horizon to the new cost horizon
+         dHorizon = dNewHorizon;
+      } while( dHorizon != double.MaxValue );
+
+      // search space has been exhausted, fail by returning null as goal state
+      return null;
+   }
+}
+
+
+//   IterativeDeepeningAStarSearch
+//
+// Description
+//    This class uses the IterativeDeepeningCostSearch search. The cost function 
+//    returns the total cost of the state node plus an estimated cost to the goal
+//    state. The estimated cost is provided by the specified heuristic function.
+//
+class IterativeDeepeningAStarSearch [abstract] : IterativeDeepeningCostSearch {
+   State operator () ( 
+      SearchProblem hSearchProblem, 
+      double fnHeuristic( State hState )
+   ) [class] {
+
+      // use the iterative deepening cost search algorithm with state cost + heuristic 
+      // function as cost estimation function
+      return self( 
+         hSearchProblem, 
+         double ( State hState ) { return hState.Cost + fnHeuristic( hState ); }
+      );
+   }
+}
+
+
+//   IDCostSearchWithBacktracking
+//
+// Description
+//    This class uses an recursive algorithm to mimic the search space traversal
+//    of IterativeDeepeningCostSearch.  However, it uses backtracking to explore
+//    the entire search space. Consequently, operations performed during the
+//    search can alterate the search space without side-effects if this search
+//    branch is abandoned. The cost 
+//
+class IDCostSearchWithBacktracking [abstract] {
+   State operator () ( 
+      SearchProblem hSearchProblem, 
+      double fnCost( State hState )
+   ) [class] {
+
+      // define local recursive function
+      State Explore( State hState ) {
+
+         // estimate current cost
+         double dCost = fnCost( hState );
+
+         // if cost is less than the current horzion, explore sub-states of this state
+         if( dCost <= dCostLimit ) {
+
+            // if state is a goal state, succeed by returning this state
+            if( hState.IsGoal()) return hState;
+
+            // otherwise, continue with exploration of the sub-states
+            return Explore( ChoiceSet<State>( hState.Expand()).Pick());
+         } else {
+
+            // check the cost is less than the new CostLimit
+            if( dCost < dNewCostLimit ) dNewCostLimit = dCost;
+            fail;
+         }
+      }
+
+      // set the initial CostLimit to the cost estimate of the initial state
+      double dCostLimit = fnCost( hSearchProblem.InitialState );
+      double dNewCostLimit [nostate];
+
+      // loop until the new is infinite or a goal state has been found
+      do {
+
+         // initialize the new CostLimit to infinity
+         dNewCostLimit = double.MaxValue;
+
+         // return the goal state found by explore or set the CostLimit
+         // to the new CostLimit if explore failed
+         choose {
+            return Explore( hSearchProblem.InitialState );
+         }, {
+            dCostLimit = dNewCostLimit;
+         }
+      } while( dCostLimit != double.MaxValue );
+
+      // no goal state was found
+      return null;
+   }
+}
+
+
+Sample Application
+
+The following application uses the iterative deepening algorithm with backtracking.  It describes a simple problem where the shortest-path from one city to another must be found.  The program takes advantage of several features found in BML (most notably backtracking and parsing) and serves as a good example of the expressiveness of the language.
+
+//////////////////////////////////////////////////////////////////////
+//
+// Name: Sample.bml
+// Author: Steve G. Bjorg
+// Email: bjorg@colorado.edu
+// Date: 6-Dec-99
+//
+// Platform: Windows 95/NT
+// Compiler: BML v1.0
+//
+//////////////////////////////////////////////////////////////////////
+
+
+//   CitySearch
+//
+// Description:
+//    This class defines the classes required to use the SearchProblem class.
+//
+class CitySearch : SearchProblem {
+
+   //--- Classes ---
+
+   //   City
+   //
+   // Description:
+   //    This class describes a city in terms of name and position.
+   //
+   class City {
+
+      //--- Fields ---
+      String m_strName  [get=[public,name=Name]];
+      double m_dX       [get=[public,name=X]];
+      double m_dY       [get=[public,name=Y]];
+      double m_dZ       [get=[public,name=Z]];
+
+      //--- Syntax ---
+      syntax [text] {
+         CitySearch ::= m_strName:word "," longitude:double "," latitude:double;
+         ( m_dX, m_dY, m_dZ ) {
+
+            // compute spherical coordinates
+            double dAlpha = Math.DegreesToRadians( .latitude );
+            double dBeta = Math.DegreesToRadians( .longitude );
+            m_dX = Math.Cos( dAlpha ) * Math.Cos( dBeta );
+            m_dY = Math.Cos( dAlpha ) * Math.Sin( dBeta );
+            m_dZ = Math.Sin( dAlpha );
+         }
+      }
+
+      //--- Methods ---
+
+      //   Distance
+      //
+      // Description:
+      //    This method computes the circle distance between two cities.
+      //
+      double Distance( City hCity ) {
+         with( hCity ) {
+
+            // compute circle distance (and update value in table)
+            return EARTH_DIAMETER * Math.ArcSin(
+               Math.Sqrt(( X - .X )^2 + ( Y - .Y )^2 + ( Z - .Z )^2 ) / 2.0
+            );
+         }
+      }
+   }
+
+   //   Path
+   //
+   // Description:
+   //    This class describes the starting and ending city of the path.
+   //    Furthermore, it provides the max. travel distance between any
+   //    two cities.
+   //
+   class Path [inner] {
+
+      //--- Fields ---
+      int      m_iFrom     [get=[public,name=From]];;
+      int      m_iTo       [get=[public,name=To]];;
+      double   m_dMaxHop;
+
+      //--- Syntax ---
+      syntax [text] {
+         Path ::= from:word "," to:word "," m_dMaxHop:double;
+         ( m_iFrom, m_iTo ) {
+            
+            m_iFrom = m_hCities.Find( .from );
+            m_iTo = m_hCities.Find( .to );
+            if( m_iFrom == -1 ) {
+               Console.Error.PrintLn( "City '" + from + "' not found." );
+               fail;
+            }
+            if( m_iTo == -1 ) {
+               Console.Error.PrintLn( "City '" + to + "' not found." );
+               fail;
+            }
+         }
+      }
+   }
+
+   //   CityState
+   //
+   // Description:
+   //    This class describes a state node corresponding to the itenerary
+   //    to a specific city.
+   //
+   class CityState : State {
+
+      //--- Fields ---
+      int   m_iCity  [get=[public,name=CityIndex]];
+      bool  m_bMark  [get=[public,name=Mark],put=[public,name=Mark]];
+
+      //--- Constructors ---
+      CityState( int iCity ) {
+         m_iCity = iCity;
+         m_bMark = false;
+      }
+
+      CityState( 
+         int iCity, 
+         CityState hParentState, 
+         CityOperator hOperator, 
+         double dCost
+      ) {
+         super( hParentState, hOperator, dCost );
+         m_iCity = iCity;
+         m_bMark = false;
+      }
+
+      //--- Properties ---
+
+      //   City
+      //
+      // Description:
+      //    This property return the city instance corresponding to this city state.
+      //
+      City City() [get] { return m_hCities[m_iCity]; }
+
+      //--- Methods ---
+
+      //   IsGoal
+      //
+      // Description:
+      //    This method returns true when this city state corresponds to the
+      //    wanted destination city.
+      //
+      bool IsGoal() { return m_iCity == m_hPath.To; }
+   }
+
+   //   HopOperator
+   //
+   // Description:
+   //    This operator finds all the non-processed cities whose distance
+   //    is less than max. hop distance to the current city.
+   //
+   class HopOperator : Operator {
+      State[] Apply( State hState [cast=CityState] ) {
+         State[] hStates;
+
+         // set city state as processed
+         hState.Mark = true;
+
+         // loop over all cities
+         m_hCities.ForEach( bool ( int iIndex, City hCity ) {
+
+            // skip cities that are being processed
+            if( hState.Mark ) return true;
+
+            // compute distance to city
+            double dDistance = hState.City.Distance( hCity );
+
+            // if distance is less than the max. hop distance, add it to the set 
+            // of new states
+            if( dDistance <= m_hPath.MaxHop ) {
+               hStates.AddLast( outer.CityState( iIndex, hState, self, dDistance ));
+            }
+            return true;
+         });
+
+         // return the new set of states
+         return hStates;
+      }
+   }
+
+   //--- Fields ---
+   City[]   m_hCities;
+   Path     m_hPath;
+
+   //--- Syntax ---
+   syntax [text] {
+      word ::= << ( 'A'..'Z' | 'a'..'z' | '-' )+ >>;
+   }
+
+   //--- Methods ---
+
+   //   Main
+   //
+   // Description:
+   //    This method is the main program. It reads in the cities and paths file
+   //    and computes the shortest path between them.
+   //
+   void Main() {
+
+      // add the available operators to the operator set
+      Operators.AddLast( HopOperator());
+
+      // open cities file
+      File hFile = System.FileSystem( "new-cities.dat" );
+      TextStream in = hFile.OpenText( READ | OPEN_EXISTING );
+      if( in == null ) {
+         System.Console.Out.PrintLn( "File 'new-cities.dat' could not be opened." );
+         return;
+      }
+
+      // read all cities
+      while_success {
+         m_hCities.AddLast( in.Parse( City()));
+      }
+      in.Close();
+
+      // open paths file
+      File hFile = System.FileSystem( "paths.dat" );
+      TextStream in = hFile.OpenText( READ | OPEN_EXISTING );
+      if( in == null ) {
+         System.Console.Out.PrintLn( "File 'paths.dat' could not be opened." );
+         return;
+      }
+
+      // read all paths
+      while_success {
+
+         // read in the path
+         m_hPath = in.Parse( Path());
+
+         // set the initial state
+         InitialState = CityState( m_hPath.From );
+
+         // perform an IDA* search for this path
+         State hGoal = IDCostSearchWithBacktracking( 
+            self, 
+            double ( State hState [cast=CityState] )
+         {
+            return hState.Cost + hState.City.Distance( m_hPath.To );
+         });
+
+         // if a goal was found, print the complete itenerary
+         if( hGoal != null ) {
+            PrintItenerary( hGoal );
+            System.Console.Out.PrintLn( " = " + hGoal.Cost.ToString() + " km" );
+         } else System.Console.Out.PrintLn(
+            "No itenerary found from " + 
+            m_Cities[m_hPath.From].Name + 
+            " to " + m_Cities[m_hPath.To].Name + "."
+         );
+      }
+      in.Close();
+   }
+
+   //   PrintItenerary
+   //
+   // Description:
+   //    This methods prints recursively the names of the cities found.
+   //
+   void PrintItenerary( State hState [cast=CityState] ) {
+
+      // if parent is not null, print parents itenerary
+      if( hState.Parent != null ) {
+         PrintItenerary( hState.Parent );
+         System.Console.Out.Print( ", " );
+      }
+
+      // print name associted to this city
+      System.Console.Out.Print( hState.City.Name );
+   }
+}
+
+Standard Classes
+
+The following source file contains the definitions required for the above classes.  Note that only the classes and the methods' prototypes are provided for brevity.  A short description of every class is provided in the following paragraphs.
+Array
+This class implements the array type.  Arrays are automatically generated by the compiler when a type is defined with brackets.  For example, int[] creates an instance of Array<int>.  Compared to other languages, such as Java and C++, BML arrays are dynamic rather than static.  Hence, new elements can be added to arrays.  Furthermore, BML arrays have iterators (i.e. ForEach) that are used to iterate over their contents.
+Queue
+The queue class has two template parameters: a key type and an element type.  The key type is used when elements are inserted in sorted order into the queue.  If the queue is just used a FIFO structure, the key type is not used.
+ChoiceSet
+A choice-set is constructed from an array with the same template parameter.  The method Pick returns non-deterministically an element from the set.  When a failure occurs, the Pick method continues to return another element until every element of the set has been returned once.  Furthermore, the same element is never returned twice, unless the method Pick is invoked again from a different location.
+Math
+The math class acts as wrapper for all mathematical functions.
+System
+The system class acts as wrapper to all system resources, such as the file-system and the console.
+Console
+The console class acts as wrapper to the system's console.  It provides access to standard input, output, and error.  Note, however, that the error stream has the nostate attribute, which means that output performed on the error will not be undone during backtracking.  This allows a program to output a message before it executes the fail statement.
+FileSystem
+The file-system class acts as wrapper for all file-system related operations.  The only operation shown here is the File method, which can be invoked without being specified since it has the default attribute.  For instance, consider the following example.
+
+System.FileSystem( "hello.txt" )
+
+The above code is identical to the next code.
+
+System.FileSystem.File( "hello.txt" )
+File
+The file class represents a file location.  File information can be retrieved when the file already exists.  Its primary role is to open a stream associated with the file.
+Stream
+The stream class encapsulates the functionality common to both the TextStream and BinaryStream (not shown) classes.
+TextStream
+The text stream class contains the functionality for working with streams containing textual information.
+
+//////////////////////////////////////////////////////////////////////
+//
+// Name: StdClasses.bml
+// Author: Steve G. Bjorg
+// Email: bjorg@colorado.edu
+// Date: 6-Dec-99
+//
+// Platform: Windows 95/NT
+// Compiler: BML v1.0
+//
+//////////////////////////////////////////////////////////////////////
+
+/*
+ *   Container Classes
+ */
+
+template <Object TYPE>
+class Array {
+
+   //--- Methods ---
+   int Count() [get];
+   TYPE operator [] ( int iIndex );
+   TYPE operator [] ( int iIndex, TYPE hObject [assign] );
+   void ForEach( void fnBlock( TYPE hObject ));
+   void ForEach( bool fnBlock( int iIndex, TYPE hObject ));
+   int  Find( TYPE hObject );
+   void AddLast( TYPE hObject );
+   void AddFirst( TYPE hObject );
+   void AddAt( TYPE hObject, int iIndex );
+}
+
+template<Object TYPE, Comparable KEY>
+class Queue {
+
+   //--- Methods ---
+   bool IsEmpty();
+   TYPE PopFirst();
+   void AddFirst( TYPE hObject );
+   void AddLast( TYPE hObject );
+   void AddSorted( TYPE hObject, KEY hSortKey );
+}
+
+template<Object TYPE>
+class ChoiceSet {
+
+   //--- Constructors ---
+   ChoiceSet();
+   ChoiceSet( TYPE[] hTypes );
+
+   //--- Methods ---
+   TYPE Pick();
+}
+
+/*
+ *   Math. Class
+ */
+
+class Math {
+   section [class] {
+
+      //--- Class Methods ---
+      double DegreesToRadians( double dValue );
+      double Cos( double dValue );
+      double Sin( double dValue );
+      double ArcSin( double dValue );
+      double ArcCos( double dValue );
+      double Sqrt( double dValue );
+   }
+}
+
+
+/*
+ *   Runtime System Class
+ */
+
+class System {
+
+   //--- Class Methods ---
+   FileSystem FileSystem() [get,class];
+   Console    Console() [get,class];
+}
+
+class Console {
+
+   //--- Properties ---
+   TextStream Out()     [get];
+   TextStream In()      [get];
+   TextStream [nostate] Error() [get];
+}
+
+class FileSystem {
+
+   //--- Methods ---
+   File File( String strPath ) [default];
+}
+
+
+/*
+ *   File I/O Classes
+ */
+
+class File {
+
+   //--- Constants ---
+   enum OPEN_FLAGS {
+      READ           = 0x01,
+      WRITE          = 0x02,
+      SHARE_READ     = 0x04,
+      SHARE_WRITE    = 0x08,
+      CREATE_NEW     = 0x10,
+      CREATE_ALWAYS  = 0x20,
+      OPEN_EXISTING  = 0x30,
+      OPEN_ALWAYS    = 0x40
+   }
+
+   //--- Methods ---
+   TextStream OpenText( OPEN_FLAGS eFlags );
+}
+
+class Stream [abstract] {
+
+   //--- Methods ---
+   bool IsOpen();
+   void Close();
+}
+
+class TextStream : Stream {
+
+   //--- Methods ---
+   void PrintLn( String strText );
+   void Print( String strText );
+   Object Parse( Object hObject, String strSyntax = "text" );
+}
+
+
+References
+[1]
+Steve G. Bjorg. "BM Assembler." Theory of Computing Final Paper, University of Colorado at Boulder, 1999.
+[2]
+David Flanagan. Java In a Nutshell. O'Reilly, Sebastopol, Ca., 1997.
+[3]
+James Gosling, Bill Joy, Guy Steele. The Java Language Specification. Addison-Wesley, Reading, Mass., 1996,
+[4]
+Stuart Russel, Peter Norvig. Artificial Intelligence: A Modern Approach. Prentice Hall, New Jersey, 1995.
+[5]
+Margareth A. Ellis & Bjarne Stroustroup. The Annotated C++ Reference Manual. Addison-Wesley, Reading, Mass., 1990.
+[6]
+Urs C. Muff. "Prolog Implementation in BML."  AI Final Paper, University of Colorado at Boulder, 1999.
+[7]
+Ivan Bratko.  Prolog: Programming for Artificial Intelligence. 2nd edition, Addison-Wesley, Harlow, United Kingdom, 1997.
+
