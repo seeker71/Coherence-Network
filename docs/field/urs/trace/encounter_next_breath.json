@@ -1,8 +1,8 @@
 {
   "command": "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
   "contributor_hint": "contributor:seeker71",
-  "generated_at": "2026-05-07T15:13:11.283392+00:00",
-  "privacy_boundary": "Generated from derived trace indexes only; no raw archives, cookies, sessions, pixels, or paid text.",
+  "generated_at": "2026-05-07T15:43:53.778164+00:00",
+  "publication_boundary": "Generated from derived trace indexes only; raw archives, cookies, sessions, pixels, and paid text remain source bodies until their shape belongs directly in repo.",
   "rows": [
     {
       "events": 217,
