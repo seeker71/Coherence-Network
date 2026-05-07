@@ -19,6 +19,7 @@
  * to the right of the works/upcoming column.
  */
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
@@ -87,6 +88,14 @@ export type PresenceIdentity = {
   when_text?: string;
   where_text?: string;
   note?: string;
+  // The graph's `description` field. When the body holds substantive
+  // writing about a presence (not just a single-sentence og:description
+  // fallback or a duplicate of name/tagline), render it as the lead
+  // body block so the page carries who they are in their own voice.
+  // Several presences (Liquid Bloom, Mose, Robert) hold thousands of
+  // characters of beautiful description that was previously hidden
+  // because the renderer never surfaced this slot.
+  description?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -188,6 +197,57 @@ const KIND_GLYPH: Record<CreationKind, string> = {
 };
 
 // ── Sub-blocks ────────────────────────────────────────────────────────
+
+/**
+ * Render the graph's `description` as the body's lead narrative when it
+ * holds substantive writing. Some presence descriptions in the graph
+ * carry thousands of characters of body-of-fire prose; some carry only
+ * a single-sentence og:description scrape. Both are valuable, but the
+ * rendering should let either land as the page's voice.
+ *
+ * Lightweight handling of common markdown patterns: a leading `# Name`
+ * heading is stripped (the page already shows the name in the hero);
+ * `**bold**` runs render as <strong>; paragraphs split on blank lines.
+ * Anything else passes through as plain text. No external markdown
+ * dependency — this is intentional. Heavier rendering can come later
+ * when a presence asks for it.
+ */
+function DescriptionBlock({ raw }: { raw: string }) {
+  // Strip a leading "# Name" heading (and the blank line after it).
+  // The hero already carries the name; repeating it here calcifies.
+  const trimmed = raw
+    .replace(/^\s*#\s+[^\n]+\n+/, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+  const paragraphs = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (paragraphs.length === 0) return null;
+  return (
+    <section>
+      <div className="space-y-4 text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
+        {paragraphs.map((para, i) => (
+          <p key={i}>{renderInline(para)}</p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function renderInline(text: string): ReactNode {
+  // Pull **bold** runs out so they render as <strong>; everything
+  // else stays plain.
+  const parts: ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<strong key={key++}>{m[1]}</strong>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length ? parts : text;
+}
 
 function PlatformChips({
   presences,
@@ -565,6 +625,9 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
                 {identity.note}
               </p>
             </section>
+          )}
+          {identity.description && !identity.note && (
+            <DescriptionBlock raw={identity.description} />
           )}
           <UpcomingGatherings
             identityId={identity.id}

@@ -302,27 +302,38 @@ function nodeToPresenceIdentity(
     typeof node.tagline === "string" && node.tagline.trim()
       ? (node.tagline as string)
       : undefined;
-  // Event-specific fields. These ride on event-type nodes and were
-  // previously invisible because the renderer had no slot for them.
-  // Surface them on identity so PresencePage can render the gathering's
-  // when, where, and the `note` field that holds its actual story.
-  // Also: when description is non-trivial AND not a duplicate of name,
-  // promote it to `note` so older event nodes whose history sits in
-  // description get rendered too.
+  // The graph holds a node's narrative in two distinct slots:
+  //   · `note` — event-specific story ("What this gathering held")
+  //   · `description` — long-form prose about a presence (often
+  //                      thousands of characters of body-of-fire
+  //                      writing for artists/teachers)
+  //
+  // Earlier the mapper promoted description into note universally, so
+  // Liquid Bloom's beautiful prose rendered under the gathering-shaped
+  // "What this gathering held" heading. Now they stay separate. For
+  // event-type nodes, description still falls through to note when
+  // note is absent (older events store their history there). For all
+  // other types, description rides its own slot.
+  const isEvent = nodeType === "event";
+  const rawDescription =
+    typeof node.description === "string" ? node.description.trim() : "";
+  const nameTrim = typeof node.name === "string" ? node.name.trim() : "";
+  // Description is "substantive" when it isn't just a name-echo or a
+  // test-leak ("TESTING" etc) shorter than ~24 chars.
+  const descriptionIsSubstantive =
+    !!rawDescription &&
+    rawDescription !== nameTrim &&
+    rawDescription.length >= 24;
   const note: string | undefined = (() => {
     const n = node.note;
     if (typeof n === "string" && n.trim()) return n.trim();
-    const desc = node.description;
-    const name = node.name;
-    if (
-      typeof desc === "string" &&
-      desc.trim() &&
-      desc.trim() !== (typeof name === "string" ? name.trim() : "")
-    ) {
-      return desc.trim();
-    }
+    if (isEvent && descriptionIsSubstantive) return rawDescription;
     return undefined;
   })();
+  const description: string | undefined =
+    !isEvent && descriptionIsSubstantive && rawDescription !== (tagline || "")
+      ? rawDescription
+      : undefined;
   const when_text =
     typeof node.when === "string" && node.when.trim()
       ? (node.when as string)
@@ -346,6 +357,7 @@ function nodeToPresenceIdentity(
     when_text,
     where_text,
     note,
+    description,
   };
 }
 
