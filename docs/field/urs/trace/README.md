@@ -8,6 +8,8 @@ Compact derived indexes for answering influence questions without loading raw li
 - `monthly_spectrum.json` - one object per `YYYY-MM` with frequency counts, axes, primary influence, and linked top authors/works.
 - `author_index.jsonl` - one author per line with ID, name, top works, peak months, and compact monthly wave.
 - `work_index.jsonl` - one work per line with ID, author link, peak months, and compact monthly wave.
+- `significant_work_index.jsonl` - one significant formative work/series per line with impact basis, linked vision concepts, children titles, and chapter-discovery probes.
+- `concept_work_map.json` - concept-first lookup from `lc-*` vision concepts to significant works and probe terms.
 
 ## Query Flow
 
@@ -29,6 +31,18 @@ For a work, resolve by title or use the linked ID from a month/author result:
 rg -m1 '"title":"Naturaleza \\(Mose Edit\\)"|"title": "Naturaleza \\(Mose Edit\\)"' docs/field/urs/trace/work_index.jsonl | jq .
 ```
 
+For a formative work or series, resolve by title, alias, or ID:
+
+```bash
+rg -m1 '"title":"Spellmonger Universe"|"aliases":.*"Spellmonger"' docs/field/urs/trace/significant_work_index.jsonl | jq .
+```
+
+For "which works relate to `lc-network`?", load:
+
+```bash
+jq '.concepts["lc-network"]' docs/field/urs/trace/concept_work_map.json
+```
+
 The wave arrays use:
 
 ```json
@@ -40,7 +54,29 @@ The wave arrays use:
 - Month slice: `/api/field-stories/urs-field-story/trace/month/2026-04`
 - Author slice: `/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic`
 - Work slice: `/api/field-stories/urs-field-story/trace/work/{work_id}`
-- MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, or `work`.
+- Significant work slice: `/api/field-stories/urs-field-story/trace/significant-work/Spellmonger`
+- Concept slice: `/api/field-stories/urs-field-story/trace/concept/lc-network`
+- MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
+
+## Chapter Discovery Boundary
+
+The significant-work index can answer concept-to-work questions now. It does not claim exact chapter matches until chapter notes, table of contents, or legally available chapter text have been ingested.
+
+Each significant-work record includes:
+
+- `concept_links` - why the work resonates with a vision concept.
+- `chapter_probe_terms` - efficient search terms for chapter notes/text.
+- `deep_discovery.needs_for_exact_chapters` - the minimum source material needed to make exact chapter links.
+- `deep_discovery.chapter_links` - the future slot for exact book/chapter/concept evidence.
+
+Example flow for "which chapter in which Spellmonger book relates to `lc-network`?":
+
+```bash
+curl https://api.coherencycoin.com/api/field-stories/urs-field-story/trace/concept/lc-network
+curl https://api.coherencycoin.com/api/field-stories/urs-field-story/trace/significant-work/Spellmonger
+```
+
+Then search only the Spellmonger chapter notes/text for the `lc-network` probe terms: `Sevendor`, `mageland`, `vassal`, `duchy`, `supply`, `alliance`, `market`.
 
 ## Rebuild
 

@@ -1,15 +1,19 @@
 {
   "author_count": 895,
+  "concept_work_count": 25,
   "event_count_with_month": 27443,
-  "generated_at": "2026-05-07T07:09:14.427706+00:00",
+  "generated_at": "2026-05-07T07:44:20.480927+00:00",
   "month_count": 96,
   "privacy_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain out of repo.",
   "query_shapes": {
     "author_influence_wave": "Search author_index.jsonl by id or exact name, then read wave.",
+    "concept_to_work_discovery": "Load concept_work_map.json -> concepts[lc-*] for related significant works.",
     "primary_influence_during_month": "Load monthly_spectrum.json -> months[YYYY-MM].",
+    "significant_work_discovery": "Search significant_work_index.jsonl by id, title, or alias, then use concept links and chapter probes.",
     "work_influence_wave": "Search work_index.jsonl by id or exact title, then read wave."
   },
   "schema_version": "field-trace-index/v1",
+  "significant_work_count": 12,
   "source": "docs/field/urs/output/ten_year_events.jsonl",
   "thresholds": {
     "author_min_events": 3,

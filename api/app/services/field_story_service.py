@@ -132,7 +132,12 @@ def _trace_file(story_dir: Path, name: str) -> dict[str, Any]:
     return _load_json(_safe_artifact_path(story_dir, f"trace/{name}"))
 
 
-def _lookup_trace_jsonl(story_dir: Path, filename: str, value: str, name_field: str) -> dict[str, Any]:
+def _lookup_trace_jsonl(
+    story_dir: Path,
+    filename: str,
+    value: str,
+    name_fields: tuple[str, ...],
+) -> dict[str, Any]:
     path = _safe_artifact_path(story_dir, f"trace/{filename}")
     needle = value.lower()
     with path.open(encoding="utf-8") as handle:
@@ -140,9 +145,11 @@ def _lookup_trace_jsonl(story_dir: Path, filename: str, value: str, name_field: 
             if not line.strip():
                 continue
             record = json.loads(line)
-            if record.get("id") == value or str(record.get(name_field, "")).lower() == needle:
+            aliases = [str(record.get(field, "")) for field in name_fields]
+            aliases.extend(str(item) for item in record.get("aliases", []))
+            if record.get("id") == value or any(alias.lower() == needle for alias in aliases):
                 return record
-    raise KeyError(f"Unknown trace {name_field}: {value}")
+    raise KeyError(f"Unknown trace value: {value}")
 
 
 def get_field_story_trace_slice(slug: str, selector: str, value: str) -> dict[str, Any]:
@@ -154,9 +161,17 @@ def get_field_story_trace_slice(slug: str, selector: str, value: str) -> dict[st
         if not result:
             raise KeyError(f"Unknown trace month: {value}")
     elif selector == "author":
-        result = _lookup_trace_jsonl(story_dir, "author_index.jsonl", value, "name")
+        result = _lookup_trace_jsonl(story_dir, "author_index.jsonl", value, ("name",))
     elif selector == "work":
-        result = _lookup_trace_jsonl(story_dir, "work_index.jsonl", value, "title")
+        result = _lookup_trace_jsonl(story_dir, "work_index.jsonl", value, ("title",))
+    elif selector in {"significant-work", "significant_work"}:
+        result = _lookup_trace_jsonl(story_dir, "significant_work_index.jsonl", value, ("title",))
+        selector = "significant-work"
+    elif selector == "concept":
+        concept_map = _trace_file(story_dir, "concept_work_map.json")
+        result = concept_map.get("concepts", {}).get(value)
+        if not result:
+            raise KeyError(f"Unknown trace concept: {value}")
     else:
         raise KeyError(f"Unknown trace selector: {selector}")
     return {

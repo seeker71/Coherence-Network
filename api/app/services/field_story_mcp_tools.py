@@ -104,12 +104,12 @@ FIELD_STORY_TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_field_story_trace",
-        "description": "Read one compact influence trace slice for a field story by month, author, or work.",
+        "description": "Read one compact influence trace slice for a field story by month, author, work, significant-work, or concept.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "slug": {"type": "string", "default": "urs-field-story"},
-                "selector": {"type": "string", "enum": ["month", "author", "work"]},
+                "selector": {"type": "string", "enum": ["month", "author", "work", "significant-work", "concept"]},
                 "value": {"type": "string"},
             },
             "required": ["selector", "value"],

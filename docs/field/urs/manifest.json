@@ -52,6 +52,8 @@
     {"artifact_id": "trace-monthly-spectrum", "path": "trace/monthly_spectrum.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-author-index", "path": "trace/author_index.jsonl", "kind": "index", "content_type": "application/x-ndjson"},
     {"artifact_id": "trace-work-index", "path": "trace/work_index.jsonl", "kind": "index", "content_type": "application/x-ndjson"},
+    {"artifact_id": "trace-significant-work-index", "path": "trace/significant_work_index.jsonl", "kind": "index", "content_type": "application/x-ndjson"},
+    {"artifact_id": "trace-concept-work-map", "path": "trace/concept_work_map.json", "kind": "index", "content_type": "application/json"},
     {"artifact_id": "normalized-events", "path": "output/normalized_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
     {"artifact_id": "ten-year-events", "path": "output/ten_year_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
     {"artifact_id": "audible-series-events", "path": "output/audible_series_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
