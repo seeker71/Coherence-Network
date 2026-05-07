@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from fastapi.testclient import TestClient
 
@@ -66,10 +67,77 @@ def test_chronological_story_links_influence_trace_slices():
         "/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic",
         "/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic",
         "/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Maneesh%20De%20Moor%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Karunesh%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/East%20Forest%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Parijat%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Alexia%20Chellun%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Alex%20Serra%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Anne%20Tucker",
+        "/api/field-stories/urs-field-story/trace/author/Ram%20Dass%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Eckhart%20Tolle",
+        "/api/field-stories/urs-field-story/trace/author/Dr%20Joe%20Dispenza",
     ]
 
     for path in significant_work_paths + author_paths:
         assert path in story
+        response = client.get(path)
+        assert response.status_code == 200, f"{path}: {response.text}"
+
+
+def test_chronological_story_gives_each_known_influence_a_room():
+    story = field_story_service.get_field_story("urs-field-story")["story_markdown"]
+
+    required_links = [
+        "/people/mose",
+        "/people/porangui",
+        "/people/lex-fridman",
+        "/people/elon-musk",
+        "/people/matias-de-stefano",
+        "/people/aubrey-marcus",
+        "/people/robert-edward-grant",
+        "../../../presences/next-level-soul.md",
+        "../../../presences/liquid-bloom.md",
+        "../../../presences/yaima.md",
+        "../../../lineage/urs-contribution-profile.graph.json",
+        "../../../lineage/formative-transmissions.md",
+        "../../../lineage/grok-verified-lineage.md",
+        "../../../vision-kb/concepts/lc-perception-as-interface.md",
+        "../anchors/influence_anchors.json",
+        "../anchors/event_meeting_anchors.json",
+    ]
+    required_names = [
+        "Veda Austin",
+        "MAPS",
+        "Tantra",
+        "Ecstatic Dance",
+        "Contact Improv",
+        "Unison",
+        "Emergence Conference",
+        "Zach Bush",
+        "Michael Levin",
+        "Donald Hoffman",
+        "Next Level Soul",
+    ]
+
+    for link in required_links:
+        assert link in story
+    for name in required_names:
+        assert name in story
+
+
+def test_chronological_story_trace_links_resolve():
+    story = field_story_service.get_field_story("urs-field-story")["story_markdown"]
+    trace_paths = sorted(
+        {
+            match.group(1)
+            for match in re.finditer(r"\((/api/field-stories/urs-field-story/trace/[^)\s]+)\)", story)
+            if "{" not in match.group(1)
+        }
+    )
+
+    assert len(trace_paths) >= 30
+    for path in trace_paths:
         response = client.get(path)
         assert response.status_code == 200, f"{path}: {response.text}"
 
