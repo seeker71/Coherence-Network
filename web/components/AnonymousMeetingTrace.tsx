@@ -20,6 +20,17 @@ function ensureSessionKey(): string {
   }
 }
 
+function readReferrerDomain(): string | null {
+  try {
+    if (!document.referrer) return null;
+    const referrer = new URL(document.referrer);
+    if (referrer.origin === window.location.origin) return null;
+    return referrer.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 export function AnonymousMeetingTrace() {
   const pathname = usePathname() || "/";
   const startedAtRef = useRef<number>(Date.now());
@@ -30,14 +41,19 @@ export function AnonymousMeetingTrace() {
     lastPathRef.current = pathname;
 
     const flush = (keepalive = false) => {
-      const duration_ms = Math.max(0, Date.now() - startedAtRef.current);
+      const endedAt = Date.now();
+      const duration_ms = Math.max(0, endedAt - startedAtRef.current);
       const { contributorId } = readIdentity();
       const payload: Record<string, string | number> = {
         visitor_key: ensureFingerprint(),
         session_key: ensureSessionKey(),
         surface: lastPathRef.current,
         duration_ms,
+        started_at: new Date(startedAtRef.current).toISOString(),
+        ended_at: new Date(endedAt).toISOString(),
       };
+      const referrerDomain = readReferrerDomain();
+      if (referrerDomain) payload.referrer_domain = referrerDomain;
       if (contributorId) payload.contributor_id = contributorId;
 
       try {

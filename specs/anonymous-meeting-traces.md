@@ -18,6 +18,7 @@ requirements:
   - "POST /api/meetings/anonymous-traces records or refreshes one anonymous meeting session."
   - "The API returns a stable hashed source_point_id that can match a second meeting without storing raw visitor/session keys."
   - "The trace keeps first_seen_at, last_seen_at, total duration, surfaces met, and per-surface duration."
+  - "The trace exposes meeting shape: entry surface, ordered surface sequence, page count, coarse duration bucket, and hostname-only referrer domain."
   - "When contributor_id is present, prior traces for the same source point are folded into that contributor."
   - "The public web layout sends silent route-level meeting traces with an opaque visitor key and session key."
 done_when:
@@ -37,7 +38,7 @@ constraints:
 
 When someone meets the organism through public surfaces, the body should remember enough to recognize a likely return without claiming direct identity or location. This closes the gap between ephemeral presence and explicit registration: a later contributor identity can fold earlier anonymous meetings into its lineage.
 
-The trace is intentionally modest. It knows an opaque source point, when it first and last appeared, how long the meeting lasted, and which public surfaces were met.
+The trace is intentionally modest. It knows an opaque source point, when it first and last appeared, how long the meeting lasted, which public surfaces were met, and the coarse shape of the meeting. Referrer memory is limited to hostname only.
 
 ## Requirements
 
@@ -48,6 +49,8 @@ The trace is intentionally modest. It knows an opaque source point, when it firs
 - [ ] **R5**: If `contributor_id` is present, prior traces for the same source point are marked with `folded_into_contributor_id`.
 - [ ] **R6**: `GET /api/meetings/anonymous-traces` lists recent traces and can filter by `source_point_id`.
 - [ ] **R7**: The root web layout mounts a silent client component that sends route-level meeting traces with localStorage/sessionStorage continuity keys and current route duration.
+- [ ] **R8**: Session and summary responses include `entry_surface`, `surface_sequence`, `page_count`, and `duration_bucket`.
+- [ ] **R9**: Referrer capture is limited to external hostname-only `referrer_domain`; full referrer URLs, IP address, user agent, geolocation, and cross-device matching stay out of scope.
 
 ## Research Inputs
 
@@ -65,6 +68,9 @@ The trace is intentionally modest. It knows an opaque source point, when it firs
   "session_key": "opaque-tab-session-token",
   "surface": "/come-in",
   "duration_ms": 12000,
+  "referrer_domain": "example.org",
+  "started_at": "2026-05-07T00:00:00+00:00",
+  "ended_at": "2026-05-07T00:00:12+00:00",
   "contributor_id": "contributor:urs"
 }
 ```
@@ -79,15 +85,27 @@ The trace is intentionally modest. It knows an opaque source point, when it firs
     "first_seen_at": "2026-05-07T00:00:00+00:00",
     "last_seen_at": "2026-05-07T00:00:12+00:00",
     "duration_ms": 12000,
+    "duration_bucket": "10s_to_1m",
+    "entry_surface": "/come-in",
     "surface_count": 1,
+    "surface_sequence": ["/come-in"],
+    "page_count": 1,
     "surfaces": [
-      {"surface": "/come-in", "duration_ms": 12000}
+      {"surface": "/come-in", "duration_ms": 12000, "referrer_domain": "example.org"}
     ],
+    "referrer_domain": "example.org",
+    "referrer_domains": ["example.org"],
     "raw_keys_stored": false
   },
   "summary": {
     "meeting_count": 1,
+    "duration_bucket": "10s_to_1m",
+    "entry_surface": "/come-in",
     "surfaces_met": ["/come-in"],
+    "surface_sequence": ["/come-in"],
+    "page_count": 1,
+    "referrer_domain": "example.org",
+    "referrer_domains": ["example.org"],
     "folded_into_contributor_id": "contributor:urs"
   }
 }
@@ -107,9 +125,12 @@ AnonymousMeetingTrace:
   session_id: hashed session key
   first_seen_at: iso timestamp
   last_seen_at: iso timestamp
+  entry_surface: first route path in the session
+  entry_referrer_domain: optional hostname-only external referrer
   surfaces:
     - surface: route path
       duration_ms: integer
+      referrer_domain: optional hostname-only external referrer
   folded_into_contributor_id: optional contributor id
 ```
 
@@ -118,7 +139,6 @@ AnonymousMeetingTrace:
 - `specs/anonymous-meeting-traces.md` — behavior contract.
 - `api/app/routers/meetings.py` — anonymous trace endpoints.
 - `api/app/services/anonymous_meeting_trace_service.py` — graph-backed trace upsert/list logic.
-- `api/app/services/meeting_service.py` — existing meeting memory remains separate from the anonymous trace tissue.
 - `api/tests/test_anonymous_meeting_traces.py` — API behavior tests.
 - `web/components/AnonymousMeetingTrace.tsx` — silent public web trace component.
 - `web/app/layout.tsx` — mount the trace component once.
@@ -149,6 +169,7 @@ python3 scripts/validate_spec_quality.py --file specs/anonymous-meeting-traces.m
 ## Risks and Assumptions
 
 - **Risk — tracking overreach**: store only hashed local keys and route/duration data; do not store raw keys, IP, location, or user-agent strings.
+- **Risk — referrer overreach**: store only the external hostname; never store full referrer URLs, paths, queries, fragments, or same-origin routes.
 - **Risk — false continuity**: shared devices may reuse a local source point; responses label the source point as a continuity hint rather than identity proof.
 - **Risk — missed unload events**: the component posts on mount, interval, visibility change, and route cleanup; missed beacons are acceptable because the next meeting refreshes continuity.
 

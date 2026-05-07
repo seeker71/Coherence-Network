@@ -52,6 +52,7 @@ class AnonymousMeetingTraceIn(BaseModel):
     session_key: str = Field(min_length=4, max_length=128)
     surface: str = Field(min_length=1, max_length=300)
     duration_ms: int = Field(default=0, ge=0, le=86_400_000)
+    referrer_domain: str | None = Field(default=None, max_length=300)
     started_at: str | None = None
     ended_at: str | None = None
     contributor_id: str | None = Field(default=None, max_length=200)
