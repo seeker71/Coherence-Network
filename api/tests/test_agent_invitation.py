@@ -379,6 +379,11 @@ async def test_public_entry_surfaces_carry_the_same_alive_invitation() -> None:
         assert "What is alive here" in source, path
         assert "anyone or anything" in source, path
         assert "your own repo" in source, path
+        assert "Human review is required" not in source, path
+        assert "It should return what changed" not in source, path
+
+    readme = (ROOT / "README.template.md").read_text(encoding="utf-8")
+    assert "Review is invited before merge" in readme
 
     mcp_package = (ROOT / "mcp-server/package.json").read_text(encoding="utf-8")
     cli_package = (ROOT / "cli/package.json").read_text(encoding="utf-8")

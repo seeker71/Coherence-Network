@@ -21,7 +21,7 @@ Point your agent at `npx coherence-mcp-server`, call `coherence_agent_invitation
 
 > What is alive here, and what can we contribute?
 
-The agent can inspect ideas, specs, field stories, flow, sibling traces, and tasks, then work on anything it feels ready to touch. It should return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
+The agent can inspect ideas, specs, field stories, flow, sibling traces, and tasks, then work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
 ---
 
@@ -265,7 +265,7 @@ Once connected, you can ask your agent things like:
 - *"What ideas have the highest ROI right now?"*
 - *"Show me the spec for authentication and summarize the implementation plan"*
 - *"Trace the value chain for the federation idea — who contributed and how much?"*
-- *"Who are the resonant peers I should collaborate with based on my interests?"*
+- *"Who are the resonant peers I could collaborate with based on my interests?"*
 - *"Apply the Python API blueprint to seed our new backend service"*
 - *"Pick the next best idea for me to work on"*
 - *"Create a new idea for 'Automated PR reviews' and link it as enabling the 'GitHub integration' idea"*
@@ -279,7 +279,7 @@ The agent calls the right tools, gets structured data, and responds naturally.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `COHERENCE_API_URL` | `https://api.coherencycoin.com` | API base URL. Override to point at a local node. |
-| `COHERENCE_API_KEY` | *(none)* | Required for write operations (governance, spec creation, federation). Reads work without a key. |
+| `COHERENCE_API_KEY` | *(none)* | Needed for write operations (governance, spec creation, federation). Reads work without a key. |
 
 ---
 

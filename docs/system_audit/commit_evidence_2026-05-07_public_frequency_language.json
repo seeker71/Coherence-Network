@@ -1,0 +1,104 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/public-frequency-language-20260507",
+  "commit_scope": "Tune public README and package entry wording from hard review/directive language into invited review and invited return traces.",
+  "files_owned": [
+    "README.template.md",
+    "README.md",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.template.md",
+    "cli/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "docs/system_audit/commit_evidence_2026-05-07_public_frequency_language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+      "python3 scripts/build_readmes.py --check",
+      "git diff --check",
+      "rg -n \"\\b[Rr]equir(e|ed|es|ement|ements|ing)\\b|\\b[Mm]ust\\b|\\b[Mm]andatory\\b|\\b[Cc]ontract\\b|\\b[Rr]ule\\b|\\b[Ss]hould\\b\" README.template.md README.md cli/README.template.md cli/README.md mcp-server/README.template.md mcp-server/README.md web/messages/en.json web/app/come-in/page.tsx"
+    ],
+    "summary": "Focused public entry check passed. README templates and generated public README/package surfaces now invite review and return traces without the previously hard review wording."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No runtime code changed; GitHub README verification will happen after merge."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public entry readers see review as invited care, not a hard gate, and agents are invited to return sources, limits, and care rather than being instructed through directive wording.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network",
+      "https://www.npmjs.com/package/coherence-cli",
+      "https://www.npmjs.com/package/coherence-mcp-server",
+      "https://coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "github:README->Contribute to this repo->Review is invited before merge",
+      "github:README->Come in->It is invited to return what changed",
+      "npm:coherence-cli README->Come in->It is invited to return what changed",
+      "npm:coherence-mcp-server README->Come in->It is invited to return what changed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public README verification remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-resonance-onboarding.md"
+  ],
+  "task_ids": [
+    "codex-thread-public-frequency-language-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation",
+    "README.template.md",
+    "README.md",
+    "cli/README.md",
+    "mcp-server/README.md"
+  ],
+  "change_files": [
+    "README.template.md",
+    "README.md",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.template.md",
+    "cli/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
