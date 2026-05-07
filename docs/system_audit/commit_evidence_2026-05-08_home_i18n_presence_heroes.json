@@ -1,0 +1,105 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/home-i18n-presence-heroes-20260508",
+  "commit_scope": "Restore the full homepage story, repair English i18n leakage, and replace stock/TODO presence hero cards with source-grounded public assets already held by the web surface.",
+  "files_owned": [
+    "web/app/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_home_i18n_presence_heroes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "curl local homepage HTML for leaked i18n keys, stock image URLs, and restored homepage section markers",
+      "playwright-cli open http://127.0.0.1:3114/ and full-page screenshot sanity check",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts tests/homepage-readability.test.ts",
+      "cd web && npm run build"
+    ],
+    "summary": "The full homepage body is restored: invitation, featured concept/vision entry, idea form, how work grows, activity, silence/ground, and footer. The living-lineage presence cards remain as a lower supporting section using local/source-grounded assets for Liquid Bloom, Bloomurian, Mose, Matias De Stefano, and PORTAL. English messages were restored from the last full bundle after an earlier commit had truncated them to a homepage-only object, which caused header/live-breath keys to leak."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The homepage should lead with what the network is creating and how to enter the work, not collapse into a presence-only page. Presence cards should use real local public assets and no stock/TODO placeholders.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/vision",
+      "https://coherencycoin.com/people"
+    ],
+    "test_flows": [
+      "open local / -> no leaked common/header/nav/homeBreath/home living-lineage keys",
+      "open local / -> see What idea are you holding, Share an idea, Three days of silence, Living Lineage, and real presence names",
+      "open local / -> no images.unsplash.com and no TODO presence hero placeholders"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-collective",
+    "public-homepage"
+  ],
+  "spec_ids": [
+    "specs/presence-invitation-surface.md"
+  ],
+  "task_ids": [
+    "codex-thread-home-i18n-presence-heroes-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/page.tsx",
+    "web/messages/en.json",
+    "web/tests/homepage-presence-lineage.test.ts"
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
