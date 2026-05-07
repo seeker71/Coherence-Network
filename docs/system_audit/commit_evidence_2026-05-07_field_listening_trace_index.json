@@ -1,0 +1,113 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/listening-trace-index-20260507",
+  "commit_scope": "Publish compact field listening trace indexes with month, author, and work API/MCP lookups.",
+  "files_owned": [
+    "specs/field-listening-trace-index.md",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_service.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-07_field_listening_trace_index.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
+    ],
+    "notes": [
+      "Trace manifest reports 27443 dated events, 96 months, 895 main authors, and 1718 main works.",
+      "Author and work indexes are JSONL so CLI, API, MCP, and agents can read one slice instead of the whole raw event stream."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending GitHub PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI, merge, and public deploy validation are still pending."
+  },
+  "idea_ids": [
+    "profile-contribution-derived-data",
+    "field-listening-trace-index"
+  ],
+  "spec_ids": [
+    "field-listening-trace-index"
+  ],
+  "task_ids": [
+    "listening-trace-index-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 3 passed, 5 warnings",
+    "trace manifest: 27443 dated events across 96 months, 895 main authors, and 1718 main works",
+    "privacy boundary excludes raw Google Takeout archives, Audible exports, browser sessions, cookies, and extracted service files"
+  ],
+  "change_files": [
+    "specs/field-listening-trace-index.md",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_service.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-07_field_listening_trace_index.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents can ask for a primary monthly influence or an author/work influence wave through compact field story trace slices.",
+    "public_endpoints": [
+      "/api/field-stories/urs-field-story/trace/month/2026-04",
+      "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+      "/api/field-stories/urs-field-story/trace/work/{work_id}"
+    ],
+    "test_flows": [
+      "Field story trace API tests",
+      "MCP get_field_story_trace registry test",
+      "Trace index rebuild from ten_year_events.jsonl"
+    ]
+  }
+}

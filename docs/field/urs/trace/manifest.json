@@ -1,0 +1,22 @@
+{
+  "author_count": 895,
+  "event_count_with_month": 27443,
+  "generated_at": "2026-05-07T07:09:14.427706+00:00",
+  "month_count": 96,
+  "privacy_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain out of repo.",
+  "query_shapes": {
+    "author_influence_wave": "Search author_index.jsonl by id or exact name, then read wave.",
+    "primary_influence_during_month": "Load monthly_spectrum.json -> months[YYYY-MM].",
+    "work_influence_wave": "Search work_index.jsonl by id or exact title, then read wave."
+  },
+  "schema_version": "field-trace-index/v1",
+  "source": "docs/field/urs/output/ten_year_events.jsonl",
+  "thresholds": {
+    "author_min_events": 3,
+    "month_top_authors": 12,
+    "month_top_works": 12,
+    "work_min_events": 3
+  },
+  "undated_event_count": 731,
+  "work_count": 1718
+}
