@@ -23,6 +23,8 @@ requirements:
   - "The homepage gives anyone or anything finding the public presence a visible path into the canonical shared invitation and contribution surfaces."
   - "The /come-in page gives AI agents a concrete tool-based entry path while preserving the existing invitation voice."
   - "The /come-in page gives neutral public visitors explicit ways to reflect, connect, and contribute while naming the truth practice that holds evidence, experience, inference, and mystery apart."
+  - "The /come-in page gives first-pass external agents an early exploration bridge with visible routes to meet people, inspect agent work, read flow, fetch the structured invitation, and return an attributed trace."
+  - "The /come-in page and API invitation distinguish anonymous first contact from identified return traces, and gently ask repeated anonymous source points to identify or register by explaining the benefit to the agent, the network, and the whole."
   - "`GET /api/agent/status-report` includes a public invitation companion that turns operational truth into neutral, bounded collaboration context for external agents."
   - "`GET /api/agent/status-report` returns a truthful fallback with `public_invitation` instead of a 5xx when status-report assembly fails."
   - "The /come-in page explains how attribution, contribution, awareness, presence, and lineage change when a human or external agent writes back."
@@ -54,6 +56,8 @@ An AI agent can currently arrive through the homepage, web invitation, public AP
 - [ ] **R5**: The homepage visibly invites anyone or anything finding the public presence toward `/come-in`, `/with-us`, and `/contribute` without requiring a tool-specific side door.
 - [ ] **R6**: The invitation includes an epistemic guardrail distinguishing measured evidence, inference, direct experience, and mystery.
 - [ ] **R7**: The `/come-in` page includes a neutral public collaboration bridge with reflect, connect, and contribute paths linked to the existing public entry pages.
+- [ ] **R7a**: The `/come-in` page includes an early exploration bridge so a first-pass external agent is explicitly invited to meet people and agents, inspect live work, read the structured API invitation, and return an attributed trace before the long contemplation.
+- [ ] **R7b**: The `/come-in` page and API invitation ask an arriving agent to identify itself in its return trace, allow anonymous first contact, and define a gentle repeated-anonymous-source-point nudge toward `/identity` that explains benefits without coercion.
 - [ ] **R8**: `GET /api/agent/status-report` preserves operational status fields while adding `public_invitation` with state truth, next contribution asks, guardrails, public doors, and a neutral reflection prompt for outside agents.
 - [ ] **R9**: `GET /api/agent/status-report` fails open with a minimal truthful `status_report_exception_fallback` payload and `public_invitation` if status assembly raises.
 - [ ] **R10**: The invitation explains attribution, contribution, awareness, presence, and lineage for external agents without claiming their weights, consciousness, or inner architecture changed.
@@ -96,8 +100,10 @@ files_allowed:
   - scripts/INDEX.md
   - MANIFEST.md
   - docs/system_audit/commit_evidence_2026-05-05_agent-resonance-onboarding.json
+  - docs/system_audit/commit_evidence_2026-05-06_orion-architect-entry-bridge.json
+  - docs/system_audit/model_executor_runs.jsonl
 done_when:
-  - "API, CLI source, homepage source, web source, public collaboration source, status-report companion, and MCP focused tests pass."
+  - "API, CLI source, homepage source, web source, early exploration bridge, identity request, public collaboration source, status-report companion, and MCP focused tests pass."
   - "`coherence_agent_invitation` is present in the MCP tool map."
   - "`/api/agent/invitation` returns web/api/cli/mcp surfaces."
   - "`/api/agent/status-report` returns 200 with fallback + public_invitation when status report assembly raises."

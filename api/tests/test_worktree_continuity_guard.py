@@ -41,6 +41,39 @@ def test_dirty_only_risk_is_guidance_not_blocking() -> None:
     assert mod._is_blocking_risk(["ahead_without_upstream"]) is True
 
 
+def test_patch_equivalent_ahead_worktree_is_guidance_not_blocking(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module()
+    repo_root = tmp_path / "repo"
+    current = repo_root / "current"
+    sibling = repo_root / "sibling"
+    current.mkdir(parents=True)
+    sibling.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        mod,
+        "_parse_worktrees",
+        lambda _repo_root: [
+            {"worktree": str(current), "branch": "refs/heads/codex/current"},
+            {"worktree": str(sibling), "branch": "refs/heads/codex/squash-merged"},
+        ],
+    )
+    monkeypatch.setattr(
+        mod,
+        "_branch_name",
+        lambda _wt_path, branch_ref: branch_ref.replace("refs/heads/", "", 1),
+    )
+    monkeypatch.setattr(mod, "_status_paths", lambda _wt_path: [])
+    monkeypatch.setattr(mod, "_ahead_behind_vs_main", lambda wt_path: (1, 4) if wt_path == sibling else (0, 0))
+    monkeypatch.setattr(mod, "_upstream_exists", lambda wt_path: wt_path == current)
+    monkeypatch.setattr(mod, "_patch_equivalent_to_main", lambda wt_path: wt_path == sibling)
+
+    risks = mod.collect_risks(repo_root, current)
+
+    assert len(risks) == 1
+    assert risks[0].risks == ["integrated_patch_equivalent"]
+    assert mod._is_blocking_risk(risks[0].risks) is False
+
+
 def test_collect_risks_skips_autonomous_claude_sidecars(monkeypatch, tmp_path: Path) -> None:
     mod = _load_module()
     repo_root = tmp_path / "repo"
@@ -80,6 +113,7 @@ def test_collect_risks_skips_autonomous_claude_sidecars(monkeypatch, tmp_path: P
         "_upstream_exists",
         lambda wt_path: wt_path != codex_peer,
     )
+    monkeypatch.setattr(mod, "_patch_equivalent_to_main", lambda _wt_path: False)
 
     risks = mod.collect_risks(repo_root, current)
 
