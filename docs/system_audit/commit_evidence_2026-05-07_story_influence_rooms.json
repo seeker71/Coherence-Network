@@ -1,0 +1,87 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/story-influence-rooms-20260507",
+  "commit_scope": "Add linked influence rooms to the chronological frequency story for known works, authors, people, practices, and research currents.",
+  "files_owned": [
+    "specs/story-influence-rooms.md",
+    "api/tests/test_field_story_agent_surface.py",
+    "docs/field/urs/output/chronological_story_with_frequency.md",
+    "docs/system_audit/commit_evidence_2026-05-07_story_influence_rooms.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_agent_surface.py tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check api/tests/test_field_story_agent_surface.py api/tests/test_field_story_trace_index.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "Chronological story now includes a dedicated Influence Rooms section.",
+      "Tests follow every embedded trace API link through the FastAPI router.",
+      "Non-trace rooms link to existing people pages, presence notes, lineage notes, or anchor artifacts."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending GitHub PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending public deploy verification after merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI, merge, and public deploy validation are still pending."
+  },
+  "idea_ids": [
+    "profile-contribution-derived-data",
+    "story-frequency-influence-interlinks",
+    "story-influence-rooms"
+  ],
+  "spec_ids": [
+    "story-influence-rooms"
+  ],
+  "task_ids": [
+    "story-influence-rooms-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements",
+        "source memory",
+        "source data owner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest: 13 passed, 5 warnings",
+    "ruff: All checks passed",
+    "local PR guard: ready_for_push=True, local_preflight=pass",
+    "PR followthrough guard: codex_open_prs=0, stale_codex_prs=0",
+    "story trace link resolver test follows every non-placeholder /api/field-stories/urs-field-story/trace link",
+    "privacy boundary excludes raw listening archives, browser sessions, cookies, and paid book text"
+  ],
+  "change_files": [
+    "specs/story-influence-rooms.md",
+    "api/tests/test_field_story_agent_surface.py",
+    "docs/field/urs/output/chronological_story_with_frequency.md",
+    "docs/system_audit/commit_evidence_2026-05-07_story_influence_rooms.json"
+  ],
+  "change_intent": "docs_only"
+}
