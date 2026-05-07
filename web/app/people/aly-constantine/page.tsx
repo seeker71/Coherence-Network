@@ -19,5 +19,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AlyConstantineProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getAlyConstantineContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="aly-constantine" />;
 }

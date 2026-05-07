@@ -116,14 +116,18 @@ async def get_node(node_id: str):
 
     The path argument is treated as a graph id first. When that misses
     and the value contains no namespace prefix (no colon), the lookup
-    retries against the `slug` property — the same human-readable
-    doorway used in `/people/{slug}` URLs. This lets every URL form
-    converge to one identity through one endpoint, with the mapping
-    living in the graph instead of a hand-curated table.
+    retries against the `slug` property and finally against the
+    `contributor:{path}` form — the same human-readable doorway used
+    in `/people/{slug}` URLs, plus the legacy bare-name shape used by
+    older routes. This lets every URL form converge to one identity
+    through one endpoint, with the mapping living in the graph
+    instead of a hand-curated table.
     """
     node = graph_service.get_node(node_id)
     if not node and ":" not in node_id:
         node = graph_service.get_node_by_slug(node_id)
+    if not node and ":" not in node_id:
+        node = graph_service.get_node(f"contributor:{node_id}")
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return node
@@ -185,8 +189,22 @@ async def get_edges(
     direction: str = Query(default="both", pattern="^(both|outgoing|incoming)$"),
     type: str | None = None,
 ):
-    """Get edges for a node."""
-    return graph_service.get_edges(node_id, direction=direction, edge_type=type)
+    """Get edges for a node, accepting either the graph id or a slug.
+
+    The path argument resolves through the same slug-or-id lookup as
+    `GET /graph/nodes/{node_id}` so callers using the human-readable
+    URL get the right edges without a second round-trip.
+    """
+    resolved = graph_service.get_node(node_id)
+    if not resolved and ":" not in node_id:
+        resolved = graph_service.get_node_by_slug(node_id)
+    if not resolved and ":" not in node_id:
+        resolved = graph_service.get_node(f"contributor:{node_id}")
+    if not resolved:
+        return []
+    return graph_service.get_edges(
+        resolved["id"], direction=direction, edge_type=type,
+    )
 
 
 @router.post("/graph/edges", summary="Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)")
