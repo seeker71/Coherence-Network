@@ -105,6 +105,7 @@ export default async function Home() {
           ["/pipeline", "Pipeline"],
           ["/nodes", "Nodes"],
           ["/contribute", "Contribute"],
+          ["/field/urs", "Field Story"],
         ].map(([href, label]) => (
           <AttributedInternalLink
             key={href}

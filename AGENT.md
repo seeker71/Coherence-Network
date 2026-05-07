@@ -1,43 +1,44 @@
-# Agent Self-Unblock Playbook
+# Agent Flow Guide
 
-Purpose: when a gate fails, the agent should self-unblock with concrete remediation steps and continue execution instead of stopping for clarification.
+Purpose: guide the agent toward the simplest useful next command. Validation is evidence, not ceremony. When a check fails, repair the concrete failure and continue instead of expanding the process.
 
-## Rule
+## Simple Rule
 
-- Do not stop at "gate blocked" as the final answer.
-- Fix the blocker first, rerun the gate, then continue commit/deploy flow.
+- Do not stop at "check failed" as the final answer.
+- Fix the failure first, rerun the smallest check that proves the fix, then continue commit/deploy flow.
 - Report exact failing command/output only after attempting remediation.
 - Start each prompt with:
 
 ```bash
-make prompt-gate
+make prompt-guide
 ```
 
-- `make prompt-gate` is follow-up safe:
-  - clean worktree -> full `start-gate` + rebase + local guard,
+- `make prompt-guide` is follow-up safe:
+  - clean worktree -> orientation + branch/worktree check,
   - dirty worktree -> continuation mode (no re-bootstrap),
   - detached `HEAD` -> fail fast with explicit `git switch` remediation.
+- `make prompt-gate` remains as a backward-compatible alias.
 
-## Gate-Specific Unblock Steps
+## Guide-Specific Recovery
 
-### 1) `make start-gate` fails with dirty worktree
+### 1) Entry check sees dirty worktree
 
 This commonly happens mid-task after edits are already in progress.
 
 - Treat it as a continuation task, not a new thread bootstrap.
-- Prefer `make prompt-gate` for follow-up prompts instead of rerunning `make start-gate` directly.
+- Prefer `make prompt-guide` for follow-up prompts instead of rerunning startup checks directly.
 - Continue with targeted validation for changed files.
-- Before commit, run required pre-commit guards:
+- Before commit, run the local proof commands:
 
 ```bash
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
 ```
 
-### 2) Spec quality gate fails
+### 2) Spec quality check fails
 
 - Read missing sections from output.
-- Patch spec to include required sections from `docs/SPEC-QUALITY-GATE.md`:
+- Patch spec to include the missing sections:
   - `Acceptance Tests`
   - `Verification`
   - `Risks and Assumptions`
@@ -48,7 +49,7 @@ python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --s
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 ```
 
-### 3) Pre-commit guard fails
+### 3) Pre-commit proof fails
 
 - `worktree_pr_guard.py`:
   - Apply the remediation command it prints.

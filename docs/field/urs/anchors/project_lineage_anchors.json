@@ -1,0 +1,61 @@
+{
+  "note": "Project lineage anchors gathered from local git history, GitHub repository metadata, and docs/lineage/three-attempts.md.",
+  "prehistory": [
+    {
+      "date": "2024-06-22T08:17:31-06:00",
+      "project": "Crypo-Coin-Coherency-Network",
+      "event": "Earliest local commit found: initial draft.",
+      "evidence": ["local-git:/Users/ursmuff/source/Crypo-Coin-Coherency-Network e578d23"]
+    },
+    {
+      "date": "2024-06-28T17:07:03-06:00",
+      "project": "Crypo-Coin-Coherency-Network",
+      "event": "Repository initial commit in local history.",
+      "evidence": ["local-git:/Users/ursmuff/source/Crypo-Coin-Coherency-Network 81b6736"]
+    }
+  ],
+  "official_attempts": [
+    {
+      "ordinal": 1,
+      "project": "Living-Resonance-Codex",
+      "repository": "seeker71/Living-Resonance-Codex",
+      "created_at": "2025-08-18T16:33:50Z",
+      "pushed_until": "2025-08-28T11:09:23Z",
+      "frequency": "living self-evolving resonance codex; quantum-inspired conscious AI; Living Codex stages from emergent toward divine",
+      "collapse_pattern": "Collapsed under its own weight because available LLMs could not hold the full idea without losing coherence.",
+      "evidence": [
+        "github-repo-metadata",
+        "Coherence-Network docs/lineage/three-attempts.md"
+      ]
+    },
+    {
+      "ordinal": 2,
+      "project": "Living-Codex-CSharp",
+      "repository": "seeker71/Living-Codex-CSharp",
+      "local_first_commit": "2025-09-09T00:58:09-06:00",
+      "created_at": "2025-09-17T06:19:18Z",
+      "pushed_until": "2025-10-13T14:09:26Z",
+      "frequency": "U-CORE; Everything is a Node; resonance-based knowledge graph; C# implementation pressure",
+      "collapse_pattern": "Collapsed under its own weight in the second implementation form before the surrounding AI/tooling could reliably carry it.",
+      "evidence": [
+        "local-git:/Users/ursmuff/source/Living-Codex-CSharp 5fc24ba",
+        "github-repo-metadata",
+        "Coherence-Network docs/lineage/three-attempts.md"
+      ]
+    },
+    {
+      "ordinal": 3,
+      "project": "Coherence-Network",
+      "repository": "seeker71/Coherence-Network",
+      "local_first_commit": "2026-02-11T20:29:55-07:00",
+      "created_at": "2026-02-12T05:52:31Z",
+      "frequency": "spec-driven open-source contribution intelligence; ideas, people, agents, attribution, payout, governance, and deployment evidence",
+      "survival_pattern": "The third attempt survived by grounding the mystical and systems signal into specs, tests, worktrees, evidence, PRs, deployment checks, and traceable contribution flow.",
+      "evidence": [
+        "local-git:/Users/ursmuff/source/Coherence-Network a8984106",
+        "github-repo-metadata",
+        "Coherence-Network docs/lineage/three-attempts.md"
+      ]
+    }
+  ]
+}

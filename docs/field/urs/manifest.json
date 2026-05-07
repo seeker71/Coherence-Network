@@ -1,0 +1,75 @@
+{
+  "slug": "urs-field-story",
+  "title": "Urs Field Story and Frequency Trace",
+  "contributor_id": "urs",
+  "status": "published",
+  "published_at": "2026-05-07",
+  "summary": "A source-backed, agent-readable field story integrating formative reading, thesis work, Ramtha, Xbox Live identity, Tesla/energy resources, Audible/YouTube listening traces, embodied practice, meetings, and the three Coherence Network project attempts.",
+  "canonical_story": {
+    "artifact_id": "chronological-story",
+    "path": "output/chronological_story_with_frequency.md",
+    "content_type": "text/markdown"
+  },
+  "agent_use": {
+    "read_api": "/api/field-stories/urs-field-story",
+    "artifact_api": "/api/field-stories/urs-field-story/artifacts/{artifact_id}",
+    "contribute_api": "/api/field-stories/urs-field-story/contributions",
+    "mcp_tools": [
+      "get_field_story",
+      "get_field_story_artifact",
+      "contribute_field_story"
+    ],
+    "web": "/field/urs",
+    "cli": "coh content set page field-urs --lang en --file docs/field/urs/output/chronological_story_with_frequency.md --title \"Urs Field Story\" --by <contributor_id>"
+  },
+  "privacy_boundary": {
+    "published": "Curated story, anchors, summaries, reports, normalized event traces, and analyzer scripts.",
+    "not_published": "Raw Google Takeout archives, extracted HTML, authenticated browser sessions, cookies, local browser databases, and service login state."
+  },
+  "artifacts": [
+    {"artifact_id": "readme", "path": "README.md", "kind": "method", "content_type": "text/markdown"},
+    {"artifact_id": "chronological-story", "path": "output/chronological_story_with_frequency.md", "kind": "story", "content_type": "text/markdown"},
+    {"artifact_id": "current-frequency-spectrum", "path": "output/current_frequency_spectrum.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "deep-frequency-reading", "path": "output/deep_frequency_reading.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "frequency-evolution-report", "path": "output/frequency_evolution_report.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "ten-year-cluster-report", "path": "output/ten_year_cluster_report.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "audible-series-report", "path": "output/audible_series_report.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "field-report", "path": "output/field_report.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "clusters", "path": "output/clusters.md", "kind": "report", "content_type": "text/markdown"},
+    {"artifact_id": "education-anchors", "path": "anchors/education_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "event-meeting-anchors", "path": "anchors/event_meeting_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "influence-anchors", "path": "anchors/influence_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "manual-reading-anchors", "path": "anchors/manual_reading_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "project-lineage-anchors", "path": "anchors/project_lineage_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "resource-timeline", "path": "anchors/resource_timeline.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "frequency-evolution-summary", "path": "output/frequency_evolution_summary.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "frequency-summary", "path": "output/frequency_summary.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "ten-year-cluster-summary", "path": "output/ten_year_cluster_summary.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "audible-series-summary", "path": "output/audible_series_summary.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "browser-trace-summary", "path": "output/browser_trace_summary.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "normalized-events", "path": "output/normalized_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
+    {"artifact_id": "ten-year-events", "path": "output/ten_year_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
+    {"artifact_id": "audible-series-events", "path": "output/audible_series_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
+    {"artifact_id": "field-listening-analyzer", "path": "tools/field_listening_analyzer.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "ten-year-field-cluster", "path": "tools/ten_year_field_cluster.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "audible-series-analyzer", "path": "tools/audible_series_analyzer.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "local-browser-history-collector", "path": "tools/local_browser_history_collector.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "youtube-two-year-receiver", "path": "tools/youtube_two_year_receiver.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "youtube-two-year-scrape-expression", "path": "tools/youtube_two_year_scrape_expression.js", "kind": "tool", "content_type": "text/javascript"}
+  ],
+  "frequency_bands": [
+    "frontier",
+    "time-attention",
+    "platform-frontier",
+    "reality-training",
+    "formal-language",
+    "future-economy",
+    "fictional-systems",
+    "pressure-training",
+    "devotional-body",
+    "consciousness-threshold",
+    "roots-resilience",
+    "ai-systems",
+    "meeting-resonance"
+  ]
+}

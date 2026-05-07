@@ -1,8 +1,8 @@
 {
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
-  "version": "0.5.2",
-  "description": "MCP server for the Coherence Network — 89 typed tools for AI agents to browse ideas, receive the shared invitation, trace value chains, manage tasks, link identities, and navigate the universal graph.",
+  "version": "0.5.3",
+  "description": "MCP server for the Coherence Network — 92 typed tools for AI agents to browse ideas, read field stories, receive the shared invitation, trace value chains, manage tasks, link identities, and navigate the universal graph.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
@@ -30,7 +30,7 @@
     {
       "registry": "npm",
       "name": "coherence-mcp-server",
-      "version": "0.5.2"
+      "version": "0.5.3"
     }
   ],
   "tools": [
@@ -389,6 +389,18 @@
     {
       "name": "coherence_governance_requests",
       "description": "List governance change requests with status and proposer info."
+    },
+    {
+      "name": "coherence_get_field_story",
+      "description": "Read a published field story with canonical narrative, anchors, reports, and agent contribution surfaces."
+    },
+    {
+      "name": "coherence_get_field_story_artifact",
+      "description": "Read one artifact from a field story, such as anchors, summaries, reports, tools, or event traces."
+    },
+    {
+      "name": "coherence_contribute_field_story",
+      "description": "Record an attributed correction, addition, or interpretation proposal for a published field story."
     }
   ]
 }

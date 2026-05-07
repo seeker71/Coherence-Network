@@ -1,0 +1,43 @@
+{
+  "note": "Formal education and thesis anchors that shaped the technical frequency spectrum.",
+  "masters_thesis": {
+    "title": "Backtracking Model Languages",
+    "institution": "University of Colorado at Boulder",
+    "department": "Department of Electrical, Computer, and Energy Engineering",
+    "presentation_date_on_slides": "1997-01-01",
+    "implementation_context_year": 2000,
+    "shared_files_context": {
+      "date": "2012-09",
+      "files": ["Thesis defence.ppt", "Water Project.zip"]
+    },
+    "core_forms": ["Backtracking Model Form (BMF)", "Backtracking Model Language (BML)"],
+    "language_specification_components": [
+      "attributes",
+      "expressions",
+      "backtracking choice and fail",
+      "classes",
+      "interfaces",
+      "templates"
+    ],
+    "implementation_components": [
+      "BML compiler",
+      "language implementation",
+      "demonstration of compiler behavior"
+    ],
+    "frequency_reading": {
+      "summary": "An early formal language and compiler container for possibility, choice, fail, recursion through alternatives, and structured model expression.",
+      "themes": [
+        "formal-language",
+        "compiler",
+        "backtracking",
+        "choice",
+        "fail",
+        "modeling",
+        "templates",
+        "possibility-space",
+        "technical-identity"
+      ]
+    },
+    "evidence": ["user-anchor"]
+  }
+}

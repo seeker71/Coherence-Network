@@ -1,0 +1,81 @@
+{
+  "early_online_identity": {
+    "handle": "TheSeeker",
+    "context": "First online presence when joining the Xbox Online beta program while the platform was being built.",
+    "themes": ["seeking", "online-identity", "platform-frontier", "early-network-presence"]
+  },
+  "early_childhood_reading": [
+    {
+      "title": "Karl May stories",
+      "note": "Early childhood reading. Reading was challenging, so the effort made the experience deep.",
+      "themes": ["frontier", "adventure", "effortful-reading", "moral-testing"]
+    },
+    {
+      "title": "Der Lederstrumpf",
+      "note": "Early childhood reading. Reading was challenging, so the effort made the experience deep.",
+      "themes": ["frontier", "wilderness", "identity", "effortful-reading"]
+    },
+    {
+      "title": "Momo",
+      "note": "Early childhood reading. Reading was challenging, so the effort made the experience deep.",
+      "themes": ["time", "listening", "attention", "child-wisdom", "anti-extraction"]
+    },
+    {
+      "title": "Die unendliche Geschichte",
+      "note": "Early childhood reading. Reading was challenging, so the effort made the experience deep.",
+      "themes": ["imagination", "story-as-reality", "identity", "world-renewal"]
+    }
+  ],
+  "later_series": [
+    {
+      "author": "Daniel Suarez",
+      "series": "Daemon",
+      "themes": ["autonomous-systems", "network-power", "distributed-agency", "techno-social-change"]
+    },
+    {
+      "author": "Larry Niven",
+      "series": "Ringworld",
+      "themes": ["megastructure", "systems-scale", "exploration", "engineering-imagination"]
+    },
+    {
+      "author": "James S. A. Corey",
+      "series": "The Expanse",
+      "themes": ["political-systems", "space-civilization", "tribal-tension", "human-scale-infrastructure"]
+    },
+    {
+      "author": "James Hunter",
+      "series": "The Viridian Gate Archives",
+      "themes": ["virtual-worlds", "game-systems", "progression", "identity-in-simulation"]
+    },
+    {
+      "author": "Patrick Rothfuss",
+      "series": "Kingkiller Chronicle",
+      "themes": ["storytelling", "name-magic", "music", "memory", "gift-and-wound"]
+    },
+    {
+      "author": "Terry Goodkind",
+      "series": "Sword of Truth",
+      "themes": ["truth", "will", "moral-choice", "power-and-responsibility"]
+    },
+    {
+      "author": "Joe Abercrombie",
+      "series": "The First Law Trilogy",
+      "themes": ["shadow", "power", "anti-hero", "moral-ambiguity"]
+    },
+    {
+      "author": "Terry Mancour",
+      "series": "Spellmonger",
+      "themes": ["magic-systems", "institution-building", "defense", "community-scale"]
+    },
+    {
+      "author": "Ryk Brown",
+      "series": "Frontiers Saga",
+      "themes": ["fleet", "frontier", "resilience", "distributed-war-and-care"]
+    },
+    {
+      "author": "Peter F. Hamilton",
+      "series": "Most series",
+      "themes": ["large-scale-civilization", "networked-humanity", "post-scarcity", "cosmic-systems"]
+    }
+  ]
+}

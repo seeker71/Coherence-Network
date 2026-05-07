@@ -1,0 +1,103 @@
+# Field Listening Report
+
+Generated: 2026-05-07T10:07:27
+Events analyzed: 28363
+
+## Sources
+- youtube: 26754
+- youtube-search: 465
+- youtube-myactivity: 363
+- audible-library: 233
+- audible-purchase-history: 198
+- youtube-music-myactivity: 120
+- youtube-browser: 77
+- audible-browser: 60
+- audible-listen-history: 50
+- youtube-music-browser: 28
+- manual-anchor: 15
+
+## Dominant Frequencies
+- unclassified: 24584
+- embodiment: 1860
+- magic-and-pattern: 357
+- shadow-and-power: 347
+- time-and-attention: 344
+- sovereignty: 322
+- world-building: 314
+- seeking: 286
+- ai-and-agency: 249
+- frontier: 145
+- network-intelligence: 87
+- effortful-reading: 2
+- identity: 2
+- online-identity: 1
+- platform-frontier: 1
+- early-network-presence: 1
+- adventure: 1
+- moral-testing: 1
+- wilderness: 1
+- time: 1
+- listening: 1
+- attention: 1
+- child-wisdom: 1
+- anti-extraction: 1
+- imagination: 1
+- story-as-reality: 1
+- world-renewal: 1
+- autonomous-systems: 1
+- network-power: 1
+- distributed-agency: 1
+- techno-social-change: 1
+- megastructure: 1
+- systems-scale: 1
+- exploration: 1
+- engineering-imagination: 1
+- political-systems: 1
+- space-civilization: 1
+- tribal-tension: 1
+- human-scale-infrastructure: 1
+- virtual-worlds: 1
+- game-systems: 1
+- progression: 1
+- identity-in-simulation: 1
+- storytelling: 1
+- name-magic: 1
+- music: 1
+- memory: 1
+- gift-and-wound: 1
+- truth: 1
+- will: 1
+- moral-choice: 1
+- power-and-responsibility: 1
+- shadow: 1
+- power: 1
+- anti-hero: 1
+- moral-ambiguity: 1
+- magic-systems: 1
+- institution-building: 1
+- defense: 1
+- community-scale: 1
+- fleet: 1
+- resilience: 1
+- distributed-war-and-care: 1
+- large-scale-civilization: 1
+- networked-humanity: 1
+- post-scarcity: 1
+- cosmic-systems: 1
+
+## Strongest Manual Anchors
+- TheSeeker (seeking, online-identity, platform-frontier, early-network-presence)
+- Karl May stories (frontier, adventure, effortful-reading, moral-testing)
+- Der Lederstrumpf (frontier, wilderness, identity, effortful-reading)
+- Momo (time, listening, attention, child-wisdom, anti-extraction)
+- Die unendliche Geschichte (imagination, story-as-reality, identity, world-renewal)
+- Daemon — Daniel Suarez (autonomous-systems, network-power, distributed-agency, techno-social-change)
+- Ringworld — Larry Niven (megastructure, systems-scale, exploration, engineering-imagination)
+- The Expanse — James S. A. Corey (political-systems, space-civilization, tribal-tension, human-scale-infrastructure)
+- The Viridian Gate Archives — James Hunter (virtual-worlds, game-systems, progression, identity-in-simulation)
+- Kingkiller Chronicle — Patrick Rothfuss (storytelling, name-magic, music, memory, gift-and-wound)
+- Sword of Truth — Terry Goodkind (truth, will, moral-choice, power-and-responsibility)
+- The First Law Trilogy — Joe Abercrombie (shadow, power, anti-hero, moral-ambiguity)
+- Spellmonger — Terry Mancour (magic-systems, institution-building, defense, community-scale)
+- Frontiers Saga — Ryk Brown (fleet, frontier, resilience, distributed-war-and-care)
+- Most series — Peter F. Hamilton (large-scale-civilization, networked-humanity, post-scarcity, cosmic-systems)

@@ -1,0 +1,101 @@
+{
+  "note": "Meeting, event, and relationship-field anchors found through local Gmail traces and Coherence-Network GitHub PR metadata.",
+  "events_and_meetings": [
+    {
+      "date": "2025-07-27",
+      "name": "Actualize Earth: REBIRTH",
+      "themes": ["somatic", "mythic", "rebirth", "labyrinth"],
+      "evidence": ["gmail:Actualize Earth newsletter"]
+    },
+    {
+      "date": "2025-09-07/2025-10-12",
+      "name": "QUALIA at Fiske Planetarium",
+      "themes": ["immersive", "consciousness", "planetarium", "science-and-art"],
+      "evidence": ["gmail:Actualize Earth newsletters"]
+    },
+    {
+      "date": "2026-01-24",
+      "name": "Emerge somatic sound immersion",
+      "themes": ["somatic", "sound", "emergence"],
+      "evidence": ["gmail:Actualize Earth newsletter"]
+    },
+    {
+      "date": "2026-01-21",
+      "name": "Zach Bush forwarded influence anchor",
+      "themes": ["biology", "regenerative-health", "earth-body"],
+      "evidence": ["gmail:forwarded Zach Bush message"]
+    },
+    {
+      "date": "2026-03-18/2026-04-16",
+      "name": "StarHouse New Moon ceremonies",
+      "themes": ["ceremony", "community", "cycles", "Boulder field"],
+      "evidence": ["gmail:StarHouse emails"]
+    },
+    {
+      "date": "2026-04-17",
+      "name": "Bumi Sehat visit request sent",
+      "themes": ["birth", "care", "service", "Coherence Network outreach"],
+      "evidence": ["gmail:sent Visit request - Coherence Network founder, late April"]
+    },
+    {
+      "date": "2026-04-19",
+      "name": "Punpun visit request response",
+      "themes": ["regenerative living", "Thailand", "timing", "closed window"],
+      "evidence": ["gmail:Punpun Volunteers response"]
+    },
+    {
+      "date": "2026-04-21",
+      "name": "Bumi Sehat proposed visit time",
+      "themes": ["meeting", "field contact", "Bali"],
+      "evidence": ["gmail:Ni Putu Erna Libya proposed April 27 at 1:00 PM"]
+    },
+    {
+      "date": "2026-04-21/2026-04-23",
+      "name": "Samyama and Megatix ecstatic dance traces",
+      "themes": ["ecstatic-dance", "embodiment", "Bali", "community"],
+      "evidence": [
+        "gmail:Samyama Ecstatic Dance Festival 2026 tickets and accommodation",
+        "gmail:Megatix FRIDAY Ecstatic Dance"
+      ]
+    },
+    {
+      "date": "2026-04-24",
+      "name": "Shambala Sidemen shuttle request",
+      "themes": ["Bali", "retreat", "movement", "place-window"],
+      "evidence": ["gmail:Jotform Shambala Sidemen 26.04.2026"]
+    },
+    {
+      "date": "2026-04-25",
+      "name": "Sensual Hearts blue lotus love Temple XL Bali order and cancellation",
+      "themes": ["tantra", "embodiment", "discernment", "boundary"],
+      "evidence": [
+        "gmail:Embodied Co-Loving order complete",
+        "gmail:Embodied Co-Loving cancellation"
+      ]
+    },
+    {
+      "date": "2026-04-29T13:56:19Z",
+      "name": "Coherence Network PR 1273 merged",
+      "themes": ["profiles", "transmissions", "Tesla stewardship", "Ubud proposals"],
+      "evidence": ["github:https://github.com/seeker71/Coherence-Network/pull/1273"]
+    },
+    {
+      "date": "2026-04-29T23:07:44Z",
+      "name": "Coherence Network PR 1275 merged",
+      "themes": ["rented places", "temporal opportunity windows", "hosting posture"],
+      "evidence": ["github:https://github.com/seeker71/Coherence-Network/pull/1275"]
+    },
+    {
+      "date": "2026-04-30T00:40:20Z",
+      "name": "Coherence Network PR 1279 merged",
+      "themes": ["Matias De Stefano", "Aubrey Marcus", "Urs profile", "field reading"],
+      "evidence": ["github:https://github.com/seeker71/Coherence-Network/pull/1279"]
+    },
+    {
+      "date": "2026-04-30",
+      "name": "Isaac Bentoumi Coherence Network infrastructure exchange",
+      "themes": ["proxy", "load-balancer", "self-hosted", "external technical resonance"],
+      "evidence": ["gmail:Re: quick one on seeker71/Coherence-Network"]
+    }
+  ]
+}

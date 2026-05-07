@@ -28,6 +28,7 @@ from app.routers import (
     contributors,
     distributions,
     federation,
+    field_stories,
     friction,
     gates,
     governance,
@@ -101,7 +102,6 @@ from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 _startup_logger = logging.getLogger("coherence.api.slow")
 
-
 def _startup_compat_row(node: dict) -> dict:
     row = dict(node)
     if row.get("legacy_id"):
@@ -134,7 +134,6 @@ def _ensure_db_tables() -> None:
             _startup_logger.info("DB tables ensured via unified_models.Base")
     except Exception:
         _startup_logger.warning("DB table creation skipped", exc_info=True)
-    # Ensure the default workspace exists (tenant primitive).
     try:
         from app.services import workspace_service as _ws
         _ws.ensure_default_workspace()
@@ -683,6 +682,7 @@ app.include_router(sensings_router.router, prefix="/api", tags=["sensings"])
 app.include_router(offerings_router.router, prefix="/api", tags=["offerings"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
+app.include_router(field_stories.router, prefix="/api", tags=["field-stories"])
 app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])

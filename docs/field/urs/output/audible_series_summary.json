@@ -1,0 +1,724 @@
+{
+  "raw_audible_rows": 481,
+  "unique_audible_titles": 278,
+  "series_count": 23,
+  "series_clusters": [
+    {
+      "series": "Standalone / Unclustered",
+      "unique_titles": 109,
+      "authors": {
+        "Neal Stephenson": 3,
+        "Terry Mancour, Emily Burch Harris": 3,
+        "Daniel Suarez": 3,
+        "Scott Sigler": 2,
+        "Thich Nhat Hanh": 2,
+        "Adam Mansbach": 2,
+        "Barry Michels, Phil Stutz": 1,
+        "Lee Harris, Regina Meredith": 1,
+        "Niall Ferguson": 1,
+        "Pema Chödrön": 1,
+        "Philip K. Dick": 1,
+        "Dan Millman": 1,
+        "Adam Grant": 1,
+        "Plato": 1,
+        "Steven Johnson": 1,
+        "George R. R. Martin, Gardner Dozois, Gillian Flynn, Neil Gaiman": 1,
+        "Will Wight": 1,
+        "Kaia Ra": 1,
+        "Lisa Feldman Barrett": 1,
+        "Sara Landon": 1,
+        "Tim Lebbon, Dirk Maggs": 1,
+        "John Scalzi": 1,
+        "Michael Talbot": 1,
+        "Holly Duckworth": 1,
+        "Pema Chodron": 1,
+        "J.D. Astra, James Hunter": 1,
+        "Alexander Loyd PhD ND": 1,
+        "Florence Williams": 1,
+        "Robert Thurman": 1,
+        "Jeff Hirsch": 1,
+        "Susan Trott, Libby Spurrier - adaptor": 1,
+        "don Miguel Ruiz": 1,
+        "Kel Kade": 1,
+        "Jan Smith": 1,
+        "Gary John Bishop": 1,
+        "Henry David Thoreau": 1,
+        "Gordon Hempton, Audible Sleep": 1,
+        "Marshall Rosenberg PhD": 1,
+        "Jason Anspach, Nick Cole": 1,
+        "The Big Quiet, Audible Sleep": 1,
+        "Eckhart Tolle, Kim Eng": 1,
+        "unknown": 1,
+        "Rick Rubin": 1,
+        "Andrew Rowe, Kayleigh Nicol": 1,
+        "Lauren Gunderson": 1,
+        "Lynne McTaggart": 1,
+        "Steven Kotler, Jamie Wheal": 1,
+        "Dr. Joe Dispenza": 1,
+        "Matthew McConaughey": 1,
+        "Julian Barbour": 1,
+        "Michael Pollan": 1,
+        "Peter H. Diamandis, Steven Kotler": 1,
+        "Mike Dooley, Darryl Anka, Matt Kahn, Sara Landon, Salvatore Rachele, Lyssa Royal Holt, Daniel Scranton": 1,
+        "Gary Marcus, Ernest Davis": 1,
+        "Melissa McPhail": 1,
+        "Brian Staveley": 1,
+        "Ray Dalio": 1,
+        "W. W. Rouse Ball, Audible Sleep": 1,
+        "Alexandre Dumas": 1,
+        "William Gibson": 1,
+        "Tara Swart MD PhD": 1,
+        "L. Ron Hubbard": 1,
+        "Ana Gasteyer, Mona Mansour": 1,
+        "J.N. Chaney, Scott Moon": 1,
+        "J.N. Chaney, Terry Maggert, Glenn Seguin": 1,
+        "Mark Wayne McGinnis": 1,
+        "Ken Lozito": 1,
+        "Sarah Breskman Cosme": 1,
+        "Sean Oswald": 1,
+        "Robin Wall Kimmerer": 1,
+        "Mitch Horowitz": 1,
+        "Bill Plotkin PhD": 1,
+        "Dalai Lama, Graham Coleman - editor, Thupten Jinpa - editor, Gyurme Dorje - translator": 1,
+        "Gary Marcus": 1,
+        "Peter H. Diamandis": 1,
+        "Barack Obama": 1,
+        "Aldous Huxley": 1,
+        "Orson Scott Card": 1,
+        "Larry Niven": 1,
+        "Jeff Hawkins": 1,
+        "Howard Zinn": 1,
+        "Carl Sagan": 1,
+        "J. R. R. Tolkien": 1,
+        "Brandon Sanderson": 1,
+        "Mark Russinovich": 1,
+        "George R. R. Martin": 1,
+        "Tim Lebbon": 1,
+        "Steven Kotler": 1,
+        "Barry Michels": 1,
+        "Peter Clines": 1,
+        "Susan Trott": 1,
+        "Jason Anspach": 1,
+        "Holly Newson": 1,
+        "Ana Gasteyer": 1,
+        "The Big Quiet": 1,
+        "W. W. Rouse Ball": 1,
+        "Gordon Hempton": 1,
+        "Andrew Rowe": 1,
+        "Mike Dooley": 1,
+        "Lee Harris": 1
+      },
+      "sources": {
+        "audible-purchase-history": 63,
+        "audible-library": 36,
+        "audible-listen-history": 10
+      },
+      "titles": [
+        "A Hypnotist's Journey to Avalon",
+        "A People's History of the United States",
+        "A Short Account of the History of Mathematics",
+        "Alien III",
+        "Alien: Out of the Shadows",
+        "Battlefield Earth",
+        "Blade Runner",
+        "Braiding Sweetgrass",
+        "Cephrael's Hand",
+        "Coming Alive",
+        "Contact",
+        "Cryptonomicon",
+        "Crystal Awakening",
+        "Delta-v",
+        "Doom",
+        "Earthcore",
+        "Ender's Game",
+        "Finding Purpose",
+        "Galaxy's Edge",
+        "Genesis",
+        "Go the F--k to Sleep",
+        "Greenlights",
+        "Henry David Thoreau Collection",
+        "Hoh Rainforest",
+        "Holiday Greetings from Sugar and Booze",
+        "Homeworld Lost",
+        "House of Blades",
+        "How Emotions Are Made",
+        "How We Live Is How We Die",
+        "How to Change Your Mind",
+        "Induction",
+        "Influx",
+        "Kill Decision",
+        "Killer by Nature",
+        "Knight of Shadows",
+        "Legion",
+        "Messenger Corps",
+        "Nonviolent Communication",
+        "On Intelligence",
+        "Pandemic",
+        "Paradox Bound",
+        "Peaceful Heart, Warrior Spirit: The True Story of My Spiritual Quest",
+        "Peter F. Hamilton",
+        "Plato's Republic",
+        "Power Moves",
+        "Premium Plus 24-credit Annual Plan Extra 3 Credits",
+        "Principles",
+        "Rebooting AI",
+        "Rogues",
+        "Seveneves",
+        "Shadowblade",
+        "Shadowheist",
+        "Shadowplay",
+        "Snow Crash",
+        "Sovereign",
+        "Stealing Fire",
+        "Tension Release",
+        "The 3-Day Effect",
+        "The Art of Mindful Living",
+        "The Audacity of Hope",
+        "The Count of Monte Cristo",
+        "The Creative Act",
+        "The Dispatcher",
+        "The Doors of Perception",
+        "The Emperor's Blades",
+        "The Field",
+        "The Future Human",
+        "The Future Is Faster Than You Think",
+        "The Great Awakening",
+        "The Half-Life of Marie Curie",
+        "The Healing Code",
+        "The Hobbit",
+        "The Holographic Universe",
+        "The Janus Point",
+        "The Man on the Mountaintop",
+        "The Mastery of Love",
+        "The Miracle Habits",
+        "The Mote in God's Eye",
+        "The Next Step in Human Evolution",
+        "The Sophia Code",
+        "The Source",
+        "The Tibetan Book of the Dead",
+        "The Tibetan Book of the Dead [SAMPLE]",
+        "The Ultimate Dimension",
+        "USS Hamilton: Ironhold Station",
+        "Unfu*k Yourself",
+        "Viridian Gate Online",
+        "When Things Fall Apart",
+        "Wild Mind",
+        "Wonderland",
+        "You Are a Channel",
+        "You Are the Placebo",
+        "You Have to F--king Eat",
+        "Zero Day"
+      ],
+      "inference_levels": {
+        "none": 109
+      }
+    },
+    {
+      "series": "Frontiers Saga",
+      "unique_titles": 43,
+      "authors": {
+        "Ryk Brown": 43
+      },
+      "sources": {
+        "audible-purchase-history": 40,
+        "audible-listen-history": 2,
+        "audible-library": 1
+      },
+      "titles": [
+        "A Few Against Many",
+        "A Line in the Sand",
+        "A Price Too High",
+        "A Rock and a Hard Place",
+        "A Show of Force",
+        "Arrival",
+        "Aurora: CV-01",
+        "Aurora: EV-01",
+        "Balance",
+        "Birth of an Empire",
+        "Born of the Ashes",
+        "Celestia CV-02",
+        "Enemies of My Enemy",
+        "Escape of the Free Fleet",
+        "Evolution",
+        "Fall of the Core",
+        "For the Triumph of Evil",
+        "Freedom's Dawn",
+        "Frontiers Saga Series #14: The Weak and the Innocent",
+        "Head of the Dragon",
+        "I Am Justice",
+        "Into the Serpent's Lair",
+        "Lesser of Two Evils",
+        "Liberation",
+        "Liberty and Truth, Peace and Prosperity",
+        "No Risk Too Great",
+        "Not The Hill We Die On",
+        "Rebellion",
+        "Resistance",
+        "Resurrection",
+        "Retaliation",
+        "Return of the Corinari",
+        "Rise of the Alliance",
+        "Rise of the Corinari",
+        "Sanctuary",
+        "Singularity",
+        "The Expanse",
+        "The First Ranger",
+        "The Legend of Corinair",
+        "The Rings of Haven",
+        "The Vengeance",
+        "Welcome to Paradise",
+        "Who Takes No Risk"
+      ],
+      "inference_levels": {
+        "author-rule": 43
+      }
+    },
+    {
+      "series": "Spellmonger Universe",
+      "unique_titles": 30,
+      "authors": {
+        "Terry Mancour": 30
+      },
+      "sources": {
+        "audible-purchase-history": 24,
+        "audible-library": 6
+      },
+      "titles": [
+        "Arcanist",
+        "Court Wizard",
+        "Enchanter",
+        "Footwizard",
+        "Hawklady",
+        "Hawkmaiden",
+        "Hedgewitch",
+        "High Mage",
+        "Journeymage",
+        "Knights Magi",
+        "Magelord",
+        "Marshal Arcane",
+        "Necromancer",
+        "Practical Adept",
+        "Preceptor",
+        "Seamage",
+        "Shadowblade",
+        "Shadowheist",
+        "Shadowmage",
+        "Shadowplay",
+        "Sky Rider",
+        "Spellmonger",
+        "Thaumaturge",
+        "The Golden Goblin",
+        "The Mad Mage of Sevendor",
+        "The Road to Sevendor",
+        "The Road to Vanador: A Spellmonger Anthology",
+        "The Spellmonger's Honeymoon: A Spellmonger Novella",
+        "The Wizards of Sevendor",
+        "Warmage"
+      ],
+      "inference_levels": {
+        "author-rule": 30
+      }
+    },
+    {
+      "series": "Sword of Truth / Goodkind Universe",
+      "unique_titles": 19,
+      "authors": {
+        "Terry Goodkind": 19
+      },
+      "sources": {
+        "audible-purchase-history": 14,
+        "audible-library": 5
+      },
+      "titles": [
+        "Blood of the Fold",
+        "Chainfire",
+        "Confessor",
+        "Death's Mistress",
+        "Faith of the Fallen",
+        "Heart of Black Ice",
+        "Naked Empire",
+        "Phantom",
+        "Severed Souls",
+        "Shroud of Eternity",
+        "Siege of Stone",
+        "Soul of the Fire",
+        "Stone of Tears",
+        "Temple of the Winds",
+        "The Omen Machine",
+        "The Pillars of Creation",
+        "The Third Kingdom",
+        "Warheart",
+        "Wizard's First Rule"
+      ],
+      "inference_levels": {
+        "author-rule": 19
+      }
+    },
+    {
+      "series": "Peter F. Hamilton Systems Fiction",
+      "unique_titles": 17,
+      "authors": {
+        "Peter F. Hamilton": 17
+      },
+      "sources": {
+        "audible-purchase-history": 10,
+        "audible-library": 7
+      },
+      "titles": [
+        "A Night Without Stars: A Novel of the Commonwealth",
+        "A Quantum Murder",
+        "Exodus: The Archimedes Engine",
+        "Great North Road",
+        "Judas Unchained",
+        "Mindstar Rising",
+        "Pandora's Star",
+        "Salvation",
+        "Salvation Lost",
+        "The Abyss Beyond Dreams",
+        "The Dreaming Void",
+        "The Evolutionary Void",
+        "The Naked God",
+        "The Neutronium Alchemist",
+        "The Reality Dysfunction",
+        "The Saints of Salvation",
+        "The Temporal Void"
+      ],
+      "inference_levels": {
+        "author-rule": 17
+      }
+    },
+    {
+      "series": "First Law World",
+      "unique_titles": 6,
+      "authors": {
+        "Joe Abercrombie": 6
+      },
+      "sources": {
+        "audible-purchase-history": 6
+      },
+      "titles": [
+        "Before They Are Hanged",
+        "Best Served Cold",
+        "Last Argument of Kings",
+        "Red Country",
+        "The Blade Itself",
+        "The Heroes"
+      ],
+      "inference_levels": {
+        "author-rule": 6
+      }
+    },
+    {
+      "series": "A Song of Ice and Fire",
+      "unique_titles": 5,
+      "authors": {
+        "George R. R. Martin": 5
+      },
+      "sources": {
+        "audible-library": 5
+      },
+      "titles": [
+        "A Clash of Kings",
+        "A Dance with Dragons",
+        "A Feast for Crows",
+        "A Game of Thrones",
+        "A Storm of Swords"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 5
+      }
+    },
+    {
+      "series": "Viridian Gate Archives",
+      "unique_titles": 5,
+      "authors": {
+        "James Hunter": 5
+      },
+      "sources": {
+        "audible-purchase-history": 5
+      },
+      "titles": [
+        "Viridian Gate Online: Darkling Siege",
+        "Viridian Gate Online: Doom Forge",
+        "Viridian Gate Online: Empirical Endgame",
+        "Viridian Gate Online: Imperial Legion",
+        "Viridian Gate Online: The Lich Priest"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 5
+      }
+    },
+    {
+      "series": "Arcane Ascension",
+      "unique_titles": 4,
+      "authors": {
+        "Andrew Rowe": 4
+      },
+      "sources": {
+        "audible-purchase-history": 4
+      },
+      "titles": [
+        "On The Shoulders of Titans",
+        "Sufficiently Advanced Magic",
+        "The Silence of Unworthy Gods",
+        "The Torch That Ignites the Stars"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 4
+      }
+    },
+    {
+      "series": "King's Dark Tidings",
+      "unique_titles": 4,
+      "authors": {
+        "Kel Kade": 4
+      },
+      "sources": {
+        "audible-purchase-history": 4
+      },
+      "titles": [
+        "Free the Darkness",
+        "Kingdoms and Chaos",
+        "Legends of Ahn",
+        "Reign of Madness"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 4
+      }
+    },
+    {
+      "series": "Kingsbridge",
+      "unique_titles": 4,
+      "authors": {
+        "Ken Follett": 4
+      },
+      "sources": {
+        "audible-purchase-history": 4
+      },
+      "titles": [
+        "A Column of Fire",
+        "The Armor of Light",
+        "The Pillars of the Earth",
+        "World Without End"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 4
+      }
+    },
+    {
+      "series": "Shroud of Prophecy",
+      "unique_titles": 4,
+      "authors": {
+        "Kel Kade": 4
+      },
+      "sources": {
+        "audible-purchase-history": 4
+      },
+      "titles": [
+        "Destiny of the Dead",
+        "Dragons and Demons",
+        "Fate of the Fallen",
+        "Mage of No Renown"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 4
+      }
+    },
+    {
+      "series": "The Expanse",
+      "unique_titles": 4,
+      "authors": {
+        "James S. A. Corey": 4
+      },
+      "sources": {
+        "audible-purchase-history": 3,
+        "audible-library": 1
+      },
+      "titles": [
+        "Babylon's Ashes",
+        "Cibola Burn",
+        "Nemesis Games",
+        "Persepolis Rising"
+      ],
+      "inference_levels": {
+        "author-rule": 4
+      }
+    },
+    {
+      "series": "Power of Now / Presence",
+      "unique_titles": 3,
+      "authors": {
+        "Eckhart Tolle": 3
+      },
+      "sources": {
+        "audible-library": 2,
+        "audible-purchase-history": 1
+      },
+      "titles": [
+        "A New Earth",
+        "The Next Step in Human Evolution",
+        "The Power of Now"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 3
+      }
+    },
+    {
+      "series": "Sapiens / Human Systems",
+      "unique_titles": 3,
+      "authors": {
+        "Yuval Noah Harari": 3
+      },
+      "sources": {
+        "audible-purchase-history": 3
+      },
+      "titles": [
+        "21 Lessons for the 21st Century",
+        "Homo Deus",
+        "Sapiens"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 3
+      }
+    },
+    {
+      "series": "War of Broken Mirrors",
+      "unique_titles": 3,
+      "authors": {
+        "Andrew Rowe": 3
+      },
+      "sources": {
+        "audible-purchase-history": 3
+      },
+      "titles": [
+        "Defying Destiny",
+        "Forging Divinity",
+        "Stealing Sorcery"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 3
+      }
+    },
+    {
+      "series": "Weapons and Wielders",
+      "unique_titles": 3,
+      "authors": {
+        "Andrew Rowe": 3
+      },
+      "sources": {
+        "audible-purchase-history": 3
+      },
+      "titles": [
+        "Diamantine",
+        "Six Sacred Swords",
+        "Soulbrand"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 3
+      }
+    },
+    {
+      "series": "Conversations with God",
+      "unique_titles": 2,
+      "authors": {
+        "Neale Donald Walsch": 2
+      },
+      "sources": {
+        "audible-purchase-history": 2
+      },
+      "titles": [
+        "The Complete Conversations with God",
+        "The God Solution"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 2
+      }
+    },
+    {
+      "series": "Daemon",
+      "unique_titles": 2,
+      "authors": {
+        "Daniel Suarez": 2
+      },
+      "sources": {
+        "audible-library": 2
+      },
+      "titles": [
+        "Daemon",
+        "Freedom (TM)"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 2
+      }
+    },
+    {
+      "series": "Kingkiller Chronicle",
+      "unique_titles": 2,
+      "authors": {
+        "Patrick Rothfuss": 2
+      },
+      "sources": {
+        "audible-purchase-history": 2
+      },
+      "titles": [
+        "The Name of the Wind",
+        "The Wise Man's Fear"
+      ],
+      "inference_levels": {
+        "author-rule": 2
+      }
+    },
+    {
+      "series": "Radical Compassion / Acceptance",
+      "unique_titles": 2,
+      "authors": {
+        "Tara Brach": 2
+      },
+      "sources": {
+        "audible-purchase-history": 1,
+        "audible-listen-history": 1
+      },
+      "titles": [
+        "Radical Acceptance",
+        "Radical Compassion"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 2
+      }
+    },
+    {
+      "series": "Ringworld",
+      "unique_titles": 2,
+      "authors": {
+        "Larry Niven": 2
+      },
+      "sources": {
+        "audible-library": 2
+      },
+      "titles": [
+        "The Ringworld Engineers",
+        "The Ringworld Throne"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 2
+      }
+    },
+    {
+      "series": "The Lost Edge",
+      "unique_titles": 2,
+      "authors": {
+        "Andrew Rowe": 2
+      },
+      "sources": {
+        "audible-purchase-history": 2
+      },
+      "titles": [
+        "Edge of the Dream: An Epic Fantasy Adventure",
+        "Edge of the Woods: An Epic Fantasy Adventure"
+      ],
+      "inference_levels": {
+        "author-and-title-rule": 2
+      }
+    }
+  ]
+}

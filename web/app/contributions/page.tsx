@@ -237,6 +237,7 @@ function ContributionsPageContent() {
               <h1 className="mt-2 text-3xl sm:text-5xl font-light tracking-tight text-stone-50">
                 <span className="sr-only">Contributions</span>
                 {t("contributions.title")}
+                <span className="sr-only">Contributions</span>
               </h1>
               <p className="mt-3 max-w-2xl text-base sm:text-lg text-stone-200/95 leading-relaxed">
                 {t("contributions.lede")}

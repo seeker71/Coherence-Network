@@ -1,0 +1,724 @@
+{
+  "generated_at": "2026-05-07T02:07:35.864613+00:00",
+  "event_count": 28174,
+  "evidence_levels": {
+    "authenticated-myactivity-visible-feed": 483,
+    "local-browser-history": 165,
+    "audible-purchase-history": 198,
+    "audible-listen-history": 50,
+    "audible-library": 233,
+    "manual-anchor": 15,
+    "google-takeout-2024-05-07-to-2026-05-07": 27030
+  },
+  "time_clusters": [
+    [
+      "2025-01",
+      1758
+    ],
+    [
+      "2024-10",
+      1659
+    ],
+    [
+      "2024-07",
+      1622
+    ],
+    [
+      "2025-04",
+      1471
+    ],
+    [
+      "2024-08",
+      1457
+    ],
+    [
+      "2026-04",
+      1413
+    ],
+    [
+      "2024-06",
+      1308
+    ],
+    [
+      "2025-03",
+      1290
+    ],
+    [
+      "2025-07",
+      1274
+    ],
+    [
+      "2025-02",
+      1233
+    ],
+    [
+      "2025-06",
+      1177
+    ],
+    [
+      "2025-11",
+      1125
+    ],
+    [
+      "2024-11",
+      1089
+    ],
+    [
+      "2024-09",
+      1015
+    ],
+    [
+      "2025-12",
+      998
+    ],
+    [
+      "2024-05",
+      966
+    ],
+    [
+      "2025-05",
+      952
+    ],
+    [
+      "2024-12",
+      894
+    ],
+    [
+      "2026-01",
+      883
+    ],
+    [
+      "2025-08",
+      776
+    ],
+    [
+      "2025-09",
+      668
+    ],
+    [
+      "2026-03",
+      640
+    ],
+    [
+      "2025-10",
+      632
+    ],
+    [
+      "2026-02",
+      596
+    ],
+    [
+      "visible-feed-no-date",
+      483
+    ],
+    [
+      "2026-05",
+      357
+    ],
+    [
+      "undated",
+      248
+    ],
+    [
+      "2023-10",
+      8
+    ],
+    [
+      "2016-11",
+      6
+    ],
+    [
+      "2018-03",
+      6
+    ],
+    [
+      "2023-12",
+      6
+    ],
+    [
+      "2019-04",
+      5
+    ],
+    [
+      "2019-06",
+      5
+    ],
+    [
+      "2020-05",
+      5
+    ],
+    [
+      "2022-04",
+      5
+    ],
+    [
+      "2022-12",
+      5
+    ],
+    [
+      "2024-03",
+      5
+    ],
+    [
+      "2019-02",
+      4
+    ],
+    [
+      "2019-09",
+      4
+    ],
+    [
+      "2019-10",
+      4
+    ],
+    [
+      "2019-12",
+      4
+    ],
+    [
+      "2021-03",
+      4
+    ],
+    [
+      "2021-09",
+      4
+    ],
+    [
+      "2021-10",
+      4
+    ],
+    [
+      "2022-10",
+      4
+    ],
+    [
+      "2023-02",
+      4
+    ],
+    [
+      "2023-09",
+      4
+    ],
+    [
+      "2023-11",
+      4
+    ],
+    [
+      "2024-04",
+      4
+    ],
+    [
+      "2018-01",
+      3
+    ],
+    [
+      "2018-06",
+      3
+    ],
+    [
+      "2018-12",
+      3
+    ],
+    [
+      "2019-05",
+      3
+    ],
+    [
+      "2020-10",
+      3
+    ],
+    [
+      "2021-04",
+      3
+    ],
+    [
+      "2021-05",
+      3
+    ],
+    [
+      "2021-11",
+      3
+    ],
+    [
+      "2022-01",
+      3
+    ],
+    [
+      "2022-03",
+      3
+    ],
+    [
+      "2023-08",
+      3
+    ]
+  ],
+  "space_clusters": [
+    [
+      "youtube",
+      27470
+    ],
+    [
+      "audible",
+      541
+    ],
+    [
+      "youtube-music",
+      148
+    ],
+    [
+      "manual-lineage",
+      15
+    ]
+  ],
+  "author_clusters": [
+    [
+      "unknown",
+      1765
+    ],
+    [
+      "Yaima - Topic",
+      1683
+    ],
+    [
+      "Mose - Topic",
+      1425
+    ],
+    [
+      "Poranguí - Topic",
+      731
+    ],
+    [
+      "Liquid Bloom - Topic",
+      647
+    ],
+    [
+      "Ajeet - Topic",
+      494
+    ],
+    [
+      "Malte Marten - Topic",
+      441
+    ],
+    [
+      "Ayla Schafer - Topic",
+      373
+    ],
+    [
+      "Maneesh De Moor - Topic",
+      347
+    ],
+    [
+      "Karunesh - Topic",
+      283
+    ],
+    [
+      "Danit - Topic",
+      275
+    ],
+    [
+      "Anne Tucker",
+      260
+    ],
+    [
+      "Empty Artist - Topic",
+      241
+    ],
+    [
+      "Nessi Gomes - Topic",
+      237
+    ],
+    [
+      "Yatao - Topic",
+      227
+    ],
+    [
+      "Mei-lan - Topic",
+      218
+    ],
+    [
+      "Alexia Chellun - Topic",
+      213
+    ],
+    [
+      "Sam Garrett - Topic",
+      212
+    ],
+    [
+      "East Forest - Topic",
+      211
+    ],
+    [
+      "Parijat - Topic",
+      202
+    ],
+    [
+      "Tetouze - Topic",
+      188
+    ],
+    [
+      "Chantress Seba - Topic",
+      183
+    ],
+    [
+      "Alex Serra - Topic",
+      182
+    ],
+    [
+      "Emilio Ortiz",
+      182
+    ],
+    [
+      "Deya Dova - Topic",
+      177
+    ],
+    [
+      "Little Whale - Topic",
+      173
+    ],
+    [
+      "Daniel Scranton",
+      153
+    ],
+    [
+      "Brian Scott",
+      137
+    ],
+    [
+      "Al Marconi - Topic",
+      131
+    ],
+    [
+      "Ayla Nereo - Topic",
+      122
+    ],
+    [
+      "Rising Appalachia - Topic",
+      122
+    ],
+    [
+      "Clara Sophia",
+      117
+    ],
+    [
+      "Jesse Cook - Topic",
+      117
+    ],
+    [
+      "Hang Massive - Topic",
+      116
+    ],
+    [
+      "Dean Evenson - Topic",
+      115
+    ],
+    [
+      "Iftekharul Anam - Topic",
+      115
+    ],
+    [
+      "The White Arrow - Topic",
+      110
+    ],
+    [
+      "Mogli - Topic",
+      105
+    ],
+    [
+      "Pam Gregory",
+      103
+    ],
+    [
+      "Mose",
+      102
+    ]
+  ],
+  "work_clusters": [
+    [
+      "Naturaleza (Mose Edit)",
+      73
+    ],
+    [
+      "Healing Song",
+      63
+    ],
+    [
+      "Paradise",
+      63
+    ],
+    [
+      "Cuatro Vientos (Rey & Kjavik Remix)",
+      56
+    ],
+    [
+      "Gajumaru",
+      55
+    ],
+    [
+      "Rebirth",
+      55
+    ],
+    [
+      "Odonata",
+      52
+    ],
+    [
+      "Om Ganesha (Dance Meditation)",
+      51
+    ],
+    [
+      "Agradezco",
+      50
+    ],
+    [
+      "Iluminar",
+      50
+    ],
+    [
+      "The Power Is Here Now",
+      50
+    ],
+    [
+      "Force",
+      49
+    ],
+    [
+      "Phoenix",
+      49
+    ],
+    [
+      "Azul",
+      48
+    ],
+    [
+      "Te Nande (Mose Remix)",
+      48
+    ],
+    [
+      "Aguila De Oro",
+      46
+    ],
+    [
+      "Vuela con el Viento (Mose Remix)",
+      46
+    ],
+    [
+      "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation",
+      45
+    ],
+    [
+      "Cuñaq",
+      44
+    ],
+    [
+      "Mother's Heartbeat",
+      44
+    ],
+    [
+      "Old Stories - Gajumaru (Revisioned)",
+      43
+    ],
+    [
+      "Spirit Divine",
+      42
+    ],
+    [
+      "Citadella",
+      41
+    ],
+    [
+      "All My Life is a Ceremony (Mose Remix)",
+      40
+    ],
+    [
+      "Cura Corazón",
+      40
+    ],
+    [
+      "Danza Del Viento (Live)",
+      40
+    ],
+    [
+      "Ash + Bone",
+      39
+    ],
+    [
+      "Fluyendo",
+      39
+    ],
+    [
+      "Silent Awakening",
+      38
+    ],
+    [
+      "The Water Blessing Song (Mose & Binder Remix)",
+      38
+    ],
+    [
+      "Cuatro Vientos",
+      37
+    ],
+    [
+      "Guiding and Protecting",
+      37
+    ],
+    [
+      "Q’antataita",
+      37
+    ],
+    [
+      "Rebirth (Revisioned)",
+      37
+    ],
+    [
+      "Sita Ram",
+      37
+    ],
+    [
+      "Valley of the Ancients (Mose Remix)",
+      37
+    ],
+    [
+      "Written in the Wind (Revisioned)",
+      37
+    ],
+    [
+      "Mycelia (Fantastic Fungi: Reimagine)",
+      36
+    ],
+    [
+      "Rise",
+      36
+    ],
+    [
+      "Freedom",
+      35
+    ],
+    [
+      "Heart Takes Flight",
+      35
+    ],
+    [
+      "Rebirth - Live @ Colorado Sound Studios",
+      35
+    ],
+    [
+      "Akaal",
+      34
+    ],
+    [
+      "Eternal Horizons (Temple Step Project Remix)",
+      34
+    ],
+    [
+      "Gajumaru (Acoustic)",
+      34
+    ],
+    [
+      "Grandmother (I Am the Earth)",
+      34
+    ],
+    [
+      "Miniyamba",
+      34
+    ],
+    [
+      "Written in the Wind",
+      34
+    ],
+    [
+      "A Message from the Stars (1111 Hz)",
+      33
+    ],
+    [
+      "Ama La Tierra",
+      33
+    ],
+    [
+      "Horizon",
+      33
+    ],
+    [
+      "Lately (Mose Remix)",
+      33
+    ],
+    [
+      "Odonata (Revisioned)",
+      33
+    ],
+    [
+      "As You Will [Shye Ben Tzur Cover]",
+      32
+    ],
+    [
+      "Feel the Love",
+      32
+    ],
+    [
+      "Heaven & Earth",
+      32
+    ],
+    [
+      "Madre De La Selva",
+      32
+    ],
+    [
+      "Oso Blanco (Mose Remix)",
+      32
+    ],
+    [
+      "The Sacred",
+      32
+    ],
+    [
+      "Arcoiris",
+      31
+    ]
+  ],
+  "frequency_clusters": [
+    [
+      "unclassified",
+      19150
+    ],
+    [
+      "devotional-body",
+      6441
+    ],
+    [
+      "consciousness-threshold",
+      1155
+    ],
+    [
+      "roots-resilience",
+      631
+    ],
+    [
+      "shadow-power",
+      344
+    ],
+    [
+      "time-attention",
+      329
+    ],
+    [
+      "fictional-systems",
+      318
+    ],
+    [
+      "ai-systems",
+      301
+    ]
+  ],
+  "axis_totals": {
+    "pressure": 356,
+    "intensity": 30792,
+    "inspiration": 5434,
+    "insight": 1174,
+    "vitality": 45588
+  },
+  "youtube_takeout_window": {
+    "start": "2024-05-07",
+    "end": "2026-05-07",
+    "evidence_level": "google-takeout-2024-05-07-to-2026-05-07"
+  },
+  "data_gap": "YouTube watch history from the completed history-only Google Takeout archive is loaded for the requested two-year window. The 10-part full export in Downloads exposes YouTube search history in part 001, but no watch-history file was found in those parts. Audible web contributes purchase/library/listen-history evidence; the detailed per-title mobile Listening Log remains app-only."
+}

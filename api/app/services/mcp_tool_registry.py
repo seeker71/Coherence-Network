@@ -11,6 +11,8 @@ import logging
 from typing import Any
 from uuid import uuid4
 
+from app.services.field_story_mcp_tools import FIELD_STORY_TOOLS
+
 logger = logging.getLogger(__name__)
 
 
@@ -545,6 +547,7 @@ TOOLS: list[dict[str, Any]] = [
         },
         "handler": list_open_changes_handler,
     },
+    *FIELD_STORY_TOOLS,
 ]
 
 # Build lookup for fast access by name

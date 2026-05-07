@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-05-06T10:21:23",
+  "event_count": 167,
+  "by_source": {
+    "youtube-browser": 79,
+    "youtube-music-browser": 28,
+    "audible-browser": 60
+  },
+  "by_browser": {
+    "chrome": 167
+  },
+  "errors": [],
+  "output": "/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl"
+}

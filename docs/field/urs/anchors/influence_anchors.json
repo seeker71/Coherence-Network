@@ -1,0 +1,123 @@
+{
+  "note": "User-supplied influence anchors that must be included in the personal story even when source logs are partial. Evidence levels distinguish lived/manual anchors from Audible/YouTube/browser traces.",
+  "presence_and_embodiment": [
+    {
+      "name": "Eckhart Tolle",
+      "evidence": ["audible", "user-anchor"],
+      "themes": ["presence", "now", "awakening", "ego-transcendence", "human-evolution"]
+    },
+    {
+      "name": "Dr. Joe Dispenza",
+      "evidence": ["audible", "youtube", "user-anchor"],
+      "themes": ["meditation", "neuroplasticity", "breath", "self-healing", "state-change"]
+    },
+    {
+      "name": "Tantra",
+      "evidence": ["user-anchor"],
+      "themes": ["embodiment", "relational-field", "energy", "intimacy", "sacred-body"]
+    },
+    {
+      "name": "Ecstatic Dance",
+      "evidence": ["youtube", "browser", "user-anchor"],
+      "themes": ["movement", "somatics", "music", "community", "nonverbal-integration"]
+    },
+    {
+      "name": "Contact Improv",
+      "evidence": ["user-anchor"],
+      "themes": ["movement", "trust", "weight-sharing", "attunement", "relational-intelligence"]
+    },
+    {
+      "name": "Unison",
+      "evidence": ["browser", "user-anchor"],
+      "themes": ["festival", "community", "music", "ceremony", "embodied-belonging"]
+    },
+    {
+      "name": "MAPS",
+      "evidence": ["user-anchor"],
+      "themes": ["psychedelic-research", "healing", "integration", "trauma", "science-and-ceremony"]
+    }
+  ],
+  "consciousness_threshold": [
+    {
+      "name": "Ramtha",
+      "first_evidence": "circa 1988",
+      "later_evidence": ["2008-07-06", "2008-09-24", "2014-11-10", "2014-11-20"],
+      "evidence": ["gmail", "user-anchor"],
+      "evidence_notes": [
+        "User reports reading Ramtha at about age 17; born in 1971, this places first reading around 1988.",
+        "Amazon recommendation on 2008-07-06 for Ramtha on Genetic Memory and the Sixth Sense reflects later research for someone else, not first contact.",
+        "Amazon recommendation on 2008-09-24 for Ramtha on Create Your Day.",
+        "Amazon recommendation on 2014-11-10 for Ramtha: The White Book.",
+        "Ramtha.com order #10260 confirmation on 2014-11-20."
+      ],
+      "themes": ["reality-creation", "consciousness", "discipline", "field-training", "mind-training", "choice", "self-mastery"]
+    },
+    {
+      "name": "Next Level Soul",
+      "evidence": ["youtube", "browser", "user-anchor"],
+      "themes": ["afterlife", "spiritual-testimony", "awakening", "future-prophecy", "threshold-discernment"]
+    },
+    {
+      "name": "Matias De Stefano",
+      "aliases": ["Matthias De Stephano"],
+      "evidence": ["youtube", "user-anchor"],
+      "themes": ["cosmic-memory", "earth-grid", "lineage", "consciousness-history"]
+    },
+    {
+      "name": "Robert Edward Grant",
+      "evidence": ["youtube", "browser", "user-anchor"],
+      "themes": ["new-math", "geometry", "music", "sovereign-ai", "symbolic-code", "orion"]
+    },
+    {
+      "name": "Donald Hoffman",
+      "evidence": ["youtube", "user-anchor"],
+      "themes": ["perception-interface", "consciousness", "reality-models", "evolution"]
+    },
+    {
+      "name": "New math",
+      "evidence": ["youtube", "user-anchor"],
+      "themes": ["geometry", "number", "pattern", "harmonics", "formal-language"]
+    }
+  ],
+  "science_systems_and_future": [
+    {
+      "name": "Michael Levin",
+      "aliases": ["Micheal Levins"],
+      "evidence": ["youtube", "browser", "user-anchor"],
+      "themes": ["bioelectricity", "basal-cognition", "regeneration", "agency", "morphogenesis"]
+    },
+    {
+      "name": "Lex Fridman",
+      "evidence": ["youtube", "user-anchor"],
+      "themes": ["long-form-dialogue", "ai", "science", "humility", "bridging-worlds"]
+    },
+    {
+      "name": "Elon Musk",
+      "evidence": ["youtube", "user-anchor"],
+      "themes": ["tesla", "spacex", "ai", "manufacturing", "risk", "future-economy"]
+    },
+    {
+      "name": "Zach Bush",
+      "evidence": ["user-anchor"],
+      "themes": ["regenerative-health", "soil", "microbiome", "systems-medicine", "earth-body"]
+    },
+    {
+      "name": "Aubrey Marcus",
+      "aliases": ["Aubrey Marus"],
+      "evidence": ["user-anchor"],
+      "themes": ["integration", "mythopoetic-growth", "medicine", "masculine-initiation", "embodiment"]
+    },
+    {
+      "name": "Emergence Conference",
+      "aliases": ["Emergance Conference"],
+      "evidence": ["user-anchor"],
+      "themes": ["community", "systems-change", "consciousness", "culture", "networking"]
+    },
+    {
+      "name": "Backtracking Model Languages",
+      "aliases": ["Master thesis", "Backtracking Model Language", "BML", "Backtracking Model Form", "BMF"],
+      "evidence": ["user-anchor"],
+      "themes": ["formal-study", "research", "technical-identity", "compiler", "formal-language", "backtracking", "choice-and-fail", "possibility-space"]
+    }
+  ]
+}
