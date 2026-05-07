@@ -28,6 +28,8 @@ import { KindredPresences } from "./KindredPresences";
 import { LocationChip } from "./LocationChip";
 import { CoLocated } from "./CoLocated";
 import { RootedHere } from "./RootedHere";
+import { HeldBy } from "./HeldBy";
+import { WanderInto } from "./WanderInto";
 
 export type Presence = {
   provider: string;
@@ -658,12 +660,22 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           {identity.id.startsWith("place:") && (
             <RootedHere placeId={identity.id} />
           )}
+          {/* When the page IS an event, surface the hosts as living
+              doorways back into the lineage that held it. */}
+          {identity.id.startsWith("event:") && (
+            <HeldBy eventId={identity.id} />
+          )}
           <ResonatesWith presenceId={identity.id} />
           <KindredPresences presenceId={identity.id} />
           <CoLocated presenceId={identity.id} />
           <InspiredByChips inspired={inspired} />
           <HeldOpen identity={identity} accent={accent} />
         </aside>
+      </div>
+
+      {/* ── Wander into — closing doorways into the body ─────────── */}
+      <div className="mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12 pb-12">
+        <WanderInto presenceId={identity.id} />
       </div>
 
       {/* ── Canonical link ────────────────────────────────────────── */}
@@ -679,6 +691,72 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           </a>
         </footer>
       )}
+
+      {/* ── Schema.org structured data — for machine readers ──────── */}
+      {/* Helps search engines and LLM crawlers see the shape of each
+          presence: their type, name, image, related URLs, and
+          (where relevant) location. Inline JSON-LD keeps it
+          server-rendered and crawlable on first paint. */}
+      <SchemaOrgScript identity={identity} />
     </main>
+  );
+}
+
+/**
+ * Inline JSON-LD using schema.org vocabulary so machine readers
+ * (Google, Bing, LLM crawlers) understand each presence's shape.
+ *
+ * Mapping graph node types → schema.org types:
+ *   contributor / interested-person → Person
+ *   community / network-org          → Organization
+ *   event                             → Event
+ *   place / scene                     → Place
+ *   asset                             → CreativeWork
+ *   practice                          → Course (closest schema type)
+ *
+ * Only fields the body actually carries are emitted. This is a
+ * server-renderable component (no client effects, no state) so the
+ * JSON-LD ships with the first HTML payload.
+ */
+function SchemaOrgScript({ identity }: { identity: PresenceIdentity }) {
+  const id = identity.id;
+  let schemaType: string;
+  if (id.startsWith("event:")) schemaType = "Event";
+  else if (id.startsWith("place:") || id.startsWith("scene:"))
+    schemaType = "Place";
+  else if (
+    id.startsWith("community:") ||
+    id.startsWith("community-") ||
+    id.startsWith("network-")
+  )
+    schemaType = "Organization";
+  else if (id.startsWith("asset:")) schemaType = "CreativeWork";
+  else if (id.startsWith("practice:")) schemaType = "Course";
+  else schemaType = "Person";
+
+  const json: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": schemaType,
+    name: identity.name,
+    url: `https://coherencycoin.com/people/${encodeURIComponent(id)}`,
+  };
+  if (identity.image_url) json.image = identity.image_url;
+  if (identity.tagline || identity.note || identity.description) {
+    json.description = (identity.tagline ||
+      identity.note ||
+      identity.description ||
+      "")
+      .substring(0, 500);
+  }
+  if (identity.canonical_url) json.sameAs = [identity.canonical_url];
+  if (schemaType === "Event") {
+    if (identity.when_text) json.startDate = identity.when_text;
+    if (identity.where_text) json.location = { "@type": "Place", name: identity.where_text };
+  }
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
+    />
   );
 }
