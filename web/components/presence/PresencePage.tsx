@@ -27,6 +27,7 @@ import { ResonatesWith } from "./ResonatesWith";
 import { KindredPresences } from "./KindredPresences";
 import { LocationChip } from "./LocationChip";
 import { CoLocated } from "./CoLocated";
+import { RootedHere } from "./RootedHere";
 
 export type Presence = {
   provider: string;
@@ -650,6 +651,13 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             identityName={identity.name}
           />
           <LocationChip presenceId={identity.id} />
+          {/* When the page IS a place, show every presence rooted in
+              it. The component renders nothing for non-place ids, so
+              passing the id unconditionally is safe and keeps the
+              place-vs-presence rendering unified. */}
+          {identity.id.startsWith("place:") && (
+            <RootedHere placeId={identity.id} />
+          )}
           <ResonatesWith presenceId={identity.id} />
           <KindredPresences presenceId={identity.id} />
           <CoLocated presenceId={identity.id} />
