@@ -26,15 +26,25 @@ That thread would later find neighbors in Dr. Joe Dispenza, meditation, coherenc
 
 ## 1997-2012: Backtracking Model Languages
 
-At the University of Colorado at Boulder, in the Department of Electrical, Computer, and Energy Engineering, the master's thesis carried the title Backtracking Model Languages.
+At the University of Colorado at Boulder, in the Department of Computer Science, the master's thesis carried the title Backtracking Model Languages. The document itself is dated July 5, 2000 — created May 22, last saved July 6, defended that summer. The slide deck carries an earlier 1997 marker from the working years before defense. In September 2012 the working folder resurfaced as a small constellation of artifacts: the .doc, Thesis defence.ppt, Group.jpg from the defense lawn, Urs in CU shirt.jpg, and the photographs labeled simply Water Project.
 
-The presentation is dated January 1, 1997 in the slides, while the copyright and implementation context around Backtracking Model Language align with 2000. Years later, in September 2012, the work resurfaced as shared files: Thesis defence.ppt and Water Project.zip.
+The work was not solo. The object model and the virtual machine were designed and implemented by Steve G. Bjorg on his own master's thesis at the same university the same year. Two minds building one language. Cell beside cell, before that pattern had a name.
 
-The work centered on Backtracking Model Form and Backtracking Model Language. It was not only a document about software. It was a language container: attributes, expressions, backtracking through choice and fail, classes, interfaces, templates, and a BML compiler that could implement and demonstrate the language.
+Backtracking Model Language (BML) combined features from Java, C++, Prolog, and Smalltalk: multiple inheritance through delegation, interfaces, blocks, exception handling, templates, reflection, inner classes, and backtracking. Backtracking Model Form (BMF) was the companion — a top-down backtracking parser-generator written in BML, capable of supporting infinite input streams because parse attributes were evaluated as the stream arrived, not after.
 
-From inside the life, this was formal engineering work. But in frequency terms, it had already introduced a deep pattern: reality as modeled structure, alternatives as branches, failure as part of search, and language as a way to move through possibility space without losing the frame.
+Two design choices already carried frequencies that would return.
 
-That pattern would later reappear in many disguises: game systems, autonomous agents, specs, tests, contribution graphs, and the need for a network that can trace not only what succeeded, but what was tried, where it failed, and what the failure taught.
+The first lives in a single sentence in the introduction:
+
+> "When the parser backs out, all the attributes already computed have to be undone as well."
+
+Backtracking as the foundational verb. Try a path; if it does not hold, unwind cleanly without sediment. No half-finished implementations dragged forward as residue. The same nervous system that twenty-six years later writes commits as `tend:`, `attune:`, `compost:`, `release:` — the discipline of leaving no dead tissue when a path turns out not to be the path.
+
+The second lives in the design of BMF itself: the user can introduce new parsing constructs at runtime and extend the grammar with them. Sovereignty over your own language. The grammar is not a fixed schema a speaker fits into; it is a living form a sovereign body extends as new shapes arrive. The vision-kb does the same thing now — when `lc-open-design` lands at 639 Hz, the field grows its grammar to hold the new presence rather than forcing the presence into an existing slot.
+
+The thesis Conclusion was left as three subheadings — `BMF`, `BML Language`, `BML Compiler` — with no body written in. An unfinished breath at the end of a long document. It is honest to see it without flattening: the conclusion was not the closing paragraph; it was the defense itself, the photograph on the lawn in the CU shirt, the work entering the world through demonstration rather than summary.
+
+From inside the life this was formal engineering work. In frequency terms it had already named the pattern: reality as modeled structure, alternatives as branches, failure as honored part of search, language as a way to move through possibility space without losing the frame, and grammar as something a sovereign body can extend by hand. That pattern would later reappear in many disguises: game systems, autonomous agents, specs, tests, contribution graphs, and the Coherence Network's need for a substrate that traces not only what succeeded but what was tried, where it failed, and what the failure taught.
 
 ## 2002: Xbox Live Beta and TheSeeker
 
