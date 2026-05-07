@@ -1,0 +1,96 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/field-docs-public-runtime-20260507",
+  "commit_scope": "Make published field-story docs available to the public API runtime after Hostinger deploy.",
+  "files_owned": [
+    "api/app/services/field_story_service.py",
+    "api/tests/test_field_story_runtime_docs.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "specs/field-story-public-runtime-docs.md",
+    "docs/system_audit/commit_evidence_2026-05-07_field_story_public_runtime_docs.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_field_story_runtime_docs.py tests/test_field_story_trace_index.py",
+      "api/.venv/bin/ruff check api/app/services/field_story_service.py api/tests/test_field_story_runtime_docs.py",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_field_story_public_runtime_docs.json"
+    ],
+    "notes": [
+      "Public API at ef414172 exposed the trace route but returned Unknown field story because deployed API runtime listed zero field stories.",
+      "Hostinger deploy now syncs docs/field into API container doc paths and the service resolves both repo-root and container layouts."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending GitHub PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending Hostinger deploy and public endpoint verification after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI, deploy, and public endpoint validation are still pending."
+  },
+  "idea_ids": [
+    "field-story-public-runtime-docs",
+    "profile-contribution-derived-data"
+  ],
+  "spec_ids": [
+    "field-story-public-runtime-docs"
+  ],
+  "task_ids": [
+    "field-docs-public-runtime-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "requirements"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "public API before fix: /api/field-stories returned {\"items\":[]}",
+    "public API before fix: /api/field-stories/urs-field-story/trace/month/2026-04 returned Unknown field story",
+    "pytest: 4 passed, 5 warnings",
+    "bash -n deploy/hostinger/auto-deploy.sh: pass"
+  ],
+  "change_files": [
+    "api/app/services/field_story_service.py",
+    "api/tests/test_field_story_runtime_docs.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "specs/field-story-public-runtime-docs.md",
+    "docs/system_audit/commit_evidence_2026-05-07_field_story_public_runtime_docs.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+        "status": "pending",
+    "expected_behavior_delta": "Public API runtime can read repo-published field-story docs and serve trace slices.",
+    "public_endpoints": [
+      "/api/field-stories",
+      "/api/field-stories/urs-field-story/trace/month/2026-04"
+    ],
+    "test_flows": [
+      "Field story runtime-doc fallback unit test",
+      "Hostinger deploy workflow",
+      "Public trace endpoint curl"
+    ]
+  }
+}
