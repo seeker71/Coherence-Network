@@ -21,5 +21,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MoseProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getMoseContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="mose" />;
 }

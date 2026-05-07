@@ -18,6 +18,7 @@ import Link from "next/link";
 import { Panel } from "@/components/Panel";
 import { createTranslator } from "@/lib/i18n";
 import type { LocaleCode } from "@/lib/locales";
+import { TemplateInfluenceWeb } from "./TemplateInfluenceWeb";
 
 export type PersonProfileFact = {
   label: ReactNode;
@@ -82,9 +83,15 @@ const DEFAULT_OVERLAY =
 export function PersonProfileTemplate({
   content,
   lang,
+  graphSlug,
 }: {
   content: PersonProfileContent;
   lang: LocaleCode;
+  /** Slug or graph id of the corresponding contributor node, when
+   *  this hand-built page maps to one. Plumbing this lets the page
+   *  surface the live influence web and the refine doorway alongside
+   *  the hand-curated content. Both forms are accepted by the API. */
+  graphSlug?: string;
 }) {
   const t = createTranslator(lang);
   const { hero } = content;
@@ -169,6 +176,12 @@ export function PersonProfileTemplate({
             {content.articles.map((article, i) => (
               <ArticleBlock key={i} article={article} />
             ))}
+          </section>
+        )}
+
+        {graphSlug && (
+          <section className="mt-16 pt-8 border-t border-border/40">
+            <TemplateInfluenceWeb graphSlug={graphSlug} />
           </section>
         )}
 

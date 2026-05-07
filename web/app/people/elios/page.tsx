@@ -22,5 +22,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function EliosProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getEliosContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="elios" />;
 }

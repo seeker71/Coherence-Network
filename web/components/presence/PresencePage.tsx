@@ -25,6 +25,8 @@ import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
 import { ResonatesWith } from "./ResonatesWith";
 import { KindredPresences } from "./KindredPresences";
+import { InfluenceWeb } from "./InfluenceWeb";
+import { RefineDoorway } from "./RefineDoorway";
 import { LocationChip } from "./LocationChip";
 import { CoLocated } from "./CoLocated";
 import { RootedHere } from "./RootedHere";
@@ -72,6 +74,9 @@ export type Lineage = {
 
 export type PresenceIdentity = {
   id: string;
+  /** Human-readable doorway slug from the graph node, when set.
+   *  Drives `/people/{slug}` URL forms (refine, share, canonical). */
+  slug?: string | null;
   name: string;
   category: string; // "Artist" | "Community" | "Project" | "Gathering" | ...
   tagline?: string;
@@ -648,6 +653,16 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             the platforms appear immediately after on mobile. */}
         <aside className="space-y-10 lg:space-y-8 min-w-0">
           <PresenceOverview identity={identity} inspiredCount={inspired.length} />
+          {/* Every related influence the body holds, inside and
+              outside the network, painted in the spectrum color of
+              its relationship family. The visitor reads the shape
+              of the presence by the spread of color and density
+              of chips. */}
+          <InfluenceWeb
+            presenceId={identity.id}
+            externalPresences={identity.presences}
+          />
+          <RefineDoorway identity={identity} />
           <PlatformChips
             presences={identity.presences}
             identityName={identity.name}

@@ -19,5 +19,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AubreyMarcusProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getAubreyMarcusContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="aubrey-marcus" />;
 }

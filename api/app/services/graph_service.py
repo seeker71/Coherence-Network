@@ -367,9 +367,14 @@ def get_edges(
     direction: str = "both",
     edge_type: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Get edges for a node.
+    """Get edges for a node, enriched with node stubs on both ends.
 
     direction: 'outgoing', 'incoming', or 'both'
+
+    Each edge in the response carries `from_node` and `to_node` stubs
+    (id, type, name, image_url, slug) so a UI rendering the influence
+    web around this node has everything it needs to draw a labelled,
+    spectrum-colored chip without a follow-up fetch per edge.
     """
     with session() as s:
         if direction == "outgoing":
@@ -384,7 +389,28 @@ def get_edges(
         if edge_type:
             q = q.filter(Edge.type == edge_type)
 
-        return [e.to_dict() for e in q.order_by(Edge.created_at.desc()).all()]
+        edges = q.order_by(Edge.created_at.desc()).all()
+
+        # Batch-load referenced nodes so the response is single-query
+        # in addition to the edge query (no N+1).
+        ref_ids: set[str] = set()
+        for e in edges:
+            ref_ids.add(e.from_id)
+            ref_ids.add(e.to_id)
+        nodes_map: dict[str, Node] = (
+            {n.id: n for n in s.query(Node).filter(Node.id.in_(ref_ids)).all()}
+            if ref_ids
+            else {}
+        )
+
+        out: list[dict[str, Any]] = []
+        for e in edges:
+            d = e.to_dict()
+            d["from_node"] = _node_stub(nodes_map.get(e.from_id))
+            d["to_node"] = _node_stub(nodes_map.get(e.to_id))
+            d["canonical"] = e.type in CANONICAL_EDGE_TYPES
+            out.append(d)
+        return out
 
 
 def delete_edge(edge_id: str) -> bool:
@@ -604,10 +630,22 @@ def get_subgraph(
 
 
 def _node_stub(node: Node | None) -> dict[str, Any] | None:
-    """Return a minimal node stub for edge enrichment."""
+    """Return a node stub for edge enrichment.
+
+    Carries enough surface for a relationship chip to render: identity,
+    display name, image for the avatar, and the slug so the chip's
+    href resolves to `/people/{slug}` without an extra round-trip.
+    """
     if not node:
         return None
-    return {"id": node.id, "type": node.type, "name": node.name}
+    props = node.properties or {}
+    return {
+        "id": node.id,
+        "type": node.type,
+        "name": node.name,
+        "image_url": props.get("image_url"),
+        "slug": props.get("slug"),
+    }
 
 
 def _enrich_edge(edge: Edge, s) -> dict[str, Any]:

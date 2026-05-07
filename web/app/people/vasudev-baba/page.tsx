@@ -26,5 +26,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function VasudevBabaProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getVasudevBabaContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="vasudev-baba" />;
 }

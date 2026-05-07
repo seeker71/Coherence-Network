@@ -344,6 +344,7 @@ function nodeToPresenceIdentity(
       : undefined;
   return {
     id: (node.id as string) || "",
+    slug: typeof node.slug === "string" && node.slug ? (node.slug as string) : null,
     name: (node.name as string) || "",
     category: categoryMap[nodeType] || nodeType,
     tagline,

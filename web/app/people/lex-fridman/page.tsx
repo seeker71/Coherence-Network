@@ -27,5 +27,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function LexFridmanProfilePage() {
   const lang = await resolveRequestLocale();
   const content = getLexFridmanContent(lang);
-  return <PersonProfileTemplate content={content} lang={lang} />;
+  return <PersonProfileTemplate content={content} lang={lang} graphSlug="lex-fridman" />;
 }
