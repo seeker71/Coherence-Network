@@ -55,6 +55,19 @@ async def get_field_story_spectrum(slug: str) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get(
+    "/field-stories/{slug}/trace/{selector}/{value:path}",
+    summary="Get a compact month, author, or work influence trace",
+)
+async def get_field_story_trace_slice(slug: str, selector: str, value: str) -> dict:
+    try:
+        return field_story_service.get_field_story_trace_slice(slug, selector, value)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
 @router.post(
     "/field-stories/{slug}/contributions",
     status_code=201,

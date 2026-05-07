@@ -50,6 +50,18 @@ def contribute_field_story_handler(arguments: dict[str, Any]) -> Any:
     )
 
 
+def get_field_story_trace_handler(arguments: dict[str, Any]) -> Any:
+    from app.services import field_story_service
+
+    return _json_safe(
+        field_story_service.get_field_story_trace_slice(
+            str(arguments.get("slug", "urs-field-story")),
+            str(arguments["selector"]),
+            str(arguments["value"]),
+        )
+    )
+
+
 FIELD_STORY_TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_field_story",
@@ -89,5 +101,19 @@ FIELD_STORY_TOOLS: list[dict[str, Any]] = [
             "required": ["contributor_id", "artifact_id", "summary"],
         },
         "handler": contribute_field_story_handler,
+    },
+    {
+        "name": "get_field_story_trace",
+        "description": "Read one compact influence trace slice for a field story by month, author, or work.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "default": "urs-field-story"},
+                "selector": {"type": "string", "enum": ["month", "author", "work"]},
+                "value": {"type": "string"},
+            },
+            "required": ["selector", "value"],
+        },
+        "handler": get_field_story_trace_handler,
     },
 ]
