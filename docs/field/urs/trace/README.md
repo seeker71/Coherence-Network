@@ -10,6 +10,8 @@ Compact derived indexes for answering influence questions without loading raw li
 - `work_index.jsonl` - one work per line with ID, author link, peak months, and compact monthly wave.
 - `significant_work_index.jsonl` - one significant formative work/series per line with impact basis, linked vision concepts, children titles, and chapter-discovery probes.
 - `concept_work_map.json` - concept-first lookup from `lc-*` vision concepts to significant works and probe terms.
+- `audible_history_spectrum.json` - Audible-specific source-body trace with duration-weighted monthly influence.
+- `audible_duration_metadata.json` - compact Audible catalog runtime metadata used to weight Audible influence by listening duration or book length.
 - `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow

@@ -1,0 +1,2358 @@
+{
+  "generated_at": "2026-05-07T17:14:35.082117+00:00",
+  "products": {
+    "0062960172": {
+      "asin": "0062960172",
+      "authors": [
+        "Tara Swart MD PhD"
+      ],
+      "runtime_length_min": 402,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0525527974": {
+      "asin": "0525527974",
+      "authors": [
+        "Daniel Suarez"
+      ],
+      "runtime_length_min": 1002,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0593148975": {
+      "asin": "0593148975",
+      "authors": [
+        "Tara Brach"
+      ],
+      "runtime_length_min": 500,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0593153529": {
+      "asin": "0593153529",
+      "authors": [
+        "Gary Marcus",
+        "Ernest Davis"
+      ],
+      "runtime_length_min": 444,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0593294181": {
+      "asin": "0593294181",
+      "authors": [
+        "Matthew McConaughey"
+      ],
+      "runtime_length_min": 411,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0593339584": {
+      "asin": "0593339584",
+      "authors": [
+        "Robert Thurman"
+      ],
+      "runtime_length_min": 629,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "0593413148": {
+      "asin": "0593413148",
+      "authors": [
+        "Niall Ferguson"
+      ],
+      "runtime_length_min": 995,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "103940006X": {
+      "asin": "103940006X",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1577,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1039404367": {
+      "asin": "1039404367",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1573,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "125024188X": {
+      "asin": "125024188X",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 753,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "125075514X": {
+      "asin": "125075514X",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 834,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1469079917": {
+      "asin": "1469079917",
+      "authors": [
+        "Mitch Horowitz"
+      ],
+      "runtime_length_min": 375,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589036": {
+      "asin": "1494589036",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 511,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589044": {
+      "asin": "1494589044",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 544,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589052": {
+      "asin": "1494589052",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 499,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589060": {
+      "asin": "1494589060",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 673,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589079": {
+      "asin": "1494589079",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 551,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1494589087": {
+      "asin": "1494589087",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 870,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1508299536": {
+      "asin": "1508299536",
+      "authors": [
+        "Peter H. Diamandis",
+        "Steven Kotler"
+      ],
+      "runtime_length_min": 593,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1515982793": {
+      "asin": "1515982793",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 952,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1515982807": {
+      "asin": "1515982807",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1047,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1543639267": {
+      "asin": "1543639267",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1214,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "154363933X": {
+      "asin": "154363933X",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1194,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1662083998": {
+      "asin": "1662083998",
+      "authors": [
+        "Michael Talbot"
+      ],
+      "runtime_length_min": 780,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1705295169": {
+      "asin": "1705295169",
+      "authors": [
+        "Bill Plotkin PhD"
+      ],
+      "runtime_length_min": 569,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1713586681": {
+      "asin": "1713586681",
+      "authors": [
+        "Julian Barbour"
+      ],
+      "runtime_length_min": 825,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1772307505": {
+      "asin": "1772307505",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 983,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1772308641": {
+      "asin": "1772308641",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 2156,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1772309117": {
+      "asin": "1772309117",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 649,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1772309419": {
+      "asin": "1772309419",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1456,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1772309427": {
+      "asin": "1772309427",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 649,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774240041": {
+      "asin": "1774240041",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 593,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774240289": {
+      "asin": "1774240289",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 609,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774240602": {
+      "asin": "1774240602",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 319,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774241501": {
+      "asin": "1774241501",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 2357,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774242257": {
+      "asin": "1774242257",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 786,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774243032": {
+      "asin": "1774243032",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 958,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774243326": {
+      "asin": "1774243326",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1727,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774244934": {
+      "asin": "1774244934",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 912,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774244993": {
+      "asin": "1774244993",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1467,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774245361": {
+      "asin": "1774245361",
+      "authors": [
+        "Mark Wayne McGinnis"
+      ],
+      "runtime_length_min": 595,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "177424800X": {
+      "asin": "177424800X",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1041,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1774248638": {
+      "asin": "1774248638",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 640,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1977366228": {
+      "asin": "1977366228",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 897,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "1988649110": {
+      "asin": "1988649110",
+      "authors": [
+        "Eckhart Tolle",
+        "Kim Eng"
+      ],
+      "runtime_length_min": 189,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UUKWCY": {
+      "asin": "B002UUKWCY",
+      "authors": [
+        "Neal Stephenson"
+      ],
+      "runtime_length_min": 1023,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZKIBO": {
+      "asin": "B002UZKIBO",
+      "authors": [
+        "George R. R. Martin"
+      ],
+      "runtime_length_min": 2232,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZMLXM": {
+      "asin": "B002UZMLXM",
+      "authors": [
+        "Patrick Rothfuss"
+      ],
+      "runtime_length_min": 1675,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZMQAU": {
+      "asin": "B002UZMQAU",
+      "authors": [
+        "Thich Nhat Hanh"
+      ],
+      "runtime_length_min": 149,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZYUNQ": {
+      "asin": "B002UZYUNQ",
+      "authors": [
+        "Barack Obama"
+      ],
+      "runtime_length_min": 370,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZYX2Y": {
+      "asin": "B002UZYX2Y",
+      "authors": [
+        "Ken Follett"
+      ],
+      "runtime_length_min": 2456,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002UZZ93G": {
+      "asin": "B002UZZ93G",
+      "authors": [
+        "George R. R. Martin"
+      ],
+      "runtime_length_min": 2026,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V01ATC": {
+      "asin": "B002V01ATC",
+      "authors": [
+        "Thich Nhat Hanh"
+      ],
+      "runtime_length_min": 407,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0LY84": {
+      "asin": "B002V0LY84",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1339,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0PN36": {
+      "asin": "B002V0PN36",
+      "authors": [
+        "Eckhart Tolle"
+      ],
+      "runtime_length_min": 457,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0PN5O": {
+      "asin": "B002V0PN5O",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1800,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0PW2I": {
+      "asin": "B002V0PW2I",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1355,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0QK4C": {
+      "asin": "B002V0QK4C",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 2046,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0QWQI": {
+      "asin": "B002V0QWQI",
+      "authors": [
+        "don Miguel Ruiz"
+      ],
+      "runtime_length_min": 153,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0QZL0": {
+      "asin": "B002V0QZL0",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2458,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V0RAUU": {
+      "asin": "B002V0RAUU",
+      "authors": [
+        "Eckhart Tolle"
+      ],
+      "runtime_length_min": 552,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V1BQCM": {
+      "asin": "B002V1BQCM",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1573,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V1LTME": {
+      "asin": "B002V1LTME",
+      "authors": [
+        "Ken Follett"
+      ],
+      "runtime_length_min": 2733,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V1NSN2": {
+      "asin": "B002V1NSN2",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1395,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V1O3AY": {
+      "asin": "B002V1O3AY",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1456,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V59SZ0": {
+      "asin": "B002V59SZ0",
+      "authors": [
+        "Aldous Huxley"
+      ],
+      "runtime_length_min": 136,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V59VPW": {
+      "asin": "B002V59VPW",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1510,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V5A12Y": {
+      "asin": "B002V5A12Y",
+      "authors": [
+        "Orson Scott Card"
+      ],
+      "runtime_length_min": 717,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V5B9SO": {
+      "asin": "B002V5B9SO",
+      "authors": [
+        "Daniel Suarez"
+      ],
+      "runtime_length_min": 955,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V5BDXK": {
+      "asin": "B002V5BDXK",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2241,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V5GVGO": {
+      "asin": "B002V5GVGO",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1371,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V5GWHM": {
+      "asin": "B002V5GWHM",
+      "authors": [
+        "Larry Niven",
+        "Jerry Pournelle"
+      ],
+      "runtime_length_min": 1228,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V8DH5Y": {
+      "asin": "B002V8DH5Y",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 2314,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V8LKTE": {
+      "asin": "B002V8LKTE",
+      "authors": [
+        "Jeff Hawkins",
+        "Sandra Blakeslee"
+      ],
+      "runtime_length_min": 562,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V8OFAA": {
+      "asin": "B002V8OFAA",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1350,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V9ZAXK": {
+      "asin": "B002V9ZAXK",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1342,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002V9ZFX0": {
+      "asin": "B002V9ZFX0",
+      "authors": [
+        "Philip K. Dick"
+      ],
+      "runtime_length_min": 552,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B002VA9J2M": {
+      "asin": "B002VA9J2M",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1732,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00309SYV0": {
+      "asin": "B00309SYV0",
+      "authors": [
+        "Daniel Suarez"
+      ],
+      "runtime_length_min": 707,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0030H777E": {
+      "asin": "B0030H777E",
+      "authors": [
+        "Howard Zinn"
+      ],
+      "runtime_length_min": 2050,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0036NK9D6": {
+      "asin": "B0036NK9D6",
+      "authors": [
+        "Neal Stephenson"
+      ],
+      "runtime_length_min": 2564,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0036NQ9Z8": {
+      "asin": "B0036NQ9Z8",
+      "authors": [
+        "George R. R. Martin"
+      ],
+      "runtime_length_min": 2854,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B004287I7O": {
+      "asin": "B004287I7O",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1485,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B004L17CAA": {
+      "asin": "B004L17CAA",
+      "authors": [
+        "Alexander Loyd PhD ND"
+      ],
+      "runtime_length_min": 546,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B004QISZN6": {
+      "asin": "B004QISZN6",
+      "authors": [
+        "Patrick Rothfuss"
+      ],
+      "runtime_length_min": 2575,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00551W570": {
+      "asin": "B00551W570",
+      "authors": [
+        "Adam Mansbach",
+        "Ricardo Cortes - illustrator"
+      ],
+      "runtime_length_min": 6,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0057POQJE": {
+      "asin": "B0057POQJE",
+      "authors": [
+        "George R. R. Martin"
+      ],
+      "runtime_length_min": 2935,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B005G457M6": {
+      "asin": "B005G457M6",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 900,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B005GFQ5WQ": {
+      "asin": "B005GFQ5WQ",
+      "authors": [
+        "Alexandre Dumas"
+      ],
+      "runtime_length_min": 3161,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B005VH39B4": {
+      "asin": "B005VH39B4",
+      "authors": [
+        "Larry Niven"
+      ],
+      "runtime_length_min": 790,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B006C4GVHE": {
+      "asin": "B006C4GVHE",
+      "authors": [
+        "Larry Niven"
+      ],
+      "runtime_length_min": 828,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B006FZ935W": {
+      "asin": "B006FZ935W",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 892,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B006IVKY56": {
+      "asin": "B006IVKY56",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 712,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B006LPIVL8": {
+      "asin": "B006LPIVL8",
+      "authors": [
+        "George R. R. Martin"
+      ],
+      "runtime_length_min": 2031,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B006WP75QE": {
+      "asin": "B006WP75QE",
+      "authors": [
+        "Tara Brach"
+      ],
+      "runtime_length_min": 735,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B007NLZ9SM": {
+      "asin": "B007NLZ9SM",
+      "authors": [
+        "Carl Sagan"
+      ],
+      "runtime_length_min": 885,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B008HQTIRU": {
+      "asin": "B008HQTIRU",
+      "authors": [
+        "Daniel Suarez"
+      ],
+      "runtime_length_min": 786,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0099RKI5W": {
+      "asin": "B0099RKI5W",
+      "authors": [
+        "J. R. R. Tolkien"
+      ],
+      "runtime_length_min": 665,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B009GJVJC4": {
+      "asin": "B009GJVJC4",
+      "authors": [
+        "Brandon Sanderson"
+      ],
+      "runtime_length_min": 126,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B009GLCXPO": {
+      "asin": "B009GLCXPO",
+      "authors": [
+        "Mark Russinovich"
+      ],
+      "runtime_length_min": 579,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00A0XYUTE": {
+      "asin": "B00A0XYUTE",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1192,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00ATTA71O": {
+      "asin": "B00ATTA71O",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2194,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00CBXCSZY": {
+      "asin": "B00CBXCSZY",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 435,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00CLWTGPA": {
+      "asin": "B00CLWTGPA",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 345,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00CLWVEZA": {
+      "asin": "B00CLWVEZA",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 399,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00DC3XD60": {
+      "asin": "B00DC3XD60",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 546,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00DL6V7WA": {
+      "asin": "B00DL6V7WA",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 654,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00DVN8U82": {
+      "asin": "B00DVN8U82",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 761,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00E4SJ1JK": {
+      "asin": "B00E4SJ1JK",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1027,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00H3N54HG": {
+      "asin": "B00H3N54HG",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 619,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00HAKECQ6": {
+      "asin": "B00HAKECQ6",
+      "authors": [
+        "Brian Staveley"
+      ],
+      "runtime_length_min": 1162,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00HCMUG3K": {
+      "asin": "B00HCMUG3K",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 540,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00HDLQXI2": {
+      "asin": "B00HDLQXI2",
+      "authors": [
+        "Lynne McTaggart"
+      ],
+      "runtime_length_min": 612,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00HR8SVCM": {
+      "asin": "B00HR8SVCM",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 547,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00I5N3J70": {
+      "asin": "B00I5N3J70",
+      "authors": [
+        "Scott Sigler"
+      ],
+      "runtime_length_min": 1195,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00I9JZB3U": {
+      "asin": "B00I9JZB3U",
+      "authors": [
+        "Daniel Suarez"
+      ],
+      "runtime_length_min": 826,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00JDTMXGI": {
+      "asin": "B00JDTMXGI",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 640,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00K7PP15W": {
+      "asin": "B00K7PP15W",
+      "authors": [
+        "James S. A. Corey"
+      ],
+      "runtime_length_min": 1207,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00L1GU3WC": {
+      "asin": "B00L1GU3WC",
+      "authors": [
+        "George R. R. Martin",
+        "Gardner Dozois",
+        "Gillian Flynn",
+        "Neil Gaiman"
+      ],
+      "runtime_length_min": 1875,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00LB8VMTI": {
+      "asin": "B00LB8VMTI",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 720,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00LWDBWH4": {
+      "asin": "B00LWDBWH4",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1090,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00OGRKWTW": {
+      "asin": "B00OGRKWTW",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1348,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00P9JHMDK": {
+      "asin": "B00P9JHMDK",
+      "authors": [
+        "Adam Mansbach"
+      ],
+      "runtime_length_min": 3,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00S07PIHA": {
+      "asin": "B00S07PIHA",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 646,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00TJJNSQG": {
+      "asin": "B00TJJNSQG",
+      "authors": [
+        "Marshall Rosenberg PhD"
+      ],
+      "runtime_length_min": 309,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00WNBF0RM": {
+      "asin": "B00WNBF0RM",
+      "authors": [
+        "Neal Stephenson"
+      ],
+      "runtime_length_min": 1915,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00Y1O1FYG": {
+      "asin": "B00Y1O1FYG",
+      "authors": [
+        "James S. A. Corey"
+      ],
+      "runtime_length_min": 1086,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B00ZGUGLJ8": {
+      "asin": "B00ZGUGLJ8",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 789,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B014LL69TO": {
+      "asin": "B014LL69TO",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1359,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B014LL6R5U": {
+      "asin": "B014LL6R5U",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1335,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B014LL6Y4O": {
+      "asin": "B014LL6Y4O",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1624,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B014LLCKPG": {
+      "asin": "B014LLCKPG",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 945,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B016N7P4OU": {
+      "asin": "B016N7P4OU",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1589,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B017Y427UA": {
+      "asin": "B017Y427UA",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 620,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01A60YYKK": {
+      "asin": "B01A60YYKK",
+      "authors": [
+        "Joe Abercrombie"
+      ],
+      "runtime_length_min": 1385,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01CO38QBA": {
+      "asin": "B01CO38QBA",
+      "authors": [
+        "Plato"
+      ],
+      "runtime_length_min": 706,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01CYVJUBC": {
+      "asin": "B01CYVJUBC",
+      "authors": [
+        "Tim Lebbon",
+        "Dirk Maggs"
+      ],
+      "runtime_length_min": 268,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01D274C5Q": {
+      "asin": "B01D274C5Q",
+      "authors": [
+        "L. Ron Hubbard"
+      ],
+      "runtime_length_min": 2753,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01D53NPLO": {
+      "asin": "B01D53NPLO",
+      "authors": [
+        "James S. A. Corey"
+      ],
+      "runtime_length_min": 1198,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01DAU1F00": {
+      "asin": "B01DAU1F00",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2466,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01DKTOOJ0": {
+      "asin": "B01DKTOOJ0",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 730,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01ETJK9BC": {
+      "asin": "B01ETJK9BC",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1008,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01FR5OEZ4": {
+      "asin": "B01FR5OEZ4",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2422,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01H478VR0": {
+      "asin": "B01H478VR0",
+      "authors": [
+        "Robin Wall Kimmerer"
+      ],
+      "runtime_length_min": 1004,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01I5SFG3Y": {
+      "asin": "B01I5SFG3Y",
+      "authors": [
+        "Melissa McPhail"
+      ],
+      "runtime_length_min": 1926,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01IRUA5VI": {
+      "asin": "B01IRUA5VI",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 2917,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01K8JA1GU": {
+      "asin": "B01K8JA1GU",
+      "authors": [
+        "Steven Johnson"
+      ],
+      "runtime_length_min": 523,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01KIOP1QA": {
+      "asin": "B01KIOP1QA",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 994,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01KKPH1VA": {
+      "asin": "B01KKPH1VA",
+      "authors": [
+        "John Scalzi"
+      ],
+      "runtime_length_min": 138,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01LXHIHIB": {
+      "asin": "B01LXHIHIB",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1590,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01LY6GN0F": {
+      "asin": "B01LY6GN0F",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 1161,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01MSMZKM5": {
+      "asin": "B01MSMZKM5",
+      "authors": [
+        "Steven Kotler",
+        "Jamie Wheal"
+      ],
+      "runtime_length_min": 504,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01N264EEK": {
+      "asin": "B01N264EEK",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1102,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01N4DCBK6": {
+      "asin": "B01N4DCBK6",
+      "authors": [
+        "Yuval Noah Harari"
+      ],
+      "runtime_length_min": 894,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01N4H06MY": {
+      "asin": "B01N4H06MY",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1154,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01N4NYAWT": {
+      "asin": "B01N4NYAWT",
+      "authors": [
+        "Ken Follett"
+      ],
+      "runtime_length_min": 1819,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B01NA0TG25": {
+      "asin": "B01NA0TG25",
+      "authors": [
+        "Lisa Feldman Barrett"
+      ],
+      "runtime_length_min": 872,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B06XYRP92W": {
+      "asin": "B06XYRP92W",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 506,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B06ZY7KGQM": {
+      "asin": "B06ZY7KGQM",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1643,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B072LVMNZ3": {
+      "asin": "B072LVMNZ3",
+      "authors": [
+        "Scott Sigler"
+      ],
+      "runtime_length_min": 1216,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B072YT93QD": {
+      "asin": "B072YT93QD",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1318,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0731R4RFX": {
+      "asin": "B0731R4RFX",
+      "authors": [
+        "Gary John Bishop"
+      ],
+      "runtime_length_min": 204,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B073VW3VPH": {
+      "asin": "B073VW3VPH",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1899,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B073VYC1WW": {
+      "asin": "B073VYC1WW",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 496,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B073XS1C8T": {
+      "asin": "B073XS1C8T",
+      "authors": [
+        "Barry Michels",
+        "Phil Stutz"
+      ],
+      "runtime_length_min": 524,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0741G911Q": {
+      "asin": "B0741G911Q",
+      "authors": [
+        "Yuval Noah Harari"
+      ],
+      "runtime_length_min": 918,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B074B29GQJ": {
+      "asin": "B074B29GQJ",
+      "authors": [
+        "Ray Dalio"
+      ],
+      "runtime_length_min": 965,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B074TW1K9K": {
+      "asin": "B074TW1K9K",
+      "authors": [
+        "Kaia Ra"
+      ],
+      "runtime_length_min": 953,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B074WH171J": {
+      "asin": "B074WH171J",
+      "authors": [
+        "Peter Clines"
+      ],
+      "runtime_length_min": 751,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B074XM52YQ": {
+      "asin": "B074XM52YQ",
+      "authors": [
+        "James S. A. Corey"
+      ],
+      "runtime_length_min": 1234,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0756RX6X3": {
+      "asin": "B0756RX6X3",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 653,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B075Y4SWJ8": {
+      "asin": "B075Y4SWJ8",
+      "authors": [
+        "Susan Trott",
+        "Libby Spurrier - adaptor"
+      ],
+      "runtime_length_min": 345,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B076VW7L7C": {
+      "asin": "B076VW7L7C",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1154,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B076XNN4KF": {
+      "asin": "B076XNN4KF",
+      "authors": [
+        "Jan Smith"
+      ],
+      "runtime_length_min": 271,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B077J898CV": {
+      "asin": "B077J898CV",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 658,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B077MVXZ29": {
+      "asin": "B077MVXZ29",
+      "authors": [
+        "Terry Goodkind"
+      ],
+      "runtime_length_min": 1162,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B077NGB78R": {
+      "asin": "B077NGB78R",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 975,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0797N62N4": {
+      "asin": "B0797N62N4",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 595,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B079LRSMNN": {
+      "asin": "B079LRSMNN",
+      "authors": [
+        "Jason Anspach",
+        "Nick Cole"
+      ],
+      "runtime_length_min": 1042,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B079LW5JL7": {
+      "asin": "B079LW5JL7",
+      "authors": [
+        "James Hunter"
+      ],
+      "runtime_length_min": 655,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B079NKJV2W": {
+      "asin": "B079NKJV2W",
+      "authors": [
+        "Ken Lozito"
+      ],
+      "runtime_length_min": 534,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07B1J873J": {
+      "asin": "B07B1J873J",
+      "authors": [
+        "Michael Pollan"
+      ],
+      "runtime_length_min": 815,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07BN33KPK": {
+      "asin": "B07BN33KPK",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1289,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07D2JKSBN": {
+      "asin": "B07D2JKSBN",
+      "authors": [
+        "James Hunter"
+      ],
+      "runtime_length_min": 684,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07DHS7PP5": {
+      "asin": "B07DHS7PP5",
+      "authors": [
+        "Yuval Noah Harari"
+      ],
+      "runtime_length_min": 710,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07DVNY52Y": {
+      "asin": "B07DVNY52Y",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1142,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07DX6Q4JH": {
+      "asin": "B07DX6Q4JH",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 976,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07FMBQ8KF": {
+      "asin": "B07FMBQ8KF",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 659,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07GPPTNZ1": {
+      "asin": "B07GPPTNZ1",
+      "authors": [
+        "Holly Newson"
+      ],
+      "runtime_length_min": 11,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07GX2GD4N": {
+      "asin": "B07GX2GD4N",
+      "authors": [
+        "Florence Williams"
+      ],
+      "runtime_length_min": 180,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07H4XVBBW": {
+      "asin": "B07H4XVBBW",
+      "authors": [
+        "Adam Grant"
+      ],
+      "runtime_length_min": 183,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07HB4VGPB": {
+      "asin": "B07HB4VGPB",
+      "authors": [
+        "Neale Donald Walsch"
+      ],
+      "runtime_length_min": 1593,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07HRWZH18": {
+      "asin": "B07HRWZH18",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 611,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07L6P2KW7": {
+      "asin": "B07L6P2KW7",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1467,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07M79GGYT": {
+      "asin": "B07M79GGYT",
+      "authors": [
+        "Jeff Hirsch"
+      ],
+      "runtime_length_min": 363,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07MDDG8PZ": {
+      "asin": "B07MDDG8PZ",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1486,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07QD14HY2": {
+      "asin": "B07QD14HY2",
+      "authors": [
+        "James Hunter"
+      ],
+      "runtime_length_min": 848,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07QY3KR81": {
+      "asin": "B07QY3KR81",
+      "authors": [
+        "William Gibson"
+      ],
+      "runtime_length_min": 136,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07Y44KPNN": {
+      "asin": "B07Y44KPNN",
+      "authors": [
+        "Will Wight"
+      ],
+      "runtime_length_min": 659,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07YYMVPJV": {
+      "asin": "B07YYMVPJV",
+      "authors": [
+        "Ana Gasteyer",
+        "Mona Mansour"
+      ],
+      "runtime_length_min": 148,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B07ZWP5WF6": {
+      "asin": "B07ZWP5WF6",
+      "authors": [
+        "Lauren Gunderson"
+      ],
+      "runtime_length_min": 79,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B086R7QDV3": {
+      "asin": "B086R7QDV3",
+      "authors": [
+        "Henry David Thoreau"
+      ],
+      "runtime_length_min": 1339,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0874D4YL1": {
+      "asin": "B0874D4YL1",
+      "authors": [
+        "Dr. Joe Dispenza"
+      ],
+      "runtime_length_min": 726,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B088G28PWT": {
+      "asin": "B088G28PWT",
+      "authors": [
+        "The Big Quiet",
+        "Audible Sleep"
+      ],
+      "runtime_length_min": 18,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B088GM3KKN": {
+      "asin": "B088GM3KKN",
+      "authors": [
+        "W. W. Rouse Ball",
+        "Audible Sleep"
+      ],
+      "runtime_length_min": 30,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B088GT6BWV": {
+      "asin": "B088GT6BWV",
+      "authors": [
+        "Gordon Hempton",
+        "Audible Sleep"
+      ],
+      "runtime_length_min": 120,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0899JMKJP": {
+      "asin": "B0899JMKJP",
+      "authors": [
+        "James Hunter"
+      ],
+      "runtime_length_min": 947,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B08RHHVC28": {
+      "asin": "B08RHHVC28",
+      "authors": [
+        "Neale Donald Walsch"
+      ],
+      "runtime_length_min": 267,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0913JCTBW": {
+      "asin": "B0913JCTBW",
+      "authors": [
+        "J.D. Astra",
+        "James Hunter"
+      ],
+      "runtime_length_min": 601,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09DZ541QL": {
+      "asin": "B09DZ541QL",
+      "authors": [
+        "Terry Mancour",
+        "Emily Burch Harris"
+      ],
+      "runtime_length_min": 685,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09L59M8KZ": {
+      "asin": "B09L59M8KZ",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1248,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09L5G3PB3": {
+      "asin": "B09L5G3PB3",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 921,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09NMQ1QKM": {
+      "asin": "B09NMQ1QKM",
+      "authors": [
+        "Dan Millman"
+      ],
+      "runtime_length_min": 456,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09VY8D463": {
+      "asin": "B09VY8D463",
+      "authors": [
+        "James Hunter"
+      ],
+      "runtime_length_min": 970,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09WC2Z92G": {
+      "asin": "B09WC2Z92G",
+      "authors": [
+        "Holly Duckworth"
+      ],
+      "runtime_length_min": 311,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B09XN6XSNH": {
+      "asin": "B09XN6XSNH",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 630,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0B3L2T9W5": {
+      "asin": "B0B3L2T9W5",
+      "authors": [
+        "Rick Rubin"
+      ],
+      "runtime_length_min": 345,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0B3NH83JZ": {
+      "asin": "B0B3NH83JZ",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 480,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0B4BBNLGB": {
+      "asin": "B0B4BBNLGB",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 1023,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0B7CPF425": {
+      "asin": "B0B7CPF425",
+      "error": "Command '['curl', '-fsSL', '--max-time', '10', '-H', 'Accept: application/json', '-H', 'User-Agent: Audible/671 CFNetwork/1408 Darwin/22.5.0', 'https://api.audible.com/1.0/catalog/products/B0B7CPF425?response_groups=product_attrs,contributors']' returned non-zero exit status 56.",
+      "source": "audible-catalog-api"
+    },
+    "B0B8LP8CPD": {
+      "asin": "B0B8LP8CPD",
+      "authors": [
+        "Terry Mancour",
+        "Emily Burch Harris"
+      ],
+      "runtime_length_min": 1000,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0B8PH32PN": {
+      "asin": "B0B8PH32PN",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 401,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BC299XT2": {
+      "asin": "B0BC299XT2",
+      "authors": [
+        "Andrew Rowe",
+        "Kayleigh Nicol"
+      ],
+      "runtime_length_min": 1085,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BDP46JN1": {
+      "asin": "B0BDP46JN1",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1305,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BGQD2ZN6": {
+      "asin": "B0BGQD2ZN6",
+      "authors": [
+        "Pema Chödrön"
+      ],
+      "runtime_length_min": 367,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BHJDMHFQ": {
+      "asin": "B0BHJDMHFQ",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 455,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BHJF9622": {
+      "asin": "B0BHJF9622",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1243,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BR5X523V": {
+      "asin": "B0BR5X523V",
+      "authors": [
+        "Pema Chodron"
+      ],
+      "runtime_length_min": 318,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BSMM8M6P": {
+      "asin": "B0BSMM8M6P",
+      "authors": [
+        "Ken Follett"
+      ],
+      "runtime_length_min": 1299,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0BX7DLW2D": {
+      "asin": "B0BX7DLW2D",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 520,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0C2JM6NVX": {
+      "asin": "B0C2JM6NVX",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 546,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0C2QS538W": {
+      "asin": "B0C2QS538W",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 797,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0C3MWCQR8": {
+      "asin": "B0C3MWCQR8",
+      "authors": [
+        "J.N. Chaney",
+        "Scott Moon"
+      ],
+      "runtime_length_min": 690,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0C6RCB8K2": {
+      "asin": "B0C6RCB8K2",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1210,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CBD6NF1Z": {
+      "asin": "B0CBD6NF1Z",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 493,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CBNH5C2S": {
+      "asin": "B0CBNH5C2S",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1391,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CDYDD4TM": {
+      "asin": "B0CDYDD4TM",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 397,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CKJBPTLQ": {
+      "asin": "B0CKJBPTLQ",
+      "authors": [
+        "Sean Oswald"
+      ],
+      "runtime_length_min": 740,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CNDF32SZ": {
+      "asin": "B0CNDF32SZ",
+      "authors": [
+        "Terry Mancour",
+        "Emily Burch Harris"
+      ],
+      "runtime_length_min": 1213,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CSQ1SY86": {
+      "asin": "B0CSQ1SY86",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 502,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0CTKSG1VB": {
+      "asin": "B0CTKSG1VB",
+      "authors": [
+        "Peter F. Hamilton"
+      ],
+      "runtime_length_min": 1858,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0D2DRHSDJ": {
+      "asin": "B0D2DRHSDJ",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 469,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0D2DSCTTG": {
+      "asin": "B0D2DSCTTG",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 462,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0D481T9YJ": {
+      "asin": "B0D481T9YJ",
+      "authors": [
+        "Sara Landon"
+      ],
+      "runtime_length_min": 436,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0D6WKDBTY": {
+      "asin": "B0D6WKDBTY",
+      "authors": [
+        "Mike Dooley",
+        "Darryl Anka",
+        "Matt Kahn",
+        "Sara Landon",
+        "Salvatore Rachele",
+        "Lyssa Royal Holt",
+        "Daniel Scranton"
+      ],
+      "runtime_length_min": 420,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0D7F9P7Z6": {
+      "asin": "B0D7F9P7Z6",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1821,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DGQVB5B9": {
+      "asin": "B0DGQVB5B9",
+      "authors": [
+        "Kel Kade"
+      ],
+      "runtime_length_min": 798,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DJV5P43J": {
+      "asin": "B0DJV5P43J",
+      "authors": [
+        "J.N. Chaney",
+        "Terry Maggert",
+        "Glenn Seguin"
+      ],
+      "runtime_length_min": 797,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DP3L9KLS": {
+      "asin": "B0DP3L9KLS",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 432,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DWBR1B1G": {
+      "asin": "B0DWBR1B1G",
+      "authors": [
+        "Sarah Breskman Cosme"
+      ],
+      "runtime_length_min": 577,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DY8BLCPX": {
+      "asin": "B0DY8BLCPX",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 406,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DYG995W1": {
+      "asin": "B0DYG995W1",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 457,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DYWXVL24": {
+      "asin": "B0DYWXVL24",
+      "authors": [
+        "Lee Harris",
+        "Regina Meredith"
+      ],
+      "runtime_length_min": 430,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0DZZB6TXS": {
+      "asin": "B0DZZB6TXS",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 450,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0F514WLWD": {
+      "asin": "B0F514WLWD",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1089,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0FCGJKSS9": {
+      "asin": "B0FCGJKSS9",
+      "authors": [
+        "Andrew Rowe"
+      ],
+      "runtime_length_min": 1089,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0FMGXBVY7": {
+      "asin": "B0FMGXBVY7",
+      "authors": [
+        "Ryk Brown"
+      ],
+      "runtime_length_min": 442,
+      "source": "audible-catalog-api",
+      "title": ""
+    },
+    "B0GC832YN8": {
+      "asin": "B0GC832YN8",
+      "authors": [
+        "Terry Mancour"
+      ],
+      "runtime_length_min": 1301,
+      "source": "audible-catalog-api",
+      "title": ""
+    }
+  },
+  "schema_version": "audible-duration-metadata/v1",
+  "source": "https://api.audible.com/1.0/catalog/products/{asin}?response_groups=product_attrs,contributors"
+}

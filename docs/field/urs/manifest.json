@@ -59,6 +59,7 @@
     {"artifact_id": "trace-significant-work-index", "path": "trace/significant_work_index.jsonl", "kind": "index", "content_type": "application/x-ndjson"},
     {"artifact_id": "trace-concept-work-map", "path": "trace/concept_work_map.json", "kind": "index", "content_type": "application/json"},
     {"artifact_id": "trace-audible-history-spectrum", "path": "trace/audible_history_spectrum.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "trace-audible-duration-metadata", "path": "trace/audible_duration_metadata.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-influence-breath-cycle", "path": "trace/influence_breath_cycle.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-digital-influence-inventory", "path": "trace/digital_influence_inventory.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-encounter-next-breath", "path": "trace/encounter_next_breath.json", "kind": "summary", "content_type": "application/json"},

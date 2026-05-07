@@ -1,6 +1,6 @@
 # Coherence Field Listening Analysis
 
-Private local workspace for analyzing what entered Urs's field through Audible, YouTube, and YouTube Music.
+Local workspace for analyzing what entered Urs's field through Audible, YouTube, and YouTube Music.
 
 ## Current State
 - Libation is installed at `/Applications/Libation.app`.
@@ -13,6 +13,8 @@ Private local workspace for analyzing what entered Urs's field through Audible, 
 - `trace/audible_history_spectrum.json` carries an effective Audible listening trace:
   - direct visible listen-history rows where Audible exposes them.
   - purchase-date approximation for purchased works that do not have a direct visible listen row.
+  - duration-weighted monthly influence using Audible catalog runtime length, with event counts kept as secondary context.
+- `trace/audible_duration_metadata.json` carries compact Audible catalog runtime metadata used by the duration-weighted trace.
 - No local Google Takeout / YouTube history export was found under `Downloads`, `Documents`, or `Desktop`.
 
 ## Input Slots
@@ -47,7 +49,7 @@ python3 /Users/ursmuff/CoherenceFieldAnalysis/field_listening_analyzer.py \
   --root /Users/ursmuff/CoherenceFieldAnalysis
 ```
 
-If Audible/Google account auth is blocked, collect local browser traces first:
+If Audible/Google account auth creates friction, collect local browser traces first:
 
 ```bash
 python3 /Users/ursmuff/CoherenceFieldAnalysis/local_browser_history_collector.py

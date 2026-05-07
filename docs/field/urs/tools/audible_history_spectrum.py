@@ -6,6 +6,8 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
+import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
@@ -18,6 +20,7 @@ from audible_series_analyzer import infer_series, split_library_title
 ANALYSIS_ROOT = Path("/Users/ursmuff/CoherenceFieldAnalysis")
 AXES = ("pressure", "intensity", "inspiration", "insight", "vitality")
 WAVE_SCHEMA = ["month", "events", *AXES]
+DURATION_WAVE_SCHEMA = ["month", "events", "influence_hours", *AXES]
 
 FREQUENCY_RULES = {
     "fictional-systems": [
@@ -98,6 +101,10 @@ class AudibleEvent:
     insight: int
     vitality: int
     event_kind: str
+    duration_minutes: int | None = None
+    remaining_minutes: int | None = None
+    influence_minutes: int | None = None
+    influence_basis: str = "event-count"
 
 
 def clean(value: Any) -> str:
@@ -113,6 +120,33 @@ def audible_date(value: Any) -> str | None:
     if len(year) == 2:
         year = f"20{year}"
     return f"{year}-{month}-{day}"
+
+
+def parse_duration_minutes(value: Any) -> int | None:
+    text = clean(value).casefold()
+    if not text:
+        return None
+    total = 0
+    matched = False
+    for amount, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b", text):
+        matched = True
+        number = float(amount)
+        if unit.startswith(("h", "hr", "hour")):
+            total += int(round(number * 60))
+        else:
+            total += int(round(number))
+    if matched:
+        return total
+    if str(value).isdigit():
+        return int(value)
+    return None
+
+
+def parse_remaining_minutes(status: str | None) -> int | None:
+    text = clean(status).casefold()
+    if "left" not in text:
+        return None
+    return parse_duration_minutes(text)
 
 
 def month_of(date: str | None) -> str | None:
@@ -149,10 +183,23 @@ def row_title_author(row: dict[str, Any]) -> tuple[str, str]:
     return split_library_title(title, author)
 
 
-def make_event(row: dict[str, Any], *, source: str, date_field: str | None, event_kind: str) -> AudibleEvent | None:
+def metadata_key(author: str, title: str, asin: str | None) -> str:
+    return asin or event_id(author, title, asin)
+
+
+def make_event(
+    row: dict[str, Any],
+    *,
+    source: str,
+    date_field: str | None,
+    event_kind: str,
+    duration_metadata: dict[str, dict[str, Any]] | None = None,
+) -> AudibleEvent | None:
     title, author = row_title_author(row)
     if not title:
         return None
+    asin = clean(row.get("asin") or row.get("ASIN")) or None
+    metadata = (duration_metadata or {}).get(metadata_key(author, title, asin), {})
     date = audible_date(row.get(date_field)) if date_field else None
     native_series = clean(row.get("series") or row.get("Series")) or None
     series, inference = infer_series(title, author, native_series)
@@ -162,17 +209,35 @@ def make_event(row: dict[str, Any], *, source: str, date_field: str | None, even
     insight = score(text, AXIS_RULES["insight"])
     vitality = score(text, AXIS_RULES["vitality"])
     intensity = min(10, 1 + pressure // 2 + insight // 3 + vitality // 4)
+    duration_minutes = (
+        parse_duration_minutes(row.get("duration") or row.get("runtime_length_min"))
+        or parse_duration_minutes(metadata.get("runtime_length_min"))
+    )
+    status = clean(row.get("status")) or None
+    remaining_minutes = parse_remaining_minutes(status)
+    influence_minutes = None
+    influence_basis = "event-count"
+    if event_kind == "visible-listen" and duration_minutes:
+        if status and "finished" in status.casefold():
+            influence_minutes = duration_minutes
+            influence_basis = "direct-finished-duration"
+        elif remaining_minutes is not None:
+            influence_minutes = max(1, duration_minutes - remaining_minutes)
+            influence_basis = "direct-duration-minus-remaining"
+    elif event_kind == "purchase":
+        influence_minutes = duration_minutes
+        influence_basis = "purchase-book-length"
     return AudibleEvent(
         source=source,
         date=date,
         month=month_of(date),
         author=author or "unknown",
         title=title,
-        asin=clean(row.get("asin") or row.get("ASIN")) or None,
+        asin=asin,
         url=clean(row.get("product_url") or row.get("url")) or None,
         series=series,
         inference=inference,
-        status=clean(row.get("status")) or None,
+        status=status,
         frequency=classify(text),
         pressure=pressure,
         intensity=intensity,
@@ -180,6 +245,10 @@ def make_event(row: dict[str, Any], *, source: str, date_field: str | None, even
         insight=insight,
         vitality=vitality,
         event_kind=event_kind,
+        duration_minutes=duration_minutes,
+        remaining_minutes=remaining_minutes,
+        influence_minutes=influence_minutes,
+        influence_basis=influence_basis,
     )
 
 
@@ -192,7 +261,79 @@ def read_json(path: Path) -> list[dict[str, Any]]:
     return data.get("Books") or data.get("books") or []
 
 
-def load_events(analysis_root: Path) -> list[AudibleEvent]:
+def read_duration_metadata(path: Path) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, dict) and isinstance(data.get("products"), dict):
+        return {str(key): value for key, value in data["products"].items() if isinstance(value, dict)}
+    return {}
+
+
+def fetch_product_duration(asin: str) -> dict[str, Any] | None:
+    url = f"https://api.audible.com/1.0/catalog/products/{asin}?response_groups=product_attrs,contributors"
+    completed = subprocess.run(
+        [
+            "curl",
+            "-fsSL",
+            "--max-time",
+            "10",
+            "-H",
+            "Accept: application/json",
+            "-H",
+            "User-Agent: Audible/671 CFNetwork/1408 Darwin/22.5.0",
+            url,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(completed.stdout)
+    product = payload.get("product") or {}
+    runtime = product.get("runtime_length_min")
+    if not runtime:
+        return None
+    authors = [
+        clean(row.get("name"))
+        for row in product.get("authors", [])
+        if isinstance(row, dict) and clean(row.get("name"))
+    ]
+    return {
+        "asin": asin,
+        "title": clean(product.get("title")),
+        "authors": authors,
+        "runtime_length_min": int(runtime),
+        "source": "audible-catalog-api",
+    }
+
+
+def refresh_duration_metadata(events: list[AudibleEvent], path: Path, *, sleep_seconds: float = 0.05) -> dict[str, dict[str, Any]]:
+    products = read_duration_metadata(path)
+    asins = sorted({event.asin for event in events if event.asin and event.asin not in products})
+    for index, asin in enumerate(asins, start=1):
+        print(f"duration_metadata_fetch={index}/{len(asins)} asin={asin}", flush=True)
+        try:
+            product = fetch_product_duration(asin)
+            if product:
+                products[asin] = product
+        except Exception as exc:  # noqa: BLE001 - keep harvesting around individual catalog misses.
+            products[asin] = {"asin": asin, "source": "audible-catalog-api", "error": str(exc)}
+        if sleep_seconds:
+            time.sleep(sleep_seconds)
+        if index % 25 == 0:
+            print(f"duration_metadata_refreshed={index}/{len(asins)}")
+    payload = {
+        "schema_version": "audible-duration-metadata/v1",
+        "generated_at": datetime.now(UTC).isoformat(),
+        "source": "https://api.audible.com/1.0/catalog/products/{asin}?response_groups=product_attrs,contributors",
+        "products": products,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    return products
+
+
+def load_events(analysis_root: Path, duration_metadata: dict[str, dict[str, Any]] | None = None) -> list[AudibleEvent]:
     base = analysis_root / "input" / "audible" / "playwright"
     sources = [
         ("audible-purchase-history", base / "audible-purchase-history-2016-2026.json", "purchased_date", "purchase"),
@@ -202,7 +343,13 @@ def load_events(analysis_root: Path) -> list[AudibleEvent]:
     events: list[AudibleEvent] = []
     for source, path, date_field, event_kind in sources:
         for row in read_json(path):
-            event = make_event(row, source=source, date_field=date_field, event_kind=event_kind)
+            event = make_event(
+                row,
+                source=source,
+                date_field=date_field,
+                event_kind=event_kind,
+                duration_metadata=duration_metadata,
+            )
             if event:
                 events.append(event)
     return events
@@ -218,6 +365,25 @@ def top(counter: Counter[Any], limit: int = 20) -> list[dict[str, Any]]:
     return out
 
 
+def top_weighted(rows: list[AudibleEvent], attr: str, limit: int = 20) -> list[dict[str, Any]]:
+    weights: dict[Any, int] = defaultdict(int)
+    counts: Counter[Any] = Counter()
+    for row in rows:
+        value = getattr(row, attr)
+        if attr == "title":
+            value = (row.title, row.author)
+        weights[value] += row.influence_minutes or 0
+        counts[value] += 1
+    out = []
+    for value, minutes in sorted(weights.items(), key=lambda item: (-item[1], str(item[0])))[:limit]:
+        hours = round(minutes / 60, 2)
+        if isinstance(value, tuple):
+            out.append({"value": value[0], "by": value[1], "hours": hours, "events": counts[value]})
+        else:
+            out.append({"value": value, "hours": hours, "events": counts[value]})
+    return out
+
+
 def wave(rows: list[AudibleEvent]) -> list[list[Any]]:
     by_month: dict[str, list[AudibleEvent]] = defaultdict(list)
     for row in rows:
@@ -227,6 +393,29 @@ def wave(rows: list[AudibleEvent]) -> list[list[Any]]:
     for month in sorted(by_month):
         month_rows = by_month[month]
         out.append([month, len(month_rows), *[sum(getattr(row, axis) for row in month_rows) for axis in AXES]])
+    return out
+
+
+def weighted_wave(rows: list[AudibleEvent]) -> list[list[Any]]:
+    by_month: dict[str, list[AudibleEvent]] = defaultdict(list)
+    for row in rows:
+        if row.month:
+            by_month[row.month].append(row)
+    out = []
+    for month in sorted(by_month):
+        month_rows = by_month[month]
+        minutes = sum(row.influence_minutes or 0 for row in month_rows)
+        out.append(
+            [
+                month,
+                len(month_rows),
+                round(minutes / 60, 2),
+                *[
+                    round(sum((row.influence_minutes or 0) * getattr(row, axis) for row in month_rows) / 60, 2)
+                    for axis in AXES
+                ],
+            ]
+        )
     return out
 
 
@@ -241,6 +430,8 @@ def record_waves(events: list[AudibleEvent], attr: str, limit: int = 80) -> list
                 "value": value,
                 "events": len(rows),
                 "dated_events": sum(1 for row in rows if row.month),
+                "influence_hours": round(sum(row.influence_minutes or 0 for row in rows) / 60, 2),
+                "duration_known_events": sum(1 for row in rows if row.influence_minutes is not None),
                 "sources": dict(Counter(row.source for row in rows).most_common()),
                 "event_kinds": dict(Counter(row.event_kind for row in rows).most_common()),
                 "series": top(Counter(row.series for row in rows), 8),
@@ -248,6 +439,8 @@ def record_waves(events: list[AudibleEvent], attr: str, limit: int = 80) -> list
                 "peak_months": top(Counter(row.month for row in rows if row.month), 8),
                 "wave_schema": WAVE_SCHEMA,
                 "wave": wave(rows),
+                "duration_wave_schema": DURATION_WAVE_SCHEMA,
+                "duration_wave": weighted_wave(rows),
             }
         )
     return records
@@ -263,6 +456,7 @@ def effective_listening_events(events: list[AudibleEvent]) -> list[AudibleEvent]
             event,
             event_kind="purchase-as-listen-approx",
             status="purchase date used as approximate Audible field-entry/listening date",
+            influence_basis="purchase-book-length",
         )
         for event in purchases
         if event_id(event.author, event.title, event.asin) not in listen_keys
@@ -279,19 +473,28 @@ def monthly_summary(rows: list[AudibleEvent]) -> dict[str, dict[str, Any]]:
     for month, month_rows in sorted(months.items()):
         monthly[month] = {
             "events": len(month_rows),
+            "influence_hours": round(sum(row.influence_minutes or 0 for row in month_rows) / 60, 2),
+            "duration_known_events": sum(1 for row in month_rows if row.influence_minutes is not None),
             "sources": dict(Counter(row.source for row in month_rows).most_common()),
             "event_kinds": dict(Counter(row.event_kind for row in month_rows).most_common()),
             "top_authors": top(Counter(row.author for row in month_rows), 10),
             "top_titles": top(Counter((row.title, row.author) for row in month_rows), 10),
             "top_series": top(Counter(row.series for row in month_rows), 10),
+            "top_authors_by_hours": top_weighted(month_rows, "author", 10),
+            "top_titles_by_hours": top_weighted(month_rows, "title", 10),
+            "top_series_by_hours": top_weighted(month_rows, "series", 10),
             "frequency": top(Counter(label for row in month_rows for label in row.frequency), 10),
             "axes": {axis: sum(getattr(row, axis) for row in month_rows) for axis in AXES},
+            "axes_by_hours": {
+                axis: round(sum((row.influence_minutes or 0) * getattr(row, axis) for row in month_rows) / 60, 2)
+                for axis in AXES
+            },
         }
     return monthly
 
 
-def build(analysis_root: Path) -> dict[str, Any]:
-    events = load_events(analysis_root)
+def build(analysis_root: Path, duration_metadata: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    events = load_events(analysis_root, duration_metadata)
     dated = [event for event in events if event.month]
     library = [event for event in events if event.source == "audible-library"]
     purchases = [event for event in events if event.source == "audible-purchase-history"]
@@ -305,7 +508,7 @@ def build(analysis_root: Path) -> dict[str, Any]:
     monthly = monthly_summary(dated)
     effective_monthly = monthly_summary(effective)
     return {
-        "schema_version": "audible-history-spectrum/v1",
+        "schema_version": "audible-history-spectrum/v2",
         "generated_at": datetime.now(UTC).isoformat(),
         "source_roots": {
             "analysis_root": str(analysis_root),
@@ -318,6 +521,8 @@ def build(analysis_root: Path) -> dict[str, Any]:
             "effective_listening_rows": len(effective),
             "direct_visible_listen_rows": len(listens),
             "purchase_approx_listen_rows": len(approx),
+            "effective_listening_duration_known_rows": sum(1 for row in effective if row.influence_minutes is not None),
+            "effective_listening_hours": round(sum(row.influence_minutes or 0 for row in effective) / 60, 2),
             "unique_titles_or_asins": len(unique_keys),
             "library_matched_to_purchase_rows": len(library_keys & purchased_keys),
             "visible_listens_matched_to_purchase_rows": len(listen_keys & purchased_keys),
@@ -328,7 +533,7 @@ def build(analysis_root: Path) -> dict[str, Any]:
             "effective_listening_last": max((row.date for row in effective if row.date), default=None),
             "purchase_history_first": min((row.date for row in purchases if row.date), default=None),
             "purchase_history_last": max((row.date for row in purchases if row.date), default=None),
-            "publication_note": "Audible web capture gives complete captured library and 2016-2026 purchase rows plus the currently visible web listen-history rows. The effective listening trace uses direct visible listen rows where present and uses purchase date as an approximate field-entry/listening date for purchased works not present in visible listen history.",
+            "publication_note": "Audible web capture gives complete captured library and 2016-2026 purchase rows plus the currently visible web listen-history rows. The effective listening trace uses direct visible listen rows where present and uses purchase date as an approximate field-entry/listening date for purchased works not present in visible listen history. Main monthly influence is duration-weighted using Audible catalog runtime length; direct listens use finished duration or duration minus remaining time, and purchase approximations use full book length.",
         },
         "source_counts": dict(Counter(event.source for event in events).most_common()),
         "event_kind_counts": dict(Counter(event.event_kind for event in events).most_common()),
@@ -365,6 +570,8 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- Visible web listen history: `{capture['visible_listen_history_rows']}` rows, `{capture['visible_listen_history_first']}` to `{capture['visible_listen_history_last']}`",
         f"- Effective listening trace: `{capture['effective_listening_rows']}` rows, `{capture['effective_listening_first']}` to `{capture['effective_listening_last']}`",
         f"- Purchase rows used as approximate listens: `{capture['purchase_approx_listen_rows']}`",
+        f"- Duration-known effective listening rows: `{capture['effective_listening_duration_known_rows']}`",
+        f"- Duration-weighted effective listening total: `{capture['effective_listening_hours']}` hours",
         f"- Unique titles/ASINs across Audible captures: `{capture['unique_titles_or_asins']}`",
         f"- Library rows matched to purchase rows: `{capture['library_matched_to_purchase_rows']}`",
         f"- Visible listen rows matched to purchase rows: `{capture['visible_listens_matched_to_purchase_rows']}`",
@@ -385,16 +592,17 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines.extend(["", "## Top Series / Rooms", ""])
     for row in payload["top_series"][:20]:
         lines.append(f"- {row['value']}: {row['count']}")
-    lines.extend(["", "## Strongest Approximate Listening Months", ""])
-    for month, row in sorted(payload["effective_listening_monthly"].items(), key=lambda item: (-item[1]["events"], item[0]))[:24]:
-        authors = ", ".join(item["value"] for item in row["top_authors"][:4])
-        series = ", ".join(item["value"] for item in row["top_series"][:4])
-        lines.append(f"- `{month}`: {row['events']} events; authors: {authors}; rooms: {series}")
+    lines.extend(["", "## Strongest Duration-Weighted Listening Months", ""])
+    for month, row in sorted(payload["effective_listening_monthly"].items(), key=lambda item: (-item[1]["influence_hours"], item[0]))[:24]:
+        authors = ", ".join(f"{item['value']} ({item['hours']}h)" for item in row["top_authors_by_hours"][:4])
+        series = ", ".join(f"{item['value']} ({item['hours']}h)" for item in row["top_series_by_hours"][:4])
+        lines.append(f"- `{month}`: {row['influence_hours']} hours across {row['events']} rows; authors: {authors}; rooms: {series}")
     lines.extend(["", "## Query Shapes", ""])
     lines.append("- Primary Audible listening influence during a month: load `trace/audible_history_spectrum.json` then read `effective_listening_monthly[YYYY-MM]`.")
-    lines.append("- Author listening wave: search `effective_listening_author_waves[]` by `value` and read its `wave`.")
-    lines.append("- Series listening wave: search `effective_listening_series_waves[]` by `value` and read its `wave`.")
-    lines.append("- Work listening wave: search `effective_listening_title_waves[]` by title and read source counts plus month wave.")
+    lines.append("- Use `top_authors_by_hours`, `top_series_by_hours`, and `top_titles_by_hours` for main influence; `events` remains secondary.")
+    lines.append("- Author listening wave: search `effective_listening_author_waves[]` by `value` and read its `duration_wave`.")
+    lines.append("- Series listening wave: search `effective_listening_series_waves[]` by `value` and read its `duration_wave`.")
+    lines.append("- Work listening wave: search `effective_listening_title_waves[]` by title and read source counts plus duration wave.")
     lines.append("- Raw source-body audit: use `events`, `monthly`, `author_waves`, `series_waves`, and `title_waves`.")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -409,13 +617,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build Audible history spectrum artifacts.")
     parser.add_argument("--field-dir", type=Path, default=Path("docs/field/urs"))
     parser.add_argument("--analysis-root", type=Path, default=ANALYSIS_ROOT)
+    parser.add_argument("--refresh-duration-metadata", action="store_true")
     args = parser.parse_args()
-    payload = build(args.analysis_root)
+    duration_metadata_path = args.field_dir / "trace" / "audible_duration_metadata.json"
+    duration_metadata = read_duration_metadata(duration_metadata_path)
+    if args.refresh_duration_metadata:
+        seed_events = load_events(args.analysis_root)
+        duration_metadata = refresh_duration_metadata(seed_events, duration_metadata_path)
+    payload = build(args.analysis_root, duration_metadata)
     write_json(args.field_dir / "trace" / "audible_history_spectrum.json", payload)
     write_markdown(args.field_dir / "output" / "audible_history_spectrum.md", payload)
     print(f"audible_events={len(payload['events'])}")
     print(f"effective_listening_events={len(payload['effective_listening_events'])}")
     print(f"purchase_approx_listen_rows={payload['capture_shape']['purchase_approx_listen_rows']}")
+    print(f"effective_listening_hours={payload['capture_shape']['effective_listening_hours']}")
     print(f"unique_titles_or_asins={payload['capture_shape']['unique_titles_or_asins']}")
     print(args.field_dir / "output" / "audible_history_spectrum.md")
     return 0
