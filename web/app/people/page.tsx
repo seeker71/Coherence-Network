@@ -70,6 +70,9 @@ function filterScannable(
     if (filterRules.ignoredIdIncludes.some((needle) => n.id.includes(needle))) {
       return false;
     }
+    if (filterRules.ignoredIdExact?.includes(n.id)) {
+      return false;
+    }
     const ct = (n.contributor_type || "").toUpperCase();
     if ((filterRules.excludedContributorTypes as readonly string[]).includes(ct)) {
       return false;

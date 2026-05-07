@@ -95,6 +95,7 @@ export type PresenceContent = {
     };
     filterRules: {
       ignoredIdIncludes: string[];
+      ignoredIdExact?: string[];
       excludedContributorTypes: string[];
       initialFallback: string;
     };

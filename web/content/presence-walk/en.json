@@ -151,7 +151,31 @@
       "ignoredIdIncludes": [
         ":wanderer-",
         ":presence-visitor",
-        ":test-"
+        ":test-",
+        ":smoke-",
+        "-smoke-",
+        "-bot",
+        ":external-proof",
+        "decomposition-verify",
+        ":friend-",
+        "-placeholder",
+        ":juicy-placeholder",
+        ":tay-blevins-placeholder",
+        ":claude-opus-mac-node",
+        ":coherence-runner",
+        ":e-m-t-",
+        ":email-",
+        ":qa-",
+        ":ci-"
+      ],
+      "ignoredIdExact": [
+        "contributor:claude",
+        "contributor:codex",
+        "contributor:codex-agent",
+        "contributor:cursor-agent",
+        "contributor:grok",
+        "contributor:gemini",
+        "person:codex-smoke-human"
       ],
       "excludedContributorTypes": [
         "SYSTEM"
