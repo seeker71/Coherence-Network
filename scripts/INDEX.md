@@ -27,6 +27,7 @@
 | [check_runtime_drift.py](check_runtime_drift.py) | !/usr/bin/env python3 |
 | [check_spec_references.py](check_spec_references.py) | !/usr/bin/env python3 |
 | [check_traceability.py](check_traceability.py) | !/usr/bin/env python3 |
+| [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
 | [context_budget.py](context_budget.py) | !/usr/bin/env python3 |
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
@@ -48,7 +49,6 @@
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
 | [import_lineage.py](import_lineage.py) | !/usr/bin/env python3 |
-| [ingest_youtube_watch_history.py](ingest_youtube_watch_history.py) | !/usr/bin/env python3 |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [local_runner.py](local_runner.py) | !/usr/bin/env python3 |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | !/usr/bin/env python3 |
