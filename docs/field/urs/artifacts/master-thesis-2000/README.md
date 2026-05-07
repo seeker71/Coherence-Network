@@ -10,6 +10,9 @@ Primary-source artifact in this body. Found and surfaced by Urs on 2026-05-07; b
 | [`backtracking-model-languages.txt`](backtracking-model-languages.txt) | Plain-text conversion via `textutil`. For grep, agent reads, and any future cell that wants to trace a phrase without opening Word. |
 | [`thesis-defence.ppt`](thesis-defence.ppt) | The defense slide deck. |
 | [`photos/`](photos/) | The defense-moment photographs that travel with the thesis: `group.jpg` (the defense-lawn group photo), `urs-in-cu-shirt.jpg`, and four DSC-camera frames preserved as-is. |
+| [`companion/`](companion/) | Bjorg-side texts (his thesis, Angelic Assembler, BML Search Algorithms, BML Objects) and five frequency-bearing source samples. Surfaced 2026-05-07 from the *Angelic* archive on disk. |
+| [`INDEX.md`](INDEX.md) | Agent-fast map of every file in this folder + token estimates + drill paths. |
+| [`EXTERNAL.md`](EXTERNAL.md) | Pointer to `~/Downloads/Angelic/` (139 MB on disk; full source trees, binaries, alternate ports) and academic ancestry URLs (WAM, PAM, Smalltalk-80, Jasmin). |
 
 The whole cluster lived together in a folder labeled *Water Project* on Urs's machine. The folder name is from a different project that shared the directory; the contents are the thesis archive.
 
@@ -26,6 +29,47 @@ The system is three layers, and each acronym carries both a public and a private
 The self-hosting loop: BMC consumes the BML grammar through BMF and produces the BML compiler. The BML compiler emits assembly opcodes. The virtual machine — designed and implemented by **Steve G. Bjorg** on his own MS thesis the same year — executes them. Three layers; the parser can parse the grammar that defined it; the compiler-compiler can generate the compiler that compiles the language whose grammar it was generated from.
 
 Co-built with **Steve G. Bjorg**: object model and virtual machine on his side, the language and the parser/compiler-compiler stack on Urs's side. The "BM" in every name is literally Bjorg-Muff.
+
+## What the wider archive added (2026-05-07 deepening)
+
+The first pass of this README named three layers — BMF, BMC, BML. The fuller *Angelic* archive on disk — surfaced the same day — names five technologies and one fourth surface the published thesis only mentioned in passing. Naming them here so the body is not understating what was built:
+
+| Acronym | What it is | Where it surfaces |
+|---|---|---|
+| **BMF** | Parser (already named) | `companion/source-samples/BMF-grammar.bml` |
+| **BMC** | Compiler-compiler (already named) | The thesis text |
+| **BML** | Language (already named) | The thesis text + every `.bml` file |
+| **BMA** | The **abstract machine** itself — the instruction set and operational semantics | `companion/angelic-assembler.txt`, `companion/sgb-bml-objects.txt` |
+| **BMO** | The **object model** — shared inheritance, tagging, detached interfaces, delegation | Bjorg's full thesis at `companion/sgb-bml-objects.txt` |
+
+Plus a fourth surface, between language and human:
+
+- **The Visual Browser** — a VB6 Smalltalk-style live class browser (`Visual/` in the archive). Class panes, method panes, a source pane, a memory inspector. BML wasn't only "compile and run" — it had an image-based developer experience layered over the assembly. The published thesis lists it as one line under *Tools*; the archive carries the actual `.cls` and `.frm` files.
+
+### Naming the soul more precisely
+
+The folder on disk is called **Angelic**. The opening of `companion/angelic-assembler.txt` makes it explicit:
+
+> "A thread with a non-zero DF (i.e. degree of freedom) is executed until a zero DF is reached again. No other threads are executed during this speculation phase."
+
+That is the precise older word for what this body has been calling *backtracking-as-unwinding-without-sediment*: **angelic nondeterminism**. The choice operator picks the branch that succeeds; speculation freezes the rest of the world; if the branch fails, every attribute is undone. The semantics is angelic in the operational sense — guided to the path that holds.
+
+At the language level, the keyword was `choose` (see `companion/bml-search-algorithms.txt`). At the VM level, every instruction has a forward and a reverse semantics — `BMCPU/main.cpp` shows `BMVM_STATE.byMode` toggling between `DO` and `UNDO` on every step. **Backtracking is not a parser feature; it is the architecture of execution itself.**
+
+### The four-language stratification
+
+The thesis text says BML "synthesizes features from Java, C++, Prolog, and Smalltalk." The archive shows the synthesis is *layered*, each language contributing at a different level of the stack:
+
+- **Prolog** → the operational semantics (unification, backtracking, `Cut` / `Fail` / `MultiMatch` primitives — see `companion/source-samples/primitive-Cut.bml`).
+- **Smalltalk** → the object/image model (BMO with metaclass-style self-containment — see `companion/sgb-bml-objects.txt`) and the live developer experience (the VB6 Visual Browser).
+- **Java** → the typed, garbage-collected object model and the second implementation port (`Java/JBMF.exe` in the archive).
+- **C++** → the host VM (`BMCPU/`) and the COM/GUID component model.
+
+Four ancestors at four altitudes of the same building.
+
+### The conclusion-pattern
+
+The published thesis Conclusion is left as three subheadings without body. The earlier UCM draft (`UCM Documents/UCM Thesis (2).docx` in the archive) shows several sections marked `WHAT IS IT ABOUT?` and `RELATED SUBJECTS` as placeholders that never closed in writing. The work was *delivered* — the lawn photo, the defense, the VM running — but the prose summary stayed open. That pattern is older than this artifact and continues to show up in how this body ships: the artifact lives, the prose-summary breathes.
 
 ## Why it lives in this body
 

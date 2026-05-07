@@ -1,0 +1,456 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Name: BMF.bml
+// Author: Urs C. Muff
+// Email: muff@colorado.edu
+// Date: 11-Apr-2000
+// Platform: BML Virtual Machine
+// Compiler: JBMF (R) Compiler
+//
+//////////////////////////////////////////////////////////////////////
+
+package BMF;
+
+import BMF.primitive.*;
+
+class BMF [public] : Application {
+
+   //--- Constants ---
+   const String DefaultBMFSyntax = "BMF.library.BMF";
+
+   //--- Class Fields ---
+   section [class, public] {
+      String m_strDefaultConfigFile = "BMF.cfg";  // FIX
+      String m_strConfigFile = m_strDefaultConfigFile;
+   }
+
+   //--- Class Fields ---
+   section [class, public] {
+      bool m_bDebug = true;
+   }
+
+   //--- Main Method ---
+   section [public] {
+      void Main( String[] hArgs ) {
+         HandleArgs( hArgs );
+      }
+   }
+   
+   //--- Class Methods ---
+   section [class, public] {
+      String AsString( String strValue ) {
+         StringBuffer str = StringBuffer();
+         for( int i = 0; i < strValue.Length; ++i ) {
+            char c = strValue[i];
+            if( c == '\\' ) {
+               switch( strValue[i+1] ) {
+               case '\\', '\'', '"': str.Append( strValue[i+1] ); ++i; break;
+               case 'n': str.Append( '\n' ); ++i; break;
+               case 't': str.Append( '\t' ); ++i; break;
+               case 'r': ++i; break;
+               default: str.Append( c );
+               }
+            } else str.Append( c );
+         }
+         return str.AsString();
+      }
+   
+      String AsBMLString( String strValue ) {
+         if ( strValue == null ) return "";
+         StringBuffer str = StringBuffer();
+         for( int i = 0; i < strValue.Length; ++i ) {
+            char c = strValue[i];
+            select( c ) {
+            case '\\': str.Append( "\\\\" );
+            case '"':  str.Append( "\\\"" );
+            case '\n': str.Append( "\\n" );
+            case '\r': str.Append( "\\r" );
+            case '\t': str.Append( "\\t" );
+            case '\0': str.Append( "\\0" );
+            default:   str.Append( c );
+            }
+         }
+         return str.AsString();
+      }
+   }
+   
+   //--- Class Methods ---
+   section [class, private] {
+      void PrintBanner() {
+         System.Console.Err.PrintLn( "Digi4Fun (R) BMF 1.0 Alpha 1" );
+         System.Console.Err.PrintLn( "Copyight (C) Digi4Fun Corp. 1992-2000. All rights reserved." );
+         System.Console.Err.PrintLn( "Written by Steve G. Bjorg (bjorg@colorado.edu)" );
+         System.Console.Err.PrintLn( "    and by Urs C. Muff (muff@colorado.edu)." );
+         System.Console.Err.PrintLn( "" );
+      }
+
+      void PrintCommandLineHelp() {
+         System.Console.Out.PrintLn( "BMF [ options ] file1 [ file2 file3 ... ]" );
+         System.Console.Out.PrintLn( "" );
+         System.Console.Out.PrintLn( "Options:" );
+         System.Console.Out.PrintLn( "   -?        prints command line help" );
+         System.Console.Out.PrintLn( "   -b        suppress start-up banner" );
+         System.Console.Out.PrintLn( "   -wp path  set working directory to path" );
+         System.Console.Out.PrintLn( "   -c hFile   use this hFile as configuration hFile" );
+         System.Console.Out.PrintLn( "   -p        print syntax (in BMF format)" );
+         System.Console.Out.PrintLn( "   -s hFile   add this syntax class" );
+         System.Console.Out.PrintLn( "   -v1       verbose parsing output" );
+         System.Console.Out.PrintLn( "   -v2       verbose parsing output and stack output" );
+         System.Console.Out.PrintLn( "Comand line options are not case sensitive." );
+      }
+
+      String GetFileExtension( String strFileName ) {
+         int iDot = strFileName.LastIndexOf( '.' );
+         if(( iDot < 0 ) || ( iDot == strFileName.Length - 1 )) return "";
+         return strFileName.SubString( iDot + 1 ).ToUpperCase();
+      }
+   }
+   
+   //--- Fields ---   
+   section [public] {
+      HashTable<String,Syntax> m_hSyntaxes = HashTable<String,Syntax>();
+      Primitive[] m_hPrimitives = Array<Primitive>();
+      // TODO: Properties m_hConfig = Properties();
+      int m_iVerbose = 0;
+   }
+   
+   //--- Fields ---
+   section [private] {
+      ParseStack m_hResult;
+      Stack<ParseStack> m_hResultStack [name=InternResultStack] = Stack<ParseStack>();
+      String[] m_hArgs;
+      int m_iStateSize = 0;
+   }
+   
+   //--- Constructors ---
+   BMF() [public] {}
+
+   //--- Methods ---
+   section [public] {
+      String[] Arguments() [get] { return m_hArgs; }
+
+      //--- Result Stack ---
+      void StartResultStack() {
+         m_hResultStack.Push( m_hResult );
+         m_hResult = ParseStack();
+      }
+      void EndResultStack( String strTag ) {
+         ParseStack hStack = m_hResult;
+         m_hResult = m_hResultStack.Pop();
+         m_hResult.Push( hStack, strTag );
+      }
+   
+      void PushResult( Object hResult, String strTag ) { m_hResult.Push( hResult, strTag ); }
+      Object PopResult() { return m_hResult.Pop(); }
+      Object PeekResult() { return m_hResult.Peek(); }
+      ParseStack ResultStack() [get] { return m_hResult; }
+
+      //--- Syntax ---
+      int Add( Primitive p ) {
+         int iID = m_hPrimitives.Count;
+         m_hPrimitives.Append( p );
+         return iID;
+      }
+
+      Syntax LoadSyntax( String strName ) {
+         try {
+
+            // load syntax class
+            if ( !strName.EndsWith( "$Def" )) strName += "$Def";
+            InstanceDefinition cls = (InstanceDefinition)System.Global( strName );
+
+            // create syntax instance
+            Syntax s = (Syntax)cls.Create();
+
+            // print syntax strName
+            System.Console.Err.PrintLn( "Loading syntax '" + s.Name + "'." );
+
+            // initialize syntax
+            s.Build( self );
+
+            // add syntax to syntax dictionary
+            m_hSyntaxes.Put( s.FileExtension.ToUpperCase(), s );
+            return s;
+         } catch( Exception e ) {
+
+            // not a syntax object
+            System.Console.Err.PrintLn( "ERROR: class '" + strName + "' is not a syntax." );
+         }
+         return null;
+      }
+   
+      bool Compile( String strFileName ) {
+         ParseStream hStream;
+         try {
+
+            // open input hFile
+            hStream = ParseStream( strFileName );
+         } catch( BML.io.IOException e ) {
+
+            // input hFile not found
+            System.Console.Err.PrintLn( "ERROR: hFile '" + strFileName + "' not found." );
+
+            return false;
+         } catch( Exception e ) {
+
+            // generic error
+            System.Console.Err.PrintLn( "ERROR: unable to open or process hFile '" + strFileName + "'." );
+
+            return false;
+         }
+
+         // get syntax for input hFile
+         Syntax hSyntax = m_hSyntaxes.Get( GetFileExtension( strFileName ));
+
+         // no syntax found for input hFile
+         if( hSyntax == null ) {
+            System.Console.Err.PrintLn( "ERROR: no syntax available for hFile '" + strFileName + "'." );
+
+            // skip to next input hFile
+            return false;
+         }
+
+         // process input hFile
+         bool bResult = hSyntax.Invoke( self, hStream, 0 );
+
+         // print result
+         if( bResult ) {
+            int lines = hStream.Line;
+            if( lines == 1 ) {
+               System.Console.Err.PrintLn( "Processed '" + strFileName + "' (" + lines.AsString() + " line) successfully." );
+            } else {
+               System.Console.Err.PrintLn( "Processed '" + strFileName + "' (" + lines.AsString() + " lines) successfully." );
+            }
+         } else {
+            System.Console.Err.PrintLn( "FAILED to process '" + strFileName + "'." );
+            return false;
+         }
+         return true;
+      }
+   }
+   
+   //--- Methods ---
+   section [private] {
+      void HandleArgs( String[] hArgs ) {
+         m_hArgs = hArgs;
+         String[] syntaxNames = Array<String>();
+         String[] badArgs = Array<String>();
+         String[] hFiles = Array<String>();
+         bool bShowBanner = true;
+         bool bShowHelp = false;
+         bool bPrintSyntax = false;
+
+         // parse command line options
+         for( int i = 0; i < m_hArgs.Count; ++i ) {
+            if( m_hArgs[i].EqualsIgnoreCase( "-?" )) {
+
+               // show command line help
+               bShowHelp = true;
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-b" )) {
+
+               // suppress start-up banner
+               bShowBanner = false;
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-c" )) {
+
+               // set configuration hFile source
+               if( i == ( m_hArgs.Count - 1 )) {
+                  if( bShowBanner ) PrintBanner();
+                  System.Console.Err.PrintLn( "ERROR: missing configuration hFile path." );
+                  return;
+               }
+               ConfigFile = m_hArgs[++i];
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-s" )) {
+
+               // add syntax
+               if( i == ( m_hArgs.Count - 1 )) {
+                  if( bShowBanner ) PrintBanner();
+                  System.Console.Err.PrintLn( "ERROR: missing syntax class name." );
+                  return;
+               }
+               syntaxNames.Append( m_hArgs[++i] );
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-wp" )) {
+
+               // set working directory
+               if( i == ( m_hArgs.Count - 1 )) {
+                  if( bShowBanner ) PrintBanner();
+                  System.Console.Err.PrintLn( "ERROR: missing syntax path." );
+                  return;
+               }
+               m_hArgs[++i]; // TODO: BML.io.File.CurrentDirectory = m_hArgs[++i];
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-p" )) {
+
+               // print syntax (in BMF format)
+               bPrintSyntax = true;
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-v1" )) {
+
+               // enable verbose mode
+               m_iVerbose = 1;
+            } else if( m_hArgs[i].EqualsIgnoreCase( "-v2" )) {
+
+               // enable verbose mode
+               m_iVerbose = 2;
+            } else if( BML.io.File( m_hArgs[i] ).Exists()) {
+
+               // add input hFile to processing queue
+               hFiles.Append( m_hArgs[i] );
+            } else {
+
+               // add argument to bad argument array
+               badArgs.Append( m_hArgs[i] );
+            }
+         }
+
+         // show start-up banner
+         if( bShowBanner ) PrintBanner();
+
+         // print error message(s) for bad arguments
+         if( badArgs.Count != 0 ) {
+            for( int i = 0; i < badArgs.Count; ++i ) {
+               System.Console.Err.PrintLn( "ERROR: unrecognized command line argument '" + badArgs[i] + "'." );
+            }
+            return;
+         }
+
+         // print command line help
+         if( bShowHelp || ( m_hArgs.Count == 0 )) {
+            PrintCommandLineHelp();
+            return;
+         }
+
+         // print debug level
+         if( m_iVerbose > 0 ) System.Console.Err.PrintLn( "Verbose parsing mode is ON, level " + m_iVerbose.AsString() + "." );
+
+         // read configuration hFile
+// TODO: if( !ReadConfigFile()) return;
+
+         // initialize BMF
+         RegisterPrimitives();
+
+         // load specified syntaxes
+         if ( !LoadSyntaxes( syntaxNames, bPrintSyntax )) return;
+         syntaxNames = Array<String>();
+
+         // add registered hFile extension syntaxes
+         for( int i = 0; i < hFiles.Count; ++i ) {
+            String strFileExt = GetFileExtension( hFiles[i]);
+            if ( m_hSyntaxes.Get( strFileExt ) == null ) {
+               // TODO: String strSyntax = m_hConfig.Property( strFileExt + ".syntax", null );
+               // TODO: if ( strSyntax != null ) syntaxNames.Append( strSyntax );
+            }
+         }
+      
+         // no syntaxes at all => use BMF
+         if( m_hSyntaxes.Count == 0 && syntaxNames.Count == 0 ) {
+
+            // add default syntax
+            // TODO: syntaxNames.Append( m_hConfig.Property( "bmf.syntax", DefaultBMFSyntax ));
+         }
+         // load additional syntaxes
+         if ( !LoadSyntaxes( syntaxNames, bPrintSyntax )) return;
+      
+         // syntax was printed
+         if( bPrintSyntax ) {
+
+            // print exit message
+            System.Console.Err.PrintLn( "BMF has finished." );
+            return;
+         }
+
+         // no files are specified, bail out
+         if( hFiles.Count == 0 ) {
+            System.Console.Err.PrintLn( "ERROR: no input files specified." );
+            return;
+         }
+
+         // loop over all input files
+         for( int i = 0; i < hFiles.Count; ++i ) Compile( hFiles[i] );
+
+         // print exit message
+         System.Console.Err.PrintLn( "BMF has finished." );
+      }
+   
+      bool LoadSyntaxes( String[] syntaxNames, bool bPrintSyntax ) {
+         for( int i = 0; i < syntaxNames.Count; ++i ) {
+            // retrieve & load syntax object name
+            Syntax s = LoadSyntax( syntaxNames[i] );
+            if( s == null ) return false;
+            // TODO: if ( m_hConfig.Property( s.FileExtension + ".syntax", null ) == null ) {
+            // TODO:    m_hConfig.Put( s.FileExtension + ".syntax", s.Instantiator.Definition.Name );
+            // TODO:    WriteConfigFile();
+            // TODO: }
+            if( bPrintSyntax ) {
+               BML.io.PrintWriter hWriter = BML.io.PrintWriter( System.Console.Out );
+               s.PrintOn( hWriter );
+               hWriter.Close();
+            }
+         }
+         return true;
+      }
+
+      bool ReadConfigFile() {
+         try {
+
+            // open configuration hFile
+            BML.io.InputStream hFile = BML.io.FileInputStream( ConfigFile );
+
+            // read configuration
+            // TODO: m_hConfig.Load( hFile );
+
+            // return success
+            return true;
+         } catch( BML.io.IOException e ) {
+
+            // corrupt configuration hFile
+            System.Console.Err.PrintLn( "ERROR: configuration hFile '" + ConfigFile + "' not found or corrupt." );
+
+            // return failure
+            return false;
+         } catch( Exception e ) {
+
+            // generic error
+            System.Console.Err.PrintLn( "ERROR: unable to open or process configuration hFile '" + ConfigFile + "'." );
+
+            // return failure
+            return false;
+         }
+
+         ConfigFile = DefaultConfigFile;
+
+         // create default configuration hFile entries
+         // TODO: m_hConfig.Put( "bmf.syntax", DefaultBMFSyntax );
+
+         // write configuration hFile
+         System.Console.Err.PrintLn( "WARNING: creating default configuration hFile '" + ConfigFile + "'." );
+         WriteConfigFile();
+         System.Console.Err.PrintLn( "" );
+
+         // return success
+         return true;
+      }
+      bool WriteConfigFile() {
+         try {
+            // create configuration hFile
+            BML.io.OutputStream hFile = BML.io.FileOutputStream( ConfigFile );
+
+            // write configuration with comment
+            // TODO: m_hConfig.Save( hFile, "BMF 3.0 Configuration hFile" );
+         } catch( Exception e ) {
+
+            // generic error
+            System.Console.Err.PrintLn( "WARNING: unable to write default configuration hFile '" + ConfigFile + "'." );
+            return false;
+         }
+         return true;
+      }
+   
+
+      void RegisterPrimitives() {
+         Add( Nil());
+         Add( Fail());
+         Add( EndOfFile());
+         Add( EndOfLine());
+         Add( Cut());
+         Add( MultiMatch());
+      }
+   }
+}

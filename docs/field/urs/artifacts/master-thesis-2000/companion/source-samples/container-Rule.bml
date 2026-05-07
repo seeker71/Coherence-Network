@@ -1,0 +1,148 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Name: Rule.bml
+// Author: Urs C. Muff
+// Email: muff@colorado.edu
+// Date: 11-Apr-2000
+// Platform: BML Virtual Machine
+// Compiler: JBMF (R) Compiler
+//
+//////////////////////////////////////////////////////////////////////
+
+package BMF.container;
+
+import BMF.*;
+
+class RuleProcess : Process {
+   Object Invoke( Context hContext, ParseStack.Enumerator hStackEnum ) { return null; }
+}
+
+class Rule [public] {
+
+   //--- Private Members ---
+   section [private] {
+      Process m_hDefaultProcess [class] = RuleProcess();
+
+      String m_strName;
+      Syntax m_hSyntax;
+      ParseItem m_hItem;
+      String[] m_hArgs;
+      // TODO: Stack<???> m_hCallStack = Stack<???>();
+      Process m_hProcess [name=InternProcess];
+   }
+
+   //--- Public Constructors ---
+   section [public] {
+      Rule( Syntax hSyntax, String strName, String[] hArgs, ParseItem hItem, Process hProcess ) {
+         m_strName = strName;
+         m_hArgs = hArgs;
+         m_hSyntax = hSyntax;
+         m_hItem = hItem;
+         m_hProcess = hProcess;
+      }
+   
+      Rule( Syntax hSyntax, String strName, String[] strArgs, ParseItem hItem ) { self( hSyntax, strName, strArgs, hItem, null ); }
+      Rule( Syntax hSyntax, String strName, ParseItem hItem, Process hProcess ) { self( hSyntax, strName, Array<String>( 0 ), hItem, hProcess ); }
+      Rule( Syntax hSyntax, String strName, ParseItem hItem ) { self( hSyntax, strName, Array<String>( 0 ), hItem, null ); }
+   }
+
+   //--- Public Methods ---
+   section [public] {
+      void SetProcess() { m_hProcess = DefaultProcess; }
+      int HashCode() [get] { return m_strName.HashCode + m_hItem.HashCode; }
+      bool operator == ( Object hObj ) {
+         if ( !hObj instanceof Rule ) return false;
+         Rule hOther = (Rule) hObj;
+         if ( m_strName != hOther.Name ) return false;
+         if ( m_hProcess != hOther.InternProcess ) return false;
+         if ( m_hArgs.Count != hOther.Args.Count ) return false;
+         return m_hItem == hOther.Item;
+      }
+   
+      void Match( Context hContext, Environment hEnv, String strTag ) {
+      
+         // verify if this is a recursive call
+         /* TODO: 
+         Environment.State hCurrentState = hEnv.State;
+         if( !m_hCallStack.IsEmpty()) {
+            Environment.State hPrevState = (Environment.State) m_hCallStack.Peek();
+
+            // no progress was made since the last call, return failure
+            if( hCurrentState == hPrevState ) fail;
+         }
+
+         // save stream position
+         m_hCallStack.Push( hCurrentState );
+         */
+
+         // print debug output
+         if( hEnv.Verbose > 0 ) hEnv.PrintNestedBegin( m_strName, hEnv.Stream );
+
+         // create a new result stack
+         hEnv.StartResultStack();
+
+         // try item
+         int iStartPos = hContext.Position;
+         m_hItem.Match( hContext, hEnv, null );
+         hContext.StartPosition = iStartPos;
+         Invoke( hContext, hEnv, strTag );
+         hContext.StartPosition = -1;
+
+         hEnv.EndResultStack( GetTag( strTag ));
+
+         // print debug output
+         if( hEnv.Verbose > 0 ) hEnv.PrintNestedEnd( true, hEnv.Stream );
+
+         // discard stream position
+         // TODO: m_hCallStack.Pop();
+      }
+
+      String AsString() {
+         StringBuffer strRes = StringBuffer();
+         strRes.Append( m_hProcess != null ? "#process " : "#rule " );
+         strRes.Append( m_strName );
+         if ( m_hArgs.Count != 0 ) {
+            strRes.Append( "( " );
+            for ( int i = 0; i < m_hArgs.Count; i++ ) {
+               strRes.Append( m_hArgs[i] );
+               if ( i < m_hArgs.Count-1 ) strRes.Append( ", " );
+            }
+            strRes.Append( " )" );
+         }
+         strRes.Append( " ::= " + m_hItem.AsString( m_hArgs ) + ";" );
+         return strRes.AsString();
+      }
+
+      String AsCreateString() {
+         BML.io.StringWriter hString = BML.io.StringWriter();
+         BML.io.PrintWriter hOut = BML.io.PrintWriter( hString );
+         hOut.Print( "BMF.container.Rule( self, \"" + m_strName + "\"" );
+         if ( m_hArgs.Count > 0 ) {
+            hOut.PrintLn( ", #(" );
+            BMF.Syntax.IncTab();
+            for ( int i = 0; i < m_hArgs.Count; ++i ) hOut.PrintLn( BMF.Syntax.Tab + "\"" + m_hArgs[i] + "\"," );
+            BMF.Syntax.DecTab();
+            hOut.Print( BMF.Syntax.Tab + ")" );
+         }
+         hOut.Print( ", " + m_hItem.AsCreateString() );
+         if ( m_hProcess != null ) hOut.Print( ", " + m_hProcess.AsCreateString());
+         hOut.Print( ")" );
+         return hString.AsString();
+      }
+   }
+
+   //--- Private Methods ---
+   section [private] {
+      String GetTag( String strTag ) { return ( strTag != null ) ? strTag : m_strName; }
+   
+      void Invoke( Context hContext, Environment hEnv, String strTag ) {
+         Object o = null;
+         if( m_hProcess != null ) {
+            o = m_hProcess.Invoke( hContext, hEnv.ResultStack.Reduce().Contents );
+            if ( o == null ) throw IllegalStateException( "return null" );
+            if ( !m_hProcess.Type.IsInstance( o )) throw IllegalStateException( "wrong return type" );
+         }
+      }
+   }
+}
+
