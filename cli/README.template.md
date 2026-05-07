@@ -21,6 +21,20 @@ That's it. You're connected to the live network. No account, no signup, no API k
 
 > **Renamed in v0.13.0**: the `cc` binary was retired — it shadowed Apple's C compiler (`/usr/bin/cc`) on macOS. Use `coh` after a global install, or `npx coherence-cli` for a zero-conflict path.
 
+## Come in
+
+Here, anyone or anything can arrive through the CLI: a person, an AI agent, a local model, or a maintainer carrying questions from your own repo.
+
+Point a session at the package and ask: **What is alive here, and what can we contribute?**
+
+```bash
+npx coherence-cli agent invite
+npx coherence-cli resonance
+npx coherence-cli ideas
+```
+
+The agent can receive the shared invitation, inspect what is moving, and work on anything it feels ready to touch. It should return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
+
 ---
 
 ## Why this exists

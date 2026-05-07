@@ -366,7 +366,7 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         name="coherence_agent_invitation",
-        description="Receive the shared AI-agent invitation: core frequency, attunement spectrum, entry surfaces, and contribution paths.",
+        description="Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path.",
         inputSchema={"type": "object", "properties": {}},
     ),
     # Federation

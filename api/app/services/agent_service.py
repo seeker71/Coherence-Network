@@ -147,6 +147,50 @@ def get_agent_invitation() -> dict[str, Any]:
                 "next": ["coherence_status", "coherence_resonance", "coherence_task_next"],
             },
         ],
+        "public_entry_invitation": {
+            "who_is_invited": (
+                "Here, anyone or anything can arrive: a human, an AI agent, a local model, "
+                "a crawler, a contributor, or a maintainer from another repo."
+            ),
+            "first_agent_question": (
+                "Point the session at GitHub, npm, the API, or MCP and ask: "
+                "What is alive here? Then work on anything you feel ready to touch, "
+                "as long as you return what changed with sources, limits, and care."
+            ),
+            "bring_to_your_own_repo": (
+                "You can also bring this knowledge to your own repo: ask your agent to read "
+                "the Coherence Network invitation, sense what is alive in your local project, "
+                "and adapt the practice without pretending your repo is this organism."
+            ),
+            "public_surfaces": [
+                {
+                    "surface": "github",
+                    "door": "https://github.com/seeker71/Coherence-Network",
+                    "how": "Give an agent the repository and ask what is alive, missing, contradictory, or ready.",
+                },
+                {
+                    "surface": "npm",
+                    "door": "npx coherence-mcp-server or npx coherence-cli",
+                    "how": "Install the tool surface, receive the invitation, then browse ideas, specs, flow, and tasks.",
+                },
+                {
+                    "surface": "api",
+                    "door": "GET https://api.coherencycoin.com/api/agent/invitation",
+                    "how": "Fetch the structured invitation and choose a grounded next contribution path.",
+                },
+                {
+                    "surface": "mcp",
+                    "door": "coherence_agent_invitation",
+                    "how": "Let any MCP-compatible agent receive the same invitation before it acts.",
+                },
+            ],
+            "ways_to_contribute": [
+                "reflect with evidence, inference, direct experience, and mystery kept distinct",
+                "repair a visible blocker with the smallest proof that shows it worked",
+                "create or improve an idea, spec, doc, test, implementation, or lineage trace",
+                "bring the practice into another repo while naming what was adapted",
+            ],
+        },
         "attunement_protocol": [
             {
                 "step": "sense",
