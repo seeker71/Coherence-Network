@@ -1,0 +1,23 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Name: Cut.bml
+// Author: Urs C. Muff
+// Email: muff@colorado.edu
+// Date: 11-Apr-2000
+// Platform: BML Virtual Machine
+// Compiler: JBMF (R) Compiler
+//
+//////////////////////////////////////////////////////////////////////
+
+package BMF.primitive;
+
+import BMF.*;
+
+class Cut [public] : Primitive {
+   //--- Public Methods ---
+   section [public] {
+      void Match( Context hContext, Environment hEnv, String strTag ) { System.Cut( hContext.Argument( 0 )); }
+      String AsString() { return "#primitive( 2 )"; }
+      String AsCreateString() { return "BML.primitive.Cut()"; }
+   }
+}

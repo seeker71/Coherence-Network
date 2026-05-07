@@ -1,0 +1,147 @@
+
+Another Object Model
+Steve G. Bjorg Department of Computer Science University of Colorado Boulder, CO, 80309-0425, USA bjorg@colorado.edu
+
+Table of Contents
+Table of Contents	i
+Introduction	ii
+Statement	1
+Literature	2
+C++	2
+Smalltalk-80	4
+Java	6
+Proposed Work	8
+Timetable	12
+Conclusion	13
+Bibliography	14
+
+Introduction
+
+WHAT IS THIS THESIS ABOUT?
+
+
+
+Statement
+
+The object model of every language is the defining part of the power of the language.  Consequently, shortcomings in the object model directly reflect into complications faced by developers to model abstractions and to work with them.  Furthermore, the use of objects as independent components has been promoted heavily in the last few years.  Models such as Microsoft Component Object Model (COM) and Java Beans have clearly shown the trend to incorporate third-party object libraries into projects.  However, remnants from previous definitions and practices have impaired the pure object-oriented practices.  For instance, C++ still carries a lot of practices, which were developed for C.  Furthermore, even a new language such as Java, does not provide the necessary mechanisms for allowing the creation of large object hierarchies that can be manipulated after creation.  Consequently, developers and designers are continually faced with the challenge of making long-term design decisions with only partial knowledge of the future.
+
+The proposed object model addresses these issues in trying to find a balance between concepts found in Smalltalk, Java, and C++.  Furthermore, mechanism for supporting object evolution will be introduced.  Although, not all issues are completely interrelated, the goal is to create harmonious object model that integrates all of them.
+What's next?
+The next section provides an overview of the existing object models found in C++, Java, and Smalltalk.
+Literature
+
+This section provides an overview of the most significant object-oriented languages: C++, Smalltalk-80, and Java.  Each language is presented with its capabilities and some of its implementation details.
+C++
+
+The C++ object model allows for single and multiple inheritance.  Although, C++ supports non-virtual methods (i.e. statically bound), this overview will only focus on dynamically bound methods.
+Virtual Method Table
+Dynamic binding is achieved in C++ through the use of a virtual method table (VMT).  The VMT acts as indexed collection of pointers to methods.  During runtime, the call to a specific method it not represented by a pointer to the method, but by its respective index in the VMT.  Consequently, calling a method is a two-stage mechanism: get the VMT pointer and find the pointer to the method in the VMT.  The VMT pointer itself is stored in the instance (usually as the first field).  This approach allows the behavior of the instance to be dependent on the instance itself.  However, in C++, every class is associated with a specific VMT.  Consequently, every proper instance of a class shares the same VMT pointer.
+Single Inheritance
+Single inheritance in C++ works by concatenating the structural definitions of the base class with its derived class.  This approach allows the instances to be structurally compatible with their base class instances.  Consequently, methods inherited through the base class can still perform data member accesses on instances of derived classes.
+Multiple Inheritance
+Multiple inheritance allows a derived class to have more than one base class.  In this overview, C++ is the only language to support this feature.  The reason being that multiple inheritance suffers from several ambiguities:
+
+	•	behavioral inheritance becomes ambiguous when the same method definition is present in two or more base classes
+	•	structural inheritance becomes ambiguous when the same base class occurs more than once in the derived class
+	•	typecasting becomes ambiguous when the same base class is physically present  more than once in the derived class
+
+However, each of these ambiguities can be overcome in C++ by redefining or qualifying the ambiguous access.
+
+The final challenge for supporting multiple inheritance in C++ is structural compatibility.  Since each inherited method expects its instance pointer to be at the beginning of the instance, the actual instance pointer must be computed for each call.  The data necessary for this base pointer conversion is stored in the VMT in form of an offset.
+Interfaces
+Interfaces in C++ are supported through two different approaches: multiple inheritance and satellite classes.  When the abstract base classes (i.e. interfaces) don't have colliding method definitions the multiple inheritance technique is straightforward: the derived class simply implements each of the abstract methods it inherits.  However, when one or more method definitions collide, intermediary derived classes must be introduced.  Each abstract base class must have a single derived class that redirects the colliding method to a new abstract method.  The intermediary classes are then used as base classes, and the newly introduced abstract methods can be implemented.
+Satellite Classes
+The satellite classes approach is more cumbersome; however, it does not require special attention to colliding method definitions.  Instead of deriving the class directly from the abstract base classes, each base class has a derived class that forwards its method calls to methods in the final class.  Furthermore, casting must now be performed through a method call that requests a new instance pointer compatible with the wanted interface.  This technique is used in Microsoft's COM (Component Object Model) technology.  Additional information about COM can be found in [12].
+Conclusion
+Although, C++ supports multiple inheritance, the programming language puts a large burden on the shoulder of the developer when an interface based model is desired.  Consequently, C++ is not appropriate to create large object hierarchies that rely extensively on interfaces.  Furthermore, C++ objects are not dynamically sizeable without using some low-level hacks, which create maintenance problems and are therefore not desirable.
+Additional Information
+Additional information about the object model of C++ and its implementation can be found in [1] and [2].
+Smalltalk-80
+
+The Smalltalk-80 object model allows only single inheritance.  Furthermore, the Smalltalk language is devoid of types.  Consequently, all methods are bound during runtime.  Finally, everything is an instance in Smalltalk, including classes and methods.
+Method Dictionary
+Smalltalk stores all the methods pertaining to an instance in a method dictionary, which is located in the class of the instance.  The method dictionary stores the name of the method associated with the reference to the method instance.  At runtime, the interpreter looks up the class of the instance (a mandatory field in every instance), locates the method dictionary, and performs a binary search with the name of the method to find the actual method to be invoked.  Although, this mechanism is much more involved than a simple index lookup, it is also much more flexible.  For example, an instance needs only to support the required methods in order to be used by some code.  Given that there are no types, it doesn’t matter if the instance is of the intended type or some compatible type.
+Single Inheritance
+Single inheritance in Smalltalk works by concatenating the structural definitions of the base class with its derived class.  This approach allows the instances to be structurally compatible with their base class instances.  Consequently, methods inherited through the base class can still perform data member accesses on instances of derived classes.  However, a key distinction with C++ is that data member access is restricted to instances only.  Consequently, to access a data member in another instance, a method call must be used.  This distinction allows the technique of compatible types to actually work in Smalltalk.
+Variable Size Objects
+Another key difference in Smalltalk is the ability for instances to have variable size (i.e. array).  The variable size portion of an instance is always located after the last field.  This architecture allows variable sized objects to be derived: new fields are appended to the existing fields and the variable size portion is moved appropriately.  Although, a fixed size object can be derived as a variable sized object, the opposite cannot be done.  Furthermore, only one variable size portion can exist per instance.
+Metaclasses
+In Smalltalk everything is treated as an instance, including classes.  Correspondingly, classes must have a class that contains the method dictionary for their methods.  This class of a class is referred to as the metaclass instance.  It only contains the method dictionary for a class.  Furthermore, there is a one-to-one relationship between a class and a metaclass instance.  However, to make the model complete, the metaclass instance must also have a class, called the metaclass, which contains the method dictionary for every metaclass instance.  Although, it might seem at first that this class delegation could go on forever, it actually halts rather quickly.  Even so the metaclass has as class another metaclass instance, its metaclass instance has as class the metaclass itself again.  This creates a circular dependency between metaclass and metaclass instance; however, it also creates a completely self-contained object model.
+Conclusion
+Modern programming languages are expected to track some conceptual errors at the compilation level; however, Smalltalk's lack of types makes this task virtually impossible.  Furthermore, Smalltalk's only mechanism for multi-interface support relies entirely on the uniqueness of method definition, which can lead to irresolvable ambiguities.  Finally, Smalltalk does not support multiple inheritance.  Nonetheless, Smalltalk possess some strengths not found in other languages, such as a completely self-contained object model and dynamically sizeable objects.
+Additional Information
+Additional information about the object model of Smalltalk and its implementation can be found in [3].
+Java
+
+Although, the Java object model allows only single class inheritance, it supports multiple interface inheritance.  Java, like Smalltalk, binds methods at runtime.
+Method Dictionary
+Java stores all the methods pertaining to an instance in a method dictionary, including methods inherited from interfaces.  Method invocations are looked-up during runtime in the method dictionary.  This technique is similar to Smalltalk's invocation mechanism.
+Single Inheritance
+Single inheritance in Java works by concatenating the structural definitions of the base class with its derived class.  This approach allows the instances to be structurally compatible with their base class instances.  Consequently, methods inherited through the base class can still perform data member accesses on instances of derived classes.  This property makes Java similar to C++ and thus allows direct access to public data members from any context.
+Interfaces
+Java's interfaces are collections of abstract methods and constants.  A class stores a list of interfaces for which it provides implementations.  This list is traversed when casting operations are performed to verify that a given class supports a given interface.  However in the method dictionary, no distinction is drawn between actual class methods and method inherited through interfaces.  This lead to ambiguity when the same method appears in several interfaces with different purposes.  Actually, this ambiguity is irresolvable and leads to one of the major weaknesses of Java.
+Conclusion
+Although, Java introduces the concept of interfaces, it relies (like Smalltalk) on the uniqueness of method definition, which can lead to irresolvable ambiguities.  Furthermore, Java lacks support for multiple inheritance and dynamically sized objects.  This places Java as programming language somewhere in-between C++ and Smalltalk.
+Additional Information
+Additional information about the object model of Java and its implementation can be found in [4], and [6].  A quick overview of Java can be found in [5].
+What's next?
+The next section will describe the proposed object model and its differences to the object models of C++, Java, and Smalltalk.
+Proposed Work
+
+The object structure described in this section differs significantly in behavior and structure from C++, Java, and Smalltalk.  Its primary design goal is to reduce the inter-class structural dependencies.  The advantages of this approach will be discussed in a later sub-section.
+References
+The first design decision has been to combine the VMT reference and the data reference into a single object reference.  This approach eliminates the need for the structural part of the object to contain a VMT pointer (or equivalent).  Furthermore, it enables the same data to be used with different set of methods (or interface) without resorting to intermediary objects, as is the case in C++ (see Interfaces paragraph in C++ discussion).  Although, the data part of a reference usually refers to an actual structure pointer, it can also be used directly as the information carrier.  For instance, 32-bit integers are composed of the integer interface reference and the integer value.  Consequently, the runtime system can make no assumptions about the semantic meaning of the data part of a reference.
+Interfaces
+The interfaces used in this object model are similar to the VMTs used in C++.  All methods are accessed through indexes.  However, theses indexes are not determined at compilation time, rather the compiler produces symbolic equivalents for method identifiers.  At load time the interface definition creates a mapping between the symbolic representation and the actual index.  Finally, symbolic method references in the code are converted into index method references before execution begins.  This technique is referred to as load-time binding.
+Single Inheritance
+Inheritance in this object model works through a single generalized mechanism: delegation.  Instead of combining the structural definitions of the base class and the derived class to form the instance, the base instance is referred to by a delegation pointer contained in the derived instance.  Consequently, all methods defined in the base class must be forwarded to the delegation pointer.  Furthermore, base class data members cannot be accessed directly by the derived class, but must be accessed through a corresponding method.  Although, this indirection creates some overhead, it achieves the goal of reducing inter-class structural dependencies.  In this case, the derived class is not dependent on the actual data members present in its base class, but only on the available methods (i.e. behavioral dependency).
+Multiple Inheritance
+Multiple inheritance is supported by the same delegation principle too.  However, it introduces the necessity to support multiple interfaces.  For example, a class C derived from class A and B must support two distinct interfaces compatible to A and B.  Furthermore, it introduces a third interface C that is a combination of the interface from A and B.  As a result, casting an instance C to A corresponds to using the A interface reference (defined in C) with C's data reference.  Invoking a method of A on C is translated into forwarding the call to A's delegation pointer in C with the same parameters, unless the method was overwritten in C.  Some care must be taken to have an equivalent behavior as traditional inheritance when forwarding calls to delegation pointer.  The proposed mechanism is described in more detail in a later sub-section.
+Beyond Inheritance
+As shown previously, the delegation mechanism allows emulating the behavior of single and multiple inheritance.  However, it can also go beyond these standard inheritance mechanisms.  With delegation it is possible for two instances to share the same base instance.  Furthermore, it is conceivable that base instances be instantiated only when necessary.  However these techniques must be further investigated to determine their applicability and usefulness.
+Method Invocation
+As hinted earlier, simply forwarding calls to delegation pointer will not provided an equivalent mechanism as inheritance.  The complication arises when a forwarded call invokes a method overwritten by a derived class.  In this case, the delegated instance must be able to locate the derived instance.  However, this problem can be overcome by having two base references at all times: self, referring to root of the delegation tree (i.e. the most derived instance); and this, corresponding to the currently executing object.  The rules for deciding which of the base references must be used are trivial: self is used when a method is invoked; this is used when data members are accessed.  The rules for updating the base references are also simple: calling a method on an object sets self and this to the foreign object's reference; forwarding a method to a delegation pointer sets only this to the delegation object reference.
+Evolution
+The concept of evolution in object hierarchies tries to answer the problem of enhancing compiled object libraries.  C++, Java, and Smalltalk do not have any mechanisms that allow replacing or introducing intermediary classes into a compiled hierarchy.  However with the increase in third-party object libraries, the need to customize and tailor such libraries to the project needs is more present then ever.  Furthermore, evolution mechanism work best when only behavioral dependencies exist; the reason being that code can be wrapped and adapted, whereas direct data member access cannot be easily controlled.  This is one of the major motivations to move to en entirely behavioral dependency model.
+Language
+Although not part of the object model, a sample programming language will be described that shows how the concepts of the object model can be introduced into an imperative programming language.  The goal would be to demonstrate the differences in complexity to support a completely behavioral dependent object system, compared to C++, Java, and Smalltalk (when possible).
+Virtual Machine
+The programming language will build on top of a simple virtual machine that supports the described method invocation mechanisms.  Furthermore, this approach allows testing the language on multiple platforms.
+Runtime Environment
+The last component of the proposed work will be the runtime environment, which will be designed to integrate the proposed evolutionary mechanisms.
+What's next?
+The next section shows the proposed timetable for creating the new object model.
+Timetable
+
+WHAT IS DONE WHEN
+
+
+ Conclusion
+
+
+Bibliography
+[1]
+Margareth A. Ellis & Bjarne Stroustroup. The Annotated C++ Reference Manual. Addison-Wesley, Readin, Mass., 1990.
+[2]
+Bjarne Stroutstroup. The C++ Programming Language. 3rd edition, Addison-Wesley, Reading, Mass., 1997.
+[3]
+Adele Goldberg & David Robson. SMALLTALK-80: The Language and its Implementation. Addison-Wesley, Reading, Mass., 1983.
+[4]
+James Gosling, Bill Joy & Guy Steele. The Java Language Specification. Addison-Wesley, Mass., 1996.
+[5]
+David Flanagan. Java in a Nutshell. 2nd edition, O’Reilly and Associates, Inc., 1997.
+[6]
+Jon Meyer & Troy Downing. Java Virtual Machine. 1st edition, O’Reilly and Associates, Inc., 1997.
+[7]
+David Ungar, Randall B. Smith. "SELF: The Power of Simplicity." LISP AND SYMBOLIC COMPUTATION: An International Journal, 4, 3, 1991.
+[8]
+Erich Gamma, Richard Helm, Ralph Johnson & John Vlissides. Design Patterns: Elements of Reusable Design. Addison-Wesley, Mass., 1995.
+[9]
+James Rumbauch, Ivar Jacobson & Grady Booch. The Unified Modeling Language Reference Manual. 1st edition, Addison-Wesley, Mass., 1999.
+[10]
+Robert W. Sebesta. Concepts of Programming Languages. 3rd edition, Addison-Wesley, Mass., 1996.
+[11]
+Martin Abadi, Luca Cardelli. A Theory of Objects. Springer, NY, 1996.
+[12]
+Dale Rogerson. Inside COM. Microsoft Press, Wash., 1997.
+
