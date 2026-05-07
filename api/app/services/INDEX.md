@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 212
+**Total files**: 220
 
 | File | Purpose |
 |---|---|
@@ -38,6 +38,7 @@
 | [agent_task_continuation_service.py](agent_task_continuation_service.py) | Post-execution task continuation helpers. |
 | [agent_task_store_service.py](agent_task_store_service.py) | Persistent store for agent tasks with shared DB support. |
 | [app_mode.py](app_mode.py) | Application runtime mode helpers backed by config, not environment. |
+| [attunement_scheduler.py](attunement_scheduler.py) | Attunement scheduler — re-attune every presence so newly added concepts |
 | [audit_ledger_service.py](audit_ledger_service.py) | Transparent Audit Ledger service -- spec 123. |
 | [auto_heal_service.py](auto_heal_service.py) | Auto-heal from diagnostics: maps error categories to heal strategies. Spec 114. |
 | [automation_usage_service.py](automation_usage_service.py) | Provider usage adapters, normalized snapshots, and alert evaluation. |
@@ -76,6 +77,7 @@
 | [contributor_profile_service.py](contributor_profile_service.py) | Contributor Profile Service — what the system knows about a contributor. |
 | [contributor_recognition_service.py](contributor_recognition_service.py) | _no top-of-file purpose_ |
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
+| [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
 | [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
@@ -92,12 +94,15 @@
 | [fallback_witness_service.py](fallback_witness_service.py) | Fallback witness — honest record of when the body runs on reserve. |
 | [federation_push_service.py](federation_push_service.py) | Client-side push logic for federation measurement summaries (Spec 131). |
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
+| [field_story_mcp_tools.py](field_story_mcp_tools.py) | MCP registry entries for published field stories. |
+| [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [frequency_editor.py](frequency_editor.py) | Frequency editor — finds and rewrites institutional-frequency phrases. |
 | [frequency_field.py](frequency_field.py) | Frequency field analysis — token and phrase level dissonance detection. |
 | [frequency_profile_service.py](frequency_profile_service.py) | Frequency profile service — dynamic, multi-view, multi-hop. |
 | [frequency_scoring.py](frequency_scoring.py) | Frequency scoring engine — measures how "alive" vs "institutional" text reads. |
 | [friction_entry_points_service.py](friction_entry_points_service.py) | Friction entry-point and category rollups. |
 | [friction_service.py](friction_service.py) | Friction ledger service for API and scripts. |
+| [gatherings_importer.py](gatherings_importer.py) | Gatherings importer — scan presences for event listings, plant the missing ones. |
 | [geocoding_service.py](geocoding_service.py) | Forward geocoding: OpenCage → Nominatim → static fallback (Living Codex–style chain). |
 | [geolocation_service.py](geolocation_service.py) | Geolocation service — city-level contributor location storage and proximity search. |
 | [github_client.py](github_client.py) | GitHub API client — spec 029. |
@@ -161,7 +166,10 @@
 | [pipeline_policy_service.py](pipeline_policy_service.py) | Pipeline policy service — data-driven pipeline configuration. |
 | [pipeline_pulse_service.py](pipeline_pulse_service.py) | Pipeline pulse — self-awareness digest for the idea→spec→impl→verify pipeline. |
 | [pipeline_service.py](pipeline_service.py) | Shared state and helpers for the agent pipeline loop (spec 139). |
+| [place_service.py](place_service.py) | Place service — where presences are rooted. |
 | [portfolio_service.py](portfolio_service.py) | Portfolio service — aggregates contributor personal view data (spec 174). |
+| [presence_invitation_service.py](presence_invitation_service.py) | Graph-backed invitation surface for living presences. |
+| [presence_resolver.py](presence_resolver.py) | Presence resolver — backfill image_url + tagline on existing graph nodes. |
 | [presence_service.py](presence_service.py) | Presence — felt-witness that others are here too. |
 | [prompt_ab_roi_service.py](prompt_ab_roi_service.py) | Backward-compatible wrapper around SlotSelector for prompt variant selection. |
 | [proposal_service.py](proposal_service.py) | Proposals — short suggestions the collective can vote on by meeting. |
