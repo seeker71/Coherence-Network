@@ -28,6 +28,7 @@ import { ResonantAssets } from "./_components/ResonantAssets";
 import { CarriedBy } from "./_components/CarriedBy";
 import { ConceptVoices } from "./_components/ConceptVoices";
 import { ReactionBar } from "@/components/ReactionBar";
+import { InfluenceWeb } from "@/components/presence/InfluenceWeb";
 
 export const dynamic = "force-dynamic";
 
@@ -347,6 +348,15 @@ export default async function VisionConceptPage({
             {/* Multiple visual expressions — most resonant rises */}
             <div className="max-w-3xl">
               <ResonantAssets conceptId={conceptId} />
+            </div>
+
+            {/* Every related thread the field has woven through this
+                concept — concepts it bridges, presences carrying it,
+                external influences honoring it through shared
+                vibrational resonance — painted in the spectrum color
+                of each relationship's family. */}
+            <div className="max-w-3xl">
+              <InfluenceWeb presenceId={conceptId} />
             </div>
 
             {/* Live signals from the world resonating with this concept */}
