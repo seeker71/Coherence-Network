@@ -112,6 +112,45 @@ def get_field_story_spectrum(slug: str) -> dict[str, Any]:
     }
 
 
+def _trace_file(story_dir: Path, name: str) -> dict[str, Any]:
+    return _load_json(_safe_artifact_path(story_dir, f"trace/{name}"))
+
+
+def _lookup_trace_jsonl(story_dir: Path, filename: str, value: str, name_field: str) -> dict[str, Any]:
+    path = _safe_artifact_path(story_dir, f"trace/{filename}")
+    needle = value.lower()
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if record.get("id") == value or str(record.get(name_field, "")).lower() == needle:
+                return record
+    raise KeyError(f"Unknown trace {name_field}: {value}")
+
+
+def get_field_story_trace_slice(slug: str, selector: str, value: str) -> dict[str, Any]:
+    story_dir = _story_dir_for_slug(slug)
+    selector = selector.lower()
+    if selector == "month":
+        monthly = _trace_file(story_dir, "monthly_spectrum.json")
+        result = monthly.get("months", {}).get(value)
+        if not result:
+            raise KeyError(f"Unknown trace month: {value}")
+    elif selector == "author":
+        result = _lookup_trace_jsonl(story_dir, "author_index.jsonl", value, "name")
+    elif selector == "work":
+        result = _lookup_trace_jsonl(story_dir, "work_index.jsonl", value, "title")
+    else:
+        raise KeyError(f"Unknown trace selector: {selector}")
+    return {
+        "slug": slug,
+        "selector": selector,
+        "value": value,
+        "result": result,
+    }
+
+
 def record_field_story_contribution(
     *,
     slug: str,
