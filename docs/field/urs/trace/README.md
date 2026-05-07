@@ -4,7 +4,7 @@ Compact derived indexes for answering influence questions without loading raw li
 
 ## Files
 
-- `manifest.json` - coverage, thresholds, privacy boundary, and query shapes.
+- `manifest.json` - coverage, thresholds, publication shape, and query flows.
 - `monthly_spectrum.json` - one object per `YYYY-MM` with frequency counts, axes, primary influence, and linked top authors/works.
 - `author_index.jsonl` - one author per line with ID, name, top works, peak months, and compact monthly wave.
 - `work_index.jsonl` - one work per line with ID, author link, peak months, and compact monthly wave.
@@ -93,4 +93,4 @@ python3 docs/field/urs/tools/build_trace_indexes.py \
   --output-dir docs/field/urs/trace
 ```
 
-Raw Google Takeout archives, Audible exports, browser sessions, cookies, and extracted service files stay outside the repo.
+Raw Google Takeout archives, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.

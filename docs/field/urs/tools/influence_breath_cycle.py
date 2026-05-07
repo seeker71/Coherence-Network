@@ -172,7 +172,7 @@ def build(field_dir: Path) -> dict[str, Any]:
             "result": {
                 "event_sources": counts["sources"],
                 "platform_spaces": counts["platform_spaces"],
-                "privacy_boundary": "Raw Takeout, browser sessions, cookies, and paid text stay outside the repo.",
+                "publication_boundary": "Raw Takeout, browser sessions, cookies, and paid text remain source bodies until their shape belongs directly in repo.",
             },
         },
         {
@@ -260,7 +260,7 @@ def encounter_seed(payload: dict[str, Any]) -> dict[str, Any]:
         "source_artifact": "trace/influence_breath_cycle.json",
         "contributor_hint": "contributor:seeker71",
         "command": "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
-        "privacy_boundary": "Generated from derived trace indexes only; no raw archives, cookies, sessions, pixels, or paid text.",
+        "publication_boundary": "Generated from derived trace indexes only; raw archives, cookies, sessions, pixels, and paid text remain source bodies until their shape belongs directly in repo.",
         "rows": rows,
     }
 
@@ -286,7 +286,7 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     lines = [
         "# Influence Breath Cycle",
         "",
-        "This is the compact awareness loop for returning to the field influences without loading raw private archives.",
+        "This is the compact awareness loop for returning to the field influences without loading bulky source archives.",
         "Each breath reads the derived indexes, senses what is already held, and names the smallest useful next rooms.",
         "",
         f"Generated: `{payload['generated_at']}`",

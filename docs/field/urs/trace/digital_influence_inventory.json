@@ -1,0 +1,3837 @@
+{
+  "agent_history": {
+    "files": 259,
+    "present": true,
+    "project_roots": [
+      "/Users/ursmuff/.claude-worktrees/Coherence-Network/cli-flow-validation-20260304",
+      "/Users/ursmuff/.claude-worktrees/Coherence-Network/cli-flow-validation-20260304/api",
+      "/Users/ursmuff/.claude-worktrees/Coherence-Network/gemini-cli-task-engine",
+      "/Users/ursmuff/.claude-worktrees/Coherence-Network/host-runner-proof-20260304",
+      "/Users/ursmuff/.claude-worktrees/Coherence-Network/merge-local-all-20260304-232140",
+      "/Users/ursmuff/.codex/worktrees/c3da/Coherence-Network",
+      "/Users/ursmuff/Documents/2026",
+      "/Users/ursmuff/Documents/2026/ADMINISTRATIVE/telegram_assistant",
+      "/Users/ursmuff/source/Coherence-Network",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/funny-bhaskara",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/jolly-curran",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/jolly-curran/api",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_13d87562fba",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_3069d2fa5fe",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_4b089216d3b",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_4ee90e51102",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_9154e24acac",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/runner/.worktrees/task-task_fd4ec58a4ec",
+      "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan",
+      "/Users/ursmuff/source/Coherence-Network/.worktrees/task-task_06a30829daf",
+      "/Users/ursmuff/source/Coherence-Network/.worktrees/task-task_06bfb454c5a",
+      "/Users/ursmuff/source/Coherence-Network/.worktrees/task-task_086114473df",
+      "/Users/ursmuff/source/Coherence-Network/.worktrees/task-task_0888373c47e",
+      "/Users/ursmuff/source/Coherence-Network/.worktrees/task-task_0b97ea9a0f2"
+    ],
+    "publication_boundary": "inventory only in this compact pass; conversation bodies can be handled by a later source-specific breath"
+  },
+  "audible": {
+    "library": {
+      "events": 233,
+      "first": null,
+      "last": null,
+      "top_authors": [
+        {
+          "count": 41,
+          "value": "Ryk Brown"
+        },
+        {
+          "count": 30,
+          "value": "Terry Mancour"
+        },
+        {
+          "count": 19,
+          "value": "Terry Goodkind"
+        },
+        {
+          "count": 15,
+          "value": "Peter F. Hamilton"
+        },
+        {
+          "count": 13,
+          "value": "Andrew Rowe"
+        },
+        {
+          "count": 9,
+          "value": "Kel Kade"
+        },
+        {
+          "count": 6,
+          "value": "George R. R. Martin"
+        },
+        {
+          "count": 6,
+          "value": "Joe Abercrombie"
+        },
+        {
+          "count": 5,
+          "value": "Daniel Suarez"
+        },
+        {
+          "count": 4,
+          "value": "Ken Follett"
+        },
+        {
+          "count": 4,
+          "value": "James S. A. Corey"
+        },
+        {
+          "count": 3,
+          "value": "Eckhart Tolle"
+        },
+        {
+          "count": 3,
+          "value": "Larry Niven"
+        },
+        {
+          "count": 3,
+          "value": "Yuval Noah Harari"
+        },
+        {
+          "count": 2,
+          "value": "Tara Brach"
+        },
+        {
+          "count": 2,
+          "value": "Neal Stephenson"
+        },
+        {
+          "count": 2,
+          "value": "Patrick Rothfuss"
+        },
+        {
+          "count": 2,
+          "value": "Thich Nhat Hanh"
+        },
+        {
+          "count": 2,
+          "value": "Adam Mansbach"
+        },
+        {
+          "count": 2,
+          "value": "Scott Sigler"
+        },
+        {
+          "count": 1,
+          "value": "Tara Swart MD PhD"
+        },
+        {
+          "count": 1,
+          "value": "Gary Marcus"
+        },
+        {
+          "count": 1,
+          "value": "Matthew McConaughey"
+        },
+        {
+          "count": 1,
+          "value": "Robert Thurman"
+        },
+        {
+          "count": 1,
+          "value": "Niall Ferguson"
+        }
+      ],
+      "top_titles": [
+        {
+          "count": 1,
+          "value": "The Source"
+        },
+        {
+          "count": 1,
+          "value": "Delta-v"
+        },
+        {
+          "count": 1,
+          "value": "Radical Compassion"
+        },
+        {
+          "count": 1,
+          "value": "Rebooting AI"
+        },
+        {
+          "count": 1,
+          "value": "Greenlights"
+        },
+        {
+          "count": 1,
+          "value": "The Tibetan Book of the Dead"
+        },
+        {
+          "count": 1,
+          "value": "Doom"
+        },
+        {
+          "count": 1,
+          "value": "Footwizard"
+        },
+        {
+          "count": 1,
+          "value": "Soulbrand"
+        },
+        {
+          "count": 1,
+          "value": "Fate of the Fallen"
+        },
+        {
+          "count": 1,
+          "value": "Destiny of the Dead"
+        },
+        {
+          "count": 1,
+          "value": "Retaliation"
+        },
+        {
+          "count": 1,
+          "value": "A Rock and a Hard Place"
+        },
+        {
+          "count": 1,
+          "value": "A Price Too High"
+        },
+        {
+          "count": 1,
+          "value": "Return of the Corinari"
+        },
+        {
+          "count": 1,
+          "value": "A Line in the Sand"
+        },
+        {
+          "count": 1,
+          "value": "Into the Serpent's Lair"
+        },
+        {
+          "count": 1,
+          "value": "The Future Is Faster Than You Think"
+        },
+        {
+          "count": 1,
+          "value": "Salvation Lost"
+        },
+        {
+          "count": 1,
+          "value": "The Saints of Salvation"
+        },
+        {
+          "count": 1,
+          "value": "Siege of Stone"
+        },
+        {
+          "count": 1,
+          "value": "Heart of Black Ice"
+        },
+        {
+          "count": 1,
+          "value": "The Holographic Universe"
+        },
+        {
+          "count": 1,
+          "value": "Wild Mind"
+        },
+        {
+          "count": 1,
+          "value": "The Janus Point"
+        }
+      ]
+    },
+    "listen_history": {
+      "events": 50,
+      "first": "2023-09-27",
+      "last": "2026-03-09",
+      "top_authors": [
+        {
+          "count": 11,
+          "value": "Ryk Brown"
+        },
+        {
+          "count": 3,
+          "value": "Terry Mancour"
+        },
+        {
+          "count": 2,
+          "value": "Andrew Rowe"
+        },
+        {
+          "count": 2,
+          "value": "Tara Brach"
+        },
+        {
+          "count": 1,
+          "value": "J.N. Chaney, Scott Moon"
+        },
+        {
+          "count": 1,
+          "value": "J.N. Chaney, Terry Maggert, Glenn Seguin"
+        },
+        {
+          "count": 1,
+          "value": "Mark Wayne McGinnis"
+        },
+        {
+          "count": 1,
+          "value": "Ken Lozito"
+        },
+        {
+          "count": 1,
+          "value": "Sarah Breskman Cosme"
+        },
+        {
+          "count": 1,
+          "value": "Lee Harris, Regina Meredith"
+        },
+        {
+          "count": 1,
+          "value": "Dr. Joe Dispenza"
+        },
+        {
+          "count": 1,
+          "value": "Peter F. Hamilton"
+        },
+        {
+          "count": 1,
+          "value": "Kel Kade"
+        },
+        {
+          "count": 1,
+          "value": "Sean Oswald"
+        },
+        {
+          "count": 1,
+          "value": "Holly Duckworth"
+        },
+        {
+          "count": 1,
+          "value": "Sara Landon"
+        },
+        {
+          "count": 1,
+          "value": "Mike Dooley, Darryl Anka, Matt Kahn, Sara Landon, Salvatore Rachele, Lyssa Royal Holt, Daniel Scranton"
+        },
+        {
+          "count": 1,
+          "value": "Kaia Ra"
+        },
+        {
+          "count": 1,
+          "value": "Neale Donald Walsch"
+        },
+        {
+          "count": 1,
+          "value": "Robin Wall Kimmerer"
+        },
+        {
+          "count": 1,
+          "value": "Eckhart Tolle"
+        },
+        {
+          "count": 1,
+          "value": "Ken Follett"
+        },
+        {
+          "count": 1,
+          "value": "Tara Swart MD PhD"
+        },
+        {
+          "count": 1,
+          "value": "Barry Michels, Phil Stutz"
+        },
+        {
+          "count": 1,
+          "value": "Michael Talbot"
+        }
+      ],
+      "top_titles": [
+        {
+          "count": 1,
+          "value": "Practical Adept"
+        },
+        {
+          "count": 1,
+          "value": "Edge of the Dream: An Epic Fantasy Adventure"
+        },
+        {
+          "count": 1,
+          "value": "Singularity"
+        },
+        {
+          "count": 1,
+          "value": "Arrival"
+        },
+        {
+          "count": 1,
+          "value": "Homeworld Lost"
+        },
+        {
+          "count": 1,
+          "value": "Messenger Corps"
+        },
+        {
+          "count": 1,
+          "value": "USS Hamilton: Ironhold Station"
+        },
+        {
+          "count": 1,
+          "value": "Genesis"
+        },
+        {
+          "count": 1,
+          "value": "Frontiers Saga Series #14: The Weak and the Innocent"
+        },
+        {
+          "count": 1,
+          "value": "The Vengeance"
+        },
+        {
+          "count": 1,
+          "value": "The Golden Goblin"
+        },
+        {
+          "count": 1,
+          "value": "Edge of the Woods: An Epic Fantasy Adventure"
+        },
+        {
+          "count": 1,
+          "value": "A Show of Force"
+        },
+        {
+          "count": 1,
+          "value": "The First Ranger"
+        },
+        {
+          "count": 1,
+          "value": "Enemies of My Enemy"
+        },
+        {
+          "count": 1,
+          "value": "A Hypnotist's Journey to Avalon"
+        },
+        {
+          "count": 1,
+          "value": "The Future Human"
+        },
+        {
+          "count": 1,
+          "value": "You Are the Placebo"
+        },
+        {
+          "count": 1,
+          "value": "Exodus: The Archimedes Engine"
+        },
+        {
+          "count": 1,
+          "value": "Knight of Shadows"
+        },
+        {
+          "count": 1,
+          "value": "Induction"
+        },
+        {
+          "count": 1,
+          "value": "Finding Purpose"
+        },
+        {
+          "count": 1,
+          "value": "You Are a Channel"
+        },
+        {
+          "count": 1,
+          "value": "The Great Awakening"
+        },
+        {
+          "count": 1,
+          "value": "Lesser of Two Evils"
+        }
+      ]
+    },
+    "purchase_history": {
+      "events": 198,
+      "first": "2016-01-14",
+      "last": "2026-03-09",
+      "top_authors": [
+        {
+          "count": 40,
+          "value": "Ryk Brown"
+        },
+        {
+          "count": 24,
+          "value": "Terry Mancour"
+        },
+        {
+          "count": 14,
+          "value": "Terry Goodkind"
+        },
+        {
+          "count": 12,
+          "value": "Andrew Rowe"
+        },
+        {
+          "count": 10,
+          "value": "Peter F. Hamilton"
+        },
+        {
+          "count": 9,
+          "value": "Kel Kade"
+        },
+        {
+          "count": 6,
+          "value": "Joe Abercrombie"
+        },
+        {
+          "count": 5,
+          "value": "James Hunter"
+        },
+        {
+          "count": 4,
+          "value": "Ken Follett"
+        },
+        {
+          "count": 3,
+          "value": "James S. A. Corey"
+        },
+        {
+          "count": 3,
+          "value": "Terry Mancour, Emily Burch Harris"
+        },
+        {
+          "count": 3,
+          "value": "Yuval Noah Harari"
+        },
+        {
+          "count": 2,
+          "value": "Neal Stephenson"
+        },
+        {
+          "count": 2,
+          "value": "Neale Donald Walsch"
+        },
+        {
+          "count": 2,
+          "value": "Patrick Rothfuss"
+        },
+        {
+          "count": 1,
+          "value": "Barry Michels, Phil Stutz"
+        },
+        {
+          "count": 1,
+          "value": "Lee Harris, Regina Meredith"
+        },
+        {
+          "count": 1,
+          "value": "Niall Ferguson"
+        },
+        {
+          "count": 1,
+          "value": "Pema Chödrön"
+        },
+        {
+          "count": 1,
+          "value": "Philip K. Dick"
+        },
+        {
+          "count": 1,
+          "value": "Dan Millman"
+        },
+        {
+          "count": 1,
+          "value": "Adam Grant"
+        },
+        {
+          "count": 1,
+          "value": "Plato"
+        },
+        {
+          "count": 1,
+          "value": "Steven Johnson"
+        },
+        {
+          "count": 1,
+          "value": "George R. R. Martin, Gardner Dozois, Gillian Flynn, Neil Gaiman"
+        }
+      ],
+      "top_titles": [
+        {
+          "count": 1,
+          "value": "Coming Alive"
+        },
+        {
+          "count": 1,
+          "value": "The Future Human"
+        },
+        {
+          "count": 1,
+          "value": "Cryptonomicon"
+        },
+        {
+          "count": 1,
+          "value": "Snow Crash"
+        },
+        {
+          "count": 1,
+          "value": "Preceptor"
+        },
+        {
+          "count": 1,
+          "value": "Doom"
+        },
+        {
+          "count": 1,
+          "value": "Death's Mistress"
+        },
+        {
+          "count": 1,
+          "value": "Kingdoms and Chaos"
+        },
+        {
+          "count": 1,
+          "value": "Seamage"
+        },
+        {
+          "count": 1,
+          "value": "Into the Serpent's Lair"
+        },
+        {
+          "count": 1,
+          "value": "How We Live Is How We Die"
+        },
+        {
+          "count": 1,
+          "value": "Singularity"
+        },
+        {
+          "count": 1,
+          "value": "For the Triumph of Evil"
+        },
+        {
+          "count": 1,
+          "value": "Persepolis Rising"
+        },
+        {
+          "count": 1,
+          "value": "The Expanse"
+        },
+        {
+          "count": 1,
+          "value": "Shadowblade"
+        },
+        {
+          "count": 1,
+          "value": "Blade Runner"
+        },
+        {
+          "count": 1,
+          "value": "A Line in the Sand"
+        },
+        {
+          "count": 1,
+          "value": "Necromancer"
+        },
+        {
+          "count": 1,
+          "value": "Hedgewitch"
+        },
+        {
+          "count": 1,
+          "value": "The Vengeance"
+        },
+        {
+          "count": 1,
+          "value": "Red Country"
+        },
+        {
+          "count": 1,
+          "value": "Babylon's Ashes"
+        },
+        {
+          "count": 1,
+          "value": "Peaceful Heart, Warrior Spirit: The True Story of My Spiritual Quest"
+        },
+        {
+          "count": 1,
+          "value": "The God Solution"
+        }
+      ]
+    }
+  },
+  "browser": {
+    "events": 167,
+    "first": "2026-02-05T05:59:11.980937+00:00",
+    "last": "2026-05-06T02:16:11.728236+00:00",
+    "sources": {
+      "audible-browser": 60,
+      "youtube-browser": 79,
+      "youtube-music-browser": 28
+    },
+    "top_domains": [
+      {
+        "count": 67,
+        "value": "www.youtube.com"
+      },
+      {
+        "count": 33,
+        "value": "www.audible.com"
+      },
+      {
+        "count": 28,
+        "value": "music.youtube.com"
+      },
+      {
+        "count": 10,
+        "value": "www.amazon.com"
+      },
+      {
+        "count": 7,
+        "value": "www.google.com"
+      },
+      {
+        "count": 6,
+        "value": "accounts.youtube.com"
+      },
+      {
+        "count": 6,
+        "value": "help.audible.com"
+      },
+      {
+        "count": 3,
+        "value": "m.youtube.com"
+      },
+      {
+        "count": 3,
+        "value": "audible.com"
+      },
+      {
+        "count": 2,
+        "value": "youtu.be"
+      },
+      {
+        "count": 1,
+        "value": "youtube.com"
+      },
+      {
+        "count": 1,
+        "value": "apify.com"
+      }
+    ],
+    "top_titles": [
+      {
+        "count": 17,
+        "value": "My Library"
+      },
+      {
+        "count": 15,
+        "value": "YouTube Music"
+      },
+      {
+        "count": 11,
+        "value": "(1030) Watch history"
+      },
+      {
+        "count": 10,
+        "value": "(600) YouTube"
+      },
+      {
+        "count": 8,
+        "value": "Audible"
+      },
+      {
+        "count": 7,
+        "value": "Amazon.com : my audible library"
+      },
+      {
+        "count": 6,
+        "value": "YouTube"
+      },
+      {
+        "count": 5,
+        "value": "I Will Find You in My Next Life (feat. Sia) | YouTube Music"
+      },
+      {
+        "count": 4,
+        "value": "Sama - Album by Maneesh de Moor"
+      },
+      {
+        "count": 4,
+        "value": "Amazon.com: Audible Books & Originals"
+      },
+      {
+        "count": 3,
+        "value": "Sign in - Google Accounts"
+      },
+      {
+        "count": 3,
+        "value": "(216) Tech Talk: Linus Torvalds on git"
+      },
+      {
+        "count": 3,
+        "value": "Purchase History"
+      },
+      {
+        "count": 3,
+        "value": "Home | Audible Help"
+      },
+      {
+        "count": 2,
+        "value": "(529) Claude Skills, Git Projects and brand new UI in Agent Zero!"
+      },
+      {
+        "count": 2,
+        "value": "Mentor Analyzed Claude Opus 4.6's C Compiler in Rust — Here's What It Found"
+      },
+      {
+        "count": 2,
+        "value": "(1844) Bioelectrical signals reveal, induce, and normalize cancer"
+      },
+      {
+        "count": 2,
+        "value": "(121) Using Mentor, Limiting Use of Claude Code, & Sandboxing"
+      },
+      {
+        "count": 2,
+        "value": "Damian Marley ft. Sia – I Will Find You in My Next Life | Reggae Soul Gospel Ballad"
+      },
+      {
+        "count": 2,
+        "value": "The RoboNuggets Network (free)"
+      },
+      {
+        "count": 2,
+        "value": "(58) Telepathy Activation | Arcturian Pineal Antannae Activation"
+      },
+      {
+        "count": 2,
+        "value": "Cuencos Tibetanos - Svadhisthana Chakra (Nota Re) | YouTube Music"
+      },
+      {
+        "count": 2,
+        "value": "Star Beings Take EMERGENCY ACTION: \"Humanity Will SPLIT Now...FINAL CHOICE\" | Ismael Perez"
+      },
+      {
+        "count": 2,
+        "value": "(1011) Star Beings Take EMERGENCY ACTION: \"Humanity Will SPLIT Now...FINAL CHOICE\" | Ismael Perez"
+      },
+      {
+        "count": 2,
+        "value": "where is my audible library - Google Search"
+      }
+    ]
+  },
+  "generated_at": "2026-05-07T15:43:03.588936+00:00",
+  "photos": {
+    "Photos-3-001.zip": {
+      "extensions": {
+        ".jpg": 71,
+        ".mp4": 3
+      },
+      "files": 74,
+      "first_date_from_filename": "20260504",
+      "last_date_from_filename": "20260504",
+      "publication_boundary": "filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath"
+    }
+  },
+  "project_archives": {
+    "Angelic-20260507T052334Z-3-001.zip": {
+      "extensions": {
+        ".bmc": 203,
+        ".bmf": 30,
+        ".bml": 248,
+        ".class": 573,
+        ".cls": 43,
+        ".cpp": 93,
+        ".docx": 92,
+        ".h": 29,
+        ".hpp": 73,
+        ".java": 745,
+        ".jj": 53,
+        ".obj": 31,
+        ".sbr": 31,
+        ".scc": 32,
+        "no-extension": 39
+      },
+      "files": 2774,
+      "sample_paths": [
+        "Angelic/Icons/Step Back Over.ico",
+        "Angelic/Related/BMF Assembler/BMF Assembler.ncb",
+        "Angelic/Icons/Step Over.ico",
+        "Angelic/Icons/Step Out.ico",
+        "Angelic/Related/BMF Assembler/bmfasm.h",
+        "Angelic/Icons/Step Into.ico",
+        "Angelic/classes/Test/Choice.bmc",
+        "Angelic/Icons/Step Over (gray).ico",
+        "Angelic/Icons/Step Out (gray).ico",
+        "Angelic/classes/Test/BMFTest.bmc",
+        "Angelic/Icons/Run (gray).ico",
+        "Angelic/Icons/Step Back Into.ico",
+        "Angelic/classes/Test/Output.bmc",
+        "Angelic/Icons/Step Into (gray).ico",
+        "Angelic/Icons/Show Current.ico",
+        "Angelic/classes/Test/Test.bmc",
+        "Angelic/Icons/Step Back Out.ico",
+        "Angelic/Related/BMF Assembler/BMF Assembler.dsp",
+        "Angelic/Related/BMF Assembler/BMF Assembler.plg",
+        "Angelic/Related/BMF Assembler/bmfasm.cpp"
+      ]
+    },
+    "Water Project.zip": {
+      "extensions": {
+        ".doc": 1,
+        ".jpg": 6,
+        ".ppt": 1
+      },
+      "files": 8,
+      "sample_paths": [
+        "Water Project/Backtracking Model Languages.doc",
+        "Water Project/DSC01471.JPG",
+        "Water Project/DSC01472.JPG",
+        "Water Project/DSC01474.JPG",
+        "Water Project/DSC02707.JPG",
+        "Water Project/Group.jpg",
+        "Water Project/Thesis defence.ppt",
+        "Water Project/Urs in CU shirt.jpg"
+      ]
+    }
+  },
+  "publication_boundary": "This compact artifact publishes source counts, date spans, filenames, and aggregate influence candidates. Watch and listen history are allowed to be public by contributor direction; bulky raw exports stay as source files unless a later breath decides their size and shape belong directly in the repo.",
+  "published_trace": {
+    "events": 28174,
+    "sources": {
+      "audible-browser": 60,
+      "audible-library": 233,
+      "audible-listen-history": 50,
+      "audible-purchase-history": 198,
+      "manual-anchor": 15,
+      "youtube-browser": 77,
+      "youtube-music-browser": 28,
+      "youtube-music-myactivity": 120,
+      "youtube-myactivity": 363,
+      "youtube-takeout": 27030
+    }
+  },
+  "schema_version": "digital-influence-inventory/v1",
+  "source_roots": {
+    "analysis_root": "/Users/ursmuff/CoherenceFieldAnalysis",
+    "downloads_dir": "/Users/ursmuff/Downloads",
+    "field_dir": "docs/field/urs"
+  },
+  "youtube": {
+    "full_takeout_part_012": {
+      "dated_events": 52500,
+      "events": 52500,
+      "first": "2022-09-07T05:37:14",
+      "last": "2026-05-06T09:55:18",
+      "periods": {
+        "all_available": {
+          "events": 52500,
+          "products": {
+            "youtube": 15135,
+            "youtube-music": 37365
+          },
+          "top_authors": [
+            {
+              "already_in_story": true,
+              "count": 1718,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1400,
+              "value": "Mose - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1190,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1145,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1129,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 943,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 858,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 792,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 742,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 710,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 685,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 655,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 593,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 553,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 529,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 509,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 443,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 442,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 382,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 380,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 366,
+              "value": "Ayla Schafer - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 361,
+              "value": "Maneesh De Moor - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 332,
+              "value": "Karunesh - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 325,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 310,
+              "value": "East Forest - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 2078,
+              "value": "2022-10"
+            },
+            {
+              "count": 2015,
+              "value": "2022-11"
+            },
+            {
+              "count": 1937,
+              "value": "2023-04"
+            },
+            {
+              "count": 1740,
+              "value": "2025-01"
+            },
+            {
+              "count": 1688,
+              "value": "2023-05"
+            },
+            {
+              "count": 1650,
+              "value": "2024-10"
+            },
+            {
+              "count": 1600,
+              "value": "2024-07"
+            },
+            {
+              "count": 1597,
+              "value": "2023-02"
+            },
+            {
+              "count": 1448,
+              "value": "2024-08"
+            },
+            {
+              "count": 1411,
+              "value": "2025-04"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 130,
+              "value": "Siesta"
+            },
+            {
+              "by": "here",
+              "count": 128,
+              "value": "ESPN"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 122,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 98,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "El Tano Gabarri - Topic",
+              "count": 86,
+              "value": "Noches en Andalucía"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 85,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 84,
+              "value": "Solace"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 83,
+              "value": "Aranjuez"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 82,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 81,
+              "value": "Café Café"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 80,
+              "value": "Redemption"
+            },
+            {
+              "by": "Pavlo Simtikidis - Topic",
+              "count": 80,
+              "value": "Paradise"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 79,
+              "value": "Iluminar"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 79,
+              "value": "Rougé"
+            },
+            {
+              "by": "Xuqutopi - Topic",
+              "count": 78,
+              "value": "Agradezco"
+            },
+            {
+              "by": "Govi - Topic",
+              "count": 76,
+              "value": "Treasure Bay"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 75,
+              "value": "Banana Bay"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 74,
+              "value": "Azul"
+            },
+            {
+              "by": "here",
+              "count": 74,
+              "value": "ESPN2"
+            },
+            {
+              "by": "Danit - Topic",
+              "count": 73,
+              "value": "Naturaleza (Mose Edit)"
+            }
+          ],
+          "unresolved_or_generic_events": 3205
+        },
+        "before_published_trace": {
+          "events": 25972,
+          "products": {
+            "youtube": 7162,
+            "youtube-music": 18810
+          },
+          "top_authors": [
+            {
+              "already_in_story": false,
+              "count": 1174,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1028,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 999,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 896,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 731,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 731,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 665,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 609,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 578,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 518,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 434,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 431,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 376,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 352,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 322,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 279,
+              "value": "Jim Stubblefield - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 253,
+              "value": "Young & Rollins - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 250,
+              "value": "NovaMenco - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 248,
+              "value": "Robert Michaels - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 237,
+              "value": "El Tano Gabarri - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 225,
+              "value": "Chris Spheeris - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 202,
+              "value": "Alex Fox - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 194,
+              "value": "Lara & Reyes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 184,
+              "value": "Govi - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 171,
+              "value": "Lex Fridman"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 2078,
+              "value": "2022-10"
+            },
+            {
+              "count": 2015,
+              "value": "2022-11"
+            },
+            {
+              "count": 1937,
+              "value": "2023-04"
+            },
+            {
+              "count": 1688,
+              "value": "2023-05"
+            },
+            {
+              "count": 1597,
+              "value": "2023-02"
+            },
+            {
+              "count": 1410,
+              "value": "2023-03"
+            },
+            {
+              "count": 1393,
+              "value": "2024-02"
+            },
+            {
+              "count": 1300,
+              "value": "2023-01"
+            },
+            {
+              "count": 1287,
+              "value": "2022-12"
+            },
+            {
+              "count": 1284,
+              "value": "2024-03"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 125,
+              "value": "Siesta"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 121,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "here",
+              "count": 101,
+              "value": "ESPN"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 97,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "El Tano Gabarri - Topic",
+              "count": 85,
+              "value": "Noches en Andalucía"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 83,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 80,
+              "value": "Café Café"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 80,
+              "value": "Aranjuez"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 80,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "Pavlo Simtikidis - Topic",
+              "count": 79,
+              "value": "Paradise"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 76,
+              "value": "Rougé"
+            },
+            {
+              "by": "Govi - Topic",
+              "count": 76,
+              "value": "Treasure Bay"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 74,
+              "value": "Banana Bay"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 73,
+              "value": "Redemption"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 72,
+              "value": "Solace"
+            },
+            {
+              "by": "Alex Fox - Topic",
+              "count": 71,
+              "value": "Nuevos Aires"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 71,
+              "value": "Esperanza"
+            },
+            {
+              "by": "Johannes Linstead - Topic",
+              "count": 71,
+              "value": "Between Tears"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 71,
+              "value": "Azul"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 68,
+              "value": "Europa"
+            }
+          ],
+          "unresolved_or_generic_events": 1911
+        },
+        "early_2024_before_published_trace": {
+          "events": 4935,
+          "products": {
+            "youtube": 1409,
+            "youtube-music": 3526
+          },
+          "top_authors": [
+            {
+              "already_in_story": true,
+              "count": 274,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 184,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 127,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 117,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 112,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 93,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 91,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 83,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 82,
+              "value": "Chris Spheeris - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 82,
+              "value": "Slow Meadow - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 81,
+              "value": "Little Whale - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 80,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 78,
+              "value": "The White Arrow - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 76,
+              "value": "East Forest - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 74,
+              "value": "Robert Edward Grant"
+            },
+            {
+              "already_in_story": false,
+              "count": 73,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 71,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 69,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 69,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 67,
+              "value": "Beedle The Bardcore"
+            },
+            {
+              "already_in_story": false,
+              "count": 60,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 56,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 53,
+              "value": "Next Level Soul Podcast"
+            },
+            {
+              "already_in_story": true,
+              "count": 52,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 48,
+              "value": "Yatao - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1393,
+              "value": "2024-02"
+            },
+            {
+              "count": 1284,
+              "value": "2024-03"
+            },
+            {
+              "count": 1181,
+              "value": "2024-04"
+            },
+            {
+              "count": 843,
+              "value": "2024-01"
+            },
+            {
+              "count": 234,
+              "value": "2024-05"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 48,
+              "value": "Solace"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 41,
+              "value": "Cura Journey Mix"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 32,
+              "value": "Preparing the Path"
+            },
+            {
+              "by": "Xuqutopi - Topic",
+              "count": 31,
+              "value": "Agradezco"
+            },
+            {
+              "by": "Slow Meadow - Topic",
+              "count": 30,
+              "value": "Upstream Dream"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 29,
+              "value": "Gypsy"
+            },
+            {
+              "by": "The White Arrow - Topic",
+              "count": 28,
+              "value": "Drolma (Om Tare Tuttare)"
+            },
+            {
+              "by": "Yatao - Topic",
+              "count": 28,
+              "value": "Listen to the Mountains"
+            },
+            {
+              "by": "Danit - Topic",
+              "count": 27,
+              "value": "Tierra"
+            },
+            {
+              "by": "Liquid Bloom - Topic",
+              "count": 26,
+              "value": "Inner Sanctum (Medicine Buddha Mantra Prayer)"
+            },
+            {
+              "by": "Empty Artist - Topic",
+              "count": 26,
+              "value": "Fusion (Live) (Radio Edit)"
+            },
+            {
+              "by": "Little Whale - Topic",
+              "count": 26,
+              "value": "Aguila De Oro"
+            },
+            {
+              "by": "Gipsy Kings - Topic",
+              "count": 26,
+              "value": "No Volvere"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 25,
+              "value": "Iluminar"
+            },
+            {
+              "by": "Buddha's Lounge - Topic",
+              "count": 25,
+              "value": "Flute Meditation"
+            },
+            {
+              "by": "Hang Massive - Topic",
+              "count": 25,
+              "value": "Warmth of the Sun's Rays"
+            },
+            {
+              "by": "Dean Evenson - Topic",
+              "count": 25,
+              "value": "Breath of Light"
+            },
+            {
+              "by": "Liquid Bloom - Topic",
+              "count": 24,
+              "value": "Temple of the Goddess"
+            },
+            {
+              "by": "East Forest - Topic",
+              "count": 24,
+              "value": "Please Pass the Bliss"
+            },
+            {
+              "by": "Sukhmani - Topic",
+              "count": 24,
+              "value": "Ash + Bone"
+            }
+          ],
+          "unresolved_or_generic_events": 308
+        },
+        "published_trace_window": {
+          "events": 26528,
+          "products": {
+            "youtube": 7973,
+            "youtube-music": 18555
+          },
+          "top_authors": [
+            {
+              "already_in_story": true,
+              "count": 1661,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1396,
+              "value": "Mose - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 723,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 639,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 498,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 429,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 363,
+              "value": "Ayla Schafer - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 344,
+              "value": "Maneesh De Moor - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 284,
+              "value": "Karunesh - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 270,
+              "value": "Danit - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 259,
+              "value": "Anne Tucker"
+            },
+            {
+              "already_in_story": false,
+              "count": 232,
+              "value": "Nessi Gomes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 223,
+              "value": "Yatao - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 218,
+              "value": "Mei-lan - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 209,
+              "value": "Alexia Chellun - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 209,
+              "value": "East Forest - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 203,
+              "value": "Sam Garrett - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 200,
+              "value": "Parijat - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 187,
+              "value": "Tetouze - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 182,
+              "value": "Emilio Ortiz"
+            },
+            {
+              "already_in_story": false,
+              "count": 181,
+              "value": "Chantress Seba - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 179,
+              "value": "Deya Dova - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 178,
+              "value": "Alex Serra - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 171,
+              "value": "Little Whale - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 150,
+              "value": "Daniel Scranton"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1740,
+              "value": "2025-01"
+            },
+            {
+              "count": 1650,
+              "value": "2024-10"
+            },
+            {
+              "count": 1600,
+              "value": "2024-07"
+            },
+            {
+              "count": 1448,
+              "value": "2024-08"
+            },
+            {
+              "count": 1411,
+              "value": "2025-04"
+            },
+            {
+              "count": 1349,
+              "value": "2026-04"
+            },
+            {
+              "count": 1300,
+              "value": "2025-03"
+            },
+            {
+              "count": 1287,
+              "value": "2024-06"
+            },
+            {
+              "count": 1210,
+              "value": "2025-07"
+            },
+            {
+              "count": 1210,
+              "value": "2025-02"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Danit - Topic",
+              "count": 72,
+              "value": "Naturaleza (Mose Edit)"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 59,
+              "value": "Paradise"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 57,
+              "value": "Gajumaru"
+            },
+            {
+              "by": "Danit - Topic",
+              "count": 57,
+              "value": "Cuatro Vientos (Rey & Kjavik Remix)"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 53,
+              "value": "Om Ganesha (Dance Meditation)"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 52,
+              "value": "Iluminar"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 50,
+              "value": "Odonata"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 50,
+              "value": "Rebirth"
+            },
+            {
+              "by": "Alexia Chellun - Topic",
+              "count": 48,
+              "value": "The Power Is Here Now"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 47,
+              "value": "Force"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 46,
+              "value": "Te Nande (Mose Remix)"
+            },
+            {
+              "by": "Little Whale - Topic",
+              "count": 46,
+              "value": "Aguila De Oro"
+            },
+            {
+              "by": "Xuqutopi - Topic",
+              "count": 45,
+              "value": "Agradezco"
+            },
+            {
+              "by": "Pai Tunes",
+              "count": 45,
+              "value": "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 44,
+              "value": "Vuela con el Viento (Mose Remix)"
+            },
+            {
+              "by": "Maneesh De Moor - Topic",
+              "count": 44,
+              "value": "Mother's Heartbeat"
+            },
+            {
+              "by": "Yatao - Topic",
+              "count": 43,
+              "value": "Phoenix"
+            },
+            {
+              "by": "Sariel Orenda - Topic",
+              "count": 42,
+              "value": "Azul"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 42,
+              "value": "Spirit Divine"
+            },
+            {
+              "by": "Ajeet - Topic",
+              "count": 42,
+              "value": "Healing Song"
+            }
+          ],
+          "unresolved_or_generic_events": 1294
+        },
+        "year_2023": {
+          "events": 14808,
+          "products": {
+            "youtube": 4988,
+            "youtube-music": 9820
+          },
+          "top_authors": [
+            {
+              "already_in_story": false,
+              "count": 848,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 539,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 495,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 438,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 408,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 350,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 338,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 313,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 312,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 285,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 282,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 257,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 231,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 194,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 187,
+              "value": "Robert Michaels - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 187,
+              "value": "El Tano Gabarri - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 170,
+              "value": "Young & Rollins - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 146,
+              "value": "Jim Stubblefield - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 145,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 135,
+              "value": "Alex Fox - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 131,
+              "value": "Toby Hack - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 128,
+              "value": "NovaMenco - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 124,
+              "value": "Lex Fridman"
+            },
+            {
+              "already_in_story": false,
+              "count": 119,
+              "value": "Lara & Reyes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 116,
+              "value": "Roni Benise - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1937,
+              "value": "2023-04"
+            },
+            {
+              "count": 1688,
+              "value": "2023-05"
+            },
+            {
+              "count": 1597,
+              "value": "2023-02"
+            },
+            {
+              "count": 1410,
+              "value": "2023-03"
+            },
+            {
+              "count": 1300,
+              "value": "2023-01"
+            },
+            {
+              "count": 1198,
+              "value": "2023-10"
+            },
+            {
+              "count": 1190,
+              "value": "2023-11"
+            },
+            {
+              "count": 1161,
+              "value": "2023-06"
+            },
+            {
+              "count": 1032,
+              "value": "2023-09"
+            },
+            {
+              "count": 895,
+              "value": "2023-12"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Behzad - Topic",
+              "count": 99,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "here",
+              "count": 82,
+              "value": "ESPN"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 62,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 62,
+              "value": "Siesta"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 61,
+              "value": "Aranjuez"
+            },
+            {
+              "by": "El Tano Gabarri - Topic",
+              "count": 61,
+              "value": "Noches en Andalucía"
+            },
+            {
+              "by": "Toby Hack - Topic",
+              "count": 54,
+              "value": "Joselito (Michael Rajab & Tobito)"
+            },
+            {
+              "by": "Pavlo Simtikidis - Topic",
+              "count": 53,
+              "value": "Paradise"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 52,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 52,
+              "value": "Europa"
+            },
+            {
+              "by": "Johannes Linstead - Topic",
+              "count": 51,
+              "value": "Between Tears"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 50,
+              "value": "Azul"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 50,
+              "value": "Noches Guitanas"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 49,
+              "value": "Rougé"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 48,
+              "value": "Baila, Baila"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 47,
+              "value": "Banana Bay"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 47,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Alex Fox - Topic",
+              "count": 45,
+              "value": "Nuevos Aires"
+            },
+            {
+              "by": "Young & Rollins - Topic",
+              "count": 45,
+              "value": "Mediterranean Romance"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 45,
+              "value": "Café Café"
+            }
+          ],
+          "unresolved_or_generic_events": 1301
+        }
+      }
+    },
+    "history_only_takeout": {
+      "dated_events": 65700,
+      "events": 65700,
+      "first": "2021-07-31T17:07:28",
+      "last": "2026-05-07T00:55:36",
+      "periods": {
+        "all_available": {
+          "events": 65700,
+          "products": {
+            "youtube": 17071,
+            "youtube-music": 48629
+          },
+          "top_authors": [
+            {
+              "already_in_story": false,
+              "count": 2311,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1713,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1660,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1494,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1389,
+              "value": "Mose - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1344,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1295,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1076,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 923,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 856,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 822,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 759,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 715,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 603,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 566,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 547,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 514,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 510,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 473,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 470,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 386,
+              "value": "Young & Rollins - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 373,
+              "value": "Jim Stubblefield - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 371,
+              "value": "Chris Spheeris - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 367,
+              "value": "Ayla Schafer - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 365,
+              "value": "Pavlo Simtikidis - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 2124,
+              "value": "2022-10"
+            },
+            {
+              "count": 2002,
+              "value": "2022-11"
+            },
+            {
+              "count": 1930,
+              "value": "2023-04"
+            },
+            {
+              "count": 1739,
+              "value": "2025-01"
+            },
+            {
+              "count": 1689,
+              "value": "2023-05"
+            },
+            {
+              "count": 1651,
+              "value": "2022-04"
+            },
+            {
+              "count": 1647,
+              "value": "2024-10"
+            },
+            {
+              "count": 1602,
+              "value": "2023-02"
+            },
+            {
+              "count": 1586,
+              "value": "2024-07"
+            },
+            {
+              "count": 1520,
+              "value": "2022-08"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 158,
+              "value": "Siesta"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 149,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 136,
+              "value": "Redemption"
+            },
+            {
+              "by": "here",
+              "count": 133,
+              "value": "ESPN"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 133,
+              "value": "Rougé"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 117,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 110,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 107,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Johannes Linstead - Topic",
+              "count": 104,
+              "value": "Between Tears"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 102,
+              "value": "Café Café"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 100,
+              "value": "Esperanza"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 98,
+              "value": "Omega Requiem"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 97,
+              "value": "Cathedral"
+            },
+            {
+              "by": "Govi - Topic",
+              "count": 97,
+              "value": "Treasure Bay"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 95,
+              "value": "Porcelain Rose"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 94,
+              "value": "Solace"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 94,
+              "value": "Cafe Olé"
+            },
+            {
+              "by": "Young & Rollins - Topic",
+              "count": 91,
+              "value": "Spanish Nights"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 90,
+              "value": "Aranjuez"
+            },
+            {
+              "by": "Strunz & Farah - Topic",
+              "count": 90,
+              "value": "Illusion"
+            }
+          ],
+          "unresolved_or_generic_events": 3675
+        },
+        "before_published_trace": {
+          "events": 39144,
+          "products": {
+            "youtube": 9056,
+            "youtube-music": 30088
+          },
+          "top_authors": [
+            {
+              "already_in_story": false,
+              "count": 2180,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1543,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1478,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1297,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1234,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 1065,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 904,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 776,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 748,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 588,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 554,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 508,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 465,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 442,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 386,
+              "value": "Young & Rollins - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 368,
+              "value": "Jim Stubblefield - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 362,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 347,
+              "value": "Govi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 344,
+              "value": "NovaMenco - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 320,
+              "value": "Chris Spheeris - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 272,
+              "value": "Lex Fridman"
+            },
+            {
+              "already_in_story": false,
+              "count": 264,
+              "value": "Robert Michaels - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 248,
+              "value": "Nick Johnston - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 242,
+              "value": "Lara & Reyes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 241,
+              "value": "El Tano Gabarri - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 2124,
+              "value": "2022-10"
+            },
+            {
+              "count": 2002,
+              "value": "2022-11"
+            },
+            {
+              "count": 1930,
+              "value": "2023-04"
+            },
+            {
+              "count": 1689,
+              "value": "2023-05"
+            },
+            {
+              "count": 1651,
+              "value": "2022-04"
+            },
+            {
+              "count": 1602,
+              "value": "2023-02"
+            },
+            {
+              "count": 1520,
+              "value": "2022-08"
+            },
+            {
+              "count": 1420,
+              "value": "2022-03"
+            },
+            {
+              "count": 1379,
+              "value": "2023-03"
+            },
+            {
+              "count": 1324,
+              "value": "2024-02"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 153,
+              "value": "Siesta"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 148,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 130,
+              "value": "Rougé"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 129,
+              "value": "Redemption"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 116,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 108,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "here",
+              "count": 106,
+              "value": "ESPN"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 105,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Johannes Linstead - Topic",
+              "count": 102,
+              "value": "Between Tears"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 101,
+              "value": "Café Café"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 98,
+              "value": "Esperanza"
+            },
+            {
+              "by": "Govi - Topic",
+              "count": 97,
+              "value": "Treasure Bay"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 92,
+              "value": "Cafe Olé"
+            },
+            {
+              "by": "Young & Rollins - Topic",
+              "count": 91,
+              "value": "Spanish Nights"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 89,
+              "value": "Porcelain Rose"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 89,
+              "value": "Omega Requiem"
+            },
+            {
+              "by": "NovaMenco - Topic",
+              "count": 89,
+              "value": "Mediterranean Breeze"
+            },
+            {
+              "by": "Armik - Topic",
+              "count": 88,
+              "value": "Pure Paradise"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 88,
+              "value": "Banana Bay"
+            },
+            {
+              "by": "Strunz & Farah - Topic",
+              "count": 88,
+              "value": "Illusion"
+            }
+          ],
+          "unresolved_or_generic_events": 2376
+        },
+        "early_2024_before_published_trace": {
+          "events": 4861,
+          "products": {
+            "youtube": 1396,
+            "youtube-music": 3465
+          },
+          "top_authors": [
+            {
+              "already_in_story": true,
+              "count": 272,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 183,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 124,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 117,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 108,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 90,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 90,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 84,
+              "value": "Slow Meadow - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 83,
+              "value": "Little Whale - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 81,
+              "value": "Chris Spheeris - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 81,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 81,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 77,
+              "value": "The White Arrow - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 76,
+              "value": "Robert Edward Grant"
+            },
+            {
+              "already_in_story": true,
+              "count": 76,
+              "value": "East Forest - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 70,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 70,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 68,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 66,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 61,
+              "value": "Beedle The Bardcore"
+            },
+            {
+              "already_in_story": false,
+              "count": 59,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 55,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 52,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 51,
+              "value": "Next Level Soul Podcast"
+            },
+            {
+              "already_in_story": false,
+              "count": 49,
+              "value": "Yatao - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1324,
+              "value": "2024-02"
+            },
+            {
+              "count": 1259,
+              "value": "2024-03"
+            },
+            {
+              "count": 1215,
+              "value": "2024-04"
+            },
+            {
+              "count": 829,
+              "value": "2024-01"
+            },
+            {
+              "count": 234,
+              "value": "2024-05"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 48,
+              "value": "Solace"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 41,
+              "value": "Cura Journey Mix"
+            },
+            {
+              "by": "Xuqutopi - Topic",
+              "count": 31,
+              "value": "Agradezco"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 31,
+              "value": "Preparing the Path"
+            },
+            {
+              "by": "Slow Meadow - Topic",
+              "count": 30,
+              "value": "Upstream Dream"
+            },
+            {
+              "by": "Yatao - Topic",
+              "count": 30,
+              "value": "Listen to the Mountains"
+            },
+            {
+              "by": "Little Whale - Topic",
+              "count": 28,
+              "value": "Aguila De Oro"
+            },
+            {
+              "by": "The White Arrow - Topic",
+              "count": 28,
+              "value": "Drolma (Om Tare Tuttare)"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 28,
+              "value": "Gypsy"
+            },
+            {
+              "by": "Danit - Topic",
+              "count": 27,
+              "value": "Tierra"
+            },
+            {
+              "by": "Liquid Bloom - Topic",
+              "count": 26,
+              "value": "Temple of the Goddess"
+            },
+            {
+              "by": "Liquid Bloom - Topic",
+              "count": 26,
+              "value": "Inner Sanctum (Medicine Buddha Mantra Prayer)"
+            },
+            {
+              "by": "Hang Massive - Topic",
+              "count": 26,
+              "value": "Warmth of the Sun's Rays"
+            },
+            {
+              "by": "Empty Artist - Topic",
+              "count": 26,
+              "value": "Fusion (Live) (Radio Edit)"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 25,
+              "value": "Iluminar"
+            },
+            {
+              "by": "Buddha's Lounge - Topic",
+              "count": 25,
+              "value": "Flute Meditation"
+            },
+            {
+              "by": "Dean Evenson - Topic",
+              "count": 25,
+              "value": "Breath of Light"
+            },
+            {
+              "by": "Sukhmani - Topic",
+              "count": 25,
+              "value": "Ash + Bone"
+            },
+            {
+              "by": "Gipsy Kings - Topic",
+              "count": 25,
+              "value": "No Volvere"
+            },
+            {
+              "by": "Saint Of Sin - Topic",
+              "count": 24,
+              "value": "Song of Divine (13 Minutes Meditaton Mix)"
+            }
+          ],
+          "unresolved_or_generic_events": 307
+        },
+        "published_trace_window": {
+          "events": 26556,
+          "products": {
+            "youtube": 8015,
+            "youtube-music": 18541
+          },
+          "top_authors": [
+            {
+              "already_in_story": true,
+              "count": 1658,
+              "value": "Yaima - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 1385,
+              "value": "Mose - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 724,
+              "value": "Poranguí - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 643,
+              "value": "Liquid Bloom - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 492,
+              "value": "Ajeet - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 429,
+              "value": "Malte Marten - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 364,
+              "value": "Ayla Schafer - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 346,
+              "value": "Maneesh De Moor - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 283,
+              "value": "Karunesh - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 267,
+              "value": "Danit - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 257,
+              "value": "Anne Tucker"
+            },
+            {
+              "already_in_story": false,
+              "count": 234,
+              "value": "Nessi Gomes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 225,
+              "value": "Yatao - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 217,
+              "value": "Mei-lan - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 211,
+              "value": "Alexia Chellun - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 211,
+              "value": "East Forest - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 202,
+              "value": "Sam Garrett - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 202,
+              "value": "Parijat - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 188,
+              "value": "Tetouze - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 181,
+              "value": "Chantress Seba - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 180,
+              "value": "Emilio Ortiz"
+            },
+            {
+              "already_in_story": false,
+              "count": 177,
+              "value": "Deya Dova - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 176,
+              "value": "Alex Serra - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 171,
+              "value": "Little Whale - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 152,
+              "value": "Daniel Scranton"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1739,
+              "value": "2025-01"
+            },
+            {
+              "count": 1647,
+              "value": "2024-10"
+            },
+            {
+              "count": 1586,
+              "value": "2024-07"
+            },
+            {
+              "count": 1447,
+              "value": "2024-08"
+            },
+            {
+              "count": 1438,
+              "value": "2025-04"
+            },
+            {
+              "count": 1337,
+              "value": "2026-04"
+            },
+            {
+              "count": 1285,
+              "value": "2024-06"
+            },
+            {
+              "count": 1277,
+              "value": "2025-03"
+            },
+            {
+              "count": 1229,
+              "value": "2025-07"
+            },
+            {
+              "count": 1212,
+              "value": "2025-02"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Danit - Topic",
+              "count": 71,
+              "value": "Naturaleza (Mose Edit)"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 57,
+              "value": "Paradise"
+            },
+            {
+              "by": "Danit - Topic",
+              "count": 56,
+              "value": "Cuatro Vientos (Rey & Kjavik Remix)"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 55,
+              "value": "Gajumaru"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 51,
+              "value": "Om Ganesha (Dance Meditation)"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 51,
+              "value": "Rebirth"
+            },
+            {
+              "by": "Poranguí - Topic",
+              "count": 50,
+              "value": "Iluminar"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 49,
+              "value": "Odonata"
+            },
+            {
+              "by": "Alexia Chellun - Topic",
+              "count": 49,
+              "value": "The Power Is Here Now"
+            },
+            {
+              "by": "Yaima - Topic",
+              "count": 48,
+              "value": "Force"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 47,
+              "value": "Te Nande (Mose Remix)"
+            },
+            {
+              "by": "Xuqutopi - Topic",
+              "count": 46,
+              "value": "Agradezco"
+            },
+            {
+              "by": "Little Whale - Topic",
+              "count": 46,
+              "value": "Aguila De Oro"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 45,
+              "value": "Vuela con el Viento (Mose Remix)"
+            },
+            {
+              "by": "Pai Tunes",
+              "count": 45,
+              "value": "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation"
+            },
+            {
+              "by": "Maneesh De Moor - Topic",
+              "count": 44,
+              "value": "Mother's Heartbeat"
+            },
+            {
+              "by": "Yatao - Topic",
+              "count": 43,
+              "value": "Phoenix"
+            },
+            {
+              "by": "Mose - Topic",
+              "count": 41,
+              "value": "Spirit Divine"
+            },
+            {
+              "by": "Ajeet - Topic",
+              "count": 41,
+              "value": "Healing Song"
+            },
+            {
+              "by": "Sariel Orenda - Topic",
+              "count": 40,
+              "value": "Azul"
+            }
+          ],
+          "unresolved_or_generic_events": 1299
+        },
+        "year_2023": {
+          "events": 14746,
+          "products": {
+            "youtube": 4981,
+            "youtube-music": 9765
+          },
+          "top_authors": [
+            {
+              "already_in_story": false,
+              "count": 844,
+              "value": "Ottmar Liebert - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 542,
+              "value": "Guitarra Azul - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 489,
+              "value": "Jesse Cook - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 430,
+              "value": "Gipsy Kings - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 404,
+              "value": "Al Marconi - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 347,
+              "value": "Armik - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 332,
+              "value": "Oscar Lopez - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 311,
+              "value": "Kevin Laliberté - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 310,
+              "value": "Strunz & Farah - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 283,
+              "value": "Luis Villegas - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 277,
+              "value": "LucasGitanoFamily - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 255,
+              "value": "Johannes Linstead - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 226,
+              "value": "Behzad - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 191,
+              "value": "Jacob Gurevitsch - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 185,
+              "value": "Robert Michaels - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 182,
+              "value": "El Tano Gabarri - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 169,
+              "value": "Young & Rollins - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 148,
+              "value": "Jim Stubblefield - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 142,
+              "value": "Pavlo Simtikidis - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 136,
+              "value": "Alex Fox - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 133,
+              "value": "Toby Hack - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 130,
+              "value": "NovaMenco - Topic"
+            },
+            {
+              "already_in_story": true,
+              "count": 124,
+              "value": "Lex Fridman"
+            },
+            {
+              "already_in_story": false,
+              "count": 119,
+              "value": "Lara & Reyes - Topic"
+            },
+            {
+              "already_in_story": false,
+              "count": 117,
+              "value": "Roni Benise - Topic"
+            }
+          ],
+          "top_months": [
+            {
+              "count": 1930,
+              "value": "2023-04"
+            },
+            {
+              "count": 1689,
+              "value": "2023-05"
+            },
+            {
+              "count": 1602,
+              "value": "2023-02"
+            },
+            {
+              "count": 1379,
+              "value": "2023-03"
+            },
+            {
+              "count": 1303,
+              "value": "2023-01"
+            },
+            {
+              "count": 1203,
+              "value": "2023-10"
+            },
+            {
+              "count": 1180,
+              "value": "2023-11"
+            },
+            {
+              "count": 1167,
+              "value": "2023-06"
+            },
+            {
+              "count": 1014,
+              "value": "2023-09"
+            },
+            {
+              "count": 887,
+              "value": "2023-12"
+            }
+          ],
+          "top_works": [
+            {
+              "by": "Behzad - Topic",
+              "count": 94,
+              "value": "Rumi's Inspiration"
+            },
+            {
+              "by": "here",
+              "count": 83,
+              "value": "ESPN"
+            },
+            {
+              "by": "Guitarra Azul - Topic",
+              "count": 63,
+              "value": "Ojos Gitanos"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 61,
+              "value": "Aranjuez"
+            },
+            {
+              "by": "Kevin Laliberté - Topic",
+              "count": 61,
+              "value": "Siesta"
+            },
+            {
+              "by": "El Tano Gabarri - Topic",
+              "count": 60,
+              "value": "Noches en Andalucía"
+            },
+            {
+              "by": "Toby Hack - Topic",
+              "count": 56,
+              "value": "Joselito (Michael Rajab & Tobito)"
+            },
+            {
+              "by": "Behzad - Topic",
+              "count": 52,
+              "value": "Strings of Desire"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 52,
+              "value": "Noches Guitanas"
+            },
+            {
+              "by": "Robert Michaels - Topic",
+              "count": 52,
+              "value": "Europa"
+            },
+            {
+              "by": "Pavlo Simtikidis - Topic",
+              "count": 51,
+              "value": "Paradise"
+            },
+            {
+              "by": "Jesse Cook - Topic",
+              "count": 50,
+              "value": "Azul"
+            },
+            {
+              "by": "Al Marconi - Topic",
+              "count": 50,
+              "value": "Rougé"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 48,
+              "value": "Gentle Seduction"
+            },
+            {
+              "by": "Johannes Linstead - Topic",
+              "count": 48,
+              "value": "Between Tears"
+            },
+            {
+              "by": "Oscar Lopez - Topic",
+              "count": 47,
+              "value": "Baila, Baila"
+            },
+            {
+              "by": "Alex Fox - Topic",
+              "count": 46,
+              "value": "Nuevos Aires"
+            },
+            {
+              "by": "Luis Villegas - Topic",
+              "count": 46,
+              "value": "Banana Bay"
+            },
+            {
+              "by": "Jim Stubblefield - Topic",
+              "count": 44,
+              "value": "Café Café"
+            },
+            {
+              "by": "Alex Fox - Topic",
+              "count": 44,
+              "value": "To The Gypsies"
+            }
+          ],
+          "unresolved_or_generic_events": 1304
+        }
+      }
+    },
+    "published_gap": {
+      "highest_signal_missing_authors": [
+        {
+          "already_in_story": false,
+          "count": 2180,
+          "value": "Al Marconi - Topic"
+        },
+        {
+          "already_in_story": true,
+          "count": 1543,
+          "value": "Jesse Cook - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1478,
+          "value": "Ottmar Liebert - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1297,
+          "value": "Guitarra Azul - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1234,
+          "value": "Johannes Linstead - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1065,
+          "value": "Armik - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 904,
+          "value": "Oscar Lopez - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 776,
+          "value": "Kevin Laliberté - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 748,
+          "value": "Strunz & Farah - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 588,
+          "value": "Gipsy Kings - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 554,
+          "value": "Luis Villegas - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 508,
+          "value": "Behzad - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 465,
+          "value": "LucasGitanoFamily - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 442,
+          "value": "Jacob Gurevitsch - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 386,
+          "value": "Young & Rollins - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 368,
+          "value": "Jim Stubblefield - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 362,
+          "value": "Pavlo Simtikidis - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 347,
+          "value": "Govi - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 344,
+          "value": "NovaMenco - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 320,
+          "value": "Chris Spheeris - Topic"
+        }
+      ],
+      "missing_2023_events": 14746,
+      "missing_before_2024_05_07_events": 39144,
+      "missing_early_2024_events": 4861
+    },
+    "uploads_and_library_parts": {
+      "archives": 13,
+      "audio_upload_files": 4743,
+      "date_span": "not available from upload filenames alone",
+      "sample_audio_titles": [
+        "Are You Lonesome Tonight",
+        "Forever",
+        "The Locomotion",
+        "The Apple",
+        "Missing You",
+        "Never Give All the Heart",
+        "Beep Beep",
+        "Romeo And Juliet",
+        "Keep Your Hands To Yourself",
+        "Venus",
+        "MeanStreak",
+        "Tortured, Tangled Hearts",
+        "I Know What You Want",
+        "Ain't Gonna Bump No More (With No Big Fat Woman",
+        "Crazy(1)",
+        "Roll Over Beethoven",
+        "Take This Heart",
+        "Turning Tide",
+        "I Stay Away",
+        "Theme From S.W.A.T",
+        "Communication Breakdown(1)",
+        "Let 'Er Rip",
+        "Red Light Special",
+        "Or Is It Just Me",
+        "MacArthur Park"
+      ],
+      "sample_video_titles": [
+        "Melvin Harold - So Sally can wait",
+        "Melvin Harold - Horse with no name",
+        "Melvin Harold - Apologize",
+        "Melvin Harold - Have You Ever Seen The Rain'",
+        "Congrats Katrin and Thomas from Alex and Maija"
+      ],
+      "video_upload_files": 5
+    }
+  }
+}
