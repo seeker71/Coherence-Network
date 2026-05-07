@@ -262,6 +262,51 @@ function ExternalPresenceRow({ presences }: { presences: ExternalPresence[] }) {
   );
 }
 
+/**
+ * Patterns in graph node ids that mark system tissue — runners, test
+ * fixtures, visitors, agent identities. These never render as
+ * relationship chips on a public presence page.
+ *
+ * Mirrors the filter rules used by the /people directory in
+ * `web/content/presence-walk/en.json`. The list lives in two places
+ * for now; consolidating into a shared lib is future-breath work.
+ */
+const SYSTEM_ID_PATTERNS = [
+  ":wanderer-",
+  ":presence-visitor",
+  ":test-",
+  ":smoke-",
+  "-smoke-",
+  "-bot",
+  ":external-proof",
+  "decomposition-verify",
+  ":friend-",
+  "-placeholder",
+  ":claude-opus-mac-node",
+  ":coherence-runner",
+  ":e-m-t-",
+  ":email-",
+  ":qa-",
+  ":ci-",
+];
+const SYSTEM_EXACT_IDS = new Set([
+  "contributor:claude",
+  "contributor:codex",
+  "contributor:codex-agent",
+  "contributor:cursor-agent",
+  "contributor:grok",
+  "contributor:gemini",
+  "person:codex-smoke-human",
+  "contributor:presence-visitor",
+  "person:presence-visitor",
+]);
+
+function isSystemNode(id: string | undefined | null): boolean {
+  if (!id) return false;
+  if (SYSTEM_EXACT_IDS.has(id)) return true;
+  return SYSTEM_ID_PATTERNS.some((p) => id.includes(p));
+}
+
 function groupByFamily(
   edges: EdgeRow[],
   selfId: string,
@@ -272,10 +317,12 @@ function groupByFamily(
     const isOutgoing = e.from_id === selfId;
     const other = isOutgoing ? e.to_node : e.from_node;
     if (!other) continue;
-    // Hide self-loops and assets (assets render as creations elsewhere
-    // on the page, not as relationship chips).
+    // Hide self-loops, assets, and system tissue (visitors, runners,
+    // test fixtures). Assets render as creations elsewhere on the
+    // page, not as relationship chips.
     if (other.id === selfId) continue;
     if (other.type === "asset") continue;
+    if (isSystemNode(other.id)) continue;
     const slug = (other as { slug?: string | null }).slug;
     const href = slug
       ? `/people/${slug}`
