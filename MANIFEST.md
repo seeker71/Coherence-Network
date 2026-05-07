@@ -38,7 +38,7 @@
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 29 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 46 | Web components — shared React surfaces |
 | [web/app/INDEX.md](web/app/INDEX.md) | 153 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 84 | Scripts — operational tools, generators, syncers |
+| [scripts/INDEX.md](scripts/INDEX.md) | 85 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 

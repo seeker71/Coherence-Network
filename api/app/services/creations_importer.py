@@ -65,34 +65,64 @@ def _stratify(items: list[Any], target: int) -> list[Any]:
     """Stratified sample across an ordered list.
 
     When ``items`` has at most ``target`` entries the whole list is
-    returned. Otherwise the sample includes the oldest entries (tail
-    of the list, since most feeds list newest-first), the newest
-    entries (head), and an evenly-spaced middle slice — together
-    spanning the breadth of what the source returned rather than
-    concentrating on first-N.
+    returned. Otherwise the sample weaves four bands together:
+
+    - Newest (head of the list, since most feeds are newest-first)
+    - Oldest (tail of the list)
+    - Evenly-spaced middle (career-spanning coverage)
+    - Highest-loudness — top items by ``view_count`` when present
+
+    The view-count band makes "general signal" — what a presence
+    actually broadcast loudest into the field — visible in the
+    sample even when those works fall outside the temporal bands.
+    Items without a view count are skipped from that band only;
+    they still participate in the temporal bands.
 
     Returns items in source order so dedupe keys stay stable.
     """
     n = len(items)
     if n <= target or target <= 0:
         return list(items)
-    # Reserve thirds: newest, evenly-spaced middle, oldest.
-    third = max(1, target // 3)
-    newest = list(range(0, third))
-    oldest = list(range(n - third, n))
-    middle_count = target - len(newest) - len(oldest)
+    # Quarter-reserves so each band has weight without crowding out
+    # the others. With target=30: 8 newest + 8 oldest + 8 by-views +
+    # 6 evenly-spaced middle = 30.
+    quarter = max(1, target // 4)
+    newest = set(range(0, quarter))
+    oldest = set(range(n - quarter, n))
+
+    # Loudness band — sort indexes by view_count desc, take the top
+    # `quarter` that aren't already in newest/oldest. When no view
+    # counts are present this band collapses gracefully.
+    def _vc(idx: int) -> int:
+        item = items[idx]
+        v = getattr(item, "view_count", None) if hasattr(item, "view_count") else (
+            (item.get("view_count") if isinstance(item, dict) else None)
+        )
+        return v if isinstance(v, (int, float)) else -1
+    by_loudness_sorted = sorted(range(n), key=lambda i: -_vc(i))
+    loudest: set[int] = set()
+    for idx in by_loudness_sorted:
+        if _vc(idx) <= 0:
+            break
+        if idx in newest or idx in oldest:
+            continue
+        loudest.add(idx)
+        if len(loudest) >= quarter:
+            break
+
+    middle_count = target - len(newest) - len(oldest) - len(loudest)
+    middle: set[int] = set()
     if middle_count > 0:
-        # Evenly spaced indexes across the middle band.
-        lo = third
-        hi = n - third - 1
-        if hi <= lo:
-            middle = []
-        else:
+        lo = quarter
+        hi = n - quarter - 1
+        if hi > lo:
             step = (hi - lo) / (middle_count + 1)
-            middle = [int(lo + step * (i + 1)) for i in range(middle_count)]
-    else:
-        middle = []
-    chosen = sorted(set(newest + middle + oldest))
+            for i in range(middle_count):
+                idx = int(lo + step * (i + 1))
+                if idx not in newest and idx not in oldest and idx not in loudest:
+                    middle.add(idx)
+
+    chosen = sorted(newest | oldest | loudest | middle)
     return [items[i] for i in chosen]
 
 
@@ -186,21 +216,29 @@ def _ensure_creation(
         node = existing
         node_created = False
     else:
+        properties: dict[str, Any] = {
+            "asset_type": "CONTENT",
+            "creation_kind": creation.kind,
+            "canonical_url": creation.url,
+            "image_url": creation.image_url,
+            "when": creation.when,
+            "imported_from": source_name,
+            "total_cost": "0",
+            "claimable": True,
+        }
+        # View count carries the loudness this work broadcasts into
+        # the field — used downstream to weight a presence's emitted
+        # spectrum so a high-viewed TEDx talk emits more strongly
+        # than a low-viewed behind-the-scenes clip. None when the
+        # source can't read it (early-life videos, no-API platforms).
+        if getattr(creation, "view_count", None) is not None:
+            properties["view_count"] = creation.view_count
         node = graph_service.create_node(
             id=node_id,
             type="asset",
             name=creation.name,
             description=creation.description or creation.name,
-            properties={
-                "asset_type": "CONTENT",
-                "creation_kind": creation.kind,
-                "canonical_url": creation.url,
-                "image_url": creation.image_url,
-                "when": creation.when,
-                "imported_from": source_name,
-                "total_cost": "0",
-                "claimable": True,
-            },
+            properties=properties,
             phase="ice",
         )
         node_created = True

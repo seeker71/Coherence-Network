@@ -56,6 +56,13 @@ class ImportedCreation:
     because it's how dedupe keys against existing graph nodes.
     `image_url`, `description`, and `when` are best-effort
     enrichment that the renderer uses when present.
+
+    `view_count` (when a source can read it — YouTube's renderer
+    surfaces it, others typically don't) carries the loudness of
+    this creation's broadcast into the field. The aggregation layer
+    weights a presence's emitted spectrum by view counts so a
+    high-viewed TEDx talk emits more strongly than a low-viewed
+    behind-the-scenes clip.
     """
     name: str
     kind: str
@@ -63,6 +70,7 @@ class ImportedCreation:
     image_url: str | None = None
     description: str | None = None
     when: str | None = None  # release date if known (free-text ISO or label)
+    view_count: int | None = None  # public reach signal when available
 
 
 class CreationSource(Protocol):
