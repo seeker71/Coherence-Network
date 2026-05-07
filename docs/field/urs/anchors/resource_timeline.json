@@ -1,0 +1,79 @@
+{
+  "note": "Resource and future-economy anchors for the personal chronology. Evidence labels distinguish user-supplied memory from local email traces.",
+  "tesla_and_energy": [
+    {
+      "date": "2013-01-16",
+      "event": "Initial Tesla Model S reservation placed.",
+      "details": {
+        "reservation_sequence_number": 18326
+      },
+      "evidence": ["user-anchor"]
+    },
+    {
+      "date": "2013-05-27",
+      "event": "Tesla Model S configuration finalized and order confirmed.",
+      "details": {
+        "deposit_usd": 5000,
+        "order_number": "RN325633"
+      },
+      "evidence": ["user-anchor"]
+    },
+    {
+      "date": "2013-06-05",
+      "event": "Tesla Model S entered production around this date.",
+      "evidence": ["user-anchor"]
+    },
+    {
+      "date": "2013-06-29/2013-07-13",
+      "event": "Tesla Model S pickup window at the Denver Service Center.",
+      "evidence": ["user-anchor"]
+    },
+    {
+      "date": "2018",
+      "event": "SolarCity, now Tesla, solar panels ordered for the old house.",
+      "evidence": ["user-anchor"],
+      "source_gap": "Exact order email or account record still needs retrieval."
+    },
+    {
+      "date": "2020",
+      "event": "Powerwall ordered.",
+      "evidence": ["user-anchor"],
+      "source_gap": "Original order source still needs retrieval; Gmail confirms the 2021 install workflow."
+    },
+    {
+      "date": "2021-07-18/2021-07-26",
+      "event": "Powerwall installation, inspection, invoice, and storage installation completion workflow.",
+      "evidence": [
+        "gmail:Tesla EnergyOrders Jul 18 2021 installation reminder",
+        "gmail:Tesla EnergyOrders Jul 19 2021 welcome",
+        "gmail:Tesla Jul 20 2021 inspection and invoice",
+        "gmail:Tesla Jul 26 2021 storage installation passed inspection"
+      ]
+    }
+  ],
+  "investments": [
+    {
+      "date": "2019-06-04T06:30:18-07:00",
+      "event": "Bought 70 shares of TSLA at an execution price of 181.1.",
+      "evidence": ["gmail:E*TRADE subject Buy 70 TSLA Executed @ $181.1"]
+    },
+    {
+      "date": "2021-05-11T06:30:24-07:00",
+      "event": "Bought 14 shares of TSLA at an execution price of 599.72.",
+      "evidence": ["gmail:E*TRADE subject Buy 14 TSLA Executed @ $599.72"]
+    }
+  ],
+  "frequency_reading": {
+    "summary": "Tesla was not only a later investment theme. It entered the lived field as vehicle reservation, embodied infrastructure, energy production, storage, and capital exposure.",
+    "themes": [
+      "future-economy",
+      "manufacturing",
+      "electric-mobility",
+      "solar",
+      "home-energy-storage",
+      "capital-allocation",
+      "risk",
+      "civilization-infrastructure"
+    ]
+  }
+}

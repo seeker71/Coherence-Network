@@ -1226,6 +1226,44 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    Tool(
+        name="coherence_get_field_story",
+        description="Read a published field story with canonical narrative, anchors, reports, and agent contribution surfaces.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "description": "Field story slug", "default": "urs-field-story"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_get_field_story_artifact",
+        description="Read one artifact from a field story, such as anchors, summaries, reports, tools, or event traces.",
+        inputSchema={
+            "type": "object",
+            "required": ["artifact_id"],
+            "properties": {
+                "slug": {"type": "string", "description": "Field story slug", "default": "urs-field-story"},
+                "artifact_id": {"type": "string", "description": "Artifact id from the field story manifest"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_contribute_field_story",
+        description="Record an attributed correction, addition, or interpretation proposal for a published field story.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id", "artifact_id", "summary"],
+            "properties": {
+                "slug": {"type": "string", "description": "Field story slug", "default": "urs-field-story"},
+                "contributor_id": {"type": "string", "description": "Person or agent contributor id"},
+                "artifact_id": {"type": "string", "description": "Artifact being corrected or extended"},
+                "contribution_type": {"type": "string", "description": "correction, addition, interpretation, source, etc.", "default": "addition"},
+                "summary": {"type": "string", "description": "Short contribution summary"},
+                "content_markdown": {"type": "string", "description": "Optional proposed content"},
+            },
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -1841,6 +1879,21 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/cc/supply")
         case "coherence_governance_requests":
             return api_get("/api/governance/change-requests", {"limit": args.get("limit", 20)})
+        case "coherence_get_field_story":
+            return api_get(f"/api/field-stories/{quote(args.get('slug', 'urs-field-story'), safe='')}")
+        case "coherence_get_field_story_artifact":
+            slug = quote(args.get("slug", "urs-field-story"), safe="")
+            artifact_id = quote(args["artifact_id"], safe="")
+            return api_get(f"/api/field-stories/{slug}/artifacts/{artifact_id}")
+        case "coherence_contribute_field_story":
+            slug = quote(args.get("slug", "urs-field-story"), safe="")
+            return api_post(f"/api/field-stories/{slug}/contributions", {
+                "contributor_id": args["contributor_id"],
+                "artifact_id": args["artifact_id"],
+                "contribution_type": args.get("contribution_type", "addition"),
+                "summary": args["summary"],
+                "content_markdown": args.get("content_markdown", ""),
+            })
         case _:
             return {"error": f"Unknown tool: {name}"}
 

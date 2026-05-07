@@ -13,25 +13,25 @@ Spec → Test → Implement → CI → Review → Merge
 - Do NOT modify tests to make implementation pass
 - Only modify files listed in spec/issue
 
-## Mandatory Delivery Contract (No Exceptions)
+## Delivery Guide
 
-- User-defined deploy contract: when the user asks to deploy, run the full end-to-end contract (start-gate, rebase, local gates, evidence validation, push/PR + checks), then report each proof artifact.
-- Deploy self-heal rule: do not stop for non-critical failures in this chain; implement/repair the blocker, rerun the failed step, and continue until the chain succeeds or you return a concrete blocking condition with exact blocker output + remediations applied.
+- User-defined deploy flow: when the user asks to deploy, use the shortest end-to-end path that still produces proof: prompt guide, rebase, local proof, evidence validation, push/PR, checks, merge, deploy, public verify.
+- Self-heal rule: do not stop for non-critical failures in this chain; repair the concrete failure, rerun the smallest proof command, and continue until the chain succeeds or you return the exact external blocker plus remediations already applied.
 
 1. Worktree-only execution
    - Never edit or run implementation commands in the primary workspace.
    - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
-2. Prompt entry gate (required before any edits)
-   - Run: `make prompt-gate`
-   - Clean worktree: runs start-gate + rebase + local guard.
+2. Prompt entry guide
+   - Run: `make prompt-guide` (`make prompt-gate` remains an alias for older automation).
+   - Clean worktree: orient, confirm branch/worktree safety, and continue.
    - Dirty worktree: continuation mode (skip re-bootstrap/start-gate and continue in-flight task).
    - Detached `HEAD`: attach a branch first (`git switch -c codex/<thread-name>` or `git switch codex/<thread-name>`).
-   - If it fails, stop and fix blockers first.
-3. Pre-commit local gate (required)
+   - If it fails, fix the specific condition it reports.
+3. Pre-commit local proof
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
    - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
    - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
-   - If either fails, do not commit.
+   - If one fails, repair that failure and rerun only the needed proof command.
 4. Evidence contract (required per commit)
    - Add/update `docs/system_audit/commit_evidence_<date>_<topic>.json`.
    - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
@@ -108,7 +108,7 @@ Spec → Test → Implement → CI → Review → Merge
 ## Key Files
 
 - `CLAUDE.md` — Project config, conventions, guardrails
-- `AGENT.md` — Agent self-unblock playbook for failed gates
+- `AGENT.md` — Agent flow guide for the simplest useful next command
 - `docs/WORKTREE-QUICKSTART.md` — Mandatory worktree-only startup flow and failure recovery
 - `docs/STATUS.md` — Current implementation status, sprint progress
 - `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
@@ -136,14 +136,14 @@ Spec → Test → Implement → CI → Review → Merge
 ## Commands
 
 ```bash
-# Mandatory first step for every prompt (new thread + follow-up)
-make prompt-gate
+# First step for every prompt (new thread + follow-up)
+make prompt-guide
 
 # Worktree setup for Codex thread start
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
-make prompt-gate
+make prompt-guide
 
 # API
 cd api && uvicorn app.main:app --reload --port 8000
@@ -161,8 +161,8 @@ NPM_CACHE=/tmp/coherence-npm-cache ./scripts/verify_worktree_local_web.sh
 # Public production verify (required before merge/roll-forward)
 ./scripts/verify_web_api_deploy.sh
 
-# Prompt entry gate (required before starting a new task)
-make prompt-gate
+# Prompt entry guide
+make prompt-guide
 
 # PR check failure prevention + tracking (default before commit/push)
 # Optional for n8n-backed automation flows:
@@ -288,7 +288,7 @@ Use these as design guidance for web changes. They are intended to keep the expe
   - run `git rev-parse --abbrev-ref HEAD`
   - if output is `HEAD`, attach first: `git switch -c codex/<topic>-<date>` (or `git switch codex/<existing-branch>`)
   - only then run `./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate`
-- If `make start-gate` fails only because the worktree is dirty from active task work, prefer continuing the same task and running local validation gates directly rather than repeatedly stashing/restoring mid-task.
+- If `make start-guide` fails only because the worktree is dirty from active task work, prefer continuing the same task and running focused validation directly rather than repeatedly stashing/restoring mid-task.
 - Suggested Codex thread start check (quick, lightweight): confirm branch name, run `git status --short`, and record if the worktree is intentionally dirty before running any recovery helpers.
 - For deploy-focused threads, prefer a clean dedicated branch/worktree for release scope. Keep unrelated in-progress edits in another branch/worktree so deploy evidence and PR diffs stay easy to verify.
 

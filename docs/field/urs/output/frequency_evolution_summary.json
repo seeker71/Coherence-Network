@@ -1,0 +1,7994 @@
+{
+  "generated_at": "2026-05-07T10:08:19",
+  "events_with_dates": 27443,
+  "monthly": [
+    {
+      "month": "2016-01",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Alexandre Dumas",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Count of Monte Cristo",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2016-11",
+      "events": 6,
+      "frequency_counts": {
+        "fictional-systems": 5,
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          5
+        ],
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.833,
+      "coherence_score": 61.17,
+      "axes": {
+        "pressure": 0,
+        "intensity": 6,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Peter F. Hamilton",
+          5
+        ],
+        [
+          "James S. A. Corey",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "A Night Without Stars: A Novel of the Commonwealth",
+          1
+        ],
+        [
+          "The Naked God",
+          1
+        ],
+        [
+          "Nemesis Games",
+          1
+        ],
+        [
+          "The Abyss Beyond Dreams",
+          1
+        ],
+        [
+          "The Neutronium Alchemist",
+          1
+        ],
+        [
+          "The Reality Dysfunction",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2016-12",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Neal Stephenson",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Cryptonomicon",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2017-03",
+      "events": 1,
+      "frequency_counts": {
+        "devotional-body": 1
+      },
+      "top_frequencies": [
+        [
+          "devotional-body",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 97.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 2,
+        "insight": 0,
+        "vitality": 2
+      },
+      "top_authors": [
+        [
+          "Alexander Loyd PhD ND",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Healing Code",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2017-10",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Neal Stephenson",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Snow Crash",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2017-11",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Faith of the Fallen",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-01",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 2,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.333,
+      "coherence_score": 29.97,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Philip K. Dick",
+          1
+        ],
+        [
+          "James S. A. Corey",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Expanse",
+          1
+        ],
+        [
+          "Blade Runner",
+          1
+        ],
+        [
+          "Babylon's Ashes",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-02",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Lisa Feldman Barrett",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "How Emotions Are Made",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-03",
+      "events": 6,
+      "frequency_counts": {
+        "unclassified": 6
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          6
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 46.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 6,
+        "inspiration": 4,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          5
+        ],
+        [
+          "James S. A. Corey",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Persepolis Rising",
+          1
+        ],
+        [
+          "Head of the Dragon",
+          1
+        ],
+        [
+          "Freedom's Dawn",
+          1
+        ],
+        [
+          "Rise of the Corinari",
+          1
+        ],
+        [
+          "The Rings of Haven",
+          1
+        ],
+        [
+          "The Legend of Corinair",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-04",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Scott Sigler",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Earthcore",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-05",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Celestia CV-02",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-06",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          2
+        ],
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Resistance",
+          1
+        ],
+        [
+          "Liberation",
+          1
+        ],
+        [
+          "The Pillars of Creation",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-08",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Naked Empire",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2018-12",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 46.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 2,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          2
+        ],
+        [
+          "Tim Lebbon, Dirk Maggs",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Born of the Ashes",
+          1
+        ],
+        [
+          "Rise of the Alliance",
+          1
+        ],
+        [
+          "Alien: Out of the Shadows",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-01",
+      "events": 2,
+      "frequency_counts": {
+        "shadow-power": 1,
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "shadow-power",
+          1
+        ],
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.5,
+      "coherence_score": 32.5,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Adam Grant",
+          1
+        ],
+        [
+          "Susan Trott, Libby Spurrier - adaptor",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Power Moves",
+          1
+        ],
+        [
+          "The Man on the Mountaintop",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-02",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Jeff Hirsch",
+          1
+        ],
+        [
+          "Jan Smith",
+          1
+        ],
+        [
+          "Terry Goodkind",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Sovereign",
+          1
+        ],
+        [
+          "Killer by Nature",
+          1
+        ],
+        [
+          "Chainfire",
+          1
+        ],
+        [
+          "Resurrection",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-03",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Phantom",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-04",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          5
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          3
+        ],
+        [
+          "John Scalzi",
+          1
+        ],
+        [
+          "Joe Abercrombie",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Omen Machine",
+          1
+        ],
+        [
+          "The Dispatcher",
+          1
+        ],
+        [
+          "Confessor",
+          1
+        ],
+        [
+          "The Third Kingdom",
+          1
+        ],
+        [
+          "The Blade Itself",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-05",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          2
+        ],
+        [
+          "Florence Williams",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The 3-Day Effect",
+          1
+        ],
+        [
+          "Warheart",
+          1
+        ],
+        [
+          "Severed Souls",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-06",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          5
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          2
+        ],
+        [
+          "Joe Abercrombie",
+          2
+        ],
+        [
+          "William Gibson",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Balance",
+          1
+        ],
+        [
+          "Last Argument of Kings",
+          1
+        ],
+        [
+          "Rebellion",
+          1
+        ],
+        [
+          "Before They Are Hanged",
+          1
+        ],
+        [
+          "Alien III",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-07",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Yuval Noah Harari",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "Homo Deus",
+          1
+        ],
+        [
+          "Sapiens",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-08",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Yuval Noah Harari",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "21 Lessons for the 21st Century",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-09",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          3
+        ],
+        [
+          "Gary John Bishop",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "For the Triumph of Evil",
+          1
+        ],
+        [
+          "Sanctuary",
+          1
+        ],
+        [
+          "Unfu*k Yourself",
+          1
+        ],
+        [
+          "Who Takes No Risk",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-10",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 3,
+        "ai-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ],
+        [
+          "ai-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.25,
+      "coherence_score": 35.02,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 2,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "George R. R. Martin, Gardner Dozois, Gillian Flynn, Neil Gaiman",
+          1
+        ],
+        [
+          "Patrick Rothfuss",
+          1
+        ],
+        [
+          "Gary Marcus, Ernest Davis",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Rogues",
+          1
+        ],
+        [
+          "The Name of the Wind",
+          1
+        ],
+        [
+          "Rebooting AI",
+          1
+        ],
+        [
+          "I Am Justice",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-11",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Peter F. Hamilton",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Salvation Lost",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2019-12",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Lauren Gunderson",
+          1
+        ],
+        [
+          "Ray Dalio",
+          1
+        ],
+        [
+          "L. Ron Hubbard",
+          1
+        ],
+        [
+          "Ana Gasteyer, Mona Mansour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Half-Life of Marie Curie",
+          1
+        ],
+        [
+          "Principles",
+          1
+        ],
+        [
+          "Battlefield Earth",
+          1
+        ],
+        [
+          "Holiday Greetings from Sugar and Booze",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-01",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Peter H. Diamandis, Steven Kotler",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Future Is Faster Than You Think",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-02",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Brian Staveley",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Emperor's Blades",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-03",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Patrick Rothfuss",
+          1
+        ],
+        [
+          "Joe Abercrombie",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Wise Man's Fear",
+          1
+        ],
+        [
+          "Best Served Cold",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-05",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 4,
+        "time-attention": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ],
+        [
+          "time-attention",
+          1
+        ]
+      ],
+      "classified_ratio": 0.2,
+      "coherence_score": 34.85,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 2,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Joe Abercrombie",
+          2
+        ],
+        [
+          "Gordon Hempton, Audible Sleep",
+          1
+        ],
+        [
+          "The Big Quiet, Audible Sleep",
+          1
+        ],
+        [
+          "W. W. Rouse Ball, Audible Sleep",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Red Country",
+          1
+        ],
+        [
+          "Hoh Rainforest",
+          1
+        ],
+        [
+          "Tension Release",
+          1
+        ],
+        [
+          "The Heroes",
+          1
+        ],
+        [
+          "A Short Account of the History of Mathematics",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-06",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Peter F. Hamilton",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Mindstar Rising",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-07",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Warmage",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-08",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Magelord",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-10",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 37.33,
+      "axes": {
+        "pressure": 2,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          2
+        ],
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Knights Magi",
+          1
+        ],
+        [
+          "Retaliation",
+          1
+        ],
+        [
+          "A Rock and a Hard Place",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-11",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Jason Anspach, Nick Cole",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Galaxy's Edge",
+          1
+        ],
+        [
+          "A Price Too High",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2020-12",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Peter F. Hamilton",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Saints of Salvation",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-01",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Marshall Rosenberg PhD",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Nonviolent Communication",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-02",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Melissa McPhail",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Return of the Corinari",
+          1
+        ],
+        [
+          "Cephrael's Hand",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-03",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          3
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "A Line in the Sand",
+          1
+        ],
+        [
+          "Journeymage",
+          1
+        ],
+        [
+          "High Mage",
+          1
+        ],
+        [
+          "Enchanter",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-04",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          2
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Into the Serpent's Lair",
+          1
+        ],
+        [
+          "Shadowmage",
+          1
+        ],
+        [
+          "Court Wizard",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-05",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 2,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.333,
+      "coherence_score": 29.97,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          2
+        ],
+        [
+          "Peter F. Hamilton",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Necromancer",
+          1
+        ],
+        [
+          "Thaumaturge",
+          1
+        ],
+        [
+          "A Quantum Murder",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-08",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 1,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.5,
+      "coherence_score": 32.5,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ken Follett",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "The Pillars of the Earth",
+          1
+        ],
+        [
+          "World Without End",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-09",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Niall Ferguson",
+          1
+        ],
+        [
+          "Henry David Thoreau",
+          1
+        ],
+        [
+          "Eckhart Tolle, Kim Eng",
+          1
+        ],
+        [
+          "Ken Follett",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Doom",
+          1
+        ],
+        [
+          "Henry David Thoreau Collection",
+          1
+        ],
+        [
+          "The Next Step in Human Evolution",
+          1
+        ],
+        [
+          "A Column of Fire",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-10",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 3,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.25,
+      "coherence_score": 30.02,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          2
+        ],
+        [
+          "Kel Kade",
+          1
+        ],
+        [
+          "Andrew Rowe",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Wizards of Sevendor",
+          1
+        ],
+        [
+          "Free the Darkness",
+          1
+        ],
+        [
+          "Footwizard",
+          1
+        ],
+        [
+          "Sufficiently Advanced Magic",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-11",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Andrew Rowe",
+          3
+        ]
+      ],
+      "top_works": [
+        [
+          "Forging Divinity",
+          1
+        ],
+        [
+          "The Torch That Ignites the Stars",
+          1
+        ],
+        [
+          "On The Shoulders of Titans",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2021-12",
+      "events": 2,
+      "frequency_counts": {
+        "fictional-systems": 2
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          2
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "James Hunter",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "Viridian Gate Online: The Lich Priest",
+          1
+        ],
+        [
+          "Viridian Gate Online: Imperial Legion",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-01",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 2,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.333,
+      "coherence_score": 29.97,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          1
+        ],
+        [
+          "James Hunter",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Hedgewitch",
+          1
+        ],
+        [
+          "Viridian Gate Online: Doom Forge",
+          1
+        ],
+        [
+          "Fall of the Core",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-02",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "James Hunter",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Viridian Gate Online: Darkling Siege",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-03",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          1
+        ],
+        [
+          "Will Wight",
+          1
+        ],
+        [
+          "Matthew McConaughey",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Death's Mistress",
+          1
+        ],
+        [
+          "House of Blades",
+          1
+        ],
+        [
+          "Greenlights",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-04",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          5
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Kel Kade",
+          4
+        ]
+      ],
+      "top_works": [
+        [
+          "Kingdoms and Chaos",
+          1
+        ],
+        [
+          "Legends of Ahn",
+          1
+        ],
+        [
+          "Reign of Madness",
+          1
+        ],
+        [
+          "Premium Plus 24-credit Annual Plan Extra 3 Credits",
+          1
+        ],
+        [
+          "Fate of the Fallen",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-05",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Kel Kade",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Destiny of the Dead",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-08",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Kel Kade",
+          1
+        ],
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Dragons and Demons",
+          1
+        ],
+        [
+          "Shroud of Eternity",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-09",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Goodkind",
+          1
+        ],
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Siege of Stone",
+          1
+        ],
+        [
+          "Marshal Arcane",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-10",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 45.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 2
+      },
+      "top_authors": [
+        [
+          "Terry Mancour, Emily Burch Harris",
+          2
+        ],
+        [
+          "Terry Mancour",
+          1
+        ],
+        [
+          "Terry Goodkind",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Mad Mage of Sevendor",
+          1
+        ],
+        [
+          "Heart of Black Ice",
+          1
+        ],
+        [
+          "Shadowplay",
+          1
+        ],
+        [
+          "Shadowheist",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2022-12",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          5
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          2
+        ],
+        [
+          "Kel Kade",
+          1
+        ],
+        [
+          "Michael Pollan",
+          1
+        ],
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Aurora: EV-01",
+          1
+        ],
+        [
+          "No Risk Too Great",
+          1
+        ],
+        [
+          "Mage of No Renown",
+          1
+        ],
+        [
+          "How to Change Your Mind",
+          1
+        ],
+        [
+          "Hawkmaiden",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-01",
+      "events": 1,
+      "frequency_counts": {
+        "unclassified": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Andrew Rowe",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Silence of Unworthy Gods",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-02",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Andrew Rowe",
+          3
+        ],
+        [
+          "Rick Rubin",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Diamantine",
+          1
+        ],
+        [
+          "Six Sacred Swords",
+          1
+        ],
+        [
+          "The Creative Act",
+          1
+        ],
+        [
+          "Soulbrand",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-03",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Andrew Rowe",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "Defying Destiny",
+          1
+        ],
+        [
+          "Stealing Sorcery",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-04",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Liberty and Truth, Peace and Prosperity",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-05",
+      "events": 2,
+      "frequency_counts": {
+        "fictional-systems": 2
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          2
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "J.D. Astra, James Hunter",
+          1
+        ],
+        [
+          "James Hunter",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Viridian Gate Online",
+          1
+        ],
+        [
+          "Viridian Gate Online: Empirical Endgame",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-06",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Andrew Rowe, Kayleigh Nicol",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Not The Hill We Die On",
+          1
+        ],
+        [
+          "Crystal Awakening",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-07",
+      "events": 1,
+      "frequency_counts": {
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 1.0,
+      "coherence_score": 85.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 1,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Road to Vanador: A Spellmonger Anthology",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-08",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 2,
+        "fictional-systems": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ],
+        [
+          "fictional-systems",
+          1
+        ]
+      ],
+      "classified_ratio": 0.333,
+      "coherence_score": 29.97,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Terry Mancour",
+          1
+        ],
+        [
+          "Plato",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Preceptor",
+          1
+        ],
+        [
+          "Plato's Republic",
+          1
+        ],
+        [
+          "Escape of the Free Fleet",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-09",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 47.5,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 2,
+        "insight": 0,
+        "vitality": 2
+      },
+      "top_authors": [
+        [
+          "Dan Millman",
+          1
+        ],
+        [
+          "don Miguel Ruiz",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Will Wight",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Peaceful Heart, Warrior Spirit: The True Story of My Spiritual Quest",
+          1
+        ],
+        [
+          "The Mastery of Love",
+          1
+        ],
+        [
+          "Evolution",
+          1
+        ],
+        [
+          "House of Blades",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-10",
+      "events": 8,
+      "frequency_counts": {
+        "unclassified": 8
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          8
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 43.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 8,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 2
+      },
+      "top_authors": [
+        [
+          "Robert Thurman",
+          2
+        ],
+        [
+          "Pema Chödrön",
+          1
+        ],
+        [
+          "Ken Follett",
+          1
+        ],
+        [
+          "Tara Brach",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Dalai Lama, Graham Coleman - editor, Thupten Jinpa - editor, Gyurme Dorje - translator",
+          1
+        ],
+        [
+          "Dan Millman",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Tibetan Book of the Dead",
+          2
+        ],
+        [
+          "How We Live Is How We Die",
+          1
+        ],
+        [
+          "The Armor of Light",
+          1
+        ],
+        [
+          "Radical Compassion",
+          1
+        ],
+        [
+          "Evolution",
+          1
+        ],
+        [
+          "The Tibetan Book of the Dead [SAMPLE]",
+          1
+        ],
+        [
+          "Peaceful Heart, Warrior Spirit: The True Story of My Spiritual Quest",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-11",
+      "events": 4,
+      "frequency_counts": {
+        "unclassified": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          4
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 45.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 2,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Steven Johnson",
+          1
+        ],
+        [
+          "Pema Chödrön",
+          1
+        ],
+        [
+          "don Miguel Ruiz",
+          1
+        ],
+        [
+          "Bill Plotkin PhD",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Wonderland",
+          1
+        ],
+        [
+          "How We Live Is How We Die",
+          1
+        ],
+        [
+          "The Mastery of Love",
+          1
+        ],
+        [
+          "Wild Mind",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2023-12",
+      "events": 6,
+      "frequency_counts": {
+        "unclassified": 6
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          6
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 6,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Pema Chodron",
+          2
+        ],
+        [
+          "Tara Brach",
+          2
+        ],
+        [
+          "Michael Talbot",
+          1
+        ],
+        [
+          "Steven Johnson",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "When Things Fall Apart",
+          2
+        ],
+        [
+          "The Holographic Universe",
+          1
+        ],
+        [
+          "Radical Compassion",
+          1
+        ],
+        [
+          "Radical Acceptance",
+          1
+        ],
+        [
+          "Wonderland",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2024-01",
+      "events": 2,
+      "frequency_counts": {
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 2,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Steven Kotler, Jamie Wheal",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "Stealing Fire",
+          2
+        ]
+      ]
+    },
+    {
+      "month": "2024-02",
+      "events": 3,
+      "frequency_counts": {
+        "unclassified": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          3
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 3,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Barry Michels, Phil Stutz",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ],
+        [
+          "Terry Mancour",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "Coming Alive",
+          1
+        ],
+        [
+          "Birth of an Empire",
+          1
+        ],
+        [
+          "Preceptor",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2024-03",
+      "events": 5,
+      "frequency_counts": {
+        "unclassified": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          5
+        ]
+      ],
+      "classified_ratio": 0.0,
+      "coherence_score": 40.0,
+      "axes": {
+        "pressure": 0,
+        "intensity": 5,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Tara Swart MD PhD",
+          2
+        ],
+        [
+          "Barry Michels, Phil Stutz",
+          1
+        ],
+        [
+          "Michael Talbot",
+          1
+        ],
+        [
+          "Mitch Horowitz",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Source",
+          2
+        ],
+        [
+          "Coming Alive",
+          1
+        ],
+        [
+          "The Holographic Universe",
+          1
+        ],
+        [
+          "The Miracle Habits",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2024-04",
+      "events": 4,
+      "frequency_counts": {
+        "shadow-power": 2,
+        "unclassified": 2
+      },
+      "top_frequencies": [
+        [
+          "shadow-power",
+          2
+        ],
+        [
+          "unclassified",
+          2
+        ]
+      ],
+      "classified_ratio": 0.5,
+      "coherence_score": 32.5,
+      "axes": {
+        "pressure": 0,
+        "intensity": 4,
+        "inspiration": 0,
+        "insight": 0,
+        "vitality": 0
+      },
+      "top_authors": [
+        [
+          "Eckhart Tolle",
+          2
+        ],
+        [
+          "Ken Follett",
+          1
+        ],
+        [
+          "Ryk Brown",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "The Power of Now",
+          2
+        ],
+        [
+          "The Armor of Light",
+          1
+        ],
+        [
+          "Birth of an Empire",
+          1
+        ]
+      ]
+    },
+    {
+      "month": "2024-05",
+      "events": 966,
+      "frequency_counts": {
+        "unclassified": 716,
+        "devotional-body": 136,
+        "consciousness-threshold": 65,
+        "shadow-power": 26,
+        "roots-resilience": 12,
+        "fictional-systems": 10,
+        "time-attention": 10,
+        "ai-systems": 9
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          716
+        ],
+        [
+          "devotional-body",
+          136
+        ],
+        [
+          "consciousness-threshold",
+          65
+        ],
+        [
+          "shadow-power",
+          26
+        ],
+        [
+          "roots-resilience",
+          12
+        ],
+        [
+          "fictional-systems",
+          10
+        ]
+      ],
+      "classified_ratio": 0.272,
+      "coherence_score": 46.76,
+      "axes": {
+        "pressure": 14,
+        "intensity": 1072,
+        "inspiration": 188,
+        "insight": 46,
+        "vitality": 1548
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          43
+        ],
+        [
+          "East Forest - Topic",
+          32
+        ],
+        [
+          "Parijat - Topic",
+          26
+        ],
+        [
+          "Ajeet - Topic",
+          22
+        ],
+        [
+          "Ram Dass - Topic",
+          21
+        ],
+        [
+          "Malte Marten - Topic",
+          20
+        ],
+        [
+          "Alexia Chellun - Topic",
+          19
+        ],
+        [
+          "Jesse Cook - Topic",
+          18
+        ],
+        [
+          "Al Marconi - Topic",
+          18
+        ],
+        [
+          "Dean Evenson - Topic",
+          17
+        ],
+        [
+          "Mogli - Topic",
+          16
+        ],
+        [
+          "Yatao - Topic",
+          16
+        ]
+      ],
+      "top_works": [
+        [
+          "432hz: The Deepest Healing - Let Go of All Negative Energy",
+          7
+        ],
+        [
+          "TNT",
+          7
+        ],
+        [
+          "Aguila De Oro",
+          5
+        ],
+        [
+          "The Power Is Here Now",
+          5
+        ],
+        [
+          "Please Pass the Bliss",
+          5
+        ],
+        [
+          "Cura Journey Mix",
+          5
+        ],
+        [
+          "Hearts Awakening",
+          5
+        ],
+        [
+          "Enchantment",
+          5
+        ],
+        [
+          "8-8 Contact with Shiva Divine Father",
+          4
+        ],
+        [
+          "Light of My Soul",
+          4
+        ],
+        [
+          "Wanderer",
+          4
+        ],
+        [
+          "Old Stories - Gajumaru (Revisioned)",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2024-06",
+      "events": 1308,
+      "frequency_counts": {
+        "unclassified": 1006,
+        "devotional-body": 168,
+        "consciousness-threshold": 66,
+        "shadow-power": 29,
+        "roots-resilience": 19,
+        "time-attention": 18,
+        "fictional-systems": 11,
+        "ai-systems": 10
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1006
+        ],
+        [
+          "devotional-body",
+          168
+        ],
+        [
+          "consciousness-threshold",
+          66
+        ],
+        [
+          "shadow-power",
+          29
+        ],
+        [
+          "roots-resilience",
+          19
+        ],
+        [
+          "time-attention",
+          18
+        ]
+      ],
+      "classified_ratio": 0.242,
+      "coherence_score": 46.77,
+      "axes": {
+        "pressure": 12,
+        "intensity": 1426,
+        "inspiration": 220,
+        "insight": 42,
+        "vitality": 2158
+      },
+      "top_authors": [
+        [
+          "Karunesh - Topic",
+          94
+        ],
+        [
+          "Yaima - Topic",
+          70
+        ],
+        [
+          "Ajeet - Topic",
+          52
+        ],
+        [
+          "Parijat - Topic",
+          44
+        ],
+        [
+          "Dean Evenson - Topic",
+          40
+        ],
+        [
+          "Deuter - Topic",
+          32
+        ],
+        [
+          "Buddha's Lounge - Topic",
+          27
+        ],
+        [
+          "Mogli - Topic",
+          25
+        ],
+        [
+          "Malte Marten - Topic",
+          22
+        ],
+        [
+          "Yatao - Topic",
+          22
+        ],
+        [
+          "Ayla Schafer - Topic",
+          22
+        ],
+        [
+          "Iftekharul Anam - Topic",
+          19
+        ]
+      ],
+      "top_works": [
+        [
+          "Here & Now",
+          14
+        ],
+        [
+          "The Circle",
+          14
+        ],
+        [
+          "Heaven & Earth",
+          13
+        ],
+        [
+          "Coming Home",
+          12
+        ],
+        [
+          "Expansion",
+          12
+        ],
+        [
+          "Horizon",
+          12
+        ],
+        [
+          "The Power Is Here Now",
+          7
+        ],
+        [
+          "Phoenix",
+          5
+        ],
+        [
+          "Rebirth",
+          5
+        ],
+        [
+          "Cuatro Vientos",
+          5
+        ],
+        [
+          "Tranquility",
+          5
+        ],
+        [
+          "ESPN",
+          5
+        ]
+      ]
+    },
+    {
+      "month": "2024-07",
+      "events": 1622,
+      "frequency_counts": {
+        "unclassified": 1031,
+        "devotional-body": 416,
+        "roots-resilience": 66,
+        "consciousness-threshold": 48,
+        "shadow-power": 23,
+        "time-attention": 18,
+        "ai-systems": 17,
+        "fictional-systems": 15
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1031
+        ],
+        [
+          "devotional-body",
+          416
+        ],
+        [
+          "roots-resilience",
+          66
+        ],
+        [
+          "consciousness-threshold",
+          48
+        ],
+        [
+          "shadow-power",
+          23
+        ],
+        [
+          "time-attention",
+          18
+        ]
+      ],
+      "classified_ratio": 0.369,
+      "coherence_score": 48.56,
+      "axes": {
+        "pressure": 8,
+        "intensity": 1779,
+        "inspiration": 312,
+        "insight": 52,
+        "vitality": 2874
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          217
+        ],
+        [
+          "Mose - Topic",
+          74
+        ],
+        [
+          "Ajeet - Topic",
+          49
+        ],
+        [
+          "Empty Artist - Topic",
+          48
+        ],
+        [
+          "Liquid Bloom - Topic",
+          31
+        ],
+        [
+          "Nessi Gomes - Topic",
+          26
+        ],
+        [
+          "Alexia Chellun - Topic",
+          25
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          25
+        ],
+        [
+          "Rising Appalachia - Topic",
+          23
+        ],
+        [
+          "Karunesh - Topic",
+          22
+        ],
+        [
+          "Danit - Topic",
+          21
+        ],
+        [
+          "Ayla Schafer - Topic",
+          20
+        ]
+      ],
+      "top_works": [
+        [
+          "Emergence - Live @ Colorado Sound Studios",
+          11
+        ],
+        [
+          "The Sacred - Live @ Colorado Sound Studios",
+          9
+        ],
+        [
+          "Rebirth - Live @ Colorado Sound Studios",
+          9
+        ],
+        [
+          "Amoriri (feat. Ebyän)",
+          8
+        ],
+        [
+          "The Power Is Here Now",
+          8
+        ],
+        [
+          "Pellucidity - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Nuclear Fusion - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Rise - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Old Stories (Gajumaru) - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Odonata - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Citadella - Live @ Colorado Sound Studios",
+          8
+        ],
+        [
+          "Written in the Wind - Live @ Colorado Sound Studios",
+          8
+        ]
+      ]
+    },
+    {
+      "month": "2024-08",
+      "events": 1457,
+      "frequency_counts": {
+        "unclassified": 1053,
+        "devotional-body": 280,
+        "consciousness-threshold": 54,
+        "roots-resilience": 41,
+        "shadow-power": 14,
+        "time-attention": 14,
+        "fictional-systems": 12,
+        "ai-systems": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1053
+        ],
+        [
+          "devotional-body",
+          280
+        ],
+        [
+          "consciousness-threshold",
+          54
+        ],
+        [
+          "roots-resilience",
+          41
+        ],
+        [
+          "shadow-power",
+          14
+        ],
+        [
+          "time-attention",
+          14
+        ]
+      ],
+      "classified_ratio": 0.284,
+      "coherence_score": 47.77,
+      "axes": {
+        "pressure": 4,
+        "intensity": 1587,
+        "inspiration": 260,
+        "insight": 14,
+        "vitality": 2468
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          96
+        ],
+        [
+          "Gabriel Lugo (English)",
+          46
+        ],
+        [
+          "Ajeet - Topic",
+          37
+        ],
+        [
+          "Mose - Topic",
+          35
+        ],
+        [
+          "Malte Marten - Topic",
+          34
+        ],
+        [
+          "Poranguí - Topic",
+          27
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          26
+        ],
+        [
+          "Parijat - Topic",
+          26
+        ],
+        [
+          "Brian Scott",
+          26
+        ],
+        [
+          "East Forest - Topic",
+          24
+        ],
+        [
+          "Liquid Bloom - Topic",
+          23
+        ],
+        [
+          "Alexia Chellun - Topic",
+          19
+        ]
+      ],
+      "top_works": [
+        [
+          "Healing Song",
+          6
+        ],
+        [
+          "Aguila De Oro",
+          5
+        ],
+        [
+          "Aad Guray Nameh",
+          5
+        ],
+        [
+          "Agradezco",
+          4
+        ],
+        [
+          "The Sacred",
+          4
+        ],
+        [
+          "Cuatro Vientos (Rey & Kjavik Remix)",
+          4
+        ],
+        [
+          "9 News",
+          4
+        ],
+        [
+          "Gajumaru (Acoustic)",
+          4
+        ],
+        [
+          "Azul",
+          3
+        ],
+        [
+          "Gajumaru",
+          3
+        ],
+        [
+          "All Related",
+          3
+        ],
+        [
+          "Akaal",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2024-09",
+      "events": 1015,
+      "frequency_counts": {
+        "unclassified": 646,
+        "devotional-body": 294,
+        "consciousness-threshold": 32,
+        "roots-resilience": 30,
+        "shadow-power": 12,
+        "time-attention": 11,
+        "ai-systems": 10,
+        "fictional-systems": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          646
+        ],
+        [
+          "devotional-body",
+          294
+        ],
+        [
+          "consciousness-threshold",
+          32
+        ],
+        [
+          "roots-resilience",
+          30
+        ],
+        [
+          "shadow-power",
+          12
+        ],
+        [
+          "time-attention",
+          11
+        ]
+      ],
+      "classified_ratio": 0.379,
+      "coherence_score": 48.99,
+      "axes": {
+        "pressure": 14,
+        "intensity": 1143,
+        "inspiration": 192,
+        "insight": 28,
+        "vitality": 1770
+      },
+      "top_authors": [
+        [
+          "Liquid Bloom - Topic",
+          107
+        ],
+        [
+          "Yaima - Topic",
+          59
+        ],
+        [
+          "Mose - Topic",
+          39
+        ],
+        [
+          "Poranguí - Topic",
+          34
+        ],
+        [
+          "Ajeet - Topic",
+          19
+        ],
+        [
+          "Deya Dova - Topic",
+          16
+        ],
+        [
+          "Gone Gone Beyond - Topic",
+          15
+        ],
+        [
+          "Ayla Schafer - Topic",
+          15
+        ],
+        [
+          "Empty Artist - Topic",
+          14
+        ],
+        [
+          "Daniel Scranton",
+          13
+        ],
+        [
+          "Malte Marten - Topic",
+          13
+        ],
+        [
+          "Gabriel Lugo (English)",
+          13
+        ]
+      ],
+      "top_works": [
+        [
+          "Morning Star (Resonant Migration)",
+          8
+        ],
+        [
+          "Body Temple Communion (Ecstatic Grounding)",
+          8
+        ],
+        [
+          "Love Matrix Meditation (Enseñame)",
+          7
+        ],
+        [
+          "Ocean of Remembrance (Sacred Blessings)",
+          7
+        ],
+        [
+          "Gratitude Wisdom (Emerging Heart)",
+          7
+        ],
+        [
+          "Bridging Worlds (Jaguar Dreaming)",
+          7
+        ],
+        [
+          "Heart Active8 Meditation (Emerging Heart)",
+          6
+        ],
+        [
+          "Inner Gardens (Roots of The Earth)",
+          6
+        ],
+        [
+          "Acceptance Breath (Ceremony of The Heart)",
+          6
+        ],
+        [
+          "Recapitulation Meditation (Fire Gathering)",
+          5
+        ],
+        [
+          "Healing Song",
+          5
+        ],
+        [
+          "Azul",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2024-10",
+      "events": 1659,
+      "frequency_counts": {
+        "unclassified": 1111,
+        "devotional-body": 451,
+        "roots-resilience": 41,
+        "consciousness-threshold": 37,
+        "time-attention": 14,
+        "shadow-power": 13,
+        "fictional-systems": 10,
+        "ai-systems": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1111
+        ],
+        [
+          "devotional-body",
+          451
+        ],
+        [
+          "roots-resilience",
+          41
+        ],
+        [
+          "consciousness-threshold",
+          37
+        ],
+        [
+          "time-attention",
+          14
+        ],
+        [
+          "shadow-power",
+          13
+        ]
+      ],
+      "classified_ratio": 0.338,
+      "coherence_score": 49.42,
+      "axes": {
+        "pressure": 10,
+        "intensity": 1825,
+        "inspiration": 290,
+        "insight": 16,
+        "vitality": 3148
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          150
+        ],
+        [
+          "Mose - Topic",
+          71
+        ],
+        [
+          "Ayla Schafer - Topic",
+          59
+        ],
+        [
+          "Ajeet - Topic",
+          56
+        ],
+        [
+          "Music Library Uploads",
+          55
+        ],
+        [
+          "Poranguí - Topic",
+          50
+        ],
+        [
+          "Liquid Bloom - Topic",
+          47
+        ],
+        [
+          "Karunesh - Topic",
+          39
+        ],
+        [
+          "Danit - Topic",
+          28
+        ],
+        [
+          "Alexia Chellun - Topic",
+          26
+        ],
+        [
+          "Snatam Kaur - Topic",
+          26
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          24
+        ]
+      ],
+      "top_works": [
+        [
+          "Paradise",
+          12
+        ],
+        [
+          "Guiding and Protecting",
+          10
+        ],
+        [
+          "Iluminar",
+          10
+        ],
+        [
+          "Emergence - Live @ Colorado Sound Studios",
+          10
+        ],
+        [
+          "Blessed We Are",
+          9
+        ],
+        [
+          "Jupiter -Day 5",
+          9
+        ],
+        [
+          "Mother Earth",
+          9
+        ],
+        [
+          "Moola Mantra",
+          8
+        ],
+        [
+          "La Vida",
+          8
+        ],
+        [
+          "Mul Mantra",
+          8
+        ],
+        [
+          "Om Ganesha",
+          8
+        ],
+        [
+          "Heart Takes Flight",
+          8
+        ]
+      ]
+    },
+    {
+      "month": "2024-11",
+      "events": 1089,
+      "frequency_counts": {
+        "unclassified": 762,
+        "devotional-body": 257,
+        "consciousness-threshold": 44,
+        "shadow-power": 12,
+        "roots-resilience": 12,
+        "time-attention": 8,
+        "fictional-systems": 3,
+        "ai-systems": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          762
+        ],
+        [
+          "devotional-body",
+          257
+        ],
+        [
+          "consciousness-threshold",
+          44
+        ],
+        [
+          "shadow-power",
+          12
+        ],
+        [
+          "roots-resilience",
+          12
+        ],
+        [
+          "time-attention",
+          8
+        ]
+      ],
+      "classified_ratio": 0.308,
+      "coherence_score": 48.87,
+      "axes": {
+        "pressure": 8,
+        "intensity": 1180,
+        "inspiration": 184,
+        "insight": 36,
+        "vitality": 1984
+      },
+      "top_authors": [
+        [
+          "Liquid Bloom - Topic",
+          62
+        ],
+        [
+          "Mose - Topic",
+          60
+        ],
+        [
+          "Tetouze - Topic",
+          47
+        ],
+        [
+          "Yaima - Topic",
+          38
+        ],
+        [
+          "Empty Artist - Topic",
+          31
+        ],
+        [
+          "Poranguí - Topic",
+          23
+        ],
+        [
+          "Jesse Cook - Topic",
+          21
+        ],
+        [
+          "Daniel Scranton",
+          18
+        ],
+        [
+          "Robby Blair - Topic",
+          18
+        ],
+        [
+          "Mose",
+          17
+        ],
+        [
+          "Ajeet - Topic",
+          14
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          13
+        ]
+      ],
+      "top_works": [
+        [
+          "Organic Intelligence",
+          7
+        ],
+        [
+          "I Am (feat. Lala Deaton)",
+          6
+        ],
+        [
+          "Organic Intelligence (Temple Step Project Revision)",
+          6
+        ],
+        [
+          "Liquid Bloom @ Being Gathering 2024 (Dance Set)",
+          4
+        ],
+        [
+          "Lately (Mose Remix)",
+          4
+        ],
+        [
+          "Cuatro Vientos",
+          4
+        ],
+        [
+          "Q’antataita",
+          4
+        ],
+        [
+          "The Water Blessing Song (Mose & Binder Remix)",
+          3
+        ],
+        [
+          "Estrellas",
+          3
+        ],
+        [
+          "Dasan (feat. Anello Capuano)",
+          3
+        ],
+        [
+          "Asian yantra",
+          3
+        ],
+        [
+          "The Power Is Here Now",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2024-12",
+      "events": 894,
+      "frequency_counts": {
+        "unclassified": 608,
+        "devotional-body": 226,
+        "consciousness-threshold": 41,
+        "roots-resilience": 14,
+        "shadow-power": 9,
+        "time-attention": 8,
+        "fictional-systems": 5,
+        "ai-systems": 2
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          608
+        ],
+        [
+          "devotional-body",
+          226
+        ],
+        [
+          "consciousness-threshold",
+          41
+        ],
+        [
+          "roots-resilience",
+          14
+        ],
+        [
+          "shadow-power",
+          9
+        ],
+        [
+          "time-attention",
+          8
+        ]
+      ],
+      "classified_ratio": 0.334,
+      "coherence_score": 48.47,
+      "axes": {
+        "pressure": 8,
+        "intensity": 985,
+        "inspiration": 158,
+        "insight": 34,
+        "vitality": 1412
+      },
+      "top_authors": [
+        [
+          "Liquid Bloom - Topic",
+          58
+        ],
+        [
+          "Yaima - Topic",
+          37
+        ],
+        [
+          "Poranguí - Topic",
+          34
+        ],
+        [
+          "Music Library Uploads",
+          29
+        ],
+        [
+          "Karunesh - Topic",
+          27
+        ],
+        [
+          "Mose - Topic",
+          21
+        ],
+        [
+          "Brian Scott",
+          15
+        ],
+        [
+          "Malte Marten - Topic",
+          14
+        ],
+        [
+          "Nessi Gomes - Topic",
+          14
+        ],
+        [
+          "Emilio Ortiz",
+          13
+        ],
+        [
+          "Parijat - Topic",
+          13
+        ],
+        [
+          "Daniel Scranton",
+          13
+        ]
+      ],
+      "top_works": [
+        [
+          "Tiden Inne (Mose Remix)",
+          7
+        ],
+        [
+          "Mother's Heartbeat",
+          7
+        ],
+        [
+          "Sky & Sand",
+          7
+        ],
+        [
+          "Morning Mirrors [Kareem Raïhani Remix]",
+          7
+        ],
+        [
+          "Listen to the Mountains",
+          7
+        ],
+        [
+          "Rebirth - Live @ Colorado Sound Studios",
+          7
+        ],
+        [
+          "Stardust (Mose Remix)",
+          7
+        ],
+        [
+          "Morning Star (Resonant Migration)",
+          5
+        ],
+        [
+          "Heart Active8 Meditation (Emerging Heart)",
+          5
+        ],
+        [
+          "The Circle",
+          5
+        ],
+        [
+          "Horizon",
+          5
+        ],
+        [
+          "Om Ganesha (Dance Meditation)",
+          5
+        ]
+      ]
+    },
+    {
+      "month": "2025-01",
+      "events": 1758,
+      "frequency_counts": {
+        "unclassified": 1278,
+        "devotional-body": 343,
+        "consciousness-threshold": 58,
+        "time-attention": 30,
+        "roots-resilience": 29,
+        "fictional-systems": 27,
+        "shadow-power": 22,
+        "ai-systems": 8
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1278
+        ],
+        [
+          "devotional-body",
+          343
+        ],
+        [
+          "consciousness-threshold",
+          58
+        ],
+        [
+          "time-attention",
+          30
+        ],
+        [
+          "roots-resilience",
+          29
+        ],
+        [
+          "fictional-systems",
+          27
+        ]
+      ],
+      "classified_ratio": 0.288,
+      "coherence_score": 47.4,
+      "axes": {
+        "pressure": 28,
+        "intensity": 1931,
+        "inspiration": 306,
+        "insight": 82,
+        "vitality": 2838
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          63
+        ],
+        [
+          "Liquid Bloom - Topic",
+          58
+        ],
+        [
+          "Mose - Topic",
+          52
+        ],
+        [
+          "Poranguí - Topic",
+          50
+        ],
+        [
+          "Mei-lan - Topic",
+          29
+        ],
+        [
+          "Ajeet - Topic",
+          22
+        ],
+        [
+          "Anne Tucker",
+          18
+        ],
+        [
+          "Tetouze - Topic",
+          17
+        ],
+        [
+          "Suduaya - Topic",
+          16
+        ],
+        [
+          "Deya Dova - Topic",
+          16
+        ],
+        [
+          "Emilio Ortiz",
+          16
+        ],
+        [
+          "Malte Marten - Topic",
+          16
+        ]
+      ],
+      "top_works": [
+        [
+          "Stardust (Mose Remix)",
+          8
+        ],
+        [
+          "Dhyana",
+          7
+        ],
+        [
+          "Valley of the Ancients (Mose Remix)",
+          7
+        ],
+        [
+          "Tiden Inne (Mose Remix)",
+          7
+        ],
+        [
+          "Rebirth",
+          6
+        ],
+        [
+          "Crossroads",
+          6
+        ],
+        [
+          "Ceremony of the Heart",
+          6
+        ],
+        [
+          "Arcoiris",
+          6
+        ],
+        [
+          "Om Ganesha (Dance Meditation)",
+          6
+        ],
+        [
+          "Mother's Heartbeat",
+          6
+        ],
+        [
+          "Sky & Sand",
+          6
+        ],
+        [
+          "Listen to the Mountains",
+          6
+        ]
+      ]
+    },
+    {
+      "month": "2025-02",
+      "events": 1233,
+      "frequency_counts": {
+        "unclassified": 896,
+        "devotional-body": 239,
+        "consciousness-threshold": 48,
+        "time-attention": 23,
+        "roots-resilience": 18,
+        "shadow-power": 10,
+        "ai-systems": 8,
+        "fictional-systems": 8
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          896
+        ],
+        [
+          "devotional-body",
+          239
+        ],
+        [
+          "consciousness-threshold",
+          48
+        ],
+        [
+          "time-attention",
+          23
+        ],
+        [
+          "roots-resilience",
+          18
+        ],
+        [
+          "shadow-power",
+          10
+        ]
+      ],
+      "classified_ratio": 0.283,
+      "coherence_score": 47.72,
+      "axes": {
+        "pressure": 8,
+        "intensity": 1352,
+        "inspiration": 230,
+        "insight": 34,
+        "vitality": 2076
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          59
+        ],
+        [
+          "Bloomurian - Topic",
+          30
+        ],
+        [
+          "Doe Paoro - Topic",
+          27
+        ],
+        [
+          "Alexia Chellun - Topic",
+          26
+        ],
+        [
+          "Mose - Topic",
+          25
+        ],
+        [
+          "Fia - Topic",
+          24
+        ],
+        [
+          "Poranguí - Topic",
+          22
+        ],
+        [
+          "Ayla Schafer - Topic",
+          21
+        ],
+        [
+          "Ayla Nereo - Topic",
+          20
+        ],
+        [
+          "Danit - Topic",
+          17
+        ],
+        [
+          "Daniel Scranton",
+          16
+        ],
+        [
+          "Sam Garrett - Topic",
+          16
+        ]
+      ],
+      "top_works": [
+        [
+          "Divine Surrendering",
+          9
+        ],
+        [
+          "Like the River",
+          5
+        ],
+        [
+          "All My Life is a Ceremony",
+          5
+        ],
+        [
+          "Cuatro Vientos (Rey & Kjavik Remix)",
+          5
+        ],
+        [
+          "Guided Sleep Meditation: Attract Miracles As You Sleep",
+          4
+        ],
+        [
+          "Light Leaks",
+          4
+        ],
+        [
+          "The Water Blessing Song (Mose & Binder Remix)",
+          4
+        ],
+        [
+          "Ecstatic Ecosystems",
+          4
+        ],
+        [
+          "Guided Sleep Meditation, Receive Divine Guidance From Your Celestial Spirit Guide for Inner Peace",
+          4
+        ],
+        [
+          "Antidote",
+          4
+        ],
+        [
+          "Healing Song",
+          4
+        ],
+        [
+          "Om Namo Amitabhaya",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2025-03",
+      "events": 1290,
+      "frequency_counts": {
+        "unclassified": 942,
+        "devotional-body": 249,
+        "consciousness-threshold": 50,
+        "roots-resilience": 23,
+        "time-attention": 16,
+        "shadow-power": 13,
+        "fictional-systems": 12,
+        "ai-systems": 7
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          942
+        ],
+        [
+          "devotional-body",
+          249
+        ],
+        [
+          "consciousness-threshold",
+          50
+        ],
+        [
+          "roots-resilience",
+          23
+        ],
+        [
+          "time-attention",
+          16
+        ],
+        [
+          "shadow-power",
+          13
+        ]
+      ],
+      "classified_ratio": 0.282,
+      "coherence_score": 48.01,
+      "axes": {
+        "pressure": 6,
+        "intensity": 1410,
+        "inspiration": 258,
+        "insight": 56,
+        "vitality": 2362
+      },
+      "top_authors": [
+        [
+          "East Forest - Topic",
+          62
+        ],
+        [
+          "Yaima - Topic",
+          62
+        ],
+        [
+          "Mose - Topic",
+          36
+        ],
+        [
+          "Poranguí - Topic",
+          35
+        ],
+        [
+          "Malte Marten - Topic",
+          31
+        ],
+        [
+          "Mei-lan - Topic",
+          28
+        ],
+        [
+          "Chantress Seba - Topic",
+          25
+        ],
+        [
+          "Jon Hopkins - Topic",
+          22
+        ],
+        [
+          "Ajeet - Topic",
+          21
+        ],
+        [
+          "Liquid Bloom - Topic",
+          19
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          18
+        ],
+        [
+          "Yatao - Topic",
+          17
+        ]
+      ],
+      "top_works": [
+        [
+          "Yellowstone",
+          9
+        ],
+        [
+          "Freedom",
+          5
+        ],
+        [
+          "Phoenix",
+          5
+        ],
+        [
+          "Crossroads",
+          5
+        ],
+        [
+          "Rise",
+          4
+        ],
+        [
+          "Guided Sleep Meditation: Attract Miracles As You Sleep",
+          4
+        ],
+        [
+          "Eternal Horizons (Temple Step Project Remix)",
+          4
+        ],
+        [
+          "Cuñaq",
+          4
+        ],
+        [
+          "Rebirth",
+          4
+        ],
+        [
+          "Calling",
+          4
+        ],
+        [
+          "Haseya",
+          3
+        ],
+        [
+          "Vuela con el Viento (Mose Remix)",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2025-04",
+      "events": 1471,
+      "frequency_counts": {
+        "unclassified": 1090,
+        "devotional-body": 270,
+        "consciousness-threshold": 44,
+        "roots-resilience": 32,
+        "time-attention": 20,
+        "ai-systems": 14,
+        "shadow-power": 12,
+        "fictional-systems": 10
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          1090
+        ],
+        [
+          "devotional-body",
+          270
+        ],
+        [
+          "consciousness-threshold",
+          44
+        ],
+        [
+          "roots-resilience",
+          32
+        ],
+        [
+          "time-attention",
+          20
+        ],
+        [
+          "ai-systems",
+          14
+        ]
+      ],
+      "classified_ratio": 0.269,
+      "coherence_score": 47.67,
+      "axes": {
+        "pressure": 6,
+        "intensity": 1610,
+        "inspiration": 284,
+        "insight": 60,
+        "vitality": 2524
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          52
+        ],
+        [
+          "Poranguí - Topic",
+          44
+        ],
+        [
+          "Yaima - Topic",
+          37
+        ],
+        [
+          "Al Marconi - Topic",
+          31
+        ],
+        [
+          "Liquid Bloom - Topic",
+          28
+        ],
+        [
+          "Ajeet - Topic",
+          24
+        ],
+        [
+          "Malte Marten - Topic",
+          24
+        ],
+        [
+          "Mei-lan - Topic",
+          23
+        ],
+        [
+          "Tetouze - Topic",
+          22
+        ],
+        [
+          "Danit - Topic",
+          19
+        ],
+        [
+          "Yatao - Topic",
+          19
+        ],
+        [
+          "Larimar Sound Alchemy",
+          19
+        ]
+      ],
+      "top_works": [
+        [
+          "east forest 2025",
+          7
+        ],
+        [
+          "https://www.youtube.com/watch?v=",
+          6
+        ],
+        [
+          "peace alysha brilla",
+          6
+        ],
+        [
+          "ESPN",
+          5
+        ],
+        [
+          "Healing Song",
+          5
+        ],
+        [
+          "16 9 bet365BN OAO Generic 15s US",
+          4
+        ],
+        [
+          "16 9 bet365BN OAO Generic 6s US",
+          4
+        ],
+        [
+          "TNT",
+          4
+        ],
+        [
+          "Heart mantra (Teyata Om)",
+          4
+        ],
+        [
+          "FULL MOON SOUND CEREMONY 🌕✨ | Live Healing Frequencies for Spirit & Soul",
+          4
+        ],
+        [
+          "Surrender",
+          4
+        ],
+        [
+          "Cuatro Vientos (Rey & Kjavik Remix)",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2025-05",
+      "events": 952,
+      "frequency_counts": {
+        "unclassified": 742,
+        "devotional-body": 141,
+        "consciousness-threshold": 31,
+        "roots-resilience": 13,
+        "shadow-power": 12,
+        "ai-systems": 12,
+        "fictional-systems": 11,
+        "time-attention": 9
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          742
+        ],
+        [
+          "devotional-body",
+          141
+        ],
+        [
+          "consciousness-threshold",
+          31
+        ],
+        [
+          "roots-resilience",
+          13
+        ],
+        [
+          "shadow-power",
+          12
+        ],
+        [
+          "ai-systems",
+          12
+        ]
+      ],
+      "classified_ratio": 0.236,
+      "coherence_score": 46.88,
+      "axes": {
+        "pressure": 10,
+        "intensity": 1033,
+        "inspiration": 166,
+        "insight": 52,
+        "vitality": 1458
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          30
+        ],
+        [
+          "Mose - Topic",
+          24
+        ],
+        [
+          "Poranguí - Topic",
+          20
+        ],
+        [
+          "Larimar Sound Alchemy",
+          18
+        ],
+        [
+          "Mei-lan - Topic",
+          15
+        ],
+        [
+          "Clara Sophia",
+          15
+        ],
+        [
+          "porangui",
+          13
+        ],
+        [
+          "Chantress Seba - Topic",
+          12
+        ],
+        [
+          "Ajeet - Topic",
+          12
+        ],
+        [
+          "Malte Marten - Topic",
+          12
+        ],
+        [
+          "Karunesh - Topic",
+          11
+        ],
+        [
+          "Brian Scott",
+          11
+        ]
+      ],
+      "top_works": [
+        [
+          "ESPN",
+          10
+        ],
+        [
+          "https://www.youtube.com/watch?v=",
+          7
+        ],
+        [
+          "TNT",
+          6
+        ],
+        [
+          "truTV",
+          5
+        ],
+        [
+          "Denver 7",
+          4
+        ],
+        [
+          "Open Your Heart - 1 hour Healing Angelic Music - Deep Relaxation",
+          4
+        ],
+        [
+          "The Master Prompt Method: Unlock AI’s Full Potential (Part 1)",
+          4
+        ],
+        [
+          "Freedom",
+          3
+        ],
+        [
+          "Open Up Your Heart",
+          3
+        ],
+        [
+          "Iluminar",
+          3
+        ],
+        [
+          "Time Is All We Have",
+          3
+        ],
+        [
+          "Metamorphosis",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2025-06",
+      "events": 1177,
+      "frequency_counts": {
+        "unclassified": 752,
+        "devotional-body": 341,
+        "consciousness-threshold": 51,
+        "roots-resilience": 19,
+        "fictional-systems": 14,
+        "time-attention": 12,
+        "ai-systems": 8,
+        "shadow-power": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          752
+        ],
+        [
+          "devotional-body",
+          341
+        ],
+        [
+          "consciousness-threshold",
+          51
+        ],
+        [
+          "roots-resilience",
+          19
+        ],
+        [
+          "fictional-systems",
+          14
+        ],
+        [
+          "time-attention",
+          12
+        ]
+      ],
+      "classified_ratio": 0.374,
+      "coherence_score": 49.51,
+      "axes": {
+        "pressure": 10,
+        "intensity": 1284,
+        "inspiration": 204,
+        "insight": 38,
+        "vitality": 2220
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          158
+        ],
+        [
+          "Mose - Topic",
+          47
+        ],
+        [
+          "Poranguí - Topic",
+          41
+        ],
+        [
+          "Malte Marten - Topic",
+          38
+        ],
+        [
+          "Al Marconi - Topic",
+          33
+        ],
+        [
+          "Ajeet - Topic",
+          32
+        ],
+        [
+          "Max Ribner - Topic",
+          26
+        ],
+        [
+          "Johannes Linstead - Topic",
+          23
+        ],
+        [
+          "Jesse Cook - Topic",
+          22
+        ],
+        [
+          "Ayla Schafer - Topic",
+          19
+        ],
+        [
+          "Liquid Bloom - Topic",
+          18
+        ],
+        [
+          "Saritah - Topic",
+          17
+        ]
+      ],
+      "top_works": [
+        [
+          "Heartbeat of the Earth",
+          9
+        ],
+        [
+          "Rebirth (Revisioned)",
+          9
+        ],
+        [
+          "Old Stories - Gajumaru (Revisioned)",
+          8
+        ],
+        [
+          "Pellucidity (Revisioned)",
+          8
+        ],
+        [
+          "Sacred (Revisioned)",
+          7
+        ],
+        [
+          "Nuclear Fusion (Revisioned)",
+          7
+        ],
+        [
+          "Written in the Wind (Revisioned)",
+          7
+        ],
+        [
+          "Mother (Revisioned)",
+          7
+        ],
+        [
+          "Odonata (Revisioned)",
+          7
+        ],
+        [
+          "Follow the Heart (Revisioned)",
+          7
+        ],
+        [
+          "Phoenix",
+          6
+        ],
+        [
+          "Emergence (Revisioned)",
+          6
+        ]
+      ]
+    },
+    {
+      "month": "2025-07",
+      "events": 1274,
+      "frequency_counts": {
+        "unclassified": 820,
+        "devotional-body": 323,
+        "consciousness-threshold": 71,
+        "shadow-power": 39,
+        "fictional-systems": 24,
+        "time-attention": 20,
+        "ai-systems": 18,
+        "roots-resilience": 15
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          820
+        ],
+        [
+          "devotional-body",
+          323
+        ],
+        [
+          "consciousness-threshold",
+          71
+        ],
+        [
+          "shadow-power",
+          39
+        ],
+        [
+          "fictional-systems",
+          24
+        ],
+        [
+          "time-attention",
+          20
+        ]
+      ],
+      "classified_ratio": 0.383,
+      "coherence_score": 48.39,
+      "axes": {
+        "pressure": 16,
+        "intensity": 1411,
+        "inspiration": 422,
+        "insight": 70,
+        "vitality": 2246
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          60
+        ],
+        [
+          "Mose - Topic",
+          50
+        ],
+        [
+          "Poranguí - Topic",
+          49
+        ],
+        [
+          "Relaxing Music - Topic",
+          49
+        ],
+        [
+          "Ananda Frequencies",
+          39
+        ],
+        [
+          "Malte Marten - Topic",
+          36
+        ],
+        [
+          "Saint Of Sin - Topic",
+          28
+        ],
+        [
+          "Pai Tunes",
+          26
+        ],
+        [
+          "Liquid Bloom - Topic",
+          26
+        ],
+        [
+          "Supernatural Brainwave Power - Topic",
+          25
+        ],
+        [
+          "Ajeet - Topic",
+          23
+        ],
+        [
+          "Ayla Schafer - Topic",
+          21
+        ]
+      ],
+      "top_works": [
+        [
+          "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation",
+          25
+        ],
+        [
+          "Metamorphosis",
+          6
+        ],
+        [
+          "Arcturian Healing Frequency | Light Codes to Awaken Your Soul, Heal Deep Pain and Activate Your DNA",
+          6
+        ],
+        [
+          "Heartbeat of the Earth",
+          6
+        ],
+        [
+          "Ra Ma da Sa Healing",
+          4
+        ],
+        [
+          "Written in the Wind",
+          4
+        ],
+        [
+          "Healing Song",
+          4
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          4
+        ],
+        [
+          "Danza Del Viento (Live)",
+          4
+        ],
+        [
+          "Waves",
+          4
+        ],
+        [
+          "ARCTURIAN SONG | Starseed Light Codes (432Hz) A Portal to Higher Dimensions",
+          4
+        ],
+        [
+          "Healing Frequency (999 Hz)",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2025-08",
+      "events": 776,
+      "frequency_counts": {
+        "unclassified": 512,
+        "devotional-body": 193,
+        "consciousness-threshold": 54,
+        "roots-resilience": 11,
+        "time-attention": 11,
+        "shadow-power": 8,
+        "ai-systems": 7,
+        "fictional-systems": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          512
+        ],
+        [
+          "devotional-body",
+          193
+        ],
+        [
+          "consciousness-threshold",
+          54
+        ],
+        [
+          "roots-resilience",
+          11
+        ],
+        [
+          "time-attention",
+          11
+        ],
+        [
+          "shadow-power",
+          8
+        ]
+      ],
+      "classified_ratio": 0.36,
+      "coherence_score": 48.23,
+      "axes": {
+        "pressure": 4,
+        "intensity": 835,
+        "inspiration": 190,
+        "insight": 28,
+        "vitality": 1140
+      },
+      "top_authors": [
+        [
+          "Poranguí - Topic",
+          50
+        ],
+        [
+          "Mose - Topic",
+          37
+        ],
+        [
+          "Yaima - Topic",
+          37
+        ],
+        [
+          "Malte Marten - Topic",
+          22
+        ],
+        [
+          "Ananda Frequencies",
+          21
+        ],
+        [
+          "Liquid Bloom - Topic",
+          17
+        ],
+        [
+          "Pai Tunes",
+          16
+        ],
+        [
+          "REIDOS Sonic Healing",
+          15
+        ],
+        [
+          "Daniel Scranton",
+          12
+        ],
+        [
+          "Ajeet - Topic",
+          12
+        ],
+        [
+          "Ayla Schafer - Topic",
+          12
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          11
+        ]
+      ],
+      "top_works": [
+        [
+          "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation",
+          14
+        ],
+        [
+          "Ganesha (Live)",
+          5
+        ],
+        [
+          "Oxum (Live)",
+          5
+        ],
+        [
+          "Sana Corazón",
+          4
+        ],
+        [
+          "Vuela con el Viento (Mose Remix)",
+          4
+        ],
+        [
+          "Gajumaru",
+          4
+        ],
+        [
+          "Lately (Mose Remix)",
+          4
+        ],
+        [
+          "Arcturian in Atlantida – Sacred Lemurian Healing Frequencies & Light Codes",
+          4
+        ],
+        [
+          "Danza Del Viento (Live)",
+          4
+        ],
+        [
+          "Tonantzin (Live)",
+          4
+        ],
+        [
+          "anne tucker",
+          4
+        ],
+        [
+          "🌀 Sirian Light Codes to Awaken Your Spiritual Gifts & Akashic Memory",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2025-09",
+      "events": 668,
+      "frequency_counts": {
+        "unclassified": 420,
+        "devotional-body": 206,
+        "consciousness-threshold": 25,
+        "roots-resilience": 9,
+        "ai-systems": 8,
+        "time-attention": 7,
+        "fictional-systems": 5,
+        "shadow-power": 5
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          420
+        ],
+        [
+          "devotional-body",
+          206
+        ],
+        [
+          "consciousness-threshold",
+          25
+        ],
+        [
+          "roots-resilience",
+          9
+        ],
+        [
+          "ai-systems",
+          8
+        ],
+        [
+          "time-attention",
+          7
+        ]
+      ],
+      "classified_ratio": 0.387,
+      "coherence_score": 49.58,
+      "axes": {
+        "pressure": 4,
+        "intensity": 714,
+        "inspiration": 132,
+        "insight": 26,
+        "vitality": 1130
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          82
+        ],
+        [
+          "Poranguí - Topic",
+          33
+        ],
+        [
+          "Mose - Topic",
+          30
+        ],
+        [
+          "Liquid Bloom - Topic",
+          21
+        ],
+        [
+          "Nessi Gomes - Topic",
+          19
+        ],
+        [
+          "Ajeet - Topic",
+          17
+        ],
+        [
+          "Ayla Schafer - Topic",
+          16
+        ],
+        [
+          "Alex Serra - Topic",
+          10
+        ],
+        [
+          "Chantress Seba - Topic",
+          8
+        ],
+        [
+          "Malte Marten - Topic",
+          8
+        ],
+        [
+          "Bloomurian - Topic",
+          7
+        ],
+        [
+          "Yatao - Topic",
+          7
+        ]
+      ],
+      "top_works": [
+        [
+          "Luna",
+          5
+        ],
+        [
+          "All Related (Fantastic Fungi Mix)",
+          4
+        ],
+        [
+          "Oxum (Live)",
+          4
+        ],
+        [
+          "Phoenix",
+          4
+        ],
+        [
+          "Tonantzin (Live)",
+          4
+        ],
+        [
+          "Ganesha (Live)",
+          4
+        ],
+        [
+          "Gajumaru",
+          4
+        ],
+        [
+          "Old Stories - Gajumaru (Revisioned)",
+          4
+        ],
+        [
+          "Odonata (Revisioned)",
+          3
+        ],
+        [
+          "Follow the Heart (Revisioned)",
+          3
+        ],
+        [
+          "Not Just Music🚨This Lemurian Frequency Awakens Your Light Body & Soul DNA",
+          3
+        ],
+        [
+          "Breathe - Within the Drift of Gentle Shadows | Ethereal Vocal Music for Relaxation",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2025-10",
+      "events": 632,
+      "frequency_counts": {
+        "unclassified": 413,
+        "devotional-body": 149,
+        "consciousness-threshold": 34,
+        "ai-systems": 19,
+        "time-attention": 11,
+        "roots-resilience": 8,
+        "fictional-systems": 6,
+        "shadow-power": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          413
+        ],
+        [
+          "devotional-body",
+          149
+        ],
+        [
+          "consciousness-threshold",
+          34
+        ],
+        [
+          "ai-systems",
+          19
+        ],
+        [
+          "time-attention",
+          11
+        ],
+        [
+          "roots-resilience",
+          8
+        ]
+      ],
+      "classified_ratio": 0.359,
+      "coherence_score": 47.64,
+      "axes": {
+        "pressure": 4,
+        "intensity": 685,
+        "inspiration": 128,
+        "insight": 56,
+        "vitality": 878
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          52
+        ],
+        [
+          "GRIDdriven - Topic",
+          38
+        ],
+        [
+          "Mose - Topic",
+          28
+        ],
+        [
+          "Anne Tucker",
+          14
+        ],
+        [
+          "Poranguí - Topic",
+          14
+        ],
+        [
+          "Ayla Schafer - Topic",
+          12
+        ],
+        [
+          "Heilung - Topic",
+          12
+        ],
+        [
+          "Pam Gregory",
+          11
+        ],
+        [
+          "Farzad",
+          9
+        ],
+        [
+          "Allison Holley - Awakening Guide",
+          9
+        ],
+        [
+          "Ajeet - Topic",
+          9
+        ],
+        [
+          "WorldofAI",
+          8
+        ]
+      ],
+      "top_works": [
+        [
+          "Paradise",
+          5
+        ],
+        [
+          "Intuition",
+          4
+        ],
+        [
+          "Oxum (Live)",
+          4
+        ],
+        [
+          "Rise",
+          3
+        ],
+        [
+          "Channeled: Lightworkers We Will Be Drawn Together!",
+          3
+        ],
+        [
+          "The Imminent Wave of Love - and  our Choice, with Kelly Kolodney",
+          3
+        ],
+        [
+          "https://www.youtube.com/watch?v=xz6thAivYaU",
+          2
+        ],
+        [
+          "Google Jules 3.0 UPDATE: FULLY FREE Async AI Coder IS INSANELY GOOD! (Jules API, Tools, CLI, & More)",
+          2
+        ],
+        [
+          "https://www.youtube.com/watch?v=vTJQem99fJ8",
+          2
+        ],
+        [
+          "TELEKINESIS 🌀 The SECRET Ability That EVERYONE Has ✨",
+          2
+        ],
+        [
+          "The Greatest Discovery About Reality & the Consciousness Behind It | Donald Hoffman",
+          2
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          2
+        ]
+      ]
+    },
+    {
+      "month": "2025-11",
+      "events": 1125,
+      "frequency_counts": {
+        "unclassified": 613,
+        "devotional-body": 430,
+        "consciousness-threshold": 46,
+        "ai-systems": 20,
+        "fictional-systems": 12,
+        "roots-resilience": 9,
+        "time-attention": 6,
+        "shadow-power": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          613
+        ],
+        [
+          "devotional-body",
+          430
+        ],
+        [
+          "consciousness-threshold",
+          46
+        ],
+        [
+          "ai-systems",
+          20
+        ],
+        [
+          "fictional-systems",
+          12
+        ],
+        [
+          "roots-resilience",
+          9
+        ]
+      ],
+      "classified_ratio": 0.462,
+      "coherence_score": 51.15,
+      "axes": {
+        "pressure": 4,
+        "intensity": 1210,
+        "inspiration": 220,
+        "insight": 62,
+        "vitality": 1832
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          191
+        ],
+        [
+          "Yaima - Topic",
+          83
+        ],
+        [
+          "Liquid Bloom - Topic",
+          25
+        ],
+        [
+          "Poranguí - Topic",
+          25
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          23
+        ],
+        [
+          "Empty Artist - Topic",
+          22
+        ],
+        [
+          "Anne Tucker",
+          20
+        ],
+        [
+          "Chantress Seba - Topic",
+          20
+        ],
+        [
+          "Malte Marten - Topic",
+          11
+        ],
+        [
+          "Danit - Topic",
+          9
+        ],
+        [
+          "Nessi Gomes - Topic",
+          9
+        ],
+        [
+          "Tetouze - Topic",
+          9
+        ]
+      ],
+      "top_works": [
+        [
+          "Paradise",
+          10
+        ],
+        [
+          "Te Nande (Mose Remix)",
+          8
+        ],
+        [
+          "Musiquita (Mose Remix)",
+          7
+        ],
+        [
+          "Waves",
+          6
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          5
+        ],
+        [
+          "Cura Corazón",
+          5
+        ],
+        [
+          "Spirit Divine",
+          5
+        ],
+        [
+          "So Free",
+          5
+        ],
+        [
+          "Om Ganesha (Dance Meditation)",
+          5
+        ],
+        [
+          "Vem Mae Natureza",
+          4
+        ],
+        [
+          "Gratitude",
+          4
+        ],
+        [
+          "Guacamayo (Mose Remix)",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2025-12",
+      "events": 998,
+      "frequency_counts": {
+        "unclassified": 676,
+        "devotional-body": 229,
+        "consciousness-threshold": 60,
+        "ai-systems": 12,
+        "time-attention": 11,
+        "roots-resilience": 10,
+        "fictional-systems": 8,
+        "shadow-power": 7
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          676
+        ],
+        [
+          "devotional-body",
+          229
+        ],
+        [
+          "consciousness-threshold",
+          60
+        ],
+        [
+          "ai-systems",
+          12
+        ],
+        [
+          "time-attention",
+          11
+        ],
+        [
+          "roots-resilience",
+          10
+        ]
+      ],
+      "classified_ratio": 0.333,
+      "coherence_score": 48.07,
+      "axes": {
+        "pressure": 16,
+        "intensity": 1090,
+        "inspiration": 184,
+        "insight": 42,
+        "vitality": 1602
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          61
+        ],
+        [
+          "Mose - Topic",
+          55
+        ],
+        [
+          "Anne Tucker",
+          41
+        ],
+        [
+          "Pentatonix - Topic",
+          31
+        ],
+        [
+          "Poranguí - Topic",
+          25
+        ],
+        [
+          "Quantum Nexus",
+          23
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          20
+        ],
+        [
+          "Bloomurian - Topic",
+          19
+        ],
+        [
+          "Liquid Bloom - Topic",
+          19
+        ],
+        [
+          "Ayla Schafer - Topic",
+          15
+        ],
+        [
+          "Ape Chimba - Topic",
+          14
+        ],
+        [
+          "Danit - Topic",
+          14
+        ]
+      ],
+      "top_works": [
+        [
+          "Paradise",
+          6
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          6
+        ],
+        [
+          "Water Song",
+          6
+        ],
+        [
+          "Om Ganesha (Dance Meditation)",
+          5
+        ],
+        [
+          "Listen to the Silence",
+          3
+        ],
+        [
+          "Silent Awakening",
+          3
+        ],
+        [
+          "Mother's Heartbeat",
+          3
+        ],
+        [
+          "Many Moons (Mose & Binder Remix)",
+          3
+        ],
+        [
+          "Igniting The Sacred",
+          3
+        ],
+        [
+          "Inner Worlds, Outer Worlds",
+          3
+        ],
+        [
+          "Healing Song",
+          3
+        ],
+        [
+          "Citadella - Live @ Colorado Sound Studios",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2026-01",
+      "events": 883,
+      "frequency_counts": {
+        "unclassified": 635,
+        "devotional-body": 175,
+        "consciousness-threshold": 50,
+        "roots-resilience": 11,
+        "time-attention": 10,
+        "ai-systems": 8,
+        "fictional-systems": 5,
+        "shadow-power": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          635
+        ],
+        [
+          "devotional-body",
+          175
+        ],
+        [
+          "consciousness-threshold",
+          50
+        ],
+        [
+          "roots-resilience",
+          11
+        ],
+        [
+          "time-attention",
+          10
+        ],
+        [
+          "ai-systems",
+          8
+        ]
+      ],
+      "classified_ratio": 0.293,
+      "coherence_score": 47.82,
+      "axes": {
+        "pressure": 10,
+        "intensity": 951,
+        "inspiration": 164,
+        "insight": 34,
+        "vitality": 1422
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          57
+        ],
+        [
+          "Poranguí - Topic",
+          37
+        ],
+        [
+          "Yaima - Topic",
+          37
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          28
+        ],
+        [
+          "Namirí - Topic",
+          23
+        ],
+        [
+          "Tetouze - Topic",
+          17
+        ],
+        [
+          "Malte Marten - Topic",
+          15
+        ],
+        [
+          "Ayla Schafer - Topic",
+          14
+        ],
+        [
+          "Anne Tucker",
+          12
+        ],
+        [
+          "Liquid Bloom - Topic",
+          12
+        ],
+        [
+          "Klik & Frik - Topic",
+          10
+        ],
+        [
+          "Ape Chimba - Topic",
+          10
+        ]
+      ],
+      "top_works": [
+        [
+          "Gato Negro (Daniel Hokum & okuma Remix)",
+          9
+        ],
+        [
+          "Sita Ram",
+          6
+        ],
+        [
+          "Silent Awakening",
+          5
+        ],
+        [
+          "Te Nande (Mose Remix Extended)",
+          5
+        ],
+        [
+          "Lately (Mose Remix)",
+          4
+        ],
+        [
+          "Kwranno",
+          4
+        ],
+        [
+          "Reaulnord (feat. Lehna)",
+          4
+        ],
+        [
+          "3I ATLAS MOTHERSHIP ARRIVES TO RAISE THE FREQUENCY IN THE JUMP TO 5D/TRUST,DO NOT FEAR!/DISCOVER IT!",
+          4
+        ],
+        [
+          "Cura",
+          4
+        ],
+        [
+          "Heartbeat of the Earth",
+          3
+        ],
+        [
+          "Starseeds (1111 Hz)",
+          3
+        ],
+        [
+          "Outter Space",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2026-02",
+      "events": 596,
+      "frequency_counts": {
+        "unclassified": 344,
+        "devotional-body": 183,
+        "consciousness-threshold": 37,
+        "fictional-systems": 20,
+        "ai-systems": 13,
+        "time-attention": 7,
+        "shadow-power": 5,
+        "roots-resilience": 4
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          344
+        ],
+        [
+          "devotional-body",
+          183
+        ],
+        [
+          "consciousness-threshold",
+          37
+        ],
+        [
+          "fictional-systems",
+          20
+        ],
+        [
+          "ai-systems",
+          13
+        ],
+        [
+          "time-attention",
+          7
+        ]
+      ],
+      "classified_ratio": 0.439,
+      "coherence_score": 49.05,
+      "axes": {
+        "pressure": 4,
+        "intensity": 640,
+        "inspiration": 124,
+        "insight": 34,
+        "vitality": 912
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          82
+        ],
+        [
+          "Yaima - Topic",
+          27
+        ],
+        [
+          "Malte Marten - Topic",
+          18
+        ],
+        [
+          "Chantress Seba - Topic",
+          15
+        ],
+        [
+          "Whispers from Arcturus",
+          11
+        ],
+        [
+          "Ajeet - Topic",
+          11
+        ],
+        [
+          "Alex Serra - Topic",
+          11
+        ],
+        [
+          "Quantum Nexus",
+          10
+        ],
+        [
+          "www.youtube.com",
+          9
+        ],
+        [
+          "Poranguí - Topic",
+          9
+        ],
+        [
+          "Anne Tucker",
+          7
+        ],
+        [
+          "Whispers of The Wild",
+          7
+        ]
+      ],
+      "top_works": [
+        [
+          "Feel the Love",
+          8
+        ],
+        [
+          "Sita Ram",
+          7
+        ],
+        [
+          "Rise from it All",
+          7
+        ],
+        [
+          "I Pray",
+          7
+        ],
+        [
+          "Hare Krishna",
+          7
+        ],
+        [
+          "Surrender to the Moment",
+          7
+        ],
+        [
+          "Tu Hi Hai",
+          6
+        ],
+        [
+          "Om Namah Shivaya",
+          5
+        ],
+        [
+          "Rebirth",
+          4
+        ],
+        [
+          "Gato Negro (Daniel Hokum & okuma Remix)",
+          3
+        ],
+        [
+          "#trx #ram #srt #srt8 #trackhawk #dodge #1000hp #hellcat #fastcar #supercharged #launchcontrol",
+          3
+        ],
+        [
+          "Hanbleceya (Mose Revision)",
+          3
+        ]
+      ]
+    },
+    {
+      "month": "2026-03",
+      "events": 640,
+      "frequency_counts": {
+        "unclassified": 366,
+        "devotional-body": 216,
+        "consciousness-threshold": 22,
+        "ai-systems": 18,
+        "time-attention": 8,
+        "roots-resilience": 8,
+        "fictional-systems": 8,
+        "shadow-power": 7
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          366
+        ],
+        [
+          "devotional-body",
+          216
+        ],
+        [
+          "consciousness-threshold",
+          22
+        ],
+        [
+          "ai-systems",
+          18
+        ],
+        [
+          "time-attention",
+          8
+        ],
+        [
+          "roots-resilience",
+          8
+        ]
+      ],
+      "classified_ratio": 0.44,
+      "coherence_score": 49.86,
+      "axes": {
+        "pressure": 16,
+        "intensity": 684,
+        "inspiration": 140,
+        "insight": 40,
+        "vitality": 1082
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          114
+        ],
+        [
+          "Yaima - Topic",
+          29
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          27
+        ],
+        [
+          "Poranguí - Topic",
+          22
+        ],
+        [
+          "Alex Serra - Topic",
+          13
+        ],
+        [
+          "Ayla Schafer - Topic",
+          11
+        ],
+        [
+          "Ajeet - Topic",
+          11
+        ],
+        [
+          "Liquid Bloom - Topic",
+          9
+        ],
+        [
+          "Sam Garrett - Topic",
+          8
+        ],
+        [
+          "Anne Tucker",
+          7
+        ],
+        [
+          "www.youtube.com",
+          6
+        ],
+        [
+          "Jordi Cantos - Topic",
+          6
+        ]
+      ],
+      "top_works": [
+        [
+          "Sita Ram",
+          11
+        ],
+        [
+          "Feel the Love",
+          11
+        ],
+        [
+          "Surrender to the Moment",
+          11
+        ],
+        [
+          "Rise from it All",
+          10
+        ],
+        [
+          "Hare Krishna",
+          10
+        ],
+        [
+          "Tu Hi Hai",
+          9
+        ],
+        [
+          "I Pray",
+          9
+        ],
+        [
+          "Gajumaru",
+          5
+        ],
+        [
+          "Igniting The Sacred ((Desert Dwellers Remix))",
+          4
+        ],
+        [
+          "Odonata",
+          4
+        ],
+        [
+          "Outter Space",
+          4
+        ],
+        [
+          "White Tara Mariri",
+          4
+        ]
+      ]
+    },
+    {
+      "month": "2026-04",
+      "events": 1413,
+      "frequency_counts": {
+        "unclassified": 885,
+        "devotional-body": 363,
+        "roots-resilience": 47,
+        "consciousness-threshold": 46,
+        "ai-systems": 38,
+        "shadow-power": 23,
+        "time-attention": 13,
+        "fictional-systems": 8
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          885
+        ],
+        [
+          "devotional-body",
+          363
+        ],
+        [
+          "roots-resilience",
+          47
+        ],
+        [
+          "consciousness-threshold",
+          46
+        ],
+        [
+          "ai-systems",
+          38
+        ],
+        [
+          "shadow-power",
+          23
+        ]
+      ],
+      "classified_ratio": 0.378,
+      "coherence_score": 47.34,
+      "axes": {
+        "pressure": 58,
+        "intensity": 1506,
+        "inspiration": 210,
+        "insight": 104,
+        "vitality": 1798
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          169
+        ],
+        [
+          "Yaima - Topic",
+          61
+        ],
+        [
+          "Poranguí - Topic",
+          41
+        ],
+        [
+          "www.youtube.com",
+          37
+        ],
+        [
+          "Alex Serra - Topic",
+          30
+        ],
+        [
+          "Malte Marten - Topic",
+          28
+        ],
+        [
+          "music.youtube.com",
+          24
+        ],
+        [
+          "EllaLangleyVEVO",
+          23
+        ],
+        [
+          "Liquid Bloom - Topic",
+          22
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          21
+        ],
+        [
+          "Ayla Schafer - Topic",
+          16
+        ],
+        [
+          "Sariel Orenda - Topic",
+          14
+        ]
+      ],
+      "top_works": [
+        [
+          "YouTube Music",
+          13
+        ],
+        [
+          "(600) YouTube",
+          9
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          8
+        ],
+        [
+          "Force",
+          8
+        ],
+        [
+          "Feel the Love",
+          8
+        ],
+        [
+          "Damian Marley ft. Sia – I Will Find You in My Next Life | Reggae Soul Gospel Ballad",
+          7
+        ],
+        [
+          "(1030) Watch history",
+          7
+        ],
+        [
+          "Ella Langley - Choosin' Texas (Official Video)",
+          7
+        ],
+        [
+          "Rise from it All",
+          7
+        ],
+        [
+          "I Pray",
+          7
+        ],
+        [
+          "Surrender to the Moment",
+          7
+        ],
+        [
+          "Odonata",
+          6
+        ]
+      ]
+    },
+    {
+      "month": "2026-05",
+      "events": 357,
+      "frequency_counts": {
+        "unclassified": 204,
+        "devotional-body": 57,
+        "roots-resilience": 54,
+        "consciousness-threshold": 17,
+        "ai-systems": 12,
+        "shadow-power": 11,
+        "time-attention": 10,
+        "fictional-systems": 3
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          204
+        ],
+        [
+          "devotional-body",
+          57
+        ],
+        [
+          "roots-resilience",
+          54
+        ],
+        [
+          "consciousness-threshold",
+          17
+        ],
+        [
+          "ai-systems",
+          12
+        ],
+        [
+          "shadow-power",
+          11
+        ]
+      ],
+      "classified_ratio": 0.446,
+      "coherence_score": 44.37,
+      "axes": {
+        "pressure": 42,
+        "intensity": 392,
+        "inspiration": 96,
+        "insight": 44,
+        "vitality": 244
+      },
+      "top_authors": [
+        [
+          "www.audible.com",
+          33
+        ],
+        [
+          "Mose - Topic",
+          24
+        ],
+        [
+          "www.youtube.com",
+          13
+        ],
+        [
+          "Xavier Rudd - Topic",
+          13
+        ],
+        [
+          "www.amazon.com",
+          10
+        ],
+        [
+          "Sam Garrett - Topic",
+          10
+        ],
+        [
+          "ZionRay - Topic",
+          10
+        ],
+        [
+          "Yaima - Topic",
+          10
+        ],
+        [
+          "www.google.com",
+          7
+        ],
+        [
+          "help.audible.com",
+          6
+        ],
+        [
+          "Burcu Gönül - Topic",
+          6
+        ],
+        [
+          "Danit - Topic",
+          6
+        ]
+      ],
+      "top_works": [
+        [
+          "My Library",
+          17
+        ],
+        [
+          "Audible",
+          8
+        ],
+        [
+          "Amazon.com : my audible library",
+          7
+        ],
+        [
+          "The Empty Breeze - Sad Spring - Lukas González",
+          5
+        ],
+        [
+          "(1030) Watch history",
+          4
+        ],
+        [
+          "Amazon.com: Audible Books & Originals",
+          4
+        ],
+        [
+          "Agradezco",
+          4
+        ],
+        [
+          "Slow Sun",
+          4
+        ],
+        [
+          "Star Beings Take EMERGENCY ACTION: \"Humanity Will SPLIT Now...FINAL CHOICE\" | Ismael Perez",
+          3
+        ],
+        [
+          "Purchase History",
+          3
+        ],
+        [
+          "Home | Audible Help",
+          3
+        ],
+        [
+          "Lakshmi (I choose to live in Love) (Live)",
+          3
+        ]
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "phase": "early systems and speculative architecture",
+      "start": "2016-01",
+      "end": "2021-12",
+      "events": 112,
+      "frequency_counts": {
+        "unclassified": 94,
+        "fictional-systems": 14,
+        "shadow-power": 1,
+        "devotional-body": 1,
+        "ai-systems": 1,
+        "time-attention": 1
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          94
+        ],
+        [
+          "fictional-systems",
+          14
+        ],
+        [
+          "shadow-power",
+          1
+        ],
+        [
+          "devotional-body",
+          1
+        ],
+        [
+          "ai-systems",
+          1
+        ],
+        [
+          "time-attention",
+          1
+        ]
+      ],
+      "classified_ratio": 0.161,
+      "coherence_score": 39.1,
+      "axes": {
+        "pressure": 2,
+        "intensity": 113,
+        "inspiration": 8,
+        "insight": 4,
+        "vitality": 2
+      },
+      "top_authors": [
+        [
+          "Ryk Brown",
+          24
+        ],
+        [
+          "Terry Mancour",
+          12
+        ],
+        [
+          "Terry Goodkind",
+          10
+        ],
+        [
+          "Peter F. Hamilton",
+          9
+        ],
+        [
+          "Joe Abercrombie",
+          6
+        ],
+        [
+          "Andrew Rowe",
+          4
+        ],
+        [
+          "James S. A. Corey",
+          3
+        ],
+        [
+          "Yuval Noah Harari",
+          3
+        ],
+        [
+          "Ken Follett",
+          3
+        ],
+        [
+          "Neal Stephenson",
+          2
+        ],
+        [
+          "James Hunter",
+          2
+        ],
+        [
+          "Patrick Rothfuss",
+          2
+        ]
+      ],
+      "top_works": [
+        [
+          "Cryptonomicon",
+          1
+        ],
+        [
+          "Snow Crash",
+          1
+        ],
+        [
+          "Doom",
+          1
+        ],
+        [
+          "Into the Serpent's Lair",
+          1
+        ],
+        [
+          "For the Triumph of Evil",
+          1
+        ],
+        [
+          "Persepolis Rising",
+          1
+        ],
+        [
+          "The Expanse",
+          1
+        ],
+        [
+          "Blade Runner",
+          1
+        ],
+        [
+          "A Line in the Sand",
+          1
+        ],
+        [
+          "Necromancer",
+          1
+        ],
+        [
+          "Red Country",
+          1
+        ],
+        [
+          "Babylon's Ashes",
+          1
+        ]
+      ]
+    },
+    {
+      "phase": "fictional systems intensification",
+      "start": "2022-01",
+      "end": "2023-09",
+      "events": 46,
+      "frequency_counts": {
+        "unclassified": 39,
+        "fictional-systems": 7
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          39
+        ],
+        [
+          "fictional-systems",
+          7
+        ]
+      ],
+      "classified_ratio": 0.152,
+      "coherence_score": 33.23,
+      "axes": {
+        "pressure": 0,
+        "intensity": 46,
+        "inspiration": 2,
+        "insight": 0,
+        "vitality": 4
+      },
+      "top_authors": [
+        [
+          "Kel Kade",
+          7
+        ],
+        [
+          "Ryk Brown",
+          7
+        ],
+        [
+          "Terry Mancour",
+          6
+        ],
+        [
+          "Andrew Rowe",
+          6
+        ],
+        [
+          "Terry Goodkind",
+          4
+        ],
+        [
+          "James Hunter",
+          3
+        ],
+        [
+          "Will Wight",
+          2
+        ],
+        [
+          "Terry Mancour, Emily Burch Harris",
+          2
+        ],
+        [
+          "Dan Millman",
+          1
+        ],
+        [
+          "Plato",
+          1
+        ],
+        [
+          "J.D. Astra, James Hunter",
+          1
+        ],
+        [
+          "don Miguel Ruiz",
+          1
+        ]
+      ],
+      "top_works": [
+        [
+          "House of Blades",
+          2
+        ],
+        [
+          "Preceptor",
+          1
+        ],
+        [
+          "Death's Mistress",
+          1
+        ],
+        [
+          "Kingdoms and Chaos",
+          1
+        ],
+        [
+          "Hedgewitch",
+          1
+        ],
+        [
+          "Peaceful Heart, Warrior Spirit: The True Story of My Spiritual Quest",
+          1
+        ],
+        [
+          "Plato's Republic",
+          1
+        ],
+        [
+          "Dragons and Demons",
+          1
+        ],
+        [
+          "Aurora: EV-01",
+          1
+        ],
+        [
+          "The Mad Mage of Sevendor",
+          1
+        ],
+        [
+          "Diamantine",
+          1
+        ],
+        [
+          "No Risk Too Great",
+          1
+        ]
+      ]
+    },
+    {
+      "phase": "transition into practice and presence",
+      "start": "2023-10",
+      "end": "2024-05",
+      "events": 998,
+      "frequency_counts": {
+        "unclassified": 746,
+        "devotional-body": 136,
+        "consciousness-threshold": 65,
+        "shadow-power": 28,
+        "roots-resilience": 12,
+        "fictional-systems": 10,
+        "time-attention": 10,
+        "ai-systems": 9
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          746
+        ],
+        [
+          "devotional-body",
+          136
+        ],
+        [
+          "consciousness-threshold",
+          65
+        ],
+        [
+          "shadow-power",
+          28
+        ],
+        [
+          "roots-resilience",
+          12
+        ],
+        [
+          "fictional-systems",
+          10
+        ],
+        [
+          "time-attention",
+          10
+        ],
+        [
+          "ai-systems",
+          9
+        ]
+      ],
+      "classified_ratio": 0.266,
+      "coherence_score": 46.63,
+      "axes": {
+        "pressure": 14,
+        "intensity": 1104,
+        "inspiration": 190,
+        "insight": 46,
+        "vitality": 1550
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          43
+        ],
+        [
+          "East Forest - Topic",
+          32
+        ],
+        [
+          "Parijat - Topic",
+          26
+        ],
+        [
+          "Ajeet - Topic",
+          22
+        ],
+        [
+          "Ram Dass - Topic",
+          21
+        ],
+        [
+          "Malte Marten - Topic",
+          20
+        ],
+        [
+          "Alexia Chellun - Topic",
+          19
+        ],
+        [
+          "Jesse Cook - Topic",
+          18
+        ],
+        [
+          "Al Marconi - Topic",
+          18
+        ],
+        [
+          "Dean Evenson - Topic",
+          17
+        ],
+        [
+          "Mogli - Topic",
+          16
+        ],
+        [
+          "Yatao - Topic",
+          16
+        ]
+      ],
+      "top_works": [
+        [
+          "432hz: The Deepest Healing - Let Go of All Negative Energy",
+          7
+        ],
+        [
+          "TNT",
+          7
+        ],
+        [
+          "Aguila De Oro",
+          5
+        ],
+        [
+          "The Power Is Here Now",
+          5
+        ],
+        [
+          "Please Pass the Bliss",
+          5
+        ],
+        [
+          "Cura Journey Mix",
+          5
+        ],
+        [
+          "Hearts Awakening",
+          5
+        ],
+        [
+          "Enchantment",
+          5
+        ],
+        [
+          "8-8 Contact with Shiva Divine Father",
+          4
+        ],
+        [
+          "Light of My Soul",
+          4
+        ],
+        [
+          "Wanderer",
+          4
+        ],
+        [
+          "Old Stories - Gajumaru (Revisioned)",
+          4
+        ]
+      ]
+    },
+    {
+      "phase": "embodied devotional field expansion",
+      "start": "2024-06",
+      "end": "2024-12",
+      "events": 9044,
+      "frequency_counts": {
+        "unclassified": 6217,
+        "devotional-body": 2092,
+        "consciousness-threshold": 322,
+        "roots-resilience": 223,
+        "shadow-power": 112,
+        "time-attention": 91,
+        "fictional-systems": 61,
+        "ai-systems": 47
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          6217
+        ],
+        [
+          "devotional-body",
+          2092
+        ],
+        [
+          "consciousness-threshold",
+          322
+        ],
+        [
+          "roots-resilience",
+          223
+        ],
+        [
+          "shadow-power",
+          112
+        ],
+        [
+          "time-attention",
+          91
+        ],
+        [
+          "fictional-systems",
+          61
+        ],
+        [
+          "ai-systems",
+          47
+        ]
+      ],
+      "classified_ratio": 0.322,
+      "coherence_score": 48.29,
+      "axes": {
+        "pressure": 64,
+        "intensity": 9925,
+        "inspiration": 1616,
+        "insight": 222,
+        "vitality": 15814
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          667
+        ],
+        [
+          "Liquid Bloom - Topic",
+          332
+        ],
+        [
+          "Mose - Topic",
+          312
+        ],
+        [
+          "Ajeet - Topic",
+          229
+        ],
+        [
+          "Karunesh - Topic",
+          203
+        ],
+        [
+          "Poranguí - Topic",
+          189
+        ],
+        [
+          "Ayla Schafer - Topic",
+          141
+        ],
+        [
+          "Empty Artist - Topic",
+          128
+        ],
+        [
+          "Parijat - Topic",
+          126
+        ],
+        [
+          "Malte Marten - Topic",
+          124
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          116
+        ],
+        [
+          "Nessi Gomes - Topic",
+          112
+        ]
+      ],
+      "top_works": [
+        [
+          "Healing Song",
+          28
+        ],
+        [
+          "The Power Is Here Now",
+          26
+        ],
+        [
+          "Horizon",
+          26
+        ],
+        [
+          "Emergence - Live @ Colorado Sound Studios",
+          26
+        ],
+        [
+          "Heaven & Earth",
+          24
+        ],
+        [
+          "The Circle",
+          23
+        ],
+        [
+          "Here & Now",
+          22
+        ],
+        [
+          "Rebirth - Live @ Colorado Sound Studios",
+          22
+        ],
+        [
+          "Expansion",
+          21
+        ],
+        [
+          "Rebirth",
+          21
+        ],
+        [
+          "Paradise",
+          20
+        ],
+        [
+          "Coming Home",
+          20
+        ]
+      ]
+    },
+    {
+      "phase": "coherence consolidation",
+      "start": "2025-01",
+      "end": "2025-12",
+      "events": 13354,
+      "frequency_counts": {
+        "unclassified": 9154,
+        "devotional-body": 3113,
+        "consciousness-threshold": 572,
+        "roots-resilience": 196,
+        "time-attention": 176,
+        "fictional-systems": 141,
+        "ai-systems": 141,
+        "shadow-power": 140
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          9154
+        ],
+        [
+          "devotional-body",
+          3113
+        ],
+        [
+          "consciousness-threshold",
+          572
+        ],
+        [
+          "roots-resilience",
+          196
+        ],
+        [
+          "time-attention",
+          176
+        ],
+        [
+          "fictional-systems",
+          141
+        ],
+        [
+          "ai-systems",
+          141
+        ],
+        [
+          "shadow-power",
+          140
+        ]
+      ],
+      "classified_ratio": 0.329,
+      "coherence_score": 48.14,
+      "axes": {
+        "pressure": 116,
+        "intensity": 14565,
+        "inspiration": 2724,
+        "insight": 606,
+        "vitality": 22306
+      },
+      "top_authors": [
+        [
+          "Yaima - Topic",
+          784
+        ],
+        [
+          "Mose - Topic",
+          627
+        ],
+        [
+          "Poranguí - Topic",
+          408
+        ],
+        [
+          "Liquid Bloom - Topic",
+          254
+        ],
+        [
+          "Malte Marten - Topic",
+          215
+        ],
+        [
+          "Ajeet - Topic",
+          207
+        ],
+        [
+          "Anne Tucker",
+          166
+        ],
+        [
+          "Ayla Schafer - Topic",
+          163
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          146
+        ],
+        [
+          "Mei-lan - Topic",
+          139
+        ],
+        [
+          "Chantress Seba - Topic",
+          123
+        ],
+        [
+          "Danit - Topic",
+          116
+        ]
+      ],
+      "top_works": [
+        [
+          "The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation",
+          45
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          37
+        ],
+        [
+          "Paradise",
+          35
+        ],
+        [
+          "Healing Song",
+          30
+        ],
+        [
+          "Om Ganesha (Dance Meditation)",
+          29
+        ],
+        [
+          "Cuatro Vientos (Rey & Kjavik Remix)",
+          28
+        ],
+        [
+          "Vuela con el Viento (Mose Remix)",
+          26
+        ],
+        [
+          "Rebirth (Revisioned)",
+          26
+        ],
+        [
+          "Azul",
+          25
+        ],
+        [
+          "Gajumaru",
+          25
+        ],
+        [
+          "Phoenix",
+          25
+        ],
+        [
+          "Cuñaq",
+          24
+        ]
+      ]
+    },
+    {
+      "phase": "current integration without recency weighting",
+      "start": "2026-01",
+      "end": "2026-05",
+      "events": 3889,
+      "frequency_counts": {
+        "unclassified": 2434,
+        "devotional-body": 994,
+        "consciousness-threshold": 172,
+        "roots-resilience": 124,
+        "ai-systems": 89,
+        "shadow-power": 50,
+        "time-attention": 48,
+        "fictional-systems": 44
+      },
+      "top_frequencies": [
+        [
+          "unclassified",
+          2434
+        ],
+        [
+          "devotional-body",
+          994
+        ],
+        [
+          "consciousness-threshold",
+          172
+        ],
+        [
+          "roots-resilience",
+          124
+        ],
+        [
+          "ai-systems",
+          89
+        ],
+        [
+          "shadow-power",
+          50
+        ],
+        [
+          "time-attention",
+          48
+        ],
+        [
+          "fictional-systems",
+          44
+        ]
+      ],
+      "classified_ratio": 0.385,
+      "coherence_score": 47.6,
+      "axes": {
+        "pressure": 130,
+        "intensity": 4173,
+        "inspiration": 734,
+        "insight": 256,
+        "vitality": 5458
+      },
+      "top_authors": [
+        [
+          "Mose - Topic",
+          446
+        ],
+        [
+          "Yaima - Topic",
+          164
+        ],
+        [
+          "Poranguí - Topic",
+          111
+        ],
+        [
+          "Maneesh De Moor - Topic",
+          80
+        ],
+        [
+          "Malte Marten - Topic",
+          70
+        ],
+        [
+          "www.youtube.com",
+          65
+        ],
+        [
+          "Alex Serra - Topic",
+          65
+        ],
+        [
+          "Ayla Schafer - Topic",
+          49
+        ],
+        [
+          "Liquid Bloom - Topic",
+          45
+        ],
+        [
+          "Sam Garrett - Topic",
+          42
+        ],
+        [
+          "Anne Tucker",
+          35
+        ],
+        [
+          "Ajeet - Topic",
+          34
+        ]
+      ],
+      "top_works": [
+        [
+          "Sita Ram",
+          30
+        ],
+        [
+          "Feel the Love",
+          30
+        ],
+        [
+          "Surrender to the Moment",
+          28
+        ],
+        [
+          "Rise from it All",
+          27
+        ],
+        [
+          "I Pray",
+          26
+        ],
+        [
+          "Hare Krishna",
+          26
+        ],
+        [
+          "Tu Hi Hai",
+          24
+        ],
+        [
+          "My Library",
+          17
+        ],
+        [
+          "Odonata",
+          16
+        ],
+        [
+          "YouTube Music",
+          15
+        ],
+        [
+          "Naturaleza (Mose Edit)",
+          15
+        ],
+        [
+          "Citadella",
+          15
+        ]
+      ]
+    }
+  ],
+  "large_shifts": [
+    {
+      "month": "2024-07",
+      "frequency": "devotional-body",
+      "delta_share": 0.128,
+      "from": "2024-06",
+      "previous_share": 0.127,
+      "share": 0.255
+    },
+    {
+      "month": "2024-07",
+      "frequency": "unclassified",
+      "delta_share": -0.127,
+      "from": "2024-06",
+      "previous_share": 0.758,
+      "share": 0.631
+    },
+    {
+      "month": "2024-08",
+      "frequency": "unclassified",
+      "delta_share": 0.085,
+      "from": "2024-07",
+      "previous_share": 0.631,
+      "share": 0.716
+    },
+    {
+      "month": "2024-09",
+      "frequency": "devotional-body",
+      "delta_share": 0.092,
+      "from": "2024-08",
+      "previous_share": 0.19,
+      "share": 0.283
+    },
+    {
+      "month": "2024-09",
+      "frequency": "unclassified",
+      "delta_share": -0.095,
+      "from": "2024-08",
+      "previous_share": 0.716,
+      "share": 0.621
+    },
+    {
+      "month": "2025-06",
+      "frequency": "devotional-body",
+      "delta_share": 0.138,
+      "from": "2025-05",
+      "previous_share": 0.145,
+      "share": 0.284
+    },
+    {
+      "month": "2025-06",
+      "frequency": "unclassified",
+      "delta_share": -0.139,
+      "from": "2025-05",
+      "previous_share": 0.764,
+      "share": 0.626
+    },
+    {
+      "month": "2025-11",
+      "frequency": "devotional-body",
+      "delta_share": 0.146,
+      "from": "2025-10",
+      "previous_share": 0.231,
+      "share": 0.378
+    },
+    {
+      "month": "2025-11",
+      "frequency": "unclassified",
+      "delta_share": -0.103,
+      "from": "2025-10",
+      "previous_share": 0.641,
+      "share": 0.538
+    },
+    {
+      "month": "2025-12",
+      "frequency": "devotional-body",
+      "delta_share": -0.151,
+      "from": "2025-11",
+      "previous_share": 0.378,
+      "share": 0.226
+    },
+    {
+      "month": "2025-12",
+      "frequency": "unclassified",
+      "delta_share": 0.129,
+      "from": "2025-11",
+      "previous_share": 0.538,
+      "share": 0.667
+    },
+    {
+      "month": "2026-02",
+      "frequency": "devotional-body",
+      "delta_share": 0.104,
+      "from": "2026-01",
+      "previous_share": 0.195,
+      "share": 0.299
+    },
+    {
+      "month": "2026-02",
+      "frequency": "unclassified",
+      "delta_share": -0.146,
+      "from": "2026-01",
+      "previous_share": 0.707,
+      "share": 0.561
+    },
+    {
+      "month": "2026-05",
+      "frequency": "devotional-body",
+      "delta_share": -0.1,
+      "from": "2026-04",
+      "previous_share": 0.255,
+      "share": 0.155
+    },
+    {
+      "month": "2026-05",
+      "frequency": "roots-resilience",
+      "delta_share": 0.114,
+      "from": "2026-04",
+      "previous_share": 0.033,
+      "share": 0.147
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+# Current Frequency Spectrum
+
+Generated from `/Users/ursmuff/CoherenceFieldAnalysis/output/ten_year_events.jsonl` using now = 2026-05-07.
+
+- Total trace events: 28174
+- Dated last 90 days: 2933
+- Dated last 180 days: 5794
+- Dated last 365 days: 11173
+
+## Spectrum
+- unclassified: resonance_score=8023.2, last_90=1759, last_180=3576, all=18934
+- devotional-body: resonance_score=3416.0, last_90=794, last_180=1599, all=6441
+- consciousness-threshold: resonance_score=518.6, last_90=116, last_180=267, all=1155
+- roots-resilience: resonance_score=478.7, last_90=113, last_180=139, all=631
+- time-attention: resonance_score=230.4, last_90=39, last_180=65, all=576
+- ai-systems: resonance_score=215.4, last_90=78, last_180=117, all=301
+- shadow-power: resonance_score=183.3, last_90=44, last_180=59, all=344
+- fictional-systems: resonance_score=134.4, last_90=36, last_180=61, all=318
+
+## Works Resonating Now - 90 Days
+- Feel the Love: score=45.8, hits=25, last=2026-05-04
+- Surrender to the Moment: score=42.1, hits=23, last=2026-05-04
+- Rise from it All: score=41.3, hits=23, last=2026-05-04
+- My Library: score=36.8, hits=17, last=2026-05-06
+- YouTube Music: score=34.1, hits=15, last=2026-05-05
+- I Pray: score=33.9, hits=22, last=2026-05-04
+- Sita Ram: score=32.9, hits=22, last=2026-05-04
+- Hare Krishna: score=32.5, hits=21, last=2026-05-04
+- Tu Hi Hai: score=30.9, hits=20, last=2026-05-04
+- (1030) Watch history: score=26.2, hits=11, last=2026-05-05
+- Odonata: score=22.9, hits=14, last=2026-05-02
+- Naturaleza (Mose Edit): score=22.3, hits=13, last=2026-05-02
+- Gajumaru: score=19.4, hits=13, last=2026-04-18
+- Force: score=19.2, hits=12, last=2026-04-24
+- Citadella: score=18.8, hits=12, last=2026-04-28
+- Slow Sun: score=17.8, hits=6, last=2026-05-06
+- Outter Space: score=17.4, hits=11, last=2026-04-20
+- Audible: score=17.3, hits=8, last=2026-05-06
+- (600) YouTube: score=16.7, hits=10, last=2026-04-29
+- Kwranno: score=16.3, hits=10, last=2026-04-29
+- Amazon.com : my audible library: score=16.0, hits=7, last=2026-05-06
+- Rise: score=15.8, hits=7, last=2026-04-29
+- Trance Life: score=15.8, hits=10, last=2026-05-02
+- Agradezco: score=15.8, hits=9, last=2026-05-06
+- Igniting The Sacred ((Desert Dwellers Remix)): score=15.6, hits=9, last=2026-04-18
+- Xavier Rudd - Follow The Sun [official music video]: score=15.2, hits=4, last=2026-05-05
+- Damian Marley ft. Sia – I Will Find You in My Next Life | Reggae Soul Gospel Ballad: score=14.6, hits=8, last=2026-05-04
+- Mycelia (Fantastic Fungi: Reimagine): score=14.5, hits=8, last=2026-04-29
+- Grandmother (I Am the Earth): score=14.2, hits=6, last=2026-05-05
+- Wavespell: score=14.0, hits=9, last=2026-04-18
+
+## Channels / Authors Resonating Now - 90 Days
+- Mose - Topic: score=647.8, hits=371, last=2026-05-06
+- Yaima - Topic: score=210.1, hits=125, last=2026-05-05
+- Poranguí - Topic: score=129.7, hits=73, last=2026-05-04
+- www.youtube.com: score=120.8, hits=64, last=2026-05-05
+- Alex Serra - Topic: score=92.9, hits=58, last=2026-05-04
+- Malte Marten - Topic: score=92.7, hits=55, last=2026-05-05
+- Maneesh De Moor - Topic: score=83.3, hits=52, last=2026-04-29
+- www.audible.com: score=73.2, hits=33, last=2026-05-06
+- Liquid Bloom - Topic: score=66.4, hits=33, last=2026-05-04
+- music.youtube.com: score=63.8, hits=28, last=2026-05-05
+- Ayla Schafer - Topic: score=63.6, hits=35, last=2026-05-05
+- Sam Garrett - Topic: score=63.6, hits=35, last=2026-05-07
+- Danit - Topic: score=46.6, hits=26, last=2026-05-05
+- Sugarshack Sessions: score=40.7, hits=17, last=2026-05-07
+- Sariel Orenda - Topic: score=40.5, hits=23, last=2026-05-04
+- EllaLangleyVEVO: score=40.1, hits=24, last=2026-05-05
+- Ajeet - Topic: score=38.9, hits=27, last=2026-05-05
+- Xavier Rudd - Topic: score=38.8, hits=17, last=2026-05-06
+- Chantress Seba - Topic: score=34.4, hits=24, last=2026-05-06
+- Ape Chimba - Topic: score=28.8, hits=17, last=2026-05-05
+- Anne Tucker: score=28.3, hits=22, last=2026-05-05
+- Quantum Nexus: score=27.6, hits=21, last=2026-05-07
+- Burcu Gönül - Topic: score=26.9, hits=10, last=2026-05-05
+- Aukai - Topic: score=26.8, hits=11, last=2026-05-06
+- Nessi Gomes - Topic: score=26.2, hits=15, last=2026-04-29
+
+## Works Resonating Across 180 Days
+- Feel the Love: score=50.4, hits=30, last=2026-05-04
+- Surrender to the Moment: score=46.7, hits=28, last=2026-05-04
+- Rise from it All: score=45.0, hits=27, last=2026-05-04
+- Sita Ram: score=38.8, hits=30, last=2026-05-04
+- I Pray: score=37.0, hits=26, last=2026-05-04
+- My Library: score=36.8, hits=17, last=2026-05-06
+- Hare Krishna: score=36.5, hits=26, last=2026-05-04
+- YouTube Music: score=34.1, hits=15, last=2026-05-05
+- Tu Hi Hai: score=34.0, hits=24, last=2026-05-04
+- Naturaleza (Mose Edit): score=28.8, hits=26, last=2026-05-02
+- (1030) Watch history: score=26.2, hits=11, last=2026-05-05
+- Odonata: score=25.5, hits=19, last=2026-05-02
+- Citadella: score=22.5, hits=19, last=2026-04-28
+- Gajumaru: score=21.4, hits=17, last=2026-04-18
+- Force: score=21.1, hits=16, last=2026-04-24
+- Outter Space: score=19.7, hits=14, last=2026-04-20
+- Kwranno: score=19.1, hits=14, last=2026-04-29
+- Slow Sun: score=17.8, hits=6, last=2026-05-06
+- Rise: score=17.4, hits=10, last=2026-04-29
+- Mycelia (Fantastic Fungi: Reimagine): score=17.4, hits=13, last=2026-04-29
+- Trance Life: score=17.4, hits=13, last=2026-05-02
+- Audible: score=17.3, hits=8, last=2026-05-06
+- Agradezco: score=17.3, hits=12, last=2026-05-06
+- (600) YouTube: score=16.7, hits=10, last=2026-04-29
+- Amazon.com : my audible library: score=16.0, hits=7, last=2026-05-06
+- Om Ganesha (Dance Meditation): score=15.6, hits=15, last=2026-04-18
+- Igniting The Sacred ((Desert Dwellers Remix)): score=15.6, hits=9, last=2026-04-18
+- Grandmother (I Am the Earth): score=15.5, hits=8, last=2026-05-05
+- Xavier Rudd - Follow The Sun [official music video]: score=15.2, hits=4, last=2026-05-05
+- Wavespell: score=15.1, hits=11, last=2026-04-18
+
+## Recent Audible Anchors - 365 Days
+- 2026-05-06: where is my audible library - Google Search — www.google.com [local-browser-history]
+- 2026-05-06: where is my audible library - Google Search — www.google.com [local-browser-history]
+- 2026-05-06: how to export my audible books listening order - Google Search — www.google.com [local-browser-history]
+- 2026-05-06: audible mcp server - Google Search — www.google.com [local-browser-history]
+- 2026-05-06: audible - Google Search — www.google.com [local-browser-history]
+- 2026-05-06: View your transaction history — help.audible.com [local-browser-history]
+- 2026-05-06: View Listening log — help.audible.com [local-browser-history]
+- 2026-05-06: The Viridian Gate Archives Audiobooks — www.audible.com [local-browser-history]
+- 2026-05-06: The Viridian Gate Archives Audiobooks — www.audible.com [local-browser-history]
+- 2026-05-06: Purchases and Returns | Audible help — help.audible.com [local-browser-history]
+- 2026-05-06: Purchase History — www.audible.com [local-browser-history]
+- 2026-05-06: Purchase History — www.audible.com [local-browser-history]
+- 2026-05-06: Purchase History — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: My Library — www.audible.com [local-browser-history]
+- 2026-05-06: Listen History — www.audible.com [local-browser-history]
+- 2026-05-06: James Hunter – Audio Books, Best Sellers, Author Bio — www.audible.com [local-browser-history]
+- 2026-05-06: James Hunter – Audio Books, Best Sellers, Author Bio — www.audible.com [local-browser-history]
+- 2026-05-06: Home | Audible Help — help.audible.com [local-browser-history]
+- 2026-05-06: Home | Audible Help — help.audible.com [local-browser-history]
+- 2026-05-06: Home | Audible Help — help.audible.com [local-browser-history]
+- 2026-05-06: Audible | Listen to Audiobooks, Podcasts, & Originals — audible.com [local-browser-history]
+- 2026-05-06: Audible Scraper MCP server · Apify — apify.com [local-browser-history]
+- 2026-05-06: Audible — audible.com [local-browser-history]
+- 2026-05-06: Audible — www.audible.com [local-browser-history]
