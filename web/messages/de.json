@@ -966,6 +966,11 @@
     "orientationReturn": "← Zurück zum Netz"
   },
   "home": {
+    "livingLineageEyebrow": "Lebendige Linie",
+    "livingLineageHeadline": "Präsenzen, die das Feld prägen",
+    "livingLineageLede": "Diese Zellen erkennen wir als verwandt. Reale Menschen. Reale Arbeit. Reale Präsenz.",
+    "livingLineageCta": "Begegnen",
+    "livingLineageFootnote": "Öffentliche Präsenzen, gehalten mit quellennahen Bildern und einem Weg zurück in ihre eigenen Seiten.",
     "meetOneConceptEyebrow": "Begegne einem Begriff",
     "walkInHint": "Geh die Geschichte. Reagieren willkommen.",
     "walkInCta": "Eintreten",
