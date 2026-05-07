@@ -2,9 +2,9 @@
   "author_count": 895,
   "concept_work_count": 25,
   "event_count_with_month": 27443,
-  "generated_at": "2026-05-07T08:09:35.471863+00:00",
+  "generated_at": "2026-05-07T15:43:51.984656+00:00",
   "month_count": 96,
-  "privacy_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain out of repo.",
+  "publication_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
   "query_shapes": {
     "author_influence_wave": "Search author_index.jsonl by id or exact name, then read wave.",
     "concept_to_work_discovery": "Load concept_work_map.json -> concepts[lc-*] for related significant works.",
