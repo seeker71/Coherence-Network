@@ -102,6 +102,34 @@
             "factions need boundaries before peace"
           ],
           "title": "The Expanse"
+        },
+        {
+          "chapter_probe_terms": [
+            "honor",
+            "line",
+            "danger",
+            "truth"
+          ],
+          "id": "significant-work:der-lederstrumpf-b6472075",
+          "impact_score": 57,
+          "resonance": [
+            "moral line held in hostile terrain"
+          ],
+          "title": "Der Lederstrumpf"
+        },
+        {
+          "chapter_probe_terms": [
+            "honor",
+            "oath",
+            "danger",
+            "courage"
+          ],
+          "id": "significant-work:karl-may-stories-d0c1486d",
+          "impact_score": 57,
+          "resonance": [
+            "honor, oath, and line under pressure"
+          ],
+          "title": "Karl May stories"
         }
       ]
     },
@@ -251,6 +279,20 @@
             "world-renewal through inner travel"
           ],
           "title": "Die unendliche Geschichte"
+        },
+        {
+          "chapter_probe_terms": [
+            "journey",
+            "path",
+            "stranger",
+            "land"
+          ],
+          "id": "significant-work:karl-may-stories-d0c1486d",
+          "impact_score": 57,
+          "resonance": [
+            "movement through an unknown world as formation"
+          ],
+          "title": "Karl May stories"
         }
       ]
     },
@@ -321,6 +363,37 @@
             "meeting unknown design constraints"
           ],
           "title": "Ringworld"
+        },
+        {
+          "chapter_probe_terms": [
+            "wilderness",
+            "forest",
+            "frontier",
+            "trail"
+          ],
+          "id": "significant-work:der-lederstrumpf-b6472075",
+          "impact_score": 57,
+          "resonance": [
+            "wilderness identity and frontier pressure"
+          ],
+          "title": "Der Lederstrumpf"
+        },
+        {
+          "chapter_probe_terms": [
+            "frontier",
+            "wilderness",
+            "horse",
+            "trail",
+            "exile"
+          ],
+          "id": "significant-work:karl-may-stories-d0c1486d",
+          "impact_score": 57,
+          "resonance": [
+            "frontier as moral testing ground",
+            "outsider courage",
+            "path through wilderness"
+          ],
+          "title": "Karl May stories"
         }
       ]
     },
@@ -372,6 +445,20 @@
       "concept_id": "lc-identity-dissolution",
       "query_hint": "Use related work id with selector=significant-work, then run chapter probes only against chapter notes/text.",
       "related_significant_works": [
+        {
+          "chapter_probe_terms": [
+            "name",
+            "tribe",
+            "settler",
+            "between"
+          ],
+          "id": "significant-work:der-lederstrumpf-b6472075",
+          "impact_score": 57,
+          "resonance": [
+            "belonging between worlds"
+          ],
+          "title": "Der Lederstrumpf"
+        },
         {
           "chapter_probe_terms": [
             "wish",
@@ -824,6 +911,20 @@
         },
         {
           "chapter_probe_terms": [
+            "reading",
+            "effort",
+            "story",
+            "memory"
+          ],
+          "id": "significant-work:der-lederstrumpf-b6472075",
+          "impact_score": 57,
+          "resonance": [
+            "challenging childhood reading becoming embodied memory"
+          ],
+          "title": "Der Lederstrumpf"
+        },
+        {
+          "chapter_probe_terms": [
             "story",
             "book",
             "name",
@@ -835,6 +936,20 @@
             "story changes the world reading it"
           ],
           "title": "Die unendliche Geschichte"
+        },
+        {
+          "chapter_probe_terms": [
+            "reading",
+            "effort",
+            "story",
+            "imprint"
+          ],
+          "id": "significant-work:karl-may-stories-d0c1486d",
+          "impact_score": 57,
+          "resonance": [
+            "difficult reading becoming deeper imprint"
+          ],
+          "title": "Karl May stories"
         }
       ]
     },
@@ -860,6 +975,6 @@
       ]
     }
   },
-  "generated_at": "2026-05-07T07:44:20.480927+00:00",
+  "generated_at": "2026-05-07T08:09:35.471863+00:00",
   "schema_version": "field-trace-index/v1"
 }

@@ -39,6 +39,41 @@ def test_field_story_artifact_endpoint_returns_json_and_markdown():
     assert "2002: Xbox Live Beta and TheSeeker" in story.json()["content"]
 
 
+def test_chronological_story_links_influence_trace_slices():
+    story = field_story_service.get_field_story("urs-field-story")["story_markdown"]
+
+    significant_work_paths = [
+        "/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories",
+        "/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf",
+        "/api/field-stories/urs-field-story/trace/significant-work/Momo",
+        "/api/field-stories/urs-field-story/trace/significant-work/Die%20unendliche%20Geschichte",
+        "/api/field-stories/urs-field-story/trace/significant-work/Daemon",
+        "/api/field-stories/urs-field-story/trace/significant-work/Ringworld",
+        "/api/field-stories/urs-field-story/trace/significant-work/The%20Expanse",
+        "/api/field-stories/urs-field-story/trace/significant-work/The%20Viridian%20Gate%20Archives",
+        "/api/field-stories/urs-field-story/trace/significant-work/Kingkiller%20Chronicle",
+        "/api/field-stories/urs-field-story/trace/significant-work/Sword%20of%20Truth",
+        "/api/field-stories/urs-field-story/trace/significant-work/First%20Law%20World",
+        "/api/field-stories/urs-field-story/trace/significant-work/Spellmonger",
+        "/api/field-stories/urs-field-story/trace/significant-work/Frontiers%20Saga",
+        "/api/field-stories/urs-field-story/trace/significant-work/Peter%20F.%20Hamilton%20Systems%20Fiction",
+    ]
+    author_paths = [
+        "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/porangui",
+        "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Ajeet%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Ayla%20Schafer%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Malte%20Marten%20-%20Topic",
+    ]
+
+    for path in significant_work_paths + author_paths:
+        assert path in story
+        response = client.get(path)
+        assert response.status_code == 200, f"{path}: {response.text}"
+
+
 def test_field_story_contribution_records_attribution():
     response = client.post(
         "/api/field-stories/urs-field-story/contributions",

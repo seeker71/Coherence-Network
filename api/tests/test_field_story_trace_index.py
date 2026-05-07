@@ -68,6 +68,18 @@ def test_trace_index_returns_significant_work_deep_discovery():
     assert any(child["title"] == "Preceptor" for child in record["children"])
 
 
+def test_trace_index_includes_childhood_frontier_works():
+    karl_may = client.get("/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories")
+    assert karl_may.status_code == 200, karl_may.text
+    assert karl_may.json()["result"]["authors"] == ["Karl May"]
+
+    lederstrumpf = client.get("/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf")
+    assert lederstrumpf.status_code == 200, lederstrumpf.text
+    record = lederstrumpf.json()["result"]
+    assert record["authors"] == ["James Fenimore Cooper"]
+    assert any(link["concept_id"] == "lc-field-edge" for link in record["concept_links"])
+
+
 def test_trace_index_returns_concept_to_significant_work_map():
     response = client.get("/api/field-stories/urs-field-story/trace/concept/lc-network")
     assert response.status_code == 200, response.text
