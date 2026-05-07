@@ -21,7 +21,7 @@ Point the session at this GitHub repository, npm package, API, or MCP server and
 
 > What is alive here, and what can we contribute?
 
-The agent can read the invitation, inspect ideas and specs, sense what is moving, and work on anything it feels ready to touch. It should return what changed with sources, limits, and care.
+The agent can read the invitation, inspect ideas and specs, sense what is moving, and work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care.
 
 This can also help your own repo. Ask your agent to receive the Coherence Network invitation, look at your local project, and adapt the practice there without pretending your repo is this organism.
 
@@ -111,7 +111,7 @@ pip install -e api/.[dev]
 python3 -m pytest api/tests/ -x -q    # 813+ tests
 ```
 
-The workflow is: **Spec → Test → Implement → CI → Review → Merge**. Specs live in `specs/`. Tests are written before implementation. Human review is required before merge.
+The workflow is: **Spec → Test → Implement → CI → Review → Merge**. Specs live in `specs/`. Tests are written before implementation. Review is invited before merge when another set of eyes would improve care, clarity, or trust.
 
 ## How to exchange value
 
