@@ -288,6 +288,8 @@ function nodeToPresenceIdentity(
     scene: "Place",
     practice: "Practice",
     place: "Place",
+    concept: "Concept",
+    skill: "Skill",
   };
   const nodeType = (node.type as string) || "contributor";
   // tagline comes from the node's `tagline` property only — never
@@ -530,10 +532,25 @@ export default async function PersonPage({
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  const [contributor, feed, graphNode] = await Promise.all([
+  // When the graph node carries a canonical_url, this identity has an
+  // outward-facing presence. Render the polished presence page —
+  // hero, platforms, creations, lineage — before calling contributor
+  // endpoints that only apply to local human profiles.
+  const graphNode = await fetchGraphNode(id);
+  if (graphNode && typeof graphNode.canonical_url === "string" && graphNode.canonical_url) {
+    const nodeId = (graphNode.id as string) || id;
+    const [creations, inspiredBy] = await Promise.all([
+      fetchCreations(nodeId),
+      fetchIdentityInspiredBy(nodeId),
+    ]);
+    return (
+      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} />
+    );
+  }
+
+  const [contributor, feed] = await Promise.all([
     fetchContributor(id),
     fetchFeed(id, lang),
-    fetchGraphNode(id),
   ]);
 
   const items = feed?.items || [];

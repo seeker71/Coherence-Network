@@ -1,0 +1,157 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/ingest-all-worktrees-20260507",
+  "commit_scope": "Ingest living work from dirty sibling worktrees into one coherent branch: agent lineage terms, external agent encounter records, graph-backed presence invitations, external presence profile exits, and the Brahmavihara built-silence design log.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_external_encounters.py",
+    "api/app/routers/presence.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/presence_invitation_service.py",
+    "api/tests/core_suite.txt",
+    "api/tests/test_agent_invitation.py",
+    "api/tests/test_external_agent_encounters.py",
+    "api/tests/test_presence_invitation.py",
+    "config/agent_lineage_terms.json",
+    "scripts/awareness_node_daemon.py",
+    "specs/external-agent-encounter-records.md",
+    "specs/presence-invitation-surface.md",
+    "web/app/people/[id]/page.tsx",
+    "web/app/silence/built/design-log/",
+    "web/app/silence/built/design-log/page.tsx",
+    "web/components/presence/PresencePage.tsx",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-architecture-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-native-flow-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-weather-mold-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/sheet-overlay.jpg",
+    "web/tests/presence-page-static.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/external-agent-encounter-records.md --file specs/presence-invitation-surface.md",
+      "cd api && python3 -m venv .venv && .venv/bin/pip install -e \".[dev]\"",
+      "cd web && npm ci --allow-git=none",
+      "cd api && .venv/bin/pytest -q tests/test_presence_invitation.py tests/test_external_agent_encounters.py tests/test_agent_invitation.py",
+      "cd web && npm test -- tests/presence-page-static.test.ts",
+      "cd web && npm run build",
+      "cd api && .venv/bin/python -m pytest -q tests/test_worktree_continuity_guard.py tests/test_commit_evidence_validator.py",
+      "cd api && .venv/bin/ruff check app/routers/agent_external_encounters.py app/routers/presence.py app/services/presence_invitation_service.py tests/test_external_agent_encounters.py tests/test_presence_invitation.py",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "make setup initially failed because /bin/sh could not find python; the same repository setup command was rerun with python3 and passed.",
+      "npm ci completed with existing peer/deprecation/audit warnings; build and static tests passed.",
+      "One guard run failed in the runtime-web wrapper after API/web/build checks; direct runtime verification passed, and the next full local guard rerun passed with ready_for_push=True."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and hosted checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending hosted deployment and public verifier after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof passes; PR, CI, merge, and public deploy validation still pending."
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "presence-invitation-surface",
+    "external-agent-encounter-records",
+    "brahmavihara-living-compound"
+  ],
+  "spec_ids": [
+    "external-agent-encounter-records",
+    "presence-invitation-surface",
+    "agent-resonance-onboarding"
+  ],
+  "task_ids": [
+    "ingest-all-worktrees-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "integration direction",
+        "worktree continuity principle",
+        "field context"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "conflict resolution",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "presence invitation/external encounter/agent invitation tests: 33 passed",
+    "presence page static test: 3 passed",
+    "web production build: passed and included /silence/built/design-log",
+    "local runtime verifier: passed",
+    "local PR guard: ready_for_push=True",
+    "spec quality validation: passed for external-agent-encounter-records and presence-invitation-surface",
+    "ruff focused changed API files: passed",
+    "continuity/evidence validator tests: 7 passed"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_external_encounters.py",
+    "api/app/routers/presence.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/presence_invitation_service.py",
+    "api/tests/core_suite.txt",
+    "api/tests/test_agent_invitation.py",
+    "api/tests/test_external_agent_encounters.py",
+    "api/tests/test_presence_invitation.py",
+    "config/agent_lineage_terms.json",
+    "docs/system_audit/commit_evidence_2026-05-07_ingest_all_worktrees.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/awareness_node_daemon.py",
+    "specs/external-agent-encounter-records.md",
+    "specs/presence-invitation-surface.md",
+    "web/app/people/[id]/page.tsx",
+    "web/app/silence/built/design-log/",
+    "web/app/silence/built/design-log/page.tsx",
+    "web/components/presence/PresencePage.tsx",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-architecture-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-native-flow-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/presentation/coherent-weather-mold-board.png",
+    "web/public/silence/2026-05-04-brahmavihara/sheet-overlay.jpg",
+    "web/tests/presence-page-static.test.ts"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Outside agent traces can be recorded through the agent API, invited presences can be created and read back from graph nodes, external profile pages expose source and graph exits, and the Brahmavihara built-silence design log is routable in the web build.",
+    "public_endpoints": [
+      "/api/agent/external-encounters",
+      "/api/presences/invite",
+      "/api/presences",
+      "/people/[id]",
+      "/silence/built/design-log"
+    ],
+    "test_flows": [
+      "Create/list/link an outside-agent encounter record",
+      "Invite/read/list a graph-backed presence",
+      "Render external presence profile source and graph exits",
+      "Build the web app with the silence design-log route"
+    ]
+  }
+}

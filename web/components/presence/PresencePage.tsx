@@ -155,6 +155,17 @@ function creationArt(c: Creation, accent: BrandTone) {
   } as const;
 }
 
+function compactUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/$/, "");
+    return `${parsed.hostname.replace(/^www\./, "")}${path}`;
+  } catch {
+    return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+}
+
 // Glyph carries the frequency of the creation. Music is rounded; text
 // is angular; transmission is radiant; structured learning is a lattice.
 // Read these at a glance — they're the only label on a creation tile
@@ -226,6 +237,119 @@ function PlatformChips({
             </a>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+function PresenceOverview({
+  identity,
+  inspiredCount,
+}: {
+  identity: PresenceIdentity;
+  inspiredCount: number;
+}) {
+  const canonicalDisplay = compactUrl(identity.canonical_url);
+  const graphHref = `/nodes/${encodeURIComponent(identity.id)}`;
+  const surfaces = [
+    ...(identity.canonical_url
+      ? [{ provider: identity.provider || "web", url: identity.canonical_url }]
+      : []),
+    ...identity.presences,
+  ];
+  const dedupedSurfaces = surfaces.filter(
+    (surface, index, all) =>
+      surface.url &&
+      all.findIndex((candidate) => candidate.url.replace(/\/$/, "") === surface.url.replace(/\/$/, "")) === index,
+  );
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+      <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-4">
+        At a glance
+      </p>
+      <dl className="space-y-3 text-sm">
+        <div>
+          <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+            Category
+          </dt>
+          <dd className="mt-1 text-white/90">{identity.category}</dd>
+        </div>
+        {canonicalDisplay && (
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+              Home
+            </dt>
+            <dd className="mt-1 break-words text-white/90">{canonicalDisplay}</dd>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+              Works
+            </dt>
+            <dd className="mt-1 text-white/90">{identity.creations.length}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+              Lineage
+            </dt>
+            <dd className="mt-1 text-white/90">{inspiredCount}</dd>
+          </div>
+        </div>
+      </dl>
+
+      {dedupedSurfaces.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
+            Presence map
+          </p>
+          <div className="space-y-2">
+            {dedupedSurfaces.map((surface) => {
+              const tone = brandFor(surface.provider);
+              return (
+                <a
+                  key={surface.url}
+                  href={surface.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 hover:bg-white/[0.07]"
+                >
+                  <span className="block text-xs font-medium text-white/80">
+                    {tone.label}
+                  </span>
+                  <span className="block truncate text-xs text-white/45">
+                    {compactUrl(surface.url)}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
+          Entry points
+        </p>
+        <div className="space-y-2">
+          {identity.canonical_url && (
+            <a
+              href={identity.canonical_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.07]"
+            >
+              Official source
+            </a>
+          )}
+          <Link
+            href={graphHref}
+            className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.07]"
+          >
+            Graph node
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -457,6 +581,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             works, the hero already shows the name+category+tagline and
             the platforms appear immediately after on mobile. */}
         <aside className="space-y-10 lg:space-y-8 min-w-0">
+          <PresenceOverview identity={identity} inspiredCount={inspired.length} />
           <PlatformChips
             presences={identity.presences}
             identityName={identity.name}
@@ -471,16 +596,18 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
       </div>
 
       {/* ── Canonical link ────────────────────────────────────────── */}
-      <footer className="px-6 pb-12 text-center">
-        <a
-          href={identity.canonical_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-white/50 hover:text-white/80 underline-offset-4 hover:underline break-all"
-        >
-          {identity.canonical_url.replace(/^https?:\/\//, "")}
-        </a>
-      </footer>
+      {identity.canonical_url && (
+        <footer className="px-6 pb-12 text-center">
+          <a
+            href={identity.canonical_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-white/50 hover:text-white/80 underline-offset-4 hover:underline break-all"
+          >
+            {compactUrl(identity.canonical_url)}
+          </a>
+        </footer>
+      )}
     </main>
   );
 }
