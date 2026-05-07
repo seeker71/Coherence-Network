@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
+import { AnonymousMeetingTrace } from "@/components/AnonymousMeetingTrace";
 
 import SiteHeader from "@/components/site_header";
 import LiveUpdatesController from "@/components/live_updates_controller";
@@ -118,6 +119,7 @@ export default async function RootLayout({
         </a>
         <RuntimeBeacon />
         <MessagesProvider lang={lang} messages={messages} fallback={fallback}>
+          <AnonymousMeetingTrace />
           <RouteReadPing />
           <ThemeProvider>
             <ExpertModeProvider>

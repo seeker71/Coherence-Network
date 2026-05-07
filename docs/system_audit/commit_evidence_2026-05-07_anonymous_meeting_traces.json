@@ -1,0 +1,111 @@
+{
+  "date": "2026-05-07",
+  "thread_branch": "codex/anonymous-meeting-trace-20260507",
+  "commit_scope": "Add privacy-light anonymous meeting traces so the organism can recognize likely return meetings, remember surfaces and duration, and fold prior meetings into registration.",
+  "files_owned": [
+    "specs/anonymous-meeting-traces.md",
+    "api/app/routers/meetings.py",
+    "api/app/services/anonymous_meeting_trace_service.py",
+    "api/app/services/meeting_service.py",
+    "api/tests/test_anonymous_meeting_traces.py",
+    "web/components/AnonymousMeetingTrace.tsx",
+    "web/app/layout.tsx",
+    "web/tests/anonymous-meeting-trace.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-07_anonymous_meeting_traces.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && python3 -m pytest tests/test_anonymous_meeting_traces.py -q before implementation (expected missing endpoint)",
+      "cd web && npm test -- tests/anonymous-meeting-trace.test.ts before implementation (expected missing dependencies/component)",
+      "cd web && npm ci --allow-git=none",
+      "cd api && python3 -m pytest tests/test_anonymous_meeting_traces.py tests/test_meeting_resonance_capture.py -q",
+      "cd web && npm test -- tests/anonymous-meeting-trace.test.ts",
+      "cd web && npm run build",
+      "python3 scripts/validate_spec_quality.py --file specs/anonymous-meeting-traces.md",
+      "cd api && python3 -m ruff check app/routers/meetings.py app/services/anonymous_meeting_trace_service.py app/services/meeting_service.py tests/test_anonymous_meeting_traces.py",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh (first pass found transient automation_usage 1.34s > 1s)",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "git diff --check"
+    ],
+    "summary": "Anonymous meeting traces store hashed source/session continuity only, keep surface and duration summaries, and fold prior traces into a contributor_id when registration appears. Web build passed with the silent root-layout trace component. Local web/API verifier passed on rerun after a transient warmup slowdown on automation_usage."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public API/web verification will be performed after merge if the public deploy advances."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A public visitor or agent can meet multiple surfaces and later return with the same local source point. The API can answer when the meeting started/ended, how long it lasted, which surfaces were met, and whether prior meetings were folded into a contributor.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/meetings/anonymous-traces",
+      "GET https://api.coherencycoin.com/api/meetings/anonymous-traces",
+      "https://coherencycoin.com/come-in",
+      "https://coherencycoin.com/with-us"
+    ],
+    "test_flows": [
+      "post /come-in with visitor_key/session-one -> source_point_id + one surface",
+      "post /vision with same visitor_key/session-one -> same session with two surfaces",
+      "post /with-us with same visitor_key/session-two + contributor_id -> two meetings folded into contributor"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/anonymous-meeting-traces.md"
+  ],
+  "task_ids": [
+    "codex-thread-anonymous-meeting-trace-20260507"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_anonymous_meeting_traces.py::test_anonymous_meeting_trace_remembers_source_surfaces_and_duration",
+    "web/tests/anonymous-meeting-trace.test.ts",
+    "api/app/services/anonymous_meeting_trace_service.py::record_anonymous_meeting_trace",
+    "web/components/AnonymousMeetingTrace.tsx"
+  ],
+  "change_files": [
+    "specs/anonymous-meeting-traces.md",
+    "api/app/routers/meetings.py",
+    "api/app/services/anonymous_meeting_trace_service.py",
+    "api/app/services/meeting_service.py",
+    "api/tests/test_anonymous_meeting_traces.py",
+    "web/components/AnonymousMeetingTrace.tsx",
+    "web/app/layout.tsx",
+    "web/tests/anonymous-meeting-trace.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
