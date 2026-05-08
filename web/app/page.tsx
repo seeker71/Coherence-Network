@@ -508,8 +508,8 @@ export default async function Home() {
         * weave in, and a page for any human or AI who finds it. A visitor
         * coming for the idea-realization framing might still want to feel
         * where the body actually came from. */}
-      <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-4xl mx-auto animate-fade-in-up delay-500">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-5xl mx-auto animate-fade-in-up delay-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <AttributedInternalLink
             href="/come-in"
             className="group rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
@@ -546,6 +546,25 @@ export default async function Home() {
             </p>
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
               Sit with /silence →
+            </p>
+          </AttributedInternalLink>
+          <AttributedInternalLink
+            href="/silence/built"
+            className="group rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-card/30 hover:from-emerald-500/15 p-5 transition-colors"
+          >
+            <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-500/90 mb-1">
+              {t("silenceBuilt.compoundEyebrow")}
+            </p>
+            <p className="text-base text-foreground font-light mb-1">
+              {t("silenceBuilt.h1")}
+            </p>
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              A direct doorway for land stewards into the Bali compound
+              proposal: source sketch, climate logic, shared rooms, private
+              nests, materials, and the next buildable packet.
+            </p>
+            <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
+              Walk through /silence/built →
             </p>
           </AttributedInternalLink>
           <AttributedInternalLink

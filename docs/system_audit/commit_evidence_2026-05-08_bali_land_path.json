@@ -1,0 +1,106 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/next-breath-bali-path-20260508",
+  "commit_scope": "Make the Bali living compound design path easy to find from the public home page and /come-in invitation without routing through Bumi Sehat or a deep /silence scroll.",
+  "files_owned": [
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/tests/bali-land-path-static.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_bali_land_path.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "PORT=3116 NEXT_PUBLIC_API_URL=http://127.0.0.1:18116 npm run dev",
+      "Playwright rendered http://127.0.0.1:3116/ and http://127.0.0.1:3116/come-in and found the new /silence/built entry copy"
+    ],
+    "summary": "The public home ground band now has a direct Brahmavihara Living Compound doorway beside /come-in, /silence, and /with-us. /come-in now exposes a land-draft card near the top and a localized lower door to /silence/built. The static guard verifies the public entry surfaces keep /silence/built visible and do not route the land path through Bumi Sehat."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A land steward arriving from the public home page or /come-in can find the Bali living compound design draft directly, without needing to infer the route by reading all of /silence first.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/come-in",
+      "https://coherencycoin.com/silence/built"
+    ],
+    "test_flows": [
+      "open local / -> see Brahmavihara Living Compound and Walk through /silence/built",
+      "open local /come-in -> see Meet the land draft and the localized /silence/built door",
+      "static source guard -> no Bumi Sehat in the public land-entry path"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-collective",
+    "bali-living-compound",
+    "public-entry"
+  ],
+  "spec_ids": [
+    "specs/multilingual-web.md"
+  ],
+  "task_ids": [
+    "codex-thread-next-breath-bali-path-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/tests/bali-land-path-static.test.ts"
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/tests/bali-land-path-static.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
