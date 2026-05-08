@@ -259,3 +259,124 @@ def test_serialize_then_parse_roundtrip():
     ast = form_parse(text)
     assert isinstance(ast, NodeIDLit)
     assert (ast.package, ast.level, ast.type_, ast.instance) == (2, 7, 3, 42)
+
+
+# ---------------------------------------------------------------------------
+# Recipe Form — code expressions that intern as Recipes
+# ---------------------------------------------------------------------------
+
+
+def test_eval_math_expression(session):
+    """1 + 2 interns as a Math.PLUS recipe; result is a Recipe NodeID."""
+    result = form_evaluate_text(session, "1 + 2")
+    assert result.kind == "recipe"
+    # Math is RBasic.MATH = 12; PLUS is instance 1
+    assert result.value.type_ == 12
+    assert result.value.instance == 1
+
+
+def test_math_dedup_identical_expressions(session):
+    """Two parses of '1 + 2' return the same Recipe NodeID."""
+    a = form_evaluate_text(session, "1 + 2")
+    b = form_evaluate_text(session, "1 + 2")
+    assert a.value == b.value
+
+
+def test_math_distinct_expressions_differ(session):
+    """1 + 2 and 1 - 2 are distinct shapes."""
+    a = form_evaluate_text(session, "1 + 2")
+    b = form_evaluate_text(session, "1 - 2")
+    assert a.value != b.value
+
+
+def test_compare_expression(session):
+    result = form_evaluate_text(session, "x > 5")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 13  # RBasic.COMPARE
+
+
+def test_logic_expression(session):
+    result = form_evaluate_text(session, "a && b")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 14  # RBasic.LOGIC
+
+
+def test_unary_negation(session):
+    result = form_evaluate_text(session, "!flag")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 14  # RBasic.LOGIC
+
+
+def test_if_then_else(session):
+    result = form_evaluate_text(session, "if x > 5 then 10 else 20")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 11  # RBasic.COND
+
+
+def test_if_then_without_else(session):
+    result = form_evaluate_text(session, "if x then y")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 11  # RBasic.COND
+
+
+def test_if_then_else_distinct_from_if_then(session):
+    """if-with-else and if-without-else have distinct shapes (different category instance)."""
+    a = form_evaluate_text(session, "if x then y")
+    b = form_evaluate_text(session, "if x then y else z")
+    assert a.value != b.value
+
+
+def test_do_block(session):
+    result = form_evaluate_text(session, "do { let x = 5; x + 1 }")
+    assert result.kind == "recipe"
+    # Block = RBasic 9, DO = instance 1
+    assert result.value.type_ == 9
+    assert result.value.instance == 1
+
+
+def test_match_expression(session):
+    result = form_evaluate_text(
+        session, 'match x { 1 => "one", 2 => "two", _ => "other" }'
+    )
+    assert result.kind == "recipe"
+    assert result.value.type_ == 19  # RBasic.MATCH
+
+
+# ---------------------------------------------------------------------------
+# Angelic nondeterminism — choose / fail / stop (BML lineage)
+# ---------------------------------------------------------------------------
+
+
+def test_choose_expression(session):
+    """choose [a, b, c] is the speculation primitive."""
+    result = form_evaluate_text(session, "choose [1, 2, 3]")
+    assert result.kind == "recipe"
+    # Choice = RBasic 20, CHOOSE = instance 1
+    assert result.value.type_ == 20
+    assert result.value.instance == 1
+
+
+def test_fail_is_leaf_recipe(session):
+    """fail is a trivial leaf — no children, level BASIC."""
+    result = form_evaluate_text(session, "fail")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 20  # CHOICE
+    assert result.value.instance == 2  # FAIL
+
+
+def test_stop_is_leaf_recipe(session):
+    """stop commits speculation."""
+    result = form_evaluate_text(session, "stop")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 20  # CHOICE
+    assert result.value.instance == 3  # STOP
+
+
+def test_choose_with_fail_branches(session):
+    """A realistic angelic-nondeterminism expression."""
+    result = form_evaluate_text(session, "choose [a + 1, fail, b * 2]")
+    assert result.kind == "recipe"
+    assert result.value.type_ == 20  # CHOICE
+    # The expression interns successfully — children are mixed (Math + leaf + Math)
+    assert result.value.instance == 1  # CHOOSE
+

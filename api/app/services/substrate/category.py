@@ -134,8 +134,18 @@ class RType(IntEnum):
 
 
 class RBasic(IntEnum):
-    """Recipe basic-types (Level 2) — the verb-graph categories."""
+    """Recipe basic-types (Level 2) — the verb-graph categories.
+
+    Two layers of vocabulary:
+    - Network-relational verbs (Realize, Compose, Transmit, Tend, ...)
+    - Computational primitives (Math, Compare, Logic, Cond, Block, ...)
+
+    The substrate doesn't execute these — it interns them as content-addressed
+    Recipe NodeIDs. Two structurally-identical expressions hash to the same
+    NodeID regardless of how they were typed.
+    """
     UNDEFINED = 0
+    # Network-relational
     REALIZE = 1     # spec realizes idea
     COMPOSE = 2     # cross-reference, parent-of, member-of, analogous-to
     TRANSMIT = 3    # lineage flows source → receiver
@@ -147,6 +157,19 @@ class RBasic(IntEnum):
     BLOCK = 9       # composition: Sequence, Branch, Parallel
     CALL = 10       # invoke agent / tool / endpoint
     COND = 11       # conditional realization
+    # Computational primitives — added when Form became expressible as code
+    MATH = 12       # +  -  *  /  %
+    COMPARE = 13    # ==  !=  <  <=  >  >=
+    LOGIC = 14      # &&  ||  !
+    ACCESS = 15     # .field, [index], dereference
+    WRITE = 16      # =, +=, -=, etc. (binding to a slot)
+    LOOP = 17       # for, while, foreach
+    JUMP = 18       # return, break, continue, yield
+    MATCH = 19      # match/switch (pattern-based dispatch)
+    # The angelic-nondeterminism trio (BML lineage) —
+    # see docs/field/urs/artifacts/master-thesis-2000/companion/
+    # angelic-assembler.txt and bml-search-algorithms.txt
+    CHOICE = 20     # choose, fail, stop — speculative branching
 
 
 class RTend(IntEnum):
@@ -180,3 +203,80 @@ class RRealize(IntEnum):
     REALIZE = 1
     PARTIAL_REALIZE = 2
     SUPERSEDE = 3
+
+
+# ---------------------------------------------------------------------------
+# Computational-primitive instance enums
+# ---------------------------------------------------------------------------
+
+
+class RMath(IntEnum):
+    UNDEFINED = 0
+    PLUS = 1            # a + b
+    MINUS = 2           # a - b
+    MULTIPLY = 3        # a * b
+    DIVIDE = 4          # a / b
+    MODULO = 5          # a % b
+    NEGATE = 6          # -a (unary)
+
+
+class RCompare(IntEnum):
+    UNDEFINED = 0
+    EQUAL = 1           # ==
+    NOT_EQUAL = 2       # !=
+    LESS = 3            # <
+    LESS_EQUAL = 4      # <=
+    GREATER = 5         # >
+    GREATER_EQUAL = 6   # >=
+
+
+class RLogic(IntEnum):
+    UNDEFINED = 0
+    AND = 1             # &&
+    OR = 2              # ||
+    NOT = 3             # ! (unary)
+
+
+class RCond(IntEnum):
+    UNDEFINED = 0
+    IF_THEN = 1         # if cond then body
+    IF_THEN_ELSE = 2    # if cond then a else b
+    TERNARY = 3         # cond ? a : b
+
+
+class RMatch(IntEnum):
+    UNDEFINED = 0
+    SWITCH = 1          # match x { ... }
+
+
+class RBlock(IntEnum):
+    UNDEFINED = 0
+    DO = 1              # do { stmts; expr }
+    SEQUENCE = 2        # one statement after another
+    LET = 3             # let name = expr (a binding statement)
+
+
+class RJump(IntEnum):
+    UNDEFINED = 0
+    RETURN = 1
+    BREAK = 2
+    CONTINUE = 3
+    YIELD = 4
+
+
+class RChoice(IntEnum):
+    """Angelic nondeterminism — the BML / Prolog speculation primitives.
+
+    From sgb-bml-objects.txt + angelic-assembler.txt:
+    - choose: pick a branch from candidates; backtracks on downstream fail
+    - fail:   signal failure; unwinds speculation to nearest choose
+    - stop:   commit current speculation; no more backtracking from here
+
+    The substrate interns these as Recipe NodeIDs the same way it interns
+    arithmetic. Execution semantics (the actual speculation engine) is a
+    future concern; the structural form is what gets stored.
+    """
+    UNDEFINED = 0
+    CHOOSE = 1
+    FAIL = 2
+    STOP = 3

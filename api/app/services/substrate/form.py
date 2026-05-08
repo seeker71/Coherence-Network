@@ -50,6 +50,15 @@ from app.services.substrate.category import (
     BNumeric,
     BType,
     Level,
+    RBasic,
+    RBlock,
+    RChoice,
+    RCompare,
+    RCond,
+    RJump,
+    RLogic,
+    RMatch,
+    RMath,
 )
 from app.services.substrate.kernel import (
     NamedCell,
@@ -125,12 +134,27 @@ _TOKEN_PATTERNS = [
     ("WS", r"[ \t\n\r]+"),
     ("COMMENT", r"#[^\n]*"),
     ("PROJECT", r"\|>"),
+    ("ARROW", r"=>"),
     ("EQ", r"=="),
+    ("NEQ", r"!="),
+    ("LE", r"<="),
+    ("GE", r">="),
+    ("AND", r"&&"),
+    ("OR", r"\|\|"),
     ("ASSIGN", r"="),
+    ("LT", r"<"),
+    ("GT", r">"),
+    ("PLUS", r"\+"),
+    ("MINUS", r"-"),
+    ("STAR", r"\*"),
+    ("SLASH", r"/"),
+    ("PERCENT", r"%"),
+    ("BANG", r"!"),
     ("AT", r"@"),
     ("TILDE", r"~"),
     ("QMARK", r"\?"),
     ("COLON", r":"),
+    ("SEMI", r";"),
     ("COMMA", r","),
     ("DOT", r"\."),
     ("LBRACE", r"\{"),
@@ -140,7 +164,7 @@ _TOKEN_PATTERNS = [
     ("LPAREN", r"\("),
     ("RPAREN", r"\)"),
     ("STRING", r'"([^"\\]|\\.)*"'),
-    ("INT", r"-?\d+"),
+    ("INT", r"\d+"),
     ("IDENT", r"[A-Za-z_][A-Za-z_0-9\-]*"),
 ]
 _TOKEN_RE = re.compile(
@@ -213,7 +237,92 @@ class Query:
     filters: List[Filter] = field(default_factory=list)
 
 
+# ---------------------------------------------------------------------------
+# Recipe AST nodes — code expressions that intern as Recipes
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class IntLit:
+    value: int
+
+
+@dataclass
+class BoolLit:
+    value: bool
+
+
+@dataclass
+class StringLit:
+    value: str
+
+
+@dataclass
+class Identifier:
+    """A bare name — either a local binding or a built-in (true/false/fail/stop)."""
+    name: str
+
+
+@dataclass
+class BinOp:
+    op: str  # one of: + - * / %  ==  !=  <  <=  >  >=  &&  ||
+    left: Any
+    right: Any
+
+
+@dataclass
+class UnaryOp:
+    op: str  # one of:  -  !
+    operand: Any
+
+
+@dataclass
+class IfExpr:
+    cond: Any
+    then_branch: Any
+    else_branch: Optional[Any] = None  # None for if-without-else
+
+
+@dataclass
+class DoBlock:
+    statements: List[Any]  # last statement is the value of the block
+
+
+@dataclass
+class Let:
+    name: str
+    value: Any
+
+
+@dataclass
+class MatchArm:
+    pattern: Any  # an expression to match against (or Identifier("_") for default)
+    body: Any
+
+
+@dataclass
+class MatchExpr:
+    scrutinee: Any
+    arms: List[MatchArm]
+
+
+@dataclass
+class ChooseExpr:
+    candidates: List[Any]  # choose [a, b, c]
+
+
+@dataclass
+class FailExpr:
+    """`fail` keyword — signals failure, triggers backtracking."""
+
+
+@dataclass
+class StopExpr:
+    """`stop` keyword — commits speculation, no more backtracking."""
+
+
 AtomNode = Union[NodeIDLit, TrivialRef, CellRef, Projection]
+ExprNode = Any  # any AST node — too many to enumerate
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +350,197 @@ class Parser:
             return self.parse_query()
         if self.peek().kind == "COLON":
             return self.parse_bind()
-        return self.parse_atom_or_view()
+        return self.parse_expr()
+
+    # ----- Expression grammar with precedence -----------------------------
+
+    # Lowest precedence: ||
+    def parse_expr(self) -> ExprNode:
+        return self.parse_or()
+
+    def parse_or(self) -> ExprNode:
+        left = self.parse_and()
+        while self.peek().kind == "OR":
+            self.consume("OR")
+            right = self.parse_and()
+            left = BinOp("||", left, right)
+        return left
+
+    def parse_and(self) -> ExprNode:
+        left = self.parse_compare()
+        while self.peek().kind == "AND":
+            self.consume("AND")
+            right = self.parse_compare()
+            left = BinOp("&&", left, right)
+        return left
+
+    def parse_compare(self) -> ExprNode:
+        left = self.parse_add()
+        op_kind = self.peek().kind
+        op_map = {"EQ": "==", "NEQ": "!=", "LT": "<", "LE": "<=", "GT": ">", "GE": ">="}
+        if op_kind in op_map:
+            self.consume(op_kind)
+            right = self.parse_add()
+            return BinOp(op_map[op_kind], left, right)
+        return left
+
+    def parse_add(self) -> ExprNode:
+        left = self.parse_mul()
+        while self.peek().kind in ("PLUS", "MINUS"):
+            t = self.consume()
+            right = self.parse_mul()
+            left = BinOp("+" if t.kind == "PLUS" else "-", left, right)
+        return left
+
+    def parse_mul(self) -> ExprNode:
+        left = self.parse_unary()
+        while self.peek().kind in ("STAR", "SLASH", "PERCENT"):
+            t = self.consume()
+            op = {"STAR": "*", "SLASH": "/", "PERCENT": "%"}[t.kind]
+            right = self.parse_unary()
+            left = BinOp(op, left, right)
+        return left
+
+    def parse_unary(self) -> ExprNode:
+        if self.peek().kind == "BANG":
+            self.consume("BANG")
+            return UnaryOp("!", self.parse_unary())
+        if self.peek().kind == "MINUS":
+            self.consume("MINUS")
+            return UnaryOp("-", self.parse_unary())
+        return self.parse_projection()
+
+    def parse_projection(self) -> ExprNode:
+        a = self.parse_primary()
+        while self.peek().kind == "PROJECT":
+            self.consume("PROJECT")
+            b = self.parse_primary()
+            a = Projection(cell=a, blueprint=b)
+        return a
+
+    def parse_primary(self) -> ExprNode:
+        t = self.peek()
+        if t.kind == "AT":
+            return self.parse_at()
+        if t.kind == "TILDE":
+            return self.parse_trivial_ref()
+        if t.kind == "INT":
+            return IntLit(int(self.consume("INT").value))
+        if t.kind == "STRING":
+            return StringLit(_unquote(self.consume("STRING").value))
+        if t.kind == "LPAREN":
+            self.consume("LPAREN")
+            inner = self.parse_expr()
+            self.consume("RPAREN")
+            return inner
+        if t.kind == "LBRACK":
+            return self.parse_list_literal()
+        if t.kind == "IDENT":
+            return self.parse_keyword_or_ident()
+        raise SyntaxError(f"Form: unexpected {t.kind}({t.value!r}) at pos {t.pos}")
+
+    def parse_keyword_or_ident(self) -> ExprNode:
+        t = self.peek()
+        kw = t.value
+        if kw == "true":
+            self.consume("IDENT")
+            return BoolLit(True)
+        if kw == "false":
+            self.consume("IDENT")
+            return BoolLit(False)
+        if kw == "if":
+            return self.parse_if()
+        if kw == "do":
+            return self.parse_do_block()
+        if kw == "let":
+            return self.parse_let()
+        if kw == "match":
+            return self.parse_match()
+        if kw == "choose":
+            return self.parse_choose()
+        if kw == "fail":
+            self.consume("IDENT")
+            return FailExpr()
+        if kw == "stop":
+            self.consume("IDENT")
+            return StopExpr()
+        # Otherwise it's an Identifier (local name reference)
+        self.consume("IDENT")
+        return Identifier(name=kw)
+
+    def parse_if(self) -> IfExpr:
+        self.consume("IDENT")  # 'if'
+        cond = self.parse_expr()
+        if self.peek().kind != "IDENT" or self.peek().value != "then":
+            raise SyntaxError("Form: expected 'then' after if-condition")
+        self.consume("IDENT")  # 'then'
+        then_branch = self.parse_expr()
+        else_branch = None
+        if self.peek().kind == "IDENT" and self.peek().value == "else":
+            self.consume("IDENT")  # 'else'
+            else_branch = self.parse_expr()
+        return IfExpr(cond=cond, then_branch=then_branch, else_branch=else_branch)
+
+    def parse_do_block(self) -> DoBlock:
+        self.consume("IDENT")  # 'do'
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+            else:
+                # allow whitespace-separated statements
+                pass
+        self.consume("RBRACE")
+        return DoBlock(statements=stmts)
+
+    def parse_let(self) -> Let:
+        self.consume("IDENT")  # 'let'
+        name = self.consume("IDENT").value
+        self.consume("ASSIGN")
+        value = self.parse_expr()
+        return Let(name=name, value=value)
+
+    def parse_match(self) -> MatchExpr:
+        self.consume("IDENT")  # 'match'
+        scrutinee = self.parse_expr()
+        self.consume("LBRACE")
+        arms = []
+        while self.peek().kind != "RBRACE":
+            pattern = self.parse_expr()
+            self.consume("ARROW")
+            body = self.parse_expr()
+            arms.append(MatchArm(pattern=pattern, body=body))
+            if self.peek().kind == "COMMA":
+                self.consume("COMMA")
+        self.consume("RBRACE")
+        return MatchExpr(scrutinee=scrutinee, arms=arms)
+
+    def parse_choose(self) -> ChooseExpr:
+        self.consume("IDENT")  # 'choose'
+        self.consume("LBRACK")
+        candidates = []
+        while self.peek().kind != "RBRACK":
+            candidates.append(self.parse_expr())
+            if self.peek().kind == "COMMA":
+                self.consume("COMMA")
+        self.consume("RBRACK")
+        return ChooseExpr(candidates=candidates)
+
+    def parse_list_literal(self) -> List[ExprNode]:
+        self.consume("LBRACK")
+        items = []
+        while self.peek().kind != "RBRACK":
+            items.append(self.parse_expr())
+            if self.peek().kind == "COMMA":
+                self.consume("COMMA")
+        self.consume("RBRACK")
+        return items
+
+    # ----- Backwards-compat wrapper for query-style atoms -----------------
 
     def parse_query(self) -> Query:
         self.consume("QMARK")
@@ -284,20 +583,12 @@ class Parser:
         raise NotImplementedError("Form bind (':<domain>.<name> = ...') not yet evaluable")
 
     def parse_atom_or_view(self) -> AtomNode:
-        a = self.parse_atom()
-        while self.peek().kind == "PROJECT":
-            self.consume("PROJECT")
-            b = self.parse_atom()
-            a = Projection(cell=a, blueprint=b)
-        return a
+        # Backwards-compat — used by queries. Use parse_projection for new code.
+        return self.parse_projection()
 
     def parse_atom(self) -> AtomNode:
-        t = self.peek()
-        if t.kind == "AT":
-            return self.parse_at()
-        if t.kind == "TILDE":
-            return self.parse_trivial_ref()
-        raise SyntaxError(f"Form: expected atom (@ or ~), got {t.kind}({t.value!r}) at pos {t.pos}")
+        # Backwards-compat — used by queries.
+        return self.parse_primary()
 
     def parse_at(self) -> Union[NodeIDLit, CellRef]:
         self.consume("AT")
@@ -360,6 +651,150 @@ class FormResult:
     value: Any  # NodeID | NamedCell | CellView | list[NamedCell] | list[CellView]
 
 
+# ---------------------------------------------------------------------------
+# Recipe-category constructors — produce Recipe NodeIDs for interning
+# ---------------------------------------------------------------------------
+
+
+def _math_id(op: str) -> NodeID:
+    instance = {
+        "+": RMath.PLUS, "-": RMath.MINUS, "*": RMath.MULTIPLY,
+        "/": RMath.DIVIDE, "%": RMath.MODULO, "neg": RMath.NEGATE,
+    }[op]
+    return NodeID(1, Level.BASIC, RBasic.MATH, instance)
+
+
+def _compare_id(op: str) -> NodeID:
+    instance = {
+        "==": RCompare.EQUAL, "!=": RCompare.NOT_EQUAL,
+        "<": RCompare.LESS, "<=": RCompare.LESS_EQUAL,
+        ">": RCompare.GREATER, ">=": RCompare.GREATER_EQUAL,
+    }[op]
+    return NodeID(1, Level.BASIC, RBasic.COMPARE, instance)
+
+
+def _logic_id(op: str) -> NodeID:
+    instance = {"&&": RLogic.AND, "||": RLogic.OR, "!": RLogic.NOT}[op]
+    return NodeID(1, Level.BASIC, RBasic.LOGIC, instance)
+
+
+def _cond_id(kind: str) -> NodeID:
+    instance = {
+        "if_then": RCond.IF_THEN, "if_then_else": RCond.IF_THEN_ELSE,
+    }[kind]
+    return NodeID(1, Level.BASIC, RBasic.COND, instance)
+
+
+def _block_id(kind: str) -> NodeID:
+    instance = {"do": RBlock.DO, "let": RBlock.LET, "seq": RBlock.SEQUENCE}[kind]
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, instance)
+
+
+def _match_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.MATCH, RMatch.SWITCH)
+
+
+def _choice_id(kind: str) -> NodeID:
+    instance = {"choose": RChoice.CHOOSE, "fail": RChoice.FAIL, "stop": RChoice.STOP}[kind]
+    return NodeID(1, Level.BASIC, RBasic.CHOICE, instance)
+
+
+def _intern_recipe(session: Session, category: NodeID, children: List[NodeID]) -> NodeID:
+    """Intern a Recipe shape and return its NodeID."""
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+    return intern_node(session, DOMAIN_RECIPE, category, children)
+
+
+def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
+    """Compile an AST node to a Recipe NodeID (interning as it goes)."""
+    if isinstance(ast, IntLit):
+        return NodeID(1, Level.TRIVIAL, 3, ast.value + 1 if ast.value >= 0 else 0)
+        # RType.INTEGER = 3; instance encodes a small literal index
+    if isinstance(ast, BoolLit):
+        return NodeID(1, Level.TRIVIAL, 2, 1 if ast.value else 0)  # RType.BOOL = 2
+    if isinstance(ast, StringLit):
+        # Map literal string to an instance — same hash trick used elsewhere
+        inst = abs(hash(ast.value)) % (10**9) + 1
+        return NodeID(1, Level.TRIVIAL, 5, inst)  # RType.STRING = 5
+    if isinstance(ast, Identifier):
+        # Bare name — encode as a placeholder LOCAL_ACCESS instance.
+        # Real binding-resolution belongs in a future symbol-table phase.
+        inst = abs(hash(ast.name)) % (10**9) + 1
+        return NodeID(1, Level.TRIVIAL, 7, inst)  # RType.LOCAL_ACCESS = 7
+    if isinstance(ast, NodeIDLit):
+        return NodeID(ast.package, ast.level, ast.type_, ast.instance)
+    if isinstance(ast, TrivialRef):
+        nid = TRIVIAL_REFS.get(ast.name)
+        if nid is None:
+            raise NameError(f"Form: unknown trivial ~{ast.name}")
+        return nid
+    if isinstance(ast, CellRef):
+        if ast.name is None:
+            ref_name = DOMAIN_TO_REF.get(ast.domain)
+            if ref_name is None:
+                raise NameError(f"Form: unknown domain @{ast.domain}")
+            return TRIVIAL_REFS[ref_name]
+        cell = lookup_cell(session, ast.domain, ast.name)
+        if cell is None:
+            raise LookupError(f"Form: cell ({ast.domain}, {ast.name}) not found")
+        # Reference the cell as a global recipe — instance = its cell_id
+        return NodeID(1, Level.TRIVIAL, 8, cell.cell_id or 0)  # RType.GLOBAL = 8
+    if isinstance(ast, BinOp):
+        l = _to_recipe_node_id(session, ast.left)
+        r = _to_recipe_node_id(session, ast.right)
+        if ast.op in ("+", "-", "*", "/", "%"):
+            return _intern_recipe(session, _math_id(ast.op), [l, r])
+        if ast.op in ("==", "!=", "<", "<=", ">", ">="):
+            return _intern_recipe(session, _compare_id(ast.op), [l, r])
+        if ast.op in ("&&", "||"):
+            return _intern_recipe(session, _logic_id(ast.op), [l, r])
+        raise SyntaxError(f"Form: unknown binary op {ast.op}")
+    if isinstance(ast, UnaryOp):
+        operand = _to_recipe_node_id(session, ast.operand)
+        if ast.op == "-":
+            return _intern_recipe(session, _math_id("neg"), [operand])
+        if ast.op == "!":
+            return _intern_recipe(session, _logic_id("!"), [operand])
+        raise SyntaxError(f"Form: unknown unary op {ast.op}")
+    if isinstance(ast, IfExpr):
+        cond = _to_recipe_node_id(session, ast.cond)
+        then_id = _to_recipe_node_id(session, ast.then_branch)
+        if ast.else_branch is None:
+            return _intern_recipe(session, _cond_id("if_then"), [cond, then_id])
+        else_id = _to_recipe_node_id(session, ast.else_branch)
+        return _intern_recipe(session, _cond_id("if_then_else"), [cond, then_id, else_id])
+    if isinstance(ast, DoBlock):
+        kids = [_to_recipe_node_id(session, s) for s in ast.statements]
+        return _intern_recipe(session, _block_id("do"), kids)
+    if isinstance(ast, Let):
+        # A Let is a Block(let) holding an Identifier-shaped placeholder + value.
+        name_id = _to_recipe_node_id(session, Identifier(name=ast.name))
+        value_id = _to_recipe_node_id(session, ast.value)
+        return _intern_recipe(session, _block_id("let"), [name_id, value_id])
+    if isinstance(ast, MatchExpr):
+        scrut = _to_recipe_node_id(session, ast.scrutinee)
+        kids = [scrut]
+        for arm in ast.arms:
+            pat = _to_recipe_node_id(session, arm.pattern)
+            body = _to_recipe_node_id(session, arm.body)
+            kids.append(pat)
+            kids.append(body)
+        return _intern_recipe(session, _match_id(), kids)
+    if isinstance(ast, ChooseExpr):
+        kids = [_to_recipe_node_id(session, c) for c in ast.candidates]
+        return _intern_recipe(session, _choice_id("choose"), kids)
+    if isinstance(ast, FailExpr):
+        return _choice_id("fail")  # leaf — no children
+    if isinstance(ast, StopExpr):
+        return _choice_id("stop")  # leaf — no children
+    if isinstance(ast, Projection):
+        # In Recipe context, projection is a "view-as" recipe with two children.
+        cell_id = _to_recipe_node_id(session, ast.cell)
+        bp_id = _to_recipe_node_id(session, ast.blueprint)
+        return _intern_recipe(session, _block_id("seq"), [cell_id, bp_id])
+    raise TypeError(f"Form: cannot compile {type(ast).__name__} to Recipe")
+
+
 def evaluate(session: Session, ast: Any) -> FormResult:
     if isinstance(ast, NodeIDLit):
         return FormResult("node_id", NodeID(ast.package, ast.level, ast.type_, ast.instance))
@@ -395,6 +830,15 @@ def evaluate(session: Session, ast: Any) -> FormResult:
 
     if isinstance(ast, Query):
         return _evaluate_query(session, ast)
+
+    # Recipe-AST nodes: compile to a Recipe NodeID (intern as we go)
+    if isinstance(ast, (
+        IntLit, BoolLit, StringLit, Identifier,
+        BinOp, UnaryOp, IfExpr, DoBlock, Let,
+        MatchExpr, ChooseExpr, FailExpr, StopExpr,
+    )):
+        rid = _to_recipe_node_id(session, ast)
+        return FormResult("recipe", rid)
 
     raise TypeError(f"Form: cannot evaluate {type(ast).__name__}")
 

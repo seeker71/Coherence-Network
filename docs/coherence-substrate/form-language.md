@@ -170,6 +170,81 @@ The conceptual lineage of `|>` (the "view-through" operator):
 
 > *"In BML, the object only acts as a structural repository. It does not define by itself the applicable set of methods. Consequently, it is possible to enhance any object with a new interface."* — Bjorg, *BML Object System* (2000), § Structure-Behavior Separation
 
+### Code expressions — Recipes
+
+Form expresses *code* as well as data. The code expressions intern as Recipe NodeIDs (the substrate doesn't execute them; it stores their structure). Two structurally-identical expressions hash to the same Recipe NodeID — `1 + 2` written twice always returns the same NodeID.
+
+#### Arithmetic, comparison, logic
+
+```form
+1 + 2 * 3                           # Math expression — interns as a tree of Math recipes
+x > 5                               # Compare.GREATER recipe
+a && b || !c                        # Logic recipes (precedence: ! > && > ||)
+-x                                  # unary negation (Math.NEGATE)
+```
+
+Operator precedence (low to high): `||` < `&&` < `== != < <= > >=` < `+ -` < `* / %` < `! -` (unary) < `.` (access).
+
+#### Conditionals
+
+```form
+if x > 5 then 10 else 20            # Cond.IF_THEN_ELSE — three children
+if cond then body                   # Cond.IF_THEN — two children (no else)
+```
+
+The category vocabulary distinguishes `IF_THEN` from `IF_THEN_ELSE` so two-arm and three-arm conditionals get different Recipe NodeIDs.
+
+#### Blocks and bindings
+
+```form
+do {
+    let x = 5;
+    let y = x + 3;
+    y * 2                            # last expression is the block's value
+}
+```
+
+`do { ... }` interns as a `Block.DO` recipe with one child per statement. `let name = expr` interns as a `Block.LET` recipe carrying the name and value.
+
+#### Match (switch)
+
+```form
+match status {
+    "ready" => execute,
+    "blocked" => wait_for_signal,
+    "failed" => retry,
+    _ => default_handler,
+}
+```
+
+`match` interns as a `Match.SWITCH` recipe with the scrutinee as the first child and each arm contributing two children (pattern + body). Use `_` for the default pattern.
+
+#### Angelic nondeterminism — `choose`, `fail`, `stop`
+
+The BML lineage carries forward into Form. The substrate interns these as Recipe NodeIDs; future execution semantics will give them speculation behavior matching the BML angelic-assembler:
+
+> *"A thread with a non-zero DF (i.e. degree of freedom) is executed until a zero DF is reached again."* — `angelic-assembler.txt`
+
+```form
+choose [a, b, c]                     # speculation: pick a branch; backtrack on downstream fail
+fail                                 # signal failure; unwinds to nearest choose
+stop                                 # commit current speculation; no more backtracking from here
+```
+
+`choose [a, b, c]` interns as a `Choice.CHOOSE` recipe with three candidate children. `fail` and `stop` are leaf recipes (level BASIC, no children) — they're trivial markers that the speculation engine reads.
+
+A worked example combining the trio:
+
+```form
+choose [
+    do { let attempt = strategy_a(); if attempt > threshold then stop else fail },
+    do { let attempt = strategy_b(); if attempt > threshold then stop else fail },
+    do { let attempt = strategy_c(); if attempt > threshold then stop else fail },
+]
+```
+
+The speculation tries strategies in order; each one runs and either commits (stop) or backtracks (fail). The first one that crosses the threshold wins. **Backtracking-without-sediment at the language layer** — the same instinct that runs through this body's `tend:` / `attune:` / `compost:` / `release:` commit verbs.
+
 ### Operations
 
 Beyond declaration and query, Form supports operations on the substrate:
