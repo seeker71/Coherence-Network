@@ -2,12 +2,19 @@
   "author_count": 1727,
   "concept_work_count": 25,
   "event_count_with_month": 68351,
-  "generated_at": "2026-05-08T03:22:01.377551+00:00",
+  "field_event_shape": {
+    "backtrace_samples": "public-safe sample event ids with source line references and trace links back to month, author, and work slices",
+    "influence_spectrum": "frequency distribution plus pressure/intensity/inspiration/insight/vitality axes",
+    "source_mix": "source, platform, and evidence counts",
+    "volume": "event count, known duration, known duration coverage, and axis energy"
+  },
+  "generated_at": "2026-05-08T04:28:02.774516+00:00",
   "month_count": 163,
-  "publication_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
+  "publication_boundary": "Indexes publish derived field movement and public-safe backtrace samples. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
   "query_shapes": {
     "author_influence_wave": "Search author_index.jsonl by id or exact name, then read wave.",
     "concept_to_work_discovery": "Load concept_work_map.json -> concepts[lc-*] for related significant works.",
+    "field_event_backtrace": "Open backtrace_samples on any month, author, or work record for source line, event id, public-safe source mix, and trace links.",
     "primary_influence_during_month": "Load monthly_spectrum.json -> months[YYYY-MM].",
     "significant_work_discovery": "Search significant_work_index.jsonl by id, title, or alias, then use concept links and chapter probes.",
     "work_influence_wave": "Search work_index.jsonl by id or exact title, then read wave."
