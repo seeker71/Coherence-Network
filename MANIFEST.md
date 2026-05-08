@@ -14,7 +14,7 @@
 | Index | Purpose |
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Body tending practice + Quick Lookup table |
-| [specs/INDEX.md](specs/INDEX.md) | All specs (~92), grouped by idea |
+| [specs/INDEX.md](specs/INDEX.md) | All specs, grouped by parent idea (auto-generated) |
 | [ideas/INDEX.md](ideas/INDEX.md) | Super-ideas (16) across the 6 pillars |
 | [docs/vision-kb/INDEX.md](docs/vision-kb/INDEX.md) | Living Collective wiki — concepts, axes, lineage |
 | [docs/vision-kb/locations/INDEX.md](docs/vision-kb/locations/INDEX.md) | Climate adaptations |
