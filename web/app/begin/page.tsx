@@ -279,6 +279,53 @@ export default function BeginPage() {
           </div>
         ) : null}
 
+        {/* Public-posture disclosure — the network's body of evidence
+            is public-by-default. Contributors arrive knowing this, so
+            the choice to participate is informed rather than discovered.
+            The opt-out path is named directly so anyone uncomfortable
+            with public attribution can pause here, before joining. */}
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 leading-relaxed space-y-2">
+          <p className="font-medium text-amber-300">
+            What joining the network means
+          </p>
+          <p>
+            The Coherence Network is{" "}
+            <strong>public-by-default</strong>. Your contribution id,
+            attribution, the surfaces you visit, and the lineage edges
+            you create become part of an open body of evidence.
+            Nightly database dumps mirror to a public archive at{" "}
+            <Link
+              href="https://github.com/seeker71/coherence-network-archive"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 underline-offset-4 hover:underline"
+            >
+              coherence-network-archive
+            </Link>
+            ; per-day view-event archives sit on the main repo's
+            releases. The substrate matches the conviction —
+            sovereign-transparent attribution, no hidden state.
+          </p>
+          <p>
+            What we don't keep: tracking cookies, third-party
+            fingerprints, IP-based geolocation, device specifics. The
+            session id is a per-tab UUID local to the network.
+          </p>
+          <p>
+            If your situation ever changes, the network honours an
+            opt-out request — see{" "}
+            <Link
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/transparency/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 underline-offset-4 hover:underline"
+            >
+              docs/transparency
+            </Link>
+            {" "}for what's redactable, what isn't, and the procedure.
+          </p>
+        </div>
+
         <div className="flex items-center gap-4">
           <button
             type="submit"

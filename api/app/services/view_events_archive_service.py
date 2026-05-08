@@ -435,6 +435,122 @@ def retrieve_day(target_day: date) -> dict[str, Any]:
     }
 
 
+def list_archived_days() -> list[date]:
+    """Return every archived day in ascending order. Used by the
+    opt-out flow to enumerate cold-tier archives that may need
+    rewriting."""
+    _ensure_ready()
+    with _session() as s:
+        rows = s.query(ViewEventsArchive.day).order_by(ViewEventsArchive.day.asc()).all()
+        return [r[0] for r in rows]
+
+
+def rewrite_archived_day(
+    target_day: date,
+    *,
+    transform,
+    repo: str = DEFAULT_REPO,
+    notes: str = "",
+) -> dict[str, Any]:
+    """Rewrite a previously-archived day with a transformation applied
+    to each event.
+
+    ``transform`` is a callable taking one event-dict and returning
+    one event-dict (or None to drop the event entirely). Used by the
+    opt-out flow to anonymize specific contributor data while
+    preserving the rest of the day's attribution shape.
+
+    Returns a manifest describing the rewrite. The cold-tier asset is
+    re-uploaded under the same tag + filename (so the deterministic
+    URL still resolves) but with a new SHA-256 — the tombstone is
+    updated in lockstep so retrievers always verify against the
+    current archive content.
+
+    Honest property: anyone who downloaded the OLD asset still has it
+    locally. The rewrite is forward-looking — current and future
+    retrievals through the network's API surface, plus anyone freshly
+    cloning the cold tier, see the redacted version. Past mirrors are
+    out of our reach.
+    """
+    tomb = get_tombstone(target_day)
+    if not tomb:
+        return {"day": target_day.isoformat(), "rewritten": False, "reason": "not archived"}
+
+    fetched = retrieve_day(target_day)
+    if not fetched.get("fetched"):
+        return {"day": target_day.isoformat(), "rewritten": False,
+                "reason": fetched.get("error", "fetch failed"),
+                "tombstone": _tombstone_to_dict(tomb)}
+
+    original_events = fetched.get("events", [])
+    new_events: list[dict[str, Any]] = []
+    redactions = 0
+    for ev in original_events:
+        out = transform(ev)
+        if out is None:
+            redactions += 1
+            continue
+        if out is not ev:
+            redactions += 1
+        new_events.append(out)
+
+    if redactions == 0:
+        return {"day": target_day.isoformat(), "rewritten": False,
+                "reason": "no rows touched by transform",
+                "event_count": len(original_events)}
+
+    # Re-serialise.
+    raw = io.BytesIO()
+    for ev in new_events:
+        raw.write((json.dumps(ev, separators=(",", ":")) + "\n").encode("utf-8"))
+    raw_bytes = raw.getvalue()
+    compressed = gzip.compress(raw_bytes, compresslevel=9)
+    digest = hashlib.sha256(compressed).hexdigest()
+
+    new_manifest = {
+        "day": target_day.isoformat(),
+        "event_count": len(new_events),
+        "bytes_original": len(raw_bytes),
+        "bytes_compressed": len(compressed),
+        "sha256": digest,
+    }
+
+    archive_url = upload_to_github_releases(
+        target_day,
+        compressed,
+        repo=repo,
+        notes=notes or (
+            f"Rewritten {datetime.now(timezone.utc).isoformat()} — "
+            f"{redactions} event(s) redacted via opt-out flow. "
+            f"Original event count was {len(original_events)}; "
+            f"current event count is {len(new_events)}."
+        ),
+    )
+
+    record_tombstone(
+        target_day,
+        manifest=new_manifest,
+        archive_url=archive_url,
+        archive_provider=DEFAULT_PROVIDER,
+        archive_tag=_gh_tag_for(target_day),
+    )
+
+    # Invalidate the local cache so the next retrieval pulls fresh.
+    cache = _cache_path(target_day)
+    if cache.exists():
+        cache.unlink(missing_ok=True)
+
+    return {
+        "day": target_day.isoformat(),
+        "rewritten": True,
+        "redactions": redactions,
+        "old_sha256": tomb.sha256,
+        "new_sha256": digest,
+        "old_event_count": len(original_events),
+        "new_event_count": len(new_events),
+    }
+
+
 def _tombstone_to_dict(tomb: ViewEventsArchive) -> dict[str, Any]:
     return {
         "day": tomb.day.isoformat() if tomb.day else None,
