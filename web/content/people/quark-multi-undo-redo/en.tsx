@@ -13,7 +13,7 @@ const content: PersonProfileContent = {
       "linear-gradient(135deg, hsl(220 30% 8%), hsl(20 35% 14%) 50%, hsl(40 30% 16%))",
     overlayClass:
       "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30",
-    eyebrow: "Work · Quark Software Inc. · Denver · early 2000s",
+    eyebrow: "Work · Quark Inc. · Denver · May 2000 – Mar 2005",
     eyebrowClass: "text-[hsl(var(--chart-2))]",
     name: "Quark Multi-Document Undo/Redo Engine",
     welcome: (
@@ -31,7 +31,7 @@ const content: PersonProfileContent = {
     ),
   },
   facts: [
-    { label: "Era", value: "Quark Software Inc. · Denver office · early-to-mid 2000s · post-MS thesis. Exact tenure dates from LinkedIn — refine below." },
+    { label: "Era", value: "Quark Inc. · Denver office · May 2000 – March 2005 · 4 years 11 months · Software Engineer III · directly post-MS thesis" },
     { label: "Substrate", value: "C++ · QuarkXPress runtime · Mac OS Classic / Mac OS X / Windows · cross-platform action-record model" },
     { label: "Application", value: (<>QuarkXPress — desktop publishing across multiple simultaneous documents per session. <Link href="https://www.quark.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary">quark.com</Link></>) },
     {
@@ -356,9 +356,8 @@ const content: PersonProfileContent = {
       . The implementation is internal to Quark and not public — what
       lives here is the architectural shape, the design rationale,
       and the lived memory of building and shipping it. Urs is
-      invited to refine exact tenure dates, the canonical action-
-      record vocabulary, and any technical detail through the Refine
-      doorway below.
+      invited to refine the canonical action-record vocabulary and
+      any technical detail through the Refine doorway below.
     </p>
   ),
 };
