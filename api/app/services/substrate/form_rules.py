@@ -88,6 +88,35 @@ class Optional_:
 Opt = Optional_
 
 
+@dataclass
+class IdentCapture:
+    """Capture a raw IDENT token's *value* as a string.
+
+    Distinct from `Capture(name, "expr")` which parses the next token(s)
+    as an expression. IdentCapture takes a single IDENT token and binds
+    its string value directly. Used for `let <name> = ...` where `name`
+    is a raw identifier, not a sub-expression.
+    """
+    name: str
+
+
+@dataclass
+class RepeatedCapture:
+    """Match `item_pattern` zero or more times; bind the resulting list.
+
+    When `item_pattern` is a single Capture, the captured list contains
+    the captured values (e.g. expressions) directly. When `item_pattern`
+    is a Sequence with multiple captures, each iteration's captures dict
+    is appended to the list.
+
+    `separator` (if provided) must match between successive items.
+    If `separator` is absent, items are matched greedily until one fails.
+    """
+    name: str
+    item_pattern: Any
+    separator: Any = None  # Optional Literal (or any pattern) to match between items
+
+
 # ---------------------------------------------------------------------------
 # Match engine
 # ---------------------------------------------------------------------------
@@ -140,6 +169,40 @@ def _do_match(parser, pattern: Any, captures: Dict[str, Any]) -> bool:
         captures[pattern.name] = node
         return True
 
+    if isinstance(pattern, IdentCapture):
+        t = parser.peek()
+        if t.kind != "IDENT":
+            return False
+        captures[pattern.name] = t.value
+        parser.consume("IDENT")
+        return True
+
+    if isinstance(pattern, RepeatedCapture):
+        items: List[Any] = []
+        # Determine whether item_pattern produces a single value or a dict
+        single_capture_name = _single_capture_name(pattern.item_pattern)
+
+        while True:
+            saved = parser.pos
+            sub_captures: Dict[str, Any] = {}
+            if not _do_match(parser, pattern.item_pattern, sub_captures):
+                parser.pos = saved
+                break
+            if single_capture_name is not None:
+                items.append(sub_captures.get(single_capture_name))
+            else:
+                items.append(dict(sub_captures))
+
+            # If a separator is required, match it; if it fails, we're done.
+            if pattern.separator is not None:
+                sep_saved = parser.pos
+                if not _do_match(parser, pattern.separator, {}):
+                    parser.pos = sep_saved
+                    break
+
+        captures[pattern.name] = items
+        return True
+
     if isinstance(pattern, Sequence):
         for part in pattern.parts:
             if not _do_match(parser, part, captures):
@@ -156,6 +219,16 @@ def _do_match(parser, pattern: Any, captures: Dict[str, Any]) -> bool:
         return True  # optional: not matching is success
 
     return False
+
+
+def _single_capture_name(pattern: Any) -> Optional[str]:
+    """If `pattern` is a single Capture (or IdentCapture), return its name.
+    Otherwise return None — RepeatedCapture should yield dicts."""
+    if isinstance(pattern, Capture):
+        return pattern.name
+    if isinstance(pattern, IdentCapture):
+        return pattern.name
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +301,29 @@ def pattern_to_recipe(session: Session, pattern: Any):
             session, DOMAIN_RECIPE, _capture_marker_id(), [name_id, kind_id]
         )
 
+    if isinstance(pattern, IdentCapture):
+        # Encoded as Capture with kind="__ident__" — a special-cased kind
+        # that the deserializer recognizes.
+        name_id = _string_recipe_id(pattern.name)
+        kind_id = _string_recipe_id("__ident__")
+        return intern_node(
+            session, DOMAIN_RECIPE, _capture_marker_id(), [name_id, kind_id]
+        )
+
+    if isinstance(pattern, RepeatedCapture):
+        # Encoded as Block.SEQUENCE with marker "__repeat__":
+        # [str("__repeat__"), str(name), item_recipe, separator_recipe?]
+        marker = _string_recipe_id("__repeat__")
+        name_id = _string_recipe_id(pattern.name)
+        item_id = pattern_to_recipe(session, pattern.item_pattern)
+        children = [marker, name_id, item_id]
+        if pattern.separator is not None:
+            sep_id = pattern_to_recipe(session, pattern.separator)
+            children.append(sep_id)
+        return intern_node(
+            session, DOMAIN_RECIPE, _literal_marker_id(), children
+        )
+
     if isinstance(pattern, Sequence):
         children = [pattern_to_recipe(session, p) for p in pattern.parts]
         # We use a marker child to distinguish Sequence from Literal (both
@@ -269,21 +365,21 @@ def recipe_to_pattern(session: Session, recipe_id) -> Any:
         if len(children_ids) == 1:
             return Optional_(pattern=recipe_to_pattern(session, children_ids[0]))
 
-    # Block.LET with two string children → Capture
+    # Block.LET with two string children → Capture or IdentCapture
     if category.level == Level.BASIC and category.type_ == RBasic.BLOCK and category.instance == RBlock.LET:
         if len(children_ids) == 2:
             name = _string_from_recipe(session, children_ids[0])
             kind = _string_from_recipe(session, children_ids[1])
+            if kind == "__ident__":
+                return IdentCapture(name=name)
             return Capture(name=name, kind=kind)
 
-    # Block.SEQUENCE with two string children → Literal
-    # Block.SEQUENCE with marker + N children → Sequence
+    # Block.SEQUENCE with various marker patterns
     if category.level == Level.BASIC and category.type_ == RBasic.BLOCK and category.instance == RBlock.SEQUENCE:
         if len(children_ids) == 2:
-            # Could be Literal(kind, value)
             kind_str = _string_from_recipe(session, children_ids[0])
             value_str = _string_from_recipe(session, children_ids[1])
-            if kind_str != "__seq__":
+            if kind_str not in ("__seq__", "__repeat__"):
                 return Literal(kind=kind_str, value=value_str if value_str else None)
 
         if len(children_ids) >= 1:
@@ -291,6 +387,17 @@ def recipe_to_pattern(session: Session, recipe_id) -> Any:
             if marker == "__seq__":
                 parts_list = [recipe_to_pattern(session, c) for c in children_ids[1:]]
                 return Sequence(parts=parts_list)
+            if marker == "__repeat__":
+                # [marker, name, item_pattern, separator?]
+                if len(children_ids) >= 3:
+                    name = _string_from_recipe(session, children_ids[1])
+                    item_pattern = recipe_to_pattern(session, children_ids[2])
+                    separator = None
+                    if len(children_ids) >= 4:
+                        separator = recipe_to_pattern(session, children_ids[3])
+                    return RepeatedCapture(
+                        name=name, item_pattern=item_pattern, separator=separator,
+                    )
 
     raise ValueError(f"Form: unrecognized pattern recipe shape at {recipe_id}")
 

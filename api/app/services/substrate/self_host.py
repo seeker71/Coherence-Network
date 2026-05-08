@@ -6,31 +6,27 @@ Step 6 of the bootstrap-to-self-hosting path. The bootstrap parser
 current pattern DSL allows) as substrate-resident `(pattern, template)`
 pairs registered via `register_form_keyword`.
 
-What's currently expressible with the existing pattern DSL:
+Currently expressible with the pattern DSL (after IdentCapture +
+RepeatedCapture extensions):
 
-  if cond then body [else other]
-      pure expression captures, no special syntax
+  if cond then body [else other]    Capture(cond), Capture(body), Opt(else)
+  let name = value                   IdentCapture(name) + Capture(value)
+  fail                               bare-keyword leaf
+  stop                               bare-keyword leaf
+  choose [a, b, c]                   RepeatedCapture with `,` separator
+  do { stmt; stmt; ...; expr }       RepeatedCapture with `;` separator
 
-What needs pattern-DSL extensions to express (future work):
+What still needs further pattern-DSL extensions:
 
-  do { stmt; stmt; ...; expr }      ← needs RepeatedCapture(separator=";")
-  let name = expr                    ← needs IdentCapture (raw IDENT name,
-                                       not parsed as a sub-expression)
-  match x { pat => body, ... }       ← RepeatedCapture for arms,
-                                       and a "=>" infix pattern
-  choose [a, b, c]                   ← RepeatedCapture inside `[...]`
-  fail / stop                        ← bare-keyword leaf pattern
+  match x { pat => body, ... }       ← needs MapBuild to wrap each captured
+                                       arm-dict as a MatchArm AST instance
   arithmetic / comparison / logic    ← needs precedence-aware pattern
                                        primitives or operator-precedence
                                        declarations
 
-This module ships **partial self-hosting**: `if` (and the user-style
-`unless` and `whenever`) — the cases the current pattern DSL can fully
-express. The proof: when `prefer_registered=True`, the parser uses
-these templates and produces Recipe NodeIDs IDENTICAL to the bootstrap.
-
-The remaining keywords stay in the bootstrap until the pattern DSL
-grows IdentCapture + RepeatedCapture. Each of those is its own breath.
+This module ships **expanded partial self-hosting**: every keyword
+listed above produces Recipe NodeIDs IDENTICAL to the bootstrap when
+`prefer_registered=True`.
 """
 from __future__ import annotations
 
@@ -41,8 +37,10 @@ from sqlalchemy.orm import Session
 from app.services.substrate.form_builders import Build, CaptureRef, Const
 from app.services.substrate.form_rules import (
     Capture,
+    IdentCapture,
     Literal,
     Opt,
+    RepeatedCapture,
     Sequence,
     register_form_keyword,
 )
@@ -132,10 +130,93 @@ def bootstrap_self_host(session: Session, ast_module: Any = None) -> List[str]:
     )
     registered.append("whenever")
 
+    # `let name = value` — IdentCapture binds `name` as a string
+    register_form_keyword(
+        "let",
+        Sequence([
+            Literal("IDENT", "let"),
+            IdentCapture("name"),
+            Literal("ASSIGN", None),
+            Capture("value"),
+        ]),
+        template=Build(
+            "Let",
+            name=CaptureRef("name"),
+            value=CaptureRef("value"),
+        ),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("let")
+
+    # `fail` — bare-keyword leaf
+    register_form_keyword(
+        "fail",
+        Sequence([Literal("IDENT", "fail")]),
+        template=Build("FailExpr"),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("fail")
+
+    # `stop` — bare-keyword leaf
+    register_form_keyword(
+        "stop",
+        Sequence([Literal("IDENT", "stop")]),
+        template=Build("StopExpr"),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("stop")
+
+    # `choose [a, b, c]` — RepeatedCapture for variable-length list
+    register_form_keyword(
+        "choose",
+        Sequence([
+            Literal("IDENT", "choose"),
+            Literal("LBRACK", None),
+            RepeatedCapture(
+                "candidates",
+                item_pattern=Capture("__item__"),
+                separator=Literal("COMMA", None),
+            ),
+            Literal("RBRACK", None),
+        ]),
+        template=Build(
+            "ChooseExpr",
+            candidates=CaptureRef("candidates"),
+        ),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("choose")
+
+    # `do { stmt; stmt; ...; expr }` — RepeatedCapture with semicolon
+    register_form_keyword(
+        "do",
+        Sequence([
+            Literal("IDENT", "do"),
+            Literal("LBRACE", None),
+            RepeatedCapture(
+                "statements",
+                item_pattern=Capture("__item__"),
+                separator=Literal("SEMI", None),
+            ),
+            Literal("RBRACE", None),
+        ]),
+        template=Build(
+            "DoBlock",
+            statements=CaptureRef("statements"),
+        ),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("do")
+
     return registered
 
 
 def list_bootstrap_self_host_keywords() -> List[str]:
     """Return the set of bootstrap keywords that `bootstrap_self_host`
     currently re-expresses. Useful for tests + agent introspection."""
-    return ["if", "unless", "whenever"]
+    return ["if", "unless", "whenever", "let", "fail", "stop", "choose", "do"]

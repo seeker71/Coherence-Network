@@ -70,8 +70,10 @@ from app.services.substrate.self_host import (
 )
 from app.services.substrate.form_rules import (
     Capture,
+    IdentCapture,
     Literal,
     Opt,
+    RepeatedCapture,
     Sequence,
     list_builders,
     list_registered_keywords,
@@ -161,8 +163,10 @@ __all__ = [
     "register_form_rule",
     # Rule-driven extension — runtime keyword registration
     "Capture",
+    "IdentCapture",
     "Literal",
     "Opt",
+    "RepeatedCapture",
     "Sequence",
     "list_builders",
     "list_registered_keywords",

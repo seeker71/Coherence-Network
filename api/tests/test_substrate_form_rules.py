@@ -354,3 +354,72 @@ def test_load_all_keywords_from_substrate(session):
     loaded = load_all_keywords_from_substrate(session)
     assert "unless" in loaded
     assert "whenever" in loaded
+
+
+# ---------------------------------------------------------------------------
+# IdentCapture + RepeatedCapture — pattern DSL extensions
+# ---------------------------------------------------------------------------
+
+
+def test_ident_capture_round_trip(session):
+    """IdentCapture serializes and reconstructs."""
+    from app.services.substrate import IdentCapture, pattern_to_recipe, recipe_to_pattern
+    rid = pattern_to_recipe(session, IdentCapture("name"))
+    rebuilt = recipe_to_pattern(session, rid)
+    assert isinstance(rebuilt, IdentCapture)
+    assert rebuilt.name == "name"
+
+
+def test_repeated_capture_round_trip(session):
+    """RepeatedCapture (with separator) serializes and reconstructs."""
+    from app.services.substrate import (
+        RepeatedCapture, pattern_to_recipe, recipe_to_pattern,
+    )
+    original = RepeatedCapture(
+        "items",
+        item_pattern=Capture("__item__"),
+        separator=Literal("COMMA", None),
+    )
+    rid = pattern_to_recipe(session, original)
+    rebuilt = recipe_to_pattern(session, rid)
+    assert isinstance(rebuilt, RepeatedCapture)
+    assert rebuilt.name == "items"
+    assert isinstance(rebuilt.item_pattern, Capture)
+    assert isinstance(rebuilt.separator, Literal)
+    assert rebuilt.separator.kind == "COMMA"
+
+
+def test_repeated_capture_no_separator_round_trip(session):
+    """RepeatedCapture without separator round-trips correctly."""
+    from app.services.substrate import (
+        RepeatedCapture, pattern_to_recipe, recipe_to_pattern,
+    )
+    original = RepeatedCapture(
+        "items", item_pattern=Capture("__item__"), separator=None,
+    )
+    rid = pattern_to_recipe(session, original)
+    rebuilt = recipe_to_pattern(session, rid)
+    assert isinstance(rebuilt, RepeatedCapture)
+    assert rebuilt.separator is None
+
+
+def test_pattern_dedup_with_new_primitives(session):
+    """Two structurally-identical patterns using new primitives share NodeIDs."""
+    from app.services.substrate import (
+        IdentCapture, RepeatedCapture, pattern_to_recipe,
+    )
+    a = pattern_to_recipe(
+        session,
+        Sequence([
+            Literal("IDENT", "let"), IdentCapture("name"),
+            Literal("ASSIGN", None), Capture("value"),
+        ]),
+    )
+    b = pattern_to_recipe(
+        session,
+        Sequence([
+            Literal("IDENT", "let"), IdentCapture("name"),
+            Literal("ASSIGN", None), Capture("value"),
+        ]),
+    )
+    assert a == b

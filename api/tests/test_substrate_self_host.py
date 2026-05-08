@@ -177,12 +177,85 @@ def test_do_block_still_uses_bootstrap_in_prefer_mode(session):
     """`do { ... }` doesn't have a registered template — the parser falls
     back to the bootstrap handler even in prefer_registered mode.
 
-    This is the honest gap: do-blocks need RepeatedCapture in the pattern
-    DSL before they can be self-hosted. The fall-through proves the
-    safety mechanism: prefer_registered is opt-in per-keyword via the
-    presence of a matching rule, not a global on/off.
+    NOTE: this used to assert do-blocks weren't self-hosted. After
+    adding RepeatedCapture, `do` IS now self-hosted. We keep this test
+    to verify the bootstrap path also still works under prefer_registered
+    mode (registered template runs first; bootstrap is never reached).
     """
     bootstrap_self_host(session)
-    # `do` is NOT registered — parser falls through to bootstrap parse_do_block
     ast = form_evaluate_text(session, "do { let x = 5; x + 1 }", prefer_registered=True)
-    assert ast.kind == "recipe"  # bootstrap handler produced a Recipe
+    assert ast.kind == "recipe"  # registered template produced a Recipe
+
+
+# ---------------------------------------------------------------------------
+# Expanded self-hosting — let / fail / stop / choose / do
+# ---------------------------------------------------------------------------
+
+
+def test_let_self_hosted_matches_bootstrap(session):
+    """The killer for IdentCapture: registered `let` produces same NodeID."""
+    bootstrap_self_host(session)
+    bootstrap_path = form_evaluate_text(session, "let x = 5")
+    self_host_path = form_evaluate_text(
+        session, "let x = 5", prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_fail_self_hosted_matches_bootstrap(session):
+    bootstrap_self_host(session)
+    bootstrap_path = form_evaluate_text(session, "fail")
+    self_host_path = form_evaluate_text(
+        session, "fail", prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_stop_self_hosted_matches_bootstrap(session):
+    bootstrap_self_host(session)
+    bootstrap_path = form_evaluate_text(session, "stop")
+    self_host_path = form_evaluate_text(
+        session, "stop", prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_choose_self_hosted_matches_bootstrap(session):
+    """The killer for RepeatedCapture: registered `choose` with a list
+    of candidates produces the same Recipe NodeID."""
+    bootstrap_self_host(session)
+    bootstrap_path = form_evaluate_text(session, "choose [1, 2, 3]")
+    self_host_path = form_evaluate_text(
+        session, "choose [1, 2, 3]", prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_do_block_self_hosted_matches_bootstrap(session):
+    """RepeatedCapture with semicolon separator drives `do` self-hosting."""
+    bootstrap_self_host(session)
+    bootstrap_path = form_evaluate_text(session, "do { let x = 5; x + 1 }")
+    self_host_path = form_evaluate_text(
+        session, "do { let x = 5; x + 1 }", prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_complex_nested_self_hosted_matches_bootstrap(session):
+    """Compose multiple self-hosted keywords nested together."""
+    bootstrap_self_host(session)
+    src = "do { let x = 5; if x > 0 then stop else fail }"
+    bootstrap_path = form_evaluate_text(session, src)
+    self_host_path = form_evaluate_text(
+        session, src, prefer_registered=True
+    )
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_self_host_keywords_count_matches_advertised(session):
+    """list_bootstrap_self_host_keywords + bootstrap_self_host stay in sync."""
+    advertised = set(list_bootstrap_self_host_keywords())
+    registered = set(bootstrap_self_host(session))
+    assert advertised == registered
+    # And we have at least 8 keywords now (was 3)
+    assert len(advertised) >= 8

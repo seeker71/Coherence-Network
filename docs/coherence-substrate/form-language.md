@@ -514,20 +514,40 @@ assert bootstrap_path.value == self_host_path.value  # ✓
 
 The `prefer_registered` flag is opt-in per-call. Default behavior is unchanged: the bootstrap handlers run first, the registry runs second. With the flag flipped, registry runs first, bootstrap is fallback. **A registered keyword without a matching pattern still falls through cleanly** — the safety mechanism makes self-hosting incremental rather than all-or-nothing.
 
-**What's currently self-hostable** with the existing pattern DSL: `if cond then body [else other]`. The keyword has no special syntax beyond keyword-marker tokens and sub-expression captures.
+**Currently self-hostable** (after IdentCapture + RepeatedCapture extensions):
 
-**What's NOT yet self-hostable** (pattern DSL needs extensions):
+| Keyword | Pattern primitives used |
+|---|---|
+| `if cond then body [else other]` | Capture, Opt |
+| `unless cond then body [else other]` | Capture, Opt (desugars to `if !cond`) |
+| `whenever cond do body` | Capture |
+| `let name = value` | IdentCapture (raw name), Capture |
+| `fail` | bare-keyword leaf |
+| `stop` | bare-keyword leaf |
+| `choose [a, b, c]` | RepeatedCapture (separator=COMMA) |
+| `do { stmt; stmt; ...; expr }` | RepeatedCapture (separator=SEMI) |
+
+**Pattern DSL primitives:**
+
+| Primitive | What it matches |
+|---|---|
+| `Literal(kind, value)` | one token by kind, optional exact value |
+| `Capture(name, kind="expr")` | a sub-expression bound to `captures[name]` |
+| `IdentCapture(name)` | a raw IDENT token, value bound as a string |
+| `Sequence([p1, p2, ...])` | parts in order |
+| `Opt(pattern)` | matches if present; succeeds either way |
+| `RepeatedCapture(name, item, separator=None)` | zero or more items; bind list to `captures[name]` |
+
+For RepeatedCapture: when `item` is a single Capture (or IdentCapture), the captured list contains the values directly. When `item` is a Sequence with multiple inner captures, each iteration produces a dict and the list contains dicts.
+
+**Still needs extensions** before self-hosting:
 
 | Keyword | Why not yet |
 |---|---|
-| `do { stmt; stmt; expr }` | Needs `RepeatedCapture(separator=";")` for variable-length statement lists |
-| `let name = expr` | Needs `IdentCapture` — capturing a raw IDENT name, not parsed as a sub-expression |
-| `match x { pat => body, ... }` | Needs `RepeatedCapture` for arms + an infix `=>` matcher |
-| `choose [a, b, c]` | Needs `RepeatedCapture` inside `[...]` |
-| `fail` / `stop` | Bare-keyword leaf pattern (small extension) |
-| `+ - * / == != < <= > >= && \|\| !` | Operator precedence parsing — needs precedence-aware pattern primitives or operator-precedence declarations |
+| `match x { pat => body, ... }` | Needs `MapBuild` to wrap each captured arm-dict as a `MatchArm` AST instance |
+| `+ - * / == != < <= > >= && \|\| !` | Operator precedence parsing — needs precedence-aware pattern primitives |
 
-Each is its own future breath. The infrastructure (substrate-resident patterns + substrate-resident builders) is in place; what's missing are richer pattern primitives.
+Each remains its own future breath.
 
 #### What's still not closed
 
@@ -548,7 +568,7 @@ For Form, that path is:
 3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
 5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
-6. **Self-hosting (partial).** ✓ Shipped — `self_host.bootstrap_self_host(session)` registers `if` (plus the convenience `unless` and `whenever`) as substrate-resident `(pattern, template)` pairs. Setting `prefer_registered=True` flips the parser's lookup order so the registered templates drive parsing. Verified: `if x then y else z` produces the same Recipe NodeID via either path. Full self-hosting (do/match/let/choose/operators) awaits pattern-DSL extensions (IdentCapture, RepeatedCapture).
+6. **Self-hosting (expanded partial).** ✓ Shipped — `self_host.bootstrap_self_host(session)` now registers **8 keywords** as substrate-resident `(pattern, template)` pairs: `if`, `unless`, `whenever`, `let`, `fail`, `stop`, `choose`, `do`. Setting `prefer_registered=True` flips the parser's lookup order so the registered templates drive parsing. Verified: every self-hosted keyword (including the deeply nested `do { let x = 5; if x > 0 then stop else fail }`) produces the same Recipe NodeID via either path. Pattern DSL extensions (IdentCapture, RepeatedCapture) drive the new coverage. Remaining keywords (`match`, operators) await further pattern-DSL extensions (MapBuild, operator-precedence patterns).
 7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
