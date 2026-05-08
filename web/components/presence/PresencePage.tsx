@@ -63,6 +63,8 @@ export type Creation = {
   name: string;
   url?: string | null;
   image_url?: string | null;
+  /** When true, `url` is an internal Network route (same-tab nav); otherwise external (new tab). */
+  internal?: boolean;
 };
 
 export type Lineage = {
@@ -440,7 +442,9 @@ function CreationsGrid({
         {visible.map((c) => {
           const Tag = (c.url ? "a" : "div") as "a" | "div";
           const extra = c.url
-            ? { href: c.url, target: "_blank", rel: "noopener noreferrer" }
+            ? c.internal
+              ? { href: c.url }
+              : { href: c.url, target: "_blank", rel: "noopener noreferrer" }
             : {};
           return (
             <Tag
