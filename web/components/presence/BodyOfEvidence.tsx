@@ -89,6 +89,12 @@ const SOURCE_LABELS: Record<string, string> = {
   goethean_lineage_reading: "Physical reading",
   lineage_seed: "Named lineage",
   lineage_seed_cleanup: "Named lineage",
+  // Lateral influence-to-influence edges named in lineage docs
+  // (Ramtha → Dispenza, Goethe → Steiner, Lex hosting Levin, etc.)
+  // — same category as the in-person teacher rollup.
+  lineage_doc_formative_transmissions: "Named lineage",
+  lineage_doc_robert_edward_grant: "Named lineage",
+  lineage_lateral_edges: "Named lineage",
   inspired_by_resolver: "Manual",
   thesis_seed: "Authored work",
 };
