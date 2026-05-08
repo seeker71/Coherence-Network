@@ -23,7 +23,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
-import { ResonatesWith } from "./ResonatesWith";
 import { KindredPresences } from "./KindredPresences";
 import { BodyOfEvidence } from "./BodyOfEvidence";
 import { RefineDoorway } from "./RefineDoorway";
@@ -474,32 +473,6 @@ function CreationsGrid({
   );
 }
 
-function InspiredByChips({
-  inspired,
-}: {
-  inspired: Lineage[];
-}) {
-  if (inspired.length === 0) return null;
-  return (
-    <section>
-      <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-        Inspired by
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {inspired.map((l) => (
-          <Link
-            key={l.id}
-            href={`/people/${encodeURIComponent(l.id)}`}
-            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
-          >
-            {l.name}
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function HeldOpen({
   identity,
   accent,
@@ -681,10 +654,15 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           {identity.id.startsWith("event:") && (
             <HeldBy eventId={identity.id} />
           )}
-          <ResonatesWith presenceId={identity.id} />
+          {/* `ResonatesWith` (concept resonance chips) and
+              `InspiredByChips` (flat inspired-by list) composted —
+              both surfaces fully covered by BodyOfEvidence above
+              (Field connections → Being family; Shaped by sections
+              grouped by source). KindredPresences and CoLocated
+              carry distinct signals (shared-concept neighbors,
+              co-location through places) so they remain. */}
           <KindredPresences presenceId={identity.id} />
           <CoLocated presenceId={identity.id} />
-          <InspiredByChips inspired={inspired} />
           <HeldOpen identity={identity} accent={accent} />
         </aside>
       </div>
