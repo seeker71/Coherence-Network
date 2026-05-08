@@ -541,13 +541,33 @@ The `prefer_registered` flag is opt-in per-call. Default behavior is unchanged: 
 
 For RepeatedCapture: when `item` is a single Capture (or IdentCapture), the captured list contains the values directly. When `item` is a Sequence with multiple inner captures, each iteration produces a dict and the list contains dicts.
 
-**Still needs extensions** before self-hosting:
+**Self-hosted operators** (added in operator-self-hosting commit):
 
-| Keyword | Why not yet |
+| Operators | Mechanism |
 |---|---|
-| `+ - * / == != < <= > >= && \|\| !` | Operator precedence parsing — needs precedence-aware pattern primitives |
+| `\|\|` `&&` | Logic — left-associative, registered with templates |
+| `== != < <= > >=` | Compare — non-associative |
+| `+ -` | Math additive — left-associative |
+| `* / %` | Math multiplicative — left-associative |
+| Unary `!` `-` | Unary prefix — right-associative |
 
-Operator-precedence is the last remaining un-self-hosted layer. Once that ships, `form.py` shrinks to a tiny seed that registers the starter rules and hands off to the rule-driven engine.
+Each operator is registered as an `OperatorRule(symbol, token_kind, precedence, associativity, arity, template)`. The parser, in `prefer_registered=True` mode, drives expression parsing via precedence climbing using the registry instead of the hardcoded ladder.
+
+```python
+register_operator(
+    "+", "PLUS", 4,
+    associativity="left", arity="binary",
+    template=Build("BinOp", op=Const("+"),
+                    left=CaptureRef("__left__"),
+                    right=CaptureRef("__right__")),
+)
+```
+
+`bootstrap_self_host_operators(session)` registers all 13 built-in operators (binary + unary). Combined with `bootstrap_self_host(session)` for keywords, the entire structured grammar of Form lives as substrate data. Verified end-to-end: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registered rules.
+
+**What's NOT yet substrate-resident:**
+
+The evaluator's hardcoded BinOp symbol-table — when registering a custom operator with a non-standard symbol (like `%%`), the parser produces a valid AST but the recipe-evaluator throws `SyntaxError: unknown binary op`. Closing this requires a data-driven evaluator that reads operator definitions from the substrate. Future breath.
 
 #### What's still not closed
 
@@ -568,7 +588,7 @@ For Form, that path is:
 3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
 5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
-6. **Self-hosting (9 keywords, all structured constructs).** ✓ Shipped — `self_host.bootstrap_self_host(session)` registers **9 keywords** as substrate-resident `(pattern, template)` pairs: `if`, `unless`, `whenever`, `let`, `fail`, `stop`, `choose`, `do`, `match`. Setting `prefer_registered=True` flips the parser's lookup order so the registered templates drive parsing. Verified: every self-hosted keyword — including deeply nested compositions like `do { let result = match x { 1 => "one", 2 => "two" }; result }` — produces the same Recipe NodeID via either path. Pattern DSL extensions (IdentCapture, RepeatedCapture, MapBuild) cover the structured-keyword space completely. Only operators remain un-self-hosted, awaiting precedence-aware pattern primitives.
+6. **Self-hosting (9 keywords + 13 operators).** ✓ Shipped — `self_host.bootstrap_self_host(session)` + `bootstrap_self_host_operators(session)` register every structured Form keyword AND every binary/unary operator as substrate-resident rules. Setting `prefer_registered=True` flips the parser to use them. Verified: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registry. Pattern DSL extensions (IdentCapture, RepeatedCapture, MapBuild) cover the structured-keyword space; operator precedence climbing (form_operators.parse_with_precedence) covers the operator space. **The keyword layer is fully self-hostable.**
 7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.

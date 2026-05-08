@@ -35,6 +35,11 @@ from typing import Any, List
 from sqlalchemy.orm import Session
 
 from app.services.substrate.form_builders import Build, CaptureRef, Const, MapBuild
+from app.services.substrate.form_operators import (
+    OperatorRule,
+    register_operator,
+    reset_operator_registry,
+)
 from app.services.substrate.form_rules import (
     Capture,
     IdentCapture,
@@ -257,3 +262,87 @@ def list_bootstrap_self_host_keywords() -> List[str]:
     """Return the set of bootstrap keywords that `bootstrap_self_host`
     currently re-expresses. Useful for tests + agent introspection."""
     return ["if", "unless", "whenever", "let", "fail", "stop", "choose", "do", "match"]
+
+
+# ---------------------------------------------------------------------------
+# Operator self-hosting — closes the last keyword-layer gap
+# ---------------------------------------------------------------------------
+
+
+# Built-in operators with their precedence ladder (mirrors form.py's
+# bootstrap parse_or → parse_and → parse_compare → parse_add → parse_mul).
+# Higher precedence = tighter binding.
+_BUILTIN_OPERATORS = [
+    # (symbol, token_kind, precedence, associativity, arity, ast_class, op_text)
+    ("||", "OR", 1, "left", "binary", "BinOp", "||"),
+    ("&&", "AND", 2, "left", "binary", "BinOp", "&&"),
+    ("==", "EQ", 3, "left", "binary", "BinOp", "=="),
+    ("!=", "NEQ", 3, "left", "binary", "BinOp", "!="),
+    ("<", "LT", 3, "left", "binary", "BinOp", "<"),
+    ("<=", "LE", 3, "left", "binary", "BinOp", "<="),
+    (">", "GT", 3, "left", "binary", "BinOp", ">"),
+    (">=", "GE", 3, "left", "binary", "BinOp", ">="),
+    ("+", "PLUS", 4, "left", "binary", "BinOp", "+"),
+    ("-", "MINUS", 4, "left", "binary", "BinOp", "-"),
+    ("*", "STAR", 5, "left", "binary", "BinOp", "*"),
+    ("/", "SLASH", 5, "left", "binary", "BinOp", "/"),
+    ("%", "PERCENT", 5, "left", "binary", "BinOp", "%"),
+    # Unary prefix
+    ("!", "BANG", 6, "right", "unary_prefix", "UnaryOp", "!"),
+    ("-", "MINUS", 6, "right", "unary_prefix", "UnaryOp", "-"),
+]
+
+
+def bootstrap_self_host_operators(session: Any = None) -> List[str]:
+    """Register every bootstrap operator as a substrate-resident
+    operator rule. Each rule's `template` is a `Build("BinOp", op=Const(symbol),
+    left=CaptureRef("__left__"), right=CaptureRef("__right__"))` (or the
+    UnaryOp equivalent for unary prefix).
+
+    With these registered AND `prefer_registered=True`, the parser uses
+    precedence climbing driven by the registry instead of the hardcoded
+    ladder. Verified by tests: `1 + 2 * 3` produces the same Recipe
+    NodeID via either path.
+
+    Note: `MINUS` lives as both a binary and a unary_prefix operator.
+    The registry only stores the most-recently-registered for each
+    token_kind (currently the binary version wins because unaries come
+    last and overwrite — but the parser's parse_unary() handles the
+    unary-prefix lookup separately by checking arity, so a single
+    binary registration for MINUS is fine for now). For full coverage
+    we install both and the parser's parse_unary checks arity first.
+    """
+    # Reset to ensure a clean slate (multiple calls don't accumulate)
+    reset_operator_registry()
+
+    registered: List[str] = []
+    for sym, kind, prec, assoc, arity, ast_class, op_text in _BUILTIN_OPERATORS:
+        if arity == "binary":
+            template = Build(
+                ast_class,
+                op=Const(op_text),
+                left=CaptureRef("__left__"),
+                right=CaptureRef("__right__"),
+            )
+        else:  # unary_prefix
+            template = Build(
+                ast_class,
+                op=Const(op_text),
+                operand=CaptureRef("__operand__"),
+            )
+        register_operator(
+            symbol=sym, token_kind=kind, precedence=prec,
+            associativity=assoc, arity=arity, template=template,
+        )
+        registered.append(f"{sym}({arity})")
+
+    return registered
+
+
+def bootstrap_full_self_host(session: Any) -> dict:
+    """Convenience: register both the keyword templates and the operator
+    templates. Returns a dict with `keywords` and `operators` lists."""
+    return {
+        "keywords": bootstrap_self_host(session),
+        "operators": bootstrap_self_host_operators(session),
+    }

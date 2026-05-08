@@ -362,6 +362,14 @@ class Parser:
 
     # Lowest precedence: ||
     def parse_expr(self) -> ExprNode:
+        if self.prefer_registered:
+            # Use precedence-climbing if any binary operators are registered.
+            # Otherwise fall through to the bootstrap ladder so expressions
+            # like `x + 1` keep working when only keywords are self-hosted.
+            from app.services.substrate.form_operators import _BINARY_OPERATORS
+            if _BINARY_OPERATORS:
+                from app.services.substrate.form_operators import parse_with_precedence
+                return parse_with_precedence(self, 0)
         return self.parse_or()
 
     def parse_or(self) -> ExprNode:
@@ -408,6 +416,23 @@ class Parser:
         return left
 
     def parse_unary(self) -> ExprNode:
+        # In prefer_registered mode, check the unary-prefix operator
+        # registry first. If a rule matches, use it. Otherwise fall
+        # through to the bootstrap unary handling — the registry doesn't
+        # have to be populated for prefer mode to keep working.
+        if self.prefer_registered:
+            from app.services.substrate.form_operators import (
+                apply_unary, lookup_unary_prefix_operator,
+            )
+            t = self.peek()
+            op = lookup_unary_prefix_operator(t.kind)
+            if op is not None:
+                self.consume(t.kind)
+                operand = self.parse_unary()
+                return apply_unary(op, operand)
+            # Fall through to bootstrap below.
+
+        # Bootstrap path: hardcoded unary prefixes.
         if self.peek().kind == "BANG":
             self.consume("BANG")
             return UnaryOp("!", self.parse_unary())

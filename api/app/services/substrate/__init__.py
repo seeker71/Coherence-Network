@@ -65,8 +65,21 @@ from app.services.substrate.form_builders import (
     recipe_to_template,
     template_to_recipe,
 )
+from app.services.substrate.form_operators import (
+    OperatorRule,
+    list_operators,
+    lookup_binary_operator,
+    lookup_operator,
+    lookup_unary_prefix_operator,
+    parse_with_precedence,
+    register_operator,
+    reset_operator_registry,
+    unregister_operator,
+)
 from app.services.substrate.self_host import (
+    bootstrap_full_self_host,
     bootstrap_self_host,
+    bootstrap_self_host_operators,
     list_bootstrap_self_host_keywords,
 )
 from app.services.substrate.form_rules import (
@@ -189,7 +202,19 @@ __all__ = [
     "make_builder_from_template",
     "recipe_to_template",
     "template_to_recipe",
-    # Self-hosting (partial — re-expresses if / unless / whenever)
+    # Self-hosting
     "bootstrap_self_host",
+    "bootstrap_self_host_operators",
+    "bootstrap_full_self_host",
     "list_bootstrap_self_host_keywords",
+    # Operator registry
+    "OperatorRule",
+    "list_operators",
+    "lookup_binary_operator",
+    "lookup_operator",
+    "lookup_unary_prefix_operator",
+    "parse_with_precedence",
+    "register_operator",
+    "reset_operator_registry",
+    "unregister_operator",
 ]
