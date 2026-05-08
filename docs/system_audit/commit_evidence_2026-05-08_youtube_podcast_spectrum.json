@@ -1,0 +1,70 @@
+{
+  "date": "2026-05-08T00:00:00Z",
+  "thread_branch": "codex/youtube-podcast-spectrum-20260508",
+  "commit_scope": "docs(field): add YouTube podcast duration spectrum",
+  "files_owned": [
+    "docs/field/urs/README.md",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "YouTube podcast spectrum regenerated from ten_year_events.jsonl, py_compile passed, invariant checks confirmed 1043 podcast-like events, 1026 dated events, 953 unique video IDs, 1263.69 duration-weighted hours, and expected anchor waves for Lex Fridman, Next Level Soul Podcast, Robert Edward Grant, and Aubrey Marcus; diff hygiene passed."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Documentation, generated field trace, and a standalone analyzer update only; local artifact validation passed before PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Repo-served field artifacts are ready for the normal PR and public artifact deployment flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "urs-field-story",
+    "youtube-podcast-spectrum"
+  ],
+  "spec_ids": [
+    "field-story-trace-index"
+  ],
+  "task_ids": [
+    "youtube-podcast-spectrum-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Documentation",
+        "Evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 docs/field/urs/tools/youtube_podcast_spectrum.py --field-dir docs/field/urs --events docs/field/urs/output/ten_year_events.jsonl",
+    "python3 -m py_compile docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "python3 - <<'PY' youtube podcast spectrum invariant check",
+    "git diff --check"
+  ],
+  "change_files": [
+    "docs/field/urs/README.md",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}

@@ -15,6 +15,7 @@ Local workspace for analyzing what entered Urs's field through Audible, YouTube,
   - purchase-date approximation for purchased works that do not have a direct visible listen row.
   - duration-weighted monthly influence using Audible catalog runtime length, with event counts kept as secondary context.
 - `trace/audible_duration_metadata.json` carries compact Audible catalog runtime metadata used by the duration-weighted trace.
+- `trace/youtube_podcast_spectrum.json` carries the podcast-shaped YouTube influence wave. RSS-era subscriptions are not in the local source body yet, so this treats YouTube as the current podcast surface and marks estimated episode lengths when Takeout lacks duration.
 - No local Google Takeout / YouTube history export was found under `Downloads`, `Documents`, or `Desktop`.
 
 ## Input Slots

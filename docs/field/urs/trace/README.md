@@ -12,6 +12,7 @@ Compact derived indexes for answering influence questions without loading raw li
 - `concept_work_map.json` - concept-first lookup from `lc-*` vision concepts to significant works and probe terms.
 - `audible_history_spectrum.json` - Audible-specific source-body trace with duration-weighted monthly influence.
 - `audible_duration_metadata.json` - compact Audible catalog runtime metadata used to weight Audible influence by listening duration or book length.
+- `youtube_podcast_spectrum.json` - YouTube podcast-shaped influence wave, weighted by direct video duration where available and marked episode-length estimates where Takeout has no duration.
 - `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow
