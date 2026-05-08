@@ -52,7 +52,64 @@ fi
 
 echo "[$(date -u +%FT%TZ)] backup ok size=${SIZE} contribution_ledger_rows=${LEDGER_ROWS}" >> "${LOG}"
 
-# Prune old dumps
+# ---------------------------------------------------------------------------
+# Off-site replica — optional, gated on env vars so existing crons keep
+# working. Without this step, dumps live ONLY on the VPS — same disk and
+# zone as the live DB. Off-site upload survives a VPS-loss event.
+#
+# Two paths are supported:
+#
+#   1. COHERENCE_OFFSITE_GH_REPO=owner/private-repo
+#      Upload the gzipped dump to a GitHub release on a PRIVATE repo.
+#      Requires `gh` authenticated on the host. Idempotent on tag.
+#
+#   2. COHERENCE_OFFSITE_GPG_RECIPIENT=key-id-or-email
+#      Encrypt the dump to a GPG public key BEFORE upload — safe even
+#      against a public repo. Requires `gpg --import` of the public
+#      key on the VPS once. Combine with (1) for encrypted-public.
+#
+# When neither is set the script proceeds as before (local-only).
+# ---------------------------------------------------------------------------
+
+OFFSITE_OUT="${OUT}"
+if [[ -n "${COHERENCE_OFFSITE_GPG_RECIPIENT:-}" ]]; then
+  ENC="${OUT}.gpg"
+  if gpg --batch --yes --trust-model always --output "${ENC}" \
+       --encrypt --recipient "${COHERENCE_OFFSITE_GPG_RECIPIENT}" "${OUT}"; then
+    OFFSITE_OUT="${ENC}"
+    echo "[$(date -u +%FT%TZ)] gpg encrypted -> ${ENC}" >> "${LOG}"
+  else
+    echo "[$(date -u +%FT%TZ)] WARNING: gpg encryption failed — skipping offsite upload" >> "${LOG}"
+    OFFSITE_OUT=""
+  fi
+fi
+
+if [[ -n "${COHERENCE_OFFSITE_GH_REPO:-}" && -n "${OFFSITE_OUT}" ]]; then
+  TAG="backup-postgres-${TS}"
+  ASSET="$(basename "${OFFSITE_OUT}")"
+  if gh release create "${TAG}" \
+       --repo "${COHERENCE_OFFSITE_GH_REPO}" \
+       --title "Postgres backup ${TS}" \
+       --notes "Nightly pg_dump · size=${SIZE} · ledger_rows=${LEDGER_ROWS}$( [[ "${OFFSITE_OUT}" == *.gpg ]] && echo " · gpg-encrypted" )" \
+       >> "${LOG}" 2>&1; then
+    if gh release upload "${TAG}" "${OFFSITE_OUT}#${ASSET}" \
+         --repo "${COHERENCE_OFFSITE_GH_REPO}" --clobber \
+         >> "${LOG}" 2>&1; then
+      echo "[$(date -u +%FT%TZ)] offsite ok repo=${COHERENCE_OFFSITE_GH_REPO} tag=${TAG}" >> "${LOG}"
+    else
+      echo "[$(date -u +%FT%TZ)] WARNING: gh release upload failed for ${ASSET}" >> "${LOG}"
+    fi
+  else
+    echo "[$(date -u +%FT%TZ)] WARNING: gh release create failed for ${TAG}" >> "${LOG}"
+  fi
+
+  # If we encrypted before upload, leave the encrypted artifact in
+  # the local backups dir too (cheap, useful for parity), but prune
+  # it under the same retention rules below.
+fi
+
+# Prune old dumps (local + any encrypted siblings)
 find "${BACKUP_DIR}" -maxdepth 1 -name 'coherence-*.sql.gz' -mtime "+${RETENTION_DAYS}" -print -delete >> "${LOG}" 2>&1 || true
+find "${BACKUP_DIR}" -maxdepth 1 -name 'coherence-*.sql.gz.gpg' -mtime "+${RETENTION_DAYS}" -print -delete >> "${LOG}" 2>&1 || true
 
 echo "${OUT}"
