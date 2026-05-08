@@ -126,3 +126,9 @@ from app.services.reaction_service import ReactionRecord  # noqa: F401
 
 # Proposals — light governance the collective meets
 from app.services.proposal_service import ProposalRecord  # noqa: F401
+
+# Coherence-substrate — content-addressed numeric lattice (NUMS-shaped)
+from app.services.substrate.orm import (  # noqa: F401
+    SubstrateNamedCellORM,
+    SubstrateNodeORM,
+)
