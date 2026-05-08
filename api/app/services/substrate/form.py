@@ -331,9 +331,15 @@ ExprNode = Any  # any AST node — too many to enumerate
 
 
 class Parser:
-    def __init__(self, tokens: List[Token]):
+    def __init__(self, tokens: List[Token], *, prefer_registered: bool = False):
         self.tokens = tokens
         self.pos = 0
+        # When True, the parser consults the user-registered keyword
+        # registry BEFORE falling through to bootstrap hardcoded handlers.
+        # Used by `bootstrap_self_host` and the self-hosting demonstration —
+        # see docs/coherence-substrate/form-language.md ("Self-hosting,
+        # partial").
+        self.prefer_registered = prefer_registered
 
     def peek(self, n: int = 0) -> Token:
         return self.tokens[self.pos + n]
@@ -443,6 +449,15 @@ class Parser:
         t = self.peek()
         kw = t.value
 
+        # Self-hosting mode — try the user-registered registry FIRST.
+        # If a registered rule matches, use its template-built AST.
+        # Otherwise fall through to bootstrap handlers.
+        if self.prefer_registered:
+            from app.services.substrate.form_rules import try_apply_keyword_rule
+            node = try_apply_keyword_rule(self, kw)
+            if node is not None:
+                return node
+
         # Built-in keywords (the bootstrap grammar)
         if kw == "true":
             self.consume("IDENT")
@@ -469,10 +484,11 @@ class Parser:
 
         # User-registered keywords (the rule-driven extension point —
         # this is where the grammar becomes alive at runtime).
-        from app.services.substrate.form_rules import try_apply_keyword_rule
-        node = try_apply_keyword_rule(self, kw)
-        if node is not None:
-            return node
+        if not self.prefer_registered:
+            from app.services.substrate.form_rules import try_apply_keyword_rule
+            node = try_apply_keyword_rule(self, kw)
+            if node is not None:
+                return node
 
         # Otherwise it's an Identifier (local name reference)
         self.consume("IDENT")
@@ -905,10 +921,16 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
 # ---------------------------------------------------------------------------
 
 
-def parse(text: str) -> Any:
-    """Parse a single Form expression."""
+def parse(text: str, *, prefer_registered: bool = False) -> Any:
+    """Parse a single Form expression.
+
+    `prefer_registered` flips the lookup order so the user-registered
+    keyword registry takes priority over bootstrap hardcoded handlers.
+    Used for partial self-hosting demonstrations — see
+    `docs/coherence-substrate/form-language.md` ("Self-hosting").
+    """
     tokens = tokenize(text.strip())
-    parser = Parser(tokens)
+    parser = Parser(tokens, prefer_registered=prefer_registered)
     result = parser.parse()
     if parser.peek().kind != "EOF":
         raise SyntaxError(
@@ -917,9 +939,11 @@ def parse(text: str) -> Any:
     return result
 
 
-def evaluate_text(session: Session, text: str) -> FormResult:
+def evaluate_text(
+    session: Session, text: str, *, prefer_registered: bool = False,
+) -> FormResult:
     """Parse and evaluate a Form expression in one step."""
-    return evaluate(session, parse(text))
+    return evaluate(session, parse(text, prefer_registered=prefer_registered))
 
 
 # ---------------------------------------------------------------------------

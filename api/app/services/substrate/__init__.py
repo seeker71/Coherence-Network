@@ -64,6 +64,10 @@ from app.services.substrate.form_builders import (
     recipe_to_template,
     template_to_recipe,
 )
+from app.services.substrate.self_host import (
+    bootstrap_self_host,
+    list_bootstrap_self_host_keywords,
+)
 from app.services.substrate.form_rules import (
     Capture,
     Literal,
@@ -179,4 +183,7 @@ __all__ = [
     "make_builder_from_template",
     "recipe_to_template",
     "template_to_recipe",
+    # Self-hosting (partial — re-expresses if / unless / whenever)
+    "bootstrap_self_host",
+    "list_bootstrap_self_host_keywords",
 ]

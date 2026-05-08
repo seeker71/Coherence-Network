@@ -495,9 +495,41 @@ form_parse("unless x then y else z")  # → IfExpr(UnaryOp("!", x), y, z)
 
 The interpreter (`execute_template`) walks the template against captures and constructs the AST node. Captures resolve via `CaptureRef`; literals embed via `Const`; class instantiation via `Build`.
 
-#### What's still not closed
+#### Self-hosting — partially shipped
 
-- **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Re-expressing built-in keywords (`if`, `do`, `match`, `let`, `choose`) via `register_form_keyword(template=...)` is the move that takes form.py from "the parser" to "a tiny seed that registers a few starter rules and hands off." All infrastructure is now in place.
+`bootstrap_self_host(session)` registers the bootstrap keywords that the current pattern DSL can express as substrate-resident `(pattern, template)` pairs. With `prefer_registered=True`, the parser uses the registered versions instead of the hardcoded handlers — and produces structurally identical Recipe NodeIDs.
+
+```python
+from app.services.substrate import bootstrap_self_host, form_evaluate_text
+
+bootstrap_self_host(session)  # registers if / unless / whenever as templates
+
+# Both paths produce the SAME Recipe NodeID
+bootstrap_path = form_evaluate_text(session, "if x then y else z")
+self_host_path = form_evaluate_text(
+    session, "if x then y else z", prefer_registered=True,
+)
+assert bootstrap_path.value == self_host_path.value  # ✓
+```
+
+The `prefer_registered` flag is opt-in per-call. Default behavior is unchanged: the bootstrap handlers run first, the registry runs second. With the flag flipped, registry runs first, bootstrap is fallback. **A registered keyword without a matching pattern still falls through cleanly** — the safety mechanism makes self-hosting incremental rather than all-or-nothing.
+
+**What's currently self-hostable** with the existing pattern DSL: `if cond then body [else other]`. The keyword has no special syntax beyond keyword-marker tokens and sub-expression captures.
+
+**What's NOT yet self-hostable** (pattern DSL needs extensions):
+
+| Keyword | Why not yet |
+|---|---|
+| `do { stmt; stmt; expr }` | Needs `RepeatedCapture(separator=";")` for variable-length statement lists |
+| `let name = expr` | Needs `IdentCapture` — capturing a raw IDENT name, not parsed as a sub-expression |
+| `match x { pat => body, ... }` | Needs `RepeatedCapture` for arms + an infix `=>` matcher |
+| `choose [a, b, c]` | Needs `RepeatedCapture` inside `[...]` |
+| `fail` / `stop` | Bare-keyword leaf pattern (small extension) |
+| `+ - * / == != < <= > >= && \|\| !` | Operator precedence parsing — needs precedence-aware pattern primitives or operator-precedence declarations |
+
+Each is its own future breath. The infrastructure (substrate-resident patterns + substrate-resident builders) is in place; what's missing are richer pattern primitives.
+
+#### What's still not closed
 
 - **Backtracking-driven.** The match engine uses save-and-restore on parser.pos. Future move: integrate with Choice.FAIL recipe semantics so the parser's speculation is itself substrate-recorded.
 
@@ -516,7 +548,7 @@ For Form, that path is:
 3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
 5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
-6. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded. All infrastructure is now in place.
+6. **Self-hosting (partial).** ✓ Shipped — `self_host.bootstrap_self_host(session)` registers `if` (plus the convenience `unless` and `whenever`) as substrate-resident `(pattern, template)` pairs. Setting `prefer_registered=True` flips the parser's lookup order so the registered templates drive parsing. Verified: `if x then y else z` produces the same Recipe NodeID via either path. Full self-hosting (do/match/let/choose/operators) awaits pattern-DSL extensions (IdentCapture, RepeatedCapture).
 7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.

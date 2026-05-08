@@ -45,5 +45,6 @@ tests/test_substrate_form.py
 tests/test_substrate_form_builders.py
 tests/test_substrate_form_rules.py
 tests/test_substrate_grammar.py
+tests/test_substrate_self_host.py
 tests/test_task_dedup_service.py
 tests/test_worktree_continuity_guard.py
