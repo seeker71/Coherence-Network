@@ -643,6 +643,13 @@ function composeSections(edges: EdgeRow[], selfId: string) {
         hours,
       });
     } else if (e.type === "inspired-by" && isOutgoing) {
+      // Per-work inspired-by edges (audible book listens, individual
+      // video watches) collapse into their author/channel chip in
+      // Shaped By. The work-level traceability stays in the graph —
+      // it surfaces when the visitor walks to the author's page,
+      // where the books appear in Emits — but doesn't multiply the
+      // rolled-up Shaped By view by 30 per author.
+      if (other.type === "asset") continue;
       shapedBy.push({
         id: e.id,
         name: other.name || other.id,

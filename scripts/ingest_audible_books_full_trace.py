@@ -201,7 +201,10 @@ def main(argv: list[str] | None = None) -> int:
                     "properties": {
                         "creation_kind": "book",
                         "asset_type": "CONTENT",
-                        "canonical_url": entry.get("product_url") or "",
+                        # Library entries carry `url`; listen-history
+                        # carries `product_url`. Try both so either
+                        # source path lands the trace.
+                        "canonical_url": entry.get("url") or entry.get("product_url") or "",
                         "image_url": entry.get("cover") or "",
                         "runtime_length_min": book["minutes"],
                         "asin": asin,
