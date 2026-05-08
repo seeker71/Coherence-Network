@@ -92,9 +92,29 @@ def _node_to_asset(node: dict) -> Asset:
     ``image_url`` lands on remote-resolved nodes (inspired-by minted
     content with og:image), ``file_path`` lands on locally-generated
     KB visuals served from /visuals/...; either one is enough to give
-    the listing card a real thumbnail."""
+    the listing card a real thumbnail.
+
+    Rich fields (name, canonical_url, creator_id, asin, slug, era,
+    mime_type, content_hash, ipfs_cid, arweave_tx, etc.) are passed
+    through unchanged when present on the node, so detail surfaces
+    can render a title, an external source link, and the structured-
+    data context that makes the surface trustworthy without a second
+    round-trip to /api/graph/nodes."""
     image_url = node.get("image_url") or None
     file_path = node.get("file_path") or None
+
+    def _str(key: str) -> str | None:
+        value = node.get(key)
+        return value if isinstance(value, str) and value else None
+
+    def _int(key: str) -> int | None:
+        value = node.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return int(value)
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return None
+
     return Asset(
         id=_stable_asset_id(node),
         type=node.get("asset_type", "CODE"),
@@ -102,6 +122,27 @@ def _node_to_asset(node: dict) -> Asset:
         total_cost=Decimal(str(node.get("total_cost", "0"))),
         image_url=image_url if isinstance(image_url, str) else None,
         file_path=file_path if isinstance(file_path, str) else None,
+        node_id=_str("id"),
+        name=_str("name"),
+        canonical_url=_str("canonical_url"),
+        slug=_str("slug"),
+        creator_id=_str("creator_id"),
+        creation_kind=_str("creation_kind"),
+        asset_type=_str("asset_type"),
+        mime_type=_str("mime_type"),
+        content_hash=_str("content_hash"),
+        ipfs_cid=_str("ipfs_cid"),
+        arweave_tx=_str("arweave_tx"),
+        asin=_str("asin"),
+        isbn=_str("isbn"),
+        runtime_length_min=_int("runtime_length_min"),
+        era=_str("era"),
+        company=_str("company"),
+        title=_str("title"),
+        location=_str("location"),
+        substrate=_str("substrate"),
+        when=_str("when"),
+        language=_str("language"),
     )
 
 
