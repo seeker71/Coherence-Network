@@ -47,6 +47,19 @@ jobs:
             if [ "$status" -eq 2 ] && [ "${GITHUB_EVENT_NAME}" = "push" ]; then
               echo "::warning::COHERENCE_API_KEY was rejected by the live API; running dry-run so deploy proof stays advisory until the secret is rotated"
               python3 scripts/external_proof_demo.py --dry-run
+            elif [ "$status" -eq 3 ] && [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+              echo "::warning::Transient gateway/connection error against the live API (5xx or timeout) — not a code regression. Re-running once after a short pause."
+              sleep 30
+              set +e
+              python3 scripts/external_proof_demo.py
+              retry_status=$?
+              set -e
+              if [ "$retry_status" -eq 3 ]; then
+                echo "::warning::Live API still transiently unavailable on retry; treating as advisory and falling back to dry-run."
+                python3 scripts/external_proof_demo.py --dry-run
+              else
+                exit "$retry_status"
+              fi
             else
               exit "$status"
             fi
