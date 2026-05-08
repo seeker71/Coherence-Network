@@ -14,9 +14,12 @@ without having to stumble over it.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -184,6 +187,80 @@ def sense_spec_sources() -> list[str]:
     return lines
 
 
+def sense_contracts() -> list[str]:
+    """How are the CI contracts breathing the last 7 days?
+
+    Replaces the inbox channel — the GitHub Actions email firehose was
+    surfacing every flake as urgent. Here friction lives in a place the
+    body senses on arrival, not in interruption. We name patterns
+    (workflow X failed N times this week), not individual flakes.
+
+    Silent when contracts are breathing. Speaks when there's a shape
+    worth naming: 3+ failures of the same workflow, or any workflow
+    with a >40% failure rate over the window.
+    """
+    try:
+        r = subprocess.run(
+            ["gh", "run", "list", "--limit", "200",
+             "--json", "conclusion,workflowName,createdAt,event,headBranch"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return ["  (gh CLI unavailable — skipping contracts sense)"]
+    if r.returncode != 0:
+        return ["  (gh run list failed — skipping; may need `gh auth login`)"]
+
+    try:
+        runs = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return ["  (could not parse gh run list output)"]
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    recent = []
+    for run in runs:
+        try:
+            ts = datetime.fromisoformat(run["createdAt"].replace("Z", "+00:00"))
+        except (KeyError, ValueError):
+            continue
+        if ts >= cutoff:
+            recent.append(run)
+
+    if not recent:
+        return ["  (no runs in the last 7 days — body resting or gh window short)"]
+
+    by_wf: dict[str, dict[str, int]] = {}
+    for run in recent:
+        wf = run.get("workflowName", "?")
+        outcome = run.get("conclusion") or "in_progress"
+        by_wf.setdefault(wf, Counter())[outcome] += 1
+
+    findings = []
+    flagged = False
+    for wf in sorted(by_wf):
+        outcomes = by_wf[wf]
+        total = sum(outcomes.values())
+        failures = outcomes.get("failure", 0) + outcomes.get("startup_failure", 0)
+        if total == 0:
+            continue
+        rate = failures / total
+        if failures >= 3 or rate >= 0.4:
+            flagged = True
+            findings.append(
+                f"  {wf} — {failures}/{total} failed ({int(rate*100)}%) over 7d"
+            )
+
+    if not flagged:
+        green = sum(1 for run in recent if run.get("conclusion") == "success")
+        return [f"  contracts breathing — {green}/{len(recent)} runs green over 7d"]
+
+    findings.insert(0, f"  {len(recent)} runs over 7d; patterns worth naming:")
+    findings.append("")
+    findings.append("  (Friction here is signal, not pain to silence. If a")
+    findings.append("   pattern persists across days, the contract itself may")
+    findings.append("   want re-shaping — not the email channel.)")
+    return findings
+
+
 def main() -> int:
     print("# Wellness check\n")
     print("A gentle sensing. Not an audit. Drift is the signal,")
@@ -206,6 +283,11 @@ def main() -> int:
 
     print("## Source maps — do specs point at files that exist?\n")
     for line in sense_spec_sources():
+        print(line)
+    print()
+
+    print("## Contracts — are the CI gates breathing? (last 7d)\n")
+    for line in sense_contracts():
         print(line)
     print()
 
