@@ -214,11 +214,16 @@ def upload_to_github_releases(
     tag = _gh_tag_for(target_day)
     asset = _gh_asset_name(target_day)
 
-    # Stage payload to a temp file for `gh release upload`.
+    # Stage payload to a temp file with the *desired* asset name —
+    # `gh release upload` uses the file's basename as the asset name,
+    # and the historic `path#displayName` rename syntax is unreliable
+    # across gh versions, so writing the file to its target name from
+    # the start is the simplest path that always works.
     import tempfile
-    with tempfile.NamedTemporaryFile(suffix=".gz", delete=False) as f:
+    tmp_dir = tempfile.mkdtemp(prefix="coherence-archive-")
+    upload_path = os.path.join(tmp_dir, asset)
+    with open(upload_path, "wb") as f:
         f.write(payload)
-        tmp_path = f.name
 
     try:
         # Best-effort tag create; if it already exists, that's fine.
@@ -237,15 +242,16 @@ def upload_to_github_releases(
             else:
                 raise
 
-        # Upload (or clobber) the asset.
+        # Upload (or clobber) the asset under its target name.
         subprocess.run(
-            ["gh", "release", "upload", tag, f"{tmp_path}#{asset}",
+            ["gh", "release", "upload", tag, upload_path,
              "--repo", repo, "--clobber"],
             check=True, capture_output=True, text=True,
         )
     finally:
         try:
-            os.unlink(tmp_path)
+            os.unlink(upload_path)
+            os.rmdir(tmp_dir)
         except OSError:
             pass
 
