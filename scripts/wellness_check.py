@@ -15,6 +15,7 @@ without having to stumble over it.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -261,6 +262,67 @@ def sense_contracts() -> list[str]:
     return findings
 
 
+def sense_witness_trace() -> list[str]:
+    """How is the witness-trace breathing?
+
+    Every page view writes a row to ``asset_view_events``. The table
+    grows linearly with traffic; the daily aggregate stays bounded.
+    This sense reads /api/views/health and reports the writer's
+    latency band, the table's size band, and the growth band — plus
+    any flags that mean it's time to run scripts/trim_view_events.py.
+
+    Silent when all bands are calm. Speaks the moment any band
+    crosses budget.
+    """
+    import urllib.request
+    import urllib.error
+
+    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com")
+    try:
+        req = urllib.request.Request(
+            f"{api}/api/views/health",
+            headers={"User-Agent": "wellness-check/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            health = json.load(r)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+        return [f"  (could not reach {api}/api/views/health — {e})"]
+
+    events = health.get("events", {})
+    storage = health.get("storage", {})
+    writer = health.get("writer", {})
+    flags = health.get("flags", []) or []
+
+    lines: list[str] = []
+    total_rows = events.get("total_rows", 0)
+    growth = events.get("growth_per_day", 0.0)
+    mb = storage.get("estimated_mb", 0)
+    p95 = (writer.get("ping_latency") or {}).get("p95_ms")
+    p95_str = f"p95 {p95:.0f}ms" if isinstance(p95, (int, float)) else "no traffic yet"
+
+    bands = (
+        f"writer {writer.get('band', '?')} · "
+        f"size {storage.get('size_band', '?')} · "
+        f"growth {events.get('growth_band', '?')}"
+    )
+    lines.append(f"  {total_rows:,} events · ~{mb} MB · {growth:.0f}/day · {p95_str}")
+    lines.append(f"  bands: {bands}")
+
+    if flags:
+        lines.append("")
+        lines.append("  flags raised:")
+        for f in flags:
+            lines.append(f"    · {f}")
+        guidance = health.get("guidance")
+        if guidance:
+            lines.append("")
+            lines.append(f"  → {guidance}")
+    else:
+        lines.append("  trace breathing within budget. no action needed.")
+
+    return lines
+
+
 def main() -> int:
     print("# Wellness check\n")
     print("A gentle sensing. Not an audit. Drift is the signal,")
@@ -288,6 +350,11 @@ def main() -> int:
 
     print("## Contracts — are the CI gates breathing? (last 7d)\n")
     for line in sense_contracts():
+        print(line)
+    print()
+
+    print("## Witness-trace — is the visit-recorder within budget?\n")
+    for line in sense_witness_trace():
         print(line)
     print()
 

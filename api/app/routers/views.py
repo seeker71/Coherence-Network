@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Header, Query
@@ -10,6 +11,7 @@ from pydantic import BaseModel, Field
 from app.services import entity_view_attribution_service
 from app.services import read_tracking_service
 from app.services import discovery_reward_service
+from app.services import views_health_service
 
 log = logging.getLogger(__name__)
 
@@ -40,41 +42,50 @@ async def views_ping(
     x_session_fingerprint: str | None = Header(default=None, alias="X-Session-Fingerprint"),
     x_referrer_contributor_id: str | None = Header(default=None, alias="X-Referrer-Contributor-Id"),
 ) -> dict[str, Any]:
-    event_id = read_tracking_service.record_view(
-        asset_id=body.asset_id,
-        concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
-        contributor_id=x_contributor_id or None,
-        session_fingerprint=x_session_fingerprint or None,
-        source_page=body.source_page,
-        referrer_contributor_id=x_referrer_contributor_id or None,
-    )
-    read_tracking_service.record_read(
-        asset_id=body.asset_id,
-        concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
-        contributor_id=x_contributor_id or None,
-    )
-    if body.entity_type and body.entity_id:
-        entity_type, entity_id = body.entity_type, body.entity_id
-    else:
-        entity_type, entity_id = entity_view_attribution_service.infer_entity_from_view_ping(
+    # Time the synchronous work so /api/views/health can surface
+    # the writer's p50/p95/p99 latency band. perf_counter is
+    # monotonic; subtraction is in seconds, * 1000 for ms.
+    _ping_t0 = time.perf_counter()
+    try:
+        event_id = read_tracking_service.record_view(
             asset_id=body.asset_id,
-            concept_id=body.concept_id,
+            concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
+            contributor_id=x_contributor_id or None,
+            session_fingerprint=x_session_fingerprint or None,
+            source_page=body.source_page,
+            referrer_contributor_id=x_referrer_contributor_id or None,
+        )
+        read_tracking_service.record_read(
+            asset_id=body.asset_id,
+            concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
+            contributor_id=x_contributor_id or None,
+        )
+        if body.entity_type and body.entity_id:
+            entity_type, entity_id = body.entity_type, body.entity_id
+        else:
+            entity_type, entity_id = entity_view_attribution_service.infer_entity_from_view_ping(
+                asset_id=body.asset_id,
+                concept_id=body.concept_id,
+                source_page=body.source_page,
+            )
+        credit = entity_view_attribution_service.credit_view_source(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            asset_id=body.asset_id,
+            view_event_id=event_id,
+            viewer_contributor_id=x_contributor_id or None,
             source_page=body.source_page,
         )
-    credit = entity_view_attribution_service.credit_view_source(
-        entity_type=entity_type,
-        entity_id=entity_id,
-        asset_id=body.asset_id,
-        view_event_id=event_id,
-        viewer_contributor_id=x_contributor_id or None,
-        source_page=body.source_page,
-    )
-    return {
-        "ok": True,
-        "event_id": event_id,
-        "credited_source_contribution_id": credit["source_contribution_id"] if credit else None,
-        "attention_contribution_id": credit["attention_contribution_id"] if credit else None,
-    }
+        return {
+            "ok": True,
+            "event_id": event_id,
+            "credited_source_contribution_id": credit["source_contribution_id"] if credit else None,
+            "attention_contribution_id": credit["attention_contribution_id"] if credit else None,
+        }
+    finally:
+        views_health_service.record_ping_latency(
+            (time.perf_counter() - _ping_t0) * 1000.0
+        )
 
 
 @router.get(
@@ -108,6 +119,26 @@ async def asset_view_stats(
     days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
 ) -> dict[str, Any]:
     return read_tracking_service.get_asset_view_stats(asset_id, days=days)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/views/health
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/views/health",
+    summary="Tracing-system health",
+    description=(
+        "Proprioception of the witness-trace itself: ping latency "
+        "(p50/p95/p99), event row count, growth rate per day, oldest "
+        "event age, estimated bytes on disk, and threshold bands ("
+        "calm / active / loud / trim-recommended). Surfaces 'flags' "
+        "when any band crosses a budget so a maintainer knows when "
+        "to run the trim script."
+    ),
+)
+async def views_health() -> dict[str, Any]:
+    return views_health_service.get_views_health()
 
 
 # ---------------------------------------------------------------------------
