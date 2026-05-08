@@ -10,11 +10,11 @@
 //! - cycle bounded: a 3-cycle (A→B→C→A) renders without panic and the
 //!   inner regions show the reserved cycle-terminator shade.
 
-use mfb::allocator::{CELL_BYTES, NUM_CELLS};
+use mfb::allocator::{CELL_BYTES, GRID, NUM_CELLS};
 use mfb::pointer::{
     encode_pointer_payload, CYCLE_TERMINATOR_RGB, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC,
 };
-use mfb::render::{render_frame, RENDER_W};
+use mfb::render::{compute_active_viewport, render_frame, RENDER_H, RENDER_W};
 use mfb::{TAG_U32, TAG_U64};
 
 /// Build a fresh data plane (all-zero / all-free) ready for hand-laid cells.
@@ -49,14 +49,24 @@ fn place_pointer(plane: &mut [u8], idx: usize, tag: u16, target: usize) {
     let _ = encode_pointer_payload; // touch the helper so it's exercised by the public API.
 }
 
-/// Read the inner-region (cell-relative pixel (1,1)) RGB for cell `idx`.
-/// Each cell occupies a 4x4 px block; cells lay out left-to-right top-to-
-/// bottom, so cell `idx` lives at pixel (4*(idx % 256), 4*(idx / 256)).
-fn read_inner_rgb(frame: &[u8], idx: usize) -> [u8; 3] {
-    let cx = (idx % 256) * 4;
-    let cy = (idx / 256) * 4;
-    let x = cx + 1;
-    let y = cy + 1;
+/// Read the inner-region top-left RGB for cell `idx`. Honors the auto-viewport
+/// computed from `plane`, so cell positions follow the renderer rather than
+/// the original v0 4-px geometry.
+fn read_inner_rgb(frame: &[u8], plane: &[u8], idx: usize) -> [u8; 3] {
+    let (vx, vy, vside) = compute_active_viewport(plane);
+    let cell_px = (RENDER_W / vside).max(1);
+    let render_size = cell_px * vside;
+    let pad_x = (RENDER_W - render_size) / 2;
+    let pad_y = (RENDER_H - render_size) / 2;
+    let inner_size = (cell_px / 2).max(1);
+    let inner_offset = (cell_px - inner_size) / 2;
+
+    let cx = idx % GRID;
+    let cy = idx / GRID;
+    let cx_local = cx.checked_sub(vx).expect("cell out of viewport x");
+    let cy_local = cy.checked_sub(vy).expect("cell out of viewport y");
+    let x = pad_x + cx_local * cell_px + inner_offset;
+    let y = pad_y + cy_local * cell_px + inner_offset;
     let i = (y * RENDER_W + x) * 4;
     [frame[i], frame[i + 1], frame[i + 2]]
 }
@@ -76,8 +86,8 @@ fn test_pointer_renders_target_color() {
     let prov = vec![0u32; NUM_CELLS];
     let frame = render_frame(&plane, &prov);
 
-    let target_inner = read_inner_rgb(&frame, 0);
-    let pointer_inner = read_inner_rgb(&frame, 1);
+    let target_inner = read_inner_rgb(&frame, &plane, 0);
+    let pointer_inner = read_inner_rgb(&frame, &plane, 1);
 
     // Inner 2x2 should match within tolerance (no compression here, but
     // keep ±2 to honor the spec's stated tolerance for the e2e mp4 case).
@@ -112,9 +122,9 @@ fn test_pointer_aliasing_visible() {
 
     let frame = render_frame(&plane, &prov);
 
-    let inner_a = read_inner_rgb(&frame, 1);
-    let inner_b = read_inner_rgb(&frame, 2);
-    let inner_target = read_inner_rgb(&frame, 0);
+    let inner_a = read_inner_rgb(&frame, &plane, 1);
+    let inner_b = read_inner_rgb(&frame, &plane, 2);
+    let inner_target = read_inner_rgb(&frame, &plane, 0);
 
     assert!(
         rgb_close(inner_a, inner_b, 2),
@@ -144,7 +154,7 @@ fn test_pointer_cycle_bounded() {
     let frame = render_frame(&plane, &prov);
 
     for idx in [5usize, 6, 7] {
-        let inner = read_inner_rgb(&frame, idx);
+        let inner = read_inner_rgb(&frame, &plane, idx);
         assert!(
             rgb_close(inner, CYCLE_TERMINATOR_RGB, 2),
             "cycle node {} expected terminator {:?}, got {:?}",
@@ -168,8 +178,8 @@ fn test_pointer_aliasing_stable_across_100_frames() {
 
     for _frame in 0..100 {
         let frame = render_frame(&plane, &prov);
-        let inner_a = read_inner_rgb(&frame, 11);
-        let inner_b = read_inner_rgb(&frame, 12);
+        let inner_a = read_inner_rgb(&frame, &plane, 11);
+        let inner_b = read_inner_rgb(&frame, &plane, 12);
         assert!(rgb_close(inner_a, inner_b, 2));
     }
 }
@@ -192,9 +202,9 @@ fn test_pointer_chain_deeper_than_cap_truncates_to_terminator() {
 
     let frame = render_frame(&plane, &prov);
 
-    let inner_20 = read_inner_rgb(&frame, 20);
-    let inner_25 = read_inner_rgb(&frame, 25);
-    let inner_30 = read_inner_rgb(&frame, 30);
+    let inner_20 = read_inner_rgb(&frame, &plane, 20);
+    let inner_25 = read_inner_rgb(&frame, &plane, 25);
+    let inner_30 = read_inner_rgb(&frame, &plane, 30);
 
     assert!(
         rgb_close(inner_20, CYCLE_TERMINATOR_RGB, 2),
