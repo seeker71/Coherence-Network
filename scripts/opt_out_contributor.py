@@ -49,6 +49,15 @@ Honest properties of this opt-out:
   · **Sentinel contributor:redacted** preserves the ledger's
     aggregate-counter behaviour (the network can still see "N
     contributions came from redacted cells") without exposing who.
+  · **GitHub asset-CDN propagation lag (~2 min observed)** — after a
+    cold-tier rewrite, the deterministic download URL may briefly
+    serve the *old* asset bytes from a stale edge while propagation
+    settles. The retrieval path correctly fails-closed during that
+    window (integrity check returns an error rather than serving
+    stale content); the audit log + tombstone already record the
+    new SHA so the proof-of-rewrite is durable. Verifiers re-running
+    after a couple of minutes get the new content cleanly. Not a
+    bug to fix — a property of the substrate to know about.
 
 Usage:
 
