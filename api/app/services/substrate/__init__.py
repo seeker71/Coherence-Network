@@ -38,6 +38,14 @@ from app.services.substrate.kernel import (
     serialize_tree,
     view_cell_through_blueprint,
 )
+from app.services.substrate.form import (
+    FormResult,
+    evaluate as form_evaluate,
+    evaluate_text as form_evaluate_text,
+    parse as form_parse,
+    serialize_cell as form_serialize_cell,
+    serialize_node_id as form_serialize_node_id,
+)
 from app.services.substrate.markdown_frontend import (
     BID_concept,
     BID_idea,
@@ -97,4 +105,11 @@ __all__ = [
     "ingest_spec_file",
     "parse_markdown",
     "parse_markdown_file",
+    # Form
+    "FormResult",
+    "form_evaluate",
+    "form_evaluate_text",
+    "form_parse",
+    "form_serialize_cell",
+    "form_serialize_node_id",
 ]
