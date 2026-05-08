@@ -28,6 +28,7 @@ VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
+PULSE_RECHECK_SECONDS="${PULSE_RECHECK_SECONDS:-30}"
 
 run_with_retries() {
   local attempts="$1"
@@ -192,21 +193,59 @@ except Exception:
     print("")' "$body_file" 2>/dev/null)"
 
   echo "overall=${overall:-unknown} ongoing_silences=${silences_count}"
+  summarize_pulse_strain "$body_file"
 
   # Only ongoing silences fail the deploy — those are hard organ
   # breakage. A transient `overall=strained` with zero silences is
   # common right after a deploy (container warming, latency
-  # briefly high) and shouldn't block. If this matters for an
-  # operator, they see the warn and can re-verify once the
-  # witness's 30s probe cycle catches up. The next deploy will
-  # either catch up naturally or surface a real silence.
+  # briefly high) and shouldn't block. The verifier spends one
+  # witness cycle to see whether the body settled, while keeping
+  # no-silence strain as a soft signal.
   if [[ "${silences_count:-0}" -eq 0 ]]; then
     if [[ "$overall" == "breathing" ]]; then
       echo "OK: every organ breathing"
-    else
-      echo "WARN: overall=${overall} with no ongoing silences (likely transient; re-verify in 30s)"
+      return 0
     fi
-    return 0
+
+    local recheck_file="$TMP_DIR/pulse_now_recheck.json"
+    echo "WAIT: no ongoing silences; rechecking pulse in ${PULSE_RECHECK_SECONDS}s"
+    sleep "$PULSE_RECHECK_SECONDS"
+    if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -o "$recheck_file" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$pulse_url" >/dev/null; then
+      echo "WARN: pulse witness unreachable during recheck — keeping initial soft signal"
+      return 0
+    fi
+
+    overall="$(python3 -c 'import sys, json
+try:
+    print(json.load(open(sys.argv[1])).get("overall", ""))
+except Exception:
+    print("")' "$recheck_file" 2>/dev/null)"
+    silences_count="$(python3 -c 'import sys, json
+try:
+    print(len(json.load(open(sys.argv[1])).get("ongoing_silences", []) or []))
+except Exception:
+    print(0)' "$recheck_file" 2>/dev/null)"
+    silent_organs="$(python3 -c 'import sys, json
+try:
+    data = json.load(open(sys.argv[1]))
+    names = [s.get("organ", "?") for s in (data.get("ongoing_silences") or [])]
+    print(", ".join(names))
+except Exception:
+    print("")' "$recheck_file" 2>/dev/null)"
+
+    echo "after_recheck overall=${overall:-unknown} ongoing_silences=${silences_count}"
+    summarize_pulse_strain "$recheck_file"
+    if [[ "${silences_count:-0}" -eq 0 ]]; then
+      if [[ "$overall" == "breathing" ]]; then
+        echo "OK: pulse settled after one witness cycle"
+      else
+        echo "WARN: overall=${overall:-unknown} with no ongoing silences after recheck"
+      fi
+      return 0
+    fi
   fi
 
   echo "FAIL: pulse reports ongoing silences"
@@ -215,6 +254,39 @@ except Exception:
   fi
   echo "Hint: hit $pulse_url for the full organ list + silence ids"
   return 1
+}
+
+summarize_pulse_strain() {
+  local body_file="$1"
+  python3 - "$body_file" <<'PY' 2>/dev/null || true
+import json
+import sys
+
+try:
+    data = json.load(open(sys.argv[1]))
+except Exception:
+    print("Strain reason: pulse response was not parseable JSON")
+    raise SystemExit(0)
+
+organs = data.get("organs") or []
+strained = [organ for organ in organs if organ.get("status") != "breathing"]
+if not strained:
+    if data.get("overall") == "breathing":
+        print("Strain reason: none")
+    else:
+        print("Strain reason: no organ detail exposed")
+    raise SystemExit(0)
+
+print("Strained organs:")
+for organ in strained:
+    name = organ.get("name") or "?"
+    status = organ.get("status") or "unknown"
+    detail = organ.get("detail") or "no detail"
+    latency = organ.get("latency_ms")
+    sampled = organ.get("last_sample_at") or "unknown sample time"
+    latency_text = f"{latency}ms" if latency is not None else "unknown latency"
+    print(f"- {name}: {status}; {detail}; {latency_text}; last_sample_at={sampled}")
+PY
 }
 
 check_web_css_assets() {
@@ -668,6 +740,10 @@ check_web_runtime_sha() {
   echo "PASS"
   return 0
 }
+
+if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 fail=0
 check_url "Public API health" "${API_URL%/}/api/health" || fail=1
