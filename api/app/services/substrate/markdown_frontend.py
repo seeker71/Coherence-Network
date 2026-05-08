@@ -240,18 +240,12 @@ def make_string_literal_blueprint(session: Session, value: str) -> NodeID:
     keeps "memory with name=foo and type=bar" distinct from "memory with
     name=baz and type=bar".
 
-    We achieve this by interning the string value as a child blueprint
-    under a special string-literal category.
+    Cross-process stable: uses the substrate string-table for instance
+    allocation, so the resulting Blueprint NodeID matches what was stored
+    in any prior process for the same key value.
     """
-    # We use the BID_string trivial as the category, with a synthetic child
-    # encoding the value via the SerializedTree path. To avoid collisions
-    # with actual literal values, we treat string-literal-as-shape as a
-    # composite at level COMPLEX_1 with a single trivial child carrying the
-    # value's hash-instance.
-    inst = abs(hash(value)) % (10**9) + 1  # stable across runs (within python session)
-    # NOTE: hash() salt makes this NOT stable across processes. For real
-    # cross-process determinism we'd use a content-addressed string symbol
-    # table. Phase 3 MVP — see followup task.
+    from app.services.substrate.substrate_strings import intern_string_instance
+    inst = intern_string_instance(session, value)
     leaf = NodeID(1, Level.TRIVIAL, RType.STRING, inst)
     return make_composite_blueprint(
         session,
@@ -341,10 +335,13 @@ def _ingest_markdown_file(
     # structural identity (two memories with the same frontmatter keys+types
     # produce the same CTOR shape), and the actual values live in the
     # source file (and on disk).
+    from app.services.substrate.substrate_strings import intern_string_instance
     ctor_children = []
     for key in sorted(parsed.frontmatter.keys()):
         # Each entry is a string-literal whose instance encodes the key.
-        inst = abs(hash(f"{key}={type(parsed.frontmatter[key]).__name__}")) % (10**9) + 1
+        # Cross-process stable via the substrate string-table.
+        marker = f"{key}={type(parsed.frontmatter[key]).__name__}"
+        inst = intern_string_instance(session, marker)
         ctor_children.append(
             Recipe(
                 category=NodeID(1, Level.TRIVIAL, RType.STRING, inst),

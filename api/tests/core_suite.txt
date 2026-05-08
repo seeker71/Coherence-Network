@@ -41,6 +41,7 @@ tests/test_smart_reaper_module_boundary.py
 tests/test_source_artifact_sensing_graph.py
 tests/test_stale_task_reaper.py
 tests/test_substrate.py
+tests/test_substrate_discovery.py
 tests/test_substrate_form.py
 tests/test_substrate_form_builders.py
 tests/test_substrate_form_eval.py

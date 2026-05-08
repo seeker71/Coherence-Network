@@ -57,6 +57,47 @@ python3 scripts/coh_substrate.py form '?equivalent @memory("User biographical ar
 
 38 of 40 memory files in the body are equivalent to this one, by structural shape.
 
+## Use the substrate
+
+The substrate is now woven into daily practice through three commands:
+
+### Discover what shapes exist
+
+```bash
+python3 scripts/coh_substrate.py discover
+```
+
+Surfaces:
+- The largest blueprint clusters (e.g. 67 specs sharing the canonical spec frontmatter shape)
+- Singletons (cells with shapes nowhere else in the body)
+- Cross-domain collisions (same shape across multiple domains — refactor signal)
+
+### Shape-check before authoring
+
+```bash
+python3 scripts/coh_substrate.py shape-check path/to/draft-spec.md
+```
+
+Computes the Blueprint shape this draft would have and surfaces existing cells with the same shape. Catches duplication and structural drift before they ship. Output: either "✓ new structural pattern" or "⚠ N existing cells share this shape" with the names.
+
+### Auto-ingest on commit
+
+```bash
+# Manual installation (per developer):
+ln -s ../../scripts/substrate_post_merge_hook.sh .git/hooks/post-merge
+chmod +x .git/hooks/post-merge
+
+# Or in CI, after merge to main:
+bash scripts/substrate_post_merge_hook.sh
+```
+
+After every merge, changed `.md` files in tracked domains are auto-ingested. The substrate stays current with the body's tissue.
+
+```bash
+# Manual: feed paths from anywhere (git diff, find, etc.)
+git diff --name-only HEAD~1..HEAD '*.md' | python3 scripts/coh_substrate.py ingest-paths --from-stdin
+```
+
 ## Phase status (as of 2026-05)
 
 - Phase 1 ✓ — building-knowledge from prior art (kernel walk + run + mini-port + design doc)

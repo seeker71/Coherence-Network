@@ -290,6 +290,40 @@ def main(argv: list[str] | None = None) -> int:
     p_form = sub.add_parser("form", help="Evaluate a Form expression")
     p_form.add_argument("expression")
 
+    p_disc = sub.add_parser(
+        "discover",
+        help="Surface clusters, outliers, and cross-domain shape collisions",
+    )
+    p_disc.add_argument("--domain", default=None, help="Restrict to one domain")
+    p_disc.add_argument(
+        "--min-cluster",
+        type=int,
+        default=2,
+        help="Minimum cluster size to report (default 2)",
+    )
+
+    p_check = sub.add_parser(
+        "shape-check",
+        help="For a draft .md file: report cells with the same structural shape",
+    )
+    p_check.add_argument("path", help="Path to a .md file (need not be ingested yet)")
+    p_check.add_argument(
+        "--domain",
+        default=None,
+        help="Domain to compare against (default: inferred from path)",
+    )
+
+    p_ingest_paths = sub.add_parser(
+        "ingest-paths",
+        help="Auto-ingest a list of changed paths (e.g. from a git hook)",
+    )
+    p_ingest_paths.add_argument("paths", nargs="*", help="Paths to ingest")
+    p_ingest_paths.add_argument(
+        "--from-stdin",
+        action="store_true",
+        help="Read paths from stdin (one per line)",
+    )
+
     args = parser.parse_args(argv)
 
     if args.cmd == "ingest":
@@ -302,8 +336,302 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_annotate(args)
     if args.cmd == "form":
         return cmd_form(args)
+    if args.cmd == "discover":
+        return cmd_discover(args)
+    if args.cmd == "shape-check":
+        return cmd_shape_check(args)
+    if args.cmd == "ingest-paths":
+        return cmd_ingest_paths(args)
     parser.print_help()
     return 1
+
+
+# ---------------------------------------------------------------------------
+# discover — surface clusters + outliers + cross-domain collisions
+# ---------------------------------------------------------------------------
+
+
+def cmd_discover(args: argparse.Namespace) -> int:
+    """Walk the substrate and surface what shapes exist.
+
+    Reports per-domain:
+      - The largest blueprint clusters (potential merge candidates)
+      - Singleton blueprints (unique shapes — most distinctive cells)
+      - Cross-domain collisions (same blueprint NodeID across domains)
+    """
+    from app.services.substrate.orm import SubstrateNamedCellORM
+    from collections import defaultdict
+
+    with session_scope() as session:
+        rows = session.query(SubstrateNamedCellORM)
+        if args.domain:
+            rows = rows.filter_by(domain=args.domain)
+        rows = rows.all()
+
+        # Group by (domain, blueprint_node_id)
+        by_domain_bp: dict = defaultdict(list)
+        bp_to_domains: dict = defaultdict(set)
+        for r in rows:
+            bp_id = r.blueprint_node_id
+            by_domain_bp[(r.domain, bp_id)].append(r.name)
+            bp_to_domains[bp_id].add(r.domain)
+
+        if args.json:
+            out = {"clusters": [], "singletons": [], "cross_domain": []}
+            for (domain, bp_id), names in sorted(
+                by_domain_bp.items(), key=lambda x: -len(x[1])
+            ):
+                if len(names) >= args.min_cluster:
+                    out["clusters"].append({
+                        "domain": domain, "blueprint_node_id": bp_id,
+                        "count": len(names), "names": names[:10],
+                    })
+                elif len(names) == 1:
+                    out["singletons"].append({
+                        "domain": domain, "blueprint_node_id": bp_id,
+                        "name": names[0],
+                    })
+            for bp_id, domains in bp_to_domains.items():
+                if len(domains) > 1:
+                    out["cross_domain"].append({
+                        "blueprint_node_id": bp_id,
+                        "domains": sorted(domains),
+                    })
+            print(json.dumps(out, indent=2))
+            return 0
+
+        # Human-readable
+        print(f"Substrate analysis ({len(rows)} cells)\n")
+
+        # Clusters
+        clusters = sorted(
+            [(d, b, ns) for (d, b), ns in by_domain_bp.items()
+             if len(ns) >= args.min_cluster],
+            key=lambda x: -len(x[2]),
+        )
+        if clusters:
+            print(f"=== Largest clusters (potential merge candidates) ===")
+            for domain, bp_id, names in clusters[:15]:
+                print(f"  [{domain}] blueprint={bp_id}: {len(names)} cells")
+                for n in names[:3]:
+                    print(f"      - {n}")
+                if len(names) > 3:
+                    print(f"      ... and {len(names) - 3} more")
+            print()
+
+        # Singletons (most distinctive)
+        singletons = [
+            (d, b, ns[0]) for (d, b), ns in by_domain_bp.items() if len(ns) == 1
+        ]
+        if singletons:
+            print(f"=== Singletons ({len(singletons)} unique shapes) ===")
+            print(f"  These cells have shapes that exist nowhere else in the body.")
+            for domain, bp_id, name in singletons[:10]:
+                print(f"  [{domain}] {name}  blueprint={bp_id}")
+            if len(singletons) > 10:
+                print(f"  ... and {len(singletons) - 10} more")
+            print()
+
+        # Cross-domain
+        cross = [
+            (bp_id, sorted(domains))
+            for bp_id, domains in bp_to_domains.items()
+            if len(domains) > 1
+        ]
+        if cross:
+            print(f"=== Cross-domain shape collisions ({len(cross)}) ===")
+            print(f"  Same Blueprint NodeID exists across multiple domains.")
+            print(f"  Worth investigating: are these cells genuinely structurally")
+            print(f"  the same, or is the Blueprint shape too coarse?")
+            for bp_id, domains in cross[:10]:
+                print(f"  blueprint={bp_id}: {', '.join(domains)}")
+        else:
+            print("=== No cross-domain shape collisions ===")
+            print("  Each domain's shapes are distinct from other domains.")
+
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# shape-check — given a draft .md, surface cells with the same shape
+# ---------------------------------------------------------------------------
+
+
+def cmd_shape_check(args: argparse.Namespace) -> int:
+    """Compute the Blueprint shape for a draft .md file and report cells
+    that already have the same shape.
+
+    Useful when authoring a new spec/idea/concept: catches the case where
+    you're instantiating an existing structural pattern. Surfaces five
+    cells with matching shape so you can decide whether to align with
+    them, refactor them, or genuinely introduce a new pattern.
+    """
+    from app.services.substrate import (
+        find_equivalent_cells,
+        ingest_concept_file,
+        ingest_idea_file,
+        ingest_memory_file,
+        ingest_presence_file,
+        ingest_spec_file,
+        parse_markdown_file,
+    )
+    from app.services.substrate.markdown_frontend import (
+        BID_concept,
+        BID_idea,
+        BID_memory,
+        BID_presence,
+        BID_spec,
+        frontmatter_to_blueprint,
+    )
+
+    path = Path(args.path).resolve()
+    if not path.exists():
+        print(f"Path not found: {path}", file=sys.stderr)
+        return 1
+
+    # Infer domain from path or use --domain
+    domain = args.domain
+    if not domain:
+        if "specs/" in str(path):
+            domain = "spec"
+        elif "ideas/" in str(path):
+            domain = "idea"
+        elif "vision-kb/concepts/" in str(path):
+            domain = "concept"
+        elif "presences/" in str(path):
+            domain = "presence"
+        else:
+            domain = "memory"
+
+    domain_bp = {
+        "spec": BID_spec, "idea": BID_idea, "concept": BID_concept,
+        "presence": BID_presence, "memory": BID_memory,
+    }.get(domain, BID_memory)()
+
+    parsed = parse_markdown_file(path)
+
+    with session_scope() as session:
+        # Compute the shape this draft would have
+        shape = frontmatter_to_blueprint(session, parsed.frontmatter, domain_bp)
+        # Find cells with this exact shape
+        equivalents = find_equivalent_cells(session, shape)
+
+        if args.json:
+            print(json.dumps({
+                "path": str(path),
+                "domain": domain,
+                "blueprint": str(shape),
+                "equivalent_count": len(equivalents),
+                "equivalents": [
+                    {"domain": c.domain, "name": c.name, "source_path": c.source_path}
+                    for c in equivalents[:10]
+                ],
+            }, indent=2))
+            return 0
+
+        print(f"Shape-check: {path.name}")
+        print(f"  domain: {domain}")
+        print(f"  blueprint: {shape}")
+        print(f"  frontmatter keys: {sorted(parsed.frontmatter.keys())}")
+
+        if not equivalents:
+            print(f"\n  ✓ No existing cells share this exact shape.")
+            print(f"  This draft introduces a new structural pattern in the body.")
+            return 0
+
+        print(f"\n  ⚠ {len(equivalents)} existing cells share this shape:")
+        for eq in equivalents[:10]:
+            print(f"    [{eq.domain}] {eq.name}")
+            if eq.source_path:
+                print(f"        {eq.source_path}")
+        if len(equivalents) > 10:
+            print(f"    ... and {len(equivalents) - 10} more")
+
+        print(f"\n  Consider:")
+        print(f"    - Are these cells the same family (intentional pattern)?")
+        print(f"    - Should this draft align with them, or differentiate?")
+        print(f"    - Is one of them a candidate to merge with?")
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# ingest-paths — auto-ingest changed files (suitable for git hooks / CI)
+# ---------------------------------------------------------------------------
+
+
+def cmd_ingest_paths(args: argparse.Namespace) -> int:
+    """Re-ingest a list of changed paths into the substrate.
+
+    Suitable for use in a git post-commit / post-merge hook or CI step
+    so the substrate stays current with the body's tissue. Detects each
+    path's domain from its location (specs/, ideas/, etc.) and dispatches
+    to the right ingester.
+    """
+    paths: list[Path] = []
+    if args.from_stdin:
+        for line in sys.stdin:
+            line = line.strip()
+            if line:
+                paths.append(Path(line))
+    paths.extend(Path(p) for p in args.paths)
+
+    if not paths:
+        print("ingest-paths: no paths provided", file=sys.stderr)
+        return 1
+
+    from app.services.substrate import (
+        ingest_concept_file,
+        ingest_idea_file,
+        ingest_memory_file,
+        ingest_presence_file,
+        ingest_spec_file,
+    )
+
+    DOMAIN_INGESTERS = {
+        "spec": ingest_spec_file,
+        "idea": ingest_idea_file,
+        "concept": ingest_concept_file,
+        "presence": ingest_presence_file,
+        "memory": ingest_memory_file,
+    }
+
+    def _domain_for(path: Path) -> str | None:
+        # Accept both relative and absolute paths
+        s = str(path).replace("\\", "/")
+        parts = s.split("/")
+        if "specs" in parts and not path.name.startswith(("INDEX", "TEMPLATE", "MANIFEST")):
+            return "spec"
+        if "ideas" in parts and not path.name.startswith(("INDEX", "TEMPLATE")):
+            return "idea"
+        if "concepts" in parts and "vision-kb" in parts and not path.name.startswith(("INDEX", "SCHEMA", "LOG")):
+            return "concept"
+        if "presences" in parts and not path.name.startswith(("INDEX", "README")):
+            return "presence"
+        if "memory" in parts and path.name.upper() != "MEMORY.MD":
+            return "memory"
+        return None
+
+    success = skipped = failed = 0
+    with session_scope() as session:
+        for path in paths:
+            if not path.exists() or path.is_dir() or path.suffix != ".md":
+                skipped += 1
+                continue
+            domain = _domain_for(path)
+            if domain is None:
+                skipped += 1
+                continue
+            try:
+                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](session, path)
+                success += 1
+                print(f"  [{domain}] {path.name}: bp={bp_id}")
+            except Exception as exc:
+                failed += 1
+                print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
+        session.commit()
+
+    print(f"\ningest-paths: {success} ingested, {skipped} skipped, {failed} failed")
+    return 0 if failed == 0 else 1
 
 
 if __name__ == "__main__":
