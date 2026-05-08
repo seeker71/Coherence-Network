@@ -197,7 +197,7 @@ def test_audible_history_spectrum_registers_captured_history_waves():
     assert trace_response.status_code == 200, trace_response.text
     trace = json.loads(trace_response.json()["content"])
     capture = trace["capture_shape"]
-    assert trace["schema_version"] == "audible-history-spectrum/v1"
+    assert trace["schema_version"] == "audible-history-spectrum/v2"
     assert capture["library_rows"] == 233
     assert capture["purchase_rows"] == 198
     assert capture["visible_listen_history_rows"] == 50

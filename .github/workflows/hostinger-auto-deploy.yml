@@ -74,5 +74,27 @@ jobs:
           fi
 
       - name: Verify public deployment
+        # Web frontend rolls out a few seconds behind the API. Without retry,
+        # SHA-parity races the rollout and emails a failure that resolves on its
+        # own within 30-90s. Retry up to 3 times with a 30s backoff before
+        # treating it as a real regression.
         run: |
-          ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"
+          attempt=1
+          max_attempts=3
+          backoff=30
+          while :; do
+            set +e
+            ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              break
+            fi
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "::error::verify_web_api_deploy.sh failed after $attempt attempts (rc=$rc)"
+              exit "$rc"
+            fi
+            echo "::warning::verify attempt $attempt failed (rc=$rc); likely rollout lag — sleeping ${backoff}s before retry"
+            sleep "$backoff"
+            attempt=$((attempt + 1))
+          done
