@@ -1,0 +1,25 @@
+[package]
+name = "memory-as-framebuffer-v0"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Runtime as recordable video — the heap as a 256x256 framebuffer streamed to ffmpeg."
+
+[lib]
+name = "mfb"
+path = "src/lib.rs"
+
+[dependencies]
+crc32fast = "1"
+once_cell = "1"
+
+[dev-dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[[example]]
+name = "fizzbuzz"
+path = "examples/fizzbuzz.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
