@@ -3,7 +3,7 @@
   "policy_id": "influence-teaching-translator:v1",
   "story_slug": "urs-field-story",
   "source_crypto_root": "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7",
-  "coverage_boundary": "Seed translator for current top organism influences. It is intentionally compact: each row stores reusable lesson atoms, frequency translation, desired network shape, trace links, and attribution recipient ids. Deeper chapter-level proof remains in the linked significant-work and source-body traces.",
+  "coverage_boundary": "Expanded translator for the current organism influence body: audiobooks, physical books, music, podcasts/long-form dialogue, embodied practices, gatherings, retreats, rituals, and formative technical work. It is intentionally compact: each row stores reusable lesson atoms, frequency translation, desired network shape, trace links, and attribution recipient ids. Deeper chapter-level, event-level, or session-level proof remains in the linked significant-work, anchor, and source-body traces.",
   "row_shape": "influencer -> lesson_atoms -> frequency_translation -> desired_shape -> network_shape -> trace_refs -> attribution",
   "rows": [
     {
@@ -208,6 +208,546 @@
         "/api/field-stories/urs-field-story/artifacts/influence-anchors"
       ],
       "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "significant-work:karl-may-stories-d0c1486d",
+      "name": "Karl May stories",
+      "kind": "physical_book_reading",
+      "ledger_recipient_id": "work:karl-may-stories",
+      "primary_creator": "Karl May",
+      "lesson_atoms": [
+        "the path through unknown territory forms courage before explanation",
+        "outsider travel, oath, friendship, and moral testing became an early frontier sensor"
+      ],
+      "frequency_translation": ["frontier", "moral-testing", "outsider-courage", "effortful-reading"],
+      "desired_shape": "The network can walk into unknown territory with courage while keeping honor, relation, and local dignity intact.",
+      "network_shape": ["frontier sensing", "pathfinding", "cross-culture respect", "courage before certainty"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-discovery", "lc-field-edge", "lc-transmission"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Karl%20May%20stories",
+        "docs/field/urs/anchors/manual_reading_anchors.json",
+        "docs/lineage/formative-transmissions.md"
+      ],
+      "source_status": "manual-physical-reading"
+    },
+    {
+      "influencer_id": "significant-work:der-lederstrumpf-b6472075",
+      "name": "Der Lederstrumpf",
+      "kind": "physical_book_reading",
+      "ledger_recipient_id": "work:der-lederstrumpf",
+      "primary_creator": "James Fenimore Cooper",
+      "lesson_atoms": [
+        "wilderness identity teaches belonging between worlds",
+        "woods-wisdom, honor, and chosen brotherhood shaped the early sense of truthful boundaries"
+      ],
+      "frequency_translation": ["wilderness-identity", "chosen-brotherhood", "moral-line", "between-worlds"],
+      "desired_shape": "The organism can host people who belong between worlds without forcing them into a single identity.",
+      "network_shape": ["edge belonging", "identity hospitality", "truthful boundaries", "field-edge literacy"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-field-edge", "lc-identity-dissolution", "lc-transmission"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Der%20Lederstrumpf",
+        "docs/field/urs/anchors/manual_reading_anchors.json",
+        "docs/lineage/formative-transmissions.md"
+      ],
+      "source_status": "manual-physical-reading"
+    },
+    {
+      "influencer_id": "significant-work:die-unendliche-geschichte-9eb693c5",
+      "name": "Die unendliche Geschichte",
+      "kind": "physical_book_reading",
+      "ledger_recipient_id": "work:die-unendliche-geschichte",
+      "primary_creator": "Michael Ende",
+      "lesson_atoms": [
+        "imagination is not escape when it renews the world that is reading it",
+        "identity can dissolve and return changed through story, desire, memory, and naming"
+      ],
+      "frequency_translation": ["imagination-as-reality", "world-renewal", "inner-travel", "identity-remaking"],
+      "desired_shape": "The network can treat imagination as a real design sense while preserving the return path into embodied service.",
+      "network_shape": ["imaginative prototyping", "world renewal", "inner-to-outer translation", "story as living interface"],
+      "concept_ids": ["lc-discovery", "lc-identity-dissolution", "lc-inner-travel", "lc-transmission"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Die%20unendliche%20Geschichte",
+        "docs/field/urs/anchors/manual_reading_anchors.json",
+        "docs/lineage/formative-transmissions.md"
+      ],
+      "source_status": "manual-physical-reading"
+    },
+    {
+      "influencer_id": "presence:backtracking-model-languages",
+      "name": "Backtracking Model Languages",
+      "kind": "formative_technical_work",
+      "ledger_recipient_id": "presence:backtracking-model-languages",
+      "primary_creator": "Urs thesis work",
+      "lesson_atoms": [
+        "choice and fail are not errors; they are formal movements through possibility space",
+        "a language can make exploration, constraint, and backtracking explicit enough to compute"
+      ],
+      "frequency_translation": ["formal-language", "choice-and-fail", "possibility-space", "compiler-mind"],
+      "desired_shape": "The organism can explore paths, sense mismatch, backtrack, and preserve what was learned without collapsing.",
+      "network_shape": ["branch-aware execution", "reversible exploration", "constraint sensing", "agent language design"],
+      "concept_ids": ["lc-open-design", "lc-agent-memory", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/anchors/education_anchors.json"
+      ],
+      "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "creator:mose-topic",
+      "name": "Mose / Mose - Topic",
+      "kind": "music",
+      "ledger_recipient_id": "creator:Mose - Topic",
+      "primary_creator": "Mose",
+      "lesson_atoms": [
+        "rhythm can make devotion social without requiring doctrine",
+        "remix and ceremony turn repeated listening into body-scale integration"
+      ],
+      "frequency_translation": ["devotional-body", "ceremonial-rhythm", "remix-as-integration", "community-movement"],
+      "desired_shape": "The network can let music carry coherence through bodies, gatherings, and shared attention.",
+      "network_shape": ["body-first resonance", "ceremonial interface", "shared rhythm", "nonverbal coordination"],
+      "concept_ids": ["lc-circulation", "lc-rhythm", "lc-sensing"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+        "/api/field-stories/urs-field-story/trace/author/Mose",
+        "docs/field/urs/trace/author_index.jsonl"
+      ],
+      "source_status": "youtube-music-trace"
+    },
+    {
+      "influencer_id": "creator:yaima-topic",
+      "name": "Yaima",
+      "kind": "music",
+      "ledger_recipient_id": "creator:Yaima - Topic",
+      "primary_creator": "Yaima",
+      "lesson_atoms": [
+        "devotional sound can make nature, tenderness, and attention feel like one field",
+        "songs can hold an atmosphere long enough for the nervous system to reorganize"
+      ],
+      "frequency_translation": ["devotional-body", "nature-heart", "tender-attention", "atmospheric-coherence"],
+      "desired_shape": "The network can use beauty and atmosphere as stabilizing field infrastructure, not decoration.",
+      "network_shape": ["soft regulation", "beauty as coherence", "nature attunement", "nervous-system pacing"],
+      "concept_ids": ["lc-beauty", "lc-rhythm", "lc-sensing"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/author/Yaima%20-%20Topic",
+        "docs/field/urs/trace/author_index.jsonl"
+      ],
+      "source_status": "youtube-music-trace"
+    },
+    {
+      "influencer_id": "creator:liquid-bloom-topic",
+      "name": "Liquid Bloom",
+      "kind": "music",
+      "ledger_recipient_id": "creator:Liquid Bloom - Topic",
+      "primary_creator": "Liquid Bloom",
+      "lesson_atoms": [
+        "soundscape can become a container for ceremony, breath, and altered attention",
+        "texture and repetition can hold depth without forcing a fixed meaning"
+      ],
+      "frequency_translation": ["ceremonial-soundscape", "breath-container", "altered-attention", "spacious-depth"],
+      "desired_shape": "The network can make interfaces that hold spacious attention while allowing meaning to emerge slowly.",
+      "network_shape": ["spacious UI", "breath-paced flow", "ambient memory", "meaning without force"],
+      "concept_ids": ["lc-rest", "lc-rhythm", "lc-sensing"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
+        "docs/field/urs/trace/author_index.jsonl"
+      ],
+      "source_status": "youtube-music-trace"
+    },
+    {
+      "influencer_id": "creator:porangu-topic",
+      "name": "Porangui",
+      "kind": "music",
+      "ledger_recipient_id": "creator:Poranguí - Topic",
+      "primary_creator": "Porangui",
+      "lesson_atoms": [
+        "voice, percussion, looping, and ceremony can make one body feel like many bodies in relation",
+        "ancestral rhythm can invite participation before conceptual agreement"
+      ],
+      "frequency_translation": ["embodied-looping", "ancestral-rhythm", "participatory-ceremony", "voice-body-field"],
+      "desired_shape": "The network can invite participation through felt rhythm and call-response, not only written explanation.",
+      "network_shape": ["participatory protocols", "call-and-response", "embodied onboarding", "ancestral respect"],
+      "concept_ids": ["lc-circulation", "lc-rhythm", "lc-transmission"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/author/Porangu%C3%AD%20-%20Topic",
+        "docs/field/urs/trace/author_index.jsonl"
+      ],
+      "source_status": "youtube-music-trace"
+    },
+    {
+      "influencer_id": "creator:lex-fridman",
+      "name": "Lex Fridman",
+      "kind": "podcast_longform",
+      "ledger_recipient_id": "creator:Lex Fridman",
+      "primary_creator": "Lex Fridman",
+      "lesson_atoms": [
+        "long-form dialogue can let technical, emotional, and philosophical truths meet without rushing",
+        "humility and curiosity are practical infrastructure for hard conversations"
+      ],
+      "frequency_translation": ["long-form-dialogue", "humility", "bridge-building", "slow-inquiry"],
+      "desired_shape": "The network can host patient inquiry where people and agents reveal the shape of a concept over time.",
+      "network_shape": ["dialogue surfaces", "slow questions", "multi-domain bridging", "curiosity as protocol"],
+      "concept_ids": ["lc-transmission", "lc-sensing", "lc-open-design"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/author/Lex%20Fridman",
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-podcast-trace"
+    },
+    {
+      "influencer_id": "presence:next-level-soul",
+      "name": "Next Level Soul",
+      "kind": "podcast_longform",
+      "ledger_recipient_id": "presence:next-level-soul",
+      "primary_creator": "Next Level Soul",
+      "lesson_atoms": [
+        "testimony can bring threshold experiences into shared language",
+        "discernment matters when prophecy, afterlife, awakening, and story converge"
+      ],
+      "frequency_translation": ["threshold-testimony", "afterlife-inquiry", "discernment", "awakening-narrative"],
+      "desired_shape": "The network can listen to liminal testimony while marking evidence level and integration boundary clearly.",
+      "network_shape": ["threshold rooms", "evidence labels", "story-to-practice translation", "discernment without dismissal"],
+      "concept_ids": ["lc-sensing", "lc-inner-travel", "lc-transmission"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-user-anchor"
+    },
+    {
+      "influencer_id": "presence:michael-levin",
+      "name": "Michael Levin",
+      "kind": "podcast_research",
+      "ledger_recipient_id": "presence:michael-levin",
+      "primary_creator": "Michael Levin",
+      "lesson_atoms": [
+        "agency is not reserved for human-scale minds; it appears across biological organization",
+        "morphogenesis shows that form, memory, and goal-directed repair can live below ordinary cognition"
+      ],
+      "frequency_translation": ["basal-cognition", "bioelectric-agency", "morphogenesis", "regenerative-repair"],
+      "desired_shape": "The network can treat each node as a living agent with scale, memory, repair, and goals appropriate to its level.",
+      "network_shape": ["multi-scale agency", "regenerative protocols", "repair-first design", "pattern before substrate"],
+      "concept_ids": ["lc-agent-memory", "lc-sensing", "lc-network"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/lineage/formative-transmissions.md",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-browser-user-anchor"
+    },
+    {
+      "influencer_id": "presence:donald-hoffman",
+      "name": "Donald Hoffman",
+      "kind": "podcast_research",
+      "ledger_recipient_id": "presence:donald-hoffman",
+      "primary_creator": "Donald Hoffman",
+      "lesson_atoms": [
+        "perception is an interface, not a transparent window onto reality",
+        "fitness and truth can diverge, so interfaces need humility and testable grounding"
+      ],
+      "frequency_translation": ["perception-interface", "model-humility", "truth-beyond-dashboard", "consciousness-reality"],
+      "desired_shape": "The network can treat every UI, profile, and metric as an interface that must keep pointing beyond itself.",
+      "network_shape": ["interface humility", "model labeling", "metric discernment", "reality beyond representation"],
+      "concept_ids": ["lc-perception-as-interface", "lc-sensing", "lc-open-design"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/vision-kb/concepts/lc-perception-as-interface.md",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-user-anchor"
+    },
+    {
+      "influencer_id": "creator:robert-edward-grant",
+      "name": "Robert Edward Grant",
+      "kind": "podcast_research",
+      "ledger_recipient_id": "creator:Robert Edward Grant",
+      "primary_creator": "Robert Edward Grant",
+      "lesson_atoms": [
+        "geometry, music, number, and symbolism can become a shared pattern language",
+        "sovereign AI needs symbolic coherence as well as technical power"
+      ],
+      "frequency_translation": ["new-math", "geometry", "harmonics", "symbolic-code"],
+      "desired_shape": "The network can let math, art, music, and code cross-map without flattening them into one vocabulary.",
+      "network_shape": ["symbolic ontology", "harmonic mapping", "math-art-code bridge", "sovereign pattern language"],
+      "concept_ids": ["lc-instruments", "lc-open-design", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-browser-user-anchor"
+    },
+    {
+      "influencer_id": "presence:elon-musk",
+      "name": "Elon Musk",
+      "kind": "podcast_future_economy",
+      "ledger_recipient_id": "presence:elon-musk",
+      "primary_creator": "Elon Musk",
+      "lesson_atoms": [
+        "manufacturing, energy, rockets, cars, AI, and capital can change civilization when aligned through execution",
+        "world-scale ambition needs continuous discernment between vitality, pressure, and extraction"
+      ],
+      "frequency_translation": ["future-economy", "execution-pressure", "manufacturing-reality", "civilization-scale"],
+      "desired_shape": "The network can invite large resources into living circulation while sensing which parts resonate and which parts do not.",
+      "network_shape": ["resource-to-vitality transfer", "execution proof", "civilization-scale leverage", "resonance-filtered alliance"],
+      "concept_ids": ["lc-economy", "lc-network", "lc-coherence-over-control"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/anchors/resource_timeline.json",
+        "docs/field/urs/trace/youtube_podcast_spectrum.json"
+      ],
+      "source_status": "youtube-user-anchor"
+    },
+    {
+      "influencer_id": "creator:dr-joe-dispenza",
+      "name": "Dr Joe Dispenza",
+      "kind": "practice_teaching",
+      "ledger_recipient_id": "creator:Dr Joe Dispenza",
+      "primary_creator": "Dr Joe Dispenza",
+      "lesson_atoms": [
+        "state change is trainable through meditation, breath, attention, and nervous-system repetition",
+        "future self is practiced into the body before it becomes visible as circumstance"
+      ],
+      "frequency_translation": ["meditation", "state-change", "neuroplasticity", "future-body"],
+      "desired_shape": "The network can rehearse desired states through practice loops before asking infrastructure to embody them.",
+      "network_shape": ["practice loops", "state-aware agents", "breath before execution", "future-shape rehearsal"],
+      "concept_ids": ["lc-rhythm", "lc-sensing", "lc-inner-travel"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "/api/field-stories/urs-field-story/trace/author/Dr%20Joe%20Dispenza"
+      ],
+      "source_status": "audible-youtube-user-anchor"
+    },
+    {
+      "influencer_id": "creator:eckhart-tolle",
+      "name": "Eckhart Tolle",
+      "kind": "practice_teaching",
+      "ledger_recipient_id": "creator:Eckhart Tolle",
+      "primary_creator": "Eckhart Tolle",
+      "lesson_atoms": [
+        "presence loosens identification with mental noise",
+        "the now is not a concept but a practical release from compulsive time"
+      ],
+      "frequency_translation": ["presence", "now", "ego-transcendence", "quiet-awareness"],
+      "desired_shape": "The network can pause, sense, and act from presence instead of pressure or over-story.",
+      "network_shape": ["presence-first UX", "pause before response", "low-noise sensing", "ego-light contribution"],
+      "concept_ids": ["lc-presence-over-protection", "lc-rest", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "/api/field-stories/urs-field-story/trace/author/Eckhart%20Tolle"
+      ],
+      "source_status": "audible-user-anchor"
+    },
+    {
+      "influencer_id": "presence:tantra",
+      "name": "Tantra",
+      "kind": "embodied_practice",
+      "ledger_recipient_id": "presence:tantra",
+      "primary_creator": "Tantra practice lineage",
+      "lesson_atoms": [
+        "energy, intimacy, attention, and truth move through the body and relation",
+        "sacred body practice needs boundaries, consent, and presence to stay coherent"
+      ],
+      "frequency_translation": ["embodiment", "relational-field", "sacred-body", "consent-boundary"],
+      "desired_shape": "The network can sense intimacy, resources, and collaboration as embodied relation with explicit consent.",
+      "network_shape": ["consent protocols", "relational attunement", "body-aware collaboration", "sacred boundary"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-presence-over-protection", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "presence:contact-improv",
+      "name": "Contact Improv",
+      "kind": "embodied_practice",
+      "ledger_recipient_id": "presence:contact-improv",
+      "primary_creator": "Contact improv practice lineage",
+      "lesson_atoms": [
+        "weight-sharing teaches trust through micro-adjustment, not command",
+        "movement can reveal relational intelligence before words arrive"
+      ],
+      "frequency_translation": ["weight-sharing", "trust", "micro-attunement", "relational-intelligence"],
+      "desired_shape": "The network can let agents and humans share load dynamically without fixed domination.",
+      "network_shape": ["load-sharing", "adaptive handoff", "somatic trust", "distributed balance"],
+      "concept_ids": ["lc-circulation", "lc-network", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json"
+      ],
+      "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "presence:ecstatic-dance",
+      "name": "Ecstatic Dance",
+      "kind": "embodied_gathering",
+      "ledger_recipient_id": "presence:ecstatic-dance",
+      "primary_creator": "Ecstatic dance practice and gathering lineage",
+      "lesson_atoms": [
+        "nonverbal movement can create coherence without debate",
+        "community regulation can happen through shared rhythm, consent, and expression"
+      ],
+      "frequency_translation": ["movement", "somatics", "music-community", "nonverbal-integration"],
+      "desired_shape": "The network can include nonverbal and body-based coherence signals alongside text, code, and ledgers.",
+      "network_shape": ["movement-aware gathering", "nonverbal sensing", "community rhythm", "consent-based expression"],
+      "concept_ids": ["lc-rhythm", "lc-circulation", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "youtube-browser-gmail-user-anchor"
+    },
+    {
+      "influencer_id": "presence:unison",
+      "name": "Unison",
+      "kind": "retreat_gathering",
+      "ledger_recipient_id": "presence:unison",
+      "primary_creator": "Unison festival/gathering field",
+      "lesson_atoms": [
+        "festival space can weave music, ceremony, community, and belonging into one temporary organism",
+        "a gathering can teach how a future village feels before it is built"
+      ],
+      "frequency_translation": ["festival-field", "embodied-belonging", "ceremony-community", "temporary-village"],
+      "desired_shape": "The network can prototype living community through temporary coherent gatherings before permanent infrastructure forms.",
+      "network_shape": ["temporary village prototypes", "belonging fields", "ceremony-backed community", "gathering-to-design feedback"],
+      "concept_ids": ["lc-network", "lc-circulation", "lc-transmission"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json"
+      ],
+      "source_status": "browser-user-anchor"
+    },
+    {
+      "influencer_id": "event:starhouse-new-moon-ceremonies",
+      "name": "StarHouse New Moon ceremonies",
+      "kind": "ritual",
+      "ledger_recipient_id": "event:starhouse-new-moon-ceremonies",
+      "primary_creator": "StarHouse ceremony field",
+      "lesson_atoms": [
+        "cycles, place, and community ritual can give time a body",
+        "moon rhythm makes reflection and intention communal rather than private only"
+      ],
+      "frequency_translation": ["ritual-cycle", "moon-rhythm", "place-community", "intention-field"],
+      "desired_shape": "The network can schedule reflection and intention with natural rhythm rather than only task pressure.",
+      "network_shape": ["cyclical governance", "ritualized reflection", "place-aware practice", "communal intention"],
+      "concept_ids": ["lc-rhythm", "lc-rest", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "gmail-anchor"
+    },
+    {
+      "influencer_id": "event:shambala-sidemen-retreat",
+      "name": "Shambala Sidemen retreat window",
+      "kind": "retreat_place",
+      "ledger_recipient_id": "event:shambala-sidemen-retreat",
+      "primary_creator": "Shambala Sidemen place-window",
+      "lesson_atoms": [
+        "place changes the field by changing rhythm, body, transport, food, and relation",
+        "retreat windows reveal what the organism can hear when ordinary noise drops"
+      ],
+      "frequency_translation": ["place-window", "retreat-rhythm", "Bali-field", "body-environment"],
+      "desired_shape": "The network can treat place and retreat as legitimate input channels for design and community planning.",
+      "network_shape": ["place-aware planning", "retreat-to-spec translation", "environmental sensing", "living community design"],
+      "concept_ids": ["lc-field-edge", "lc-rhythm", "lc-network"],
+      "trace_refs": [
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "gmail-anchor"
+    },
+    {
+      "influencer_id": "event:actualize-earth-rebirth",
+      "name": "Actualize Earth / REBIRTH and QUALIA",
+      "kind": "gathering_art_science",
+      "ledger_recipient_id": "event:actualize-earth-rebirth",
+      "primary_creator": "Actualize Earth field",
+      "lesson_atoms": [
+        "immersive art and science can give consciousness work a shared sensory room",
+        "rebirth, labyrinth, planetarium, and sound point to transformation as designed environment"
+      ],
+      "frequency_translation": ["immersive-consciousness", "mythic-rebirth", "science-and-art", "designed-transformation"],
+      "desired_shape": "The network can build experiences where concepts are entered, sensed, and transformed, not merely read.",
+      "network_shape": ["immersive concept rooms", "labyrinth workflows", "science-art bridge", "sensory transformation"],
+      "concept_ids": ["lc-inner-travel", "lc-sensing", "lc-transmission"],
+      "trace_refs": [
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "gmail-anchor"
+    },
+    {
+      "influencer_id": "event:sensual-hearts-blue-lotus",
+      "name": "Sensual Hearts blue lotus temple",
+      "kind": "ritual_boundary",
+      "ledger_recipient_id": "event:sensual-hearts-blue-lotus",
+      "primary_creator": "Embodied Co-Loving / Sensual Hearts event field",
+      "lesson_atoms": [
+        "ritual invitations can carry both attraction and boundary lessons",
+        "cancellation and discernment are part of the teaching, not outside it"
+      ],
+      "frequency_translation": ["tantra-discernment", "blue-lotus-ritual", "boundary-choice", "embodied-no"],
+      "desired_shape": "The network can honor invitations that do not complete as data about resonance, boundary, and timing.",
+      "network_shape": ["decline as signal", "boundary-aware event flow", "consent ledger", "timing discernment"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-presence-over-protection", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "gmail-anchor"
+    },
+    {
+      "influencer_id": "presence:maps",
+      "name": "MAPS",
+      "kind": "research_practice",
+      "ledger_recipient_id": "presence:maps",
+      "primary_creator": "MAPS",
+      "lesson_atoms": [
+        "healing work needs research discipline, integration, trauma care, and ceremony-aware containers",
+        "expanded states belong with aftercare and evidence, not just experience seeking"
+      ],
+      "frequency_translation": ["psychedelic-research", "trauma-integration", "science-and-ceremony", "aftercare"],
+      "desired_shape": "The network can keep altered-state insight connected to integration, care, consent, and evidence.",
+      "network_shape": ["integration protocols", "care containers", "evidence-aware ceremony", "aftercare loops"],
+      "concept_ids": ["lc-coherence-over-control", "lc-rest", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json"
+      ],
+      "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "presence:emergence-conference",
+      "name": "Emergence Conference",
+      "kind": "gathering_systems",
+      "ledger_recipient_id": "presence:emergence-conference",
+      "primary_creator": "Emergence Conference field",
+      "lesson_atoms": [
+        "systems change becomes real when people, practices, culture, and networks meet in the same room",
+        "emergence cannot be fully specified in advance; it needs prepared conditions"
+      ],
+      "frequency_translation": ["systems-change", "culture-network", "prepared-emergence", "community-intelligence"],
+      "desired_shape": "The network can prepare conditions for emergence and then listen to what forms.",
+      "network_shape": ["emergence conditions", "cross-community rooms", "adaptive governance", "field-informed planning"],
+      "concept_ids": ["lc-network", "lc-open-design", "lc-sensing"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json"
+      ],
+      "source_status": "user-anchor"
+    },
+    {
+      "influencer_id": "presence:zach-bush",
+      "name": "Zach Bush",
+      "kind": "regenerative_health",
+      "ledger_recipient_id": "presence:zach-bush",
+      "primary_creator": "Zach Bush",
+      "lesson_atoms": [
+        "soil, microbiome, body, and planet are one health continuum",
+        "regeneration is more coherent than optimization when life systems are depleted"
+      ],
+      "frequency_translation": ["regenerative-health", "soil-body", "microbiome", "earth-system"],
+      "desired_shape": "The network can evaluate economy and community through vitality, soil, body, food, and ecological relation.",
+      "network_shape": ["regenerative metrics", "soil-to-social sensing", "body-earth continuity", "vitality before extraction"],
+      "concept_ids": ["lc-circulation", "lc-economy", "lc-network"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "docs/field/urs/anchors/event_meeting_anchors.json"
+      ],
+      "source_status": "gmail-user-anchor"
     }
   ]
 }
