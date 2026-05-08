@@ -182,20 +182,21 @@ export default async function ContributorLineagePage({
     ([, a], [, b]) => b.length - a.length,
   );
 
-  // For the master timeline SVG, position each work along an x axis by year.
-  const minYear = works.length ? yearFromEra(works[0].era) : 1980;
-  const maxYear = works.length
-    ? Math.max(yearFromEra(works[works.length - 1].era), 2026)
-    : 2026;
-  const span = Math.max(maxYear - minYear, 1);
-  const dotsForSvg = works.map((w, i) => {
+  // Group works by year for the swimlane visualisation. Multiple
+  // works in the same year stack vertically rather than colliding.
+  const knownYearWorks = works.filter((w) => yearFromEra(w.era) !== 9999);
+  const unknownYearWorks = works.filter((w) => yearFromEra(w.era) === 9999);
+  const yearBuckets = new Map<number, GraphNode[]>();
+  for (const w of knownYearWorks) {
     const y = yearFromEra(w.era);
-    const x = 50 + ((y - minYear) / span) * 620;
-    const dir = i % 2 === 0 ? -1 : 1;
-    return { w, x, y, dir };
-  });
-
-  const eras = ["era", "decade-band"]; // placeholder for future grouping
+    if (!yearBuckets.has(y)) yearBuckets.set(y, []);
+    yearBuckets.get(y)!.push(w);
+  }
+  const sortedYears = [...yearBuckets.keys()].sort((a, b) => a - b);
+  const minYear = sortedYears.length ? sortedYears[0] : 1980;
+  const maxYear = sortedYears.length
+    ? Math.max(sortedYears[sortedYears.length - 1], 2026)
+    : 2026;
 
   return (
     <main className="relative">
@@ -259,68 +260,71 @@ export default async function ContributorLineagePage({
               <h2 className="text-xl font-light text-foreground mb-4">
                 The arc, at a glance
               </h2>
-              <figure className="rounded-xl border border-border/40 bg-card/30 p-5">
-                <svg
-                  viewBox="0 0 720 220"
-                  className="w-full h-auto"
-                  role="img"
-                  aria-labelledby="contributor-arc"
-                >
-                  <title id="contributor-arc">Chronological arc of works</title>
-                  <g fontFamily="ui-sans-serif,system-ui" fontSize="11">
-                    <line x1="40" y1="110" x2="700" y2="110" stroke="hsl(220 30% 50%)" strokeWidth="1.5" />
-                    <text x="50" y="195" fill="hsl(220 30% 55%)" fontSize="10">{minYear}</text>
-                    <text x="670" y="195" textAnchor="end" fill="hsl(220 30% 55%)" fontSize="10">{maxYear}</text>
-                    {dotsForSvg.map(({ w, x, dir }, i) => {
-                      const labelY = 110 + dir * 50;
-                      const lineY1 = 110 + (dir > 0 ? 8 : -8);
-                      const lineY2 = labelY + (dir > 0 ? -10 : 14);
-                      const display = (w.name || w.id).slice(0, 26);
-                      return (
-                        <g key={i}>
-                          <line
-                            x1={x}
-                            y1={lineY1}
-                            x2={x}
-                            y2={lineY2}
-                            stroke="hsl(195 60% 60%)"
-                            strokeWidth="1"
-                            opacity="0.5"
-                          />
-                          <circle
-                            cx={x}
-                            cy={110}
-                            r="5"
-                            fill="hsl(195 60% 60%)"
-                            stroke="hsl(220 30% 14%)"
-                            strokeWidth="2"
-                          />
-                          <text
-                            x={x}
-                            y={labelY}
-                            textAnchor="middle"
-                            fill="hsl(195 60% 80%)"
-                            fontSize="9"
-                          >
-                            {display}
-                          </text>
-                          <text
-                            x={x}
-                            y={labelY + (dir > 0 ? 12 : -12)}
-                            textAnchor="middle"
-                            fill="hsl(220 30% 65%)"
-                            fontSize="8"
-                          >
-                            {yearFromEra(w.era) === 9999 ? "" : yearFromEra(w.era)}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </g>
-                </svg>
-                <figcaption className="text-xs text-muted-foreground mt-3 text-center">
-                  Each work positioned by extracted year from its era
-                  field. Works without a year cluster at the right.
+              <figure className="rounded-xl border border-border/40 bg-card/30 p-5 overflow-hidden">
+                <ol className="relative border-l border-border/50 pl-6 space-y-3">
+                  {sortedYears.map((year) => {
+                    const bucket = yearBuckets.get(year)!;
+                    return (
+                      <li key={year} className="relative">
+                        <span
+                          className="absolute -left-[33px] top-0.5 inline-flex items-center justify-center w-12 h-5 rounded-md bg-card border border-border/50 text-[10px] text-[hsl(var(--primary))] font-mono"
+                          aria-hidden="true"
+                        >
+                          {year}
+                        </span>
+                        <ul className="ml-2 space-y-1">
+                          {bucket.map((w) => (
+                            <li key={w.id} className="flex items-baseline gap-2">
+                              <span
+                                className="inline-block w-2 h-2 rounded-full bg-[hsl(195_60%_60%)] shrink-0 translate-y-[1px]"
+                                aria-hidden="true"
+                              />
+                              <Link
+                                href={slugDoor(w)}
+                                className="text-sm text-foreground/90 hover:text-[hsl(var(--primary))] leading-tight"
+                              >
+                                {w.name || w.id}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    );
+                  })}
+                  {unknownYearWorks.length > 0 ? (
+                    <li className="relative pt-2 border-t border-border/30">
+                      <span className="absolute -left-[33px] top-2.5 inline-flex items-center justify-center w-12 h-5 rounded-md bg-card border border-border/50 text-[10px] text-muted-foreground font-mono">
+                        —
+                      </span>
+                      <p className="text-xs text-muted-foreground italic mb-1.5 ml-2">
+                        Year not yet recorded
+                      </p>
+                      <ul className="ml-2 space-y-1">
+                        {unknownYearWorks.map((w) => (
+                          <li key={w.id} className="flex items-baseline gap-2">
+                            <span
+                              className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50 shrink-0 translate-y-[1px]"
+                              aria-hidden="true"
+                            />
+                            <Link
+                              href={slugDoor(w)}
+                              className="text-sm text-foreground/85 hover:text-[hsl(var(--primary))] leading-tight"
+                            >
+                              {w.name || w.id}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ) : null}
+                </ol>
+                <figcaption className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border/30">
+                  {sortedYears.length > 0
+                    ? `${knownYearWorks.length} work${knownYearWorks.length === 1 ? "" : "s"} from ${minYear} to ${maxYear === 2026 || maxYear === new Date().getFullYear() ? "now" : maxYear}`
+                    : ""}
+                  {unknownYearWorks.length > 0
+                    ? ` · ${unknownYearWorks.length} without a recorded year`
+                    : ""}
                 </figcaption>
               </figure>
             </section>
