@@ -70,6 +70,8 @@ The wave arrays use:
 - MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
 - Crypto trace artifact: `/api/field-stories/urs-field-story/artifacts/trace-source-crypto`
 - View attribution receipt: `POST /api/field-stories/urs-field-story/view-attribution`
+- View attribution policy: `GET /api/field-stories/urs-field-story/view-attribution-policy`
+- View attribution adjustment: `POST /api/field-stories/urs-field-story/view-attribution-adjustments`
 - View attribution circulation: `GET /api/field-stories/urs-field-story/view-attribution-circulation`
 
 ## Crypto Trace
@@ -91,6 +93,8 @@ A presence/work view writes a compact receipt plus small CC flow rows instead of
 - flow rows: recipient id, reason code, CC amount, and contribution-ledger id for each attributed recipient.
 
 The default `presence-work-view` policy currently splits one impression across original creator, lived integrator, queryable trace artifact, trace-building agent, infrastructure, and attention/discovery. The receipt points back to the existing trace APIs and source crypto root, so deeper proof is pulled only when needed.
+
+The living adjustment policy is append-only. A creator, viewer, contributor, agent, source artifact, or steward can attest that a portion of an existing flow should move from one recipient to another. The original receipt and base flow remain intact; the adjustment writes a negative ledger row from one recipient and a positive ledger row to another, so circulation can stay conserved while the organism learns where nutrition is more accurately felt.
 
 ## Chapter Discovery Boundary
 
