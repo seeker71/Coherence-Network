@@ -24,16 +24,19 @@ This produces `fizzbuzz.mp4` in the crate directory (~30 seconds, 1024×1024,
 
 ## What you'll see
 
-The fizzbuzz example only allocates 100 cells out of the 65,536-cell heap.
-With deterministic next-free-slot allocation, those 100 cells live at
-indices 0..99 — which on the 256×256 grid is **the very top row** at
-y ∈ [0, 4) px. So you're looking at a thin **400×4 px lit strip** along
-the top edge of the 1024×1024 frame, with the rest correctly black
-(free cells render as black). LOD-zoom — the v1-3d sibling spec — is the
-proper UX answer for "show me where the activity actually is"; v0
-renders the heap honestly at fixed 1:1 scale.
+The renderer **auto-zooms** to the bounding box of currently-allocated
+cells (with a small margin and a minimum-side floor), scaling that
+viewport to fill the 1024×1024 output frame. So the active heap fills
+the screen regardless of how few cells exist or where the allocator
+happened to put them. Free cells around the edges render as opaque
+black; the lit region is the live heap, large and obvious.
 
-What's happening in that strip:
+For fizzbuzz: 100 cells active at grid row 0, columns 0..99 → viewport
+is `(0, 0, 104)` (104-cell side, 100 cells + 2 margin on each side) →
+each cell renders at ~9 px instead of 4 px and the strip fills the
+top of the frame instead of being a 4 px sliver.
+
+What's happening in that lit strip:
 
 - **Cell 0** (top-left, single 4×4 px block): the current `i` (1..=10000).
   Inner color is the `u32` palette entry, modulated within a 0.7..1.0

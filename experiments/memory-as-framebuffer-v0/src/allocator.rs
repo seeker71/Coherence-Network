@@ -82,6 +82,32 @@ impl SlabFramebuffer {
         );
     }
 
+    /// Allocate at a specific cell index. Panics if the index is out of bounds
+    /// or if the cell is already allocated. Use this when an example wants a
+    /// 2D grid layout rather than the linear next-free-slot pattern (which
+    /// puts everything in row 0 and produces a narrow horizontal band).
+    pub fn alloc_at(&mut self, idx: usize, tag: u16) -> CellHandle {
+        if idx >= NUM_CELLS {
+            panic!(
+                "memory-as-framebuffer: alloc_at index {} out of bounds (NUM_CELLS={})",
+                idx, NUM_CELLS
+            );
+        }
+        let existing = self.read_tag(idx);
+        if existing != TAG_FREE {
+            panic!(
+                "memory-as-framebuffer: alloc_at index {} already allocated (tag=0x{:04x})",
+                idx, existing
+            );
+        }
+        self.write_tag(idx, tag);
+        let base = idx * CELL_BYTES;
+        for b in &mut self.bytes[base + 2..base + CELL_BYTES] {
+            *b = 0;
+        }
+        CellHandle(idx as u32)
+    }
+
     /// Free the cell: zero all 16 bytes (tag + payload).
     pub fn free_cell(&mut self, handle: CellHandle) {
         let base = Self::cell_offset(handle);
