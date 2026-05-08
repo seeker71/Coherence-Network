@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 105
+**Total files**: 106
 
 | File | Purpose |
 |---|---|
@@ -15,6 +15,7 @@
 | [test_agent_monitor_helpers.py](test_agent_monitor_helpers.py) | _no top-of-file purpose_ |
 | [test_agent_runner_tool_failure_telemetry.py](test_agent_runner_tool_failure_telemetry.py) | Tests for tool-failure-awareness spec: runtime telemetry + friction events. |
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
+| [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_attribution_middleware.py](test_attribution_middleware.py) | Tests for the attribution middleware. |

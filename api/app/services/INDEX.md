@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 220
+**Total files**: 227
 
 | File | Purpose |
 |---|---|
@@ -37,6 +37,7 @@
 | [agent_service_usage_visibility.py](agent_service_usage_visibility.py) | Agent usage, visibility, and orchestration guidance summaries. |
 | [agent_task_continuation_service.py](agent_task_continuation_service.py) | Post-execution task continuation helpers. |
 | [agent_task_store_service.py](agent_task_store_service.py) | Persistent store for agent tasks with shared DB support. |
+| [anonymous_meeting_trace_service.py](anonymous_meeting_trace_service.py) | Anonymous meeting traces. |
 | [app_mode.py](app_mode.py) | Application runtime mode helpers backed by config, not environment. |
 | [attunement_scheduler.py](attunement_scheduler.py) | Attunement scheduler — re-attune every presence so newly added concepts |
 | [audit_ledger_service.py](audit_ledger_service.py) | Transparent Audit Ledger service -- spec 123. |
@@ -96,6 +97,8 @@
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
 | [field_story_mcp_tools.py](field_story_mcp_tools.py) | MCP registry entries for published field stories. |
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
+| [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |
+| [field_view_attribution_service.py](field_view_attribution_service.py) | Field story view attribution receipts and CC circulation rows. |
 | [frequency_editor.py](frequency_editor.py) | Frequency editor — finds and rewrites institutional-frequency phrases. |
 | [frequency_field.py](frequency_field.py) | Frequency field analysis — token and phrase level dissonance detection. |
 | [frequency_profile_service.py](frequency_profile_service.py) | Frequency profile service — dynamic, multi-view, multi-hop. |
@@ -132,6 +135,7 @@
 | [idea_views.py](idea_views.py) | Read-only idea views — lifecycle, activity feed, concept resonance matches. |
 | [idea_write_ops.py](idea_write_ops.py) | Idea CRUD writes — create, update, batch update, slug update, tags, questions. |
 | [identity_providers.py](identity_providers.py) | Identity provider registry — single source of truth for all supported providers. |
+| [influence_teaching_translator_service.py](influence_teaching_translator_service.py) | Influence teaching translator for field story traces. |
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
 | [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
@@ -157,6 +161,7 @@
 | [openclaw_node_bridge_service.py](openclaw_node_bridge_service.py) | OpenClaw node bridge: WebSocket delivery for federation messages (Spec 156 Phase 3). |
 | [openrouter_client.py](openrouter_client.py) | Minimal OpenRouter client for server-side task execution. |
 | [orchestrator_policy_service.py](orchestrator_policy_service.py) | Data-driven orchestrator policy configuration. |
+| [organism_influence_cc_service.py](organism_influence_cc_service.py) | Computed CC sensing for organism-scale influences. |
 | [page_lineage_service.py](page_lineage_service.py) | Public mapping of human web pages to idea ids (for ontology traversal). |
 | [peer_resonance_service.py](peer_resonance_service.py) | Peer resonance scoring shared by discovery and peer routes. |
 | [permanent_storage_service.py](permanent_storage_service.py) | Permanent storage service — Arweave + IPFS bundler integration (pending). |
@@ -220,6 +225,8 @@
 | [unified_models.py](unified_models.py) | All ORM models registered on the unified Base. |
 | [value_lineage_service.py](value_lineage_service.py) | Service for persistent value lineage and payout attribution previews. |
 | [verification_service.py](verification_service.py) | Verification service — Merkle hash chains + Ed25519 signed snapshots. |
+| [view_events_archive_service.py](view_events_archive_service.py) | Cold-tier archival for ``asset_view_events``. |
+| [views_health_service.py](views_health_service.py) | Views-tracing health service. |
 | [vision_content_service.py](vision_content_service.py) | Graph-backed page content for Living Collective vision surfaces. |
 | [vitality_service.py](vitality_service.py) | Vitality service — living-system health metrics for a workspace. |
 | [wallet_service.py](wallet_service.py) | Wallet service — links contributor identities to on-chain addresses. |

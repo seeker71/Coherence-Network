@@ -32,13 +32,13 @@
 | Index | Files | Purpose |
 |---|---|---|
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 125 | API routers — every HTTP endpoint surface |
-| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 221 | API services — business logic and graph operations |
+| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 227 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 55 | API models — Pydantic + ORM shapes |
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 106 | API tests — flow-centric |
-| [web/lib/INDEX.md](web/lib/INDEX.md) | 29 | Web library — shared client/server helpers |
+| [web/lib/INDEX.md](web/lib/INDEX.md) | 31 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 47 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 153 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 85 | Scripts — operational tools, generators, syncers |
+| [web/app/INDEX.md](web/app/INDEX.md) | 172 | Web routes — every visible page in the app |
+| [scripts/INDEX.md](scripts/INDEX.md) | 91 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 
