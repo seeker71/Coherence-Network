@@ -1,0 +1,100 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/home-presence-live-traces-20260508",
+  "commit_scope": "Resolve home field-story presence metrics from the live trace API at render time, using presence-walk JSON metrics only as fallback.",
+  "files_owned": [
+    "web/app/page.tsx",
+    "web/lib/home-presence-traces.ts",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_home_presence_live_traces.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm run build (first pass found missing fresh-worktree dependency: next)",
+      "cd web && npm ci --cache .cache/npm",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_live_traces.json",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh (rerun after transient local API timing failure)",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "The home presence projection now awaits getHomePresenceTraceCards(), and that helper resolves /api/field-stories trace links through the server API before returning cards. Field-story cards display the live event count when the trace API responds; the JSON metric remains a fallback for unavailable trace reads. A transient local API timing failure in the shared verifier passed on direct rerun, and worktree_pr_guard then reported ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Homepage trace cards no longer freeze field-story event counts in JSON. Liquid Bloom and Mose counts can follow the live trace API after trace indexes change.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
+      "https://coherencycoin.com/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic"
+    ],
+    "test_flows": [
+      "home page awaits getHomePresenceTraceCards before rendering the living-lineage cards",
+      "getHomePresenceTraceCards resolves /api/field-stories trace metrics through fetchJsonOrNull",
+      "focused home lineage test and production build both pass"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-lineage",
+    "presence-traces",
+    "come-in"
+  ],
+  "spec_ids": [
+    "specs/multilingual-web.md"
+  ],
+  "task_ids": [
+    "codex-thread-home-presence-live-traces-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/home-presence-traces.ts",
+    "web/app/page.tsx",
+    "web/tests/homepage-presence-lineage.test.ts"
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "web/lib/home-presence-traces.ts",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
