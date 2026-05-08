@@ -15,6 +15,7 @@ import type { IdeaWithScore } from "@/lib/types";
 import type { Concept } from "@/lib/types/vision";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
+import { getEntryPathForSurface } from "@/lib/entry-paths";
 
 type IdeasResponse = {
   ideas: IdeaWithScore[];
@@ -222,6 +223,7 @@ export default async function Home() {
     ? headerLang
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
+  const baliGroundPath = getEntryPathForSurface("bali-living-compound", "home-ground");
   const howItWorks = HOW_IT_WORKS.map((step) => ({
     ...step,
     title: t(step.titleKey) || step.title,
@@ -548,25 +550,27 @@ export default async function Home() {
               Sit with /silence →
             </p>
           </AttributedInternalLink>
-          <AttributedInternalLink
-            href="/silence/built"
-            className="group rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-card/30 hover:from-emerald-500/15 p-5 transition-colors"
-          >
-            <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-500/90 mb-1">
-              {t("silenceBuilt.compoundEyebrow")}
-            </p>
-            <p className="text-base text-foreground font-light mb-1">
-              {t("silenceBuilt.h1")}
-            </p>
-            <p className="text-xs text-foreground/80 leading-relaxed">
-              A direct doorway for land stewards into the Bali compound
-              proposal: source sketch, climate logic, shared rooms, private
-              nests, materials, and the next buildable packet.
-            </p>
-            <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
-              Walk through /silence/built →
-            </p>
-          </AttributedInternalLink>
+          {baliGroundPath && (
+            <AttributedInternalLink
+              href={baliGroundPath.entry.href}
+              className="group rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-card/30 hover:from-emerald-500/15 p-5 transition-colors"
+            >
+              <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-500/90 mb-1">
+                {baliGroundPath.copy.eyebrow}
+              </p>
+              <p className="text-base text-foreground font-light mb-1">
+                {baliGroundPath.copy.title}
+              </p>
+              <p className="text-xs text-foreground/80 leading-relaxed">
+                {baliGroundPath.copy.body}
+              </p>
+              {baliGroundPath.copy.cta && (
+                <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
+                  {baliGroundPath.copy.cta}
+                </p>
+              )}
+            </AttributedInternalLink>
+          )}
           <AttributedInternalLink
             href="/with-us"
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"

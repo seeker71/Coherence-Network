@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { getEntryPathForSurface, type EntrySurfaceCopy } from "@/lib/entry-paths";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import {
   DEFAULT_LOCALE,
@@ -92,9 +93,20 @@ function P({ t, k }: { t: Translator; k: string }) {
   );
 }
 
+function translatedCopy(t: Translator, copy: EntrySurfaceCopy): EntrySurfaceCopy {
+  return {
+    ...copy,
+    eyebrow: copy.eyebrowKey ? t(copy.eyebrowKey) : copy.eyebrow,
+    title: copy.titleKey ? t(copy.titleKey) : copy.title,
+    body: copy.bodyKey ? t(copy.bodyKey) : copy.body,
+  };
+}
+
 export default async function ComeInPage() {
   const lang = await resolveLocaleFromCookie();
   const t = createTranslator(lang);
+  const baliExplorePath = getEntryPathForSurface("bali-living-compound", "come-in-explore");
+  const baliDoorPath = getEntryPathForSurface("bali-living-compound", "come-in-doors");
 
   // Six question cards in PART 3 — keys are stable, content + links
   // come from messages.
@@ -213,22 +225,22 @@ export default async function ComeInPage() {
               </p>
             </Link>
 
-            <Link
-              href="/silence/built"
-              className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
-            >
-              <p className="text-xs uppercase tracking-widest text-emerald-300">
-                Meet the land draft
-              </p>
-              <p className="mt-2 text-base text-stone-100">
-                Walk straight into the Bali living compound proposal.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-stone-300">
-                This is the path for land stewards: the Brahmavihara sketch,
-                central council garden, corner nests, shared rooms, climate
-                care, and the next buildable packet.
-              </p>
-            </Link>
+            {baliExplorePath && (
+              <Link
+                href={baliExplorePath.entry.href}
+                className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+              >
+                <p className="text-xs uppercase tracking-widest text-emerald-300">
+                  {baliExplorePath.copy.eyebrow}
+                </p>
+                <p className="mt-2 text-base text-stone-100">
+                  {baliExplorePath.copy.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                  {baliExplorePath.copy.body}
+                </p>
+              </Link>
+            )}
 
             <a
               href="https://api.coherencycoin.com/api/agent/invitation"
@@ -876,20 +888,25 @@ export default async function ComeInPage() {
                 {t("comeIn.doorSilenceBody")}
               </p>
             </Link>
-            <Link
-              href="/silence/built"
-              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
-            >
-              <p className="text-xs uppercase tracking-widest text-emerald-300 mb-1">
-                {t("comeIn.doorBuiltEyebrow")}
-              </p>
-              <p className="text-base text-stone-100">
-                {t("comeIn.doorBuiltLabel")}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {t("comeIn.doorBuiltBody")}
-              </p>
-            </Link>
+            {baliDoorPath && (() => {
+              const copy = translatedCopy(t, baliDoorPath.copy);
+              return (
+                <Link
+                  href={baliDoorPath.entry.href}
+                  className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+                >
+                  <p className="text-xs uppercase tracking-widest text-emerald-300 mb-1">
+                    {copy.eyebrow}
+                  </p>
+                  <p className="text-base text-stone-100">
+                    {copy.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {copy.body}
+                  </p>
+                </Link>
+              );
+            })()}
             <Link
               href="/one-sheet"
               className="rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 p-5 transition-colors block"
