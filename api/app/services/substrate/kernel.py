@@ -486,6 +486,63 @@ def find_equivalent_cells(
 
 
 # ---------------------------------------------------------------------------
+# Annotation — passive substrate context for any path
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PathAnnotation:
+    """Substrate context for a file path. The shape an agent receives when
+    it reads a file and wants to ground its reasoning structurally.
+
+    `cell` is None if this path isn't ingested into the substrate yet.
+    `equivalents` is empty if cell is None or the cell is a singleton.
+    """
+
+    path: str
+    cell: Optional["NamedCell"]
+    blueprint: Optional[NodeID]
+    equivalents: List["NamedCell"]
+    domain: Optional[str]
+
+
+def annotate_path(session: Session, path: str) -> PathAnnotation:
+    """Return substrate context for a file path.
+
+    The lookup is by source_path — the path stored when the cell was
+    ingested. If multiple cells point at the same path (rare; possible
+    if the same file is ingested under multiple domains), only the first
+    is returned.
+
+    Agents call this when they read a file and want to know:
+    - what cell this file is in the substrate
+    - what Blueprint shape it has
+    - what other cells share that shape (structural equivalents)
+    """
+    cell_orm = (
+        session.query(SubstrateNamedCellORM)
+        .filter_by(source_path=path)
+        .order_by(SubstrateNamedCellORM.cell_id)
+        .first()
+    )
+    if cell_orm is None:
+        return PathAnnotation(
+            path=path, cell=None, blueprint=None, equivalents=[], domain=None,
+        )
+    cell = _orm_to_cell(session, cell_orm)
+    eq = []
+    if cell.blueprint is not None and not cell.blueprint.is_undefined():
+        eq = find_equivalent_cells(session, cell.blueprint, exclude_name=cell.name)
+    return PathAnnotation(
+        path=path,
+        cell=cell,
+        blueprint=cell.blueprint,
+        equivalents=eq,
+        domain=cell.domain,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Inspection helpers
 # ---------------------------------------------------------------------------
 

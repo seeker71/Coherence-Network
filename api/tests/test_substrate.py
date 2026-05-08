@@ -25,7 +25,9 @@ from app.db.base import Base
 from app.services.substrate import (
     CellView,
     NodeID,
+    PathAnnotation,
     Recipe,
+    annotate_path,
     find_cells_compatible_with,
     find_equivalent_cells,
     ingest_memory_file,
@@ -256,6 +258,53 @@ def test_lattice_stats_reflects_ingestion(session, tmp_path):
     after = lattice_stats(session)
     assert after["cells_total"] == 1
     assert after["blueprints_total"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# Path annotation — the agent-grounding entrypoint
+# ---------------------------------------------------------------------------
+
+
+def test_annotate_path_for_unknown_file_returns_empty(session, tmp_path):
+    """A path that hasn't been ingested returns an annotation with no cell."""
+    ann = annotate_path(session, str(tmp_path / "not-ingested.md"))
+    assert ann.cell is None
+    assert ann.blueprint is None
+    assert ann.equivalents == []
+    assert ann.domain is None
+
+
+def test_annotate_path_for_ingested_file_returns_full_context(session, tmp_path):
+    """Ingest a file, then annotate its path. Returns cell + blueprint + equivalents."""
+    p = tmp_path / "x.md"
+    p.write_text(MEMORY_TEMPLATE_A.format(name="X"))
+    cell, bp, _ = ingest_memory_file(session, p)
+
+    ann = annotate_path(session, str(p))
+    assert ann.cell is not None
+    assert ann.cell.name == "X"
+    assert ann.blueprint == bp
+    assert ann.domain == "memory"
+
+
+def test_annotate_path_returns_equivalents(session, tmp_path):
+    """When other cells share the blueprint, equivalents come back."""
+    p1 = tmp_path / "a.md"
+    p1.write_text(MEMORY_TEMPLATE_A.format(name="A"))
+    p2 = tmp_path / "b.md"
+    p2.write_text(MEMORY_TEMPLATE_A.format(name="B"))
+    p3 = tmp_path / "c.md"
+    p3.write_text(MEMORY_TEMPLATE_A.format(name="C"))
+
+    ingest_memory_file(session, p1)
+    ingest_memory_file(session, p2)
+    ingest_memory_file(session, p3)
+
+    ann = annotate_path(session, str(p1))
+    eq_names = {c.name for c in ann.equivalents}
+    assert "B" in eq_names
+    assert "C" in eq_names
+    assert "A" not in eq_names  # self excluded
 
 
 # ---------------------------------------------------------------------------

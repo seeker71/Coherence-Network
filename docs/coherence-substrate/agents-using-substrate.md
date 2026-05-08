@@ -126,7 +126,55 @@ Or in [Form](form-language.md):
 ?cells |> @presence where domain == "memory"       # restrict to memory cells
 ```
 
-### Pattern 4: Phase-aware reasoning
+### Pattern 4: Auto-annotation on file reads
+
+The substrate carries every file's structural identity automatically when the file has been ingested. When you read a file in this body and want grounding context — *what cell is this? what shape? what's structurally similar?* — call `annotate_path` rather than guessing from filename or content.
+
+**Lexical (don't):**
+> "I'm reading `user_biographical_arc.md`. Based on the filename, this looks like a personal biographical memory."
+
+**Structural (do):**
+
+```python
+from app.services.substrate import annotate_path
+from app.services.unified_db import session as session_scope
+
+with session_scope() as session:
+    ann = annotate_path(session, "/Users/ursmuff/.claude/projects/.../user_biographical_arc.md")
+    if ann.cell is not None:
+        # Now you have ground truth:
+        # - ann.cell.name (the canonical name from frontmatter)
+        # - ann.blueprint (the structural shape, content-addressed)
+        # - ann.domain (memory / spec / idea / concept / presence)
+        # - ann.equivalents (other cells with the same blueprint shape)
+        ...
+    else:
+        # Path isn't ingested — the substrate has no claim about this file
+        ...
+```
+
+Or via CLI:
+
+```bash
+python3 scripts/coh_substrate.py annotate path/to/file.md
+# → cell, blueprint, domain, equivalents — printed
+```
+
+Or via REST:
+
+```
+GET /api/substrate/annotate?path=path/to/file.md
+```
+
+The annotation tells you four things:
+1. **Whether the path is in the substrate** — `in_substrate=False` means the substrate has no claim about this file. Don't pretend it does.
+2. **The canonical cell** — the name from frontmatter (which may differ from the filename), the domain, the source path.
+3. **The Blueprint NodeID** — the structural shape. Two files with the same Blueprint are structurally equivalent.
+4. **The structural equivalents** — every other cell sharing this blueprint. Use these to find related content by structure, not by lexical similarity.
+
+This is the keystone agent pattern: **whenever you read a file, annotate it.** The substrate's answer is canonical. Your reasoning is grounded.
+
+### Pattern 5: Phase-aware reasoning
 
 Stay clear about whether you're reasoning in ice (types), water (expressions), or gas (instances).
 

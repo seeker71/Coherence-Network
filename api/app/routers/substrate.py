@@ -18,6 +18,8 @@ from app.services.substrate import (
     CellView,
     NamedCell,
     NodeID,
+    PathAnnotation,
+    annotate_path,
     find_cells_compatible_with,
     find_equivalent_cells,
     lattice_stats,
@@ -194,6 +196,41 @@ def list_cells(
         rows = q.all()
         from app.services.substrate.kernel import _orm_to_cell  # internal helper
         return [CellOut.from_cell(_orm_to_cell(session, r)) for r in rows]
+
+
+class PathAnnotationOut(BaseModel):
+    path: str
+    cell: CellOut | None = None
+    blueprint: NodeIDOut | None = None
+    domain: str | None = None
+    equivalents: list[CellOut] = Field(default_factory=list)
+    equivalents_count: int = 0
+    in_substrate: bool
+
+
+@router.get("/annotate", response_model=PathAnnotationOut, tags=["substrate"])
+def get_annotation(path: str = Query(..., description="File path to annotate")) -> PathAnnotationOut:
+    """Return substrate context for a file path.
+
+    The agent-grounding endpoint: when an agent reads a file and wants to
+    know what cell that path is in the substrate (NodeID, Blueprint shape,
+    structural equivalents), it calls this. Returns in_substrate=False
+    when the path isn't ingested.
+
+    See docs/coherence-substrate/agents-using-substrate.md "Pattern 5:
+    Auto-annotation on file reads" for usage.
+    """
+    with session_scope() as session:
+        ann = annotate_path(session, path)
+        return PathAnnotationOut(
+            path=ann.path,
+            cell=CellOut.from_cell(ann.cell) if ann.cell else None,
+            blueprint=NodeIDOut.from_node_id(ann.blueprint) if ann.blueprint else None,
+            domain=ann.domain,
+            equivalents=[CellOut.from_cell(c) for c in ann.equivalents],
+            equivalents_count=len(ann.equivalents),
+            in_substrate=ann.cell is not None,
+        )
 
 
 class CellViewOut(BaseModel):
