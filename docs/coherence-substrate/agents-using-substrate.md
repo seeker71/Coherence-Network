@@ -130,6 +130,42 @@ Or in [Form](form-language.md):
 
 The substrate carries every file's structural identity automatically when the file has been ingested. When you read a file in this body and want grounding context — *what cell is this? what shape? what's structurally similar?* — call `annotate_path` rather than guessing from filename or content.
 
+#### Install the PreToolUse hook (recommended)
+
+Add this to `.claude/settings.json` in the repo root:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/scripts/substrate_read_hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+After install, every Read tool call automatically produces a stderr line like:
+
+```
+[substrate] agent-orchestration-api.md: cell @spec('agent-orchestration-api')
+  blueprint=@1.8.4.1 | structural family (66): agent-execution-lifecycle-hooks,
+  agent-resonance-onboarding, agent-self-orientation-contract, +63 more
+```
+
+That line surfaces back to the model as transcript context. The agent sees the cell, blueprint, and structural family before reasoning about the file's content. The teaching from this section becomes mechanical: **structural ground arrives whether you ask for it or not.**
+
+The hook never blocks reads. If the substrate is unavailable, if the path isn't a `.md` file, or if any error occurs during annotation, the hook exits cleanly with no output and the read proceeds as normal.
+
+#### Manual annotation (when no hook is installed)
+
 **Lexical (don't):**
 > "I'm reading `user_biographical_arc.md`. Based on the filename, this looks like a personal biographical memory."
 

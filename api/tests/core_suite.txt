@@ -49,6 +49,7 @@ tests/test_substrate_form_operators.py
 tests/test_substrate_form_rules.py
 tests/test_substrate_form_speculation.py
 tests/test_substrate_grammar.py
+tests/test_substrate_read_hook.py
 tests/test_substrate_self_host.py
 tests/test_substrate_strings.py
 tests/test_task_dedup_service.py

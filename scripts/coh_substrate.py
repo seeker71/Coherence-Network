@@ -622,7 +622,9 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
                 skipped += 1
                 continue
             try:
-                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](session, path)
+                # Resolve to absolute so source_path is consistent across
+                # callers (the hook, manual annotate, the legacy ingest path).
+                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](session, path.resolve())
                 success += 1
                 print(f"  [{domain}] {path.name}: bp={bp_id}")
             except Exception as exc:
