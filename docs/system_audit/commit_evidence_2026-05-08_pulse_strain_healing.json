@@ -1,0 +1,81 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/pulse-strain-healing-20260508",
+  "commit_scope": "Make the public deploy pulse witness explain no-silence strain and recheck once before leaving it as a soft signal.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_pulse_witness.sh",
+    "docs/system_audit/commit_evidence_2026-05-08_pulse_strain_healing.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/test_verify_web_api_pulse_witness.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_pulse_strain_healing.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The verifier now prints strained organ details from /pulse/now, waits one pulse witness cycle when there is strain without ongoing silences, and reports the rechecked state. Ongoing silences still fail the deploy contract. Local PR guard reported ready_for_push=True, and stale PR follow-through found zero stale Codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public deploy verification will run after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local proof is complete; pre-commit gates, PR checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "pulse-witness",
+    "deploy-contract",
+    "operational-vitality"
+  ],
+  "spec_ids": [
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "task_ids": [
+    "codex-thread-pulse-strain-healing-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_pulse_witness.sh"
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_pulse_witness.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
