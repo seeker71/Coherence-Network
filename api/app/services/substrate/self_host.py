@@ -34,7 +34,7 @@ from typing import Any, List
 
 from sqlalchemy.orm import Session
 
-from app.services.substrate.form_builders import Build, CaptureRef, Const
+from app.services.substrate.form_builders import Build, CaptureRef, Const, MapBuild
 from app.services.substrate.form_rules import (
     Capture,
     IdentCapture,
@@ -213,10 +213,47 @@ def bootstrap_self_host(session: Session, ast_module: Any = None) -> List[str]:
     )
     registered.append("do")
 
+    # `match scrutinee { pat => body, ..., _ => default }` —
+    # RepeatedCapture with comma; MapBuild wraps each {pattern, body}
+    # dict as a MatchArm AST instance.
+    register_form_keyword(
+        "match",
+        Sequence([
+            Literal("IDENT", "match"),
+            Capture("scrutinee"),
+            Literal("LBRACE", None),
+            RepeatedCapture(
+                "arms",
+                item_pattern=Sequence([
+                    Capture("pattern"),
+                    Literal("ARROW", None),
+                    Capture("body"),
+                ]),
+                separator=Literal("COMMA", None),
+            ),
+            Literal("RBRACE", None),
+        ]),
+        template=Build(
+            "MatchExpr",
+            scrutinee=CaptureRef("scrutinee"),
+            arms=MapBuild(
+                items=CaptureRef("arms"),
+                each=Build(
+                    "MatchArm",
+                    pattern=CaptureRef("pattern"),
+                    body=CaptureRef("body"),
+                ),
+            ),
+        ),
+        ast_module=ast_module,
+        session=session,
+    )
+    registered.append("match")
+
     return registered
 
 
 def list_bootstrap_self_host_keywords() -> List[str]:
     """Return the set of bootstrap keywords that `bootstrap_self_host`
     currently re-expresses. Useful for tests + agent introspection."""
-    return ["if", "unless", "whenever", "let", "fail", "stop", "choose", "do"]
+    return ["if", "unless", "whenever", "let", "fail", "stop", "choose", "do", "match"]

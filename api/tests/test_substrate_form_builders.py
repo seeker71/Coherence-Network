@@ -23,6 +23,7 @@ from app.services.substrate import (
     CaptureRef,
     Const,
     Literal,
+    MapBuild,
     NodeID,
     Opt,
     Sequence,
@@ -246,6 +247,76 @@ def test_template_evaluates_to_same_recipe_as_bootstrap(session):
     a = form_evaluate_text(session, "unless x then y else z")
     b = form_evaluate_text(session, "if !x then y else z")
     assert a.value == b.value
+
+
+# ---------------------------------------------------------------------------
+# MapBuild — walking lists, applying templates per item
+# ---------------------------------------------------------------------------
+
+
+def test_mapbuild_executes_over_dict_list():
+    """When items are dicts, each becomes the captures for the inner template."""
+    from app.services.substrate import form as ast_module
+    from app.services.substrate.form import MatchArm, Identifier
+
+    template = MapBuild(
+        items=CaptureRef("arms"),
+        each=Build("MatchArm", pattern=CaptureRef("pattern"), body=CaptureRef("body")),
+    )
+    captures = {
+        "arms": [
+            {"pattern": Identifier("a"), "body": Identifier("x")},
+            {"pattern": Identifier("b"), "body": Identifier("y")},
+        ],
+    }
+    result = execute_template(template, captures, ast_module)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert all(isinstance(arm, MatchArm) for arm in result)
+    assert result[0].pattern.name == "a"
+    assert result[0].body.name == "x"
+
+
+def test_mapbuild_executes_over_value_list_via_item_alias():
+    """When items are bare values, they're exposed as captures['__item__']."""
+    from app.services.substrate import form as ast_module
+    template = MapBuild(
+        items=CaptureRef("xs"),
+        each=Build("UnaryOp", op=Const("!"), operand=CaptureRef("__item__")),
+    )
+    from app.services.substrate.form import Identifier, UnaryOp
+    captures = {"xs": [Identifier("a"), Identifier("b")]}
+    result = execute_template(template, captures, ast_module)
+    assert all(isinstance(x, UnaryOp) for x in result)
+    assert result[0].operand.name == "a"
+
+
+def test_mapbuild_round_trip(session):
+    """A MapBuild template serializes and reconstructs."""
+    template = MapBuild(
+        items=CaptureRef("arms"),
+        each=Build("MatchArm", pattern=CaptureRef("pattern"), body=CaptureRef("body")),
+    )
+    rid = template_to_recipe(session, template)
+    rebuilt = recipe_to_template(session, rid)
+    assert isinstance(rebuilt, MapBuild)
+    assert isinstance(rebuilt.items, CaptureRef)
+    assert rebuilt.items.name == "arms"
+    assert isinstance(rebuilt.each, Build)
+    assert rebuilt.each.class_name == "MatchArm"
+
+
+def test_mapbuild_dedup_in_substrate(session):
+    """Two structurally-identical MapBuild templates share Recipe NodeIDs."""
+    a = template_to_recipe(session, MapBuild(
+        items=CaptureRef("xs"),
+        each=Build("UnaryOp", op=Const("!"), operand=CaptureRef("__item__")),
+    ))
+    b = template_to_recipe(session, MapBuild(
+        items=CaptureRef("xs"),
+        each=Build("UnaryOp", op=Const("!"), operand=CaptureRef("__item__")),
+    ))
+    assert a == b
 
 
 def test_load_keyword_from_substrate_uses_template_no_python(session):

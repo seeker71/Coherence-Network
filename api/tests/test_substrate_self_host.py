@@ -257,5 +257,37 @@ def test_self_host_keywords_count_matches_advertised(session):
     advertised = set(list_bootstrap_self_host_keywords())
     registered = set(bootstrap_self_host(session))
     assert advertised == registered
-    # And we have at least 8 keywords now (was 3)
-    assert len(advertised) >= 8
+    # And we have at least 9 keywords now (was 3, then 8, now adds match)
+    assert len(advertised) >= 9
+
+
+# ---------------------------------------------------------------------------
+# match self-hosted via MapBuild
+# ---------------------------------------------------------------------------
+
+
+def test_match_self_hosted_simple(session):
+    """`match scrutinee { pat => body }` — single arm."""
+    bootstrap_self_host(session)
+    src = "match x { 1 => a }"
+    bootstrap_path = form_evaluate_text(session, src)
+    self_host_path = form_evaluate_text(session, src, prefer_registered=True)
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_match_self_hosted_multiple_arms(session):
+    """`match` with multiple comma-separated arms."""
+    bootstrap_self_host(session)
+    src = 'match status { 1 => "ready", 2 => "blocked", 3 => "failed" }'
+    bootstrap_path = form_evaluate_text(session, src)
+    self_host_path = form_evaluate_text(session, src, prefer_registered=True)
+    assert bootstrap_path.value == self_host_path.value
+
+
+def test_match_in_complex_nested_self_hosted_expression(session):
+    """match composes with other self-hosted keywords."""
+    bootstrap_self_host(session)
+    src = 'do { let result = match x { 1 => "one", 2 => "two" }; result }'
+    bootstrap_path = form_evaluate_text(session, src)
+    self_host_path = form_evaluate_text(session, src, prefer_registered=True)
+    assert bootstrap_path.value == self_host_path.value

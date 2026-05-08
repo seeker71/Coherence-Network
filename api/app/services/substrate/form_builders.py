@@ -87,6 +87,33 @@ class Const:
     value: Any
 
 
+@dataclass
+class MapBuild:
+    """Walk a list and apply a template per item, producing a new list.
+
+    `items` is a template that resolves to a list (typically a
+    `CaptureRef` pointing at a `RepeatedCapture`'s result).
+
+    `each` is a template applied per item. If an item is a `dict`, its
+    keys become the captures for the inner execution; if an item is a
+    bare value, it's exposed as `captures["__item__"]`.
+
+    Used to wrap structured RepeatedCapture results — for example,
+    converting a list of `{pattern, body}` dicts into a list of
+    `MatchArm` AST instances:
+
+        MapBuild(
+            items=CaptureRef("arms"),
+            each=Build("MatchArm",
+                pattern=CaptureRef("pattern"),
+                body=CaptureRef("body"),
+            ),
+        )
+    """
+    items: Any
+    each: Any
+
+
 # ---------------------------------------------------------------------------
 # Interpreter — execute a template against captures
 # ---------------------------------------------------------------------------
@@ -123,6 +150,22 @@ def execute_template(template: Any, captures: Dict[str, Any], ast_module: Any) -
 
     if isinstance(template, Const):
         return template.value
+
+    if isinstance(template, MapBuild):
+        items = execute_template(template.items, captures, ast_module)
+        if not isinstance(items, list):
+            raise TypeError(
+                f"Form template: MapBuild items resolved to non-list "
+                f"({type(items).__name__})"
+            )
+        out = []
+        for item in items:
+            if isinstance(item, dict):
+                inner_captures = item
+            else:
+                inner_captures = {"__item__": item}
+            out.append(execute_template(template.each, inner_captures, ast_module))
+        return out
 
     # Bare value — treat as Const
     return template
@@ -250,13 +293,23 @@ def template_to_recipe(session: Session, template: Any):
             session, DOMAIN_RECIPE, _block_seq_id(), children,
         )
 
+    if isinstance(template, MapBuild):
+        # Encoding: Block.SEQUENCE [str("__map__"), items_recipe, each_recipe]
+        map_marker = _string_id("__map__")
+        items_id = template_to_recipe(session, _wrap_value(template.items))
+        each_id = template_to_recipe(session, _wrap_value(template.each))
+        return intern_node(
+            session, DOMAIN_RECIPE, _block_seq_id(),
+            [map_marker, items_id, each_id],
+        )
+
     # Bare value — wrap as Const
     return _const_to_recipe(template)
 
 
 def _wrap_value(value: Any) -> Any:
     """Wrap a bare Python value as a Const if it isn't already a template."""
-    if isinstance(value, (Build, CaptureRef, Const)):
+    if isinstance(value, (Build, CaptureRef, Const, MapBuild)):
         return value
     return Const(value)
 
@@ -338,9 +391,10 @@ def recipe_to_template(session: Session, recipe_id) -> Any:
                 return CaptureRef(name=name, default=default_value)
             return CaptureRef(name=name)
 
-    # Block.SEQUENCE shape — Build (kwargs encoded as Block.LET key/value pairs)
+    # Block.SEQUENCE shape — could be Build, MapBuild, or other markers
     if is_block_seq and len(children_ids) >= 2:
         first_str = _string_from_recipe(session, children_ids[0])
+
         if first_str == "__build__":
             class_name = _string_from_recipe(session, children_ids[1])
             kwargs: Dict[str, Any] = {}
@@ -362,12 +416,15 @@ def recipe_to_template(session: Session, recipe_id) -> Any:
                 kv_children = [_parse_node_id_str(p) for p in kvparts[1:]]
                 key_str = _string_from_recipe(session, kv_children[0])
                 value_template = recipe_to_template(session, kv_children[1])
-                # Unwrap Const(value) for simple kwarg passing? We keep
-                # templates as-is so execution can re-interpret.
                 kwargs[key_str] = value_template
             build = Build(class_name)
             build.kwargs = kwargs
             return build
+
+        if first_str == "__map__" and len(children_ids) == 3:
+            items = recipe_to_template(session, children_ids[1])
+            each = recipe_to_template(session, children_ids[2])
+            return MapBuild(items=items, each=each)
 
     raise ValueError(
         f"Form template: unrecognized shape at {recipe_id} "
