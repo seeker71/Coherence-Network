@@ -1,0 +1,113 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/influence-teaching-translator-20260508",
+  "commit_scope": "Add influence teaching translator shards that connect major formative works and presences to lesson atoms, frequency translations, desired network shape, trace refs, attribution recipients, and current organism influence CC.",
+  "files_owned": [
+    "docs/field/urs/trace/influence_teaching_translator.json",
+    "api/app/services/influence_teaching_translator_service.py",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/influence_teaching_translator.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-08_influence_teaching_translator.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 -m json.tool docs/field/urs/trace/influence_teaching_translator.json",
+      "python3 -m py_compile api/app/services/influence_teaching_translator_service.py api/app/routers/field_stories.py api/app/services/field_story_mcp_tools.py scripts/influence_teaching_translator.py",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc",
+      "python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 5 | jq '{policy_id, totals, rows: [.rows[] | {name,current_cc,frequency_translation,network_shape: .network_shape[0:2]}]}'",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+      "cd api && python3 -m ruff check app/services/influence_teaching_translator_service.py app/routers/field_stories.py app/services/field_story_mcp_tools.py tests/test_field_story_trace_index.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.influence_teaching_translator.json --fail-on-regression",
+      "git diff --check",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "JSON shape, py_compile, focused API/MCP test, CLI readback, related field story tests, ruff, maintainability audit, diff whitespace validation, direct runtime verifier, aggregate PR guard, and follow-through check pass. The first aggregate guard saw a runtime verifier miss; the direct verifier and guard rerun passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Humans and agents can now ask how major influences translate into lessons, frequencies, desired network shape, and attribution using API, MCP, CLI, or artifact reads without loading raw source bodies.",
+    "public_endpoints": [
+      "GET /api/field-stories/{slug}/influence-teaching-translator",
+      "MCP get_influence_teaching_translator",
+      "python3 scripts/influence_teaching_translator.py --slug urs-field-story"
+    ],
+    "test_flows": [
+      "Artifact flow registers trace-influence-teaching-translator in the field story manifest.",
+      "API flow returns Frontiers Saga, Spellmonger Universe, and Sword of Truth lesson/frequency/network-shape rows joined to current CC.",
+      "MCP flow exposes get_influence_teaching_translator through TOOL_MAP.",
+      "CLI flow returns the same policy id, row totals, current CC, and frequency translations."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local implementation validation and pre-commit gates are complete; push, PR CI, and public deploy validation remain."
+  },
+  "idea_ids": [
+    "influence-teaching-translator",
+    "organism-influence-cc"
+  ],
+  "spec_ids": [
+    "docs/field/urs/trace/README.md"
+  ],
+  "task_ids": [
+    "codex-thread-influence-teaching-translator-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "field-attunement"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/field/urs/trace/influence_teaching_translator.json",
+    "api/app/services/influence_teaching_translator_service.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/influence_teaching_translator.py"
+  ],
+  "change_files": [
+    "docs/field/urs/trace/influence_teaching_translator.json",
+    "api/app/services/influence_teaching_translator_service.py",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/influence_teaching_translator.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

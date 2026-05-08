@@ -245,6 +245,41 @@ def test_organism_influence_cc_computes_top_influencers_from_trace_and_agent_tim
     assert mcp_result["source_crypto_root"] == body["source_crypto_root"]
 
 
+def test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc():
+    artifact_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-influence-teaching-translator")
+    assert artifact_response.status_code == 200, artifact_response.text
+    artifact = json.loads(artifact_response.json()["content"])
+    assert artifact["schema_version"] == "influence-teaching-translator/v1"
+    assert len(artifact["rows"]) >= 10
+
+    response = client.get("/api/field-stories/urs-field-story/influence-teaching-translator?limit=5")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["schema_version"] == "influence-teaching-translator/v1"
+    assert body["source_crypto_root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert body["totals"]["joined_cc_rows"] >= 5
+
+    rows_by_name = {row["name"]: row for row in body["rows"]}
+    frontiers = rows_by_name["Frontiers Saga"]
+    assert frontiers["current_cc"] > 40
+    assert "distributed-resilience" in frontiers["frequency_translation"]
+    assert "lc-network" in frontiers["concept_ids"]
+    assert frontiers["trace_refs"][0].endswith("/Frontiers%20Saga")
+
+    spellmonger = rows_by_name["Spellmonger Universe"]
+    assert "living-infrastructure" in spellmonger["frequency_translation"]
+    assert "guild-like contribution paths" in spellmonger["network_shape"]
+    assert spellmonger["ledger_recipient_id"] == "work:spellmonger-universe"
+
+    goodkind = rows_by_name["Sword of Truth / Goodkind Universe"]
+    assert "truth-discernment" in goodkind["frequency_translation"]
+    assert "source-rooted receipts" in goodkind["network_shape"]
+
+    mcp_result = TOOL_MAP["get_influence_teaching_translator"]["handler"]({"slug": "urs-field-story", "limit": 3})
+    assert mcp_result["rows"][0]["name"] == "Frontiers Saga"
+    assert mcp_result["rows"][0]["current_cc"] > 40
+
+
 def test_field_story_view_attribution_records_compact_receipt_and_cc_flow():
     response = client.post(
         "/api/field-stories/urs-field-story/view-attribution",
