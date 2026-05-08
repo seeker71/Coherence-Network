@@ -26,6 +26,18 @@ class EdgeCreateRequest(BaseModel):
     created_by: str = "system"
 
 
+class EdgeUpdateRequest(BaseModel):
+    """Refresh an existing edge's strength and/or properties.
+
+    Used when re-running an ingest pass with sharper signals — e.g.
+    the watch-history clusterer re-applying duration-based strength
+    on top of edges originally created with count-based strength.
+    Properties merge into existing; strength replaces.
+    """
+    strength: float | None = Field(default=None, ge=0.0, le=1.0)
+    properties: dict[str, Any] | None = None
+
+
 # ── Type Registry ─────────────────────────────────────────────────────
 
 
@@ -116,6 +128,23 @@ async def create_edge(body: EdgeCreateRequest, strict: bool = False):
     result["canonical"] = is_canonical
     result["from_node"] = {"id": from_node["id"], "type": from_node["type"], "name": from_node["name"]}
     result["to_node"] = {"id": to_node["id"], "type": to_node["type"], "name": to_node["name"]}
+    return result
+
+
+@router.patch("/edges/{edge_id}", summary="Refresh an edge's strength and/or properties")
+async def update_edge(edge_id: str, body: EdgeUpdateRequest):
+    """Refresh an existing edge.
+
+    Strength replaces (when supplied); properties merge into existing.
+    Used by re-ingest passes that bring sharper signals than the
+    original create — e.g. the watch-history clusterer refreshing
+    inspired-by edges with duration-based strength on top of edges
+    originally created with count-based strength.
+    """
+    updates = body.model_dump(exclude_none=True)
+    result = graph_service.update_edge(edge_id, **updates)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Edge '{edge_id}' not found")
     return result
 
 

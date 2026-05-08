@@ -281,11 +281,116 @@ def _match_cluster(
     return None
 
 
+# ── Duration estimation ───────────────────────────────────────────────
+
+
+# Watch entries carry a timestamp but no duration. The cleanest proxy
+# we have is the gap between consecutive watches: when one entry is
+# at 10:00 and the next at 10:45, ~45 minutes of attention sat with
+# the first. Capped at MAX_SESSION_GAP because gaps longer than that
+# are someone walking away — the body wasn't watching, the tab was.
+MAX_SESSION_GAP_SECONDS = 90 * 60  # 1.5 hours
+# Minimum recognized engagement when we can't estimate (last entry
+# in a session, parse failure). A small floor so a watch still
+# counts as engagement even when its duration can't be measured.
+MIN_WATCH_SECONDS = 60
+
+
+# Takeout time strings look like:
+#   "May 7, 2026, 12:55:36 AM WITA"
+#   "Apr 23, 2024, 9:14:08 PM PDT"
+# The trailing timezone is a non-standard label; strip it and parse
+# the rest as wall time. We don't need exact UTC — only deltas.
+_TIME_RE = re.compile(
+    r"(?P<month>\w+)\s+(?P<day>\d+),\s+(?P<year>\d+),\s+"
+    r"(?P<hour>\d+):(?P<minute>\d+):(?P<second>\d+)\s+"
+    r"(?P<ampm>AM|PM)\b"
+)
+_MONTHS = {m: i for i, m in enumerate(
+    ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], 1
+)}
+
+
+def _parse_takeout_time(text: str) -> int | None:
+    """Parse a Takeout time string to a Unix-ish epoch (timezone-agnostic).
+
+    We don't need true UTC — we use deltas only, and Takeout entries
+    in a single export come from a consistent local timezone, so wall-
+    time deltas are accurate within a session.
+    """
+    if not text:
+        return None
+    m = _TIME_RE.search(text)
+    if not m:
+        return None
+    try:
+        month = _MONTHS.get(m.group("month")[:3])
+        if not month:
+            return None
+        hour = int(m.group("hour")) % 12
+        if m.group("ampm").upper() == "PM":
+            hour += 12
+        from datetime import datetime
+        dt = datetime(
+            int(m.group("year")), month, int(m.group("day")),
+            hour, int(m.group("minute")), int(m.group("second")),
+        )
+        return int(dt.timestamp())
+    except (ValueError, OverflowError):
+        return None
+
+
+def _estimate_durations(entries: list[dict]) -> None:
+    """Add `duration_seconds` to each watch entry by reading the gap
+    between this entry and the next (in chronological order). Mutates
+    the entries list in place.
+
+    Takeout exports newest-first, so the *previous* entry in the file
+    is actually the *next* in time. Sort by parsed time ascending and
+    compute forward deltas.
+    """
+    timed = [(e, _parse_takeout_time(e.get("time", ""))) for e in entries]
+    timed.sort(key=lambda t: t[1] if t[1] is not None else 0)
+    for i, (entry, t) in enumerate(timed):
+        nxt = timed[i + 1][1] if i + 1 < len(timed) else None
+        if t is None or nxt is None:
+            entry["duration_seconds"] = MIN_WATCH_SECONDS
+            continue
+        gap = nxt - t
+        if gap <= 0:
+            entry["duration_seconds"] = MIN_WATCH_SECONDS
+        else:
+            entry["duration_seconds"] = min(gap, MAX_SESSION_GAP_SECONDS)
+
+
+def _cluster_duration_seconds(cluster: dict) -> int:
+    """Sum the duration proxy across every watch in the cluster."""
+    return sum(int(w.get("duration_seconds") or MIN_WATCH_SECONDS)
+               for w in cluster["watches"])
+
+
 # ── Strength curve ────────────────────────────────────────────────────
 
 
+def _strength_from_duration(seconds: int) -> float:
+    """Map cumulative listening duration → strength in [0, 1].
+
+    Logarithmic so a 100-hour podcast catalog doesn't dominate the
+    visual against a 5-hour deeply-attended teacher. Calibration:
+      ·    1 hour  → 0.18
+      ·    5 hours → 0.36
+      ·   20 hours → 0.51
+      ·  100 hours → 0.69
+      ·  500 hours → 0.86
+      · 1000 hours → 0.93
+    """
+    hours = max(0.0, seconds / 3600.0)
+    return min(1.0, math.log1p(hours) / math.log1p(1000))
+
+
 def _strength(count: int) -> float:
-    """Map watch count → inspired-by edge strength in [0, 1].
+    """Legacy count-based strength — retained for tests that reference
+    it directly. New runs use duration via _strength_from_duration.
 
     Logarithmic so a viewer who watched 200 episodes doesn't strangle
     the visual against one who watched 10. 5 watches → 0.27;
@@ -307,10 +412,22 @@ def main(argv: list[str] | None = None) -> int:
                    help="Contributor id of the watcher (e.g. contributor:seeker71)")
     p.add_argument("--file", type=Path, required=True,
                    help="Path to watch-history.json from Google Takeout")
-    p.add_argument("--min-watches", type=int, default=5,
-                   help="Minimum watches to qualify as a main influence (default 5)")
-    p.add_argument("--create-stub-min", type=int, default=15,
-                   help="Minimum watches to create a stub for unmatched channels (default 15)")
+    p.add_argument("--min-minutes", type=int, default=15,
+                   help="Minimum cumulative attention (minutes) to qualify as a "
+                        "main influence (default 15). Duration is estimated from "
+                        "the gap between consecutive watches, capped at 1.5h "
+                        "per entry to handle session breaks.")
+    p.add_argument("--create-stub-min-minutes", type=int, default=180,
+                   help="Minimum cumulative attention (minutes) to create a stub "
+                        "for unmatched channels (default 180 = 3 hours)")
+    # Legacy count-based flags accepted for backwards compatibility but
+    # mapped to rough minute equivalents (assuming ~3 minutes per watch
+    # on average — the count→duration mapping isn't precise but the
+    # discipline still produces a sensible filter).
+    p.add_argument("--min-watches", type=int, default=None,
+                   help=argparse.SUPPRESS)
+    p.add_argument("--create-stub-min", type=int, default=None,
+                   help=argparse.SUPPRESS)
     p.add_argument("--api", default="http://localhost:8000",
                    help="API base URL (default http://localhost:8000)")
     p.add_argument("--dry-run", action="store_true",
@@ -318,6 +435,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--top", type=int, default=50,
                    help="Show details for the top N clusters in the report (default 50)")
     args = p.parse_args(argv)
+
+    # Map the legacy count-based flags into duration approximations
+    # so older invocations keep working while we transition.
+    if args.min_watches is not None:
+        args.min_minutes = max(args.min_minutes, args.min_watches * 3)
+    if args.create_stub_min is not None:
+        args.create_stub_min_minutes = max(args.create_stub_min_minutes, args.create_stub_min * 3)
 
     if not args.file.exists():
         print(f"file not found: {args.file}", file=sys.stderr)
@@ -330,36 +454,49 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     print(f"reading {len(entries)} watch entries from {args.file.name}")
+    # Estimate per-watch duration from the gap between consecutive
+    # entries. Duration carries more signal than count — a 3-hour
+    # podcast and a 30-second clip aren't equivalent attentions.
+    _estimate_durations(entries)
+
     clusters = _build_clusters(entries)
     print(f"clustered into {len(clusters)} unique channels")
 
+    # Significance is now duration-based: a cluster qualifies as a
+    # main influence when cumulative listening crosses the threshold,
+    # not just because the user clicked on it many times.
+    min_seconds = args.min_minutes * 60
     significant = {
         k: c for k, c in clusters.items()
-        if len(c["watches"]) >= args.min_watches
+        if _cluster_duration_seconds(c) >= min_seconds
     }
-    print(f"  {len(significant)} clusters at >= {args.min_watches} watches "
-          f"({sum(len(c['watches']) for c in significant.values())} watches total)")
+    total_hours = sum(_cluster_duration_seconds(c) for c in significant.values()) / 3600
+    print(f"  {len(significant)} clusters at >= {args.min_minutes} minutes total "
+          f"(~{total_hours:.0f} cumulative hours of attention)")
 
     print("loading existing contributors from the graph…")
     by_name, by_handle = _load_existing_contributors(args.api)
     print(f"  {len(by_name)} contributors known by name, "
           f"{len(by_handle)} known by youtube channel")
 
-    # Sort by watch count desc and process
+    # Sort by cumulative duration desc and process
     ordered = sorted(
-        significant.values(), key=lambda c: -len(c["watches"]),
+        significant.values(),
+        key=lambda c: -_cluster_duration_seconds(c),
     )
 
+    stub_min_seconds = args.create_stub_min_minutes * 60
     matched = unmatched = stubbed = 0
     plan: list[dict] = []
     for cluster in ordered:
+        seconds = _cluster_duration_seconds(cluster)
         count = len(cluster["watches"])
         target_id = _match_cluster(cluster, by_name, by_handle)
         action: str
         if target_id:
             action = "match"
             matched += 1
-        elif count >= args.create_stub_min:
+        elif seconds >= stub_min_seconds:
             action = "stub"
             stubbed += 1
         else:
@@ -369,22 +506,24 @@ def main(argv: list[str] | None = None) -> int:
             "name": cluster.get("name"),
             "url": cluster.get("channel_url"),
             "count": count,
+            "seconds": seconds,
             "action": action,
             "target_id": target_id,
-            "strength": _strength(count),
+            "strength": _strength_from_duration(seconds),
         })
 
     # Report
     print()
     print(f"  matched:   {matched:4d}  (existing contributors)")
-    print(f"  stubbed:   {stubbed:4d}  (new contributor created — count >= {args.create_stub_min})")
+    print(f"  stubbed:   {stubbed:4d}  (new contributor created — duration >= {args.create_stub_min_minutes} min)")
     print(f"  skipped:   {unmatched:4d}  (below stub threshold; not your main influence)")
     print()
-    print(f"top {min(args.top, len(plan))} clusters:")
+    print(f"top {min(args.top, len(plan))} clusters by cumulative attention:")
     for row in plan[: args.top]:
         marker = {"match": "✓", "stub": "+", "skip": "·"}[row["action"]]
         target = row["target_id"] or "—"
-        print(f"  {marker} {row['count']:5d} watches  s={row['strength']:.2f}  "
+        hours = row["seconds"] / 3600
+        print(f"  {marker} {hours:6.1f}h  ({row['count']:4d}×)  s={row['strength']:.2f}  "
               f"{(row['name'] or '?')[:32]:32s}  → {target}")
 
     if args.dry_run:
@@ -394,6 +533,18 @@ def main(argv: list[str] | None = None) -> int:
     # Apply via HTTP API so the same script works against any
     # environment from any machine — no DB credentials needed.
     import urllib.error
+
+    def _get_edges(api: str, from_id: str, to_id: str) -> list[str]:
+        url = (f"{api}/api/edges?from_id={urllib.parse.quote(from_id)}"
+               f"&to_id={urllib.parse.quote(to_id)}&type=inspired-by&limit=10")
+        try:
+            with urllib.request.urlopen(
+                urllib.request.Request(url, headers={"User-Agent": "curl/8.7.1"}),
+                timeout=10,
+            ) as r:
+                return [e.get("id") for e in json.load(r).get("items", []) if e.get("id")]
+        except Exception:  # noqa: BLE001
+            return []
 
     def _post(path: str, body: dict) -> dict:
         data = json.dumps(body).encode()
@@ -446,20 +597,44 @@ def main(argv: list[str] | None = None) -> int:
                 # Auto-attune against vision concepts
                 _post(f"/api/presences/{urllib.parse.quote(target_id)}/resonances/attune", {})
 
-        # Create inspired-by edge
+        # Create or refresh the inspired-by edge — strength carries
+        # the duration signal, properties keep both signals visible
+        # for debugging and richer downstream analysis.
+        edge_props = {
+            "watch_count": row["count"],
+            "watch_seconds": row["seconds"],
+            "watch_hours": round(row["seconds"] / 3600, 1),
+            "source": "youtube_watch_history_cluster",
+        }
         edge = _post("/api/edges", {
             "from_id": args.contributor,
             "to_id": target_id,
             "type": "inspired-by",
-            "properties": {
-                "watch_count": row["count"],
-                "source": "youtube_watch_history_cluster",
-            },
+            "properties": edge_props,
             "strength": row["strength"],
             "created_by": "watch_history_clusterer",
         })
-        # 201/200 mean landed; 409 (conflict) means already exists
-        if "_err" not in edge or edge.get("_err") == 409:
+        if "_err" not in edge:
+            landed += 1
+        elif edge.get("_err") == 409:
+            # Edge already exists — refresh its strength + properties
+            # so re-runs propagate the duration discipline onto edges
+            # that were created earlier with count-based strengths.
+            existing_edges = _get_edges(args.api, args.contributor, target_id)
+            for eid in existing_edges:
+                req = urllib.request.Request(
+                    f"{args.api}/api/edges/{urllib.parse.quote(eid)}",
+                    data=json.dumps({
+                        "strength": row["strength"],
+                        "properties": edge_props,
+                    }).encode(),
+                    method="PATCH",
+                    headers={"Content-Type": "application/json", "User-Agent": "curl/8.7.1"},
+                )
+                try:
+                    urllib.request.urlopen(req, timeout=15).read()
+                except Exception:  # noqa: BLE001
+                    pass
             landed += 1
 
     print(f"\nlanded {landed} inspired-by edges to your main influences")

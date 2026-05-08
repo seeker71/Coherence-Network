@@ -1058,16 +1058,17 @@ def _normalize_identity_name(name: str) -> str:
 
 
 def find_existing_identity_by_name(name: str, slug: str | None = None) -> dict[str, Any] | None:
-    """Look up an already-imported identity by name or slug.
+    """Recognize an existing identity by name or slug.
 
-    The canonical-URL dedupe in :func:`find_existing_identity` misses
-    when the same person resolves to a different URL than the existing
-    node carries — bare-name input, multiple personal URLs, Wikipedia
-    vs personal site. This name-fallback closes that gap.
+    Identity is carried by the being — the name. A single person
+    surfaces through many URLs (Wikipedia, personal site, YouTube,
+    podcast feed) and any one of them can vary across resolves; the
+    name is the more stable truth. This recognition runs *first* in
+    `ensure_identity`, with URL match as the corroborating second
+    pass.
 
     Match strategy:
-    1. Slug exact match (the human-readable doorway property — unique
-       per the URL canonicalization PR), then
+    1. Slug exact match (the human-readable doorway property), then
     2. Normalized name match — "Lex Fridman", "Lex Fridman Podcast",
        "Lex Fridman - Official" all collapse to "lex fridman".
 
@@ -1257,13 +1258,13 @@ def ensure_identity(resolved: ResolvedIdentity) -> tuple[dict[str, Any], bool, l
 
     Returns ``(identity_node, created, creations_out)``.
     """
-    existing = find_existing_identity(resolved.canonical_url)
+    # Identity is carried by the name — the being. URLs are surfaces
+    # that change (Wikipedia, personal site, YouTube channel, podcast
+    # feed) and any single one of them is one of many. Recognize the
+    # being first, then confirm or extend by URL.
+    existing = find_existing_identity_by_name(resolved.name)
     if not existing:
-        # Name-fallback: the same person can resolve to a different
-        # canonical URL (Wikipedia vs personal site, or a fresh
-        # bare-name resolve picking a different anchor). Match against
-        # the existing node's name + slug before minting a duplicate.
-        existing = find_existing_identity_by_name(resolved.name)
+        existing = find_existing_identity(resolved.canonical_url)
     if existing:
         identity_node = existing
         identity_id = existing["id"]
