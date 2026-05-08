@@ -213,6 +213,23 @@ export default async function ComeInPage() {
               </p>
             </Link>
 
+            <Link
+              href="/silence/built"
+              className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-emerald-300">
+                Meet the land draft
+              </p>
+              <p className="mt-2 text-base text-stone-100">
+                Walk straight into the Bali living compound proposal.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                This is the path for land stewards: the Brahmavihara sketch,
+                central council garden, corner nests, shared rooms, climate
+                care, and the next buildable packet.
+              </p>
+            </Link>
+
             <a
               href="https://api.coherencycoin.com/api/agent/invitation"
               className="rounded-lg border border-border/40 bg-card/30 hover:bg-card/50 p-5 transition-colors block"
@@ -857,6 +874,20 @@ export default async function ComeInPage() {
               </p>
               <p className="text-xs text-muted-foreground mt-2">
                 {t("comeIn.doorSilenceBody")}
+              </p>
+            </Link>
+            <Link
+              href="/silence/built"
+              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-emerald-300 mb-1">
+                {t("comeIn.doorBuiltEyebrow")}
+              </p>
+              <p className="text-base text-stone-100">
+                {t("comeIn.doorBuiltLabel")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {t("comeIn.doorBuiltBody")}
               </p>
             </Link>
             <Link
