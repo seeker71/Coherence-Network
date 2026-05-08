@@ -368,29 +368,42 @@ _KEYWORDS: Dict[str, tuple] = {}
 def register_form_keyword(
     name: str,
     pattern: Any,
-    builder: Callable[[Dict[str, Any]], Any],
+    builder: Optional[Callable[[Dict[str, Any]], Any]] = None,
     *,
+    template: Any = None,
+    ast_module: Any = None,
     session: Optional[Session] = None,
     builder_name: Optional[str] = None,
 ) -> None:
     """Register a user-defined Form keyword.
 
-    `name` is the trigger token (e.g. "unless"). When the parser hits an
-    IDENT with this value at the start of an expression, it consults this
-    registry before falling through to the bootstrap grammar.
+    Two builder forms are supported:
 
-    `pattern` is a RulePattern — a Sequence of Literals and Captures —
-    that defines the keyword's syntax.
+    1. `builder=<callable>` — Python function from captures to AST.
+       The substrate stores the builder *name* as a tag; the callable
+       must be re-registered after process restart via `register_builder`.
 
-    `builder` is a callable that receives a `captures` dict and returns
-    an AST node from `form.py`'s vocabulary (IfExpr, BinOp, etc.).
+    2. `template=<Build/CaptureRef/Const tree>` — substrate-resident
+       data. The template is serialized to a Recipe NodeID stored as the
+       rule's action. After process restart, the template is reconstructed
+       from the substrate; no Python re-registration needed. Pass
+       `ast_module` so the interpreter can resolve class names (defaults
+       to `app.services.substrate.form`).
 
-    If `session` is provided, the pattern is serialized to a Recipe
-    NodeID via `pattern_to_recipe` and stored as a Cell in the `grammar`
-    domain. The builder is referenced by `builder_name` (defaulting to
-    `name`); make sure to call `register_builder(builder_name, builder)`
-    so it can be recovered after process restart.
+    Either form can be combined with `session=` for substrate
+    persistence of the pattern.
     """
+    if builder is None and template is None:
+        raise ValueError("register_form_keyword: pass either builder= or template=")
+
+    if ast_module is None:
+        from app.services.substrate import form as _form_mod
+        ast_module = _form_mod
+
+    if template is not None:
+        from app.services.substrate.form_builders import make_builder_from_template
+        builder = make_builder_from_template(template, ast_module)
+
     _KEYWORDS[name] = (pattern, builder)
 
     bn = builder_name or name
@@ -399,22 +412,32 @@ def register_form_keyword(
     if session is not None:
         from app.services.substrate.grammar import register_form_rule
         pattern_recipe_id = pattern_to_recipe(session, pattern)
-        # The action recipe is a placeholder string-literal carrying the
-        # builder's name. A future builder-execution engine will replace
-        # this with a real Build template.
-        action_recipe_id = _string_recipe_id(bn)
+        if template is not None:
+            from app.services.substrate.form_builders import template_to_recipe
+            action_recipe_id = template_to_recipe(session, template)
+        else:
+            # The action recipe is a string-literal carrying the builder's
+            # name. After reload, the builder is recovered from the named
+            # registry via lookup_builder.
+            action_recipe_id = _string_recipe_id(bn)
         register_form_rule(session, name, pattern_recipe_id, action_recipe_id)
 
 
-def load_keyword_from_substrate(session: Session, name: str) -> Optional[tuple]:
+def load_keyword_from_substrate(
+    session: Session, name: str, *, ast_module: Any = None,
+) -> Optional[tuple]:
     """Reconstruct a keyword's (pattern, builder) from the substrate.
 
-    Looks up the rule cell, deserializes the pattern from its Recipe
-    NodeID, and binds it to the builder registered under the action's
-    builder-name tag. Returns None if either side is missing.
+    Lookup order for the builder:
+    1. The action recipe is a string-literal — try lookup_builder(string)
+       to find a Python callable that was re-registered at boot.
+    2. The action recipe is a Build template — reconstruct it via
+       recipe_to_template and wrap with make_builder_from_template.
+       This path needs no Python pre-registration. Pass `ast_module` to
+       resolve AST class names (defaults to substrate.form).
 
-    Side effect: also registers the keyword in the in-memory `_KEYWORDS`
-    so the parser will pick it up.
+    Side effect: registers the keyword in the in-memory `_KEYWORDS` so
+    the parser will pick it up.
     """
     from app.services.substrate.grammar import lookup_form_rule
 
@@ -426,9 +449,29 @@ def load_keyword_from_substrate(session: Session, name: str) -> Optional[tuple]:
     except (LookupError, ValueError):
         return None
 
-    # The action recipe carries the builder name as a string-literal
-    builder_name = _string_from_recipe(session, rule.action)
-    builder = lookup_builder(builder_name)
+    builder = None
+
+    # Path 1: action is a string-literal carrying the builder name
+    if rule.action.level == Level.TRIVIAL and rule.action.type_ == RType.STRING:
+        builder_name = _string_from_recipe(session, rule.action)
+        if builder_name:
+            builder = lookup_builder(builder_name)
+
+    # Path 2: action is a Build template — reconstruct
+    if builder is None:
+        try:
+            from app.services.substrate.form_builders import (
+                make_builder_from_template,
+                recipe_to_template,
+            )
+            template = recipe_to_template(session, rule.action)
+            if ast_module is None:
+                from app.services.substrate import form as _form_mod
+                ast_module = _form_mod
+            builder = make_builder_from_template(template, ast_module)
+        except (LookupError, ValueError, NameError):
+            return None
+
     if builder is None:
         return None
 

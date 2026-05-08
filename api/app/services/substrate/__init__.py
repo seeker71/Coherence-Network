@@ -55,6 +55,15 @@ from app.services.substrate.grammar import (
     lookup_form_rule,
     register_form_rule,
 )
+from app.services.substrate.form_builders import (
+    Build,
+    CaptureRef,
+    Const,
+    execute_template,
+    make_builder_from_template,
+    recipe_to_template,
+    template_to_recipe,
+)
 from app.services.substrate.form_rules import (
     Capture,
     Literal,
@@ -162,4 +171,12 @@ __all__ = [
     "register_builder",
     "register_form_keyword",
     "unregister_form_keyword",
+    # Substrate-resident builders (Build/CaptureRef/Const template DSL)
+    "Build",
+    "CaptureRef",
+    "Const",
+    "execute_template",
+    "make_builder_from_template",
+    "recipe_to_template",
+    "template_to_recipe",
 ]

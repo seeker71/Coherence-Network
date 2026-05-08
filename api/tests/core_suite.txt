@@ -42,6 +42,7 @@ tests/test_source_artifact_sensing_graph.py
 tests/test_stale_task_reaper.py
 tests/test_substrate.py
 tests/test_substrate_form.py
+tests/test_substrate_form_builders.py
 tests/test_substrate_form_rules.py
 tests/test_substrate_grammar.py
 tests/test_task_dedup_service.py

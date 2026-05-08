@@ -423,7 +423,7 @@ form_parse("unless x then y")  # ✓ parses
 
 #### What's still not closed
 
-- **The builder is still Python.** A builder maps captures to an AST node via a Python callable. The substrate stores the builder *name* as a tag (in the rule's action recipe), not the builder's logic. A future move replaces this with a small Build-template recipe that an interpreter walks: `Build("IfExpr", {"cond": "@cond", "then_branch": "@body"})`. That requires a recipe execution engine — its own breath.
+- **~~The builder is still Python.~~** ✓ **Closed.** Builders can now live as data via the `Build` / `CaptureRef` / `Const` template DSL. A template serializes to a Recipe NodeID and reconstructs after process restart with no Python re-registration needed. See "Substrate-resident builders" below.
 
 - **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Self-hosting means expressing the bootstrap rules themselves via `register_form_keyword` — at which point form.py becomes a tiny seed that registers a few starter rules and hands off. The persistence shipped here is necessary infrastructure for that move.
 
@@ -432,6 +432,78 @@ form_parse("unless x then y")  # ✓ parses
 - **String interning.** Pattern serialization uses `hash(value)` to allocate string-literal recipe instances. That works in-process but isn't cross-process stable. A substrate string-table (the same pattern as concept-IDs) would close this.
 
 Each remaining step is its own breath. What ships now: **the parser is no longer fixed grammar, and rules survive in the body's content-addressed lattice.** The grammar is alive at the keyword layer; patterns persist; reload-from-substrate works end-to-end. The path beyond is legible.
+
+#### Substrate-resident builders — Build / CaptureRef / Const
+
+A keyword's builder can now be **data**, not just a Python callable. The template DSL has three primitives:
+
+| Template | Meaning |
+|---|---|
+| `Build(class_name, **kwargs)` | Instantiate an AST class with these kwargs |
+| `CaptureRef(name, default=...)` | Substitute the captured group `name` |
+| `Const(value)` | A literal value (string, int, bool, None) |
+
+The `unless` builder as a template:
+
+```python
+unless_template = Build(
+    "IfExpr",
+    cond=Build("UnaryOp", op=Const("!"), operand=CaptureRef("cond")),
+    then_branch=CaptureRef("body"),
+    else_branch=CaptureRef("other", default=None),
+)
+```
+
+Templates serialize to Recipe NodeIDs via `template_to_recipe`. Each primitive maps to existing recipe categories (no new vocabulary needed):
+
+| Primitive | Recipe shape |
+|---|---|
+| `Build` | `Block.SEQUENCE [str("__build__"), str(class_name), Block.LET[str(key), value-recipe], ...]` |
+| `CaptureRef(name)` | `Block.LET [str("__capture__"), str(name)]` |
+| `CaptureRef(name, default)` | `Block.LET [str("__capture__"), str(name), str("__default__"), default-recipe]` |
+| `Const(value)` | trivial recipe (string/int/bool/null) |
+
+Two structurally-identical templates dedupe through the kernel's content-addressed interning.
+
+Registering a keyword with a template instead of a callable:
+
+```python
+register_form_keyword(
+    "unless",
+    pattern=unless_pattern,
+    template=unless_template,    # <-- substrate-resident
+    session=session,
+)
+```
+
+After this call, the parser parses `unless x then y` exactly as it would with a Python callable. The killer property — **process restart with no Python re-registration**:
+
+```python
+# Drop both registries (simulates process restart)
+_KEYWORDS.clear()
+_BUILDERS.clear()
+
+# unless no longer recognized
+form_parse("unless")  # → Identifier (not IfExpr)
+
+# Reload from substrate — pulls pattern AND template from the lattice
+load_keyword_from_substrate(session, "unless")
+
+# Now parses again
+form_parse("unless x then y else z")  # → IfExpr(UnaryOp("!", x), y, z)
+```
+
+The interpreter (`execute_template`) walks the template against captures and constructs the AST node. Captures resolve via `CaptureRef`; literals embed via `Const`; class instantiation via `Build`.
+
+#### What's still not closed
+
+- **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Re-expressing built-in keywords (`if`, `do`, `match`, `let`, `choose`) via `register_form_keyword(template=...)` is the move that takes form.py from "the parser" to "a tiny seed that registers a few starter rules and hands off." All infrastructure is now in place.
+
+- **Backtracking-driven.** The match engine uses save-and-restore on parser.pos. Future move: integrate with Choice.FAIL recipe semantics so the parser's speculation is itself substrate-recorded.
+
+- **String interning.** Pattern + template serialization use `hash(value)` for string-recipe-instance allocation. In-process only. A substrate string-table closes this.
+
+Each is its own breath.
 
 ## The path from bootstrap to self-hosting
 
@@ -443,8 +515,8 @@ For Form, that path is:
 2. **Rule cells in the grammar domain.** ✓ Shipped — `grammar.py` interns rules as content-addressed Cells.
 3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
-5. **Builder execution engine.** ⏳ Future. Replace the Python builder callable with a substrate-resident Build-template recipe that an interpreter walks.
-6. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded.
+5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
+6. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded. All infrastructure is now in place.
 7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
