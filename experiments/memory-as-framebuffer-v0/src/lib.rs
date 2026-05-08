@@ -199,6 +199,34 @@ impl<T: TrackedPrimitive> Tracked<T> {
         }
     }
 
+    /// Allocate at a specific cell index (rather than next-free-slot). Use
+    /// this when an example wants a 2D grid layout: pass `gy * GRID + gx` to
+    /// place at grid position (gx, gy). Panics if the slot is already used.
+    #[track_caller]
+    pub fn new_at(idx: usize, value: T) -> Self {
+        let caller = std::panic::Location::caller();
+        let prov = crc32fast::hash(format!("{}:{}", caller.file(), caller.line()).as_bytes());
+
+        let fb = framebuffer();
+        let handle = {
+            let mut data = fb.data.lock().unwrap();
+            let h = data.alloc_at(idx, T::TAG);
+            let mut payload = [0u8; 14];
+            value.write_payload(&mut payload);
+            data.write_payload(h, &payload);
+            h
+        };
+        {
+            let mut prov_plane = fb.provenance.lock().unwrap();
+            prov_plane[handle.index() as usize] = prov;
+        }
+
+        Tracked {
+            handle,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
     pub fn handle(&self) -> CellHandle {
         self.handle
     }

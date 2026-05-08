@@ -5,17 +5,29 @@
 //! shimmer because each branch (plain/fizz/buzz/fizzbuzz) writes from
 //! a different file:line.
 
-use mfb::{init_framebuffer, shutdown_framebuffer, track, Tracked};
+use mfb::{init_framebuffer, shutdown_framebuffer, track, Tracked, GRID};
 
 const HISTORY: usize = 99;
 const TOTAL: u32 = 10_000;
 
+/// Map sequence position 0..=99 to a 10x10 grid layout in the top-left
+/// of the framebuffer. The auto-viewport then renders that 10x10 region
+/// nearly full-screen, instead of a 100-wide × 1-tall horizontal sliver.
+fn grid_idx(seq: usize) -> usize {
+    let gx = seq % 10;
+    let gy = seq / 10;
+    gy * GRID + gx
+}
+
 fn main() {
     init_framebuffer("fizzbuzz.mp4").expect("init framebuffer");
 
-    // Cell 0: current i. Cells 1..=99: rolling history.
-    let mut current: Tracked<u32> = Tracked::new(0u32);
-    let mut history: Vec<Tracked<u32>> = (0..HISTORY).map(|_| Tracked::new(0u32)).collect();
+    // Cell at (0, 0): current i.
+    // Cells at (1..=9, 0) and (0..=9, 1..=9): rolling history (99 cells).
+    let mut current: Tracked<u32> = Tracked::new_at(grid_idx(0), 0u32);
+    let mut history: Vec<Tracked<u32>> = (0..HISTORY)
+        .map(|i| Tracked::new_at(grid_idx(i + 1), 0u32))
+        .collect();
 
     for n in 1..=TOTAL {
         // 1. write current i.
