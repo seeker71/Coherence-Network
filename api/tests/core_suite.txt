@@ -43,6 +43,7 @@ tests/test_stale_task_reaper.py
 tests/test_substrate.py
 tests/test_substrate_form.py
 tests/test_substrate_form_builders.py
+tests/test_substrate_form_eval.py
 tests/test_substrate_form_operators.py
 tests/test_substrate_form_rules.py
 tests/test_substrate_grammar.py

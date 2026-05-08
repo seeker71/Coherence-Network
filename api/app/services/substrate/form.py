@@ -793,20 +793,21 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
     if isinstance(ast, BinOp):
         l = _to_recipe_node_id(session, ast.left)
         r = _to_recipe_node_id(session, ast.right)
-        if ast.op in ("+", "-", "*", "/", "%"):
-            return _intern_recipe(session, _math_id(ast.op), [l, r])
-        if ast.op in ("==", "!=", "<", "<=", ">", ">="):
-            return _intern_recipe(session, _compare_id(ast.op), [l, r])
-        if ast.op in ("&&", "||"):
-            return _intern_recipe(session, _logic_id(ast.op), [l, r])
-        raise SyntaxError(f"Form: unknown binary op {ast.op}")
+        # Data-driven: look up the op→category mapping from the registry.
+        # Built-ins are pre-registered to match the previous hardcoded
+        # behavior; custom operators can register their own categories.
+        from app.services.substrate.form_eval import lookup_eval_category
+        category = lookup_eval_category(ast.op, "binary")
+        if category is not None:
+            return _intern_recipe(session, category, [l, r])
+        raise SyntaxError(f"Form: unknown binary op {ast.op!r} (no eval mapping)")
     if isinstance(ast, UnaryOp):
         operand = _to_recipe_node_id(session, ast.operand)
-        if ast.op == "-":
-            return _intern_recipe(session, _math_id("neg"), [operand])
-        if ast.op == "!":
-            return _intern_recipe(session, _logic_id("!"), [operand])
-        raise SyntaxError(f"Form: unknown unary op {ast.op}")
+        from app.services.substrate.form_eval import lookup_eval_category
+        category = lookup_eval_category(ast.op, "unary")
+        if category is not None:
+            return _intern_recipe(session, category, [operand])
+        raise SyntaxError(f"Form: unknown unary op {ast.op!r} (no eval mapping)")
     if isinstance(ast, IfExpr):
         cond = _to_recipe_node_id(session, ast.cond)
         then_id = _to_recipe_node_id(session, ast.then_branch)

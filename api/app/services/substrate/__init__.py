@@ -65,6 +65,12 @@ from app.services.substrate.form_builders import (
     recipe_to_template,
     template_to_recipe,
 )
+from app.services.substrate.form_eval import (
+    list_eval_mappings,
+    lookup_eval_category,
+    register_eval,
+    reset_eval_registry,
+)
 from app.services.substrate.form_operators import (
     OperatorRule,
     list_operators,
@@ -217,4 +223,9 @@ __all__ = [
     "register_operator",
     "reset_operator_registry",
     "unregister_operator",
+    # Eval-category registry (data-driven evaluator)
+    "list_eval_mappings",
+    "lookup_eval_category",
+    "register_eval",
+    "reset_eval_registry",
 ]

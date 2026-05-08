@@ -565,9 +565,27 @@ register_operator(
 
 `bootstrap_self_host_operators(session)` registers all 13 built-in operators (binary + unary). Combined with `bootstrap_self_host(session)` for keywords, the entire structured grammar of Form lives as substrate data. Verified end-to-end: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registered rules.
 
-**What's NOT yet substrate-resident:**
+**Data-driven evaluator** ✓ Closed:
 
-The evaluator's hardcoded BinOp symbol-table — when registering a custom operator with a non-standard symbol (like `%%`), the parser produces a valid AST but the recipe-evaluator throws `SyntaxError: unknown binary op`. Closing this requires a data-driven evaluator that reads operator definitions from the substrate. Future breath.
+`form_eval.py` introduces a registry that maps operator symbols to recipe categories. Built-ins are pre-registered with the same categories the hardcoded switch used; the result is byte-identical for all existing tests. Custom operators can register their own mappings:
+
+```python
+from app.services.substrate import register_eval, register_operator
+from app.services.substrate.kernel import NodeID
+
+# Register a runtime operator with a non-standard symbol
+register_operator("%%", "PERCENT", 5, arity="binary",
+                   template=Build("BinOp", op=Const("%%"), ...))
+
+# And tell the evaluator how to intern it
+register_eval("%%", NodeID(1, Level.BASIC, RBasic.MATH, RMath.MODULO),
+              arity="binary")
+
+# Now `2 % 3` parses with the new operator AND interns successfully
+form_evaluate_text(session, "2 % 3", prefer_registered=True)
+```
+
+The evaluator (`_to_recipe_node_id` in form.py) no longer has a hardcoded `op → category` switch. It does a single dictionary lookup. The hardcoded set is now just the *default registrations* loaded at module init.
 
 #### What's still not closed
 
