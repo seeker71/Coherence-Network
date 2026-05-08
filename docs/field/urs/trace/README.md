@@ -13,6 +13,7 @@ Compact derived indexes for answering influence questions without loading raw li
 - `audible_history_spectrum.json` - Audible-specific source-body trace with duration-weighted monthly influence.
 - `audible_duration_metadata.json` - compact Audible catalog runtime metadata used to weight Audible influence by listening duration or book length.
 - `youtube_podcast_spectrum.json` - YouTube podcast-shaped influence wave, weighted by direct video duration where available and marked episode-length estimates where Takeout has no duration.
+- `source_crypto_trace.json` - compact SHA-256 and Merkle-root manifest for source bodies, normalized events, and repo-served trace artifacts.
 - `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow
@@ -67,6 +68,18 @@ The wave arrays use:
 - Significant work slice: `/api/field-stories/urs-field-story/trace/significant-work/Spellmonger`
 - Concept slice: `/api/field-stories/urs-field-story/trace/concept/lc-network`
 - MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
+- Crypto trace artifact: `/api/field-stories/urs-field-story/artifacts/trace-source-crypto`
+
+## Crypto Trace
+
+`source_crypto_trace.json` keeps the trace alive without loading bulky source bodies. It publishes:
+
+- SHA-256 hashes for local source bodies such as Google Takeout, Audible exports, browser traces, and archives.
+- SHA-256 hashes for repo-served derived artifacts.
+- A Merkle root over canonicalized rows in `output/ten_year_events.jsonl`.
+- A combined trace root over source-body, normalized-event, and repo-artifact roots.
+
+The current precision proves the source bodies and derived artifacts as a whole. The next precision step is to add `source_body_id` and `event_hash` directly during ingestion so every API slice can return exact row-to-source proof without recomputation.
 
 ## Chapter Discovery Boundary
 
@@ -94,6 +107,7 @@ Then search only the Spellmonger chapter notes/text for the `lc-network` probe t
 python3 docs/field/urs/tools/build_trace_indexes.py \
   --input docs/field/urs/output/ten_year_events.jsonl \
   --output-dir docs/field/urs/trace
+python3 docs/field/urs/tools/source_crypto_trace.py
 ```
 
 Raw Google Takeout archives, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.

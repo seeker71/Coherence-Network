@@ -178,6 +178,26 @@ def test_digital_influence_inventory_registers_full_history_attention():
     assert trace["publication_boundary"].startswith("This compact artifact publishes")
 
 
+def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
+    story = field_story_service.get_field_story("urs-field-story", include_story=False)
+    artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
+
+    assert "trace-source-crypto" in artifact_ids
+    assert "source-crypto-trace-builder" in artifact_ids
+
+    response = client.get("/api/field-stories/urs-field-story/artifacts/trace-source-crypto")
+    assert response.status_code == 200, response.text
+    trace = json.loads(response.json()["content"])
+    assert trace["schema_version"] == "field-source-crypto-trace/v1"
+    assert trace["hash_algorithm"] == "sha256"
+    assert trace["normalized_event_trace"]["line_count"] == 69082
+    assert trace["normalized_event_trace"]["event_merkle_root"]
+    assert trace["roots"]["combined_trace_root"]
+    assert len(trace["source_bodies"]) >= 10
+    assert trace["dynamic_access"]["mcp_tool"] == "get_field_story_trace"
+    assert trace["truth_boundary"]["next_precision"].startswith("For exact row-to-source-body proofs")
+
+
 def test_audible_history_spectrum_registers_captured_history_waves():
     story = field_story_service.get_field_story("urs-field-story", include_story=False)
     artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}

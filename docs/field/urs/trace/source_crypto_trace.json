@@ -1,0 +1,524 @@
+{
+  "dynamic_access": {
+    "artifact_api": "/api/field-stories/urs-field-story/artifacts/trace-source-crypto",
+    "author_trace_api": "/api/field-stories/urs-field-story/trace/author/{name_or_id}",
+    "mcp_tool": "get_field_story_trace",
+    "month_trace_api": "/api/field-stories/urs-field-story/trace/month/{YYYY-MM}",
+    "work_trace_api": "/api/field-stories/urs-field-story/trace/work/{work_id}"
+  },
+  "generated_at": "2026-05-08T03:49:14.915862+00:00",
+  "hash_algorithm": "sha256",
+  "normalized_event_trace": {
+    "event_leaf_hash_algorithm": "sha256('event:' + canonical_json(row))",
+    "event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
+    "evidence_level_counts": {
+      "audible-library": 233,
+      "audible-listen-history": 50,
+      "audible-purchase-history": 198,
+      "authenticated-myactivity-visible-feed": 483,
+      "google-takeout-full-youtube-history": 67938,
+      "local-browser-history": 165,
+      "manual-anchor": 15
+    },
+    "file_sha256": "9c2cbe98b9403fd9906535c442fdead2900904b9087643472164c52006b46c08",
+    "first_event_hash": "e391ba8a6c21ce9e1175ca5b70adc4969afa0bec01d1bc6e55c078b0fc90220c",
+    "last_event_hash": "24d52186273fefb47f39a109952f5ce64ca7d7b340fa83c12b35b0f9b43ad320",
+    "line_count": 69082,
+    "path": "docs/field/urs/output/ten_year_events.jsonl",
+    "source_counts": {
+      "audible-browser": 60,
+      "audible-library": 233,
+      "audible-listen-history": 50,
+      "audible-purchase-history": 198,
+      "manual-anchor": 15,
+      "youtube-browser": 77,
+      "youtube-music-browser": 28,
+      "youtube-music-myactivity": 120,
+      "youtube-myactivity": 363,
+      "youtube-search-takeout": 2218,
+      "youtube-takeout": 65720
+    }
+  },
+  "publication_boundary": "This is a compact cryptographic trace. It publishes hashes, sizes, source classes, and Merkle roots; bulky raw source bodies remain outside the repo unless deliberately promoted.",
+  "repo_artifacts": [
+    {
+      "artifact_relpath": "output/ten_year_events.jsonl",
+      "content_type": "application/octet-stream",
+      "path": "docs/field/urs/output/ten_year_events.jsonl",
+      "sha256": "9c2cbe98b9403fd9906535c442fdead2900904b9087643472164c52006b46c08",
+      "size_bytes": 29423066
+    },
+    {
+      "artifact_relpath": "trace/manifest.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/trace/manifest.json",
+      "sha256": "5e21067d2fc59f63271251a0bfd7dedd74b778144cf0df065deef944fcca2011",
+      "size_bytes": 1260
+    },
+    {
+      "artifact_relpath": "trace/monthly_spectrum.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/trace/monthly_spectrum.json",
+      "sha256": "3b9c1678e992d4ef4b67e6fd164782b3a193236bfc2b867ecb3777045038737c",
+      "size_bytes": 533446
+    },
+    {
+      "artifact_relpath": "trace/author_index.jsonl",
+      "content_type": "application/octet-stream",
+      "path": "docs/field/urs/trace/author_index.jsonl",
+      "sha256": "57958ac6db5f58e4c61acc397b48005d436d0d31024dcd2a42b22e6673f50d61",
+      "size_bytes": 2289945
+    },
+    {
+      "artifact_relpath": "trace/work_index.jsonl",
+      "content_type": "application/octet-stream",
+      "path": "docs/field/urs/trace/work_index.jsonl",
+      "sha256": "a2162621cd756cd7803b9407f2ced43e3322ba251c8df948b8fcb343168af2f2",
+      "size_bytes": 2700110
+    },
+    {
+      "artifact_relpath": "trace/significant_work_index.jsonl",
+      "content_type": "application/octet-stream",
+      "path": "docs/field/urs/trace/significant_work_index.jsonl",
+      "sha256": "0b0687a108646b615849a99131182f35a7e47abd2c8d42dfb2134456e9c17240",
+      "size_bytes": 62030
+    },
+    {
+      "artifact_relpath": "trace/concept_work_map.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/trace/concept_work_map.json",
+      "sha256": "9947c48baf1b3a731b7aff0193debcccbf48d38472ec7e7d1b88189b9db67ac5",
+      "size_bytes": 28660
+    },
+    {
+      "artifact_relpath": "trace/youtube_podcast_spectrum.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/trace/youtube_podcast_spectrum.json",
+      "sha256": "2977f03e16a2cce4d38c35c37ceae49cb5ad6234c8681b89ffb8f1a71b3e6a1f",
+      "size_bytes": 2260143
+    },
+    {
+      "artifact_relpath": "trace/digital_influence_inventory.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/trace/digital_influence_inventory.json",
+      "sha256": "6a594a7b4e5de15af27e8856438e145c714366adb9f6e0493ac1e8602908b0c8",
+      "size_bytes": 104002
+    },
+    {
+      "artifact_relpath": "output/chronological_story_with_frequency.md",
+      "content_type": "text/markdown",
+      "path": "docs/field/urs/output/chronological_story_with_frequency.md",
+      "sha256": "8adcfb7d06b9ee3f09be926561aa11f74c508f08c224f42fb71b7154ae854a9e",
+      "size_bytes": 40115
+    }
+  ],
+  "roots": {
+    "combined_trace_root": "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7",
+    "normalized_event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
+    "repo_artifact_merkle_root": "19dca4a0c0ef5c2a4ce4659927ce15cf82fe450e58e6fb48582ae6c16c5e048e",
+    "source_body_merkle_root": "f913a1e53db49ad868bb49def9e78108a1146a2e5d23368b9c3ce6addcafbe3e"
+  },
+  "schema_version": "field-source-crypto-trace/v1",
+  "source_bodies": [
+    {
+      "content_type": "application/zip",
+      "id": "source:youtube-takeout:takeout-20260506t165642z-3-001.zip:6dbd39e21bba",
+      "label": "youtube-takeout",
+      "modified_at": "2026-05-06T17:48:31.874941+00:00",
+      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/takeout-20260506T165642Z-3-001.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/history/search-history.html",
+        "Takeout/YouTube and YouTube Music/history/watch-history.html"
+      ],
+      "sha256": "6dbd39e21bbac1a0e9dd6ac5b464edf93b638761391c894c151876c9561a5f5c",
+      "size_bytes": 4081111,
+      "zip_entries": 2
+    },
+    {
+      "content_type": "application/json",
+      "id": "source:youtube-takeout:myactivity-playwright-raw.json:386abad259da",
+      "label": "youtube-takeout",
+      "modified_at": "2026-05-06T02:28:11.828689+00:00",
+      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/myactivity-playwright-raw.json",
+      "path_class": "local_source_body",
+      "sha256": "386abad259da1698a41c58524fc07ee51b67d00e06d36345e2e6b3dd1366f1b4",
+      "size_bytes": 230776
+    },
+    {
+      "content_type": "application/json",
+      "id": "source:youtube-takeout:youtube-all-myactivity-raw.json:9fd50ede11b4",
+      "label": "youtube-takeout",
+      "modified_at": "2026-05-08T03:12:21.785095+00:00",
+      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/youtube-all-myactivity-raw.json",
+      "path_class": "local_source_body",
+      "sha256": "9fd50ede11b4faa450dc5814da89673cf6225db85a3f977c6327da4516058b57",
+      "size_bytes": 22290450
+    },
+    {
+      "content_type": "application/octet-stream",
+      "id": "source:browser-trace:local_browser_events.jsonl:90ec076f4853",
+      "label": "browser-trace",
+      "modified_at": "2026-05-06T02:21:23.685980+00:00",
+      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl",
+      "path_class": "local_source_body",
+      "sha256": "90ec076f4853fbbcc6aad5c6a139d2323ffcafaf1a3761e3a991177ee68d1ab6",
+      "size_bytes": 97209
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-001.zip:1a564cbf1495",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-06T18:19:20.579533+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-001.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/live chats/live chats.csv",
+        "Takeout/YouTube and YouTube Music/video metadata/video recordings.csv",
+        "Takeout/YouTube and YouTube Music/comments/comments.csv",
+        "Takeout/YouTube and YouTube Music/channels/channel page settings.csv",
+        "Takeout/YouTube and YouTube Music/channels/channel.csv",
+        "Takeout/YouTube and YouTube Music/subscriptions/subscriptions.csv",
+        "Takeout/YouTube and YouTube Music/channels/channel URL configs.csv",
+        "Takeout/YouTube and YouTube Music/video metadata/videos.csv"
+      ],
+      "sha256": "1a564cbf1495b7e3b9136574786a57a6c98277026210e11de728ebf459a634de",
+      "size_bytes": 2147566387,
+      "zip_entries": 590
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-002.zip:1a26a76407f7",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:20.458544+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-002.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Follow Me Home.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/I Don_t Wanna Live Without Your Love.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Girls.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Deer Hunter.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Stripper.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Ain_t No Sunshine.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Live to Tell.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Did You Ever Have To Make Up Your Mind.mp3"
+      ],
+      "sha256": "1a26a76407f78e0e7f7b0409a3777995f8623b13059d111c129cfbed5e7aa393",
+      "size_bytes": 2147549537,
+      "zip_entries": 466
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-003.zip:9c93a1839f91",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-06T18:13:09.609358+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-003.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Caught With Your Pants Down.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Its My Life.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Levon.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Bonnie Bessie Logan.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/You Baby.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Bill Cosby Goes To A Football Game.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Dice Talks to The Salesmen.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/When Love Comes To Town.mp3"
+      ],
+      "sha256": "9c93a1839f9115c9c483c32abedb9197d17f5c4e9afb731325845920195eaddc",
+      "size_bytes": 2147547051,
+      "zip_entries": 461
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-004.zip:4fed99442401",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-06T18:13:12.766740+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-004.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Sheila.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Hello(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Oney.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/One Way or Another.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Bait.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/How Deep Is Your Love(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Coffee.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Junior_s Farm.mp3"
+      ],
+      "sha256": "4fed994424018ebabd02afeb596d2c7ab904727ace4e16185a62e51580acdf6a",
+      "size_bytes": 2147546358,
+      "zip_entries": 442
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-005.zip:18616602c64c",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:31.989212+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-005.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Last Dance.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/I Know.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Eat You Alive.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/In The Evening(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Master Of Puppets.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Baby Don_t Forget My Number.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Fishing Song.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Only Women Bleed.mp3"
+      ],
+      "sha256": "18616602c64c96434c2e6fb149c073dd750f3a9b2719d5215a6062c697a64d54",
+      "size_bytes": 2147555272,
+      "zip_entries": 447
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-006.zip:0bb3ab581cd0",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:09:24.258587+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-006.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/(They Long To Be) Close To You.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Fast Car.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Addicted To Spuds.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Zydeco Honky Tonk.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Mistress For Christmas.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Life_s Been Good(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Orientation.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Mixed Emotions.mp3"
+      ],
+      "sha256": "0bb3ab581cd0c2b65b9a8396166a7780aec1647c12a54b3cc570f4f10dc32c76",
+      "size_bytes": 2147526192,
+      "zip_entries": 214
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-007.zip:bae800618331",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:46.884798+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-007.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Horse with no name.mp4",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Doggy Dogg World.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/No More No More.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Father Figure(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/I_m Your Baby Tonight(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Dream On.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Bergen.....mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Philosophical Bullshit.mp3"
+      ],
+      "sha256": "bae800618331a5ab97015b7f6d28993a4c00b7ffc1c931699e1cb385e3c19e60",
+      "size_bytes": 2147516173,
+      "zip_entries": 228
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-008.zip:d97843986dd1",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:53.665862+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-008.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Apologize.mp4",
+        "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Have You Ever Seen The Rain_.mp4",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Flying High.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Stone Free.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Marie Marie.mp3",
+        "Takeout/YouTube and YouTube Music/videos/Congrats Katrin and Thomas from Alex and Maija.mp4",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Snakeskin Cowboys.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Unforgiven.mp3"
+      ],
+      "sha256": "d97843986dd18047b4ea0ea507363ae31deeec36e0ff51c7cc4f8bc142bbfda3",
+      "size_bytes": 2147456937,
+      "zip_entries": 85
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-009.zip:ab1cdcb9164e",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:55.786683+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-009.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Baby I love you.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Messages.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/One More Try.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/We_ve Got Tonite.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Remember The Time.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Long Train Runnin_.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/The Spanish Archer.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Treat Me Right.mp3"
+      ],
+      "sha256": "ab1cdcb9164ee9967f5ff0d05461da9061572ae39e6c974a30f8b784a3eb54a6",
+      "size_bytes": 2147556036,
+      "zip_entries": 389
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-010.zip:6401cdfe9c12",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T01:24:57.159213+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-010.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Concerto For Group & Orchestra, 3rd Movement.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Boys.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Live Wire.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Angel Flying Too Close To The Ground(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Tie Me Kangaroo Down Sport.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/China Grove.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Nobody Knows.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Jungle Strut(1).mp3"
+      ],
+      "sha256": "6401cdfe9c122625e34c44d59d061511083a867f524b9ce332d1ac728a9c8db5",
+      "size_bytes": 2147536695,
+      "zip_entries": 370
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-011.zip:03259919884c",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T06:51:25.599239+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-011.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Forever.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Silent Running.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Achilles Last Stand(2).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/1999(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/A Hundred Pipers.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/GTO.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Hells Bells(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Wake Me Up Before You Go-Go.mp3"
+      ],
+      "sha256": "03259919884ca0aef0364db4baa4f76a50d3186108fb7d13c94db1f05978d431",
+      "size_bytes": 2147565912,
+      "zip_entries": 413
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-012.zip:4d27abff4026",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T06:42:04.771032+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-012.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/If I Was Your Girlfriend.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Forget Myself.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/No Time(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Special Dispensation_ Heaven Hell Purgatory And.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/It_s Now Or Never(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Stormtroopin_.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/I Kissed a Girl(1).mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Key West Intermezzo.mp3"
+      ],
+      "sha256": "4d27abff4026d77e925abb256e580ebf8636713897025feb4c0477e932ba2dd2",
+      "size_bytes": 2147571450,
+      "zip_entries": 400
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t023119z-3-013.zip:c211c6429bdc",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-07T06:41:45.268306+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-013.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Steamroller.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Highwayman  with Johnny Cash, Waylon Jennings, .mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/B-A-B-Y, Baby.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/I_m A Fool.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Jimmy Mo Mhíle Stór.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Smoke",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Janie_s Got A Gun.mp3",
+        "Takeout/YouTube and YouTube Music/music (library and uploads)/Hello Again.mp3"
+      ],
+      "sha256": "c211c6429bdc9f6d42378f439d33f53d34ef3e0c0c2a784c23c019ebefbcf541",
+      "size_bytes": 2147563777,
+      "zip_entries": 391
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:downloaded-takeout:takeout-20260506t165642z-3-001.zip:6dbd39e21bba",
+      "label": "downloaded-takeout",
+      "modified_at": "2026-05-06T17:48:31.874941+00:00",
+      "path": "/Users/ursmuff/Downloads/takeout-20260506T165642Z-3-001.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Takeout/YouTube and YouTube Music/history/search-history.html",
+        "Takeout/YouTube and YouTube Music/history/watch-history.html"
+      ],
+      "sha256": "6dbd39e21bbac1a0e9dd6ac5b464edf93b638761391c894c151876c9561a5f5c",
+      "size_bytes": 4081111,
+      "zip_entries": 2
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:photo-archive:photos-3-001.zip:538ba3330fce",
+      "label": "photo-archive",
+      "modified_at": "2026-05-05T01:08:48.897974+00:00",
+      "path": "/Users/ursmuff/Downloads/Photos-3-001.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "20260504_093947.mp4",
+        "20260504_095510.mp4",
+        "20260504_095651.mp4",
+        "20260504_093452.jpg",
+        "20260504_095858.jpg",
+        "20260504_095135.jpg",
+        "20260504_132124.jpg",
+        "20260504_095217.jpg"
+      ],
+      "sha256": "538ba3330fce3c52e6236145a5659fe67e9a3d2c8c4311a251d903f585895598",
+      "size_bytes": 414088742,
+      "zip_entries": 74
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:project-archive:water-project.zip:08de36bd792a",
+      "label": "project-archive",
+      "modified_at": "2026-05-07T03:38:31.494867+00:00",
+      "path": "/Users/ursmuff/Downloads/Water Project.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Water Project/",
+        "Water Project/Backtracking Model Languages.doc",
+        "Water Project/DSC01471.JPG",
+        "Water Project/DSC01472.JPG",
+        "Water Project/DSC01474.JPG",
+        "Water Project/DSC02707.JPG",
+        "Water Project/Group.jpg",
+        "Water Project/Thesis defence.ppt"
+      ],
+      "sha256": "08de36bd792a1f23a5f565ff88937daad82ac00179a785efb885696912e2fb85",
+      "size_bytes": 6209008,
+      "zip_entries": 9
+    },
+    {
+      "content_type": "application/zip",
+      "id": "source:project-archive:angelic-20260507t052334z-3-001.zip:2e5b76c9684f",
+      "label": "project-archive",
+      "modified_at": "2026-05-07T05:34:49.750274+00:00",
+      "path": "/Users/ursmuff/Downloads/Angelic-20260507T052334Z-3-001.zip",
+      "path_class": "local_source_body",
+      "sample_entries": [
+        "Angelic/Old/obsolite/",
+        "Angelic/Icons/Step Back Over.ico",
+        "Angelic/Related/BMF Assembler/BMF Assembler.ncb",
+        "Angelic/Icons/Step Over.ico",
+        "Angelic/Icons/Step Out.ico",
+        "Angelic/Related/BMF Assembler/bmfasm.h",
+        "Angelic/Icons/Step Into.ico",
+        "Angelic/classes/Test/Choice.bmc"
+      ],
+      "sha256": "2e5b76c9684f41a3d2395994bfabe06a6c18dfe0b30834f4cbfbdc21d0e8d31a",
+      "size_bytes": 74306593,
+      "zip_entries": 2779
+    }
+  ],
+  "truth_boundary": {
+    "exact_now": "Source bodies, normalized event file, and repo-served trace artifacts have SHA-256 hashes and Merkle roots.",
+    "next_precision": "For exact row-to-source-body proofs in every API slice, normalized rows should gain source_body_id and event_hash fields during ingestion."
+  }
+}
