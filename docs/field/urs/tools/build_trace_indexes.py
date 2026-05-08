@@ -9,11 +9,13 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, quote, urlparse
 
 
 AXES = ("pressure", "intensity", "inspiration", "insight", "vitality")
 WAVE_SCHEMA = ["month", "events", *AXES]
 GENERIC_AUTHORS = {"unknown", "www.youtube.com", "music.youtube.com", "youtube.com"}
+BACKTRACE_SAMPLE_LIMIT = 8
 
 SIGNIFICANT_WORK_RULES: dict[str, dict[str, Any]] = {
     "Karl May stories": {
@@ -304,6 +306,53 @@ def compact_axes(events: list[dict[str, Any]]) -> dict[str, int]:
     return {axis: int(sum(event.get(axis) or 0 for event in events)) for axis in AXES}
 
 
+def compact_volume(events: list[dict[str, Any]]) -> dict[str, Any]:
+    known_durations = [
+        int(event.get("duration_seconds") or 0)
+        for event in events
+        if isinstance(event.get("duration_seconds"), int | float) and int(event.get("duration_seconds") or 0) > 0
+    ]
+    axis_energy = sum(sum(int(event.get(axis) or 0) for axis in AXES) for event in events)
+    return {
+        "events": len(events),
+        "known_duration_seconds": sum(known_durations),
+        "known_duration_hours": round(sum(known_durations) / 3600, 2),
+        "duration_event_count": len(known_durations),
+        "backfilled_duration_event_count": sum(1 for event in events if event.get("_duration_backfilled")),
+        "axis_energy": axis_energy,
+    }
+
+
+def source_mix(events: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    return {
+        "sources": dict(sorted(Counter(str(event.get("source") or "unknown") for event in events).items())),
+        "platforms": dict(
+            sorted(Counter(str(event.get("platform_space") or event.get("source") or "unknown") for event in events).items())
+        ),
+        "evidence": dict(
+            sorted(Counter(str(event.get("evidence_level") or event.get("evidence") or "unknown") for event in events).items())
+        ),
+    }
+
+
+def influence_spectrum(events: list[dict[str, Any]], frequencies: Counter[str] | None = None) -> dict[str, Any]:
+    axes = compact_axes(events)
+    frequency_counter = frequencies or Counter(
+        frequency for event in events for frequency in (event.get("frequency") or ["unclassified"])
+    )
+    top_frequencies = top_counter(frequency_counter, 8)
+    dominant_frequency = next((item[0] for item in top_frequencies if item[0] != "unclassified"), None)
+    if not dominant_frequency and top_frequencies:
+        dominant_frequency = top_frequencies[0][0]
+    dominant_axis = max(axes.items(), key=lambda item: item[1])[0] if axes else None
+    return {
+        "frequencies": top_frequencies,
+        "axes": axes,
+        "dominant_frequency": dominant_frequency,
+        "dominant_axis": dominant_axis,
+    }
+
+
 def wave(rows: dict[str, list[dict[str, Any]]]) -> list[list[Any]]:
     out: list[list[Any]] = []
     for month in sorted(rows):
@@ -311,6 +360,127 @@ def wave(rows: dict[str, list[dict[str, Any]]]) -> list[list[Any]]:
         axes = compact_axes(events)
         out.append([month, len(events), *(axes[axis] for axis in AXES)])
     return out
+
+
+def trace_path(selector: str, value: str) -> str:
+    return f"/api/field-stories/urs-field-story/trace/{selector}/{quote(value, safe='')}"
+
+
+def public_host(url: str | None) -> str | None:
+    if not url:
+        return None
+    parsed = urlparse(url)
+    return parsed.netloc or None
+
+
+def known_duration_seconds(event: dict[str, Any]) -> int | None:
+    value = event.get("duration_seconds")
+    if not isinstance(value, int | float):
+        return None
+    seconds = int(value)
+    return seconds if seconds > 0 else None
+
+
+def youtube_video_id(url: str | None) -> str | None:
+    if not url:
+        return None
+    parsed = urlparse(url)
+    query_id = parse_qs(parsed.query).get("v", [None])[0]
+    if query_id:
+        return query_id
+    if parsed.netloc.endswith("youtu.be") and parsed.path.strip("/"):
+        return parsed.path.strip("/").split("/")[0]
+    return None
+
+
+def duration_lookup_keys(event: dict[str, Any]) -> list[str]:
+    keys: list[str] = []
+    video_id = youtube_video_id(event.get("url"))
+    if video_id:
+        keys.append(f"youtube:{video_id}")
+    author = str(event.get("author") or "").strip().lower()
+    work = str(event.get("work") or "").strip().lower()
+    if author and work:
+        keys.append(f"author-work:{author}::{work}")
+    if work:
+        keys.append(f"work:{work}")
+    return keys
+
+
+def build_duration_lookup(raw_events: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+    for event in raw_events:
+        seconds = known_duration_seconds(event)
+        if not seconds:
+            continue
+        for key in duration_lookup_keys(event):
+            existing = lookup.get(key)
+            if existing and existing["duration_seconds"] >= seconds:
+                continue
+            lookup[key] = {
+                "duration_seconds": seconds,
+                "source": event.get("source") or "unknown",
+                "evidence": event.get("evidence_level") or event.get("evidence") or "unknown",
+                "url_host": public_host(event.get("url")),
+            }
+    return lookup
+
+
+def backfill_duration(event: dict[str, Any], duration_lookup: dict[str, dict[str, Any]]) -> None:
+    if known_duration_seconds(event):
+        return
+    for key in duration_lookup_keys(event):
+        match = duration_lookup.get(key)
+        if not match:
+            continue
+        event["duration_seconds"] = match["duration_seconds"]
+        event["_duration_backfilled"] = True
+        event["_duration_backfill"] = {
+            "match_key": key,
+            "source": match["source"],
+            "evidence": match["evidence"],
+            "url_host": match["url_host"],
+        }
+        return
+
+
+def event_backtrace(event: dict[str, Any]) -> dict[str, Any]:
+    author = event.get("author") or "unknown"
+    work = event.get("work") or "unknown"
+    return {
+        "event_id": event["_event_id"],
+        "month": event["_month"],
+        "source_line": event["_source_line"],
+        "source": event.get("source") or "unknown",
+        "platform": event.get("platform_space") or event.get("source") or "unknown",
+        "evidence": event.get("evidence_level") or event.get("evidence") or "unknown",
+        "timestamp": event.get("timestamp"),
+        "duration_seconds": event.get("duration_seconds"),
+        "duration_backfill": event.get("_duration_backfill"),
+        "author": author,
+        "work": work,
+        "frequency": event.get("frequency") or ["unclassified"],
+        "axes": {axis: int(event.get(axis) or 0) for axis in AXES},
+        "url_host": public_host(event.get("url")),
+        "trace_links": {
+            "month": trace_path("month", event["_month"]),
+            "author": trace_path("author", author),
+            "work": trace_path("work", event["_work_id"]),
+        },
+    }
+
+
+def backtrace_samples(events: list[dict[str, Any]], limit: int = BACKTRACE_SAMPLE_LIMIT) -> list[dict[str, Any]]:
+    ranked = sorted(
+        events,
+        key=lambda event: (
+            -sum(int(event.get(axis) or 0) for axis in AXES),
+            -(int(event.get("duration_seconds") or 0) if isinstance(event.get("duration_seconds"), int | float) else 0),
+            event["_month"],
+            event["_source_line"],
+        ),
+    )
+    return [event_backtrace(event) for event in ranked[:limit]]
 
 
 def normalize_series(value: str) -> str:
@@ -465,20 +635,28 @@ def build_significant_work_indexes(field_dir: Path, generated_at: str) -> dict[s
 
 def load_events(path: Path) -> tuple[list[dict[str, Any]], int]:
     events: list[dict[str, Any]] = []
+    raw_events: list[dict[str, Any]] = []
     undated = 0
     with path.open(encoding="utf-8") as handle:
-        for line in handle:
+        for source_line, line in enumerate(handle, start=1):
             if not line.strip():
                 continue
             event = json.loads(line)
-            month = parse_month(event.get("timestamp"))
-            if not month:
-                undated += 1
-                continue
-            event["_month"] = month
-            event["_author_id"] = stable_id("author", event.get("author") or "unknown")
-            event["_work_id"] = stable_id("work", event.get("author") or "unknown", event.get("work") or "unknown")
-            events.append(event)
+            raw_events.append(event)
+            event["_source_line"] = source_line
+    duration_lookup = build_duration_lookup(raw_events)
+    for event in raw_events:
+        month = parse_month(event.get("timestamp"))
+        if not month:
+            undated += 1
+            continue
+        event_identity = json.dumps(event, ensure_ascii=False, sort_keys=True)
+        backfill_duration(event, duration_lookup)
+        event["_month"] = month
+        event["_author_id"] = stable_id("author", event.get("author") or "unknown")
+        event["_work_id"] = stable_id("work", event.get("author") or "unknown", event.get("work") or "unknown")
+        event["_event_id"] = f"field-event:{hashlib.sha1(event_identity.encode('utf-8')).hexdigest()[:12]}"
+        events.append(event)
     return events, undated
 
 
@@ -579,9 +757,12 @@ def month_record(month: str, events: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "month": month,
         "events": len(events),
+        "volume": compact_volume(events),
         "platforms": dict(sorted(platforms.items())),
         "frequencies": top_frequency,
         "axes": compact_axes(events),
+        "influence_spectrum": influence_spectrum(events, frequencies),
+        "source_mix": source_mix(events),
         "primary_influence": {
             "frequency": primary_frequency,
             "authors": [item["id"] for item in top_authors[:3]],
@@ -589,6 +770,7 @@ def month_record(month: str, events: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "top_authors": top_authors,
         "top_works": top_works,
+        "backtrace_samples": backtrace_samples(events),
     }
 
 
@@ -641,14 +823,18 @@ def build_indexes(events: list[dict[str, Any]], undated_events: int, source_path
             "id": author_id,
             "name": name,
             "events": len(rows),
+            "volume": compact_volume(rows),
             "first_month": author_wave[0][0],
             "last_month": author_wave[-1][0],
             "peak_months": [[item[0], item[1]] for item in sorted(author_wave, key=lambda row: (-row[1], row[0]))[:6]],
             "frequencies": top_counter(frequencies, 8),
             "axes": compact_axes(rows),
+            "influence_spectrum": influence_spectrum(rows, frequencies),
+            "source_mix": source_mix(rows),
             "top_works": top_works,
             "wave_schema": WAVE_SCHEMA,
             "wave": author_wave,
+            "backtrace_samples": backtrace_samples(rows),
         }
         authors[author_id] = record
         author_records.append(record)
@@ -671,13 +857,17 @@ def build_indexes(events: list[dict[str, Any]], undated_events: int, source_path
             "author_id": author_id,
             "author": author_names.get(author_id, "unknown"),
             "events": len(rows),
+            "volume": compact_volume(rows),
             "first_month": work_wave[0][0],
             "last_month": work_wave[-1][0],
             "peak_months": [[item[0], item[1]] for item in sorted(work_wave, key=lambda row: (-row[1], row[0]))[:6]],
             "frequencies": top_counter(Counter(freq for event in rows for freq in (event.get("frequency") or ["unclassified"])), 8),
             "axes": compact_axes(rows),
+            "influence_spectrum": influence_spectrum(rows),
+            "source_mix": source_mix(rows),
             "wave_schema": WAVE_SCHEMA,
             "wave": work_wave,
+            "backtrace_samples": backtrace_samples(rows),
         }
         works[work_id] = record
         work_records.append(record)
@@ -701,10 +891,17 @@ def build_indexes(events: list[dict[str, Any]], undated_events: int, source_path
             "primary_influence_during_month": "Load monthly_spectrum.json -> months[YYYY-MM].",
             "author_influence_wave": "Search author_index.jsonl by id or exact name, then read wave.",
             "work_influence_wave": "Search work_index.jsonl by id or exact title, then read wave.",
+            "field_event_backtrace": "Open backtrace_samples on any month, author, or work record for source line, event id, public-safe source mix, and trace links.",
             "significant_work_discovery": "Search significant_work_index.jsonl by id, title, or alias, then use concept links and chapter probes.",
             "concept_to_work_discovery": "Load concept_work_map.json -> concepts[lc-*] for related significant works.",
         },
-        "publication_boundary": "Indexes are derived counts and links. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
+        "field_event_shape": {
+            "volume": "event count, known duration, known duration coverage, and axis energy",
+            "influence_spectrum": "frequency distribution plus pressure/intensity/inspiration/insight/vitality axes",
+            "source_mix": "source, platform, and evidence counts",
+            "backtrace_samples": "public-safe sample event ids with source line references and trace links back to month, author, and work slices",
+        },
+        "publication_boundary": "Indexes publish derived field movement and public-safe backtrace samples. Raw Google Takeout, Audible exports, browser sessions, cookies, and extracted service files remain source bodies until their shape belongs directly in repo.",
     }
 
     significant = build_significant_work_indexes(field_dir_for_source(source_path), monthly["generated_at"])

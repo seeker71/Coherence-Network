@@ -48,6 +48,21 @@ def test_trace_index_api_returns_author_and_work_waves():
     author = author_response.json()["result"]
     assert author["id"].startswith("author:")
     assert author["events"] > 1000
+    assert author["volume"]["known_duration_seconds"] > 0
+    assert author["volume"]["duration_event_count"] > 0
+    assert author["volume"]["backfilled_duration_event_count"] > 0
+    assert author["volume"]["axis_energy"] > author["events"]
+    assert author["influence_spectrum"]["dominant_frequency"] == "devotional-body"
+    assert author["influence_spectrum"]["dominant_axis"] == "vitality"
+    assert author["source_mix"]["platforms"]["youtube"] > 0
+    assert author["backtrace_samples"]
+    sample = author["backtrace_samples"][0]
+    assert sample["event_id"].startswith("field-event:")
+    assert sample["source_line"] > 0
+    assert sample["duration_backfill"]["match_key"].startswith("youtube:")
+    assert sample["trace_links"]["author"].endswith("/Mose%20-%20Topic")
+    assert sample["trace_links"]["month"].startswith("/api/field-stories/urs-field-story/trace/month/")
+    assert sample["trace_links"]["work"].startswith("/api/field-stories/urs-field-story/trace/work/")
     assert author["wave_schema"] == ["month", "events", "pressure", "intensity", "inspiration", "insight", "vitality"]
     assert author["wave"]
 
@@ -57,6 +72,9 @@ def test_trace_index_api_returns_author_and_work_waves():
     work = work_response.json()["result"]
     assert work["id"] == work_id
     assert work["author_id"] == author["id"]
+    assert work["volume"]["events"] == work["events"]
+    assert work["source_mix"]["evidence"]
+    assert work_id.replace(":", "%3A") in work["backtrace_samples"][0]["trace_links"]["work"]
     assert work["wave"]
 
 
