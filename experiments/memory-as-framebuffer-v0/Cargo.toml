@@ -20,6 +20,14 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 name = "fizzbuzz"
 path = "examples/fizzbuzz.rs"
 
+[[example]]
+name = "linked_list"
+path = "examples/linked_list.rs"
+
+[[example]]
+name = "binary_tree"
+path = "examples/binary_tree.rs"
+
 [profile.release]
 opt-level = 3
 lto = "thin"

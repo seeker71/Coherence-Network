@@ -3,6 +3,9 @@
 //! inner 2x2 = type-tagged value with brightness from payload entropy.
 
 use crate::allocator::{CELL_BYTES, GRID, NUM_CELLS};
+use crate::pointer::{
+    decode_pointer_target, is_pointer_tag, PointerKind, CYCLE_TERMINATOR_RGB, POINTER_FOLLOW_CAP,
+};
 use crate::{
     TAG_BOOL, TAG_F32, TAG_F64, TAG_FREE, TAG_I32, TAG_I64, TAG_U16, TAG_U32, TAG_U64, TAG_U8,
 };
@@ -29,6 +32,92 @@ pub fn type_palette(tag: u16) -> [u8; 3] {
         TAG_F32 => [255, 100, 200],
         TAG_F64 => [240, 240, 240],
         _ => [128, 128, 128], // unknown
+    }
+}
+
+/// Read a cell's tag at the given index from the raw data plane bytes.
+fn read_tag_at(data_bytes: &[u8], idx: usize) -> u16 {
+    let base = idx * CELL_BYTES;
+    u16::from_le_bytes([data_bytes[base], data_bytes[base + 1]])
+}
+
+/// Read a cell's 14-byte payload at the given index from the raw data plane.
+fn read_payload_at(data_bytes: &[u8], idx: usize) -> [u8; 14] {
+    let base = idx * CELL_BYTES;
+    let mut out = [0u8; 14];
+    out.copy_from_slice(&data_bytes[base + 2..base + CELL_BYTES]);
+    out
+}
+
+/// Compute the inner-region color for a primitive cell from its tag + payload.
+/// Free cells render as black; primitives modulate their palette by entropy.
+fn primitive_inner(tag: u16, payload: &[u8; 14]) -> [u8; 3] {
+    if tag == TAG_FREE {
+        [0, 0, 0]
+    } else {
+        modulate_brightness(type_palette(tag), payload)
+    }
+}
+
+/// Resolve the inner color for a cell at `idx`, following pointers up to
+/// `POINTER_FOLLOW_CAP` hops. Cycles (visited-set) and depth-overflow both
+/// return `CYCLE_TERMINATOR_RGB`. A pointer whose target is out-of-range or
+/// free also returns the cycle terminator (treat as broken indirection —
+/// visibly distinct from any live primitive).
+fn resolve_inner_color(data_bytes: &[u8], idx: usize) -> [u8; 3] {
+    let mut visited: [usize; POINTER_FOLLOW_CAP + 1] = [usize::MAX; POINTER_FOLLOW_CAP + 1];
+    let mut visited_len: usize = 0;
+    let mut cur = idx;
+
+    for _hop in 0..=POINTER_FOLLOW_CAP {
+        if cur >= NUM_CELLS {
+            return CYCLE_TERMINATOR_RGB;
+        }
+        // Cycle detection: have we visited this cell already?
+        for k in 0..visited_len {
+            if visited[k] == cur {
+                return CYCLE_TERMINATOR_RGB;
+            }
+        }
+        visited[visited_len] = cur;
+        visited_len += 1;
+
+        let tag = read_tag_at(data_bytes, cur);
+        if !is_pointer_tag(tag) {
+            // Reached a primitive (or free). Return its inner color.
+            let payload = read_payload_at(data_bytes, cur);
+            return primitive_inner(tag, &payload);
+        }
+        // It's a pointer — follow.
+        let payload = read_payload_at(data_bytes, cur);
+        let next = decode_pointer_target(&payload) as usize;
+        cur = next;
+    }
+    // Exhausted POINTER_FOLLOW_CAP+1 hops without reaching a primitive.
+    CYCLE_TERMINATOR_RGB
+}
+
+/// Compute the halo (outer-ring) color for a pointer cell of the given kind.
+/// The halo encodes the pointer-kind: raw uses the plain provenance hash;
+/// Box paints solid white; Rc paints alternating bright/dim (dotted); Weak
+/// halves the provenance brightness.
+///
+/// Returns (color_a, color_b). For Rc, alternation between a and b along the
+/// outer ring renders the dotted pattern. For all other kinds, color_a == color_b.
+fn pointer_halo_pair(kind: PointerKind, prov: u32) -> ([u8; 3], [u8; 3]) {
+    let base = provenance_halo(prov);
+    match kind {
+        PointerKind::Raw => (base, base),
+        PointerKind::Box_ => ([240, 240, 240], [240, 240, 240]),
+        PointerKind::Rc => {
+            let bright = [240, 240, 240];
+            let dim = [60, 60, 60];
+            (bright, dim)
+        }
+        PointerKind::Weak => {
+            let half = [base[0] / 2, base[1] / 2, base[2] / 2];
+            (half, half)
+        }
     }
 }
 
@@ -100,18 +189,29 @@ pub fn render_frame(data_bytes: &[u8], provenance: &[u32]) -> FrameRgba {
     for cy in 0..GRID {
         for cx in 0..GRID {
             let idx = cy * GRID + cx;
-            let base = idx * CELL_BYTES;
-            let tag = u16::from_le_bytes([data_bytes[base], data_bytes[base + 1]]);
-            let mut payload = [0u8; 14];
-            payload.copy_from_slice(&data_bytes[base + 2..base + CELL_BYTES]);
+            let tag = read_tag_at(data_bytes, idx);
 
-            let palette_color = type_palette(tag);
-            let inner = if tag == TAG_FREE {
-                [0u8, 0, 0]
+            // Inner 2x2 color: for primitives, modulate palette by payload entropy.
+            // For pointer cells, follow the chain (≤4 hops) and use the target's
+            // inner color — transparency *is* indirection.
+            let inner = if is_pointer_tag(tag) {
+                resolve_inner_color(data_bytes, idx)
             } else {
-                modulate_brightness(palette_color, &payload)
+                let payload = read_payload_at(data_bytes, idx);
+                primitive_inner(tag, &payload)
             };
-            let halo = provenance_halo(provenance[idx]);
+
+            // Outer ring: for primitives, the provenance halo. For pointer
+            // cells, a kind-specific frame palette (raw=hash, Box=white,
+            // Rc=dotted, Weak=half-brightness hash).
+            let (halo_a, halo_b) = if let Some(kind) =
+                if is_pointer_tag(tag) { PointerKind::from_tag(tag) } else { None }
+            {
+                pointer_halo_pair(kind, provenance[idx])
+            } else {
+                let h = provenance_halo(provenance[idx]);
+                (h, h)
+            };
 
             // 4x4 block: outer ring (halo), inner 2x2 (value).
             let px = cx * 4;
@@ -119,7 +219,14 @@ pub fn render_frame(data_bytes: &[u8], provenance: &[u32]) -> FrameRgba {
             for dy in 0..4 {
                 for dx in 0..4 {
                     let is_inner = dx >= 1 && dx <= 2 && dy >= 1 && dy <= 2;
-                    let rgb = if is_inner { inner } else { halo };
+                    let rgb = if is_inner {
+                        inner
+                    } else {
+                        // Alternate halo_a / halo_b along the outer ring for
+                        // the Rc dotted pattern; for non-Rc kinds the two
+                        // colors are equal so the alternation collapses.
+                        if (dx + dy) % 2 == 0 { halo_a } else { halo_b }
+                    };
                     put_px(&mut buf, px + dx, py + dy, rgb);
                 }
             }

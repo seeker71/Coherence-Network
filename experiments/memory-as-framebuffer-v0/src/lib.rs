@@ -10,6 +10,7 @@
 
 pub mod allocator;
 pub mod ffmpeg;
+pub mod pointer;
 pub mod render;
 pub mod snapshot;
 
@@ -18,6 +19,10 @@ use std::sync::Mutex;
 
 pub use allocator::{CellHandle, SlabFramebuffer, CELL_BYTES, GRID, NUM_CELLS};
 pub use ffmpeg::FfmpegPipe;
+pub use pointer::{
+    is_pointer_tag, BoxPtr, Pointer, PointerKind, RcPtr, WeakPtr, CYCLE_TERMINATOR_RGB,
+    POINTER_FOLLOW_CAP, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC, TAG_PTR_WEAK,
+};
 pub use render::FrameRgba;
 pub use snapshot::SnapshotThread;
 
