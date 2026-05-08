@@ -64,6 +64,7 @@
     {"artifact_id": "trace-youtube-podcast-spectrum", "path": "trace/youtube_podcast_spectrum.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-influence-breath-cycle", "path": "trace/influence_breath_cycle.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-digital-influence-inventory", "path": "trace/digital_influence_inventory.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "trace-source-crypto", "path": "trace/source_crypto_trace.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-encounter-next-breath", "path": "trace/encounter_next_breath.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "normalized-events", "path": "output/normalized_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
     {"artifact_id": "ten-year-events", "path": "output/ten_year_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
@@ -76,6 +77,7 @@
     {"artifact_id": "trace-index-builder", "path": "tools/build_trace_indexes.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "influence-breath-cycle-builder", "path": "tools/influence_breath_cycle.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "digital-influence-inventory-builder", "path": "tools/digital_influence_inventory.py", "kind": "tool", "content_type": "text/x-python"},
+    {"artifact_id": "source-crypto-trace-builder", "path": "tools/source_crypto_trace.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "local-browser-history-collector", "path": "tools/local_browser_history_collector.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "youtube-two-year-receiver", "path": "tools/youtube_two_year_receiver.py", "kind": "tool", "content_type": "text/x-python"},
     {"artifact_id": "youtube-two-year-scrape-expression", "path": "tools/youtube_two_year_scrape_expression.js", "kind": "tool", "content_type": "text/javascript"}
