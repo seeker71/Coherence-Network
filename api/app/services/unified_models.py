@@ -132,3 +132,6 @@ from app.services.substrate.orm import (  # noqa: F401
     SubstrateNamedCellORM,
     SubstrateNodeORM,
 )
+from app.services.substrate.substrate_strings import (  # noqa: F401
+    SubstrateStringORM,
+)

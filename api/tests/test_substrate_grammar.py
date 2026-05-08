@@ -34,6 +34,8 @@ def session():
     )
     SubstrateNodeORM.__table__.create(engine, checkfirst=True)
     SubstrateNamedCellORM.__table__.create(engine, checkfirst=True)
+    from app.services.substrate.substrate_strings import SubstrateStringORM
+    SubstrateStringORM.__table__.create(engine, checkfirst=True)
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     s = Session()
     try:

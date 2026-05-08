@@ -288,15 +288,15 @@ def pattern_to_recipe(session: Session, pattern: Any):
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
 
     if isinstance(pattern, Literal):
-        kind_id = _string_recipe_id(pattern.kind)
-        value_id = _string_recipe_id(pattern.value or "")
+        kind_id = _string_recipe_id(pattern.kind, session)
+        value_id = _string_recipe_id(pattern.value or "", session)
         return intern_node(
             session, DOMAIN_RECIPE, _literal_marker_id(), [kind_id, value_id]
         )
 
     if isinstance(pattern, Capture):
-        name_id = _string_recipe_id(pattern.name)
-        kind_id = _string_recipe_id(pattern.kind)
+        name_id = _string_recipe_id(pattern.name, session)
+        kind_id = _string_recipe_id(pattern.kind, session)
         return intern_node(
             session, DOMAIN_RECIPE, _capture_marker_id(), [name_id, kind_id]
         )
@@ -304,8 +304,8 @@ def pattern_to_recipe(session: Session, pattern: Any):
     if isinstance(pattern, IdentCapture):
         # Encoded as Capture with kind="__ident__" — a special-cased kind
         # that the deserializer recognizes.
-        name_id = _string_recipe_id(pattern.name)
-        kind_id = _string_recipe_id("__ident__")
+        name_id = _string_recipe_id(pattern.name, session)
+        kind_id = _string_recipe_id("__ident__", session)
         return intern_node(
             session, DOMAIN_RECIPE, _capture_marker_id(), [name_id, kind_id]
         )
@@ -313,8 +313,8 @@ def pattern_to_recipe(session: Session, pattern: Any):
     if isinstance(pattern, RepeatedCapture):
         # Encoded as Block.SEQUENCE with marker "__repeat__":
         # [str("__repeat__"), str(name), item_recipe, separator_recipe?]
-        marker = _string_recipe_id("__repeat__")
-        name_id = _string_recipe_id(pattern.name)
+        marker = _string_recipe_id("__repeat__", session)
+        name_id = _string_recipe_id(pattern.name, session)
         item_id = pattern_to_recipe(session, pattern.item_pattern)
         children = [marker, name_id, item_id]
         if pattern.separator is not None:
@@ -328,7 +328,7 @@ def pattern_to_recipe(session: Session, pattern: Any):
         children = [pattern_to_recipe(session, p) for p in pattern.parts]
         # We use a marker child to distinguish Sequence from Literal (both
         # use Block.SEQUENCE category). The marker is a string "seq".
-        marker = _string_recipe_id("__seq__")
+        marker = _string_recipe_id("__seq__", session)
         return intern_node(
             session, DOMAIN_RECIPE, _literal_marker_id(), [marker] + children
         )
@@ -411,18 +411,23 @@ def _parse_node_id_str(s: str):
     return NodeID(int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]))
 
 
-def _string_from_recipe(session: Session, recipe_id) -> str:
+def _string_from_recipe(session: Optional[Session], recipe_id) -> str:
     """Reverse-lookup a string-literal recipe to its original string value.
 
-    NOTE: hash-based instance allocation is one-way (we can't recover the
-    original string from the hash). This function checks an in-memory
-    cache populated when strings are interned. Future work: substrate
-    string-table for round-trip recovery.
+    Uses the substrate string-table when `session` is provided (cross-
+    process stable). Falls back to the in-process `_STRING_CACHE` when
+    not — for unit tests of bare functions without DB access.
     """
+    if session is not None:
+        from app.services.substrate.substrate_strings import lookup_string_value
+        value = lookup_string_value(session, recipe_id.instance)
+        if value is not None:
+            return value
     return _STRING_CACHE.get(_node_id_key(recipe_id), "")
 
 
-# Cache of (NodeID-tuple) → original string. Populated by pattern_to_recipe.
+# In-process cache. Populated by `_string_recipe_id` whether or not a
+# session is in play. Keeps `_string_from_recipe(None, ...)` working.
 _STRING_CACHE: Dict[tuple, str] = {}
 
 
@@ -430,10 +435,21 @@ def _node_id_key(node_id) -> tuple:
     return (node_id.package, node_id.level, node_id.type_, node_id.instance)
 
 
-# Re-define _string_recipe_id to populate the cache as it computes IDs:
-def _string_recipe_id(value: str):
+def _string_recipe_id(value: str, session: Optional[Session] = None):
+    """Encode a string as a trivial String recipe NodeID.
+
+    When `session` is provided, uses the substrate string-table — the
+    instance is sequentially-allocated and cross-process stable. Without
+    a session, falls back to the legacy hash-based allocation (in-process
+    only). Either path populates `_STRING_CACHE` so the reverse lookup
+    can resolve.
+    """
     from app.services.substrate.kernel import NodeID
-    inst = abs(hash(value)) % (10**9) + 1
+    if session is not None:
+        from app.services.substrate.substrate_strings import intern_string_instance
+        inst = intern_string_instance(session, value)
+    else:
+        inst = abs(hash(value)) % (10**9) + 1
     nid = NodeID(1, Level.TRIVIAL, RType.STRING, inst)
     _STRING_CACHE[_node_id_key(nid)] = value
     return nid
@@ -526,7 +542,7 @@ def register_form_keyword(
             # The action recipe is a string-literal carrying the builder's
             # name. After reload, the builder is recovered from the named
             # registry via lookup_builder.
-            action_recipe_id = _string_recipe_id(bn)
+            action_recipe_id = _string_recipe_id(bn, session)
         register_form_rule(session, name, pattern_recipe_id, action_recipe_id)
 
 

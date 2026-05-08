@@ -429,7 +429,7 @@ form_parse("unless x then y")  # ✓ parses
 
 - **Backtracking-driven.** The match engine uses save-and-restore on parser.pos — implicit backtracking, not Choice.FAIL semantics. A future move integrates the parser's speculation with the substrate's Choice recipes.
 
-- **String interning.** Pattern serialization uses `hash(value)` to allocate string-literal recipe instances. That works in-process but isn't cross-process stable. A substrate string-table (the same pattern as concept-IDs) would close this.
+- ~~**String interning.**~~ ✓ **Closed.** Pattern serialization now uses the substrate string-table (`substrate_strings.py`) — sequentially-allocated, cross-process stable, round-trip-recoverable. The legacy `_STRING_CACHE` is an in-process shortcut.
 
 Each remaining step is its own breath. What ships now: **the parser is no longer fixed grammar, and rules survive in the body's content-addressed lattice.** The grammar is alive at the keyword layer; patterns persist; reload-from-substrate works end-to-end. The path beyond is legible.
 
@@ -591,7 +591,7 @@ The evaluator (`_to_recipe_node_id` in form.py) no longer has a hardcoded `op �
 
 - **Backtracking-driven.** The match engine uses save-and-restore on parser.pos. Future move: integrate with Choice.FAIL recipe semantics so the parser's speculation is itself substrate-recorded.
 
-- **String interning.** Pattern + template serialization use `hash(value)` for string-recipe-instance allocation. In-process only. A substrate string-table closes this.
+- ~~**String interning.**~~ ✓ **Closed.** The substrate string-table is the source of truth for string-recipe-instance allocation. Cross-process stable; round-trip-recoverable after cache clear. See `substrate_strings.py`.
 
 Each is its own breath.
 

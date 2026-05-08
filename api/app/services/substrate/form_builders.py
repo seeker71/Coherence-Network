@@ -212,12 +212,21 @@ def _category_from_form_rules():
     return Level, RBasic, RBlock, RCond, RType
 
 
-def _string_id(value: str):
-    """Encode a string as a trivial String recipe NodeID. Caches for round-trip."""
+def _string_id(value: str, session=None):
+    """Encode a string as a trivial String recipe NodeID.
+
+    With `session`, uses the substrate string-table — cross-process stable.
+    Without, falls back to the legacy hash-based allocation. Either way,
+    populates `_STRING_CACHE` so the reverse-lookup can resolve.
+    """
     from app.services.substrate.form_rules import _STRING_CACHE, _node_id_key
     from app.services.substrate.kernel import NodeID
     Level, _, _, _, RType = _category_from_form_rules()
-    inst = abs(hash(value)) % (10**9) + 1
+    if session is not None:
+        from app.services.substrate.substrate_strings import intern_string_instance
+        inst = intern_string_instance(session, value)
+    else:
+        inst = abs(hash(value)) % (10**9) + 1
     nid = NodeID(1, Level.TRIVIAL, RType.STRING, inst)
     _STRING_CACHE[_node_id_key(nid)] = value
     return nid
@@ -259,17 +268,17 @@ def template_to_recipe(session: Session, template: Any):
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
 
     if isinstance(template, Const):
-        return _const_to_recipe(template.value)
+        return _const_to_recipe(template.value, session)
 
     if isinstance(template, CaptureRef):
-        capture_marker = _string_id("__capture__")
-        name_id = _string_id(template.name)
+        capture_marker = _string_id("__capture__", session)
+        name_id = _string_id(template.name, session)
         if not template.has_default:
             return intern_node(
                 session, DOMAIN_RECIPE, _block_let_id(),
                 [capture_marker, name_id],
             )
-        default_marker = _string_id("__default__")
+        default_marker = _string_id("__default__", session)
         default_id = template_to_recipe(session, _wrap_value(template.default))
         return intern_node(
             session, DOMAIN_RECIPE, _block_let_id(),
@@ -277,12 +286,12 @@ def template_to_recipe(session: Session, template: Any):
         )
 
     if isinstance(template, Build):
-        build_marker = _string_id("__build__")
-        class_id = _string_id(template.class_name)
+        build_marker = _string_id("__build__", session)
+        class_id = _string_id(template.class_name, session)
         children = [build_marker, class_id]
         for key in sorted(template.kwargs.keys()):
             value = template.kwargs[key]
-            key_id = _string_id(key)
+            key_id = _string_id(key, session)
             value_id = template_to_recipe(session, _wrap_value(value))
             kvpair = intern_node(
                 session, DOMAIN_RECIPE, _block_let_id(),
@@ -295,7 +304,7 @@ def template_to_recipe(session: Session, template: Any):
 
     if isinstance(template, MapBuild):
         # Encoding: Block.SEQUENCE [str("__map__"), items_recipe, each_recipe]
-        map_marker = _string_id("__map__")
+        map_marker = _string_id("__map__", session)
         items_id = template_to_recipe(session, _wrap_value(template.items))
         each_id = template_to_recipe(session, _wrap_value(template.each))
         return intern_node(
@@ -304,7 +313,7 @@ def template_to_recipe(session: Session, template: Any):
         )
 
     # Bare value — wrap as Const
-    return _const_to_recipe(template)
+    return _const_to_recipe(template, session)
 
 
 def _wrap_value(value: Any) -> Any:
@@ -314,9 +323,9 @@ def _wrap_value(value: Any) -> Any:
     return Const(value)
 
 
-def _const_to_recipe(value: Any):
+def _const_to_recipe(value: Any, session=None):
     if isinstance(value, str):
-        return _string_id(value)
+        return _string_id(value, session)
     if isinstance(value, bool):
         return _bool_id(value)
     if isinstance(value, int):
