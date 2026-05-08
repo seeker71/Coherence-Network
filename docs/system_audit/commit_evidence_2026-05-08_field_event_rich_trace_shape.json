@@ -1,0 +1,106 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/field-event-rich-traces-20260508",
+  "commit_scope": "Enrich public field-story trace slices with influence spectrum, volume, source mix, public-safe backtrace samples, and duration backfill from existing event traces.",
+  "files_owned": [
+    "specs/field-event-rich-trace-shape.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/system_audit/commit_evidence_2026-05-08_field_event_rich_trace_shape.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "python3 -m py_compile docs/field/urs/tools/build_trace_indexes.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_field_event_rich_trace_shape.json"
+    ],
+    "summary": "Field-story trace slices now publish a richer event shape: volume, influence_spectrum, source_mix, and backtrace_samples. Missing durations are backfilled from existing event traces by YouTube video id, then author/work, then work title before remaining unknown. Mose's public author slice now reports 623 duration-backed events and 77.61 known hours from authenticated YouTube Music MyActivity traces, while retaining the original dated YouTube Takeout event source and backtrace source line."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public deploy verification will run after merge if this branch is published."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents and public readers can see more than event counts on field-story trace slices: rhythm, volume, evidence mix, and compact backtraces to trace slices are present without exposing raw private source bodies.",
+    "public_endpoints": [
+      "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+      "/api/field-stories/urs-field-story/trace/work/{work_id}",
+      "/api/field-stories/urs-field-story/trace/month/2024-06"
+    ],
+    "test_flows": [
+      "Mose author trace includes volume with known_duration_seconds and backfilled_duration_event_count",
+      "Mose author trace includes influence_spectrum with devotional-body / vitality",
+      "Backtrace samples include event id, source line, duration backfill evidence, and month/author/work trace links"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; rebase, local PR guard, commit, push, and PR checks remain pending."
+  },
+  "idea_ids": [
+    "living-lineage",
+    "presence-traces",
+    "field-sensing"
+  ],
+  "spec_ids": [
+    "specs/field-event-rich-trace-shape.md"
+  ],
+  "task_ids": [
+    "codex-thread-field-event-rich-traces-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/manifest.json"
+  ],
+  "change_files": [
+    "specs/field-event-rich-trace-shape.md",
+    "docs/field/urs/tools/build_trace_indexes.py",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
