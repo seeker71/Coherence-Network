@@ -244,12 +244,18 @@ async function fetchCreations(nodeId: string): Promise<Creation[]> {
     const era = (fullAsset?.era as string)
       || (edge.properties?.era as string)
       || null;
+    // Convention fallback: when an asset doesn't carry an explicit
+    // image_url in the graph, look for a generated emblem at
+    // /works/generated/{slug}.jpg. The CSS gradient sits beneath the
+    // image so a 404 still leaves the era-tinted phase showing —
+    // a missing image never produces a black square.
+    const conventionImage = slug ? `/works/generated/${slug}.jpg` : null;
     creations.push({
       kind,
       name: (fullAsset?.name as string) || edge.to_node?.name || "Untitled",
       url: internalUrl ?? canonical,
       internal: Boolean(internalUrl),
-      image_url: (fullAsset?.image_url as string) || null,
+      image_url: (fullAsset?.image_url as string) || conventionImage,
       era,
     });
   }
