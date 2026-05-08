@@ -750,8 +750,14 @@ export default async function PersonPage({
         </Panel>
       )}
 
-      {/* Quiet doorway */}
-      <div className="pt-2">
+      {/* Doorway to the chronological lineage of works + influences */}
+      <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Link
+          href={`/people/${encodeURIComponent(id)}/lineage`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-[hsl(var(--primary))] hover:opacity-80"
+        >
+          Walk this cell&apos;s lineage of works and influences →
+        </Link>
         <Link
           href="/vision"
           className="inline-flex items-center gap-1 text-sm font-medium text-[hsl(var(--chart-2))] hover:opacity-80"
