@@ -18,7 +18,8 @@
       "get_field_story",
       "get_field_story_artifact",
       "contribute_field_story",
-      "get_organism_influence_cc"
+      "get_organism_influence_cc",
+      "get_influence_teaching_translator"
     ],
     "web": "/field/urs",
     "cli": "coh content set page field-urs --lang en --file docs/field/urs/output/chronological_story_with_frequency.md --title \"Urs Field Story\" --by <contributor_id>"
@@ -66,6 +67,7 @@
     {"artifact_id": "trace-influence-breath-cycle", "path": "trace/influence_breath_cycle.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-digital-influence-inventory", "path": "trace/digital_influence_inventory.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-source-crypto", "path": "trace/source_crypto_trace.json", "kind": "summary", "content_type": "application/json"},
+    {"artifact_id": "trace-influence-teaching-translator", "path": "trace/influence_teaching_translator.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "trace-encounter-next-breath", "path": "trace/encounter_next_breath.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "normalized-events", "path": "output/normalized_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},
     {"artifact_id": "ten-year-events", "path": "output/ten_year_events.jsonl", "kind": "event-trace", "content_type": "application/x-ndjson"},

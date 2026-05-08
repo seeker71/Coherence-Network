@@ -14,6 +14,7 @@ Compact derived indexes for answering influence questions without loading raw li
 - `audible_duration_metadata.json` - compact Audible catalog runtime metadata used to weight Audible influence by listening duration or book length.
 - `youtube_podcast_spectrum.json` - YouTube podcast-shaped influence wave, weighted by direct video duration where available and marked episode-length estimates where Takeout has no duration.
 - `source_crypto_trace.json` - compact SHA-256 and Merkle-root manifest for source bodies, normalized events, and repo-served trace artifacts.
+- `influence_teaching_translator.json` - compact lesson/frequency/network-shape shards for major influences, linked to trace refs and attribution recipients.
 - `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow
@@ -60,6 +61,12 @@ For "who should receive computed CC sensing for shaping the organism?", use:
 python3 scripts/organism_influence_cc.py --slug urs-field-story --limit 40 --cc-pool 1000
 ```
 
+For "what lessons did the major influences translate into for the network shape?", use:
+
+```bash
+python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 10
+```
+
 The wave arrays use:
 
 ```json
@@ -76,6 +83,8 @@ The wave arrays use:
 - MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
 - Organism influence CC: `/api/field-stories/urs-field-story/organism-influence-cc?limit=40&cc_pool=1000`
 - Organism influence CC MCP tool: `get_organism_influence_cc`
+- Influence teaching translator: `/api/field-stories/urs-field-story/influence-teaching-translator?limit=10`
+- Influence teaching translator MCP tool: `get_influence_teaching_translator`
 - Crypto trace artifact: `/api/field-stories/urs-field-story/artifacts/trace-source-crypto`
 - View attribution receipt: `POST /api/field-stories/urs-field-story/view-attribution`
 - View attribution policy: `GET /api/field-stories/urs-field-story/view-attribution-policy`
@@ -115,6 +124,16 @@ The living adjustment policy is append-only. A creator, viewer, contributor, age
 - `manual_practices` - lived anchors from `anchors/influence_anchors.json` where source logs are partial or pre-digital.
 
 Each row includes a `ledger_recipient_id`, `trace_refs`, source mix, score, and computed CC. A later settlement breath can choose to turn those rows into append-only ledger flow, while exact proof remains pull-based through the source crypto root and the linked trace files.
+
+## Teaching Translator
+
+`influence-teaching-translator:v1` turns major influences into reusable teaching atoms:
+
+```text
+influencer -> lesson_atoms -> frequency_translation -> desired_shape -> network_shape -> trace_refs -> attribution
+```
+
+The API joins those static teaching shards with current organism influence CC, so a shard can answer both "what did this influence teach us?" and "how much current CC does the organism sense for it?" without loading raw source bodies. Rows stay concise and source-linked; chapter-level precision can be added later by appending exact chapter notes to the significant-work trace.
 
 ## Chapter Discovery Boundary
 

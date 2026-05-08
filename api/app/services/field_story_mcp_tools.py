@@ -74,6 +74,17 @@ def get_organism_influence_cc_handler(arguments: dict[str, Any]) -> Any:
     )
 
 
+def get_influence_teaching_translator_handler(arguments: dict[str, Any]) -> Any:
+    from app.services import influence_teaching_translator_service
+
+    return _json_safe(
+        influence_teaching_translator_service.get_influence_teaching_translator(
+            str(arguments.get("slug", "urs-field-story")),
+            limit=int(arguments.get("limit", 40)),
+        )
+    )
+
+
 FIELD_STORY_TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_field_story",
@@ -140,5 +151,17 @@ FIELD_STORY_TOOLS: list[dict[str, Any]] = [
             },
         },
         "handler": get_organism_influence_cc_handler,
+    },
+    {
+        "name": "get_influence_teaching_translator",
+        "description": "Read lesson/frequency/network-shape translator shards for major field-story influences, joined with current CC.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "default": "urs-field-story"},
+                "limit": {"type": "integer", "default": 40, "minimum": 1, "maximum": 250},
+            },
+        },
+        "handler": get_influence_teaching_translator_handler,
     },
 ]
