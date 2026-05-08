@@ -5,7 +5,7 @@ const content: PersonProfileContent = {
   metadata: {
     title: "Schindler HC11 — ISO/OSI 7-layer stack in hardware (age 18)",
     description:
-      "At age 18, while at Schindler in Switzerland, designed the hardware and wrote the firmware for an ISO/OSI 7-layer protocol stack on a Motorola HC11 microcontroller — multiple UARTs networked into one board, EPROM and PAL programmable blocks, all firmware in C, and a custom debugger because no off-the-shelf one existed for the bring-up. This is where Urs learned C. The earliest load-bearing technical work in the body of evidence.",
+      "At age 18, while at Schindler in Switzerland, designed the hardware and wrote the firmware for an ISO/OSI 7-layer protocol stack on a Motorola HC11 microcontroller — multiple UARTs networked into one board, EPROM and PAL programmable blocks, all firmware in C, and a custom debugger because no off-the-shelf one existed for the bring-up. Where Urs first learned C — five years after the Commodore 64 MIDI work where BASIC and 6510 assembly were already familiar.",
   },
   breadcrumbName: "Schindler HC11 — 7-layer in hardware",
   hero: {
@@ -25,9 +25,13 @@ const content: PersonProfileContent = {
         networked into a working bus, EPROM and PAL programmable
         blocks defining the discrete logic, every layer of firmware
         written in <strong>C</strong>. No off-the-shelf debugger
-        existed for the bring-up — built one. The earliest
-        load-bearing piece in the body of evidence, and the place
-        where this body learned to think in C.
+        existed for the bring-up — built one. Five years after the{" "}
+        <Link href="/people/c64-midi-interface" className="text-primary hover:underline">
+          Commodore 64 MIDI work
+        </Link>
+        {" "}made BASIC and 6510 assembly familiar territory, this is
+        where this body picked up C — at the substrate where every
+        byte mattered and no instruction came pre-debugged.
       </p>
     ),
   },
@@ -78,7 +82,7 @@ const content: PersonProfileContent = {
     },
   ],
   noteFromBody: {
-    eyebrow: "Why this is the keystone",
+    eyebrow: "Why this work matters",
     body: (
       <p>
         Most engineers learn C through tutorials. This body learned C
