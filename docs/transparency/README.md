@@ -65,7 +65,7 @@ If you ever want to verify what the network holds about you:
 - **Live state**: `GET /api/contributions?contributor_id=contributor:...` returns your contribution ledger.
 - **View trail**: `GET /api/views/trail/contributor:...` returns the concepts and assets you've touched.
 - **Cold-tier**: `GET /api/views/archive` lists every archived day with SHA-256; `GET /api/views/archive/{day}` retrieves and verifies a specific day.
-- **Postgres dump**: any release on [coherence-network-archive](https://github.com/seeker71/coherence-network-archive) is downloadable and contains the full DB state at that snapshot time.
+- **Postgres dump**: any release on [coherence-network-archive](https://github.com/seeker71/coherence-network-archive) is downloadable and contains the full DB state at that snapshot time. The full restore procedure is at [`restore-from-archive.md`](restore-from-archive.md) — validated end-to-end on 2026-05-08 against a real dump in an isolated parallel database, no production data touched.
 
 Each of these can be cross-referenced against the others. If any single substrate's view of you contradicts another, that's a signal worth raising — the network's posture is that all four should agree.
 
