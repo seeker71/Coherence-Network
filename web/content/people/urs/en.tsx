@@ -237,6 +237,34 @@ const content: PersonProfileContent = {
   },
   articles: [
     {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "42 years · 13 works · one conviction",
+      heading: (
+        <>
+          Walk the full lineage of works and influences →{" "}
+          <Link
+            href="/people/urs/lineage"
+            className="text-[hsl(var(--primary))] hover:underline"
+          >
+            /people/urs/lineage
+          </Link>
+        </>
+      ),
+      body: (
+        <p>
+          Every load-bearing technical work this body has shipped,
+          chronologically — Commodore 64 MIDI at age 13 (~1984)
+          through the network you are reading (2024-now) — woven
+          together with the streams of attention (audiobooks, watch
+          hours, physical reading, named lineage figures) that ran
+          alongside the work at each era. One conviction across
+          eleven substrates: every layer addressable, every change
+          with a clean reverse, build the tool you need.
+        </p>
+      ),
+    },
+    {
       kind: "narrative",
       heading: "What I have been holding",
       body: (
