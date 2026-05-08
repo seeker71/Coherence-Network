@@ -26,6 +26,7 @@ import json
 import logging
 import re
 import socket
+import unicodedata
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any
@@ -1033,6 +1034,58 @@ def find_existing_identity(canonical_url: str) -> dict[str, Any] | None:
     return None
 
 
+# Channel/show suffixes that don't change identity. "Lex Fridman" and
+# "Lex Fridman Podcast - Official" are the same person.
+_NAME_SUFFIX_NOISE = re.compile(
+    r"\b(official|vevo|topic|channel|youtube|music|podcast|show|tv|live)\b",
+    re.IGNORECASE,
+)
+
+
+def _normalize_identity_name(name: str) -> str:
+    """Same shape as the watch-history clusterer — collapse common
+    platform-noise tokens so two surface variants of the same human
+    resolve to one identity. Used by name-based dedupe below."""
+    if not name:
+        return ""
+    n = unicodedata.normalize("NFKD", name)
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    n = n.lower()
+    n = _NAME_SUFFIX_NOISE.sub(" ", n)
+    n = re.sub(r"[^\w\s-]", " ", n)
+    n = re.sub(r"-+", " ", n)
+    return re.sub(r"\s+", " ", n).strip()
+
+
+def find_existing_identity_by_name(name: str, slug: str | None = None) -> dict[str, Any] | None:
+    """Look up an already-imported identity by name or slug.
+
+    The canonical-URL dedupe in :func:`find_existing_identity` misses
+    when the same person resolves to a different URL than the existing
+    node carries — bare-name input, multiple personal URLs, Wikipedia
+    vs personal site. This name-fallback closes that gap.
+
+    Match strategy:
+    1. Slug exact match (the human-readable doorway property — unique
+       per the URL canonicalization PR), then
+    2. Normalized name match — "Lex Fridman", "Lex Fridman Podcast",
+       "Lex Fridman - Official" all collapse to "lex fridman".
+
+    The first canonical match wins. Skipped for empty input.
+    """
+    target_name = _normalize_identity_name(name)
+    if not target_name and not slug:
+        return None
+    for node_type in CROSS_REF_NODE_TYPES:
+        result = graph_service.list_nodes(type=node_type, limit=500)
+        for node in result.get("items", []):
+            if slug and node.get("slug") == slug:
+                return node
+            if target_name and _normalize_identity_name(node.get("name") or "") == target_name:
+                return node
+    return None
+
+
 def _creation_node_id(creation: Creation, identity_id: str) -> str:
     """Deterministic id for an asset node — URL-derived when we have
     one, name+owner-derived as a fallback.
@@ -1205,6 +1258,12 @@ def ensure_identity(resolved: ResolvedIdentity) -> tuple[dict[str, Any], bool, l
     Returns ``(identity_node, created, creations_out)``.
     """
     existing = find_existing_identity(resolved.canonical_url)
+    if not existing:
+        # Name-fallback: the same person can resolve to a different
+        # canonical URL (Wikipedia vs personal site, or a fresh
+        # bare-name resolve picking a different anchor). Match against
+        # the existing node's name + slug before minting a duplicate.
+        existing = find_existing_identity_by_name(resolved.name)
     if existing:
         identity_node = existing
         identity_id = existing["id"]

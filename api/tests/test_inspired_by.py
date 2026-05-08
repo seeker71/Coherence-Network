@@ -737,3 +737,67 @@ async def test_list_and_delete_leaves_identity_and_creations_intact():
         assert graph_service.get_node(creation_id) is not None
         identity_edges = graph_service.list_edges(from_id=identity_id, edge_type="contributes-to")
         assert any(e["to_id"] == creation_id for e in identity_edges.get("items", []))
+
+
+def test_ensure_identity_name_dedupe_collapses_canonical_variants():
+    """Same person, two canonical URLs (personal site vs Wikipedia
+    vs YouTube channel) — the second resolve must find the first
+    node by name, not mint a duplicate.
+
+    Why this matters: bare-name inputs to the resolver pick whatever
+    URL the search finds; that URL almost never matches what the
+    canonical node was created with, so URL-only dedupe misses every
+    time. Name-fallback closes the gap.
+    """
+    from app.services import inspired_by_service as service
+    from app.services import graph_service
+
+    # Seed a canonical Lex node with the personal-site URL
+    canonical_id = "contributor:lex-fridman-test-fixture"
+    graph_service.create_node(
+        id=canonical_id, type="contributor",
+        name="Lex Fridman",
+        properties={"canonical_url": "https://lexfridman.com/", "slug": "lex-fridman-test"},
+    )
+    try:
+        # A fresh resolve that produces a different canonical URL
+        # (e.g. Wikipedia) must collapse to the existing node.
+        from app.services.inspired_by_service import ResolvedIdentity, ensure_identity
+        resolved = ResolvedIdentity(
+            input="Lex Fridman",
+            name="Lex Fridman",  # same display name
+            canonical_url="https://en.wikipedia.org/wiki/Lex_Fridman",  # different URL
+            description="podcaster",
+            provider="wikipedia",
+            provider_id="lex-fridman-wp",
+            node_type="contributor",
+            image_url=None,
+            presences=[],
+            creations=[],
+        )
+        node, created, _ = ensure_identity(resolved)
+        assert node["id"] == canonical_id, (
+            f"name-dedupe should have returned the canonical; got {node['id']}"
+        )
+        assert created is False
+
+        # Surface variant ("Lex Fridman Podcast - Official") collapses too
+        variant = ResolvedIdentity(
+            input="Lex Fridman Podcast",
+            name="Lex Fridman Podcast - Official",
+            canonical_url="https://example.com/some-other-url",
+            description="",
+            provider="other",
+            provider_id="x",
+            node_type="contributor",
+            image_url=None,
+            presences=[],
+            creations=[],
+        )
+        node2, created2, _ = ensure_identity(variant)
+        assert node2["id"] == canonical_id, (
+            f"surface-variant name should still collapse; got {node2['id']}"
+        )
+        assert created2 is False
+    finally:
+        graph_service.delete_node(canonical_id)
