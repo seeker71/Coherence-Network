@@ -187,16 +187,24 @@ function eraPhaseTail(year: number | null): string {
 }
 
 function creationArt(c: Creation, accent: BrandTone) {
+  // The era-tinted gradient is ALWAYS the bottom layer. When an image
+  // is present it sits on top via cover-sizing; if the image 404s or
+  // hasn't been generated yet, the gradient still shows through the
+  // tile rather than leaving a black void. Layer cardinality has to
+  // match across backgroundImage / backgroundSize / backgroundPosition
+  // so CSS pairs them up correctly.
+  const tail = eraPhaseTail(extractEraYear(c.era));
+  const gradient = `linear-gradient(135deg,${accent.bg}66,${tail})`;
   if (c.image_url) {
     return {
-      backgroundImage: `url('${c.image_url}')`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundImage: `url('${c.image_url}'),${gradient}`,
+      backgroundSize: "cover, 100% 100%",
+      backgroundPosition: "center, center",
+      backgroundRepeat: "no-repeat",
     } as const;
   }
-  const tail = eraPhaseTail(extractEraYear(c.era));
   return {
-    backgroundImage: `linear-gradient(135deg,${accent.bg}66,${tail})`,
+    backgroundImage: gradient,
   } as const;
 }
 
