@@ -25,7 +25,7 @@ import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
 import { ResonatesWith } from "./ResonatesWith";
 import { KindredPresences } from "./KindredPresences";
-import { InfluenceWeb } from "./InfluenceWeb";
+import { BodyOfEvidence } from "./BodyOfEvidence";
 import { RefineDoorway } from "./RefineDoorway";
 import { LocationChip } from "./LocationChip";
 import { CoLocated } from "./CoLocated";
@@ -653,12 +653,13 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             the platforms appear immediately after on mobile. */}
         <aside className="space-y-10 lg:space-y-8 min-w-0">
           <PresenceOverview identity={identity} inspiredCount={inspired.length} />
-          {/* Every related influence the body holds, inside and
-              outside the network, painted in the spectrum color of
-              its relationship family. The visitor reads the shape
-              of the presence by the spread of color and density
-              of chips. */}
-          <InfluenceWeb
+          {/* Every contribution and influence flowing through this
+              presence, from any source — the unified body-of-evidence
+              view. Emissions (works), Shaped-by (influences grouped
+              by source: Audible, YouTube, Physical, Lineage), Field
+              connections (concept resonances + relational threads
+              colored by family), and Inbound recognition. */}
+          <BodyOfEvidence
             presenceId={identity.id}
             externalPresences={identity.presences}
           />
