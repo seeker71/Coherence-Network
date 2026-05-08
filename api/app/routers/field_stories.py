@@ -9,6 +9,7 @@ from app.services import (
     field_story_service,
     field_view_attribution_adjustment_service,
     field_view_attribution_service,
+    influence_teaching_translator_service,
     organism_influence_cc_service,
 )
 
@@ -104,6 +105,22 @@ async def get_organism_influence_cc(slug: str, limit: int = 40, cc_pool: float =
             slug,
             limit=limit,
             cc_pool=cc_pool,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
+@router.get(
+    "/field-stories/{slug}/influence-teaching-translator",
+    summary="Get lesson and frequency translation shards for major influences",
+)
+async def get_influence_teaching_translator(slug: str, limit: int = 40) -> dict:
+    try:
+        return influence_teaching_translator_service.get_influence_teaching_translator(
+            slug,
+            limit=limit,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -1,0 +1,213 @@
+{
+  "schema_version": "influence-teaching-translator/v1",
+  "policy_id": "influence-teaching-translator:v1",
+  "story_slug": "urs-field-story",
+  "source_crypto_root": "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7",
+  "coverage_boundary": "Seed translator for current top organism influences. It is intentionally compact: each row stores reusable lesson atoms, frequency translation, desired network shape, trace links, and attribution recipient ids. Deeper chapter-level proof remains in the linked significant-work and source-body traces.",
+  "row_shape": "influencer -> lesson_atoms -> frequency_translation -> desired_shape -> network_shape -> trace_refs -> attribution",
+  "rows": [
+    {
+      "influencer_id": "significant-work:frontiers-saga-59a6120e",
+      "name": "Frontiers Saga",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:frontiers-saga",
+      "primary_creator": "Ryk Brown",
+      "lesson_atoms": [
+        "distributed crews survive by keeping ships, routes, repairs, supplies, and trust alive",
+        "frontier pressure reveals whether a network can adapt without losing care",
+        "defense is not domination when it protects circulation and local life"
+      ],
+      "frequency_translation": ["distributed-resilience", "fleet-care", "frontier-pressure", "circulation"],
+      "desired_shape": "A fleet-like organism where agents, contributors, source bodies, APIs, and deployments coordinate without one fragile center.",
+      "network_shape": ["multi-agent coordination", "repair loops", "supply/CC circulation", "edge-aware stewardship"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-circulation", "lc-field-edge", "lc-network"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Frontiers%20Saga",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:spellmonger-universe-45f3b507",
+      "name": "Spellmonger Universe",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:spellmonger-universe",
+      "primary_creator": "Terry Mancour",
+      "lesson_atoms": [
+        "magic becomes civilization only through apprenticeships, tools, institutions, markets, defense, and local governance",
+        "a village can become a living network when knowledge, protection, and resources are tended together",
+        "power needs oath, craft, and responsibility before it becomes useful"
+      ],
+      "frequency_translation": ["living-infrastructure", "guild-memory", "sovereign-locality", "trained-practice"],
+      "desired_shape": "Vision becomes infrastructure without losing wonder: concepts have rooms, guides, ledgers, tools, practices, and continuity.",
+      "network_shape": ["guild-like contribution paths", "practice before power", "local-to-network governance", "institution without brittle control"],
+      "concept_ids": ["lc-coherence-over-control", "lc-field-sensing", "lc-instruments", "lc-network"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Spellmonger",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:sword-of-truth-goodkind-universe-b2d0daf2",
+      "name": "Sword of Truth / Goodkind Universe",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:sword-of-truth-goodkind-universe",
+      "primary_creator": "Terry Goodkind",
+      "lesson_atoms": [
+        "truth must outrank comfort, fear, wish, and social pressure",
+        "reason, deeds, earned victory, and future orientation are disciplines of coherence",
+        "protection becomes distortion when it hides what is real"
+      ],
+      "frequency_translation": ["truth-discernment", "reason-sovereignty", "deeds-over-claims", "deserve-victory"],
+      "desired_shape": "Claims, resonance, and CC flow are traceable: every view can point to source, attribution, and evidence rather than performance.",
+      "network_shape": ["source-rooted receipts", "evidence-backed claims", "action-over-words profiles", "truthful flow adjustment"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-coherence-over-control", "lc-freedom-as-recognition", "lc-presence-over-protection"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Sword%20of%20Truth",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:peter-f-hamilton-systems-fiction-39411da0",
+      "name": "Peter F. Hamilton Systems Fiction",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:peter-f-hamilton-systems-fiction",
+      "primary_creator": "Peter F. Hamilton",
+      "lesson_atoms": [
+        "civilizations are shaped by transport, abundance, longevity, institutions, and hidden incentives",
+        "large systems need enough timescale to see consequences beyond one generation"
+      ],
+      "frequency_translation": ["civilization-scale", "abundance-pressure", "deep-time-systems"],
+      "desired_shape": "The network can reason about long arcs: resources, compute, governance, identity, and culture across time.",
+      "network_shape": ["long-range planning", "resource flow modeling", "multi-layer societies", "future economy simulation"],
+      "concept_ids": ["lc-economy", "lc-network", "lc-open-design"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Peter%20F.%20Hamilton%20Systems%20Fiction",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:first-law-world-c42ebefa",
+      "name": "First Law World",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:first-law-world",
+      "primary_creator": "Joe Abercrombie",
+      "lesson_atoms": [
+        "power often hides behind story, charm, fear, and compromise",
+        "shadow awareness keeps idealism from becoming naive control"
+      ],
+      "frequency_translation": ["shadow-power", "sober-discernment", "anti-heroic-truth"],
+      "desired_shape": "The organism can sense incentives and shadow without becoming cynical or punitive.",
+      "network_shape": ["power-sensing", "incentive audits", "non-naive compassion", "shadow integration"],
+      "concept_ids": ["lc-boundaries-as-loving-truth", "lc-coherence-over-control"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/First%20Law%20World",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:the-expanse-219fe665",
+      "name": "The Expanse",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:the-expanse",
+      "primary_creator": "James S. A. Corey",
+      "lesson_atoms": [
+        "different factions can share one fragile ecology while interpreting survival differently",
+        "truth, logistics, and trust matter most under acceleration and scarcity"
+      ],
+      "frequency_translation": ["system-fragility", "coalition-pressure", "ecology-of-trust"],
+      "desired_shape": "The network can hold multiple perspectives while preserving shared life-support, shared evidence, and shared repair.",
+      "network_shape": ["faction-aware governance", "shared infrastructure", "conflict translation", "ecological constraints"],
+      "concept_ids": ["lc-network", "lc-circulation", "lc-boundaries-as-loving-truth"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/The%20Expanse",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:kingkiller-chronicle-e22c538c",
+      "name": "Kingkiller Chronicle",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:kingkiller-chronicle",
+      "primary_creator": "Patrick Rothfuss",
+      "lesson_atoms": [
+        "names, songs, craft, silence, and story carry knowledge beneath ordinary explanation",
+        "beauty is a signal when it is precise, practiced, and alive"
+      ],
+      "frequency_translation": ["naming", "beauty-as-signal", "craft-memory", "story-carrier"],
+      "desired_shape": "The organism can sense names and patterns before over-explaining them, then preserve them in usable form.",
+      "network_shape": ["naming practices", "story as interface", "beautiful precision", "craft discipline"],
+      "concept_ids": ["lc-beauty", "lc-instruments", "lc-sensing", "lc-transmission"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Kingkiller%20Chronicle",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:daemon-4eb7a176",
+      "name": "Daemon",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:daemon",
+      "primary_creator": "Daniel Suarez",
+      "lesson_atoms": [
+        "software agency can persist beyond one operator when instructions become runtime",
+        "incentive systems and networks can reorganize society faster than institutions expect"
+      ],
+      "frequency_translation": ["autonomous-agency", "protocol-power", "network-incentives"],
+      "desired_shape": "Agents act through transparent protocols, budgets, evidence, and reversible contribution flow rather than opaque command.",
+      "network_shape": ["agent memory", "runtime policies", "open protocols", "attribution-aware automation"],
+      "concept_ids": ["lc-agent-memory", "lc-economy", "lc-network", "lc-open-design"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Daemon",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "significant-work:momo-77add44f",
+      "name": "Momo",
+      "kind": "significant_work",
+      "ledger_recipient_id": "work:momo",
+      "primary_creator": "Michael Ende",
+      "lesson_atoms": [
+        "attention and time are living commons, not extractive inventory",
+        "listening can restore what time-thieves fragment"
+      ],
+      "frequency_translation": ["time-attention", "deep-listening", "anti-extraction"],
+      "desired_shape": "The network protects attention and makes contribution flow nourishing rather than extractive.",
+      "network_shape": ["attention stewardship", "slow listening", "non-extractive economy", "rest as integration"],
+      "concept_ids": ["lc-attention", "lc-circulation", "lc-presence-over-protection"],
+      "trace_refs": [
+        "/api/field-stories/urs-field-story/trace/significant-work/Momo",
+        "docs/field/urs/trace/significant_work_index.jsonl"
+      ],
+      "source_status": "motif-level-derived-link"
+    },
+    {
+      "influencer_id": "presence:ramtha",
+      "name": "Ramtha",
+      "kind": "manual_practice_or_presence",
+      "ledger_recipient_id": "presence:ramtha",
+      "primary_creator": "Ramtha teachings",
+      "lesson_atoms": [
+        "reality creation requires discipline, choice, and responsibility for the field one is shaping",
+        "threshold teachings need discernment and embodiment before integration"
+      ],
+      "frequency_translation": ["consciousness-threshold", "choice-discipline", "field-training"],
+      "desired_shape": "The organism can include magical perception while staying grounded in trace, practice, and responsible action.",
+      "network_shape": ["threshold discernment", "practice-grounded magic", "self-mastery", "responsible creation"],
+      "concept_ids": ["lc-sensing", "lc-inner-travel", "lc-coherence-over-control"],
+      "trace_refs": [
+        "docs/field/urs/anchors/influence_anchors.json",
+        "/api/field-stories/urs-field-story/artifacts/influence-anchors"
+      ],
+      "source_status": "user-anchor"
+    }
+  ]
+}
