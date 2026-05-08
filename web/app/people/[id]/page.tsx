@@ -238,10 +238,14 @@ async function fetchCreations(nodeId: string): Promise<Creation[]> {
     const kind = (edge.properties?.kind as Creation["kind"]) ||
       (fullAsset?.creation_kind as Creation["kind"]) ||
       "work";
+    const slug = (fullAsset?.slug as string) || null;
+    const internalUrl = slug ? `/people/${slug}` : null;
+    const canonical = (fullAsset?.canonical_url as string) || null;
     creations.push({
       kind,
       name: (fullAsset?.name as string) || edge.to_node?.name || "Untitled",
-      url: (fullAsset?.canonical_url as string) || null,
+      url: internalUrl ?? canonical,
+      internal: Boolean(internalUrl),
       image_url: (fullAsset?.image_url as string) || null,
     });
   }
