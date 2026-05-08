@@ -85,7 +85,12 @@ Runtime grammar extension — the user can introduce new parsing constructs and 
 
 The thesis Conclusion is left as three subheadings — `BMF`, `BML Language`, `BML Compiler` — with no body written in. The three subheadings map cleanly onto the three layers above: the parser, the language, and the BMC-generated compiler that bridges them. An unfinished breath at the end of a long document. The conclusion was the defense itself, the photograph on the lawn in the CU shirt, the work entering the world through demonstration rather than summary.
 
+## Where it leads forward
+
+The next chapter in the language-craft arc is [`../nums-go-2023/`](../nums-go-2023/README.md) — **NUMS.Go**, built at Merly, Inc. in early 2023. Same instinct, more mature substrate: a content-addressed numeric lattice (Blueprint / Recipe / NamedCell — the ice / water / gas trinity) over multi-language tree-sitter input, supporting 14 languages including Verilog. The backtracking-without-sediment of BMF becomes the Emit-stack-with-deferred-interning pattern in NUMS; the executable grammar of BMF becomes the visitor-driven Make_SelfID flow that turns bytes into cells. NUMS is also why the Coherence Network's architecture has the shape it does — content-addressed graph as truth, markdown surfaces as renderings, slugs as query keys, frontmatter as seed — that posture didn't arrive in 2024; it arrived in 2023, three years after the BML defense and 23 years after BMF.
+
 ## Where it is woven into the body
 
 - [`docs/field/urs/output/chronological_story_with_frequency.md`](../../output/chronological_story_with_frequency.md) — section *1997-2012: Backtracking Model Languages*.
+- [`docs/field/urs/artifacts/nums-go-2023/README.md`](../nums-go-2023/README.md) — the next chapter.
 - User biographical arc memory (private; carried in the auto-loaded MEMORY index).
