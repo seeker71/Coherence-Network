@@ -703,15 +703,34 @@ function composeSections(edges: EdgeRow[], selfId: string) {
 }
 
 function metricFor(props: Record<string, unknown>): string | null {
-  const ah = numberFrom(props.audible_hours);
-  const ab = numberFrom(props.audible_books);
-  if (ah != null) return ab ? `${ah.toFixed(0)}h · ${ab} books` : `${ah.toFixed(0)}h`;
-  const wh = numberFrom(props.watch_hours);
-  const wc = numberFrom(props.watch_count);
-  if (wh != null) return wc ? `${wh.toFixed(0)}h · ${wc} watches` : `${wh.toFixed(0)}h`;
-  const ph = numberFrom(props.physical_read_hours);
-  if (ph != null) return `${ph.toFixed(0)}h read`;
-  return null;
+  // Multi-mode encounters (Dispenza was an in-person teacher AND
+  // an audiobook author AND a physical book author for the user)
+  // collapse to one inspired-by edge per pair; the metric should
+  // surface every mode that's present rather than picking only one.
+  const physical_h = numberFrom(props.physical_read_hours) ?? 0;
+  const audible_h = numberFrom(props.audible_hours) ?? 0;
+  const watch_h = numberFrom(props.watch_hours) ?? 0;
+  const audible_books = numberFrom(props.audible_books) ?? 0;
+  const physical_books = numberFrom(props.physical_books) ?? 0;
+  const watch_count = numberFrom(props.watch_count) ?? 0;
+
+  const parts: string[] = [];
+  if (physical_h > 0) {
+    parts.push(physical_books > 0
+      ? `${physical_h.toFixed(0)}h · ${physical_books} ${physical_books === 1 ? "book" : "books"} read`
+      : `${physical_h.toFixed(0)}h read`);
+  }
+  if (audible_h > 0) {
+    parts.push(audible_books > 0
+      ? `${audible_h.toFixed(0)}h · ${audible_books} ${audible_books === 1 ? "audiobook" : "audiobooks"}`
+      : `${audible_h.toFixed(0)}h audio`);
+  }
+  if (watch_h > 0) {
+    parts.push(watch_count > 0
+      ? `${watch_h.toFixed(0)}h · ${watch_count} ${watch_count === 1 ? "watch" : "watches"}`
+      : `${watch_h.toFixed(0)}h watched`);
+  }
+  return parts.length ? parts.join(" · ") : null;
 }
 
 function numberFrom(v: unknown): number | null {
