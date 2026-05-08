@@ -62,6 +62,18 @@ def get_field_story_trace_handler(arguments: dict[str, Any]) -> Any:
     )
 
 
+def get_organism_influence_cc_handler(arguments: dict[str, Any]) -> Any:
+    from app.services import organism_influence_cc_service
+
+    return _json_safe(
+        organism_influence_cc_service.compute_organism_influence_cc(
+            str(arguments.get("slug", "urs-field-story")),
+            limit=int(arguments.get("limit", 40)),
+            cc_pool=float(arguments.get("cc_pool", 1000.0)),
+        )
+    )
+
+
 FIELD_STORY_TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_field_story",
@@ -115,5 +127,18 @@ FIELD_STORY_TOOLS: list[dict[str, Any]] = [
             "required": ["selector", "value"],
         },
         "handler": get_field_story_trace_handler,
+    },
+    {
+        "name": "get_organism_influence_cc",
+        "description": "Compute a read-only CC sensing allocation for top organism influencers, including steward time, agent time, works, creators, channels, and lived anchors.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "default": "urs-field-story"},
+                "limit": {"type": "integer", "default": 40, "minimum": 1, "maximum": 250},
+                "cc_pool": {"type": "number", "default": 1000.0, "minimum": 0.0},
+            },
+        },
+        "handler": get_organism_influence_cc_handler,
     },
 ]

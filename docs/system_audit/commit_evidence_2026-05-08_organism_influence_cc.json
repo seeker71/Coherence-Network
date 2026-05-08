@@ -1,0 +1,109 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/organism-influence-cc-20260508",
+  "commit_scope": "Compute organism influence CC from the field trace, including Urs stewardship time, agent execution time, formative works, creators, channels, and lived practices.",
+  "files_owned": [
+    "api/app/services/organism_influence_cc_service.py",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/organism_influence_cc.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-05-08_organism_influence_cc.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_organism_influence_cc_computes_top_influencers_from_trace_and_agent_time",
+      "python3 -m py_compile scripts/organism_influence_cc.py api/app/services/organism_influence_cc_service.py api/app/routers/field_stories.py api/app/services/field_story_mcp_tools.py",
+      "python3 scripts/organism_influence_cc.py --slug urs-field-story --limit 12 --cc-pool 1000 | jq '{policy_id, source_crypto_root, totals, top: [.top_influencers[] | {rank,name,kind,computed_cc,ledger_recipient_id}]}'",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+      "cd api && python3 -m ruff check app/services/organism_influence_cc_service.py app/routers/field_stories.py app/services/field_story_mcp_tools.py tests/test_field_story_trace_index.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.organism_influence_cc.json --fail-on-regression",
+      "git diff --check",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The focused API/MCP tests, CLI computation, py_compile, ruff, maintainability audit, whitespace validation, local runtime verifier, PR guard, and follow-through check pass. The first PR guard run saw a runtime-web verifier miss; direct verifier and guard rerun passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents and humans can now request a compact read-only CC distribution over the organism's top influencers through API, MCP, or CLI without loading bulky source bodies.",
+    "public_endpoints": [
+      "GET /api/field-stories/{slug}/organism-influence-cc",
+      "MCP get_organism_influence_cc",
+      "python3 scripts/organism_influence_cc.py --slug urs-field-story"
+    ],
+    "test_flows": [
+      "API flow returns source crypto root, pool totals, Urs stewardship, agent time, Spellmonger, and Terry Mancour recipient ids.",
+      "MCP flow exposes get_organism_influence_cc through TOOL_MAP.",
+      "CLI flow returns the same policy id, totals, and ranked top influencers."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local implementation validation and pre-commit gates are complete; push, PR CI, and public deploy validation remain."
+  },
+  "idea_ids": [
+    "organism-influence-cc",
+    "field-story-attribution"
+  ],
+  "spec_ids": [
+    "docs/field/urs/trace/README.md"
+  ],
+  "task_ids": [
+    "codex-thread-organism-influence-cc-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "field-attunement"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/organism_influence_cc_service.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/organism_influence_cc.py",
+    "docs/field/urs/trace/source_crypto_trace.json"
+  ],
+  "change_files": [
+    "api/app/services/organism_influence_cc_service.py",
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_story_mcp_tools.py",
+    "api/tests/test_field_story_trace_index.py",
+    "scripts/organism_influence_cc.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
