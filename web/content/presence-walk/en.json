@@ -243,6 +243,62 @@
       }
     }
   },
+  "homePresence": {
+    "order": [
+      "liquid-bloom",
+      "bloomurian",
+      "mose",
+      "matias-de-stefano",
+      "portal"
+    ],
+    "traces": {
+      "liquid-bloom": {
+        "traceLabel": "field-story author trace",
+        "traceHref": "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
+        "traceMetric": "643 field events",
+        "traceSource": "docs/field/urs/trace/author_index.jsonl",
+        "traceWhy": "The listening trace, public source page, and presence-walk node all meet on Liquid Bloom.",
+        "image": "/visuals/brand/liquid-bloom-bg-center.jpg",
+        "imagePosition": "center 45%"
+      },
+      "bloomurian": {
+        "traceLabel": "lineage and meeting trace",
+        "traceHref": "/people/bloomurian",
+        "traceMetric": "Boulder, Ocean Bloom, and PORTAL traces",
+        "traceSource": "web/content/people/bloomurian/en.tsx",
+        "traceWhy": "The profile and lineage seed carry the Boulder, Ocean Bloom, and PORTAL rooms where this relation was met.",
+        "image": "/people/bloomurian/hero.jpg",
+        "imagePosition": "center 28%"
+      },
+      "mose": {
+        "traceLabel": "field-story author trace",
+        "traceHref": "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+        "traceMetric": "1385 field events",
+        "traceSource": "docs/field/urs/trace/author_index.jsonl",
+        "traceWhy": "The strongest music trace in the field index points through Mose and into the Road to Unison dance lineage.",
+        "image": "/people/mose/hero.jpg",
+        "imagePosition": "center 25%"
+      },
+      "matias-de-stefano": {
+        "traceLabel": "field-story author trace",
+        "traceHref": "/api/field-stories/urs-field-story/trace/author/PATH%20TO%20I%20AM%20-%20ENGLISH%20-%20Mat%C3%ADas%20de%20Stefano",
+        "traceMetric": "10 direct PATH TO I AM events",
+        "traceSource": "docs/field/urs/trace/author_index.jsonl",
+        "traceWhy": "Direct Matias source traces join the profile's GaiaSphere, podcast, and planetary-memory references.",
+        "image": "/people/matias-de-stefano/hero.jpg",
+        "imagePosition": "center 35%"
+      },
+      "portal": {
+        "traceLabel": "lived-event trace",
+        "traceHref": "/people/portal",
+        "traceMetric": "Meow Wolf Denver, June 19 2025",
+        "traceSource": "web/content/people/portal/en.tsx",
+        "traceWhy": "PORTAL appears through the Late-Night Takeover room, Bloomurian's set, and the meeting trace around Psychedelic Science week.",
+        "image": "/people/portal/hero.jpg",
+        "imagePosition": "center 38%"
+      }
+    }
+  },
   "nodePage": {
     "copy": {
       "metadataFallbackTitle": "Presence node | Coherence Network",
@@ -459,6 +515,7 @@
       "next-level-soul",
       "robert-edward-grant",
       "matias-de-stefano",
+      "portal",
       "pam-gregory",
       "porangui",
       "quantum-nexus",
@@ -740,6 +797,22 @@
         "sourceHref": "https://matiasdestefano.org/en/frontpage/",
         "sourceLabel": "Matias De Stefano"
       },
+      "portal": {
+        "slug": "portal",
+        "kind": "community",
+        "name": "PORTAL",
+        "nodeType": "network-org",
+        "role": "responsible psychedelic community",
+        "lens": "I gather where psychedelic culture asks to become mature, civic, celebratory, and held in rooms that remember integration.",
+        "story": "PORTAL is carried here through Denver rooms around MAPS Psychedelic Science 2025, including the Late-Night Takeover at Meow Wolf where Bloomurian's set and meeting traces enter the field.",
+        "style": "Eventful, community-forward, psychedelic-adjacent, integration-aware, and oriented toward destigmatizing responsible use without flattening discernment.",
+        "message": "Bring the expanded state back into responsible relationship, public culture, and practical care.",
+        "presence": "A Denver threshold community where policy, music, integration, and psychedelic culture meet as rooms people can actually enter.",
+        "visualWhy": "The public hero image fits because PORTAL is met as a real event surface, not a generated atmosphere.",
+        "image": "/people/portal/hero.jpg",
+        "sourceHref": "/people/portal",
+        "sourceLabel": "PORTAL profile"
+      },
       "pam-gregory": {
         "slug": "pam-gregory",
         "kind": "person",
@@ -939,6 +1012,11 @@
         "composition": "center",
         "motif": "earth-grid"
       },
+      "portal": {
+        "invitation": "Enter the room where expanded culture asks for responsibility, music, and integration.",
+        "composition": "center",
+        "motif": "question-portal"
+      },
       "pam-gregory": {
         "invitation": "Look up until timing becomes a language for courage.",
         "composition": "upper-left",
@@ -1078,6 +1156,13 @@
         "logoTone": "invert",
         "phrase": "The Rememberer.",
         "focus": "Planetary memory, YOSOY, Earth grids, initiatory education."
+      },
+      "portal": {
+        "image": "/people/portal/hero.jpg",
+        "imagePosition": "center 38%",
+        "surface": "source-portrait",
+        "phrase": "Partnership of Responsible Trippers.",
+        "focus": "Denver rooms, responsible psychedelic culture, music, integration."
       },
       "pam-gregory": {
         "image": "https://www.thenextstep.uk.com/wp-content/uploads/2023/09/Pam-Gregory-2023-Bogfrog-2-of-32-1.jpg",
