@@ -165,8 +165,12 @@ jobs:
         run: |
           python3 -m pip install "httpx>=0.28.0"
 
-      - name: Check open PR failures (PRs only)
+      - name: Check open PR failures (PRs only, advisory)
+        # Advisory only — when one PR is red, every other PR's gate run reported
+        # failure too, multiplying email noise. The triage info is still useful
+        # in logs, just not as a gate.
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -174,5 +178,4 @@ jobs:
             --repo "${{ github.repository }}" \
             --base main \
             --head-prefix codex/ \
-            --head-ref "${{ github.event.pull_request.head.ref }}" \
-            --fail-on-detected
+            --head-ref "${{ github.event.pull_request.head.ref }}" || true

@@ -38,6 +38,7 @@ from typing import Any, Dict, Optional
 
 
 AUTH_FAILED_EXIT = 2
+TRANSIENT_FAILED_EXIT = 3  # 5xx / gateway / connection — not a code regression
 
 
 def _idea_create_payload() -> Dict[str, Any]:
@@ -105,9 +106,17 @@ class ProofRunner:
         if self.dry_run:
             return {"_dry_run": True}
         url = f"{self.api_url}{path}"
-        response = self.requests.request(
-            method, url, headers=self._headers(), json=body, timeout=30
-        )
+        try:
+            response = self.requests.request(
+                method, url, headers=self._headers(), json=body, timeout=30
+            )
+        except self.requests.exceptions.RequestException as exc:
+            print(
+                f"[TRANSIENT] {type(exc).__name__}: {exc} — connection/timeout, "
+                "not a code regression. Workflow will treat as advisory.",
+                file=sys.stderr,
+            )
+            raise SystemExit(TRANSIENT_FAILED_EXIT)
         if not response.ok:
             if response.status_code == 401:
                 print(
@@ -120,6 +129,17 @@ class ProofRunner:
                     file=sys.stderr,
                 )
                 raise SystemExit(AUTH_FAILED_EXIT)
+            if response.status_code in (502, 503, 504):
+                print(
+                    f"[TRANSIENT] HTTP {response.status_code} — gateway/upstream blip, "
+                    "not a code regression. Workflow will treat as advisory.",
+                    file=sys.stderr,
+                )
+                print(
+                    f"[FAIL] HTTP {response.status_code} — {response.text[:500]}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(TRANSIENT_FAILED_EXIT)
             print(
                 f"[FAIL] HTTP {response.status_code} — {response.text[:500]}",
                 file=sys.stderr,
