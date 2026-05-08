@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 29
+**Total files**: 31
 
 | File | Purpose |
 |---|---|
@@ -16,7 +16,9 @@
 | [automation-page-data.ts](automation-page-data.ts) | _no top-of-file purpose_ |
 | [edge-spectrum.ts](edge-spectrum.ts) | Spectrum colors for the seven canonical edge-type families. |
 | [egress.ts](egress.ts) | _no top-of-file purpose_ |
+| [entry-paths.ts](entry-paths.ts) | _no top-of-file purpose_ |
 | [fetch.ts](fetch.ts) | _no top-of-file purpose_ |
+| [home-presence-traces.ts](home-presence-traces.ts) | _no top-of-file purpose_ |
 | [html-entities.ts](html-entities.ts) | Many imported asset descriptions arrive carrying WordPress HTML |
 | [humanize.ts](humanize.ts) | _no top-of-file purpose_ |
 | [i18n.ts](i18n.ts) | Locale-text-as-data helpers. |

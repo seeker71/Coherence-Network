@@ -4,10 +4,11 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 46
+**Total files**: 47
 
 | File | Purpose |
 |---|---|
+| [AnonymousMeetingTrace.tsx](AnonymousMeetingTrace.tsx) | _no top-of-file purpose_ |
 | [AssetRenderer.tsx](AssetRenderer.tsx) | _no top-of-file purpose_ |
 | [EnablePush.tsx](EnablePush.tsx) | _no top-of-file purpose_ |
 | [ExplorePager.tsx](ExplorePager.tsx) | _no top-of-file purpose_ |
