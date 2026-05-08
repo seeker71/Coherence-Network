@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 85
+**Total files**: 91
 
 | File | Purpose |
 |---|---|
@@ -12,6 +12,7 @@
 | [add_crosslinks.py](add_crosslinks.py) | !/usr/bin/env python3 |
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | !/usr/bin/env python3 |
 | [agent_status.py](agent_status.py) | !/usr/bin/env python3 |
+| [archive_view_events.py](archive_view_events.py) | !/usr/bin/env python3 |
 | [arrival.py](arrival.py) | !/usr/bin/env python3 |
 | [audit_external_tools.py](audit_external_tools.py) | !/usr/bin/env python3 |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | !/usr/bin/env python3 |
@@ -49,12 +50,16 @@
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
 | [import_lineage.py](import_lineage.py) | !/usr/bin/env python3 |
+| [influence_teaching_translator.py](influence_teaching_translator.py) | !/usr/bin/env python3 |
+| [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | !/usr/bin/env python3 |
+| [ingest_audible_history.py](ingest_audible_history.py) | !/usr/bin/env python3 |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [local_runner.py](local_runner.py) | !/usr/bin/env python3 |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | !/usr/bin/env python3 |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | !/usr/bin/env python3 |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | !/usr/bin/env python3 |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | !/usr/bin/env python3 |
+| [organism_influence_cc.py](organism_influence_cc.py) | !/usr/bin/env python3 |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | !/usr/bin/env python3 |
 | [poll_task_progress.py](poll_task_progress.py) | !/usr/bin/env python3 |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
@@ -80,6 +85,7 @@
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
+| [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
 | [upgrade_specs.py](upgrade_specs.py) | !/usr/bin/env python3 |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | !/usr/bin/env python3 |
 | [validate_local_api_matrix.py](validate_local_api_matrix.py) | !/usr/bin/env python3 |
