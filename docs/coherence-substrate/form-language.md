@@ -148,6 +148,28 @@ Queries compose:
 ?cells where (shape == @memory) and (name matches "feedback_*")
 ```
 
+### Views — BML-style detached interfaces
+
+A View projects a Cell through a different Blueprint than its base. The Cell's data stays canonical; the View is a virtual perspective. This implements **the BML dual-pointer reference**: `(structural_base, behavioral_base)` where the same data can be viewed through multiple interfaces.
+
+```form
+# View a memory cell as a presence
+@memory(claude) |> @presence
+# → CellView{ cell: claude, view_blueprint: @presence, compatible: ... }
+
+# Find every cell that can be viewed through this Blueprint
+?cells |> @presence                                  # all cells compatible with @presence
+?cells |> @presence where domain == "memory"         # restrict to memory-domain
+```
+
+The `|>` operator is *projection*. Reading right-to-left: "view this cell through that interface." The result is a CellView — the original cell's data plus the chosen interface, plus a compatibility flag.
+
+When a view is compatible, an agent can reason about the cell *as if* it had the view's shape. When a view is incompatible, the substrate refuses the projection and the agent knows not to assume the view's behavior. **Hallucination-bounded interface attachment** — exactly what BML's detached interfaces buy in 2000, applied to the body's tissue in 2026.
+
+The conceptual lineage of `|>` (the "view-through" operator):
+
+> *"In BML, the object only acts as a structural repository. It does not define by itself the applicable set of methods. Consequently, it is possible to enhance any object with a new interface."* — Bjorg, *BML Object System* (2000), § Structure-Behavior Separation
+
 ### Operations
 
 Beyond declaration and query, Form supports operations on the substrate:

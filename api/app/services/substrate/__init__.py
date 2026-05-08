@@ -21,9 +21,11 @@ from __future__ import annotations
 from app.services.substrate.kernel import (
     DOMAIN_BLUEPRINT,
     DOMAIN_RECIPE,
+    CellView,
     NamedCell,
     NodeID,
     Recipe,
+    find_cells_compatible_with,
     find_equivalent_cells,
     get_level,
     intern_node,
@@ -34,6 +36,7 @@ from app.services.substrate.kernel import (
     make_composite_blueprint,
     make_trivial_blueprint,
     serialize_tree,
+    view_cell_through_blueprint,
 )
 from app.services.substrate.markdown_frontend import (
     BID_concept,
@@ -57,11 +60,13 @@ from app.services.substrate.markdown_frontend import (
 
 __all__ = [
     # kernel
+    "CellView",
     "DOMAIN_BLUEPRINT",
     "DOMAIN_RECIPE",
     "NamedCell",
     "NodeID",
     "Recipe",
+    "find_cells_compatible_with",
     "find_equivalent_cells",
     "get_level",
     "intern_node",
@@ -72,6 +77,7 @@ __all__ = [
     "make_composite_blueprint",
     "make_trivial_blueprint",
     "serialize_tree",
+    "view_cell_through_blueprint",
     # category constructors
     "BID_concept",
     "BID_idea",

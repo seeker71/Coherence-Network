@@ -15,12 +15,15 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services.substrate import (
+    CellView,
     NamedCell,
     NodeID,
+    find_cells_compatible_with,
     find_equivalent_cells,
     lattice_stats,
     lookup_cell,
     lookup_node,
+    view_cell_through_blueprint,
 )
 from app.services.substrate.kernel import DOMAIN_BLUEPRINT, DOMAIN_RECIPE
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
@@ -191,6 +194,80 @@ def list_cells(
         rows = q.all()
         from app.services.substrate.kernel import _orm_to_cell  # internal helper
         return [CellOut.from_cell(_orm_to_cell(session, r)) for r in rows]
+
+
+class CellViewOut(BaseModel):
+    cell: CellOut
+    view_blueprint: NodeIDOut
+    compatible: bool
+    reason: str | None = None
+
+
+@router.get("/view/{cell_domain}/{cell_name:path}", response_model=CellViewOut, tags=["substrate"])
+def get_view(
+    cell_domain: str,
+    cell_name: str,
+    blueprint_package: int = Query(..., alias="bp_package"),
+    blueprint_level: int = Query(..., alias="bp_level"),
+    blueprint_type: int = Query(..., alias="bp_type"),
+    blueprint_instance: int = Query(..., alias="bp_instance"),
+) -> CellViewOut:
+    """Project a cell through a different Blueprint than its base.
+
+    BML-style detached interface: the cell's data stays canonical; this
+    endpoint returns a CellView that pairs the cell with a chosen view
+    Blueprint, plus a compatibility flag indicating whether the projection
+    is structurally sound.
+
+    The substrate already has the dual-pointer shape implicitly in
+    NamedCell{access Recipe, base Blueprint}. This endpoint exposes the
+    Views explicitly so agents can reason about "this cell viewed as X"
+    without committing the projection.
+    """
+    view_bp = NodeID(
+        blueprint_package, blueprint_level, blueprint_type, blueprint_instance
+    )
+    with session_scope() as session:
+        cell = lookup_cell(session, cell_domain, cell_name)
+        if cell is None:
+            raise HTTPException(
+                status_code=404, detail=f"cell ({cell_domain}, {cell_name}) not found"
+            )
+        view = view_cell_through_blueprint(session, cell, view_bp)
+        return CellViewOut(
+            cell=CellOut.from_cell(view.cell),
+            view_blueprint=NodeIDOut.from_node_id(view.view_blueprint),
+            compatible=view.compatible,
+            reason=view.reason,
+        )
+
+
+@router.get("/compatible_with/{package}/{level}/{type_}/{instance}", tags=["substrate"])
+def get_compatible_cells(
+    package: int,
+    level: int,
+    type_: int,
+    instance: int,
+    domain: str | None = Query(None),
+) -> list[CellViewOut]:
+    """Find all cells that can be viewed through this Blueprint.
+
+    BML detached-interface query: given an interface (Blueprint), what
+    cells in the body can be projected through it? Returns the set of
+    compatible CellViews.
+    """
+    view_bp = NodeID(package, level, type_, instance)
+    with session_scope() as session:
+        views = find_cells_compatible_with(session, view_bp, domain=domain)
+        return [
+            CellViewOut(
+                cell=CellOut.from_cell(v.cell),
+                view_blueprint=NodeIDOut.from_node_id(v.view_blueprint),
+                compatible=v.compatible,
+                reason=v.reason,
+            )
+            for v in views
+        ]
 
 
 @router.get("/histogram/{domain}", response_model=HistogramOut, tags=["substrate"])

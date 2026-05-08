@@ -88,14 +88,52 @@ form my_spec_shape = {
 
 The agent now knows whether it's instantiating an existing pattern or introducing a new structural shape. Both are valid, but they are *different* — and the substrate makes the difference legible.
 
-### Pattern 3: Phase-aware reasoning
+### Pattern 3: Views — projecting a cell through a different interface
+
+The substrate carries a dual-pointer reference inside every NamedCell: the `Base blueprint` is the structural pointer (what shape the data has), and the `access Recipe` is the behavioral pointer (how to read it). Because they're separate, a cell can be **viewed** through a different Blueprint than its base — the data stays canonical, the view is a virtual projection.
+
+This is the architectural pattern Bjorg formalized in his *BML Object System* thesis (2000) as detached interfaces — see [`docs/field/urs/artifacts/master-thesis-2000/README.md`](../../../../source/Coherence-Network/.claude/worktrees/laughing-lamarr-080869/docs/field/urs/artifacts/master-thesis-2000/README.md) for the BML dual-pointer story. Why it matters here:
+
+- An agent can reason about "this memory file viewed as a presence" without committing the projection
+- Cells with overlapping shapes can be projected through each other's blueprints, surfacing structural compatibility before any rewriting happens
+- Hallucination-bounded interface attachment: the substrate either accepts the projection (compatible) or refuses it (incompatible with reason)
+
+```python
+from app.services.substrate import (
+    lookup_cell, view_cell_through_blueprint, find_cells_compatible_with, BID_presence,
+)
+
+with session_scope() as session:
+    claude = lookup_cell(session, "memory", "presences_of_the_field")
+    # Can this memory be viewed as a presence?
+    view = view_cell_through_blueprint(session, claude, BID_presence())
+    if view.compatible:
+        # Reason about claude as a presence, projecting its data through that interface
+        ...
+    else:
+        # The view is incompatible — don't pretend the cell has presence-shape
+        print(f"Not viewable: {view.reason}")
+
+    # Inverse: what cells in the body can be viewed through @presence?
+    candidates = find_cells_compatible_with(session, BID_presence())
+```
+
+Or in [Form](form-language.md):
+
+```form
+@memory(presences_of_the_field) |> @presence       # the projection
+?cells |> @presence                                # all cells viewable through @presence
+?cells |> @presence where domain == "memory"       # restrict to memory cells
+```
+
+### Pattern 4: Phase-aware reasoning
 
 Stay clear about whether you're reasoning in ice (types), water (expressions), or gas (instances).
 
 **Phase-confused (don't):**
 > "The Memory has a name field, so the Memory is named 'User biographical arc'."
 
-This collapses Blueprint (the Memory type, which has a name *field*) with Cell (the specific user-biographical-arc memory, which has a name *value*). Two different layers; phase confusion makes both murky.
+This collapses Blueprint (the Memory type, which has a name *field*) with Cell (the specific user-biographical-arc memory, which has a name *value*). Two different layers; phase confusion makes both murky. The BML object architecture's distinction between behavioral base and structural base — the dual-pointer reference — is exactly what keeps these phases addressable separately.
 
 **Phase-aware (do):**
 

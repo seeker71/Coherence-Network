@@ -344,6 +344,123 @@ def lookup_cell(session: Session, domain: str, name: str) -> Optional[NamedCell]
     return _orm_to_cell(session, cell_orm)
 
 
+# ---------------------------------------------------------------------------
+# Views — BML-style detached interfaces
+# ---------------------------------------------------------------------------
+#
+# A Cell carries a (Base blueprint, access Recipe) dual-pointer pair: the
+# Base is the structural pointer (what shape the cell has); the access
+# Recipe is the behavioral pointer (how to read it). Because they are
+# separate, the substrate supports BML-style detached interfaces — the
+# ability to project the same cell through a different Blueprint than its
+# base, without modifying the cell.
+#
+# A View is a (cell, view_blueprint) projection. It is computed on demand
+# rather than stored — the cell remains canonical, the view is a virtual
+# perspective. The View carries:
+#   - the original cell's data (access recipe, source path, ctor)
+#   - the new blueprint as the projection's "interface"
+#   - a compatibility flag indicating whether the projection is sound
+#
+# Lineage: see `docs/field/urs/artifacts/master-thesis-2000/README.md`
+# ("The BML object architecture — dual-pointer references and detached
+# interfaces") and Bjorg's BML Object System thesis at
+# `docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`.
+
+
+@dataclass
+class CellView:
+    """A projection of an existing cell through a different Blueprint.
+
+    Equivalent to a BML reference where (object_id, interface_id) point at
+    the same data through a chosen interface. The cell is not modified;
+    the view is a virtual perspective.
+    """
+
+    cell: "NamedCell"             # the underlying cell (data side)
+    view_blueprint: NodeID        # the projecting Blueprint (interface side)
+    compatible: bool              # whether the projection is structurally sound
+    reason: Optional[str] = None  # if not compatible, why
+
+
+def view_cell_through_blueprint(
+    session: Session, cell: "NamedCell", view_blueprint: NodeID
+) -> CellView:
+    """Project a cell through a different Blueprint than its base.
+
+    Structural compatibility check: a view is "compatible" when the view
+    Blueprint is structurally a subset of (or equal to) the cell's actual
+    Blueprint — in BML terms, the interface's method set is a subset of
+    the methods the structure provides. For the Network's substrate where
+    Blueprints encode frontmatter shape, that translates to: the view's
+    expected fields must be present in the cell's actual fields.
+
+    For now we use a simpler rule: compatible iff the cell's Blueprint
+    NodeID equals the view_blueprint, or one is the trivial domain
+    blueprint of the other. Richer subset checks (per-field name+type
+    matching) are a phase-4-extension followup.
+    """
+    if cell.blueprint == view_blueprint:
+        return CellView(cell=cell, view_blueprint=view_blueprint, compatible=True)
+
+    # Trivial domain match — e.g. the cell's blueprint is a Memory composite,
+    # and we're viewing through the trivial Memory domain blueprint.
+    cell_orm = (
+        session.query(SubstrateNodeORM)
+        .filter_by(
+            package=cell.blueprint.package,
+            level=cell.blueprint.level,
+            type_=cell.blueprint.type_,
+            instance=cell.blueprint.instance,
+        )
+        .one_or_none()
+    )
+    if cell_orm is None:
+        return CellView(
+            cell=cell, view_blueprint=view_blueprint, compatible=False,
+            reason="cell's blueprint not found in substrate",
+        )
+
+    # Domain trivial match: view through @memory works for any cell whose
+    # Blueprint serializes with @memory as its category.
+    view_str = str(view_blueprint)
+    if cell_orm.serialized.startswith(view_str + "+") or cell_orm.serialized == view_str:
+        return CellView(cell=cell, view_blueprint=view_blueprint, compatible=True)
+
+    return CellView(
+        cell=cell, view_blueprint=view_blueprint, compatible=False,
+        reason=(
+            f"cell blueprint {cell.blueprint} not structurally compatible "
+            f"with view blueprint {view_blueprint}; richer subset checks pending"
+        ),
+    )
+
+
+def find_cells_compatible_with(
+    session: Session, view_blueprint: NodeID, domain: Optional[str] = None
+) -> List["CellView"]:
+    """Find all cells whose Blueprint is structurally compatible with view_blueprint.
+
+    Returns the set of valid CellViews — every cell that can be projected
+    through this Blueprint without violating its structure. This is the
+    BML "detached interface" query: given an interface, what objects in
+    the body can be viewed through it?
+    """
+    q = session.query(SubstrateNamedCellORM)
+    if domain is not None:
+        q = q.filter_by(domain=domain)
+    rows = q.all()
+    out = []
+    for row in rows:
+        cell = _orm_to_cell(session, row)
+        if cell.blueprint is None:
+            continue
+        view = view_cell_through_blueprint(session, cell, view_blueprint)
+        if view.compatible:
+            out.append(view)
+    return out
+
+
 def find_equivalent_cells(
     session: Session, blueprint: NodeID, *, exclude_name: Optional[str] = None
 ) -> List[NamedCell]:

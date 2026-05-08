@@ -23,8 +23,10 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.services.substrate import (
+    CellView,
     NodeID,
     Recipe,
+    find_cells_compatible_with,
     find_equivalent_cells,
     ingest_memory_file,
     intern_node,
@@ -32,6 +34,7 @@ from app.services.substrate import (
     lookup_cell,
     make_cell,
     parse_markdown,
+    view_cell_through_blueprint,
 )
 from app.services.substrate.category import (
     BBasic,
@@ -268,6 +271,62 @@ FRONTMATTER_WITH_COLONS = textwrap.dedent("""\
     ---
     Body.
     """)
+
+
+# ---------------------------------------------------------------------------
+# Views — BML-style detached interfaces
+# ---------------------------------------------------------------------------
+
+
+def test_view_cell_through_its_own_blueprint_is_compatible(session, tmp_path):
+    """A cell viewed through its own Blueprint is trivially compatible."""
+    p = tmp_path / "x.md"
+    p.write_text(MEMORY_TEMPLATE_A.format(name="X"))
+    cell, bp, _ = ingest_memory_file(session, p)
+
+    view = view_cell_through_blueprint(session, cell, cell.blueprint)
+    assert view.compatible is True
+    assert view.cell.name == cell.name
+    assert view.view_blueprint == cell.blueprint
+
+
+def test_view_cell_through_unrelated_blueprint_is_incompatible(session, tmp_path):
+    """A cell viewed through an unrelated Blueprint reports incompatibility."""
+    p = tmp_path / "x.md"
+    p.write_text(MEMORY_TEMPLATE_A.format(name="X"))
+    cell, _, _ = ingest_memory_file(session, p)
+
+    # Try to view as an arbitrary unrelated NodeID (a fresh Integer)
+    unrelated = NodeID(1, Level.TRIVIAL, BType.NUMERIC, 99)
+    view = view_cell_through_blueprint(session, cell, unrelated)
+    assert view.compatible is False
+    assert view.reason is not None
+
+
+def test_find_cells_compatible_with_returns_views(session, tmp_path):
+    """The detached-interface query returns CellViews for compatible cells."""
+    p1 = tmp_path / "a.md"
+    p1.write_text(MEMORY_TEMPLATE_A.format(name="A"))
+    p2 = tmp_path / "b.md"
+    p2.write_text(MEMORY_TEMPLATE_A.format(name="B"))
+    p3 = tmp_path / "c.md"
+    p3.write_text(MEMORY_TEMPLATE_DIFFERENT.format(name="C"))
+
+    cell_a, bp_a, _ = ingest_memory_file(session, p1)
+    cell_b, bp_b, _ = ingest_memory_file(session, p2)
+    cell_c, bp_c, _ = ingest_memory_file(session, p3)
+
+    views = find_cells_compatible_with(session, bp_a, domain="memory")
+    names = {v.cell.name for v in views}
+    assert "A" in names
+    assert "B" in names
+    # C has a different shape — it should NOT be compatible
+    assert "C" not in names
+
+
+# ---------------------------------------------------------------------------
+# Tolerant frontmatter parsing — colons-in-descriptions don't break us
+# ---------------------------------------------------------------------------
 
 
 def test_tolerant_frontmatter_handles_colons_in_descriptions(session):
