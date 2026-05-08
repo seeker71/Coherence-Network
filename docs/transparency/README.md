@@ -53,6 +53,7 @@ These are the limits of what an opt-out can guarantee, named directly:
 
 - **Past third-party mirrors are out of reach.** Anyone who downloaded a cold-tier archive before the rewrite has the old SHA-256 on their disk. The network's surfaces (live DB, current cold-tier archives, future dumps) reflect the redaction; mirrors elsewhere don't.
 - **Past postgres dumps in the public archive aren't rewritten.** Each nightly dump is a monolithic snapshot; rewriting them retroactively would invalidate every prior cryptographic verification. From the moment of opt-out, every new nightly dump reflects the redacted DB; older dumps in the archive are immutable.
+- **GitHub's asset-CDN has a brief propagation window (~2 minutes observed)** after a cold-tier archive is rewritten. During that window the retrieval surface (`/api/views/archive/{day}`) returns an integrity error rather than serving stale content — fail-closed by design. The audit log and tombstone already record the new SHA, so the proof of rewrite is durable. Re-fetching after the window settles returns the redacted content cleanly.
 - **Aggregate counts persist.** The sentinel `contributor:redacted` keeps the ledger's aggregate-counter behaviour intact (the network can still see "N contributions came from redacted cells") without exposing who. If you need stronger removal, say so in your request; we'll discuss what's possible at the substrate level.
 
 The opt-out is **forward-looking and current-state effective**. It honours the request without pretending the substrate has powers it doesn't have.
