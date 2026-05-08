@@ -71,6 +71,15 @@ from app.services.substrate.form_eval import (
     register_eval,
     reset_eval_registry,
 )
+from app.services.substrate.form_speculation import (
+    FailSignal,
+    SpeculationContext,
+    SpeculationFrame,
+    SpeculationResult,
+    StopSignal,
+    choice,
+    speculate,
+)
 from app.services.substrate.form_operators import (
     OperatorRule,
     list_operators,
@@ -228,4 +237,12 @@ __all__ = [
     "lookup_eval_category",
     "register_eval",
     "reset_eval_registry",
+    # Parser-level speculation (backtracking-without-sediment)
+    "FailSignal",
+    "SpeculationContext",
+    "SpeculationFrame",
+    "SpeculationResult",
+    "StopSignal",
+    "choice",
+    "speculate",
 ]

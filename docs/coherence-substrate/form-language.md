@@ -427,7 +427,7 @@ form_parse("unless x then y")  # ✓ parses
 
 - **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Self-hosting means expressing the bootstrap rules themselves via `register_form_keyword` — at which point form.py becomes a tiny seed that registers a few starter rules and hands off. The persistence shipped here is necessary infrastructure for that move.
 
-- **Backtracking-driven.** The match engine uses save-and-restore on parser.pos — implicit backtracking, not Choice.FAIL semantics. A future move integrates the parser's speculation with the substrate's Choice recipes.
+- ~~**Backtracking-driven.**~~ ✓ **Closed.** The match engine now delegates to `form_speculation.speculate(...)` which manages a structured speculation stack. `FailSignal` triggers clean unwind; `StopSignal` commits a frame. `try_match` and `choice(alternatives)` are both built on the same primitive. Captures partially populated during a failed attempt are fully restored — no sediment.
 
 - ~~**String interning.**~~ ✓ **Closed.** Pattern serialization now uses the substrate string-table (`substrate_strings.py`) — sequentially-allocated, cross-process stable, round-trip-recoverable. The legacy `_STRING_CACHE` is an in-process shortcut.
 
@@ -589,7 +589,7 @@ The evaluator (`_to_recipe_node_id` in form.py) no longer has a hardcoded `op �
 
 #### What's still not closed
 
-- **Backtracking-driven.** The match engine uses save-and-restore on parser.pos. Future move: integrate with Choice.FAIL recipe semantics so the parser's speculation is itself substrate-recorded.
+- ~~**Backtracking-driven.**~~ ✓ **Closed.** `form_speculation.py` manages a SpeculationContext; `try_match` delegates to it; FailSignal/StopSignal are first-class exceptions; nested speculation works; captures are fully unwound on fail. The structural seam to Choice.FAIL/STOP recipes is in place — a future recipe-execution engine catches these signals when interpreting Choice recipes.
 
 - ~~**String interning.**~~ ✓ **Closed.** The substrate string-table is the source of truth for string-recipe-instance allocation. Cross-process stable; round-trip-recoverable after cache clear. See `substrate_strings.py`.
 
@@ -607,7 +607,7 @@ For Form, that path is:
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
 5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
 6. **Self-hosting (9 keywords + 13 operators).** ✓ Shipped — `self_host.bootstrap_self_host(session)` + `bootstrap_self_host_operators(session)` register every structured Form keyword AND every binary/unary operator as substrate-resident rules. Setting `prefer_registered=True` flips the parser to use them. Verified: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registry. Pattern DSL extensions (IdentCapture, RepeatedCapture, MapBuild) cover the structured-keyword space; operator precedence climbing (form_operators.parse_with_precedence) covers the operator space. **The keyword layer is fully self-hostable.**
-7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
+7. **Backtracking-without-sediment at parser level.** ✓ Shipped — `form_speculation.py` introduces a structured speculation engine. Each parse attempt becomes a `SpeculationFrame` on a stack. On success, the frame commits and accumulated state persists. On failure (matcher returns False, `FailSignal` raised, or any other exception), the frame unwinds cleanly — `parser.pos` AND any partially-populated captures are fully restored. `try_match` and `choice(alternatives)` both delegate to `speculate(...)`. Verified: nested speculation works, partial captures don't leak through failed attempts, and the legacy `try_match` API is preserved. Connection to the substrate's `Choice.FAIL`/`Choice.STOP` recipes is structural — a future recipe-execution engine catches the signals.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
 

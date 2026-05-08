@@ -131,18 +131,20 @@ class MatchResult:
 def try_match(parser, pattern: Any) -> MatchResult:
     """Try to match a pattern against the parser's current position.
 
-    On success, returns MatchResult(success=True, captures=...).
-    On fail, restores parser.pos and returns MatchResult(success=False).
+    Delegates to the structured speculation engine in form_speculation.
+    On success, returns MatchResult(success=True, captures=...). On
+    fail, the speculation engine cleanly unwinds parser state — without
+    sediment — and returns MatchResult(success=False).
 
-    This is the "implicit backtracking" — we save pos before the try,
-    restore on failure. Future work: integrate with Choice.FAIL so the
-    parser's speculation is itself a substrate-recorded operation.
+    Captures partially-populated during a failed attempt are also
+    cleared, not just `parser.pos`. The previous ad-hoc save/restore
+    only restored position; the speculation engine restores the full
+    captured state.
     """
-    saved = parser.pos
-    captures: Dict[str, Any] = {}
-    if _do_match(parser, pattern, captures):
-        return MatchResult(True, captures)
-    parser.pos = saved
+    from app.services.substrate.form_speculation import speculate
+    result = speculate(parser, pattern)
+    if result.success:
+        return MatchResult(True, result.captures)
     return MatchResult(False)
 
 
