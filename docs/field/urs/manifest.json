@@ -17,7 +17,8 @@
     "mcp_tools": [
       "get_field_story",
       "get_field_story_artifact",
-      "contribute_field_story"
+      "contribute_field_story",
+      "get_organism_influence_cc"
     ],
     "web": "/field/urs",
     "cli": "coh content set page field-urs --lang en --file docs/field/urs/output/chronological_story_with_frequency.md --title \"Urs Field Story\" --by <contributor_id>"

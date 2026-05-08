@@ -216,6 +216,35 @@ def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     assert trace["truth_boundary"]["next_precision"].startswith("For exact row-to-source-body proofs")
 
 
+def test_organism_influence_cc_computes_top_influencers_from_trace_and_agent_time():
+    response = client.get("/api/field-stories/urs-field-story/organism-influence-cc?limit=80&cc_pool=1000")
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["schema_version"] == "organism-influence-cc/v1"
+    assert body["policy_id"] == "organism-influence-cc:v1"
+    assert body["source_crypto_root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert body["totals"]["total_cc_pool"] == 1000
+    assert body["totals"]["distributed_cc"] == 1000
+    assert body["truth_boundary"].startswith("Computed sensing allocation")
+
+    pool_ids = {pool["pool_id"] for pool in body["pools"]}
+    assert {"stewardship_time", "agent_time", "significant_works", "creators_and_channels", "manual_practices"} <= pool_ids
+
+    rows = body["top_influencers"]
+    assert len(rows) >= 20
+    assert all(row["computed_cc"] > 0 for row in rows)
+    assert any(row["influencer_id"] == "contributor:urs" and row["kind"] == "human_steward" for row in rows)
+    assert any(row["kind"] == "agent_time" and row["influencer_id"].startswith("agent:") for row in rows)
+    assert any(row["influencer_id"].startswith("significant-work:spellmonger") for row in rows)
+    assert any(row["ledger_recipient_id"] == "creator:Terry Mancour" for row in rows)
+    assert any("trace/significant_work_index.jsonl" in ref for row in rows for ref in row["trace_refs"])
+
+    mcp_result = TOOL_MAP["get_organism_influence_cc"]["handler"]({"slug": "urs-field-story", "limit": 20})
+    assert mcp_result["top_influencers"][0]["computed_cc"] > 0
+    assert mcp_result["source_crypto_root"] == body["source_crypto_root"]
+
+
 def test_field_story_view_attribution_records_compact_receipt_and_cc_flow():
     response = client.post(
         "/api/field-stories/urs-field-story/view-attribution",

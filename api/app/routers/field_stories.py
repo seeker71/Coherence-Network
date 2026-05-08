@@ -9,6 +9,7 @@ from app.services import (
     field_story_service,
     field_view_attribution_adjustment_service,
     field_view_attribution_service,
+    organism_influence_cc_service,
 )
 
 router = APIRouter()
@@ -87,6 +88,23 @@ async def get_field_story_spectrum(slug: str) -> dict:
 async def get_field_story_trace_slice(slug: str, selector: str, value: str) -> dict:
     try:
         return field_story_service.get_field_story_trace_slice(slug, selector, value)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
+@router.get(
+    "/field-stories/{slug}/organism-influence-cc",
+    summary="Compute CC sensing allocation for top organism influencers",
+)
+async def get_organism_influence_cc(slug: str, limit: int = 40, cc_pool: float = 1000.0) -> dict:
+    try:
+        return organism_influence_cc_service.compute_organism_influence_cc(
+            slug,
+            limit=limit,
+            cc_pool=cc_pool,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FileNotFoundError as exc:
