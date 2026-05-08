@@ -1,0 +1,71 @@
+{
+  "date": "2026-05-08T03:50:19Z",
+  "thread_branch": "codex/field-source-crypto-trace-20260508",
+  "commit_scope": "docs(field): add source crypto trace manifest",
+  "files_owned": [
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/source_crypto_trace.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Built trace/source_crypto_trace.json with 21 local source bodies, 69,082 normalized event rows, and combined_trace_root 52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7. py_compile passed, crypto trace invariant check passed, focused API artifact test passed, full api/tests/test_field_story_trace_index.py passed with 10 tests, and git diff whitespace check passed."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Local API artifact tests validate the registered field-story artifact and compact hash-root shape. CI will rerun after PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Docs/API-served field artifact change is ready for normal PR/deploy flow; public deploy verification applies after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "urs-field-story",
+    "source-crypto-trace",
+    "living-field-ingest"
+  ],
+  "spec_ids": [
+    "field-story-trace-index"
+  ],
+  "task_ids": [
+    "field-source-crypto-trace-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Documentation",
+        "Evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 docs/field/urs/tools/source_crypto_trace.py",
+    "python3 -m py_compile docs/field/urs/tools/source_crypto_trace.py",
+    "python3 crypto trace invariant check",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_source_crypto_trace_registers_hash_roots_for_dynamic_access",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check"
+  ],
+  "change_files": [
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/manifest.json",
+    "docs/field/urs/tools/source_crypto_trace.py",
+    "docs/field/urs/trace/README.md",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
