@@ -60,16 +60,39 @@ fn fizzbuzz_produces_watchable_mp4() {
     // Find at least two pixels with distinct RGB values.
     let mut first: Option<[u8; 3]> = None;
     let mut found_distinct = false;
-    'outer: for px in img.pixels() {
+    let mut max_channel: u8 = 0;
+    let mut bright_pixels: usize = 0;
+    for px in img.pixels() {
         let rgb = [px.0[0], px.0[1], px.0[2]];
         match first {
             None => first = Some(rgb),
             Some(prev) if prev != rgb => {
                 found_distinct = true;
-                break 'outer;
             }
             _ => {}
         }
+        let m = rgb[0].max(rgb[1]).max(rgb[2]);
+        if m > max_channel {
+            max_channel = m;
+        }
+        if m > 80 {
+            bright_pixels += 1;
+        }
     }
     assert!(found_distinct, "first frame is uniform; renderer not producing color variance");
+
+    // Visibility floor: the heap must actually be visible to a human, not just
+    // technically non-uniform. Without these assertions the v0 demo can ship
+    // a frame that passes pixel-distinctness while being indistinguishable
+    // from black to the eye.
+    assert!(
+        max_channel > 100,
+        "first frame's brightest pixel max channel = {}; the heap must be visibly lit",
+        max_channel
+    );
+    assert!(
+        bright_pixels > 50,
+        "only {} pixels with max channel > 80; the heap region is too dim or too small to see",
+        bright_pixels
+    );
 }

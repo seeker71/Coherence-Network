@@ -121,15 +121,31 @@ fn pointer_halo_pair(kind: PointerKind, prov: u32) -> ([u8; 3], [u8; 3]) {
     }
 }
 
-/// Modulate a base RGB by payload entropy. More nonzero bytes = brighter,
-/// all zeros = dim (15% of base).
+/// Modulate a base RGB by payload content. Cells must be visibly bright at
+/// any nonzero value (the heap is meant to be *seen*); within that floor,
+/// payload content drives a hue/value flicker so the eye perceives change.
+///
+/// Brightness floor is 0.7 of the base palette so even a single-byte value
+/// (e.g. `u32 = 1` with payload [1,0,0,...]) renders as a clearly-lit cell
+/// rather than a near-black smudge. A small CRC-driven channel offset
+/// (±25 per channel, anti-correlated across R/B) makes adjacent values
+/// distinguishable as they change.
 pub fn modulate_brightness(base: [u8; 3], payload: &[u8; 14]) -> [u8; 3] {
     let nonzero = payload.iter().filter(|b| **b != 0).count() as f32;
-    let factor = 0.15 + (nonzero / 14.0) * 0.85;
+    let factor = 0.7 + (nonzero / 14.0) * 0.3;
+
+    // Payload-driven channel offset for value-change flicker.
+    let h = crc32fast::hash(payload);
+    let offset = ((h % 51) as i16) - 25; // -25..=25
+
+    let r = (base[0] as f32 * factor) as i16 + offset;
+    let g = (base[1] as f32 * factor) as i16;
+    let b = (base[2] as f32 * factor) as i16 - offset;
+
     [
-        ((base[0] as f32) * factor) as u8,
-        ((base[1] as f32) * factor) as u8,
-        ((base[2] as f32) * factor) as u8,
+        r.clamp(0, 255) as u8,
+        g.clamp(0, 255) as u8,
+        b.clamp(0, 255) as u8,
     ]
 }
 
@@ -271,5 +287,56 @@ mod tests {
         let i = (1 * RENDER_W + 1) * 4;
         let r = frame[i];
         assert!(r > 100, "expected bright red channel, got {}", r);
+    }
+
+    #[test]
+    fn small_value_cell_is_still_visibly_bright() {
+        // A u32 with value 1 (payload = [1, 0, 0, 0, 0...]) is the dimmest realistic
+        // fizzbuzz value — only one byte nonzero. It MUST render visibly bright,
+        // otherwise the demo looks like an all-black frame to the eye.
+        let mut data = vec![0u8; NUM_CELLS * CELL_BYTES];
+        // Cell 0: tag = TAG_U32 (0x0003), payload = [1, 0, 0, ..., 0]
+        data[0] = 0x03;
+        data[1] = 0x00;
+        data[2] = 0x01;
+        // bytes 3..15 stay 0
+        let prov = vec![0u32; NUM_CELLS];
+        let frame = render_frame(&data, &prov);
+        // Inner pixel of cell 0 = (1,1).
+        let i = (1 * RENDER_W + 1) * 4;
+        let max_channel = frame[i].max(frame[i + 1]).max(frame[i + 2]);
+        assert!(
+            max_channel > 100,
+            "u32(1) inner pixel must be visibly bright; got max channel {} (RGB={:?})",
+            max_channel,
+            (frame[i], frame[i + 1], frame[i + 2])
+        );
+    }
+
+    #[test]
+    fn distinct_payloads_render_distinguishable_colors() {
+        // Two u32 cells with values 1 vs 2 should produce visibly different colors
+        // (CRC-driven flicker), so changing values are perceptible across frames.
+        let mut data = vec![0u8; NUM_CELLS * CELL_BYTES];
+        // Cell 0: u32 = 1
+        data[0] = 0x03;
+        data[2] = 0x01;
+        // Cell 1: u32 = 2
+        data[CELL_BYTES] = 0x03;
+        data[CELL_BYTES + 2] = 0x02;
+        let prov = vec![0u32; NUM_CELLS];
+        let frame = render_frame(&data, &prov);
+        // Inner pixels of cells 0 and 1 (cells 0 at x=1,y=1; cell 1 at x=5,y=1)
+        let i0 = (1 * RENDER_W + 1) * 4;
+        let i1 = (1 * RENDER_W + 5) * 4;
+        let dr = (frame[i0] as i16 - frame[i1] as i16).abs();
+        let db = (frame[i0 + 2] as i16 - frame[i1 + 2] as i16).abs();
+        assert!(
+            dr + db > 5,
+            "u32(1) and u32(2) must render distinguishable colors; \
+             got cell0 RGB=({},{},{}) cell1 RGB=({},{},{})",
+            frame[i0], frame[i0 + 1], frame[i0 + 2],
+            frame[i1], frame[i1 + 1], frame[i1 + 2]
+        );
     }
 }

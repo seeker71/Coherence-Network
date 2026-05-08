@@ -24,18 +24,30 @@ This produces `fizzbuzz.mp4` in the crate directory (~30 seconds, 1024×1024,
 
 ## What you'll see
 
+The fizzbuzz example only allocates 100 cells out of the 65,536-cell heap.
+With deterministic next-free-slot allocation, those 100 cells live at
+indices 0..99 — which on the 256×256 grid is **the very top row** at
+y ∈ [0, 4) px. So you're looking at a thin **400×4 px lit strip** along
+the top edge of the 1024×1024 frame, with the rest correctly black
+(free cells render as black). LOD-zoom — the v1-3d sibling spec — is the
+proper UX answer for "show me where the activity actually is"; v0
+renders the heap honestly at fixed 1:1 scale.
+
+What's happening in that strip:
+
 - **Cell 0** (top-left, single 4×4 px block): the current `i` (1..=10000).
-  Its inner color is the `u32` palette entry; brightness pulses with the
-  payload's nonzero-byte count.
-- **Cells 1..99** (the rest of the top row): the rolling fizz/buzz history.
-  As the loop runs, tag values shift down the strip: `1=plain`, `2=fizz`,
-  `3=buzz`, `4=fizzbuzz`. Inner color is the same palette entry (all `u32`),
-  but brightness varies with the value.
-- **Halos** (outer ring of every 4×4 block): the provenance hash. The four
-  branches of the fizzbuzz `match` (`write_plain`, `write_fizz`, `write_buzz`,
-  `write_fizzbuzz`) each live at a distinct `file:line`, so each branch's
-  halo color is distinct. You should see the strip's halos shimmer between
-  four colors as the loop progresses.
+  Inner color is the `u32` palette entry, modulated within a 0.7..1.0
+  brightness range so it stays clearly visible at any value; a CRC-driven
+  channel offset gives value-change flicker.
+- **Cells 1..99** (the rest of the top strip): the rolling fizz/buzz
+  history. As the loop runs, tag values shift down the strip: `1=plain`,
+  `2=fizz`, `3=buzz`, `4=fizzbuzz`. Inner color is the same palette entry
+  (all `u32`); the CRC-driven flicker per-value gives a perceptible drift.
+- **Halos** (outer ring of every 4×4 block): the provenance hash. The
+  four branches of the fizzbuzz `match` (`write_plain`, `write_fizz`,
+  `write_buzz`, `write_fizzbuzz`) each live at a distinct `file:line`, so
+  each branch's halo color is distinct. You should see the strip's halos
+  shimmer between four colors as the loop progresses.
 
 ## Tests
 
