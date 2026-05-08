@@ -14,7 +14,7 @@ from typing import Any
 
 
 GENERIC_AUTHORS = {"here", "unknown", "empty artist - topic"}
-TAKEOUT_DATE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, 20\d\d, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?")
+TAKEOUT_DATE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?")
 PUBLISHED_TRACE_START = datetime(2024, 5, 7)
 
 
@@ -314,6 +314,10 @@ def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str
             "full_takeout_part_012": youtube_part,
             "uploads_and_library_parts": summarize_youtube_upload_parts(downloads_dir),
             "published_gap": {
+                "integrated_before_2024_05_07_events": missing_period["events"],
+                "integrated_2023_events": youtube_full["periods"]["year_2023"]["events"],
+                "integrated_early_2024_events": youtube_full["periods"]["early_2024_before_published_trace"]["events"],
+                "highest_signal_expansion_authors": missing_period["top_authors"][:20],
                 "missing_before_2024_05_07_events": missing_period["events"],
                 "missing_2023_events": youtube_full["periods"]["year_2023"]["events"],
                 "missing_early_2024_events": youtube_full["periods"]["early_2024_before_published_trace"]["events"],
@@ -355,16 +359,16 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- Audible library/listen/purchase captures: {payload['audible']['library']['events']} library, {payload['audible']['listen_history']['events']} listen-history, {payload['audible']['purchase_history']['events']} purchase-history rows.",
         f"- Local browser trace: {payload['browser']['events']} events, `{payload['browser']['first']}` to `{payload['browser']['last']}`.",
         "",
-        "## Published Gap",
+        "## Expanded Trace Before The Former Window",
         "",
-        f"- YouTube events before the published `2024-05-07` trace window: {gap['missing_before_2024_05_07_events']}.",
-        f"- 2023 YouTube events: {gap['missing_2023_events']}.",
-        f"- Early 2024 YouTube events before `2024-05-07`: {gap['missing_early_2024_events']}.",
+        f"- YouTube events before the former `2024-05-07` trace window now present in the repo trace: {gap['integrated_before_2024_05_07_events']}.",
+        f"- 2023 YouTube events now present: {gap['integrated_2023_events']}.",
+        f"- Early 2024 YouTube events before `2024-05-07` now present: {gap['integrated_early_2024_events']}.",
         "",
-        "## Highest-Signal Missing YouTube Authors",
+        "## Highest-Signal Expansion YouTube Authors",
         "",
     ]
-    for item in gap["highest_signal_missing_authors"]:
+    for item in gap["highest_signal_expansion_authors"]:
         marker = "already in story" if item.get("already_in_story") else "needs room"
         lines.append(f"- {item['value']} — {item['count']} events ({marker})")
     lines.extend(["", "## 2023 Wave", ""])
@@ -386,7 +390,7 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     for name, row in payload["project_archives"].items():
         lines.append(f"- `{name}`: {row['files']} files")
     lines.extend(["", "## Next Breath", ""])
-    lines.append("- Rebuild the field trace from the full YouTube history-only Takeout, not just the two-year window.")
+    lines.append("- Use `trace/monthly_spectrum.json`, `trace/author_index.jsonl`, and `trace/work_index.jsonl` as the compact query layer for the expanded YouTube trace.")
     lines.append("- Add a 2023/early-2024 transition room for the flamenco/Spanish-guitar body wave and its bridge into devotional-body music.")
     lines.append("- Add a separate unresolved-author cleanup for `here` YouTube rows before treating them as real influence presences.")
     lines.append("- Keep Photos and Gmail at metadata/header level in this compact pass; deeper source-specific analysis can happen when that breath is useful.")
@@ -403,7 +407,7 @@ def main() -> int:
     write_json(args.field_dir / "trace" / "digital_influence_inventory.json", payload)
     write_markdown(args.field_dir / "output" / "digital_influence_inventory.md", payload)
     print(f"youtube_full_events={payload['youtube']['history_only_takeout']['events']}")
-    print(f"missing_before_published={payload['youtube']['published_gap']['missing_before_2024_05_07_events']}")
+    print(f"integrated_before_2024_05_07={payload['youtube']['published_gap']['integrated_before_2024_05_07_events']}")
     print(args.field_dir / "output" / "digital_influence_inventory.md")
     return 0
 

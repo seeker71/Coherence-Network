@@ -2,7 +2,7 @@
 
 This inventory maps the local digital-history sources available for the Urs field story without committing bulky raw archives.
 
-Generated: `2026-05-07T15:43:03.588936+00:00`
+Generated: `2026-05-08T03:24:35.159519+00:00`
 
 ## Publication Boundary
 
@@ -10,20 +10,20 @@ This compact artifact publishes source counts, date spans, filenames, and aggreg
 
 ## Source Coverage
 
-- Published repo trace: 28174 events.
+- Published repo trace: 69082 events.
 - Full YouTube history-only Takeout: 65700 events, `2021-07-31T17:07:28` to `2026-05-07T00:55:36`.
 - Full YouTube part 012 watch history: 52500 events, `2022-09-07T05:37:14` to `2026-05-06T09:55:18`.
 - YouTube uploads/library archives: 4743 audio files and 5 video files across 13 archives.
 - Audible library/listen/purchase captures: 233 library, 50 listen-history, 198 purchase-history rows.
 - Local browser trace: 167 events, `2026-02-05T05:59:11.980937+00:00` to `2026-05-06T02:16:11.728236+00:00`.
 
-## Published Gap
+## Expanded Trace Before The Former Window
 
-- YouTube events before the published `2024-05-07` trace window: 39144.
-- 2023 YouTube events: 14746.
-- Early 2024 YouTube events before `2024-05-07`: 4861.
+- YouTube events before the former `2024-05-07` trace window now present in the repo trace: 39144.
+- 2023 YouTube events now present: 14746.
+- Early 2024 YouTube events before `2024-05-07` now present: 4861.
 
-## Highest-Signal Missing YouTube Authors
+## Highest-Signal Expansion YouTube Authors
 
 - Al Marconi - Topic — 2180 events (needs room)
 - Jesse Cook - Topic — 1543 events (already in story)
@@ -121,7 +121,7 @@ This compact artifact publishes source counts, date spans, filenames, and aggreg
 
 ## Next Breath
 
-- Rebuild the field trace from the full YouTube history-only Takeout, not just the two-year window.
+- Use `trace/monthly_spectrum.json`, `trace/author_index.jsonl`, and `trace/work_index.jsonl` as the compact query layer for the expanded YouTube trace.
 - Add a 2023/early-2024 transition room for the flamenco/Spanish-guitar body wave and its bridge into devotional-body music.
 - Add a separate unresolved-author cleanup for `here` YouTube rows before treating them as real influence presences.
 - Keep Photos and Gmail at metadata/header level in this compact pass; deeper source-specific analysis can happen when that breath is useful.
