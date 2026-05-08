@@ -1,0 +1,101 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/dynamic-entry-paths-20260508",
+  "commit_scope": "Move the Bali living compound public entry path into a typed web registry so home and /come-in render the route from one source of truth instead of fixed page strings.",
+  "files_owned": [
+    "web/lib/entry-paths.ts",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/tests/bali-land-path-static.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_dynamic_entry_paths.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "PORT=3122 NEXT_PUBLIC_API_URL=http://127.0.0.1:18122 npm run dev",
+      "Playwright rendered local / and /come-in and found the registry-fed Bali land path copy"
+    ],
+    "summary": "The Bali living compound entry now lives in web/lib/entry-paths.ts with kind, audiences, excluded kinds, surfaces, href, tone, and surface-specific copy. Home and /come-in render that entry through getEntryPathForSurface. The static guard now validates the registry, the page imports, locale keys, route resolvability, and excluded hospital/care-institution kinds instead of depending on hardcoded page href strings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A future entry path can be moved by changing the registry instead of editing each public page. The Bali land path remains visible from home and /come-in while keeping Bumi Sehat out of land-design and community-living slots.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/come-in",
+      "https://coherencycoin.com/silence/built"
+    ],
+    "test_flows": [
+      "registry contains bali-living-compound as land-design-draft for home-ground, come-in-explore, and come-in-doors",
+      "home and /come-in source render through getEntryPathForSurface instead of hardcoded href strings",
+      "local browser rendering sees Brahmavihara Living Compound, Walk through /silence/built, Meet the land draft, and the localized lower /silence/built door"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-collective",
+    "bali-living-compound",
+    "public-entry"
+  ],
+  "spec_ids": [
+    "specs/multilingual-web.md"
+  ],
+  "task_ids": [
+    "codex-thread-dynamic-entry-paths-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/entry-paths.ts",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/tests/bali-land-path-static.test.ts"
+  ],
+  "change_files": [
+    "web/lib/entry-paths.ts",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/tests/bali-land-path-static.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
