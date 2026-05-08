@@ -57,16 +57,19 @@ echo "[$(date -u +%FT%TZ)] backup ok size=${SIZE} contribution_ledger_rows=${LED
 # working. Without this step, dumps live ONLY on the VPS — same disk and
 # zone as the live DB. Off-site upload survives a VPS-loss event.
 #
-# Two paths are supported:
+#   COHERENCE_OFFSITE_GH_REPO=owner/repo
+#     Upload the gzipped dump to a GitHub release on the named repo.
+#     The Coherence Network's posture is sovereign + transparent —
+#     dumps belong with the rest of the public body of evidence —
+#     so the configured repo is typically public (e.g.
+#     seeker71/coherence-network-archive). Requires `gh` authenticated
+#     on the host. Idempotent on tag.
 #
-#   1. COHERENCE_OFFSITE_GH_REPO=owner/private-repo
-#      Upload the gzipped dump to a GitHub release on a PRIVATE repo.
-#      Requires `gh` authenticated on the host. Idempotent on tag.
-#
-#   2. COHERENCE_OFFSITE_GPG_RECIPIENT=key-id-or-email
-#      Encrypt the dump to a GPG public key BEFORE upload — safe even
-#      against a public repo. Requires `gpg --import` of the public
-#      key on the VPS once. Combine with (1) for encrypted-public.
+#   COHERENCE_OFFSITE_GPG_RECIPIENT=key-id-or-email   (optional)
+#     For deployments that *do* hold private state, the dump can be
+#     encrypted to a GPG public key before upload. Not the default
+#     — kept here as an opt-in for forks of the network that have
+#     stricter privacy needs.
 #
 # When neither is set the script proceeds as before (local-only).
 # ---------------------------------------------------------------------------
