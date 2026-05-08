@@ -142,10 +142,11 @@ def sense_metabolism() -> list[str]:
 def sense_spec_sources() -> list[str]:
     """Do the paths spec frontmatter 'source:' points at actually exist?
 
-    Missing paths are signal, not failure. Some specs name future targets
-    (scripts to be written, services-to-be-built); those show as drift
-    here but are acknowledged in the spec's Known Gaps section. This
-    reading exists so surprise drift can't hide.
+    Missing paths are signal, not failure. Draft specs are forward
+    projections — their source paths name files that haven't been
+    written yet, so we skip them here (the draft status itself is the
+    acknowledgement). Active and done specs are where missing paths
+    are real drift worth surfacing.
     """
     findings: list[dict[str, str]] = []
     specs_dir = ROOT / "specs"
@@ -161,6 +162,12 @@ def sense_spec_sources() -> list[str]:
         if not rest:
             continue
         frontmatter = rest[0] if len(rest) == 1 else rest[0]
+        # Skip draft specs — they describe future work; missing paths
+        # are intentional, not drift.
+        status_m = re.search(r"^\s*status\s*:\s*(\S+)", frontmatter, re.MULTILINE)
+        status = (status_m.group(1).strip().strip('"').strip("'") if status_m else "").lower()
+        if status == "draft":
+            continue
         for m in re.finditer(r"^\s*-\s*file:\s*(\S+)", frontmatter, re.MULTILINE):
             path = m.group(1).strip()
             if path.startswith("..") or "://" in path or path.startswith("specs/"):
