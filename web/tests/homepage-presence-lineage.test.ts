@@ -50,6 +50,7 @@ describe("homepage presence lineage", () => {
   it("draws home presences from presence data and trace pointers", () => {
     const homePresence = presenceWalk.homePresence;
     expect(pageSource).toContain("getHomePresenceTraceCards");
+    expect(pageSource).toContain("await getHomePresenceTraceCards");
     expect(homePresence?.order).toEqual([
       "liquid-bloom",
       "bloomurian",
