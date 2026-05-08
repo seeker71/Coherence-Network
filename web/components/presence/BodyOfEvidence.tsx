@@ -76,12 +76,20 @@ type Props = {
 // raw label so we don't hide what the body is carrying.
 const SOURCE_LABELS: Record<string, string> = {
   audible_listening_history: "Audible",
+  audible_book_listening: "Audible",
   youtube_watch_history_cluster: "YouTube",
+  watch_history_clusterer: "YouTube",
   physical_book_reading: "Physical reading",
+  // The various reading-from-lineage-docs sources all collapse into
+  // "Physical reading" — they're all eyes-on-paper or eyes-on-paper-
+  // adjacent encounters from named lineage. The granular source value
+  // stays in the graph for analysis; the rendered label folds.
+  lineage_seed_books: "Physical reading",
+  ramtha_lineage_reading: "Physical reading",
+  goethean_lineage_reading: "Physical reading",
   lineage_seed: "Named lineage",
   lineage_seed_cleanup: "Named lineage",
   inspired_by_resolver: "Manual",
-  watch_history_clusterer: "YouTube",
   thesis_seed: "Authored work",
 };
 
