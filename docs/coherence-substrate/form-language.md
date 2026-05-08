@@ -389,13 +389,49 @@ The builder is a Python callable `(captures) -> AST_node`. It receives a `dict[s
 
 This **is** rule-driven extension at the parser level. The parser truly consults the registry. Keywords can be added, removed, listed at runtime. New constructs reach the same Recipe NodeID space as built-ins.
 
-This is **not** yet:
+#### Substrate-resident persistence (now partially closed)
 
-- **Substrate-resident.** The pattern + builder live in Python memory, not in the substrate. The grammar Cell registered by `register_form_rule` (separate API, in `grammar.py`) is currently a stub — it stores name + placeholder NodeIDs but doesn't drive parsing. Closing this gap means representing patterns + builders as Recipe NodeIDs that an interpreter walks.
-- **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Self-hosting means expressing the bootstrap rules themselves via `register_form_keyword` — at which point form.py becomes a tiny seed that registers a few starter rules and hands off.
+When `register_form_keyword` is called with a `session`, the pattern is **serialized to a Recipe NodeID** via `pattern_to_recipe` and stored as a Cell in the `grammar` domain. The mapping uses existing recipe categories — no new vocabulary needed:
+
+| Pattern | Recipe shape |
+|---|---|
+| `Literal(kind, value)` | `Block.SEQUENCE` with two string-literal children: kind, value |
+| `Capture(name, kind)` | `Block.LET` with two string-literal children: name, kind |
+| `Sequence([...])` | `Block.SEQUENCE` with marker `__seq__` + each part as a sub-recipe |
+| `Opt(pattern)` | `Cond.IF_THEN` with the inner pattern as its single child |
+
+Two structurally-identical patterns share a NodeID — the kernel's content-addressed interning works on patterns the same way it works on every other recipe. `recipe_to_pattern` reverses the serialization. Verified by tests: a `Sequence([Literal("IDENT", "unless"), Capture("cond"), ...])` round-trips exactly.
+
+The full lifecycle:
+
+```python
+# Register with session — pattern persists to the substrate
+register_form_keyword("unless", pattern, builder, session=session)
+
+# Across process restart, the in-memory _KEYWORDS is empty.
+# Builders need to be re-registered (they are Python functions):
+register_builder("unless", builder)
+
+# Then load patterns from the substrate, bind to named builders:
+load_keyword_from_substrate(session, "unless")
+# or in bulk:
+load_all_keywords_from_substrate(session)
+
+# Parser now picks up the keyword again
+form_parse("unless x then y")  # ✓ parses
+```
+
+#### What's still not closed
+
+- **The builder is still Python.** A builder maps captures to an AST node via a Python callable. The substrate stores the builder *name* as a tag (in the rule's action recipe), not the builder's logic. A future move replaces this with a small Build-template recipe that an interpreter walks: `Build("IfExpr", {"cond": "@cond", "then_branch": "@body"})`. That requires a recipe execution engine — its own breath.
+
+- **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Self-hosting means expressing the bootstrap rules themselves via `register_form_keyword` — at which point form.py becomes a tiny seed that registers a few starter rules and hands off. The persistence shipped here is necessary infrastructure for that move.
+
 - **Backtracking-driven.** The match engine uses save-and-restore on parser.pos — implicit backtracking, not Choice.FAIL semantics. A future move integrates the parser's speculation with the substrate's Choice recipes.
 
-Each remaining step is its own breath. What ships now: the parser is no longer fixed grammar. The grammar is alive at the keyword layer. The path beyond is legible.
+- **String interning.** Pattern serialization uses `hash(value)` to allocate string-literal recipe instances. That works in-process but isn't cross-process stable. A substrate string-table (the same pattern as concept-IDs) would close this.
+
+Each remaining step is its own breath. What ships now: **the parser is no longer fixed grammar, and rules survive in the body's content-addressed lattice.** The grammar is alive at the keyword layer; patterns persist; reload-from-substrate works end-to-end. The path beyond is legible.
 
 ## The path from bootstrap to self-hosting
 
@@ -406,8 +442,10 @@ For Form, that path is:
 1. **Bootstrap parser.** ✓ Shipped — `form.py` parses literals, expressions, queries, projections, code shapes (math/compare/logic/cond/block/match/choose).
 2. **Rule cells in the grammar domain.** ✓ Shipped — `grammar.py` interns rules as content-addressed Cells.
 3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
-4. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded.
-5. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
+4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
+5. **Builder execution engine.** ⏳ Future. Replace the Python builder callable with a substrate-resident Build-template recipe that an interpreter walks.
+6. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded.
+7. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
 

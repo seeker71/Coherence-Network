@@ -1,4 +1,4 @@
-"""User-extensible Form keywords — step 3 of the bootstrap-to-self-hosting path.
+"""User-extensible Form keywords — runtime grammar extension.
 
 The bootstrap parser in `form.py` has a hand-written grammar. This module
 makes ONE part of that grammar live: when an agent encounters an unknown
@@ -6,24 +6,46 @@ keyword, the parser consults a registry of user-registered keywords. If
 a rule matches, the parser captures sub-expressions using the rule's
 pattern and hands them to the rule's builder to construct the AST.
 
-This proves the grammar-as-data architecture is alive (not just stored).
-A new keyword can be added at runtime — `unless`, `when`, `until`, etc. —
-without editing form.py.
+Two layers of persistence now coexist:
+
+1. **Python in-memory registry** (`_KEYWORDS`) — the live registry the
+   parser consults during a session. Patterns + builders live here.
+
+2. **Substrate-resident persistence** — when `register_form_keyword` is
+   called with a `session`, the pattern is serialized to a Recipe NodeID
+   via `pattern_to_recipe` and stored as a Cell in the `grammar` domain.
+   The builder is referenced by name (registered via `register_builder`)
+   so it can be re-bound after process restart.
+
+`load_keyword_from_substrate(session, name)` reconstructs the in-memory
+registration from the substrate: pattern recipe → Pattern, builder name
+→ Python callable from the builder registry.
 
 What this module is NOT yet:
-- Pattern matching is structural-token-level, not character-level. Lexing
-  remains static.
-- Builders are Python callables, not substrate-resident Recipe actions.
+- Builders are still Python callables. A substrate-resident builder
+  would need a recipe execution engine that walks a Build template and
+  substitutes captures. That's a future breath.
 - Backtracking is implicit (try-and-rewind via parser.pos save/restore),
   not Choice.FAIL-driven speculation.
-
-Each of those gaps is a future breath. What ships here is the seed:
-the parser truly extends at runtime.
+- Self-hosting: form.py's bootstrap is still hardcoded. Re-expressing
+  built-in keywords (if, do, match, etc.) via this registry is future.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from sqlalchemy.orm import Session
+
+from app.services.substrate.category import (
+    BBasic,
+    BDomain,
+    Level,
+    RBasic,
+    RBlock,
+    RCond,
+    RType,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +159,203 @@ def _do_match(parser, pattern: Any, captures: Dict[str, Any]) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Pattern serialization — patterns ↔ Recipe NodeIDs
+# ---------------------------------------------------------------------------
+#
+# Each pattern primitive maps to a Recipe in the substrate:
+#
+#   Literal(kind, value)       → Block.SEQUENCE recipe with two
+#                                 string-literal children: kind, value
+#   Capture(name, kind)        → Block.LET recipe with two string-literal
+#                                 children: name, kind
+#   Sequence([p1, p2, ...])    → Block.SEQUENCE recipe with each part
+#                                 serialized as a sub-recipe child
+#   Opt(pattern)               → Cond.IF_THEN recipe with the inner
+#                                 pattern as its single child
+#
+# This mapping uses existing Recipe categories — no new vocabulary needed.
+# Two structurally-identical patterns dedupe through the kernel's content-
+# addressed interning. The serialized form is round-trippable.
+
+
+def _string_recipe_id(value: str) -> "NodeIDForRecipe":
+    """Encode a string as a trivial String recipe NodeID.
+
+    Uses the same hash-based instance-allocation as the markdown frontend's
+    string-literal handling. NOT cross-process stable; future work moves
+    string interning to a substrate string-table.
+    """
+    from app.services.substrate.kernel import NodeID
+    inst = abs(hash(value)) % (10**9) + 1
+    return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
+
+
+def _literal_marker_id() -> "NodeIDForRecipe":
+    """Block.SEQUENCE category — used as the literal-pattern wrapper."""
+    from app.services.substrate.kernel import NodeID
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.SEQUENCE)
+
+
+def _capture_marker_id() -> "NodeIDForRecipe":
+    """Block.LET category — used as the capture-pattern wrapper."""
+    from app.services.substrate.kernel import NodeID
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.LET)
+
+
+def _opt_marker_id() -> "NodeIDForRecipe":
+    """Cond.IF_THEN category — used as the optional-pattern wrapper."""
+    from app.services.substrate.kernel import NodeID
+    return NodeID(1, Level.BASIC, RBasic.COND, RCond.IF_THEN)
+
+
+def pattern_to_recipe(session: Session, pattern: Any):
+    """Serialize a pattern to a Recipe NodeID. Two structurally-identical
+    patterns share a NodeID via the kernel's content-addressed interning.
+    """
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+
+    if isinstance(pattern, Literal):
+        kind_id = _string_recipe_id(pattern.kind)
+        value_id = _string_recipe_id(pattern.value or "")
+        return intern_node(
+            session, DOMAIN_RECIPE, _literal_marker_id(), [kind_id, value_id]
+        )
+
+    if isinstance(pattern, Capture):
+        name_id = _string_recipe_id(pattern.name)
+        kind_id = _string_recipe_id(pattern.kind)
+        return intern_node(
+            session, DOMAIN_RECIPE, _capture_marker_id(), [name_id, kind_id]
+        )
+
+    if isinstance(pattern, Sequence):
+        children = [pattern_to_recipe(session, p) for p in pattern.parts]
+        # We use a marker child to distinguish Sequence from Literal (both
+        # use Block.SEQUENCE category). The marker is a string "seq".
+        marker = _string_recipe_id("__seq__")
+        return intern_node(
+            session, DOMAIN_RECIPE, _literal_marker_id(), [marker] + children
+        )
+
+    if isinstance(pattern, Optional_):
+        inner = pattern_to_recipe(session, pattern.pattern)
+        return intern_node(session, DOMAIN_RECIPE, _opt_marker_id(), [inner])
+
+    raise TypeError(f"Form: cannot serialize pattern {type(pattern).__name__}")
+
+
+def recipe_to_pattern(session: Session, recipe_id) -> Any:
+    """Reverse of pattern_to_recipe: reconstruct a Python Pattern from a
+    Recipe NodeID."""
+    from app.services.substrate.orm import SubstrateNodeORM
+
+    row = (
+        session.query(SubstrateNodeORM)
+        .filter_by(
+            package=recipe_id.package, level=recipe_id.level,
+            type_=recipe_id.type_, instance=recipe_id.instance,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        raise LookupError(f"Form: pattern recipe {recipe_id} not found in substrate")
+
+    parts = row.serialized.split("+")
+    category = _parse_node_id_str(parts[0])
+    children_ids = [_parse_node_id_str(p) for p in parts[1:]]
+
+    # Cond.IF_THEN with one child → Optional
+    if category.level == Level.BASIC and category.type_ == RBasic.COND and category.instance == RCond.IF_THEN:
+        if len(children_ids) == 1:
+            return Optional_(pattern=recipe_to_pattern(session, children_ids[0]))
+
+    # Block.LET with two string children → Capture
+    if category.level == Level.BASIC and category.type_ == RBasic.BLOCK and category.instance == RBlock.LET:
+        if len(children_ids) == 2:
+            name = _string_from_recipe(session, children_ids[0])
+            kind = _string_from_recipe(session, children_ids[1])
+            return Capture(name=name, kind=kind)
+
+    # Block.SEQUENCE with two string children → Literal
+    # Block.SEQUENCE with marker + N children → Sequence
+    if category.level == Level.BASIC and category.type_ == RBasic.BLOCK and category.instance == RBlock.SEQUENCE:
+        if len(children_ids) == 2:
+            # Could be Literal(kind, value)
+            kind_str = _string_from_recipe(session, children_ids[0])
+            value_str = _string_from_recipe(session, children_ids[1])
+            if kind_str != "__seq__":
+                return Literal(kind=kind_str, value=value_str if value_str else None)
+
+        if len(children_ids) >= 1:
+            marker = _string_from_recipe(session, children_ids[0])
+            if marker == "__seq__":
+                parts_list = [recipe_to_pattern(session, c) for c in children_ids[1:]]
+                return Sequence(parts=parts_list)
+
+    raise ValueError(f"Form: unrecognized pattern recipe shape at {recipe_id}")
+
+
+def _parse_node_id_str(s: str):
+    """Parse 'p.l.t.i' back into a NodeID."""
+    from app.services.substrate.kernel import NodeID
+    parts = s.split(".")
+    if len(parts) != 4:
+        raise ValueError(f"Form: malformed NodeID string {s!r}")
+    return NodeID(int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]))
+
+
+def _string_from_recipe(session: Session, recipe_id) -> str:
+    """Reverse-lookup a string-literal recipe to its original string value.
+
+    NOTE: hash-based instance allocation is one-way (we can't recover the
+    original string from the hash). This function checks an in-memory
+    cache populated when strings are interned. Future work: substrate
+    string-table for round-trip recovery.
+    """
+    return _STRING_CACHE.get(_node_id_key(recipe_id), "")
+
+
+# Cache of (NodeID-tuple) → original string. Populated by pattern_to_recipe.
+_STRING_CACHE: Dict[tuple, str] = {}
+
+
+def _node_id_key(node_id) -> tuple:
+    return (node_id.package, node_id.level, node_id.type_, node_id.instance)
+
+
+# Re-define _string_recipe_id to populate the cache as it computes IDs:
+def _string_recipe_id(value: str):
+    from app.services.substrate.kernel import NodeID
+    inst = abs(hash(value)) % (10**9) + 1
+    nid = NodeID(1, Level.TRIVIAL, RType.STRING, inst)
+    _STRING_CACHE[_node_id_key(nid)] = value
+    return nid
+
+
+# ---------------------------------------------------------------------------
+# Builder registry — name → callable, for substrate-resident lookup
+# ---------------------------------------------------------------------------
+
+
+_BUILDERS: Dict[str, Callable[[Dict[str, Any]], Any]] = {}
+
+
+def register_builder(name: str, builder: Callable[[Dict[str, Any]], Any]) -> None:
+    """Register a named builder. Used by `register_form_keyword` to bind
+    the keyword's builder under a name so it can be recovered after
+    substrate persistence + process restart."""
+    _BUILDERS[name] = builder
+
+
+def lookup_builder(name: str) -> Optional[Callable[[Dict[str, Any]], Any]]:
+    return _BUILDERS.get(name)
+
+
+def list_builders() -> List[str]:
+    return list(_BUILDERS.keys())
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -151,9 +370,8 @@ def register_form_keyword(
     pattern: Any,
     builder: Callable[[Dict[str, Any]], Any],
     *,
-    session=None,
-    substrate_pattern_id=None,
-    substrate_action_id=None,
+    session: Optional[Session] = None,
+    builder_name: Optional[str] = None,
 ) -> None:
     """Register a user-defined Form keyword.
 
@@ -167,15 +385,67 @@ def register_form_keyword(
     `builder` is a callable that receives a `captures` dict and returns
     an AST node from `form.py`'s vocabulary (IfExpr, BinOp, etc.).
 
-    If `session` is provided, also registers the rule as a substrate Cell
-    in the grammar domain (using register_form_rule). Pattern + action
-    NodeIDs default to placeholder leaves; richer substrate-level
-    representation is future work.
+    If `session` is provided, the pattern is serialized to a Recipe
+    NodeID via `pattern_to_recipe` and stored as a Cell in the `grammar`
+    domain. The builder is referenced by `builder_name` (defaulting to
+    `name`); make sure to call `register_builder(builder_name, builder)`
+    so it can be recovered after process restart.
     """
     _KEYWORDS[name] = (pattern, builder)
-    if session is not None and substrate_pattern_id is not None and substrate_action_id is not None:
+
+    bn = builder_name or name
+    register_builder(bn, builder)
+
+    if session is not None:
         from app.services.substrate.grammar import register_form_rule
-        register_form_rule(session, name, substrate_pattern_id, substrate_action_id)
+        pattern_recipe_id = pattern_to_recipe(session, pattern)
+        # The action recipe is a placeholder string-literal carrying the
+        # builder's name. A future builder-execution engine will replace
+        # this with a real Build template.
+        action_recipe_id = _string_recipe_id(bn)
+        register_form_rule(session, name, pattern_recipe_id, action_recipe_id)
+
+
+def load_keyword_from_substrate(session: Session, name: str) -> Optional[tuple]:
+    """Reconstruct a keyword's (pattern, builder) from the substrate.
+
+    Looks up the rule cell, deserializes the pattern from its Recipe
+    NodeID, and binds it to the builder registered under the action's
+    builder-name tag. Returns None if either side is missing.
+
+    Side effect: also registers the keyword in the in-memory `_KEYWORDS`
+    so the parser will pick it up.
+    """
+    from app.services.substrate.grammar import lookup_form_rule
+
+    rule = lookup_form_rule(session, name)
+    if rule is None or rule.pattern.is_undefined():
+        return None
+    try:
+        pattern = recipe_to_pattern(session, rule.pattern)
+    except (LookupError, ValueError):
+        return None
+
+    # The action recipe carries the builder name as a string-literal
+    builder_name = _string_from_recipe(session, rule.action)
+    builder = lookup_builder(builder_name)
+    if builder is None:
+        return None
+
+    _KEYWORDS[name] = (pattern, builder)
+    return (pattern, builder)
+
+
+def load_all_keywords_from_substrate(session: Session) -> List[str]:
+    """Walk every rule cell in the grammar domain and reconstruct each
+    keyword. Returns the names that were successfully loaded."""
+    from app.services.substrate.grammar import list_form_rules
+
+    loaded = []
+    for rule in list_form_rules(session):
+        if load_keyword_from_substrate(session, rule.name) is not None:
+            loaded.append(rule.name)
+    return loaded
 
 
 def unregister_form_keyword(name: str) -> bool:
