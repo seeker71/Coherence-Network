@@ -48,6 +48,13 @@ from app.services.substrate.form import (
     serialize_cell as form_serialize_cell,
     serialize_node_id as form_serialize_node_id,
 )
+from app.services.substrate.grammar import (
+    BID_grammar,
+    FormRule,
+    list_form_rules,
+    lookup_form_rule,
+    register_form_rule,
+)
 from app.services.substrate.markdown_frontend import (
     BID_concept,
     BID_idea,
@@ -116,4 +123,10 @@ __all__ = [
     "form_parse",
     "form_serialize_cell",
     "form_serialize_node_id",
+    # Grammar — substrate-resident parse rules (BMF-shaped seed)
+    "BID_grammar",
+    "FormRule",
+    "list_form_rules",
+    "lookup_form_rule",
+    "register_form_rule",
 ]

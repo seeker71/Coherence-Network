@@ -303,6 +303,47 @@ An agent encountering an unfamiliar memory might reason like this:
 
 **Round-trip stability.** Substrate state can be serialized to Form, mutated, and re-ingested. The substrate IS the source of truth; Form is just the surface humans (and agents) read it through.
 
+## What this parser is — and what it's not
+
+The current `api/app/services/substrate/form.py` is a **bootstrap parser**: hand-written recursive descent with a regex lexer. It produces the right results — Form text in, Recipe NodeIDs out, content-addressed dedup working — but **its grammar lives in Python code**. Adding a new construct means editing form.py, not interning a rule.
+
+This is **not** what BMF was. BMF (the BMF/BMC/BML lineage in `docs/field/urs/artifacts/master-thesis-2000/`) treated grammar rules as *data*, not code:
+
+> *"BMF — Backtracking Model Form... a top-down parser written in C++. BNF augmented with execution elements: when a rule matches, code fires. A stack supports backtracking on parse failures. Expressions are tagged and placed on a structured stack that each rule can transform into the target language's object model. The grammar is executable — parsing produces a full object tree as it goes, so even infinite input streams can be handled."* — `master-thesis-2000/README.md`
+
+Two architectural properties BMF had that our current parser does not:
+
+1. **Grammar rules are first-class objects.** Each rule was `(pattern, semantic_action)`. The pattern matched input; the action was an executable that fired on match. Rules could be *added at runtime* — the grammar grew with the language.
+
+2. **Backtracking-without-sediment at the parser level.** Failed branches unwound cleanly. Speculation was a first-class operation in the parser, not a higher-level concept the parser couldn't express.
+
+Where the substrate has gone in this direction so far:
+
+- The `Choice.CHOOSE / FAIL / STOP` recipe vocabulary exists (`category.py`'s `RChoice`). It's reachable from Form text. Speculation-as-data is interned today.
+- A `grammar` cell-domain exists (`api/app/services/substrate/grammar.py`). Parse rules can be registered as Cells whose CTOR is a (pattern, action) Recipe.
+- `register_form_rule(session, name, pattern, action)` interns a rule.
+- `list_form_rules(session)` enumerates every rule the substrate holds.
+
+Where it has not gone yet:
+
+- **The parser does not consume rules.** `form.py` ignores the `grammar` domain. It still uses its hand-written grammar. Closing this gap is the self-hosting move.
+- **No backtracking in the parser.** A failed parse raises `SyntaxError` immediately. There's no Choice.FAIL semantics at the parsing layer.
+- **No semantic-action runtime.** A rule's `action` field stores a Recipe NodeID, but no engine evaluates it to construct the parse result.
+
+## The path from bootstrap to self-hosting
+
+The BMF self-hosting pattern: a tiny bootstrap parser knows just enough syntax to read rule definitions. Rules are stored. The rule-driven parser is then built *from those rules*. The bootstrap parser becomes vestigial — kept only because something has to read the rules the first time.
+
+For Form, that path is:
+
+1. **Bootstrap parser.** ✓ Shipped — `form.py` parses literals, expressions, queries, projections, code shapes (math/compare/logic/cond/block/match/choose).
+2. **Rule cells in the grammar domain.** ✓ Shipped — `grammar.py` interns rules as content-addressed Cells.
+3. **Rule-driven parser.** ⏳ Future. A parser that reads input by walking grammar cells, matching patterns in registered order, and firing semantic actions on match.
+4. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded.
+5. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
+
+Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
+
 ## Implementation status
 
 Form is a **design** as of 2026-05-08. The substrate kernel exists (`api/app/services/substrate/`); the Form parser/evaluator is the next piece. The grammar above is small enough to implement in ~200-300 LoC of Python on top of the kernel.

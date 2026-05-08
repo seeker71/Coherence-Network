@@ -111,6 +111,7 @@ class BDomain(IntEnum):
     TASK = 6        # work unit: idea_id, status, context, witness
     LINEAGE = 7     # transmission edge: kind, from, to, evidence
     WITNESS = 8     # event-as-proof: presence, action, evidence_url, timestamp
+    GRAMMAR = 9     # parse rule: (pattern, action) — substrate-resident BMF-shaped grammar
 
 
 # ---------------------------------------------------------------------------
