@@ -12,6 +12,7 @@ import { AssetGlyph } from "@/app/_components/AssetGlyph";
 import { assetTypeLabel } from "@/lib/asset-types";
 import { LedgerNav } from "@/app/_components/LedgerNav";
 import { ModelViewer } from "./_components/ModelViewer";
+import { AssetReadPing } from "./_components/AssetReadPing";
 
 type Asset = {
   id: string;
@@ -19,7 +20,50 @@ type Asset = {
   description: string;
   total_cost: string;
   created_at?: string;
+  // Rich fields the API now passes through from the underlying graph
+  // node — all optional so the legacy contract still works.
+  name?: string;
+  canonical_url?: string;
+  slug?: string;
+  creator_id?: string;
+  creation_kind?: string;
+  mime_type?: string;
+  content_hash?: string;
+  ipfs_cid?: string;
+  arweave_tx?: string;
+  asin?: string;
+  isbn?: string;
+  runtime_length_min?: number;
+  era?: string;
+  company?: string;
+  title?: string;
+  location?: string;
+  substrate?: string;
+  when?: string;
+  language?: string;
+  node_id?: string;
+  image_url?: string | null;
+  file_path?: string | null;
 };
+
+type ViewStats = {
+  total_views?: number;
+  unique_contributors?: number;
+  unique_sessions?: number;
+};
+
+async function loadViewStats(assetId: string): Promise<ViewStats | null> {
+  try {
+    const r = await fetch(
+      `${getApiBase()}/api/views/stats/${encodeURIComponent(assetId)}?days=90`,
+      { cache: "no-store" },
+    );
+    if (!r.ok) return null;
+    return (await r.json()) as ViewStats;
+  } catch {
+    return null;
+  }
+}
 
 type Contribution = {
   id: string;
@@ -96,12 +140,12 @@ async function loadAsset(assetId: string): Promise<Asset | null> {
   } as Asset;
 }
 
-async function loadAssetPage(assetId: string): Promise<{ asset: Asset | null; contributions: Contribution[]; contributorsById: Map<string, string> }> {
+async function loadAssetPage(assetId: string): Promise<{ asset: Asset | null; contributions: Contribution[]; contributorsById: Map<string, string>; viewStats: ViewStats | null }> {
   const API = getApiBase();
 
   const asset = await loadAsset(assetId);
   if (!asset) {
-    return { asset: null, contributions: [], contributorsById: new Map() };
+    return { asset: null, contributions: [], contributorsById: new Map(), viewStats: null };
   }
 
   let contributions: Contribution[] = [];
@@ -125,7 +169,9 @@ async function loadAssetPage(assetId: string): Promise<{ asset: Asset | null; co
     }
   } catch {}
 
-  return { asset, contributions: Array.isArray(contributions) ? contributions : [], contributorsById };
+  const viewStats = await loadViewStats(assetId);
+
+  return { asset, contributions: Array.isArray(contributions) ? contributions : [], contributorsById, viewStats };
 }
 
 function truncateText(s: string, n: number): string {
@@ -200,7 +246,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
 
   const resolved = await params;
   const assetId = decodeURIComponent(resolved.asset_id);
-  const { asset, contributions, contributorsById } = await loadAssetPage(assetId);
+  const { asset, contributions, contributorsById, viewStats } = await loadAssetPage(assetId);
 
   if (!asset) {
     notFound();
@@ -269,6 +315,18 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
     if (creatorName) creator.name = creatorName;
     jsonLd.creator = creator;
   }
+  // External canonical_url + ASIN/ISBN identifiers — let crawlers and
+  // AI aggregators bridge the network's surface back to the
+  // authoritative external source instead of dead-ending here.
+  if (asset.canonical_url) jsonLd.sameAs = asset.canonical_url;
+  if (asset.asin || asset.isbn) {
+    jsonLd.identifier = [asset.asin, asset.isbn].filter(Boolean);
+  }
+  if (asset.runtime_length_min) {
+    jsonLd.duration = `PT${asset.runtime_length_min}M`;
+  }
+  if (asset.creation_kind === "book") jsonLd["@type"] = "Book";
+  if (asset.language) jsonLd.inLanguage = asset.language;
 
   return (
     <main className="bg-stone-950 min-h-screen">
@@ -278,6 +336,10 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
         // is the standard Next.js pattern for JSON-LD and is what crawlers parse.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* Leaves a witness trace — every visit becomes part of the
+          asset's own awareness of who has met it. Composes the same
+          read-ping machinery /vision and /ideas already use. */}
+      <AssetReadPing assetId={asset.id} />
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         <div className="flex items-center gap-3 text-sm">
           <Link href="/assets" className="text-stone-400 hover:text-amber-300 transition-colors">
@@ -303,7 +365,102 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
               {displayDescription && displayDescription !== displayName && (
                 <p className="text-stone-300 leading-relaxed">{displayDescription}</p>
               )}
-              <p className="text-xs text-stone-500 font-mono break-all">{asset.id}</p>
+              {/* Structured-data row — when the underlying graph
+                  node carries identifiers and contextual metadata,
+                  surface them so the visitor can see what kind of
+                  vessel this is at a glance. */}
+              {(asset.creation_kind || asset.runtime_length_min || asset.era || asset.company || asset.location || asset.asin || asset.isbn || asset.language) && (
+                <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-400 pt-1">
+                  {asset.creation_kind && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Kind</dt>
+                      <dd className="text-stone-300">{asset.creation_kind}</dd>
+                    </div>
+                  )}
+                  {asset.runtime_length_min && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Runtime</dt>
+                      <dd className="text-stone-300">
+                        {Math.floor(asset.runtime_length_min / 60)}h{" "}
+                        {asset.runtime_length_min % 60}m
+                      </dd>
+                    </div>
+                  )}
+                  {asset.era && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Era</dt>
+                      <dd className="text-stone-300">{asset.era}</dd>
+                    </div>
+                  )}
+                  {asset.company && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Company</dt>
+                      <dd className="text-stone-300">{asset.company}</dd>
+                    </div>
+                  )}
+                  {asset.location && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Place</dt>
+                      <dd className="text-stone-300">{asset.location}</dd>
+                    </div>
+                  )}
+                  {asset.asin && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">ASIN</dt>
+                      <dd className="text-stone-300 font-mono">{asset.asin}</dd>
+                    </div>
+                  )}
+                  {asset.isbn && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">ISBN</dt>
+                      <dd className="text-stone-300 font-mono">{asset.isbn}</dd>
+                    </div>
+                  )}
+                  {asset.language && (
+                    <div className="flex items-baseline gap-1.5">
+                      <dt className="text-stone-500">Language</dt>
+                      <dd className="text-stone-300">{asset.language}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              {/* External source — the canonical authoritative URL
+                  that this vessel points back at (Audible, GitHub,
+                  publisher page, etc.). Without this, the asset
+                  surface dead-ends; with it, the visitor can always
+                  reach the source. */}
+              {asset.canonical_url && (
+                <p className="pt-2">
+                  <a
+                    href={asset.canonical_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex items-center gap-1.5 text-sm text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline"
+                  >
+                    <span>External source</span>
+                    <span aria-hidden="true">↗</span>
+                    <span className="text-stone-500 font-mono text-xs ml-1 break-all">
+                      {asset.canonical_url.replace(/^https?:\/\//, "").slice(0, 60)}
+                      {asset.canonical_url.length > 67 ? "…" : ""}
+                    </span>
+                  </a>
+                </p>
+              )}
+              {/* Slug doorway — when the graph carries a slug, link
+                  to the human-readable presence page (/people/{slug})
+                  so a visitor can walk the rich context surface. */}
+              {asset.slug && (
+                <p className="text-xs text-stone-500 pt-1">
+                  Presence:{" "}
+                  <Link
+                    href={`/people/${encodeURIComponent(asset.slug)}`}
+                    className="text-stone-300 hover:text-amber-300 underline-offset-4 hover:underline"
+                  >
+                    /people/{asset.slug}
+                  </Link>
+                </p>
+              )}
+              <p className="text-xs text-stone-500 font-mono break-all pt-1">{asset.id}</p>
             </div>
             {Number(asset.total_cost) > 0 && (
               <div className="text-right shrink-0">
@@ -327,7 +484,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
         )}
 
         {/* Stats */}
-        <section className="grid gap-3 grid-cols-3">
+        <section className="grid gap-3 grid-cols-2 sm:grid-cols-4">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("assets.detail.statTouches")}</p>
             <p className="mt-2 text-2xl sm:text-3xl font-light text-stone-100">{contributions.length}</p>
@@ -342,6 +499,23 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("assets.detail.statCoherence")}</p>
             <p className="mt-2 text-2xl sm:text-3xl font-light text-stone-100">{avgCoherence === null ? "—" : avgCoherence.toFixed(2)}</p>
             <p className="mt-1 text-xs text-stone-400">{t("assets.detail.statCoherenceHint")}</p>
+          </div>
+          {/* Witnessed — every visit to this page leaves a trace
+              through the read-ping. The /api/views/stats/{id}
+              endpoint aggregates 90 days of those traces so the
+              visitor can see how many cells have met this vessel. */}
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-emerald-500/10 to-emerald-500/5 p-4">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-400/80">Witnessed</p>
+            <p className="mt-2 text-2xl sm:text-3xl font-light text-stone-100">
+              {viewStats?.total_views ?? "—"}
+            </p>
+            <p className="mt-1 text-xs text-stone-400">
+              {viewStats?.unique_contributors
+                ? `${viewStats.unique_contributors} contributor${
+                    viewStats.unique_contributors === 1 ? "" : "s"
+                  } · 90d`
+                : "views over 90 days"}
+            </p>
           </div>
         </section>
 
