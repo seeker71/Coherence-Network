@@ -250,14 +250,26 @@ def test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc()
     assert artifact_response.status_code == 200, artifact_response.text
     artifact = json.loads(artifact_response.json()["content"])
     assert artifact["schema_version"] == "influence-teaching-translator/v1"
-    assert len(artifact["rows"]) >= 10
+    assert len(artifact["rows"]) >= 35
 
-    response = client.get("/api/field-stories/urs-field-story/influence-teaching-translator?limit=5")
+    response = client.get("/api/field-stories/urs-field-story/influence-teaching-translator?limit=80")
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["schema_version"] == "influence-teaching-translator/v1"
     assert body["source_crypto_root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
-    assert body["totals"]["joined_cc_rows"] >= 5
+    assert body["totals"]["joined_cc_rows"] >= 25
+    assert {
+        "physical_book_reading",
+        "music",
+        "podcast_longform",
+        "podcast_research",
+        "practice_teaching",
+        "embodied_practice",
+        "embodied_gathering",
+        "retreat_gathering",
+        "ritual",
+        "formative_technical_work",
+    } <= set(body["totals"]["coverage_kinds"])
 
     rows_by_name = {row["name"]: row for row in body["rows"]}
     frontiers = rows_by_name["Frontiers Saga"]
@@ -274,6 +286,31 @@ def test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc()
     goodkind = rows_by_name["Sword of Truth / Goodkind Universe"]
     assert "truth-discernment" in goodkind["frequency_translation"]
     assert "source-rooted receipts" in goodkind["network_shape"]
+
+    karl_may = rows_by_name["Karl May stories"]
+    assert karl_may["kind"] == "physical_book_reading"
+    assert "frontier" in karl_may["frequency_translation"]
+    assert karl_may["current_cc"] > 15
+
+    mose = rows_by_name["Mose / Mose - Topic"]
+    assert mose["kind"] == "music"
+    assert "devotional-body" in mose["frequency_translation"]
+    assert mose["current_cc"] > 1
+
+    lex = rows_by_name["Lex Fridman"]
+    assert lex["kind"] == "podcast_longform"
+    assert "long-form-dialogue" in lex["frequency_translation"]
+    assert lex["current_cc"] > 0
+
+    ecstatic_dance = rows_by_name["Ecstatic Dance"]
+    assert ecstatic_dance["kind"] == "embodied_gathering"
+    assert "nonverbal-integration" in ecstatic_dance["frequency_translation"]
+    assert ecstatic_dance["current_cc"] > 7
+
+    starhouse = rows_by_name["StarHouse New Moon ceremonies"]
+    assert starhouse["kind"] == "ritual"
+    assert "ritual-cycle" in starhouse["frequency_translation"]
+    assert starhouse["current_cc"] == 0
 
     mcp_result = TOOL_MAP["get_influence_teaching_translator"]["handler"]({"slug": "urs-field-story", "limit": 3})
     assert mcp_result["rows"][0]["name"] == "Frontiers Saga"

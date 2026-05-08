@@ -14,7 +14,7 @@ Compact derived indexes for answering influence questions without loading raw li
 - `audible_duration_metadata.json` - compact Audible catalog runtime metadata used to weight Audible influence by listening duration or book length.
 - `youtube_podcast_spectrum.json` - YouTube podcast-shaped influence wave, weighted by direct video duration where available and marked episode-length estimates where Takeout has no duration.
 - `source_crypto_trace.json` - compact SHA-256 and Merkle-root manifest for source bodies, normalized events, and repo-served trace artifacts.
-- `influence_teaching_translator.json` - compact lesson/frequency/network-shape shards for major influences, linked to trace refs and attribution recipients.
+- `influence_teaching_translator.json` - compact lesson/frequency/network-shape shards for audiobooks, physical books, music, podcasts, practices, gatherings, retreats, rituals, and formative technical work, linked to trace refs and attribution recipients.
 - `../output/chronological_story_with_frequency.md` - narrative story with direct links back into significant-work, author, and concept trace slices.
 
 ## Query Flow
@@ -127,13 +127,13 @@ Each row includes a `ledger_recipient_id`, `trace_refs`, source mix, score, and 
 
 ## Teaching Translator
 
-`influence-teaching-translator:v1` turns major influences into reusable teaching atoms:
+`influence-teaching-translator:v1` turns major influences into reusable teaching atoms across audiobooks, physical books, music, podcasts, embodied practices, gatherings, retreats, rituals, research, and formative technical work:
 
 ```text
 influencer -> lesson_atoms -> frequency_translation -> desired_shape -> network_shape -> trace_refs -> attribution
 ```
 
-The API joins those static teaching shards with current organism influence CC, so a shard can answer both "what did this influence teach us?" and "how much current CC does the organism sense for it?" without loading raw source bodies. Rows stay concise and source-linked; chapter-level precision can be added later by appending exact chapter notes to the significant-work trace.
+The API joins those static teaching shards with current organism influence CC and returns `totals.coverage_kinds`, so a caller can see the full influence body before choosing deeper discovery. A shard can answer both "what did this influence teach us?" and "how much current CC does the organism sense for it?" without loading raw source bodies. Rows stay concise and source-linked; chapter-level precision can be added later by appending exact chapter notes, event notes, playlists, or practice logs to the trace.
 
 ## Chapter Discovery Boundary
 
