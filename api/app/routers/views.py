@@ -12,6 +12,7 @@ from app.services import entity_view_attribution_service
 from app.services import read_tracking_service
 from app.services import discovery_reward_service
 from app.services import views_health_service
+from app.services import view_events_archive_service
 
 log = logging.getLogger(__name__)
 
@@ -134,11 +135,58 @@ async def asset_view_stats(
         "event age, estimated bytes on disk, and threshold bands ("
         "calm / active / loud / trim-recommended). Surfaces 'flags' "
         "when any band crosses a budget so a maintainer knows when "
-        "to run the trim script."
+        "to run the trim or archive script. Includes a `cold_tier` "
+        "section reporting how many days have been archived to the "
+        "cold tier (GitHub releases by default), the compression "
+        "ratio achieved, and the estimated retrieval cost when the "
+        "data needs to come back."
     ),
 )
 async def views_health() -> dict[str, Any]:
-    return views_health_service.get_views_health()
+    health = views_health_service.get_views_health()
+    try:
+        health["cold_tier"] = view_events_archive_service.stats()
+    except Exception as e:  # pragma: no cover — never block the health endpoint
+        log.warning("views_health: cold_tier stats failed: %s", e)
+        health["cold_tier"] = {"error": str(e)}
+    return health
+
+
+# ---------------------------------------------------------------------------
+# GET /api/views/archive/{day}
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/views/archive/{day}",
+    summary="Retrieve a day from the cold-tier archive",
+    description=(
+        "Fetches the gzipped JSONL of events for a previously-archived "
+        "UTC day, verifies the SHA-256 against the tombstone, "
+        "decompresses, and returns the events. Local cache makes "
+        "repeat reads instant. The tombstone is included in the "
+        "response so callers can verify integrity themselves."
+    ),
+)
+async def views_archive_retrieve(day: str) -> dict[str, Any]:
+    try:
+        from datetime import date as _date
+        target_day = _date.fromisoformat(day)
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"day must be YYYY-MM-DD (got {day!r})",
+        )
+    return view_events_archive_service.retrieve_day(target_day)
+
+
+@router.get(
+    "/views/archive",
+    summary="List all archived days",
+    description="Tombstone index — every day in cold-tier storage, with URL + sha256 + ETA.",
+)
+async def views_archive_list() -> dict[str, Any]:
+    return view_events_archive_service.stats()
 
 
 # ---------------------------------------------------------------------------
