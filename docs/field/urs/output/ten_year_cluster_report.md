@@ -1,10 +1,10 @@
 # Ten-Year Field Cluster Analysis
 
-Generated: 2026-05-07T02:07:35.864613+00:00
-Events/anchors analyzed: 28174
+Generated: 2026-05-08T03:21:22.767718+00:00
+Events/anchors analyzed: 69082
 
 ## Coverage
-- google-takeout-2024-05-07-to-2026-05-07: 27030
+- google-takeout-full-youtube-history: 67938
 - authenticated-myactivity-visible-feed: 483
 - audible-library: 233
 - audible-purchase-history: 198
@@ -12,196 +12,196 @@ Events/anchors analyzed: 28174
 - audible-listen-history: 50
 - manual-anchor: 15
 
-Coverage note: YouTube watch history is loaded from the completed history-only Google Takeout archive for 2024-05-07 through 2026-05-07. The 10-part full export in Downloads exposes YouTube search history in part 001, but no watch-history file was found in those parts. Audible web now contributes authenticated purchase, library, and visible listen-history evidence, while the detailed per-title mobile Listening Log remains app-only.
+Coverage note: YouTube watch history is loaded from the completed history-only Google Takeout archive for the full available span in that source body, 2021-07-31 through 2026-05-07. YouTube search history from the same export extends the signal back to 2011-12-31. Audible web now contributes authenticated purchase, library, and visible listen-history evidence, while the detailed per-title mobile Listening Log remains app-only.
 
 ## Time Clusters
+- 2022-10: 2143
+- 2022-11: 2046
+- 2023-04: 1965
 - 2025-01: 1758
+- 2023-05: 1715
+- 2022-04: 1665
 - 2024-10: 1659
 - 2024-07: 1622
+- 2023-02: 1612
+- 2022-08: 1531
 - 2025-04: 1471
 - 2024-08: 1457
+- 2022-03: 1437
 - 2026-04: 1413
+- 2023-03: 1401
+- 2024-02: 1348
+- 2023-01: 1326
 - 2024-06: 1308
+- 2022-12: 1306
 - 2025-03: 1290
+- 2024-03: 1288
 - 2025-07: 1274
+- 2022-06: 1265
+- 2022-02: 1261
+- 2024-04: 1236
 - 2025-02: 1233
+- 2022-05: 1232
+- 2023-10: 1230
+- 2024-05: 1203
+- 2023-11: 1198
+- 2023-06: 1189
+- 2022-09: 1182
 - 2025-06: 1177
 - 2025-11: 1125
 - 2024-11: 1089
+- 2022-07: 1045
+- 2023-09: 1037
+- 2022-01: 1033
 - 2024-09: 1015
 - 2025-12: 998
-- 2024-05: 966
 - 2025-05: 952
+- 2023-12: 933
 - 2024-12: 894
 - 2026-01: 883
+- 2024-01: 847
+- 2021-08: 827
 - 2025-08: 776
+- 2023-08: 759
+- 2023-07: 687
 - 2025-09: 668
 - 2026-03: 640
 - 2025-10: 632
+- 2021-11: 604
 - 2026-02: 596
 - visible-feed-no-date: 483
+- 2021-10: 446
+- 2021-09: 438
+- 2021-12: 436
 - 2026-05: 357
 - undated: 248
-- 2023-10: 8
-- 2016-11: 6
-- 2018-03: 6
-- 2023-12: 6
-- 2019-04: 5
-- 2019-06: 5
-- 2020-05: 5
-- 2022-04: 5
-- 2022-12: 5
-- 2024-03: 5
-- 2019-02: 4
-- 2019-09: 4
-- 2019-10: 4
-- 2019-12: 4
-- 2021-03: 4
-- 2021-09: 4
-- 2021-10: 4
-- 2022-10: 4
-- 2023-02: 4
-- 2023-09: 4
-- 2023-11: 4
-- 2024-04: 4
-- 2018-01: 3
-- 2018-06: 3
-- 2018-12: 3
-- 2019-05: 3
-- 2020-10: 3
-- 2021-04: 3
-- 2021-05: 3
-- 2021-11: 3
-- 2022-01: 3
-- 2022-03: 3
-- 2023-08: 3
 
 ## Space Clusters
-- youtube: 27470
+- youtube: 68378
 - audible: 541
 - youtube-music: 148
 - manual-lineage: 15
 
 ## Author / Channel Clusters
-- unknown: 1765
-- Yaima - Topic: 1683
-- Mose - Topic: 1425
-- Poranguí - Topic: 731
-- Liquid Bloom - Topic: 647
-- Ajeet - Topic: 494
-- Malte Marten - Topic: 441
-- Ayla Schafer - Topic: 373
-- Maneesh De Moor - Topic: 347
-- Karunesh - Topic: 283
-- Danit - Topic: 275
-- Anne Tucker: 260
-- Empty Artist - Topic: 241
-- Nessi Gomes - Topic: 237
-- Yatao - Topic: 227
-- Mei-lan - Topic: 218
-- Alexia Chellun - Topic: 213
-- Sam Garrett - Topic: 212
-- East Forest - Topic: 211
-- Parijat - Topic: 202
-- Tetouze - Topic: 188
-- Chantress Seba - Topic: 183
-- Alex Serra - Topic: 182
-- Emilio Ortiz: 182
-- Deya Dova - Topic: 177
-- Little Whale - Topic: 173
-- Daniel Scranton: 153
-- Brian Scott: 137
-- Al Marconi - Topic: 131
-- Ayla Nereo - Topic: 122
-- Rising Appalachia - Topic: 122
-- Clara Sophia: 117
-- Jesse Cook - Topic: 117
-- Hang Massive - Topic: 116
-- Dean Evenson - Topic: 115
-- Iftekharul Anam - Topic: 115
-- The White Arrow - Topic: 110
-- Mogli - Topic: 105
-- Pam Gregory: 103
-- Mose: 102
+- unknown: 5809
+- Al Marconi - Topic: 2311
+- Yaima - Topic: 1738
+- Jesse Cook - Topic: 1660
+- Ottmar Liebert - Topic: 1494
+- Mose - Topic: 1429
+- Guitarra Azul - Topic: 1344
+- Johannes Linstead - Topic: 1295
+- Armik - Topic: 1076
+- Oscar Lopez - Topic: 923
+- Poranguí - Topic: 863
+- Kevin Laliberté - Topic: 822
+- Strunz & Farah - Topic: 759
+- Liquid Bloom - Topic: 719
+- Gipsy Kings - Topic: 603
+- Luis Villegas - Topic: 566
+- Ajeet - Topic: 549
+- Malte Marten - Topic: 522
+- Behzad - Topic: 514
+- LucasGitanoFamily - Topic: 473
+- Jacob Gurevitsch - Topic: 470
+- Young & Rollins - Topic: 386
+- Ayla Schafer - Topic: 376
+- Jim Stubblefield - Topic: 373
+- Chris Spheeris - Topic: 371
+- Pavlo Simtikidis - Topic: 365
+- Maneesh De Moor - Topic: 364
+- Karunesh - Topic: 362
+- Govi - Topic: 347
+- Parijat - Topic: 347
+- NovaMenco - Topic: 346
+- Empty Artist - Topic: 337
+- Danit - Topic: 313
+- East Forest - Topic: 312
+- Anne Tucker: 297
+- Lex Fridman: 289
+- Yatao - Topic: 276
+- Robert Michaels - Topic: 268
+- Little Whale - Topic: 256
+- Nick Johnston - Topic: 248
 
 ## Work Clusters
-- Naturaleza (Mose Edit): 73
-- Healing Song: 63
-- Paradise: 63
-- Cuatro Vientos (Rey & Kjavik Remix): 56
-- Gajumaru: 55
-- Rebirth: 55
-- Odonata: 52
-- Om Ganesha (Dance Meditation): 51
-- Agradezco: 50
-- Iluminar: 50
-- The Power Is Here Now: 50
-- Force: 49
-- Phoenix: 49
-- Azul: 48
-- Te Nande (Mose Remix): 48
-- Aguila De Oro: 46
-- Vuela con el Viento (Mose Remix): 46
-- The Most Beautiful Voices in the Universe | Relaxation Music | Ethereal Vocal Music for Relaxation: 45
-- Cuñaq: 44
-- Mother's Heartbeat: 44
-- Old Stories - Gajumaru (Revisioned): 43
-- Spirit Divine: 42
-- Citadella: 41
-- All My Life is a Ceremony (Mose Remix): 40
-- Cura Corazón: 40
-- Danza Del Viento (Live): 40
-- Ash + Bone: 39
-- Fluyendo: 39
-- Silent Awakening: 38
-- The Water Blessing Song (Mose & Binder Remix): 38
-- Cuatro Vientos: 37
-- Guiding and Protecting: 37
-- Q’antataita: 37
-- Rebirth (Revisioned): 37
-- Sita Ram: 37
-- Valley of the Ancients (Mose Remix): 37
-- Written in the Wind (Revisioned): 37
-- Mycelia (Fantastic Fungi: Reimagine): 36
-- Rise: 36
-- Freedom: 35
-- Heart Takes Flight: 35
-- Rebirth - Live @ Colorado Sound Studios: 35
-- Akaal: 34
-- Eternal Horizons (Temple Step Project Remix): 34
-- Gajumaru (Acoustic): 34
-- Grandmother (I Am the Earth): 34
-- Miniyamba: 34
-- Written in the Wind: 34
-- A Message from the Stars (1111 Hz): 33
-- Ama La Tierra: 33
-- Horizon: 33
-- Lately (Mose Remix): 33
-- Odonata (Revisioned): 33
-- As You Will [Shye Ben Tzur Cover]: 32
-- Feel the Love: 32
-- Heaven & Earth: 32
-- Madre De La Selva: 32
-- Oso Blanco (Mose Remix): 32
-- The Sacred: 32
-- Arcoiris: 31
+- Siesta: 158
+- Paradise: 150
+- Rumi's Inspiration: 149
+- Redemption: 142
+- Azul: 138
+- ESPN: 135
+- Rougé: 133
+- Aranjuez: 126
+- Strings of Desire: 117
+- Ojos Gitanos: 110
+- Gentle Seduction: 107
+- Entre Dos Aguas: 106
+- Between Tears: 104
+- Esperanza: 104
+- Café Café: 102
+- Tormenta De Fuego: 102
+- Solace: 100
+- Cathedral: 98
+- Omega Requiem: 98
+- Treasure Bay: 97
+- Porcelain Rose: 95
+- Cafe Olé: 94
+- Spanish Nights: 93
+- Illusion: 91
+- Nomad: 90
+- Pure Paradise: 90
+- Banana Bay: 89
+- Mediterranean Breeze: 89
+- Torero: 89
+- ESPN2: 86
+- Noches en Andalucía: 85
+- Agradezco: 83
+- El Ritmo de Amor: 83
+- To The Gypsies: 83
+- Noches Guitanas: 82
+- Black Rain: 81
+- 9 News: 80
+- Insomnia: 80
+- Alma: 79
+- Europa: 78
+- Nuevos Aires: 78
+- Cafe by the Sea: 77
+- Iluminar: 77
+- Aguila De Oro: 74
+- Naturaleza (Mose Edit): 74
+- TNT: 74
+- Tres Lagrimas: 73
+- Oasis: 72
+- Recuerdo: 72
+- Journey: 71
+- Cielo Azul: 70
+- Mediterranean Romance: 70
+- Touch My Soul: 70
+- Up Close: Embrace: 69
+- https://www.youtube.com/watch?v=: 69
+- Joselito (Michael Rajab & Tobito): 68
+- Mauna Loa: 68
+- The Flavor: 68
+- Andalus: 67
+- Habla Me: 67
 
 ## Frequency Clusters
-- unclassified: 19150
-- devotional-body: 6441
-- consciousness-threshold: 1155
-- roots-resilience: 631
-- shadow-power: 344
-- time-attention: 329
-- fictional-systems: 318
-- ai-systems: 301
+- unclassified: 57607
+- devotional-body: 6843
+- consciousness-threshold: 1628
+- ai-systems: 856
+- roots-resilience: 854
+- time-attention: 677
+- fictional-systems: 662
+- shadow-power: 602
 
 ## Axis Totals
-- pressure: 356
-- intensity: 30792
-- inspiration: 5434
-- insight: 1174
-- vitality: 45588
+- pressure: 770
+- intensity: 73047
+- inspiration: 8562
+- insight: 2806
+- vitality: 109018
 
 ## Highest Pressure Events
 - P6 I6: Star Beings Take EMERGENCY ACTION: "Humanity Will SPLIT Now...FINAL CHOICE" | Ismael Perez — Emilio Ortiz [youtube]
@@ -241,6 +241,10 @@ Sending love to you, soul family and I can't wait to welcome you into my voice h
 - P4 I3: Godfather of AI: We Have 2 Years Before Everything Changes! — The Diary Of A CEO [youtube]
 - P4 I3: 1 HOUR AGO: Pleiadians ISSUED Emergency Warning in Exclusive Interview — SAM THE ILLUSIONIST [youtube]
 - P4 I3: The Universe Is Sending You a FINAL Warning — Respond Before MIDNIGHT — Quantum Nexus [youtube]
+- P4 I3: Levin Λ Friston Λ Fields: "Meta" Hard Problem of Consciousness — Curt Jaimungal [youtube]
+- P4 I3: Tesla FLEXES Hard (Again) In NEW “Impact Report” — Solving The Money Problem [youtube]
+- P4 I3: Tesla Q1 Earnings Recap & Highlights (Wall St PANICS Hard) — Solving The Money Problem [youtube]
+- P4 I3: MY WAR (ATTACK ON TITAN) FINAL SEASON 4 OPENING 6 (僕の戦争 - 進撃の巨人Shingeki no Kyojin) [GUITAR COVER] — LucasGitanoFamily [youtube]
 - P2 I4: JULY 2026 WARNING: The "QUICKENING" Has Begun — Humanity's GREAT Initiation Is HERE! | Amanda Walsh — Amrit Sandhu 🙏🏻 [youtube]
 - P2 I4: Channeled: Collective Consciousness will Split! — Anne Tucker [youtube]
 - P2 I3: Whoops Cursor - from Gemini.
@@ -276,65 +280,6 @@ We explore:
 • Implications for AI, consciousness, and ethics
 
 This episode pushes neuroscience beyond the neuron, toward a deeper understanding of mind, life, and intelligence as continuous across scales. — Mind-Body Solution [youtube]
-- P2 I3: Who are you?
-
-Most people, when they answer that question, give a description of their current circumstances. I am a mother. I am an accountant. I am someone who struggles with confidence. I am someone who is working on their health. I am someone who has always had trouble with money. These answers feel true because they match our current experience. But they are not who we are. They are one configuration of who we are — one expression among infinite expressions.
-
-
-I want to share my own experience with this because I am not teaching theory. I am teaching what I have lived.
-
-
-When I decided to write my first book, I faced a problem. I was not a writer. I had never written anything substantial. The task seemed overwhelming. But I knew about the infinite selves. I knew that somewhere in the probability field, there existed a version of me who was a masterful writer — someone who had spent decades honing the craft, who could organize ideas beautifully, who could translate consciousness into language.
-
-
-So I accessed that version. I reached across the dimensional barrier and connected with the writer version of myself. I did not ask for tips. I did not request advice. I merged with him. I allowed his consciousness to overlap with mine. And when I came out of that state, the book that had seemed impossible began to flow. It was as if I was remembering how to write rather than learning for the first time.
-
-
-But here is where it gets even more interesting. One morning, I woke up with an overwhelming urge to paint. Now understand — I had never touched a paintbrush. I had no artistic training whatsoever. But the urge was undeniable. And I realized what had happened. In my explorations of the infinite selves, I had contacted the version of me who was a lifelong artist. Some of his consciousness had integrated into mine. His passion, his vision, his way of seeing — it had become available to me. I began painting, and what emerged was not the work of a beginner.
-
-
-More recently, I accessed the version of myself who is the greatest musician. And now I am creating music — producing an album, writing songs that I never could have imagined creating from my ordinary limited identity.
-
-
-This is real. This works. And you are about to experience it for yourself.
-
-
-https://youtu.be/zY2Ijl5Aipk — Brian Scott [youtube]
-- P2 I3: Consciousness is genderless, but I AM grateful for the female vessel I AM shining through. Because during this time of the planetary shift, the Divine Feminine is reawakening and being reinstated into our avatars’ expression. ⁣
-⁣
-Naturally, the female avatar is inclined towards FEELING and INTUITIVE knowing. However, since we have lived in a mind-dominant, conquer and divide world, women and men were taught to suppress and repress their hearts knowing. But, I’m here to remind you to FORGET THAT SHIT and let your feminine energy fly! Because we need your sensuality and intuitiveness! ⁣
-⁣
-Intuitive feeling and knowing are absolute gifts because they are heart-centered energies. And if we want to see our species thrive, Humanity must open its heart chakra because the heart is all about love, unity, creativity, and wisdom. ⁣
-⁣
-Truly, how could one keep creating war and separation when one’s heart is flooding with Love and Unity? ⁣
-⁣
-You can’t.⁣
-⁣
-Therefore, it doesn’t matter if you appear male or female; we can all open our hearts and be more sensual, intuitive, and connected to our physical body avatar with our Cosmic Love and understanding. ⁣
-⁣
-The more you connect to the physical body avatar with pure consciousness/love, the more you connect to the grid of Gaia. The more you connect to Gaia, the more you can influence the collective consciousness with vibrant energy and amplitude! ⁣
-⁣
-Knowing this, what will you live for today? ⁣
-⁣
-LOVE or the shove?⁣
-⁣
-The choice is yours.⁣
-⁣
-⁣
-⁣
-🧘🏼‍♀️☕🌈⁣
-⁣
-⁣
-⁣
-
-⁣
-✨ Website: https://www.wonderfullynothing.com⁣
-⁣
-✨Join the High Vibe Patreon Community: https://www.patreon.com/annaebrown7⁣
-⁣
-⁣ — Anna Brown [youtube]
-- P2 I3: LEMURIAN WATER CODES | New Moon in Cancer | Crystalline Sound Healing | 528hz — Molly Anne Chinner [youtube]
-- P2 I3: LEMURIAN WATER CODES | New Moon in Cancer | Crystalline Sound Healing | 528hz — Molly Anne Chinner [youtube]
 
 ## Highest Inspiration / Vitality Events
 - S8 V10 I5: Something exciting is opening today - the biggest (and final) sale of the year for my course Voice Revelation.
@@ -712,5 +657,5 @@ We are extremely grateful to Harald’s incredible daughter Pippa Malmgren for c
 - N4 I3: The Problem With Today's AI (In Simple Language) — Goju Tech Talk [youtube]
 - N4 I2: Mentor Analyzed Claude Opus 4.6's C Compiler in Rust — Here's What It Found — www.youtube.com [youtube]
 - N4 I2: Mentor Analyzed Claude Opus 4.6's C Compiler in Rust — Here's What It Found — m.youtube.com [youtube]
+- N4 I2: consciousness ai quantum field LLM as reality story predictor — unknown [youtube]
 - N4 I2: AI Analysis of Stonehenge’s Interior Changes What We Thought We Knew — Vexora [youtube]
-- N4 I2: Claude C Compiler: DIF & Mentor Find Flaws #shorts — Goju Tech Talk [youtube]

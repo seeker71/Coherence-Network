@@ -822,7 +822,7 @@
       }
     ]
   },
-  "generated_at": "2026-05-07T15:43:03.588936+00:00",
+  "generated_at": "2026-05-08T03:24:35.159519+00:00",
   "photos": {
     "Photos-3-001.zip": {
       "extensions": {
@@ -899,7 +899,7 @@
   },
   "publication_boundary": "This compact artifact publishes source counts, date spans, filenames, and aggregate influence candidates. Watch and listen history are allowed to be public by contributor direction; bulky raw exports stay as source files unless a later breath decides their size and shape belong directly in the repo.",
   "published_trace": {
-    "events": 28174,
+    "events": 69082,
     "sources": {
       "audible-browser": 60,
       "audible-library": 233,
@@ -910,7 +910,8 @@
       "youtube-music-browser": 28,
       "youtube-music-myactivity": 120,
       "youtube-myactivity": 363,
-      "youtube-takeout": 27030
+      "youtube-search-takeout": 2218,
+      "youtube-takeout": 65720
     }
   },
   "schema_version": "digital-influence-inventory/v1",
@@ -3687,6 +3688,108 @@
       }
     },
     "published_gap": {
+      "highest_signal_expansion_authors": [
+        {
+          "already_in_story": false,
+          "count": 2180,
+          "value": "Al Marconi - Topic"
+        },
+        {
+          "already_in_story": true,
+          "count": 1543,
+          "value": "Jesse Cook - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1478,
+          "value": "Ottmar Liebert - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1297,
+          "value": "Guitarra Azul - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1234,
+          "value": "Johannes Linstead - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 1065,
+          "value": "Armik - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 904,
+          "value": "Oscar Lopez - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 776,
+          "value": "Kevin Laliberté - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 748,
+          "value": "Strunz & Farah - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 588,
+          "value": "Gipsy Kings - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 554,
+          "value": "Luis Villegas - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 508,
+          "value": "Behzad - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 465,
+          "value": "LucasGitanoFamily - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 442,
+          "value": "Jacob Gurevitsch - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 386,
+          "value": "Young & Rollins - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 368,
+          "value": "Jim Stubblefield - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 362,
+          "value": "Pavlo Simtikidis - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 347,
+          "value": "Govi - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 344,
+          "value": "NovaMenco - Topic"
+        },
+        {
+          "already_in_story": false,
+          "count": 320,
+          "value": "Chris Spheeris - Topic"
+        }
+      ],
       "highest_signal_missing_authors": [
         {
           "already_in_story": false,
@@ -3789,6 +3892,9 @@
           "value": "Chris Spheeris - Topic"
         }
       ],
+      "integrated_2023_events": 14746,
+      "integrated_before_2024_05_07_events": 39144,
+      "integrated_early_2024_events": 4861,
       "missing_2023_events": 14746,
       "missing_before_2024_05_07_events": 39144,
       "missing_early_2024_events": 4861

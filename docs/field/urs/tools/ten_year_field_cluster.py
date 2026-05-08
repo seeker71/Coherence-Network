@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 ROOT = Path("/Users/ursmuff/CoherenceFieldAnalysis")
 TAKEOUT_WINDOW_START = datetime(2024, 5, 7).date()
 TAKEOUT_WINDOW_END = datetime(2026, 5, 7).date()
+FULL_YOUTUBE_HISTORY_START = datetime(2011, 12, 31).date()
+FULL_YOUTUBE_HISTORY_END = datetime(2026, 5, 7).date()
 
 
 FREQUENCY_RULES = {
@@ -266,7 +268,7 @@ def takeout_html_blocks(raw: str) -> list[str]:
 
 def parse_takeout_date(value: str | None):
     value = clean(value).replace("\u202f", " ").replace("\xa0", " ")
-    match = re.search(r"([A-Z][a-z]+ \d{1,2}, 20\d\d, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?", value)
+    match = re.search(r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?", value)
     if not match:
         return None
     for fmt in ("%B %d, %Y, %I:%M:%S %p", "%b %d, %Y, %I:%M:%S %p"):
@@ -282,6 +284,13 @@ def in_takeout_window(timestamp: str | None) -> bool:
     if parsed is None:
         return False
     return TAKEOUT_WINDOW_START <= parsed <= TAKEOUT_WINDOW_END
+
+
+def in_full_youtube_history_window(timestamp: str | None) -> bool:
+    parsed = parse_takeout_date(timestamp)
+    if parsed is None:
+        return False
+    return FULL_YOUTUBE_HISTORY_START <= parsed <= FULL_YOUTUBE_HISTORY_END
 
 
 def event_from_parts(
@@ -466,23 +475,31 @@ def load_takeout_file(path: Path) -> list[Event]:
             if not links:
                 continue
             text = clean(re.sub(r"<[^>]+>", " ", content)).replace("\u202f", " ").replace("\xa0", " ")
-            time = re.search(r"([A-Z][a-z]+ \d{1,2}, 20\d\d, \d{1,2}:\d{2}:\d{2}\s*[AP]M\s*[A-Z]+)", text)
+            time = re.search(r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s*[AP]M\s*[A-Z]+)", text)
             timestamp = clean(time.group(1)) if time else None
-            if not in_takeout_window(timestamp):
+            if not in_full_youtube_history_window(timestamp):
                 continue
             product = re.search(r"<b>Products:</b><br>&emsp;([^<]+)", block)
             product_text = clean(product.group(1)).lower() if product else ""
-            source = "youtube-music-takeout" if "music" in product_text else "youtube-takeout"
+            title = clean(links[0][1])
+            action = re.match(r"^(Watched|Searched for|Viewed)\b", text)
+            action_text = action.group(1).lower().replace(" ", "-") if action else "activity"
+            if "music" in product_text:
+                source = "youtube-music-takeout"
+            elif action_text == "searched-for":
+                source = "youtube-search-takeout"
+            else:
+                source = "youtube-takeout"
             author = clean(links[1][1]) if len(links) > 1 and "watch?" not in links[1][0] else None
             out.append(
                 event_from_parts(
                     source=source,
                     timestamp=timestamp,
                     author=author,
-                    work=clean(links[0][1]).removeprefix("Watched "),
+                    work=title.removeprefix("Watched ").removeprefix("Searched for ").removeprefix("Viewed "),
                     url=html.unescape(links[0][0]),
                     duration=None,
-                    evidence_level="google-takeout-2024-05-07-to-2026-05-07",
+                    evidence_level="google-takeout-full-youtube-history",
                 )
             )
     return out
@@ -497,7 +514,16 @@ def load_takeout_zips(root: Path) -> list[Event]:
                 wanted = [
                     name
                     for name in zf.namelist()
-                    if name.lower().endswith(("watch-history.json", "watch-history.html", "myactivity.json", "myactivity.html"))
+                    if name.lower().endswith(
+                        (
+                            "watch-history.json",
+                            "watch-history.html",
+                            "search-history.json",
+                            "search-history.html",
+                            "myactivity.json",
+                            "myactivity.html",
+                        )
+                    )
                 ]
                 for name in wanted:
                     zf.extract(name, tmp)
@@ -590,11 +616,11 @@ def write_report(root: Path, events: list[Event]) -> None:
         "frequency_clusters": top(by_frequency, 30),
         "axis_totals": axis_totals,
         "youtube_takeout_window": {
-            "start": TAKEOUT_WINDOW_START.isoformat(),
-            "end": TAKEOUT_WINDOW_END.isoformat(),
-            "evidence_level": "google-takeout-2024-05-07-to-2026-05-07",
+            "start": FULL_YOUTUBE_HISTORY_START.isoformat(),
+            "end": FULL_YOUTUBE_HISTORY_END.isoformat(),
+            "evidence_level": "google-takeout-full-youtube-history",
         },
-        "data_gap": "YouTube watch history from the completed history-only Google Takeout archive is loaded for the requested two-year window. The 10-part full export in Downloads exposes YouTube search history in part 001, but no watch-history file was found in those parts. Audible web contributes purchase/library/listen-history evidence; the detailed per-title mobile Listening Log remains app-only.",
+        "data_gap": "YouTube watch history from the completed history-only Google Takeout archive is loaded for the full available span in that source body, 2021-07-31 through 2026-05-07. YouTube search history from the same export extends the signal back to 2011-12-31. Audible web contributes purchase/library/listen-history evidence; the detailed per-title mobile Listening Log remains app-only.",
     }
     (out / "ten_year_cluster_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -611,7 +637,7 @@ def write_report(root: Path, events: list[Event]) -> None:
     lines.extend(
         [
             "",
-            "Coverage note: YouTube watch history is loaded from the completed history-only Google Takeout archive for 2024-05-07 through 2026-05-07. The 10-part full export in Downloads exposes YouTube search history in part 001, but no watch-history file was found in those parts. Audible web now contributes authenticated purchase, library, and visible listen-history evidence, while the detailed per-title mobile Listening Log remains app-only.",
+            "Coverage note: YouTube watch history is loaded from the completed history-only Google Takeout archive for the full available span in that source body, 2021-07-31 through 2026-05-07. YouTube search history from the same export extends the signal back to 2011-12-31. Audible web now contributes authenticated purchase, library, and visible listen-history evidence, while the detailed per-title mobile Listening Log remains app-only.",
             "",
             "## Time Clusters",
         ]
