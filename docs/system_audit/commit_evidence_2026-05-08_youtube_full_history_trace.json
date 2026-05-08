@@ -1,0 +1,91 @@
+{
+  "date": "2026-05-08T03:25:06Z",
+  "thread_branch": "codex/youtube-full-history-20260508",
+  "commit_scope": "docs(field): expand YouTube history trace to full Takeout span",
+  "files_owned": [
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/ten_year_cluster_report.md",
+    "docs/field/urs/output/ten_year_cluster_summary.json",
+    "docs/field/urs/output/ten_year_events.jsonl",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/ten_year_field_cluster.py",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Expanded YouTube ingest from history-only Google Takeout: 65,700 watch rows from 2021-07-31 through 2026-05-07 plus search history back to 2011-12-31. Regenerated ten_year_events.jsonl with 69,082 events, 67,938 google-takeout-full-youtube-history evidence rows, 163 monthly buckets, and 2,152 podcast-like events / 2,626.86 duration-weighted podcast hours. py_compile, trace invariant check, focused digital-influence API artifact test, and git diff whitespace check passed."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Focused YouTube/digital-influence artifact test passed. Running the whole api/tests/test_field_story_trace_index.py file also reached an existing separate Audible assertion: trace audible-history-spectrum schema_version is v2 while that assertion expects v1."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Docs and trace artifact changes are ready for the normal PR/deploy flow; generated API-served artifacts were locally readable through the focused field-story artifact test."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "urs-field-story",
+    "youtube-full-history",
+    "youtube-podcast-spectrum"
+  ],
+  "spec_ids": [
+    "field-story-trace-index"
+  ],
+  "task_ids": [
+    "youtube-full-history-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Documentation",
+        "Evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 docs/field/urs/tools/ten_year_field_cluster.py",
+    "python3 docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+    "python3 docs/field/urs/tools/digital_influence_inventory.py",
+    "python3 -m py_compile docs/field/urs/tools/ten_year_field_cluster.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/youtube_podcast_spectrum.py docs/field/urs/tools/build_trace_indexes.py",
+    "python3 trace invariant check",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_digital_influence_inventory_registers_full_history_attention",
+    "git diff --check"
+  ],
+  "change_files": [
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/ten_year_cluster_report.md",
+    "docs/field/urs/output/ten_year_cluster_summary.json",
+    "docs/field/urs/output/ten_year_events.jsonl",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/ten_year_field_cluster.py",
+    "docs/field/urs/trace/author_index.jsonl",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/work_index.jsonl",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
