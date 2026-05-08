@@ -54,6 +54,12 @@ For reading the story and opening each influence as it appears, use:
 rg '/api/field-stories/urs-field-story/trace' docs/field/urs/output/chronological_story_with_frequency.md
 ```
 
+For "who should receive computed CC sensing for shaping the organism?", use:
+
+```bash
+python3 scripts/organism_influence_cc.py --slug urs-field-story --limit 40 --cc-pool 1000
+```
+
 The wave arrays use:
 
 ```json
@@ -68,6 +74,8 @@ The wave arrays use:
 - Significant work slice: `/api/field-stories/urs-field-story/trace/significant-work/Spellmonger`
 - Concept slice: `/api/field-stories/urs-field-story/trace/concept/lc-network`
 - MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
+- Organism influence CC: `/api/field-stories/urs-field-story/organism-influence-cc?limit=40&cc_pool=1000`
+- Organism influence CC MCP tool: `get_organism_influence_cc`
 - Crypto trace artifact: `/api/field-stories/urs-field-story/artifacts/trace-source-crypto`
 - View attribution receipt: `POST /api/field-stories/urs-field-story/view-attribution`
 - View attribution policy: `GET /api/field-stories/urs-field-story/view-attribution-policy`
@@ -95,6 +103,18 @@ A presence/work view writes a compact receipt plus small CC flow rows instead of
 The default `presence-work-view` policy currently splits one impression across original creator, lived integrator, queryable trace artifact, trace-building agent, infrastructure, and attention/discovery. The receipt points back to the existing trace APIs and source crypto root, so deeper proof is pulled only when needed.
 
 The living adjustment policy is append-only. A creator, viewer, contributor, agent, source artifact, or steward can attest that a portion of an existing flow should move from one recipient to another. The original receipt and base flow remain intact; the adjustment writes a negative ledger row from one recipient and a positive ledger row to another, so circulation can stay conserved while the organism learns where nutrition is more accurately felt.
+
+## Organism Influence CC
+
+`organism-influence-cc:v1` computes a read-only CC sensing allocation. It does not mint or pay CC. It makes the current influence body visible across five proportional pools:
+
+- `stewardship_time` - Urs / TheSeeker71 source gathering, direction, curation, and lived integration.
+- `agent_time` - Codex/model execution proof from `docs/system_audit/model_executor_runs.jsonl`.
+- `significant_works` - formative books, series, and works from `significant_work_index.jsonl`.
+- `creators_and_channels` - authors, speakers, musicians, researchers, and channels from `author_index.jsonl`, boosted by significant works.
+- `manual_practices` - lived anchors from `anchors/influence_anchors.json` where source logs are partial or pre-digital.
+
+Each row includes a `ledger_recipient_id`, `trace_refs`, source mix, score, and computed CC. A later settlement breath can choose to turn those rows into append-only ledger flow, while exact proof remains pull-based through the source crypto root and the linked trace files.
 
 ## Chapter Discovery Boundary
 
