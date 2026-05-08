@@ -65,6 +65,9 @@ export type Creation = {
   image_url?: string | null;
   /** When true, `url` is an internal Network route (same-tab nav); otherwise external (new tab). */
   internal?: boolean;
+  /** Free-text era like "approximately 1984–1985 · age 13" or "2020 onwards".
+   *  Drives chronological sort and the small marker at the top of the tile. */
+  era?: string | null;
 };
 
 export type Lineage = {
@@ -160,6 +163,29 @@ function heroGradient(image_url: string | null | undefined, accent: BrandTone) {
   } as const;
 }
 
+// Pull the first 4-digit year out of a free-text era string.
+// "approximately 1984–1985 · age 13" → 1984; "~2003" → 2003; "" → null.
+// Used to sort works chronologically when the body doesn't carry an
+// explicit start_year field.
+export function extractEraYear(era: string | null | undefined): number | null {
+  if (!era) return null;
+  const m = era.match(/(\d{4})/);
+  return m ? Number(m[1]) : null;
+}
+
+// Coarse life-phase from a year. Tints the fallback gradient so the
+// works walk a temperature arc — childhood warm amber, formation cool
+// indigo, career teal-steel, network living green — even before any
+// real image is attached. The phase is informational, not load-bearing;
+// when no year can be parsed, we fall to the neutral near-black tail.
+function eraPhaseTail(year: number | null): string {
+  if (year === null) return "#0b0b12";
+  if (year < 1990) return "#1a0d05"; // childhood — warm amber-black
+  if (year < 2000) return "#0d0a1a"; // formation — deep indigo-black
+  if (year < 2020) return "#051a17"; // career — teal-black
+  return "#0a1505"; // network — living green-black
+}
+
 function creationArt(c: Creation, accent: BrandTone) {
   if (c.image_url) {
     return {
@@ -168,8 +194,9 @@ function creationArt(c: Creation, accent: BrandTone) {
       backgroundPosition: "center",
     } as const;
   }
+  const tail = eraPhaseTail(extractEraYear(c.era));
   return {
-    backgroundImage: `linear-gradient(135deg,${accent.bg}66,#0b0b12)`,
+    backgroundImage: `linear-gradient(135deg,${accent.bg}66,${tail})`,
   } as const;
 }
 
@@ -424,6 +451,18 @@ function PresenceOverview({
   );
 }
 
+// Compact era marker for the tile corner. Strips wordy prefixes
+// ("approximately ", "~") so the year-shape lands clean. Falls back
+// to the raw string if no year is parseable. Empty string → no marker.
+function eraMarker(era: string | null | undefined): string {
+  if (!era) return "";
+  const compact = era
+    .replace(/^\s*(approximately|approx\.?|circa|ca\.?|~)\s*/i, "")
+    .replace(/\s+·\s+age\s+\d+\s*$/i, "")
+    .trim();
+  return compact;
+}
+
 function CreationsGrid({
   creations,
   accent,
@@ -433,19 +472,33 @@ function CreationsGrid({
 }) {
   const visible = creations.filter((c) => c.kind !== "event");
   if (visible.length === 0) return null;
+  // Walk the lineage forward in time when an era year is parseable.
+  // Works without a year sort to the end so they don't masquerade as
+  // ancient. Stable on name as the secondary key for deterministic
+  // ordering inside the same year-bucket.
+  const ordered = [...visible].sort((a, b) => {
+    const ay = extractEraYear(a.era);
+    const by = extractEraYear(b.era);
+    if (ay === null && by === null) return a.name.localeCompare(b.name);
+    if (ay === null) return 1;
+    if (by === null) return -1;
+    if (ay !== by) return ay - by;
+    return a.name.localeCompare(b.name);
+  });
   return (
     <section>
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
         Works
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {visible.map((c) => {
+        {ordered.map((c) => {
           const Tag = (c.url ? "a" : "div") as "a" | "div";
           const extra = c.url
             ? c.internal
               ? { href: c.url }
               : { href: c.url, target: "_blank", rel: "noopener noreferrer" }
             : {};
+          const eraText = eraMarker(c.era);
           return (
             <Tag
               key={`${c.kind}-${c.name}`}
@@ -456,6 +509,11 @@ function CreationsGrid({
                 className="aspect-square rounded-xl border border-white/10 relative overflow-hidden"
                 style={creationArt(c, accent)}
               >
+                {eraText && !c.image_url ? (
+                  <span className="absolute top-2 left-2 right-2 text-white/70 text-[10px] uppercase tracking-[0.14em] leading-snug line-clamp-2">
+                    {eraText}
+                  </span>
+                ) : null}
                 <span
                   className="absolute bottom-1.5 right-2 text-white/70 text-xs"
                   aria-hidden="true"
