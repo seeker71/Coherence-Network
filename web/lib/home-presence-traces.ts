@@ -6,6 +6,8 @@ import {
   type PresenceNode,
   type PresenceSourceVisual,
 } from "@/app/presence-walk/nodes";
+import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 import { DEFAULT_LOCALE, type LocaleCode } from "@/lib/locales";
 
 export type HomePresenceTraceCard = PresenceNode &
@@ -15,9 +17,9 @@ export type HomePresenceTraceCard = PresenceNode &
     image: string;
   };
 
-export function getHomePresenceTraceCards(
+export async function getHomePresenceTraceCards(
   lang: LocaleCode = DEFAULT_LOCALE,
-): HomePresenceTraceCard[] {
+): Promise<HomePresenceTraceCard[]> {
   const homePresence = getPresenceContent(lang).homePresence;
   if (!homePresence) return [];
 
@@ -42,11 +44,36 @@ export function getHomePresenceTraceCards(
     });
   }
 
-  return cards;
+  return Promise.all(
+    cards.map(async (card) => ({
+      ...card,
+      traceMetric: (await resolveLiveTraceMetric(card.traceHref)) ?? card.traceMetric,
+    })),
+  );
 }
 
 function getSourceVisualImage(sourceVisual: PresenceSourceVisual | undefined): string | undefined {
   if (!sourceVisual) return undefined;
   if (sourceVisual.template === "patterned-release-page") return sourceVisual.backgroundImage;
   return sourceVisual.image;
+}
+
+type FieldStoryTraceResponse = {
+  result?: {
+    events?: number;
+  };
+};
+
+async function resolveLiveTraceMetric(traceHref: string): Promise<string | null> {
+  if (!traceHref.startsWith("/api/field-stories/")) return null;
+
+  const trace = await fetchJsonOrNull<FieldStoryTraceResponse>(
+    `${getApiBase()}${traceHref}`,
+    {},
+    3500,
+    1,
+  );
+  const events = trace?.result?.events;
+  if (typeof events !== "number" || !Number.isFinite(events)) return null;
+  return `${events} field events`;
 }

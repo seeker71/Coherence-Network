@@ -181,7 +181,7 @@ export default async function Home() {
     title: t(step.titleKey) || step.title,
     description: t(step.descKey) || step.description,
   }));
-  const homePresenceCards = getHomePresenceTraceCards(lang);
+  const homePresenceCards = await getHomePresenceTraceCards(lang);
 
   const [ideasData, resonanceItems, coherenceScore, nodeCount, featuredConcept] = await Promise.all([
     loadIdeas(lang),
