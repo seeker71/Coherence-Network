@@ -5,6 +5,27 @@ import { describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..");
 const pageSource = readFileSync(join(root, "app/page.tsx"), "utf8");
+const presenceWalk = JSON.parse(
+  readFileSync(join(root, "content/presence-walk/en.json"), "utf8"),
+) as {
+  homePresence?: {
+    order?: string[];
+    traces?: Record<
+      string,
+      {
+        traceLabel?: string;
+        traceHref?: string;
+        traceMetric?: string;
+        traceSource?: string;
+        traceWhy?: string;
+        image?: string;
+      }
+    >;
+  };
+  presenceNodes?: {
+    nodes?: Record<string, { image?: string }>;
+  };
+};
 const localeFiles = ["en", "de", "es", "id"].map((locale) =>
   join(root, `messages/${locale}.json`),
 );
@@ -22,13 +43,37 @@ describe("homepage presence lineage", () => {
     expect(pageSource).not.toContain("TODO: Replace");
     expect(pageSource).not.toContain("/presences/");
     expect(pageSource).not.toContain('href: "#"');
+    expect(pageSource).not.toContain("FEATURED_PRESENCES");
     expect(pageSource).not.toContain("0Jq2Qv4o0vJq2Qv4o0vJq2Q");
   });
 
+  it("draws home presences from presence data and trace pointers", () => {
+    const homePresence = presenceWalk.homePresence;
+    expect(pageSource).toContain("getHomePresenceTraceCards");
+    expect(homePresence?.order).toEqual([
+      "liquid-bloom",
+      "bloomurian",
+      "mose",
+      "matias-de-stefano",
+      "portal",
+    ]);
+
+    for (const slug of homePresence?.order ?? []) {
+      const trace = homePresence?.traces?.[slug];
+      expect(presenceWalk.presenceNodes?.nodes?.[slug], `${slug} missing node`).toBeTruthy();
+      expect(trace?.traceLabel, `${slug} missing trace label`).toBeTruthy();
+      expect(trace?.traceHref, `${slug} missing trace href`).toMatch(/^\/(api|people)\//);
+      expect(trace?.traceMetric, `${slug} missing trace metric`).toBeTruthy();
+      expect(trace?.traceSource, `${slug} missing trace source`).toMatch(/^(docs|web)\//);
+      expect(trace?.traceWhy, `${slug} missing trace explanation`).toBeTruthy();
+      expect(trace?.image, `${slug} missing home image`).toBeTruthy();
+    }
+  });
+
   it("uses public assets that exist in the repository", () => {
-    const imageMatches = [
-      ...pageSource.matchAll(/image: "([^"]+)"/g),
-    ].map((match) => match[1]);
+    const imageMatches = (presenceWalk.homePresence?.order ?? []).map(
+      (slug) => presenceWalk.homePresence?.traces?.[slug]?.image,
+    );
 
     expect(imageMatches).toEqual([
       "/visuals/brand/liquid-bloom-bg-center.jpg",

@@ -58,6 +58,16 @@ export type PeopleDirectorySection = {
   lede: string;
 };
 
+export type HomePresenceTrace = {
+  traceLabel: string;
+  traceHref: string;
+  traceMetric: string;
+  traceSource: string;
+  traceWhy: string;
+  image?: string;
+  imagePosition?: string;
+};
+
 export type PresenceContent = {
   presenceWalk: {
     index: {
@@ -109,6 +119,10 @@ export type PresenceContent = {
         lede: string;
       }
     >;
+  };
+  homePresence?: {
+    order: string[];
+    traces: Record<string, HomePresenceTrace>;
   };
   nodePage: unknown;
   presenceNodes: unknown;
