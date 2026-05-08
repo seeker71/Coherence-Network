@@ -32,13 +32,30 @@ sys.path.insert(0, str(REPO_ROOT / "api"))
 
 from app.services.substrate import (
     find_equivalent_cells,
+    ingest_concept_file,
+    ingest_idea_file,
     ingest_memory_file,
+    ingest_presence_file,
+    ingest_spec_file,
     lattice_stats,
 )
 from app.services.unified_db import session as session_scope
 
 
 MEMORY_DIR = Path.home() / ".claude/projects/-Users-ursmuff-source-Coherence-Network/memory"
+SPEC_DIR = REPO_ROOT / "specs"
+IDEA_DIR = REPO_ROOT / "ideas"
+CONCEPT_DIR = REPO_ROOT / "docs/vision-kb/concepts"
+PRESENCE_DIR = REPO_ROOT / "docs/presences"
+
+
+_INGESTERS = {
+    "memory": (MEMORY_DIR, ingest_memory_file, lambda p: p.name.upper() != "MEMORY.MD"),
+    "spec": (SPEC_DIR, ingest_spec_file, lambda p: p.name not in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md")),
+    "idea": (IDEA_DIR, ingest_idea_file, lambda p: p.name not in ("INDEX.md", "TEMPLATE.md")),
+    "concept": (CONCEPT_DIR, ingest_concept_file, lambda p: p.name not in ("INDEX.md", "SCHEMA.md", "LOG.md")),
+    "presence": (PRESENCE_DIR, ingest_presence_file, lambda p: p.name not in ("INDEX.md", "README.md")),
+}
 
 
 def cmd_ingest(paths: list[Path]) -> int:
@@ -59,19 +76,46 @@ def cmd_ingest(paths: list[Path]) -> int:
     return 0
 
 
-def cmd_memories() -> int:
-    """Ingest all memory files under the auto-loaded memory directory."""
-    if not MEMORY_DIR.exists():
-        print(f"Memory directory not found: {MEMORY_DIR}", file=sys.stderr)
+def cmd_ingest_domain(domain: str) -> int:
+    """Ingest all .md files for a given domain."""
+    if domain not in _INGESTERS:
+        print(f"Unknown domain: {domain}. Choose from {list(_INGESTERS)}", file=sys.stderr)
         return 1
-    md_files = sorted(MEMORY_DIR.glob("*.md"))
+    base, ingester, filter_fn = _INGESTERS[domain]
+    if not base.exists():
+        print(f"{domain} directory not found: {base}", file=sys.stderr)
+        return 1
+    md_files = sorted([p for p in base.glob("*.md") if filter_fn(p)])
     if not md_files:
-        print(f"No .md files in {MEMORY_DIR}", file=sys.stderr)
-        return 1
-    # Skip the index — it's not a memory, it's a pointer list
-    md_files = [p for p in md_files if p.name.upper() != "MEMORY.MD"]
-    print(f"Ingesting {len(md_files)} memory files from {MEMORY_DIR}")
-    return cmd_ingest(md_files)
+        print(f"No {domain} files in {base}", file=sys.stderr)
+        return 0
+    print(f"Ingesting {len(md_files)} {domain} files from {base}")
+    success = fail = 0
+    with session_scope() as session:
+        for path in md_files:
+            try:
+                cell, bp_id, ctor_id = ingester(session, path)
+                success += 1
+                if success <= 3 or success % 25 == 0:
+                    print(f"  [{success}] {path.name}: bp={bp_id}")
+            except Exception as exc:
+                fail += 1
+                print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
+        session.commit()
+    print(f"{domain}: {success} ingested, {fail} failed")
+    return 0
+
+
+def cmd_memories() -> int:
+    return cmd_ingest_domain("memory")
+
+
+def cmd_backfill_all() -> int:
+    """Ingest all five domains."""
+    rc = 0
+    for domain in ("memory", "spec", "idea", "concept", "presence"):
+        rc |= cmd_ingest_domain(domain)
+    return rc
 
 
 def cmd_stats() -> int:
@@ -115,6 +159,31 @@ def main(argv: list[str] | None = None) -> int:
         help="Ingest all auto-loaded memory files",
     )
     parser.add_argument(
+        "--specs",
+        action="store_true",
+        help="Ingest all spec files",
+    )
+    parser.add_argument(
+        "--ideas",
+        action="store_true",
+        help="Ingest all idea files",
+    )
+    parser.add_argument(
+        "--concepts",
+        action="store_true",
+        help="Ingest all vision-kb concept files",
+    )
+    parser.add_argument(
+        "--presences",
+        action="store_true",
+        help="Ingest all presence files",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Ingest all five domains (memory, spec, idea, concept, presence)",
+    )
+    parser.add_argument(
         "--stats",
         action="store_true",
         help="Print lattice stats",
@@ -129,8 +198,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.stats:
         return cmd_stats()
+    if args.all:
+        return cmd_backfill_all()
     if args.memories:
-        return cmd_memories()
+        return cmd_ingest_domain("memory")
+    if args.specs:
+        return cmd_ingest_domain("spec")
+    if args.ideas:
+        return cmd_ingest_domain("idea")
+    if args.concepts:
+        return cmd_ingest_domain("concept")
+    if args.presences:
+        return cmd_ingest_domain("presence")
     if args.equivalent:
         return cmd_equivalent(args.equivalent[0], args.equivalent[1])
     if args.paths:

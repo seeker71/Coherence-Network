@@ -67,7 +67,7 @@ class SubstrateNodeORM(Base):
 class SubstrateNamedCellORM(Base):
     """A named instance — Recipe access + Base blueprint + Name + CTOR recipe.
 
-    Maps the NUMS NamedCell pattern: every memory file, spec file, concept
+    Maps the cell pattern: every memory file, spec file, concept
     story, idea, presence, lineage edge, witness, or task in the body lives
     here as a cell.
     """

@@ -1,6 +1,6 @@
 """Coherence-substrate — content-addressed numeric lattice for the Network.
 
-NUMS-shaped substrate for the body's tissue (ideas, specs, concepts,
+A structural substrate for the body's tissue (ideas, specs, concepts,
 memories, presences, lineages, tasks, witnesses). The kernel is universal;
 the category vocabulary is Network-specific.
 
@@ -46,7 +46,11 @@ from app.services.substrate.markdown_frontend import (
     BID_spec,
     BID_string,
     frontmatter_to_blueprint,
+    ingest_concept_file,
+    ingest_idea_file,
     ingest_memory_file,
+    ingest_presence_file,
+    ingest_spec_file,
     parse_markdown,
     parse_markdown_file,
 )
@@ -80,7 +84,11 @@ __all__ = [
     "BID_string",
     # frontends
     "frontmatter_to_blueprint",
+    "ingest_concept_file",
+    "ingest_idea_file",
     "ingest_memory_file",
+    "ingest_presence_file",
+    "ingest_spec_file",
     "parse_markdown",
     "parse_markdown_file",
 ]

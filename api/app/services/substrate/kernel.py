@@ -1,9 +1,9 @@
 """Coherence-substrate kernel — NodeID, Module, Blueprint, Recipe, NamedCell.
 
-Persistent, content-addressed, multi-process-safe. The body of this kernel
-is a faithful port of the NUMS.Go architecture (see
-docs/field/urs/artifacts/nums-go-2023/) backed by SQLAlchemy / Postgres /
-SQLite via the unified_db engine.
+Persistent, content-addressed, multi-process-safe. Backed by SQLAlchemy
+against Postgres or SQLite via the unified_db engine. The architectural
+lineage (the prior art that informs this design) is captured in
+docs/field/urs/artifacts/nums-go-2023/.
 
 The trinity:
 - Blueprint (ice phase) — structural identity; what something IS
@@ -11,8 +11,8 @@ The trinity:
 - NamedCell (gas phase) — diffuse individuation; named slot with its CTOR
 
 The kernel is universal — domain frontends (markdown_frontend, etc.) drive
-it from format-specific surface syntax. Same architecture as NUMS.Go;
-domain-specific category vocabulary lives in category.py.
+it from format-specific surface syntax. The Network's domain-specific
+category vocabulary lives in category.py.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ DOMAIN_RECIPE = "recipe"
 
 
 # ---------------------------------------------------------------------------
-# Level computation — bottom-up, identical to NUMS
+# Level computation — bottom-up, universal
 # ---------------------------------------------------------------------------
 
 
@@ -78,7 +78,7 @@ def get_level(category_level: int, child_levels: List[int]) -> int:
 
 
 def serialize_tree(category: NodeID, children: List[NodeID]) -> str:
-    """Hash key. Same format as NUMS: Category + '+' + child IDs joined."""
+    """Hash key. Hash format: Category + '+' + child IDs joined."""
     return str(category) + "".join("+" + str(c) for c in children)
 
 
@@ -236,7 +236,7 @@ class Recipe:
         self._self_id = None
 
     def make_self_id(self, session: Session) -> NodeID:
-        """Bottom-up recursive interning. Same pattern as NUMS EmitRecipe."""
+        """Bottom-up recursive interning. Bottom-up recursive composition."""
         if self._self_id is not None:
             return self._self_id
         if not self.children:

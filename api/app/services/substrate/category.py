@@ -1,14 +1,14 @@
 """Category vocabulary for the coherence-substrate.
 
-The kernel is universal — same NodeID 4-tuples, same TreeDB interning, same
-content-addressing — but the *alphabet* (the leaf categories at levels 1 and
-2) is domain-specific. NUMS.Go has a code-language vocabulary (Compare /
-Math / BitMath / Cond / Loop / ...). The Network has its own vocabulary
-matching what the body actually holds: ideas, specs, concepts, memories,
-presences, lineages, tasks, witnesses.
+The kernel is universal — NodeID 4-tuples, TreeDB interning, content-addressing
+all stay the same regardless of domain. The *alphabet* (the leaf categories at
+levels 1 and 2) is what changes per-domain. A code-comprehension substrate
+would have a code-language vocabulary (Compare / Math / BitMath / Cond /
+Loop / ...). The Network has its own vocabulary matching what the body holds:
+ideas, specs, concepts, memories, presences, lineages, tasks, witnesses.
 
 See `docs/field/urs/artifacts/nums-go-2023/network-substrate-design.md` for
-the full design rationale.
+the architectural lineage and the design rationale.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from enum import IntEnum
 
 
 # ---------------------------------------------------------------------------
-# Levels (universal — same as NUMS)
+# Levels — the universal compositional-depth axis
 # ---------------------------------------------------------------------------
 
 

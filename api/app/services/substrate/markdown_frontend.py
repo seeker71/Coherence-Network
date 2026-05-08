@@ -294,11 +294,46 @@ def ingest_memory_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeI
 
     Returns (NamedCell, blueprint NodeID, ctor recipe NodeID).
     """
+    return _ingest_markdown_file(session, path, "memory", BID_memory(), name_field="name")
+
+
+def ingest_spec_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one spec file. Spec frontmatter has source/requirements/done_when/test/constraints."""
+    return _ingest_markdown_file(session, path, "spec", BID_spec())
+
+
+def ingest_idea_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one idea file. Idea frontmatter has idea_id/title/stage/work_type/pillar/specs."""
+    return _ingest_markdown_file(session, path, "idea", BID_idea(), name_field="idea_id")
+
+
+def ingest_concept_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one concept file (vision-kb concepts/lc-xxx.md)."""
+    return _ingest_markdown_file(session, path, "concept", BID_concept(), name_field="id")
+
+
+def ingest_presence_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one presence file (docs/presences/{slug}.md)."""
+    return _ingest_markdown_file(session, path, "presence", BID_presence())
+
+
+def _ingest_markdown_file(
+    session: Session,
+    path: Path,
+    domain: str,
+    domain_blueprint: NodeID,
+    name_field: Optional[str] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Generic ingestion path — domain + domain blueprint + optional name field."""
     parsed = parse_markdown_file(path)
-    name = parsed.frontmatter.get("name") or path.stem
+    name = None
+    if name_field:
+        name = parsed.frontmatter.get(name_field)
+    if not name:
+        name = parsed.frontmatter.get("name") or parsed.frontmatter.get("title") or path.stem
 
     # Build the Blueprint from the frontmatter shape.
-    blueprint_id = frontmatter_to_blueprint(session, parsed.frontmatter, BID_memory())
+    blueprint_id = frontmatter_to_blueprint(session, parsed.frontmatter, domain_blueprint)
 
     # Build the CTOR recipe — captures frontmatter-as-seed.
     # We represent it as a Block recipe whose children are string-literal
@@ -332,8 +367,8 @@ def ingest_memory_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeI
     # Make the cell.
     cell = make_cell(
         session,
-        name=name,
-        domain="memory",
+        name=str(name),
+        domain=domain,
         blueprint=blueprint_id,
         access=access_id,
         ctor=ctor_id,
