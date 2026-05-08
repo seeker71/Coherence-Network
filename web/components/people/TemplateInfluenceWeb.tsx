@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
-import { InfluenceWeb } from "@/components/presence/InfluenceWeb";
+import { BodyOfEvidence } from "@/components/presence/BodyOfEvidence";
 import { RefineDoorway } from "@/components/presence/RefineDoorway";
 import type { PresenceIdentity } from "@/components/presence/PresencePage";
 
@@ -66,7 +66,7 @@ export function TemplateInfluenceWeb({ graphSlug }: { graphSlug: string }) {
 
   return (
     <div className="space-y-10">
-      <InfluenceWeb
+      <BodyOfEvidence
         presenceId={node.id}
         externalPresences={node.presences || []}
       />
