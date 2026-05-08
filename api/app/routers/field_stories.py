@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.services import field_story_service
+from app.services import field_story_service, field_view_attribution_service
 
 router = APIRouter()
 
@@ -16,6 +16,16 @@ class FieldStoryContributionIn(BaseModel):
     contribution_type: str = Field(default="addition", min_length=1)
     summary: str = Field(min_length=1)
     content_markdown: str = ""
+
+
+class FieldStoryViewAttributionIn(BaseModel):
+    surface: str = Field(default="/field/urs", min_length=1)
+    presence_id: str = Field(min_length=1)
+    target_selector: str = Field(default="significant-work", min_length=1)
+    target_value: str = Field(min_length=1)
+    session_hash: str | None = None
+    viewer_contributor_id: str | None = None
+    cc_amount: float = Field(default=1.0, ge=0.0, le=1000.0)
 
 
 @router.get("/field-stories", summary="List published field stories")
@@ -66,6 +76,51 @@ async def get_field_story_trace_slice(slug: str, selector: str, value: str) -> d
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
+@router.post(
+    "/field-stories/{slug}/view-attribution",
+    status_code=201,
+    summary="Record a compact attributed field-story view and CC flow receipt",
+)
+async def record_field_story_view_attribution(slug: str, body: FieldStoryViewAttributionIn) -> dict:
+    try:
+        return field_view_attribution_service.record_presence_view(
+            slug=slug,
+            surface=body.surface,
+            presence_id=body.presence_id,
+            target_selector=body.target_selector,
+            target_value=body.target_value,
+            session_hash=body.session_hash,
+            viewer_contributor_id=body.viewer_contributor_id,
+            cc_amount=body.cc_amount,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
+@router.get(
+    "/field-stories/{slug}/view-attribution/{event_hash:path}",
+    summary="Read a compact attributed field-story view receipt",
+)
+async def get_field_story_view_attribution(slug: str, event_hash: str) -> dict:
+    try:
+        receipt = field_view_attribution_service.receipt_summary(event_hash)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if receipt["receipt"].get("event_hash") != event_hash:
+        raise HTTPException(status_code=404, detail="Receipt mismatch")
+    return receipt
+
+
+@router.get(
+    "/field-stories/{slug}/view-attribution-circulation",
+    summary="Summarize field-story view CC circulation and sensing signals",
+)
+async def get_field_story_view_attribution_circulation(slug: str, limit: int = 12) -> dict:
+    return field_view_attribution_service.circulation_summary(slug, limit=limit)
 
 
 @router.post(

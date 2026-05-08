@@ -1,0 +1,86 @@
+{
+  "date": "2026-05-08T04:18:50Z",
+  "thread_branch": "codex/field-view-attribution-flow-20260508",
+  "commit_scope": "feat(field): record view attribution CC flow receipts",
+  "files_owned": [
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_view_attribution_service.py",
+    "api/app/services/unified_models.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Added POST /api/field-stories/{slug}/view-attribution, GET /api/field-stories/{slug}/view-attribution/{event_hash}, and GET /api/field-stories/{slug}/view-attribution-circulation. Focused test records an lc-network -> Spellmonger view, persists a compact receipt, writes 6 CC flow rows, mirrors flow into contribution ledger, verifies creator:Terry Mancour receives 0.4 CC, and reads flowing circulation/vitality summary. Full api/tests/test_field_story_trace_index.py passed with 11 tests."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Local API field-story trace tests passed; CI will rerun after PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "API endpoint change is ready for normal PR/deploy flow; public API calls will be verified after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "urs-field-story",
+    "presence-view-attribution",
+    "cc-circulation-sensing"
+  ],
+  "spec_ids": [
+    "field-story-trace-index",
+    "coherence-network-value-attribution"
+  ],
+  "task_ids": [
+    "field-view-attribution-flow-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Documentation",
+        "Evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 -m py_compile api/app/services/field_view_attribution_service.py api/app/routers/field_stories.py api/app/services/unified_models.py",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_field_story_view_attribution_records_compact_receipt_and_cc_flow",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check"
+  ],
+  "change_files": [
+    "api/app/routers/field_stories.py",
+    "api/app/services/field_view_attribution_service.py",
+    "api/app/services/unified_models.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/trace/README.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public field-story trace views can persist compact attribution receipts and CC flow rows, then expose circulation sensing without copying raw traces into each view.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/field-stories/urs-field-story/view-attribution",
+      "GET https://api.coherencycoin.com/api/field-stories/urs-field-story/view-attribution/{event_hash}",
+      "GET https://api.coherencycoin.com/api/field-stories/urs-field-story/view-attribution-circulation",
+      "GET https://api.coherencycoin.com/api/contributions/ledger/creator:Terry%20Mancour"
+    ],
+    "test_flows": [
+      "POST lc-network -> Spellmonger view attribution with cc_amount=1.0",
+      "GET receipt by returned event_hash",
+      "GET creator:Terry Mancour ledger and confirm field_view_flow amount_cc=0.4",
+      "GET circulation summary and confirm flowing circulation/vitality signals"
+    ]
+  }
+}

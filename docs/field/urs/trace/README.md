@@ -69,6 +69,8 @@ The wave arrays use:
 - Concept slice: `/api/field-stories/urs-field-story/trace/concept/lc-network`
 - MCP tool: `get_field_story_trace` with `selector` set to `month`, `author`, `work`, `significant-work`, or `concept`.
 - Crypto trace artifact: `/api/field-stories/urs-field-story/artifacts/trace-source-crypto`
+- View attribution receipt: `POST /api/field-stories/urs-field-story/view-attribution`
+- View attribution circulation: `GET /api/field-stories/urs-field-story/view-attribution-circulation`
 
 ## Crypto Trace
 
@@ -80,6 +82,15 @@ The wave arrays use:
 - A combined trace root over source-body, normalized-event, and repo-artifact roots.
 
 The current precision proves the source bodies and derived artifacts as a whole. The next precision step is to add `source_body_id` and `event_hash` directly during ingestion so every API slice can return exact row-to-source proof without recomputation.
+
+## View Attribution Flow
+
+A presence/work view writes a compact receipt plus small CC flow rows instead of copying the full trace into each event. For example, a viewer opening `lc-network` and then `Spellmonger` stores:
+
+- receipt: surface, presence id, target selector/value, resolved target id, creator id, trace API path, source crypto root, policy id, CC amount, event hash.
+- flow rows: recipient id, reason code, CC amount, and contribution-ledger id for each attributed recipient.
+
+The default `presence-work-view` policy currently splits one impression across original creator, lived integrator, queryable trace artifact, trace-building agent, infrastructure, and attention/discovery. The receipt points back to the existing trace APIs and source crypto root, so deeper proof is pulled only when needed.
 
 ## Chapter Discovery Boundary
 
