@@ -37,6 +37,7 @@ def get_influence_teaching_translator(slug: str, *, limit: int = 40) -> dict[str
         rows.append(merged)
 
     rows.sort(key=lambda item: (-(float(item.get("current_cc") or 0.0)), str(item.get("name", "")).lower()))
+    coverage_kinds = sorted({str(row.get("kind")) for row in rows if row.get("kind")})
     return {
         "schema_version": SCHEMA_VERSION,
         "policy_id": artifact.get("policy_id", "influence-teaching-translator:v1"),
@@ -49,6 +50,7 @@ def get_influence_teaching_translator(slug: str, *, limit: int = 40) -> dict[str
             "available_rows": len(rows),
             "returned_count": min(limit, len(rows)),
             "joined_cc_rows": sum(1 for row in rows if row.get("current_cc")),
+            "coverage_kinds": coverage_kinds,
         },
         "rows": rows[:limit],
         "dynamic_access": {
