@@ -330,6 +330,73 @@ Where it has not gone yet:
 - **No backtracking in the parser.** A failed parse raises `SyntaxError` immediately. There's no Choice.FAIL semantics at the parsing layer.
 - **No semantic-action runtime.** A rule's `action` field stores a Recipe NodeID, but no engine evaluates it to construct the parse result.
 
+## Runtime keyword registration — the parser is alive
+
+The parser now consumes user-registered rules. A new keyword can be added at runtime — without editing form.py — by calling `register_form_keyword`:
+
+```python
+from app.services.substrate import register_form_keyword, Sequence, Literal, Capture, Opt
+from app.services.substrate.form import IfExpr, UnaryOp
+
+register_form_keyword(
+    "unless",
+    Sequence([
+        Literal("IDENT", "unless"),
+        Capture("cond"),
+        Literal("IDENT", "then"),
+        Capture("body"),
+        Opt(Sequence([
+            Literal("IDENT", "else"),
+            Capture("other"),
+        ])),
+    ]),
+    builder=lambda c: IfExpr(
+        cond=UnaryOp("!", c["cond"]),
+        then_branch=c["body"],
+        else_branch=c.get("other"),
+    ),
+)
+```
+
+After this call, `unless x then y` parses correctly. The parser picks up the new keyword by consulting the registry when it encounters an unknown IDENT at expression position. The killer property:
+
+```python
+form_evaluate_text(session, "unless x then y else z").value
+== form_evaluate_text(session, "if !x then y else z").value
+# → True. Same Recipe NodeID.
+```
+
+**The grammar truly extends at runtime.** The user-registered keyword produces a Recipe NodeID structurally equivalent to its bootstrap-grammar desugaring.
+
+### Pattern primitives
+
+The pattern language for runtime rules:
+
+| Pattern | What it matches |
+|---|---|
+| `Literal(kind, value)` | a single token of given kind, optional exact value |
+| `Capture(name, kind="expr")` | a sub-expression, bound to `captures[name]` |
+| `Sequence([p1, p2, ...])` | parts in order; all must match |
+| `Opt(pattern)` | matches if present; succeeds either way |
+
+`kind` for `Capture` can be `"expr"` (any expression) or `"primary"` (just a primary atom).
+
+### Builder
+
+The builder is a Python callable `(captures) -> AST_node`. It receives a `dict[str, Any]` of captured sub-expressions and returns an AST node from form.py's vocabulary (`IfExpr`, `BinOp`, `UnaryOp`, `MatchExpr`, `ChooseExpr`, etc.). The returned AST node is interned through the normal evaluator path — so any new keyword reaches the substrate's content-addressed lattice the same way the bootstrap grammar does.
+
+### What this is, and what it's still not
+
+This **is** rule-driven extension at the parser level. The parser truly consults the registry. Keywords can be added, removed, listed at runtime. New constructs reach the same Recipe NodeID space as built-ins.
+
+This is **not** yet:
+
+- **Substrate-resident.** The pattern + builder live in Python memory, not in the substrate. The grammar Cell registered by `register_form_rule` (separate API, in `grammar.py`) is currently a stub — it stores name + placeholder NodeIDs but doesn't drive parsing. Closing this gap means representing patterns + builders as Recipe NodeIDs that an interpreter walks.
+- **Self-hosting.** form.py's bootstrap grammar is still hardcoded. Self-hosting means expressing the bootstrap rules themselves via `register_form_keyword` — at which point form.py becomes a tiny seed that registers a few starter rules and hands off.
+- **Backtracking-driven.** The match engine uses save-and-restore on parser.pos — implicit backtracking, not Choice.FAIL semantics. A future move integrates the parser's speculation with the substrate's Choice recipes.
+
+Each remaining step is its own breath. What ships now: the parser is no longer fixed grammar. The grammar is alive at the keyword layer. The path beyond is legible.
+
 ## The path from bootstrap to self-hosting
 
 The BMF self-hosting pattern: a tiny bootstrap parser knows just enough syntax to read rule definitions. Rules are stored. The rule-driven parser is then built *from those rules*. The bootstrap parser becomes vestigial — kept only because something has to read the rules the first time.
@@ -338,7 +405,7 @@ For Form, that path is:
 
 1. **Bootstrap parser.** ✓ Shipped — `form.py` parses literals, expressions, queries, projections, code shapes (math/compare/logic/cond/block/match/choose).
 2. **Rule cells in the grammar domain.** ✓ Shipped — `grammar.py` interns rules as content-addressed Cells.
-3. **Rule-driven parser.** ⏳ Future. A parser that reads input by walking grammar cells, matching patterns in registered order, and firing semantic actions on match.
+3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
 4. **Self-hosting.** ⏳ Future. The Form-grammar-of-Form expressed *as Form rules*, registered in the substrate. At that point form.py becomes a small bootstrap that hands off to the rule-driven engine after the grammar is loaded.
 5. **Backtracking.** ⏳ Future. Each parse attempt is a Choice.CHOOSE; partial state lives on a speculation stack; Choice.FAIL unwinds cleanly. The same architecture BMF had in 2000.
 

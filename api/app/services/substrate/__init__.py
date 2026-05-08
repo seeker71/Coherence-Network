@@ -55,6 +55,16 @@ from app.services.substrate.grammar import (
     lookup_form_rule,
     register_form_rule,
 )
+from app.services.substrate.form_rules import (
+    Capture,
+    Literal,
+    Opt,
+    Sequence,
+    list_registered_keywords,
+    lookup_form_keyword,
+    register_form_keyword,
+    unregister_form_keyword,
+)
 from app.services.substrate.markdown_frontend import (
     BID_concept,
     BID_idea,
@@ -129,4 +139,13 @@ __all__ = [
     "list_form_rules",
     "lookup_form_rule",
     "register_form_rule",
+    # Rule-driven extension — runtime keyword registration
+    "Capture",
+    "Literal",
+    "Opt",
+    "Sequence",
+    "list_registered_keywords",
+    "lookup_form_keyword",
+    "register_form_keyword",
+    "unregister_form_keyword",
 ]

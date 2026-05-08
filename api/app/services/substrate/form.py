@@ -442,6 +442,8 @@ class Parser:
     def parse_keyword_or_ident(self) -> ExprNode:
         t = self.peek()
         kw = t.value
+
+        # Built-in keywords (the bootstrap grammar)
         if kw == "true":
             self.consume("IDENT")
             return BoolLit(True)
@@ -464,6 +466,14 @@ class Parser:
         if kw == "stop":
             self.consume("IDENT")
             return StopExpr()
+
+        # User-registered keywords (the rule-driven extension point —
+        # this is where the grammar becomes alive at runtime).
+        from app.services.substrate.form_rules import try_apply_keyword_rule
+        node = try_apply_keyword_rule(self, kw)
+        if node is not None:
+            return node
+
         # Otherwise it's an Identifier (local name reference)
         self.consume("IDENT")
         return Identifier(name=kw)
