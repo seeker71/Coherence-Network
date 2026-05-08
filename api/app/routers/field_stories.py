@@ -5,7 +5,11 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.services import field_story_service, field_view_attribution_service
+from app.services import (
+    field_story_service,
+    field_view_attribution_adjustment_service,
+    field_view_attribution_service,
+)
 
 router = APIRouter()
 
@@ -26,6 +30,17 @@ class FieldStoryViewAttributionIn(BaseModel):
     session_hash: str | None = None
     viewer_contributor_id: str | None = None
     cc_amount: float = Field(default=1.0, ge=0.0, le=1000.0)
+
+
+class FieldStoryViewAttributionAdjustmentIn(BaseModel):
+    event_hash: str = Field(min_length=1)
+    from_recipient_id: str = Field(min_length=1)
+    to_recipient_id: str = Field(min_length=1)
+    amount_cc: float = Field(gt=0.0, le=1000.0)
+    reason_code: str = Field(default="living-redistribution", min_length=1)
+    attested_by: str = Field(min_length=1)
+    attestation_type: str = Field(default="steward-attestation", min_length=1)
+    note: str = ""
 
 
 @router.get("/field-stories", summary="List published field stories")
@@ -99,6 +114,41 @@ async def record_field_story_view_attribution(slug: str, body: FieldStoryViewAtt
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Trace file not found: {exc}") from exc
+
+
+@router.get(
+    "/field-stories/{slug}/view-attribution-policy",
+    summary="Describe field-story attribution policy and living adjustment paths",
+)
+async def get_field_story_view_attribution_policy(slug: str) -> dict:
+    return {"story_slug": slug, **field_view_attribution_adjustment_service.policy_summary()}
+
+
+@router.post(
+    "/field-stories/{slug}/view-attribution-adjustments",
+    status_code=201,
+    summary="Record an append-only living adjustment to an attributed view flow",
+)
+async def record_field_story_view_attribution_adjustment(
+    slug: str,
+    body: FieldStoryViewAttributionAdjustmentIn,
+) -> dict:
+    try:
+        return field_view_attribution_adjustment_service.record_flow_adjustment(
+            slug=slug,
+            event_hash=body.event_hash,
+            from_recipient_id=body.from_recipient_id,
+            to_recipient_id=body.to_recipient_id,
+            amount_cc=body.amount_cc,
+            reason_code=body.reason_code,
+            attested_by=body.attested_by,
+            attestation_type=body.attestation_type,
+            note=body.note,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get(

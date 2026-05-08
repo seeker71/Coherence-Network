@@ -16,6 +16,7 @@ from app.services.unified_db import Base
 
 
 POLICY_ID = "cc-flow-policy:presence-work-view:v1"
+ADJUSTMENT_POLICY_ID = "cc-flow-policy:presence-work-view-adjustment:v1"
 
 
 class FieldViewReceiptRecord(Base):
@@ -50,6 +51,26 @@ class FieldViewFlowRecord(Base):
     reason_code: Mapped[str] = mapped_column(String, nullable=False, index=True)
     amount_cc: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     ledger_contribution_id: Mapped[str] = mapped_column(String, nullable=True, index=True)
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class FieldViewFlowAdjustmentRecord(Base):
+    __tablename__ = "field_view_flow_adjustments"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    event_hash: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    from_recipient_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    to_recipient_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    amount_cc: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    reason_code: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    attested_by: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    attestation_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    policy_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    from_ledger_contribution_id: Mapped[str] = mapped_column(String, nullable=True, index=True)
+    to_ledger_contribution_id: Mapped[str] = mapped_column(String, nullable=True, index=True)
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
@@ -261,6 +282,15 @@ def _record_flow_rows(context: dict[str, Any], flows: list[dict[str, Any]]) -> l
     return flow_rows
 
 
+def _flow_dict(row: FieldViewFlowRecord) -> dict[str, Any]:
+    return {
+        "recipient_id": row.recipient_id,
+        "reason_code": row.reason_code,
+        "amount_cc": row.amount_cc,
+        "ledger_contribution_id": row.ledger_contribution_id,
+    }
+
+
 def record_presence_view(
     *,
     slug: str,
@@ -323,17 +353,21 @@ def receipt_summary(event_hash: str, *, session: Session | None = None) -> dict[
             .order_by(FieldViewFlowRecord.recorded_at.asc())
             .all()
         )
+        adjustments = (
+            session.query(FieldViewFlowAdjustmentRecord)
+            .filter(FieldViewFlowAdjustmentRecord.event_hash == event_hash)
+            .order_by(FieldViewFlowAdjustmentRecord.recorded_at.asc())
+            .all()
+        )
+        from app.services import field_view_attribution_adjustment_service
+
         return {
             "receipt": json.loads(receipt.metadata_json),
-            "flows": [
-                {
-                    "recipient_id": row.recipient_id,
-                    "reason_code": row.reason_code,
-                    "amount_cc": row.amount_cc,
-                    "ledger_contribution_id": row.ledger_contribution_id,
-                }
-                for row in flows
+            "flows": [_flow_dict(row) for row in flows],
+            "adjustments": [
+                field_view_attribution_adjustment_service.adjustment_dict(row) for row in adjustments
             ],
+            "effective_flows": field_view_attribution_adjustment_service.effective_flow_totals(flows, adjustments),
         }
     finally:
         if close:
@@ -356,21 +390,40 @@ def circulation_summary(slug: str, *, limit: int = 12) -> dict[str, Any]:
             .filter(FieldViewReceiptRecord.story_slug == slug)
             .all()
         )
+        adjustments = (
+            session.query(FieldViewFlowAdjustmentRecord)
+            .join(FieldViewReceiptRecord, FieldViewFlowAdjustmentRecord.event_hash == FieldViewReceiptRecord.event_hash)
+            .filter(FieldViewReceiptRecord.story_slug == slug)
+            .all()
+        )
         by_recipient: dict[str, float] = defaultdict(float)
         by_reason: dict[str, float] = defaultdict(float)
         for row in flows:
             by_recipient[row.recipient_id] += row.amount_cc
             by_reason[row.reason_code] += row.amount_cc
+        from app.services import field_view_attribution_adjustment_service
+
+        field_view_attribution_adjustment_service.apply_adjustments_to_totals(
+            by_recipient,
+            defaultdict(set),
+            adjustments,
+        )
+        for row in adjustments:
+            by_reason[f"adjustment:{row.reason_code}"] += row.amount_cc
         tension = Counter(row.target_id for row in receipts)
         vitality = sum(row.amount_cc for row in flows)
+        adjusted = sum(row.amount_cc for row in adjustments)
         return {
             "story_slug": slug,
             "receipt_count_sampled": len(receipts),
             "flow_row_count": len(flows),
+            "adjustment_count": len(adjustments),
             "total_cc_circulated": round(vitality, 4),
+            "total_cc_adjusted": round(adjusted, 4),
             "top_recipients": [
                 {"recipient_id": key, "amount_cc": round(value, 4)}
                 for key, value in sorted(by_recipient.items(), key=lambda item: (-item[1], item[0]))[:limit]
+                if round(value, 4) != 0
             ],
             "reason_totals": {key: round(value, 4) for key, value in sorted(by_reason.items())},
             "sensing": {
@@ -379,6 +432,7 @@ def circulation_summary(slug: str, *, limit: int = 12) -> dict[str, Any]:
                 "tension_points": [{"target_id": key, "views": count} for key, count in tension.most_common(5)],
                 "flexibility": "multi-recipient" if len(by_recipient) >= 5 else "narrow",
                 "friction": "none-visible" if flows else "no-recorded-flow-yet",
+                "living_adjustment": "active" if adjustments else "base-policy-only",
             },
             "recent_receipts": [
                 {
