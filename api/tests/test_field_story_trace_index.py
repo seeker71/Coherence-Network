@@ -265,6 +265,69 @@ def test_field_story_view_attribution_records_compact_receipt_and_cc_flow():
     assert any(row["recipient_id"] == "creator:Terry Mancour" for row in circulation["top_recipients"])
 
 
+def test_field_story_view_attribution_allows_living_append_only_adjustments():
+    view = client.post(
+        "/api/field-stories/urs-field-story/view-attribution",
+        json={
+            "surface": "/field/urs",
+            "presence_id": "concept:lc-network",
+            "target_selector": "significant-work",
+            "target_value": "Spellmonger",
+            "session_hash": "anon:test-session-field-view-adjustment",
+            "viewer_contributor_id": "viewer:test-field-view-adjustment",
+            "cc_amount": 1.0,
+        },
+    )
+    assert view.status_code == 201, view.text
+    event_hash = view.json()["receipt"]["event_hash"]
+
+    policy = client.get("/api/field-stories/urs-field-story/view-attribution-policy")
+    assert policy.status_code == 200, policy.text
+    assert policy.json()["living_policy"]["conservation"].startswith("each adjustment")
+
+    adjustment = client.post(
+        "/api/field-stories/urs-field-story/view-attribution-adjustments",
+        json={
+            "event_hash": event_hash,
+            "from_recipient_id": "viewer-session",
+            "to_recipient_id": "creator:Terry Mancour",
+            "amount_cc": 0.05,
+            "reason_code": "viewer-gratitude",
+            "attested_by": "contributor:urs",
+            "attestation_type": "steward-attestation",
+            "note": "Spellmonger deserves more visible creator nutrition for this concept view.",
+        },
+    )
+    assert adjustment.status_code == 201, adjustment.text
+    adjusted = adjustment.json()
+    assert adjusted["adjustment"]["policy_id"] == "cc-flow-policy:presence-work-view-adjustment:v1"
+
+    effective = {row["recipient_id"]: row["amount_cc"] for row in adjusted["effective_flows"]}
+    assert effective["creator:Terry Mancour"] == 0.45
+    assert effective["viewer-session"] == 0.03
+
+    fetched = client.get(f"/api/field-stories/urs-field-story/view-attribution/{event_hash}")
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.json()["adjustments"][0]["reason_code"] == "viewer-gratitude"
+
+    creator_ledger = client.get("/api/contributions/ledger/creator:Terry%20Mancour?limit=20")
+    assert creator_ledger.status_code == 200, creator_ledger.text
+    creator_adjustments = [
+        row for row in creator_ledger.json()["history"]
+        if row["contribution_type"] == "field_view_flow_adjustment"
+        and json.loads(row["metadata_json"]).get("event_hash") == event_hash
+        and json.loads(row["metadata_json"]).get("direction") == "to"
+    ]
+    assert creator_adjustments
+    assert creator_adjustments[0]["amount_cc"] == 0.05
+
+    summary = client.get("/api/field-stories/urs-field-story/view-attribution-circulation")
+    assert summary.status_code == 200, summary.text
+    body = summary.json()
+    assert body["adjustment_count"] >= 1
+    assert body["sensing"]["living_adjustment"] == "active"
+
+
 def test_audible_history_spectrum_registers_captured_history_waves():
     story = field_story_service.get_field_story("urs-field-story", include_story=False)
     artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
