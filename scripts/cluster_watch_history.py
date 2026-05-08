@@ -231,6 +231,10 @@ def _build_clusters(entries: list[dict]) -> dict[str, dict]:
             "title": entry.get("title"),
             "url": entry.get("titleUrl"),
             "time": entry.get("time"),
+            # Carry the duration estimate forward — without this the
+            # cluster sum collapses to MIN_WATCH_SECONDS per entry and
+            # the strength curve undercounts by 50-100x.
+            "duration_seconds": entry.get("duration_seconds"),
         })
     return dict(clusters)
 
@@ -246,15 +250,35 @@ def _load_existing_contributors(api_base: str) -> tuple[dict[str, str], dict[str
     the contributor's presences[] carries a matching YouTube URL.
     """
     import urllib.request
-    req = urllib.request.Request(
-        f"{api_base}/api/graph/nodes?type=contributor&limit=500",
-        headers={"User-Agent": "curl/8.7.1"},
-    )
-    with urllib.request.urlopen(req) as resp:
-        data = json.load(resp)
+    # Page through contributors so a slow upstream query at large
+    # limits (where production sometimes returns a 502) doesn't kill
+    # the run. 100 per page is the conservative middle ground.
+    all_items: list[dict] = []
+    offset = 0
+    page_size = 100
+    while True:
+        req = urllib.request.Request(
+            f"{api_base}/api/graph/nodes?type=contributor"
+            f"&limit={page_size}&offset={offset}",
+            headers={"User-Agent": "curl/8.7.1"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                page = json.load(resp)
+        except Exception:  # noqa: BLE001
+            break
+        items = page.get("items", []) if isinstance(page, dict) else []
+        if not items:
+            break
+        all_items.extend(items)
+        if len(items) < page_size:
+            break
+        offset += page_size
+        if offset >= 5000:  # safety stop
+            break
     by_name: dict[str, str] = {}
     by_handle: dict[str, str] = {}
-    for n in data.get("items", []):
+    for n in all_items:
         cid = n.get("id")
         name = n.get("name") or ""
         norm = _normalize_name(name)
@@ -289,7 +313,11 @@ def _match_cluster(
 # at 10:00 and the next at 10:45, ~45 minutes of attention sat with
 # the first. Capped at MAX_SESSION_GAP because gaps longer than that
 # are someone walking away — the body wasn't watching, the tab was.
-MAX_SESSION_GAP_SECONDS = 90 * 60  # 1.5 hours
+#
+# 4h cap because the dominant long-form pattern (Lex Fridman,
+# Aubrey Marcus, Joe Rogan) runs 2-3+ hours per episode; capping
+# at 1.5h was undercounting podcasts by half.
+MAX_SESSION_GAP_SECONDS = 4 * 60 * 60  # 4 hours
 # Minimum recognized engagement when we can't estimate (last entry
 # in a session, parse failure). A small floor so a watch still
 # counts as engagement even when its duration can't be measured.
