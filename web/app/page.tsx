@@ -16,6 +16,7 @@ import type { Concept } from "@/lib/types/vision";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { getEntryPathForSurface } from "@/lib/entry-paths";
+import { getHomePresenceTraceCards } from "@/lib/home-presence-traces";
 
 type IdeasResponse = {
   ideas: IdeaWithScore[];
@@ -74,55 +75,6 @@ const STAT_LABEL_FALLBACKS = {
   nodes: "nodes",
   coherence: "coherence",
 };
-
-const FEATURED_PRESENCES: {
-  slug: string;
-  name: string;
-  tagline: string;
-  image: string;
-  imagePosition?: string;
-  color: string;
-}[] = [
-  {
-    slug: "liquid-bloom",
-    name: "Liquid Bloom",
-    tagline: "Soundscapes for Embodied Dance • Journeys • Healing",
-    image: "/visuals/brand/liquid-bloom-bg-center.jpg",
-    imagePosition: "center 45%",
-    color: "from-emerald-950 to-teal-950",
-  },
-  {
-    slug: "bloomurian",
-    name: "Bloomurian",
-    tagline: "Folktronica • World Bass • Heart-Opening Frequencies",
-    image: "/people/bloomurian/hero.jpg",
-    imagePosition: "center 28%",
-    color: "from-amber-950 to-orange-950",
-  },
-  {
-    slug: "mose",
-    name: "Mose",
-    tagline: "Shamanic Downtempo • ReGen Remixes • Organic Intelligence",
-    image: "/people/mose/hero.jpg",
-    imagePosition: "center 25%",
-    color: "from-stone-950 to-zinc-950",
-  },
-  {
-    slug: "matias-de-stefano",
-    name: "Matías De Stefano",
-    tagline: "Akashic Memory • Planetary Lineage • Sacred Geometry",
-    image: "/people/matias-de-stefano/hero.jpg",
-    color: "from-violet-950 to-slate-950",
-  },
-  {
-    slug: "portal",
-    name: "PORTAL",
-    tagline: "Responsible Trippers • Denver Rooms • Psychedelic Integration",
-    image: "/people/portal/hero.jpg",
-    imagePosition: "center 38%",
-    color: "from-fuchsia-950 to-zinc-950",
-  },
-];
 
 export const revalidate = 90;
 export const dynamic = "force-dynamic";
@@ -229,6 +181,7 @@ export default async function Home() {
     title: t(step.titleKey) || step.title,
     description: t(step.descKey) || step.description,
   }));
+  const homePresenceCards = getHomePresenceTraceCards(lang);
 
   const [ideasData, resonanceItems, coherenceScore, nodeCount, featuredConcept] = await Promise.all([
     loadIdeas(lang),
@@ -606,40 +559,64 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {FEATURED_PRESENCES.map((presence) => (
-            <AttributedInternalLink
+          {homePresenceCards.map((presence) => (
+            <article
               key={presence.slug}
-              href={`/people/${presence.slug}`}
-              entityId={`presence:${presence.slug}`}
-              className="group block overflow-hidden rounded-2xl border border-border/40 bg-card transition-all duration-500 hover:border-[hsl(var(--primary)/0.6)] hover:shadow-xl"
+              className="group/card overflow-hidden rounded-2xl border border-border/40 bg-card transition-all duration-500 hover:border-[hsl(var(--primary)/0.6)] hover:shadow-xl"
             >
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <Image
-                  src={presence.image}
-                  alt={presence.name}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                  style={{ objectPosition: presence.imagePosition ?? "center" }}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-t ${presence.color} opacity-55 transition-opacity group-hover:opacity-65`} />
-                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/70 to-transparent" />
-                <div className="absolute bottom-5 left-5 right-5">
-                  <h3 className="mb-1.5 text-xl font-light tracking-tight text-white">
-                    {presence.name}
-                  </h3>
-                  <p className="text-xs text-white/90 leading-snug line-clamp-2">
-                    {presence.tagline}
-                  </p>
+              <AttributedInternalLink
+                href={presence.href}
+                entityId={presence.entityId}
+                className="block"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <Image
+                    src={presence.image}
+                    alt={presence.name}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover/card:scale-[1.06]"
+                    style={{ objectPosition: presence.imagePosition ?? "center" }}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 20vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent opacity-75 transition-opacity group-hover/card:opacity-85" />
+                  <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h3 className="mb-1.5 text-xl font-light tracking-tight text-white">
+                      {presence.name}
+                    </h3>
+                    <p className="text-xs text-white/90 leading-snug line-clamp-2">
+                      {presence.role}
+                    </p>
+                  </div>
+                </div>
+              </AttributedInternalLink>
+              <div className="border-t border-border/30 bg-card px-5 py-4">
+                <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {presence.traceLabel}
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {presence.traceMetric}
+                </p>
+                <p className="mt-2 min-h-12 text-xs leading-relaxed text-foreground/75 line-clamp-3">
+                  {presence.traceWhy}
+                </p>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <span
+                    className="min-w-0 truncate text-[10px] text-muted-foreground"
+                    title={presence.traceSource}
+                  >
+                    {presence.traceSource}
+                  </span>
+                  <AttributedInternalLink
+                    href={presence.traceHref}
+                    entityId={`trace:${presence.slug}`}
+                    className="shrink-0 text-[11px] uppercase tracking-[0.16em] text-[hsl(var(--primary))] transition-colors hover:text-foreground"
+                  >
+                    {t("home.livingLineageCta")} →
+                  </AttributedInternalLink>
                 </div>
               </div>
-              <div className="px-5 py-3 flex items-center justify-between bg-card border-t border-border/30">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground group-hover:text-[hsl(var(--primary))] transition-colors">
-                  {t("home.livingLineageCta")}
-                </span>
-                <span className="text-[hsl(var(--primary))] group-hover:translate-x-0.5 transition-transform">→</span>
-              </div>
-            </AttributedInternalLink>
+            </article>
           ))}
         </div>
 

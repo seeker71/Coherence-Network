@@ -1,0 +1,111 @@
+{
+  "date": "2026-05-08",
+  "thread_branch": "codex/home-presence-traces-20260508",
+  "commit_scope": "Move the home living-lineage presences out of hardcoded page data and into presence-walk data with visible trace links and source-backed public images.",
+  "files_owned": [
+    "web/app/page.tsx",
+    "web/app/presence-walk/data.ts",
+    "web/lib/home-presence-traces.ts",
+    "web/content/presence-walk/en.json",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/commit_evidence_2026-05-08_home_presence_traces.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts (first pass found missing fresh-worktree dependency: vitest)",
+      "cd web && npm ci --cache .cache/npm",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build (first pass found a TypeScript narrowing issue in web/lib/home-presence-traces.ts)",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "for f in web/messages/*.json web/content/presence-walk/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_traces.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh (rerun after transient local API timing failure)",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "The homepage now gets living-lineage cards from getHomePresenceTraceCards(), which projects presence-walk JSON nodes plus homePresence trace entries. The page remains force-dynamic for fresh rendering, but the people shown, images, metrics, trace links, and trace sources now come from data. The focused guard verifies absence of FEATURED_PRESENCES, presence data coverage, trace href/source coverage, and existing local public images. The shared local verifier passed on rerun with zero API matrix failures and all web route checks passing; worktree_pr_guard then reported ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR checks, and merge verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Public web verification will be performed after merge and deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The home page still renders dynamically, but the living-lineage section is no longer a fixed local array. Each card is backed by presence-walk data and exposes how the relation is traced through field-story API paths or lived profile traces.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
+      "https://coherencycoin.com/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
+      "https://coherencycoin.com/people/bloomurian",
+      "https://coherencycoin.com/people/portal"
+    ],
+    "test_flows": [
+      "home page imports getHomePresenceTraceCards and maps homePresenceCards instead of FEATURED_PRESENCES",
+      "presence-walk data contains five home presences, trace labels, trace hrefs, metrics, sources, and trace explanations",
+      "local public images exist for Liquid Bloom, Bloomurian, Mose, Matias De Stefano, and PORTAL",
+      "Next build marks / as dynamic and completes type checking"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; commit, push, PR, checks, merge, and public verification remain pending."
+  },
+  "idea_ids": [
+    "living-lineage",
+    "presence-traces",
+    "come-in"
+  ],
+  "spec_ids": [
+    "specs/multilingual-web.md"
+  ],
+  "task_ids": [
+    "codex-thread-home-presence-traces-20260508"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/home-presence-traces.ts",
+    "web/content/presence-walk/en.json",
+    "web/app/page.tsx",
+    "web/tests/homepage-presence-lineage.test.ts"
+  ],
+  "change_files": [
+    "web/app/page.tsx",
+    "web/app/presence-walk/data.ts",
+    "web/lib/home-presence-traces.ts",
+    "web/content/presence-walk/en.json",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
