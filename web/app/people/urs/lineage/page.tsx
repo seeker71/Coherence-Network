@@ -73,94 +73,145 @@ export default function UrsLineagePage() {
       </section>
 
       <div className="max-w-4xl mx-auto px-6 py-12 space-y-12">
-        {/* Master timeline */}
+        {/* Master timeline — era swimlanes */}
         <section>
           <h2 className="text-2xl font-light text-foreground mb-4">
             The arc, at a glance
           </h2>
           <figure className="rounded-xl border border-border/40 bg-card/30 p-5">
-            <svg
-              viewBox="0 0 720 380"
-              className="w-full h-auto"
-              role="img"
-              aria-labelledby="master-arc"
-            >
-              <title id="master-arc">42-year arc of works and eras</title>
-              <g fontFamily="ui-sans-serif,system-ui" fontSize="11">
-                {/* Era band backgrounds */}
-                {[
-                  ["~1984-90", 50, 95, "hsl(220 30% 14%)"],
-                  ["1990-2000", 95, 200, "hsl(220 30% 14% / 0.6)"],
-                  ["2000-05", 200, 295, "hsl(195 30% 14% / 0.5)"],
-                  ["2005-07", 295, 330, "hsl(140 30% 14% / 0.5)"],
-                  ["2007-09", 330, 365, "hsl(80 30% 14% / 0.5)"],
-                  ["2009-22", 365, 510, "hsl(40 30% 14% / 0.5)"],
-                  ["2022-24", 510, 555, "hsl(140 30% 14% / 0.5)"],
-                  ["2024-now", 555, 690, "hsl(280 30% 14% / 0.5)"],
-                ].map(([label, x1, x2, fill], i) => (
-                  <g key={i}>
-                    <rect x={Number(x1)} y="40" width={Number(x2) - Number(x1)} height="280" fill={String(fill)} />
-                    <text x={(Number(x1) + Number(x2)) / 2} y="32" textAnchor="middle" fill="hsl(220 30% 65%)" fontSize="9">
-                      {String(label)}
-                    </text>
-                  </g>
-                ))}
-                {/* Center timeline */}
-                <line x1="40" y1="180" x2="700" y2="180" stroke="hsl(220 30% 50%)" strokeWidth="1.5" />
-
-                {/* Works as dots */}
-                {[
-                  ["c64-midi-interface", 75, "C64", "hsl(220 60% 65%)", -1],
-                  ["schindler-hc11-protocol", 130, "Schindler", "hsl(0 65% 60%)", 1],
-                  ["backtracking-model-languages", 220, "BML thesis", "hsl(38 80% 60%)", -1],
-                  ["quark-virtual-dom", 245, "Q·VDOM", "hsl(195 60% 55%)", 1],
-                  ["quark-multi-undo-redo", 265, "Q·Undo", "hsl(195 60% 55%)", -1],
-                  ["quark-mono-corba", 285, "Q·Mono", "hsl(195 60% 55%)", 1],
-                  ["mindtouch-wiki-in-a-box", 312, "MindTouch", "hsl(140 55% 55%)", -1],
-                  ["trimble-glue-layer", 348, "Trimble", "hsl(80 55% 55%)", 1],
-                  ["qualcomm-test-automation", 410, "Q·Test", "hsl(40 70% 55%)", -1],
-                  ["qualcomm-hdmi-hdcp", 460, "Q·HDMI", "hsl(40 70% 55%)", 1],
-                  ["living-resonance-codex", 525, "L-R-Codex", "hsl(140 60% 55%)", -1],
-                  ["living-codex-csharp", 545, "L-C-CSharp", "hsl(195 60% 55%)", 1],
-                  ["coherence-network", 620, "Coherence", "hsl(280 70% 65%)", -1],
-                ].map(([slug, x, label, color, dir], i) => {
-                  const cx = Number(x);
-                  const ydot = 180;
-                  const labelY = ydot + Number(dir) * 70;
-                  const lineY1 = ydot + (Number(dir) > 0 ? 8 : -8);
-                  const lineY2 = labelY + (Number(dir) > 0 ? -10 : 14);
-                  return (
-                    <g key={i}>
-                      <line x1={cx} y1={lineY1} x2={cx} y2={lineY2} stroke={String(color)} strokeWidth="1" opacity="0.6" />
-                      <circle cx={cx} cy={ydot} r="6" fill={String(color)} stroke="hsl(220 30% 14%)" strokeWidth="2" />
-                      <text x={cx} y={labelY} textAnchor="middle" fill={String(color)} fontSize="10">
-                        {String(label)}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Era labels below */}
-                <text x="75" y="335" textAnchor="middle" fill="hsl(220 30% 70%)" fontSize="9">keystone</text>
-                <text x="148" y="335" textAnchor="middle" fill="hsl(220 30% 70%)" fontSize="9">foundation</text>
-                <text x="248" y="335" textAnchor="middle" fill="hsl(195 30% 70%)" fontSize="9">Quark Denver</text>
-                <text x="312" y="335" textAnchor="middle" fill="hsl(140 30% 70%)" fontSize="9">MindTouch</text>
-                <text x="348" y="335" textAnchor="middle" fill="hsl(80 30% 70%)" fontSize="9">Trimble</text>
-                <text x="437" y="335" textAnchor="middle" fill="hsl(40 30% 75%)" fontSize="9">Qualcomm Boulder · 12y</text>
-                <text x="532" y="335" textAnchor="middle" fill="hsl(140 30% 70%)" fontSize="9">bridge</text>
-                <text x="620" y="335" textAnchor="middle" fill="hsl(280 40% 75%)" fontSize="9">Coherence Network</text>
-
-                {/* Year ticks */}
-                <text x="75" y="360" textAnchor="middle" fill="hsl(220 30% 55%)" fontSize="9">1984</text>
-                <text x="220" y="360" textAnchor="middle" fill="hsl(220 30% 55%)" fontSize="9">2000</text>
-                <text x="410" y="360" textAnchor="middle" fill="hsl(220 30% 55%)" fontSize="9">2009</text>
-                <text x="620" y="360" textAnchor="middle" fill="hsl(220 30% 55%)" fontSize="9">2024</text>
-              </g>
-            </svg>
-            <figcaption className="text-xs text-muted-foreground mt-3 text-center">
-              Thirteen load-bearing works across eight named eras. Click
-              any dot through the era sections below to follow it into
-              its own page.
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  era: "~1984 – ~1990",
+                  label: "keystone",
+                  hue: "hsl(220 60% 65%)",
+                  works: [
+                    { slug: "c64-midi-interface", short: "C64 MIDI · age 13" },
+                    { slug: "schindler-hc11-protocol", short: "Schindler HC11 · age 18" },
+                  ],
+                },
+                {
+                  era: "1991 – 2000",
+                  label: "foundation",
+                  hue: "hsl(38 80% 60%)",
+                  works: [
+                    {
+                      slug: "backtracking-model-languages",
+                      short: "BML thesis · CU Boulder",
+                    },
+                  ],
+                },
+                {
+                  era: "May 2000 – Mar 2005",
+                  label: "Quark Denver",
+                  hue: "hsl(195 60% 55%)",
+                  works: [
+                    { slug: "quark-virtual-dom", short: "Virtual DOM" },
+                    { slug: "quark-multi-undo-redo", short: "Multi-Undo / Redo" },
+                    { slug: "quark-mono-corba", short: "Mono / CORBA" },
+                  ],
+                },
+                {
+                  era: "Mar 2005 – Jan 2007",
+                  label: "MindTouch",
+                  hue: "hsl(140 55% 55%)",
+                  works: [
+                    {
+                      slug: "mindtouch-wiki-in-a-box",
+                      short: "Wiki-in-a-Box",
+                    },
+                  ],
+                },
+                {
+                  era: "Jan 2007 – Oct 2009",
+                  label: "Trimble Boulder",
+                  hue: "hsl(80 55% 55%)",
+                  works: [
+                    { slug: "trimble-glue-layer", short: "Client/Server Glue" },
+                  ],
+                },
+                {
+                  era: "Oct 2009 – Jan 2022",
+                  label: "Qualcomm Boulder · 12y",
+                  hue: "hsl(40 70% 55%)",
+                  works: [
+                    {
+                      slug: "qualcomm-test-automation",
+                      short: "Test Automation · 3 divisions",
+                    },
+                    {
+                      slug: "qualcomm-hdmi-hdcp",
+                      short: "Linux HDMI / HDCP kernel",
+                    },
+                  ],
+                },
+                {
+                  era: "2023 – 2024",
+                  label: "bridge",
+                  hue: "hsl(140 60% 55%)",
+                  works: [
+                    {
+                      slug: "living-resonance-codex",
+                      short: "Living-Resonance-Codex · Python",
+                    },
+                    {
+                      slug: "living-codex-csharp",
+                      short: "Living-Codex-CSharp · U-CORE",
+                    },
+                  ],
+                },
+                {
+                  era: "2024 – present",
+                  label: "Coherence Network",
+                  hue: "hsl(280 70% 65%)",
+                  works: [
+                    {
+                      slug: "coherence-network",
+                      short: "Coherence-Network · live",
+                    },
+                  ],
+                },
+              ].map((era, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-border/40 bg-card/40 p-3 flex flex-col gap-2 min-h-[8rem]"
+                  style={{ borderLeft: `3px solid ${era.hue}` }}
+                >
+                  <div>
+                    <p
+                      className="text-[11px] uppercase tracking-[0.16em]"
+                      style={{ color: era.hue }}
+                    >
+                      {era.label}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                      {era.era}
+                    </p>
+                  </div>
+                  <ul className="space-y-1 mt-1">
+                    {era.works.map((w) => (
+                      <li key={w.slug} className="flex items-baseline gap-2">
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full shrink-0 translate-y-[1px]"
+                          style={{ background: era.hue }}
+                          aria-hidden="true"
+                        />
+                        <Link
+                          href={`/people/${w.slug}`}
+                          className="text-xs text-foreground/85 hover:text-[hsl(var(--primary))] leading-snug"
+                        >
+                          {w.short}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <figcaption className="text-xs text-muted-foreground mt-4 text-center">
+              Thirteen load-bearing works across eight named eras.
+              Each card is an era; the works inside it link to their
+              individual pages.
             </figcaption>
           </figure>
         </section>
