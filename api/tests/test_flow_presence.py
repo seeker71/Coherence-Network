@@ -1382,3 +1382,47 @@ def test_watch_history_clustering_filters_noise_and_matches_canonical():
     # Strength curve: more watches → higher strength, capped at 1.
     assert clu._strength(50) > clu._strength(8) > clu._strength(0) == 0.0
     assert clu._strength(10000) <= 1.0
+
+
+def test_duration_proxy_carries_more_signal_than_count():
+    """Duration > count: a 3-hour podcast watched once outweighs a
+    30-second clip watched 100 times. The strength curve must
+    reflect cumulative attention, not click frequency.
+    """
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "cluster_watch_history",
+        Path(__file__).resolve().parent.parent.parent / "scripts" / "cluster_watch_history.py",
+    )
+    clu = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(clu)
+
+    # Cluster A: 100 entries, 1 minute each (replayed clip) = 100 min
+    # Cluster B: 10 entries, 60 minutes each (long podcast) = 600 min
+    cluster_clip = {
+        "name": "Clip Channel",
+        "watches": [{"duration_seconds": 60} for _ in range(100)],
+    }
+    cluster_pod = {
+        "name": "Long Podcast",
+        "watches": [{"duration_seconds": 3600} for _ in range(10)],
+    }
+    clip_seconds = clu._cluster_duration_seconds(cluster_clip)
+    pod_seconds = clu._cluster_duration_seconds(cluster_pod)
+    assert pod_seconds > clip_seconds, (
+        f"podcast attention ({pod_seconds}s) should exceed clip "
+        f"replays ({clip_seconds}s)"
+    )
+
+    # Strength must agree
+    s_clip = clu._strength_from_duration(clip_seconds)
+    s_pod = clu._strength_from_duration(pod_seconds)
+    assert s_pod > s_clip, (
+        f"podcast strength ({s_pod}) must exceed clip strength ({s_clip})"
+    )
+
+    # Calibration smoke-checks
+    assert 0.0 < clu._strength_from_duration(60 * 60) < 0.3   # 1 hour
+    assert clu._strength_from_duration(100 * 3600) > 0.6      # 100 hours
+    assert clu._strength_from_duration(10_000_000) <= 1.0     # capped
