@@ -59,6 +59,10 @@ from app.services.value_lineage_service import (  # noqa: F401
 # Contribution Ledger models
 # ---------------------------------------------------------------------------
 from app.services.contribution_ledger_service import ContributionLedgerRecord  # noqa: F401
+from app.services.field_view_attribution_service import (  # noqa: F401
+    FieldViewFlowRecord,
+    FieldViewReceiptRecord,
+)
 
 # ---------------------------------------------------------------------------
 # Federation models

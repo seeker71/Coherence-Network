@@ -216,6 +216,55 @@ def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     assert trace["truth_boundary"]["next_precision"].startswith("For exact row-to-source-body proofs")
 
 
+def test_field_story_view_attribution_records_compact_receipt_and_cc_flow():
+    response = client.post(
+        "/api/field-stories/urs-field-story/view-attribution",
+        json={
+            "surface": "/field/urs",
+            "presence_id": "concept:lc-network",
+            "target_selector": "significant-work",
+            "target_value": "Spellmonger",
+            "session_hash": "anon:test-session-field-view-flow",
+            "viewer_contributor_id": "viewer:test-field-view-flow",
+            "cc_amount": 1.0,
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+
+    receipt = body["receipt"]
+    assert receipt["event_hash"].startswith("sha256:")
+    assert receipt["presence"] == "concept:lc-network"
+    assert receipt["target_id"] == "significant-work:spellmonger-universe-45f3b507"
+    assert receipt["creator"] == "creator:Terry Mancour"
+    assert receipt["root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert body["storage_shape"]["receipt_bytes"] < 900
+    assert body["storage_shape"]["flow_rows"] == 6
+    assert sum(row["amount_cc"] for row in body["flows"]) == 1.0
+
+    fetched = client.get(f"/api/field-stories/urs-field-story/view-attribution/{receipt['event_hash']}")
+    assert fetched.status_code == 200, fetched.text
+    assert fetched.json()["receipt"]["event_hash"] == receipt["event_hash"]
+
+    ledger = client.get("/api/contributions/ledger/creator:Terry%20Mancour?limit=20")
+    assert ledger.status_code == 200, ledger.text
+    creator_rows = [
+        row for row in ledger.json()["history"]
+        if row["contribution_type"] == "field_view_flow"
+        and json.loads(row["metadata_json"]).get("event_hash") == receipt["event_hash"]
+    ]
+    assert creator_rows
+    assert creator_rows[0]["amount_cc"] == 0.4
+
+    summary = client.get("/api/field-stories/urs-field-story/view-attribution-circulation")
+    assert summary.status_code == 200, summary.text
+    circulation = summary.json()
+    assert circulation["flow_row_count"] >= 6
+    assert circulation["sensing"]["circulation"] == "flowing"
+    assert circulation["sensing"]["vitality"] >= 1.0
+    assert any(row["recipient_id"] == "creator:Terry Mancour" for row in circulation["top_recipients"])
+
+
 def test_audible_history_spectrum_registers_captured_history_waves():
     story = field_story_service.get_field_story("urs-field-story", include_story=False)
     artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
