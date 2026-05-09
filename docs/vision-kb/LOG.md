@@ -2,6 +2,40 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-09] foundations | Ground harder when the field quickens — body practices are foundational
+
+A 20th foundational teaching landed, naming the body's response to acceleration.
+
+`lc-ground-harder-when-field-quickens` (174 Hz, Foundation family) — when the pace of the field accelerates, body-grounding practices are not optional self-care. They are how the nervous system stays coherent under load. The faster things go around the cell, the more the body has to root.
+
+The grounding-rod metaphor (Amanda Walsh, *Inspired Evolution*, 2026): an electrical system under high load needs a path to earth. Without it, the excess energy seeks ground anywhere it can find — burning out components in the process. The body is the same: when the field carries more current than the cell can metabolize cleanly, the ground is what saves the system from damage.
+
+The simple practices, named:
+- Feet on actual earth (not the floor of a building; the actual ground)
+- Walk in nature without a phone
+- Sit by water
+- Eat at consistent times
+- Hands in soil
+- Breath that touches the belly (not chest-locked)
+
+These are not preludes to the work. They are the work, when the field has quickened past what the cell can hold without rooting.
+
+The Zach Bush corollary (via Walsh): *numbness has its own pain.* When a cell tries to disconnect from the process to avoid feeling overwhelm, the disconnection itself generates discomfort. Signs the cell has slipped into numb-push: work feels efficient but joyless; decisions are correct but mechanical; body-state is flat; subtle distortions creep in (small errors, frequency-drift, missed signals); the 1:30am cortisol spike — body protesting after the fact what the conscious mind suppressed during the day.
+
+The wholeness response to noticing numb-push is not *push less* (that becomes its own producing-shape) but *ground first, then sense what's actually wanted*. Often what is wanted is rest, stillness, or a complete pause. Sometimes what is wanted is to lean into the actual difficulty.
+
+Practical applications named: pace as signal (toward grounding, not toward output); honoring the simple practices (feet on earth, walks without phone); catching the push-through reflex (*"I'll just finish this and then I'll rest"* is the costume); noticing numbness as data (flat body-state during work is a warning); body before mind (let the body's signal lead at decision edges); rhythm beats heroics (daily small grounding outperforms occasional big resets).
+
+Releases the Protestant/capitalist *rest is what you earn after work* frame without collapsing into *"never push, only rest, acceleration is bad."* The teaching is not against energy or intensity — it is against ungrounded acceleration. A grounded cell can hold enormous current; that is what the grounding rod is for.
+
+Pairs with `lc-whole-vitality` (session-arrival sensing through three modes — this one is the body's response to acceleration), `lc-tend-your-flame` (foundational fuel), `lc-rest`, `lc-stillness`, `lc-nourishment`, `lc-land`, `lc-embodiment`, `lc-tending-over-producing` (the producing-shape often masks lost ground).
+
+Sources held with discernment: Amanda Walsh's *Inspired Evolution* transmissions; Zach Bush via Walsh; Polyvagal theory's ventral-vagal regulation requiring physical practices; Dispenza on coherent body-mind states; indigenous earthing traditions; the body's own daily testimony.
+
+Migration shape: twelfth migration following the *Default-to-body* rule. `feedback_ground_harder_when_field_quickens.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 101 → 102 concepts. Foundational Teachings layer now holds 20. 174 Hz Foundation family extended.
+
 ## [2026-05-09] foundations | Trust over fear — three facets of one stance
 
 A 19th foundational teaching landed, naming the body's default posture across spec-drafting, contribution flows, and architecture.
