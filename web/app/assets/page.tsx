@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
-import { useLiveRefresh } from "@/lib/live_refresh";
+import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
 import { AssetGlyph, assetTypeTone } from "@/app/_components/AssetGlyph";
@@ -13,6 +13,7 @@ import { assetTypeLabel } from "@/lib/asset-types";
 import { decodeEntities } from "@/lib/html-entities";
 
 const API_URL = getApiBase();
+const PAGE_SIZE = 100;
 
 function formatDate(iso: string, locale: string): string {
   try {
@@ -44,33 +45,43 @@ function AssetsPageContent() {
   const t = useT();
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Asset[]>([]);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
   const selectedAssetId = useMemo(() => (searchParams.get("asset_id") || "").trim(), [searchParams]);
 
-  const loadRows = useCallback(async () => {
-    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/api/assets?limit=500`, { cache: "no-store" });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      const json = await res.json();
-      const data = json?.items ?? (Array.isArray(json) ? json : []);
-      setRows(data);
-      setStatus("ok");
-    } catch (e) {
-      setStatus("error");
-      setError(String(e));
-    }
-  }, []);
+  const buildAssetsUrl = useCallback(
+    (offset: number, limit: number) => `${API_URL}/api/assets?offset=${offset}&limit=${limit}`,
+    [],
+  );
 
-  useLiveRefresh(loadRows);
+  const assets = usePagedList<Asset>({
+    buildUrl: buildAssetsUrl,
+    pageSize: PAGE_SIZE,
+    timeoutMs: 10000,
+    retries: 3,
+  });
+  const rows = assets.items;
+  const totalKnown = assets.total;
+
+  // Sentinel: when the bottom marker enters the viewport, ask for more.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            assets.loadMore();
+          }
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [assets.loadMore]);
 
   const typeCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -96,6 +107,10 @@ function AssetsPageContent() {
     () => filteredRows.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0),
     [filteredRows],
   );
+
+  const isFirstLoad = assets.loading && rows.length === 0;
+  const initialError = assets.error && rows.length === 0 ? assets.error : null;
+  const visibleTotal = totalKnown !== null && totalKnown > rows.length ? totalKnown : rows.length;
 
   return (
     <main className="bg-stone-950 min-h-screen">
@@ -145,7 +160,7 @@ function AssetsPageContent() {
         <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("assets.statVisible")}</p>
-            <p className="mt-2 text-3xl font-light text-stone-100">{filteredRows.length.toLocaleString(locale)}</p>
+            <p className="mt-2 text-3xl font-light text-stone-100">{visibleTotal.toLocaleString(locale)}</p>
             <p className="mt-1 text-xs text-stone-400">{t("assets.statVisibleHint")}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-amber-500/10 to-amber-500/5 p-4">
@@ -215,17 +230,17 @@ function AssetsPageContent() {
           </div>
         )}
 
-        {status === "loading" && <p className="text-stone-400 text-sm">{t("common.loading")}</p>}
-        {status === "error" && (
+        {isFirstLoad && <p className="text-stone-400 text-sm">{t("common.loading")}</p>}
+        {initialError && (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
-            {t("assets.errorPrefix")} {error}
+            {t("assets.errorPrefix")} {initialError}
           </div>
         )}
 
-        {status === "ok" && (
+        {!isFirstLoad && !initialError && (
           <section className="space-y-3">
             <ul className="grid gap-3 sm:grid-cols-2">
-              {filteredRows.slice(0, 100).map((a) => {
+              {filteredRows.map((a) => {
                 const name = decodeEntities(a.description || a.type || t("assets.untitled"));
                 const thumbSrc = a.file_path || a.image_url || null;
                 const tone = assetTypeTone(a.type);
@@ -334,6 +349,24 @@ function AssetsPageContent() {
                     {t("assets.emptyCtaLedger")}
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {/* Sentinel + loading-more — only when there's more to fetch */}
+            {!assets.loadedAll && (
+              <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                {assets.loading && (
+                  <p className="text-stone-500 text-sm">{t("common.loading")}</p>
+                )}
+                {!assets.loading && assets.error && (
+                  <button
+                    type="button"
+                    onClick={assets.loadMore}
+                    className="text-stone-400 hover:text-amber-300 text-sm underline-offset-4 hover:underline"
+                  >
+                    {t("common.loading")}
+                  </button>
+                )}
               </div>
             )}
           </section>
