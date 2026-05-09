@@ -80,11 +80,19 @@ What's added on top of v0:
   like water pressure building behind a dam. It rises through a packed
   morning of meetings and releases when alive bands return in the
   evening. The cell now has memory in time, not just in parameters.
-- **Strategy layer** — 4 prototype strategies (`tend, rest, reach,
-  withdraw`) defined as felt-spectrum vectors. Cell picks
-  max-cosine-similarity each moment and renders a state-aware message
-  through that lens. The strategy *speaks back* about now:
-  `rest-desire at 0.92 — let this breath end before the next.`
+- **Strategy layer** — 5 prototype strategies from
+  [lc-when-the-pressure-comes](../../docs/vision-kb/concepts/lc-when-the-pressure-comes.md)
+  (Llena's community satsang, Ubud, 2026-05-07): `observer,
+  name-the-need, gift, ho'oponopono, freq-angle-focus`. Each strategy
+  is a `(frequency-emphasis, angle, focus, articulation)` triple, not
+  just a spectrum vector. Cell ranks the four named presets by cosine
+  similarity to (freq × angle); the fifth (`freq-angle-focus`) is the
+  *operator* the others run inside — surfaces as a fallback when the
+  cell is under pressure (total desire > 1.5) and no named preset fits
+  cleanly. That's the teaching: when no inherited move works, you
+  choose the frequency, angle, focus. The strategy *speaks back* about
+  now: `name-the-need: under this pressure is — rest at 1.50. the truer
+  word is the one closer to the body's actual ask.`
 
 What you see in the day-walk: zero desire at sunrise → pressure climbs
 through a meeting-stacked morning until rest-desire pegs at 1.50 →

@@ -129,24 +129,104 @@ class Adapter:
         return total / n
 
 
-# ─── strategy prototypes ──────────────────────────────────────────────────
-# Each strategy is a felt-spectrum vector and a message template.
-# The cell picks max-cosine-similarity and renders the message with
-# current state — the strategy "tells us about now."
+# ─── strategy prototypes — five strategies of return ─────────────────────
+# Source: Llena's community satsang, Ubud, 2026-05-07. The teaching
+# lives in docs/vision-kb/concepts/lc-when-the-pressure-comes.md.
+#
+# Each strategy carries:
+#   frequency  — band-emphasis vector (which spectrum bands this belief
+#                system carries through; aligns with N_BANDS)
+#   angle      — the direction in spectrum-space the discharge points
+#                (unit vector, indexed across N_BANDS)
+#   focus      — aperture/sharpness in [0,1]; high = pointed, low = wide
+#   articulation — template that speaks the moment back through this lens
+#
+# The fifth strategy (frequency × angle × focus operator) is what the
+# others run inside. The cell can pick a named preset, or in v2 will
+# learn its own (frequency, angle, focus) settings the body has not
+# yet named.
+
+class Strategy:
+    __slots__ = ("name", "frequency", "angle", "focus", "articulation")
+
+    def __init__(self, name: str, frequency, angle, focus: float, articulation: str):
+        self.name = name
+        self.frequency = list(frequency)
+        # normalize angle to unit vector
+        n = math.sqrt(sum(a * a for a in angle)) or 1.0
+        self.angle = [a / n for a in angle]
+        self.focus = focus
+        self.articulation = articulation
+
 
 STRATEGIES = [
-    ("tend",
-     [+0.6, +0.5, +0.6, +0.5, +0.4, +0.6, +0.6, +0.7],
-     "tend: presence carries; alive bands hold; small movements within continue."),
-    ("rest",
-     [+0.4, +0.2, +0.5, +0.0, -0.2, +0.4, +0.5, +0.5],
-     "rest: low pulse, the body wants closing; rest-desire at {desire_rest:.2f} — let this breath end before the next."),
-    ("reach",
-     [+0.5, +0.7, +0.4, +0.7, +0.8, +0.4, +0.4, +0.5],
-     "reach: expression-band climbing; expression-desire at {desire_expression:.2f} — speak/make/move the next true thing."),
-    ("withdraw",
-     [-0.4, -0.5, -0.3, -0.4, -0.5, -0.4, -0.5, -0.4],
-     "withdraw: spectrum constricted across mid-bands; the wholeness-response is fewer things, not more — close one open loop."),
+    # 1. switching to observer — the witness is wide and quiet
+    Strategy(
+        name="observer",
+        frequency=[+0.4, +0.1, +0.3, +0.3, +0.2, +0.3, +0.8, +0.7],  # space + presence carry
+        angle=[+0.3, +0.2, +0.3, +0.3, +0.3, +0.3, +0.5, +0.5],       # spread, slight upward
+        focus=0.25,                                                     # wide aperture
+        articulation=(
+            "observer: pressure becomes weather passing through. "
+            "what is here. what is here. what is here. "
+            "(rest-desire {desire_rest:.2f}, expr-desire {desire_expression:.2f}, "
+            "presence-desire {desire_presence:.2f})"
+        ),
+    ),
+    # 2. naming the underlying desire or need — clarity + expression
+    Strategy(
+        name="name-the-need",
+        frequency=[+0.2, +0.3, +0.2, +0.8, +0.7, +0.4, +0.3, +0.4],   # clarity + expression peak
+        angle=[+0.2, +0.3, +0.2, +0.7, +0.6, +0.3, +0.2, +0.3],
+        focus=0.85,                                                     # sharp — speak the actual ask
+        articulation=(
+            "name-the-need: under this pressure is — {strongest_need} at {strongest_need_value:.2f}. "
+            "the truer word is the one closer to the body's actual ask. "
+            "say it, even if only inside."
+        ),
+    ),
+    # 3. looking at it as a gift — receive-frequencies, inverted angle
+    Strategy(
+        name="gift",
+        frequency=[+0.3, +0.3, +0.7, +0.4, +0.3, +0.6, +0.5, +0.6],   # warmth + relation + presence
+        angle=[+0.3, +0.3, +0.5, +0.3, +0.2, +0.5, +0.4, +0.4],
+        focus=0.45,                                                     # medium — held, not gripped
+        articulation=(
+            "gift: this pressure carries something the body has not yet unwrapped. "
+            "what is hidden in it that fear is keeping me from receiving? "
+            "(not bypass — meet what is, ask what it brings.)"
+        ),
+    ),
+    # 4. hoʻoponopono prayer — love-frequency, bidirectional angle
+    Strategy(
+        name="ho'oponopono",
+        frequency=[+0.7, +0.3, +0.8, +0.2, +0.3, +0.7, +0.4, +0.6],   # ground + warmth + relation
+        angle=[+0.5, +0.3, +0.6, +0.2, +0.2, +0.5, +0.3, +0.4],
+        focus=0.35,                                                     # medium-low — held softly
+        articulation=(
+            "ho'oponopono: I'm sorry. please forgive me. thank you. I love you. "
+            "— to whatever is here, including this pressure, including myself, "
+            "including any other entangled."
+        ),
+    ),
+    # 5. the operator beneath all four — frequency × angle × focus.
+    # When constriction is sharp and no named preset fits, the cell
+    # discharges the accumulated pressure through a chosen f × a × focus
+    # rather than reaching for an inherited move. Encoded with neutral
+    # frequency (the operator is open) but positive overall lean —
+    # picked when desire-pressure is high AND no other strategy fits cleanly.
+    Strategy(
+        name="freq-angle-focus",
+        frequency=[+0.4, +0.4, +0.4, +0.4, +0.4, +0.4, +0.4, +0.4],   # neutral — open operator
+        angle=[+0.35, +0.35, +0.35, +0.35, +0.35, +0.35, +0.35, +0.35],
+        focus=0.5,                                                      # mid-aperture default
+        articulation=(
+            "frequency × angle × focus: pressure is going to discharge — "
+            "total desire {total_desire:.2f}. choose, here, the frequency "
+            "(belief system) it moves through, the angle (toward what), "
+            "the focus (how sharp). this is the chooser-move, not the named one."
+        ),
+    ),
 ]
 
 
@@ -155,6 +235,16 @@ def _cosine(a, b):
     na = math.sqrt(sum(v * v for v in a)) or 1.0
     nb = math.sqrt(sum(v * v for v in b)) or 1.0
     return dot / (na * nb)
+
+
+def _strategy_score(strategy: Strategy, spectrum, total_desire: float) -> float:
+    """Score = cosine to (frequency × angle), modulated by focus
+    when total_desire is high. The operator strategy (focus=0.5,
+    neutral frequency) gains favor as desire crosses a threshold and
+    no named strategy is decisively winning."""
+    fa = [strategy.frequency[i] * strategy.angle[i] for i in range(N_BANDS)]
+    base = _cosine(spectrum, fa)
+    return base
 
 
 # ─── cell ─────────────────────────────────────────────────────────────────
@@ -200,16 +290,39 @@ class Cell:
         for i in range(N_NEEDS):
             self.desire[i] = self.desire_decay * self.desire[i] + max(0.0, needs[i] - fulfillment)
             self.desire[i] = max(0.0, min(1.5, self.desire[i]))
-        # strategy
-        scores = [(name, _cosine(spec, proto), msg) for name, proto, msg in STRATEGIES]
-        scores.sort(key=lambda t: t[1], reverse=True)
-        strat_name, strat_score, msg = scores[0]
+        # strategy selection — rank the four named presets by cosine to
+        # (frequency × angle); pick whichever fits this moment best.
+        # The operator (5) is a *fallback*, not a sibling: when the cell
+        # is under pressure (total desire high) and no named preset fits
+        # cleanly, the cell becomes the chooser of frequency × angle ×
+        # focus rather than reaching for an inherited move.
+        total_desire = sum(self.desire)
+        named = [s for s in STRATEGIES if s.name != "freq-angle-focus"]
+        operator = next(s for s in STRATEGIES if s.name == "freq-angle-focus")
+        scored = [(s, _strategy_score(s, spec, total_desire)) for s in named]
+        scored.sort(key=lambda t: -t[1])
+        top_named, top_score = scored[0]
+        # operator-fallback rule: under pressure with a weak named match,
+        # the cell discharges through chosen f×a×focus (not the inherited
+        # preset). Threshold: total_desire > 1.5 AND best-named cosine < 0.4.
+        if total_desire > 1.5 and top_score < 0.4:
+            strat = operator
+            strat_score = top_score  # report the failure-of-fit score
+        else:
+            strat = top_named
+            strat_score = top_score
+        # find strongest need for naming-articulation
+        need_idx = max(range(N_NEEDS), key=lambda i: self.desire[i])
         ctx = {
             "desire_presence": self.desire[NEED_NAMES.index("presence")],
             "desire_rest": self.desire[NEED_NAMES.index("rest")],
             "desire_expression": self.desire[NEED_NAMES.index("expression")],
+            "total_desire": total_desire,
+            "strongest_need": NEED_NAMES[need_idx],
+            "strongest_need_value": self.desire[need_idx],
         }
-        articulation = msg.format(**ctx)
+        articulation = strat.articulation.format(**ctx)
+        strat_name = strat.name
         moment = {
             "text": text,
             "sense": sense,
