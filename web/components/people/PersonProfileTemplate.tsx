@@ -20,6 +20,7 @@ import { createTranslator } from "@/lib/i18n";
 import type { LocaleCode } from "@/lib/locales";
 import { TemplateInfluenceWeb } from "./TemplateInfluenceWeb";
 import { LineageStrip } from "./LineageStrip";
+import { AttentionPresence } from "./AttentionPresence";
 
 export type PersonProfileFact = {
   label: ReactNode;
@@ -169,6 +170,16 @@ export function PersonProfileTemplate({
             into the lineage so the visitor walks the body's own time
             instead of arriving at a dead-end leaf. */}
         <LineageStrip slug={graphSlug} />
+
+        {/* Attention presence — surfaces the witness-trace's record of
+            visits to this page. The data is captured on every read; this
+            returns it to the visitor so each page is visibly held by
+            other cells, not silent. */}
+        {graphSlug && (
+          <div className="mb-6">
+            <AttentionPresence assetId={graphSlug} />
+          </div>
+        )}
 
         {/* Source-language disclosure — when the visitor's locale is
             not English but the content module bound to this page is

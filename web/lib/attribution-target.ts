@@ -68,6 +68,17 @@ export function attributionTargetFromHref(href: string): AttributionTarget | nul
     const entityId = decodeURIComponent(parts[1]);
     return { entityType: "spec", entityId, assetId: entityId };
   }
+  // /people/{slug} — record reads under the slug so the witness-trace
+  // can surface attention on a specific person, work, or community.
+  // Without this branch, /people/quark-virtual-dom records under
+  // assetId="page:people-quark-virtual-dom" and the per-slug stats
+  // endpoint sees zero. Sub-routes like /people/urs/lineage keep the
+  // page:* fallback so the lineage page has its own attention record
+  // separate from the urs profile.
+  if (parts[0] === "people" && parts[1] && parts.length === 2) {
+    const entityId = decodeURIComponent(parts[1]);
+    return { entityType: "people", entityId, assetId: entityId };
+  }
 
   const entityId = pageIdFromPath(pathname);
   return { entityType: "page", entityId, assetId: `page:${entityId}` };
