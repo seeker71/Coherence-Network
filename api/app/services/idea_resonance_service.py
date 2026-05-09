@@ -344,4 +344,14 @@ def invalidate_idea_cache(idea_id: str) -> None:
 
 def get_event_log(limit: int = 50) -> list[dict]:
     """Return the resonance event log (most recent first)."""
-    return list(reversed(_resonance_events[-limit:]))
+    items, _total = get_event_log_page(limit=limit, offset=0)
+    return items
+
+
+def get_event_log_page(limit: int = 50, offset: int = 0) -> tuple[list[dict], int]:
+    """Page of the resonance event log plus the total event count."""
+    most_recent_first = list(reversed(_resonance_events))
+    total = len(most_recent_first)
+    start = max(0, int(offset))
+    end = start + max(1, int(limit))
+    return most_recent_first[start:end], total

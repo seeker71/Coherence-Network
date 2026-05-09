@@ -160,7 +160,9 @@ async def test_idea_lifecycle_flow():
         showcase = await c.get("/api/ideas/showcase")
         assert showcase.status_code == 200
         assert "ideas" in showcase.json() or "items" in showcase.json() or "showcase" in showcase.json()
-        assert isinstance((await c.get("/api/ideas/resonance")).json(), list)
+        resonance_payload = (await c.get("/api/ideas/resonance")).json()
+        assert isinstance(resonance_payload, dict)
+        assert isinstance(resonance_payload.get("items"), list)
         storage = await c.get("/api/ideas/storage")
         assert storage.status_code == 200 and "backend" in storage.json()
 

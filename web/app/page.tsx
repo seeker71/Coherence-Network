@@ -87,13 +87,14 @@ async function loadIdeas(lang: LocaleCode): Promise<IdeasResponse | null> {
 async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
   const langParam = lang === DEFAULT_LOCALE ? "" : `&lang=${lang}`;
   try {
-    const data = await fetchJsonOrNull<ResonanceItem[] | { ideas: ResonanceItem[] }>(
+    const data = await fetchJsonOrNull<ResonanceItem[] | { ideas?: ResonanceItem[]; items?: ResonanceItem[] }>(
       `${getApiBase()}/api/ideas/resonance?window_hours=72&limit=3${langParam}`,
       {},
       5000,
     );
     if (!data) return [];
-    return Array.isArray(data) ? data : data.ideas || [];
+    if (Array.isArray(data)) return data;
+    return data.items ?? data.ideas ?? [];
   } catch {
     return [];
   }

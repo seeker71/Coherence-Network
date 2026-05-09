@@ -65,6 +65,17 @@ def get_activity(
     node_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Get recent activity, optionally filtered."""
+    items, _total = get_activity_page(limit=limit, offset=0, task_id=task_id, node_id=node_id)
+    return items
+
+
+def get_activity_page(
+    limit: int = 50,
+    offset: int = 0,
+    task_id: str | None = None,
+    node_id: str | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """Page of recent activity (most-recent first) plus the filtered total."""
     with _LOCK:
         items = list(_ACTIVITY_LOG)
 
@@ -73,7 +84,11 @@ def get_activity(
     if node_id:
         items = [e for e in items if e["node_id"] == node_id]
 
-    return items[-limit:]
+    most_recent_first = list(reversed(items))
+    total = len(most_recent_first)
+    start = max(0, int(offset))
+    end = start + max(1, int(limit))
+    return most_recent_first[start:end], total
 
 
 def get_task_stream(task_id: str) -> list[dict[str, Any]]:
