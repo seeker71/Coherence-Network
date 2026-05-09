@@ -28,7 +28,7 @@ done_when:
   - "GET /api/agent/reap-history returns per-idea timeout summary"
   - "GET /api/agent/tasks/{id}/reap-diagnosis returns 200 with diagnosis or 404"
   - "All 8 new tests pass in pytest"
-test: "cd api && python -m pytest tests/test_agent.py tests/test_agent_runner_registry_api.py -x"
+test: "cd api && python -m pytest tests/test_smart_reaper_module_boundary.py tests/test_stale_task_reaper.py -x"
 constraints:
   - "Do not break existing timed_out / failed pipeline advance logic"
   - "Do not add DB migrations; use task context JSON for all new state"
