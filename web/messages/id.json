@@ -367,7 +367,27 @@
     "replied": "membalas:",
     "emptyHeading": "Nama yang tamannya masih menunggu.",
     "emptyLede": "Ia memiliki id penyumbang tetapi belum bersuara atau menerima reaksi. Sudutnya menunggu.",
-    "backToVision": "Jelajahi visi"
+    "backToVision": "Jelajahi visi",
+    "lineage": {
+      "breadcrumb": "Garis keturunan",
+      "eyebrowWorks": "{n} karya",
+      "eyebrowWorkSingular": "{n} karya",
+      "eyebrowEdges": "{n} tepi pengaruh",
+      "eyebrowEdgeSingular": "{n} tepi pengaruh",
+      "title": "{name} — garis keturunan",
+      "welcome": "Setiap karya yang telah dikontribusikan oleh sel ini, dalam urutan kronologis, dengan aliran perhatian yang berjalan di sampingnya. Disusun dari graf langsung; data adalah apa yang saat ini diketahui substrat. Sempurnakan melalui pintu di halaman profil.",
+      "arcAtAGlance": "Busur, sekilas",
+      "yearNotRecorded": "Tahun belum dicatat",
+      "worksHeading": "Karya · kronologis",
+      "streamsHeading": "Aliran perhatian yang berjalan di sampingnya",
+      "streamsLede": "Tepi inspired-by yang dikelompokkan menurut sumber. Jaring pengaruh yang dipersatukan secara penuh — dengan jam yang diukur dan pewarnaan spektrum per-sumber — berada di bagian bawah halaman profil.",
+      "empty": "Belum ada karya yang dikaitkan dengan sel ini. Saat kontribusi dicatat, mereka akan muncul di sini dalam urutan kronologis.",
+      "footerLede": "Halaman ini disusun secara langsung dari graf. Apa pun di sini dapat diperbaiki — sempurnakan melalui pintu di halaman profil. Klien programatik dapat mengambil data yang sama langsung melalui endpoint tepi contributes-to.",
+      "figcaptionRange": "{n} karya dari {from} sampai {to}",
+      "figcaptionRangeSingular": "{n} karya dari {from} sampai {to}",
+      "now": "sekarang",
+      "figcaptionUnknownYears": "{n} tanpa tahun yang dicatat"
+    }
   },
   "morningNudge": {
     "ariaLabel": "Rangkuman pagi",
@@ -691,7 +711,23 @@
     "assetOne": "{n} karya",
     "assetMany": "{n} karya",
     "loadingAssets": "Memuat karya…",
-    "thumbnailAlt": "{description}"
+    "thumbnailAlt": "{description}",
+    "detail": {
+      "kind": "Jenis",
+      "runtime": "Durasi",
+      "era": "Era",
+      "company": "Perusahaan",
+      "place": "Tempat",
+      "asin": "ASIN",
+      "isbn": "ISBN",
+      "languageLabel": "Bahasa",
+      "externalSource": "Sumber eksternal",
+      "presence": "Kehadiran:",
+      "statWitnessed": "Disaksikan",
+      "statWitnessedDays": "{n} kontributor · 90h",
+      "statWitnessedDaysPlural": "{n} kontributor · 90h",
+      "statWitnessedHint": "tampilan selama 90 hari"
+    }
   },
   "search": {
     "title": "Cari proyek",
@@ -1430,7 +1466,11 @@
       "transport-mechanic": "Transportasi · mekanik",
       "elder-witness": "Tetua · saksi",
       "other": "Lainnya (dengan kata-katamu sendiri di bawah)"
-    }
+    },
+    "publicPostureTitle": "Apa artinya bergabung dengan jaringan",
+    "publicPostureBody1": "Coherence Network bersifat publik secara default. ID kontribusi, atribusi, permukaan yang Anda kunjungi, dan tepi silsilah yang Anda buat menjadi bagian dari kumpulan bukti terbuka. Dump basis data setiap malam dicerminkan ke arsip publik di [coherence-network-archive](https://github.com/seeker71/coherence-network-archive); arsip peristiwa harian berada di rilis repositori utama. Substrat sesuai dengan keyakinan — atribusi berdaulat dan transparan, tanpa status tersembunyi.",
+    "publicPostureBody2": "Yang tidak kami simpan: cookie pelacak, sidik jari pihak ketiga, geolokasi berbasis IP, detail perangkat. ID sesi adalah UUID per-tab yang lokal di jaringan.",
+    "publicPostureBody3": "Jika situasi Anda berubah, jaringan menghormati permintaan opt-out — lihat [docs/transparency](https://github.com/seeker71/Coherence-Network/blob/main/docs/transparency/README.md) untuk apa yang dapat diredaksi, apa yang tidak, dan prosedurnya."
   },
   "share": {
     "eyebrow": "Membagikan",
