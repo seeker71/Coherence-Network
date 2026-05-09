@@ -20,6 +20,11 @@ const content: PersonProfileContent = {
       "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20",
     eyebrow: "The body's primary shepherd",
     name: "Urs Muff",
+    lineageDoorway: {
+      href: "/people/urs/lineage",
+      label: "Walk the 42-year lineage of works and influences",
+      summary: "13 load-bearing works · 8 eras · 1984 → now · the streams of attention woven alongside",
+    },
     welcome: (
       <p>
         Founder of Coherence Network. Swiss-American by lineage,
