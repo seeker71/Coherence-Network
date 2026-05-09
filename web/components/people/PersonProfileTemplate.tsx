@@ -163,6 +163,19 @@ export function PersonProfileTemplate({
       </section>
 
       <div className="max-w-3xl mx-auto px-6 py-12">
+        {/* Source-language disclosure — when the visitor's locale is
+            not English but the content module bound to this page is
+            English (no de.tsx / es.tsx / id.tsx sibling for this slug
+            yet), surface that honestly so the reader knows what they're
+            looking at. They can use their browser's built-in
+            translate-this-page until an author-curated translation
+            arrives. The chrome (breadcrumbs, headings) is already in
+            their language; this banner addresses the prose. */}
+        {lang !== "en" && (content.metadata as { authoredLang?: string })?.authoredLang !== lang && (
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-stone-300 leading-relaxed mb-8">
+            {t("personProfile.sourceLanguageDisclosure")}
+          </div>
+        )}
         {content.noteFromBody && (
           <Panel variant="warm" eyebrow={content.noteFromBody.eyebrow ?? t("personProfile.noteEyebrow")}>
             <div className="text-sm text-foreground/85 leading-relaxed">
