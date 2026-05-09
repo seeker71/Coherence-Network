@@ -31,6 +31,8 @@ import { CoLocated } from "./CoLocated";
 import { RootedHere } from "./RootedHere";
 import { HeldBy } from "./HeldBy";
 import { WanderInto } from "./WanderInto";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, type LocaleCode } from "@/lib/locales";
 
 export type Presence = {
   provider: string;
@@ -296,15 +298,17 @@ function renderInline(text: string): ReactNode {
 function PlatformChips({
   presences,
   identityName,
+  t,
 }: {
   presences: Presence[];
   identityName: string;
+  t: Translator;
 }) {
   if (presences.length === 0) return null;
   return (
     <section>
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-        Find them
+        {t("presence.findThem")}
       </p>
       <div className="flex flex-wrap gap-2.5">
         {presences.map((p) => {
@@ -349,9 +353,11 @@ function PlatformChips({
 function PresenceOverview({
   identity,
   inspiredCount,
+  t,
 }: {
   identity: PresenceIdentity;
   inspiredCount: number;
+  t: Translator;
 }) {
   const canonicalDisplay = compactUrl(identity.canonical_url);
   const graphHref = `/nodes/${encodeURIComponent(identity.id)}`;
@@ -370,19 +376,19 @@ function PresenceOverview({
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-4">
-        At a glance
+        {t("presence.atAGlance")}
       </p>
       <dl className="space-y-3 text-sm">
         <div>
           <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-            Category
+            {t("presence.category")}
           </dt>
           <dd className="mt-1 text-white/90">{identity.category}</dd>
         </div>
         {canonicalDisplay && (
           <div>
             <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-              Home
+              {t("presence.home")}
             </dt>
             <dd className="mt-1 break-words text-white/90">{canonicalDisplay}</dd>
           </div>
@@ -390,13 +396,13 @@ function PresenceOverview({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-              Works
+              {t("presence.works")}
             </dt>
             <dd className="mt-1 text-white/90">{identity.creations.length}</dd>
           </div>
           <div>
             <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-              Lineage
+              {t("presence.lineage")}
             </dt>
             <dd className="mt-1 text-white/90">{inspiredCount}</dd>
           </div>
@@ -406,7 +412,7 @@ function PresenceOverview({
       {dedupedSurfaces.length > 0 && (
         <div className="mt-6">
           <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-            Presence map
+            {t("presence.presenceMap")}
           </p>
           <div className="space-y-2">
             {dedupedSurfaces.map((surface) => {
@@ -434,7 +440,7 @@ function PresenceOverview({
 
       <div className="mt-6">
         <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-          Entry points
+          {t("presence.entryPoints")}
         </p>
         <div className="space-y-2">
           {identity.canonical_url && (
@@ -444,14 +450,14 @@ function PresenceOverview({
               rel="noopener noreferrer"
               className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.07]"
             >
-              Official source
+              {t("presence.officialSource")}
             </a>
           )}
           <Link
             href={graphHref}
             className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.07]"
           >
-            Graph node
+            {t("presence.graphNode")}
           </Link>
         </div>
       </div>
@@ -459,24 +465,32 @@ function PresenceOverview({
   );
 }
 
-// Compact era marker for the tile corner. Strips wordy prefixes
-// ("approximately ", "~") so the year-shape lands clean. Falls back
-// to the raw string if no year is parseable. Empty string → no marker.
+// Compact era marker for the tile corner. Strips wordy prefixes so
+// the year-shape lands clean. The English "approximately/circa/~"
+// list is paralleled by the German "ungefähr/zirka", Spanish
+// "aproximadamente/hacia", and Indonesian "sekitar/kira-kira" — kept
+// inline so the parser stays locale-aware while the era field itself
+// remains content (not chrome) and comes from the asset's own voice.
+// Falls back to the raw string if nothing matches; empty era yields
+// no marker.
+const ERA_PREFIX_RE =
+  /^\s*(approximately|approx\.?|circa|ca\.?|~|ungef(ä|ae)hr|zirka|ca\b|aproximadamente|hacia|aprox\.?|sekitar|kira-?kira)\s*/i;
+const ERA_AGE_SUFFIX_RE =
+  /\s+·\s+(age|alter|edad|usia)\s+\d+\s*$/i;
+
 function eraMarker(era: string | null | undefined): string {
   if (!era) return "";
-  const compact = era
-    .replace(/^\s*(approximately|approx\.?|circa|ca\.?|~)\s*/i, "")
-    .replace(/\s+·\s+age\s+\d+\s*$/i, "")
-    .trim();
-  return compact;
+  return era.replace(ERA_PREFIX_RE, "").replace(ERA_AGE_SUFFIX_RE, "").trim();
 }
 
 function CreationsGrid({
   creations,
   accent,
+  t,
 }: {
   creations: Creation[];
   accent: BrandTone;
+  t: Translator;
 }) {
   const visible = creations.filter((c) => c.kind !== "event");
   if (visible.length === 0) return null;
@@ -496,7 +510,7 @@ function CreationsGrid({
   return (
     <section>
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-        Works
+        {t("presence.works")}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {ordered.map((c) => {
@@ -533,7 +547,7 @@ function CreationsGrid({
                 {c.name}
               </p>
               <p className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-                {c.kind}
+                {localizeKind(c.kind, t)}
               </p>
             </Tag>
           );
@@ -543,31 +557,44 @@ function CreationsGrid({
   );
 }
 
+// Render a creation_kind label in the active locale. Kind values like
+// "software-system" or "kernel-driver" are stable English identifiers
+// in the graph; the rendered label is chrome and lives in the messages
+// bundle keyed by `presence.creationKind.{kind}`. When the bundle has
+// no entry for an unfamiliar kind, fall back to the kind itself with
+// hyphens turned to spaces so the tile still reads.
+function localizeKind(kind: string, t: Translator): string {
+  const key = `presence.creationKind.${kind}`;
+  const translated = t(key);
+  if (translated === key) return kind.replace(/-/g, " ");
+  return translated;
+}
+
 function HeldOpen({
   identity,
   accent,
+  t,
 }: {
   identity: PresenceIdentity;
   accent: BrandTone;
+  t: Translator;
 }) {
   if (identity.claimed !== false) return null;
   return (
     <section>
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-1.5">
-          Held open
+          {t("presence.heldOpen")}
         </p>
         <p className="text-sm text-white/80 leading-relaxed">
-          This page is a door held open for {identity.name}. Nothing is
-          asked; if this is you, you can take the page as-is or send any
-          edits and they&apos;ll be applied same day.
+          {t("presence.heldOpenBody", { name: identity.name })}
         </p>
         <Link
           href={`/claim/${encodeURIComponent(identity.id)}`}
           className="mt-3 inline-flex items-center gap-1 text-sm font-medium"
           style={{ color: accent.bg }}
         >
-          this is me →
+          {t("presence.thisIsMe")} →
         </Link>
       </div>
     </section>
@@ -616,7 +643,19 @@ function pickAccentProvider(identity: PresenceIdentity): string {
   return identity.provider;
 }
 
-export function PresencePage({ identity }: { identity: PresenceIdentity }) {
+export function PresencePage({
+  identity,
+  lang = DEFAULT_LOCALE,
+}: {
+  identity: PresenceIdentity;
+  /** Active locale for the chrome — passed in by the server-rendered
+   *  page that resolved cookie/profile/Accept-Language. Defaults to
+   *  the bundle default for any older callers that haven't been
+   *  threaded through yet; the chrome falls back to English in that
+   *  case rather than missing-key warnings. */
+  lang?: LocaleCode;
+}) {
+  const t: Translator = createTranslator(lang);
   const accent = brandFor(pickAccentProvider(identity));
   const hasImage = Boolean(identity.image_url);
   const inspired = identity.inspired_by || [];
@@ -670,7 +709,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           {identity.note && (
             <section>
               <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-                What this gathering held
+                {t("presence.gatheringHeld")}
               </p>
               <p className="text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
                 {identity.note}
@@ -685,7 +724,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             identityName={identity.name}
             accent={accent}
           />
-          <CreationsGrid creations={identity.creations} accent={accent} />
+          <CreationsGrid creations={identity.creations} accent={accent} t={t} />
         </div>
 
         {/* Sidebar — collapses to full-width above the main column on
@@ -695,7 +734,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             works, the hero already shows the name+category+tagline and
             the platforms appear immediately after on mobile. */}
         <aside className="space-y-10 lg:space-y-8 min-w-0">
-          <PresenceOverview identity={identity} inspiredCount={inspired.length} />
+          <PresenceOverview identity={identity} inspiredCount={inspired.length} t={t} />
           {/* Every contribution and influence flowing through this
               presence, from any source — the unified body-of-evidence
               view. Emissions (works), Shaped-by (influences grouped
@@ -710,6 +749,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           <PlatformChips
             presences={identity.presences}
             identityName={identity.name}
+            t={t}
           />
           <LocationChip presenceId={identity.id} />
           {/* When the page IS a place, show every presence rooted in
@@ -733,7 +773,7 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
               co-location through places) so they remain. */}
           <KindredPresences presenceId={identity.id} />
           <CoLocated presenceId={identity.id} />
-          <HeldOpen identity={identity} accent={accent} />
+          <HeldOpen identity={identity} accent={accent} t={t} />
         </aside>
       </div>
 

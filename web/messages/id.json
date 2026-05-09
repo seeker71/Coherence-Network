@@ -1999,6 +1999,41 @@
         "frequent": "sering",
         "founded": "didirikan"
       }
+    },
+    "findThem": "Temukan mereka",
+    "atAGlance": "Sekilas",
+    "category": "Kategori",
+    "home": "Rumah",
+    "works": "Karya",
+    "lineage": "Garis silsilah",
+    "presenceMap": "Peta kehadiran",
+    "entryPoints": "Pintu masuk",
+    "officialSource": "Sumber resmi",
+    "graphNode": "Simpul graf",
+    "heldOpen": "Tetap terbuka",
+    "heldOpenBody": "Halaman ini adalah pintu yang dibiarkan terbuka untuk {name}. Tidak ada yang diminta; jika ini kamu, kamu bisa menerima halaman ini apa adanya atau mengirim perubahan — akan diterapkan pada hari yang sama.",
+    "thisIsMe": "ini saya",
+    "gatheringHeld": "Apa yang dipegang oleh pertemuan ini",
+    "creationKind": {
+      "album": "album",
+      "track": "trek",
+      "video": "video",
+      "film": "film",
+      "event": "acara",
+      "book": "buku",
+      "teaching": "ajaran",
+      "podcast": "podcast",
+      "episode": "episode",
+      "essay": "esai",
+      "article": "artikel",
+      "course": "kursus",
+      "workshop": "lokakarya",
+      "work": "karya",
+      "software-system": "sistem perangkat lunak",
+      "kernel-driver": "driver kernel",
+      "hardware-firmware-software": "perangkat keras · firmware · perangkat lunak",
+      "hardware-firmware-system": "perangkat keras · firmware · sistem",
+      "thesis": "tesis"
     }
   }
 }

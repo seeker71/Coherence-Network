@@ -2138,6 +2138,41 @@
         "frequent": "frequent",
         "founded": "founded"
       }
+    },
+    "findThem": "Find them",
+    "atAGlance": "At a glance",
+    "category": "Category",
+    "home": "Home",
+    "works": "Works",
+    "lineage": "Lineage",
+    "presenceMap": "Presence map",
+    "entryPoints": "Entry points",
+    "officialSource": "Official source",
+    "graphNode": "Graph node",
+    "heldOpen": "Held open",
+    "heldOpenBody": "This page is a door held open for {name}. Nothing is asked; if this is you, you can take the page as-is or send any edits and they'll be applied same day.",
+    "thisIsMe": "this is me",
+    "gatheringHeld": "What this gathering held",
+    "creationKind": {
+      "album": "album",
+      "track": "track",
+      "video": "video",
+      "film": "film",
+      "event": "event",
+      "book": "book",
+      "teaching": "teaching",
+      "podcast": "podcast",
+      "episode": "episode",
+      "essay": "essay",
+      "article": "article",
+      "course": "course",
+      "workshop": "workshop",
+      "work": "work",
+      "software-system": "software system",
+      "kernel-driver": "kernel driver",
+      "hardware-firmware-software": "hardware · firmware · software",
+      "hardware-firmware-system": "hardware · firmware · system",
+      "thesis": "thesis"
     }
   }
 }
