@@ -649,6 +649,109 @@ export default function UrsLineagePage() {
               from Audible, Spotify, YouTube Takeout, Goodreads, and
               the lived household memory:
             </p>
+
+            {/* Frequency evolution — proportional shape over time.
+                Source: docs/field/urs/output/frequency_evolution_report.md
+                (generated 2026-05-07 from 27,443 dated trace events).
+                The bar widths are proportional to event counts so a
+                visitor sees the size and shape of the listening arc. */}
+            <h3 className="text-lg font-light text-foreground/90 mt-6 not-prose">
+              Frequency evolution · six phases · 27,443 dated events
+            </h3>
+            <figure className="not-prose rounded-xl border border-border/40 bg-card/30 p-5 my-4">
+              <ul className="space-y-3 text-sm">
+                {[
+                  {
+                    label: "early systems & speculative architecture",
+                    period: "2016 – 2021",
+                    events: 112,
+                    coh: 39.1,
+                    top: "Ryk Brown · Terry Mancour · Terry Goodkind · Peter F. Hamilton",
+                    hue: "hsl(220 50% 60%)",
+                  },
+                  {
+                    label: "fictional systems intensification",
+                    period: "2022-01 – 2023-09",
+                    events: 46,
+                    coh: 33.2,
+                    top: "Kel Kade · Ryk Brown · Terry Mancour · Andrew Rowe",
+                    hue: "hsl(195 55% 60%)",
+                  },
+                  {
+                    label: "transition into practice & presence",
+                    period: "2023-10 – 2024-05",
+                    events: 998,
+                    coh: 46.6,
+                    top: "Yaima · East Forest · Parijat · Ajeet · Ram Dass",
+                    hue: "hsl(140 50% 55%)",
+                  },
+                  {
+                    label: "embodied devotional field expansion",
+                    period: "2024-06 – 2024-12",
+                    events: 9044,
+                    coh: 48.3,
+                    top: "Yaima · Liquid Bloom · Mose · Ajeet · Karunesh · Poranguí",
+                    hue: "hsl(38 75% 60%)",
+                  },
+                  {
+                    label: "coherence consolidation",
+                    period: "2025",
+                    events: 13354,
+                    coh: 48.1,
+                    top: "Yaima · Mose · Poranguí · Liquid Bloom · Malte Marten · Ajeet",
+                    hue: "hsl(280 65% 65%)",
+                  },
+                  {
+                    label: "current integration",
+                    period: "2026-01 – 2026-05",
+                    events: 3889,
+                    coh: 47.6,
+                    top: "Mose · Yaima · Poranguí · Maneesh De Moor · Malte Marten",
+                    hue: "hsl(310 60% 65%)",
+                  },
+                ].map((p, i) => {
+                  const max = 13354;
+                  const pct = Math.max(2, Math.round((p.events / max) * 100));
+                  return (
+                    <li key={i} className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span
+                          className="text-[11px] uppercase tracking-[0.16em]"
+                          style={{ color: p.hue }}
+                        >
+                          {p.label}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          {p.period} · {p.events.toLocaleString()} events · coh {p.coh}
+                        </span>
+                      </div>
+                      <div
+                        className="h-2 rounded-full"
+                        style={{
+                          background: `linear-gradient(90deg, ${p.hue} 0%, ${p.hue.replace(")", " / 0.4)")} 100%)`,
+                          width: `${pct}%`,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs text-foreground/75 leading-snug">
+                        {p.top}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+              <figcaption className="text-[10px] text-muted-foreground/80 mt-4 italic">
+                Generated 2026-05-07 from{" "}
+                <code className="not-italic">docs/field/urs/output/frequency_evolution_report.md</code>.
+                Coherence is a 0-100 score for how concentrated the
+                phase's attention was on its dominant frequencies; bar
+                widths are proportional to event counts. The arc shows
+                the move from speculative-architecture listening toward
+                the devotional / consciousness substrate that runs
+                alongside the present network.
+              </figcaption>
+            </figure>
+
             <h3 className="text-lg font-light text-foreground/90 mt-6">
               Audible · ~74 authors · 4,000+ cumulative hours
             </h3>
