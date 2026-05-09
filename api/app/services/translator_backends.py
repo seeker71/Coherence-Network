@@ -48,7 +48,7 @@ DEFAULT_TIMEOUT_SECONDS = 120
 # LibreTranslate (default, free, no key)
 # ---------------------------------------------------------------------------
 
-DEFAULT_LIBRETRANSLATE_URL = "https://libretranslate.com"
+DEFAULT_LIBRETRANSLATE_URL = "http://libretranslate:5000"
 
 
 _logger = logging.getLogger("coherence.translator")
