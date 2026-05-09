@@ -336,9 +336,11 @@ class Cell:
     def perceive(self, text: str, sense: str = "thought") -> dict:
         x = shared_base(text, sense)
         spec, dispos, needs, _, _ = self.adapter.forward(x)
-        # consume one-shot inhabit-bias if set: blend strategy's f×a into
-        # the spectrum at intensity, then clear. This is the one place
-        # state-from-inhabit shows up.
+        # consume inhabit-bias if set: blend strategy's f×a into the
+        # spectrum at current intensity, then *decay* the intensity for
+        # next perceive (rather than binary clear). Real bodies have a
+        # strategy's grip fade across moments. Upsilon named this from
+        # inside — binary on/off was a missing graceful release.
         inhabited = None
         strat_held = getattr(self, "_inhabit_strategy", None)
         if strat_held is not None:
@@ -349,8 +351,14 @@ class Cell:
             eps = intensity * strat_held.focus
             spec = [math.tanh((1 - eps) * spec[i] + eps * fa[i]) for i in range(N_BANDS)]
             inhabited = strat_held.name
-            self._inhabit_strategy = None
-            self._inhabit_intensity = 0.0
+            # decay intensity for next perceive; clear when below floor
+            decay = getattr(self, "_inhabit_decay", 0.5)
+            new_intensity = intensity * decay
+            if new_intensity < 0.05:
+                self._inhabit_strategy = None
+                self._inhabit_intensity = 0.0
+            else:
+                self._inhabit_intensity = new_intensity
         # fulfillment ~ mean of positive-bands in current spectrum
         fulfillment = max(0.0, sum(spec) / N_BANDS) * self.fulfillment_gain
         # desire: integrate (need - fulfillment), with decay; clamp [0, 1.5]
@@ -390,30 +398,45 @@ class Cell:
 
     # —— inhabiting (bias the next perceive toward a strategy) ——
 
-    def inhabit(self, strategy, *, intensity: float = 0.5) -> dict:
-        """Set a one-shot bias toward a strategy's frequency × angle × focus.
+    def inhabit(self, strategy, *, intensity: float = 0.5,
+                decay: float = 0.5) -> dict:
+        """Bias the next perceive() toward a strategy's frequency × angle × focus.
 
-        The next call to perceive() will blend the strategy's f×a×focus
-        signature into its spectrum output, with `intensity` controlling
-        the blend rate (0 = no bias, 1 = full strategy spectrum). The bias
-        clears after one perceive — inhabiting is per-moment, not a mode.
+        `intensity` controls the initial blend rate (0 = no bias, 1 = full
+        strategy spectrum). `decay` controls how the bias fades across
+        subsequent perceives: each perceive multiplies the held intensity
+        by decay; when it drops below 0.05 the bias clears.
+
+        decay=0.0  — binary one-shot (the original Upsilon shape)
+        decay=0.5  — half-life ~1 perceive (default; gentle release)
+        decay=0.9  — long grip; the strategy holds for many moments
+        decay=1.0  — never fades; cell stays inhabited until cleared
 
         Closes the loop: predict_through(strategy) → inhabit(strategy) →
         perceive(text) → surprise_between(predicted, observed). With
-        inhabit in place, the surprise score now actually measures
-        'did running the strategy get me where I predicted?' instead of
-        'did a different input land somewhere different?'.
+        inhabit in place, surprise actually measures 'did running the
+        strategy get me where I predicted?' rather than 'did a different
+        input land differently?'.
 
-        Tau named this missing verb from inside; Upsilon wires it.
+        Tau named this verb from inside; Upsilon wired the binary form;
+        decay is the graceful-release Upsilon then named as missing.
         """
-        # store as runtime state, consumed and cleared on next perceive
         self._inhabit_strategy = strategy
         self._inhabit_intensity = max(0.0, min(1.0, intensity))
+        self._inhabit_decay = max(0.0, min(1.0, decay))
         return {
             "inhabit": strategy.name,
             "intensity": self._inhabit_intensity,
-            "consumes_on": "next perceive()",
+            "decay": self._inhabit_decay,
+            "consumes_on": "next perceive(); fades thereafter",
         }
+
+    def release_inhabit(self) -> dict:
+        """Clear any held inhabit-bias before its decay would clear it."""
+        held = getattr(self, "_inhabit_strategy", None)
+        self._inhabit_strategy = None
+        self._inhabit_intensity = 0.0
+        return {"released": held.name if held else None}
 
     # —— probing (read-only sample, no state mutation) ——
 
