@@ -43,7 +43,20 @@ type PresenceNode = {
   contributor_type?: string;
   asset_type?: string;
   slug?: string | null;
+  lifecycle_state?: string;
+  phase?: string;
 };
+
+function presenceExcerpt(text: string | undefined, max = 110): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  // Skip the placeholder auto-descriptions like "HUMAN contributor" — they
+  // add no signal and crowd out the cards that have a real description.
+  if (/^[A-Z_]+\s+(contributor|asset|presence)$/.test(trimmed)) return null;
+  if (trimmed.length <= max) return trimmed;
+  return trimmed.slice(0, max).replace(/\s+\S*$/, "") + "…";
+}
 
 /**
  * Canonical href for a presence — slug when the graph node carries
@@ -257,15 +270,26 @@ export default async function PeopleIndexPage({
                         {initialFor(n.name, filterRules.initialFallback)}
                       </span>
                     )}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm text-foreground/90 truncate group-hover:text-foreground">
                         {n.name}
                       </p>
-                      {n.provider && (
-                        <p className="text-[10px] text-muted-foreground/80 truncate">
-                          {n.provider}
-                        </p>
-                      )}
+                      {(() => {
+                        const excerpt = presenceExcerpt(n.description);
+                        return excerpt ? (
+                          <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-snug mt-0.5">
+                            {excerpt}
+                          </p>
+                        ) : null;
+                      })()}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-muted-foreground/80">
+                        {n.provider && <span className="truncate">{n.provider}</span>}
+                        {n.lifecycle_state && n.lifecycle_state !== n.provider && (
+                          <span className="rounded-full border border-border/30 px-1.5 py-px">
+                            {n.lifecycle_state}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </li>
