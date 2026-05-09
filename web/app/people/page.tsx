@@ -102,6 +102,13 @@ function initialFor(name: string, fallback: string): string {
   return c ? c.toUpperCase() : fallback;
 }
 
+// When a section has dozens of items (the Works section in particular
+// is dominated by 170+ audiobook nodes), the alphabetic flood drowns
+// the rest of the directory. Cap the default render so each section
+// stays scannable; the section header already links to ?kind={key}
+// for the full list, and that filtered view shows everything.
+const PREVIEW_PER_SECTION = 16;
+
 export default async function PeopleIndexPage({
   searchParams,
 }: {
@@ -170,6 +177,14 @@ export default async function PeopleIndexPage({
         const linkHref = isCurrentlyFiltered
           ? "/people"
           : `/people?kind=${encodeURIComponent(section.key)}`;
+        // Default view caps each section at PREVIEW_PER_SECTION so a
+        // long catalog (Works has 170+ audiobook nodes) doesn't bury
+        // the smaller sections. When a kind-filter is active, the
+        // visitor asked for the full list — show everything.
+        const visibleItems = isCurrentlyFiltered
+          ? items
+          : items.slice(0, PREVIEW_PER_SECTION);
+        const hiddenCount = items.length - visibleItems.length;
         return (
           <section key={section.key} className="space-y-4">
             <div>
@@ -194,7 +209,7 @@ export default async function PeopleIndexPage({
               </p>
             </div>
             <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {items.map((n) => (
+              {visibleItems.map((n) => (
                 <li key={n.id}>
                   <Link
                     href={presenceHref(n)}
@@ -226,6 +241,14 @@ export default async function PeopleIndexPage({
                 </li>
               ))}
             </ul>
+            {hiddenCount > 0 && (
+              <Link
+                href={linkHref}
+                className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Show all {items.length} {section.title.toLowerCase()} →
+              </Link>
+            )}
           </section>
         );
       })}
