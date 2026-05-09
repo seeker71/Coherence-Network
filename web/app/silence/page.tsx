@@ -135,45 +135,128 @@ export default async function SilencePage() {
 
       <hr className="border-border/30 my-10" />
 
-      {NOTEBOOK_PAGES.map((p) => (
-        <section key={p.slug} className="my-14 scroll-mt-16" id={p.slug}>
-          <h2 className="text-xl font-medium tracking-tight mb-4">
-            <span className="text-muted-foreground/60 font-mono mr-3">
-              {String(p.n).padStart(2, "0")}
-            </span>
-            {t(`silence.notebook.${p.slug}.title`)}
-          </h2>
-          <div className="not-prose my-6 mx-auto max-w-2xl rounded-2xl border border-border/30 overflow-hidden bg-stone-950 shadow-xl">
-            <Link
-              href={`/silence/${p.slug}`}
-              aria-label={`${t("silence.openLabel")} ${t(`silence.notebook.${p.slug}.title`)}`}
+      {NOTEBOOK_PAGES.map((p) => {
+        // Pages 4 (bloom-live) and 5 (breath) sat as one open spread in the
+        // notebook. Render them under a single stitched image at the bloom-live
+        // slot, and skip breath since it's already inside the spread.
+        if (p.slug === "breath") return null;
+
+        if (p.slug === "bloom-live") {
+          const breath = NOTEBOOK_PAGES.find((x) => x.slug === "breath")!;
+          return (
+            <section
+              key="bloom-live-breath-spread"
+              className="my-14 scroll-mt-16"
+              id="bloom-live-breath-spread"
             >
-              <Image
-                src={p.image}
-                alt={t(`silence.notebook.${p.slug}.alt`)}
-                width={4000}
-                height={2252}
-                className="w-full h-auto"
-                sizes="(max-width: 768px) 100vw, 768px"
-              />
-            </Link>
-          </div>
-          <div className="space-y-4 text-stone-300 leading-relaxed">
-            <MarkdownProse text={t(`silence.notebook.${p.slug}.body`)} />
-            <p className="rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 italic">
-              <ProseLine text={t(`silence.notebook.${p.slug}.held`)} />
-            </p>
-            <p className="not-prose text-xs">
+              <h2 className="text-xl font-medium tracking-tight mb-4">
+                <span className="text-muted-foreground/60 font-mono mr-3">
+                  {String(p.n).padStart(2, "0")} · {String(breath.n).padStart(2, "0")}
+                </span>
+                {t("silence.spread.heading")}
+              </h2>
+              <div className="not-prose my-6 mx-auto max-w-3xl rounded-2xl border border-border/30 overflow-hidden bg-stone-950 shadow-xl">
+                <Image
+                  src="/silence/2026-05-04-brahmavihara/sheet-spread.jpg"
+                  alt={t("silence.spread.alt")}
+                  width={8024}
+                  height={2252}
+                  className="w-full h-auto"
+                  sizes="(max-width: 768px) 100vw, 1024px"
+                />
+              </div>
+
+              <div
+                id="breath"
+                className="space-y-4 text-stone-300 leading-relaxed mt-8 scroll-mt-16"
+              >
+                <h3 className="text-lg font-medium tracking-tight">
+                  <span className="text-muted-foreground/60 font-mono mr-3">
+                    {String(breath.n).padStart(2, "0")}
+                  </span>
+                  {t("silence.notebook.breath.title")}
+                </h3>
+                <MarkdownProse text={t("silence.notebook.breath.body")} />
+                <p className="rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 italic">
+                  <ProseLine text={t("silence.notebook.breath.held")} />
+                </p>
+                <p className="not-prose text-xs">
+                  <Link
+                    href="/silence/breath"
+                    className="text-amber-500/80 hover:text-amber-400"
+                  >
+                    {t("silence.holdOnItsOwn")}
+                  </Link>
+                </p>
+              </div>
+
+              <div
+                id="bloom-live"
+                className="space-y-4 text-stone-300 leading-relaxed mt-10 scroll-mt-16"
+              >
+                <h3 className="text-lg font-medium tracking-tight">
+                  <span className="text-muted-foreground/60 font-mono mr-3">
+                    {String(p.n).padStart(2, "0")}
+                  </span>
+                  {t("silence.notebook.bloom-live.title")}
+                </h3>
+                <MarkdownProse text={t("silence.notebook.bloom-live.body")} />
+                <p className="rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 italic">
+                  <ProseLine text={t("silence.notebook.bloom-live.held")} />
+                </p>
+                <p className="not-prose text-xs">
+                  <Link
+                    href="/silence/bloom-live"
+                    className="text-amber-500/80 hover:text-amber-400"
+                  >
+                    {t("silence.holdOnItsOwn")}
+                  </Link>
+                </p>
+              </div>
+            </section>
+          );
+        }
+
+        return (
+          <section key={p.slug} className="my-14 scroll-mt-16" id={p.slug}>
+            <h2 className="text-xl font-medium tracking-tight mb-4">
+              <span className="text-muted-foreground/60 font-mono mr-3">
+                {String(p.n).padStart(2, "0")}
+              </span>
+              {t(`silence.notebook.${p.slug}.title`)}
+            </h2>
+            <div className="not-prose my-6 mx-auto max-w-2xl rounded-2xl border border-border/30 overflow-hidden bg-stone-950 shadow-xl">
               <Link
                 href={`/silence/${p.slug}`}
-                className="text-amber-500/80 hover:text-amber-400"
+                aria-label={`${t("silence.openLabel")} ${t(`silence.notebook.${p.slug}.title`)}`}
               >
-                {t("silence.holdOnItsOwn")}
+                <Image
+                  src={p.image}
+                  alt={t(`silence.notebook.${p.slug}.alt`)}
+                  width={4000}
+                  height={2252}
+                  className="w-full h-auto"
+                  sizes="(max-width: 768px) 100vw, 768px"
+                />
               </Link>
-            </p>
-          </div>
-        </section>
-      ))}
+            </div>
+            <div className="space-y-4 text-stone-300 leading-relaxed">
+              <MarkdownProse text={t(`silence.notebook.${p.slug}.body`)} />
+              <p className="rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 italic">
+                <ProseLine text={t(`silence.notebook.${p.slug}.held`)} />
+              </p>
+              <p className="not-prose text-xs">
+                <Link
+                  href={`/silence/${p.slug}`}
+                  className="text-amber-500/80 hover:text-amber-400"
+                >
+                  {t("silence.holdOnItsOwn")}
+                </Link>
+              </p>
+            </div>
+          </section>
+        );
+      })}
 
       <hr className="border-border/30 my-10" />
 
