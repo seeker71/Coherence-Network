@@ -13,6 +13,11 @@ type IdeaDsssSpecBuilderProps = {
   estimatedCost: number;
   openQuestions: string[];
   existingSpecIds: string[];
+  // The name the visitor was welcomed under (read server-side from the
+  // coh_contributor_name cookie). null when no welcome has happened yet —
+  // the action area then guides toward /welcome instead of offering buttons
+  // that would 401 without an attached identity.
+  contributorName: string | null;
 };
 
 type DsssMode = "single" | "set";
@@ -164,7 +169,9 @@ export default function IdeaDsssSpecBuilder({
   estimatedCost,
   openQuestions,
   existingSpecIds,
+  contributorName,
 }: IdeaDsssSpecBuilderProps) {
+  const isWelcomed = Boolean(contributorName);
   const [mode, setMode] = useState<DsssMode>(existingSpecIds.length === 0 ? "set" : "single");
   const [createState, setCreateState] = useState<CreateState>("idle");
   const [busyKey, setBusyKey] = useState("");
@@ -377,15 +384,30 @@ export default function IdeaDsssSpecBuilder({
         <Button type="button" variant={mode === "set" ? "default" : "outline"} onClick={() => applyMode("set")}>
           Split into smaller plans
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void createAllSpecs()}
-          disabled={createState === "saving" || allSuggestedKnown}
-        >
-          {createState === "saving" && busyKey === "all" ? "Creating plans..." : "Create all plans"}
-        </Button>
+        {isWelcomed ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void createAllSpecs()}
+            disabled={createState === "saving" || allSuggestedKnown}
+          >
+            {createState === "saving" && busyKey === "all" ? "Creating plans..." : "Create all plans"}
+          </Button>
+        ) : null}
       </div>
+
+      {isWelcomed ? null : (
+        <div className="rounded border border-amber-300/50 bg-amber-50/40 p-4 text-sm dark:border-amber-700/30 dark:bg-amber-950/10">
+          <p className="font-medium">Plans you place here carry the name you choose.</p>
+          <p className="mt-1 text-muted-foreground">
+            You can shape the preview below now. To place a plan, first be welcomed:{" "}
+            <Link href="/welcome" className="underline hover:text-foreground">
+              choose a name
+            </Link>
+            . You will return here, and the plans will carry your name.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-3">
         {suggestedSpecs.map((draft) => {
@@ -404,16 +426,22 @@ export default function IdeaDsssSpecBuilder({
                     <Link href={`/specs/${encodeURIComponent(draft.specId)}`} className="underline hover:text-foreground">
                       Open plan
                     </Link>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => void startWorkFromPlan(draft)}
-                      disabled={startState === "saving"}
-                    >
-                      {startState === "saving" && startBusyKey === draft.specId ? "Creating work card..." : "Start first work step"}
-                    </Button>
+                    {isWelcomed ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void startWorkFromPlan(draft)}
+                        disabled={startState === "saving"}
+                      >
+                        {startState === "saving" && startBusyKey === draft.specId ? "Creating work card..." : "Start first work step"}
+                      </Button>
+                    ) : (
+                      <Link href="/welcome" className="underline hover:text-foreground">
+                        Be welcomed to start work from this plan
+                      </Link>
+                    )}
                   </>
-                ) : (
+                ) : isWelcomed ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -422,6 +450,10 @@ export default function IdeaDsssSpecBuilder({
                   >
                     {createState === "saving" && busyKey === draft.specId ? "Creating..." : "Create plan"}
                   </Button>
+                ) : (
+                  <Link href="/welcome" className="underline hover:text-foreground">
+                    Be welcomed to place this plan
+                  </Link>
                 )}
                 <span className="text-muted-foreground">
                   Expected impact {draft.potentialValue.toFixed(1)} | Work size {draft.estimatedCost.toFixed(1)}
