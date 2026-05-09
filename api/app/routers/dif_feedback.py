@@ -36,9 +36,13 @@ async def dif_stats():
 
 
 @router.get("/dif/recent", summary="Recent DIF verification entries with scores and outcomes")
-async def dif_recent(limit: int = Query(default=20, ge=1, le=100)):
+async def dif_recent(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, description="Number of items to skip"),
+) -> dict:
     """Recent DIF verification entries with scores and outcomes."""
-    return dif_feedback_service.get_recent(limit=limit)
+    items, total = dif_feedback_service.get_recent_page(limit=limit, offset=offset)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.post("/dif/record", status_code=201, summary="Record a DIF verification result for accuracy tracking")

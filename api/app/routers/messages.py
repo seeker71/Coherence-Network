@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.middleware.auth import require_api_key
 from app.models.message import InboxResponse, Message, MessageCreate
+from app.models.pagination import PaginatedResponse
 from app.services import message_service
 
 router = APIRouter()
@@ -72,19 +73,22 @@ async def get_inbox(
     )
 
 
-@router.get("/messages/thread/{contributor_a}/{contributor_b}", response_model=list[Message], summary="Get the message thread between two contributors")
+@router.get("/messages/thread/{contributor_a}/{contributor_b}", response_model=PaginatedResponse[Message], summary="Get the message thread between two contributors")
 async def get_thread(
     contributor_a: str,
     contributor_b: str,
     limit: int = Query(50, ge=1, le=200),
-) -> list[Message]:
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
+) -> PaginatedResponse[Message]:
     """Get the message thread between two contributors."""
-    messages = message_service.get_thread(
+    messages, total = message_service.get_thread_page(
         contributor_a,
         contributor_b,
         limit=limit,
+        offset=offset,
     )
-    return [Message(**m) for m in messages]
+    items = [Message(**m) for m in messages]
+    return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.patch("/messages/{message_id}/read", response_model=Message, summary="Mark a message as read")

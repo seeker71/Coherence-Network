@@ -293,13 +293,15 @@ async def list_ideas_showcase() -> IdeaShowcaseResponse:
 async def get_resonance(
     window_hours: int = Query(24, ge=1, le=720),
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     lang: str | None = Query(None, description="Target language view — when set, idea names come from canonical views for that lang where available."),
-) -> list[dict]:
+) -> dict:
     """Return ideas with recent activity, sorted by most-recent-activity-first."""
     from app.services import translator_service
     from app.services import translation_cache_service as _tcache
+    from app.services.idea_views import get_resonance_feed_page
 
-    items = idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+    items, total = get_resonance_feed_page(window_hours=window_hours, limit=limit, offset=offset)
     if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
         for it in items:
             iid = it.get("idea_id") or it.get("id")
@@ -323,7 +325,7 @@ async def get_resonance(
                     it["name"] = t_title
                 if t_desc and "description" in it:
                     it["description"] = t_desc
-    return items
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse, summary="Return conceptually related ideas, preferring matches from different domains")

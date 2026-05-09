@@ -55,7 +55,8 @@ async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : data.ideas || [];
+    if (Array.isArray(data)) return data;
+    return data.items ?? data.ideas ?? [];
   } catch {
     return [];
   }

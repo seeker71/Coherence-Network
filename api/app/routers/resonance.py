@@ -249,13 +249,15 @@ async def get_resonance_proof() -> ResonanceProofOut:
 @router.get("/resonance/events", summary="Return the resonance discovery event log (most recent first)")
 async def get_resonance_events(
     limit: int = Query(50, ge=1, le=200),
-) -> list[dict]:
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
+) -> dict:
     """Return the resonance discovery event log (most recent first).
 
     Each event records when two ideas were first found to resonate structurally.
     This log is the primary evidence that the CRK is surfacing real connections.
     """
-    return resonance_svc.get_event_log(limit=limit)
+    items, total = resonance_svc.get_event_log_page(limit=limit, offset=offset)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.post("/resonance/scan", response_model=ScanResult, summary="Trigger a full cross-domain resonance scan of the idea portfolio")

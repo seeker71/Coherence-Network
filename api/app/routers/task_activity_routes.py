@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.services.task_activity_service import (
     get_active_tasks,
-    get_activity,
+    get_activity_page,
     get_task_stream,
     log_activity,
 )
@@ -31,11 +31,13 @@ class ActivityEvent(BaseModel):
 @router.get("/tasks/activity", summary="Recent activity across all tasks")
 async def recent_activity(
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     task_id: str | None = Query(None),
     node_id: str | None = Query(None),
-) -> list[dict]:
+) -> dict:
     """Recent activity across all tasks."""
-    return get_activity(limit=limit, task_id=task_id, node_id=node_id)
+    items, total = get_activity_page(limit=limit, offset=offset, task_id=task_id, node_id=node_id)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/tasks/active", summary="Currently executing tasks across all nodes")
