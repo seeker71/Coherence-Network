@@ -136,32 +136,32 @@ export default async function SilencePage() {
       <hr className="border-border/30 my-10" />
 
       {NOTEBOOK_PAGES.map((p) => {
-        // Pages 5 (breath) and 6 (organic-intelligence) sat as one open
-        // spread in the notebook — the word "Water" arches across the
-        // binding. Render them under a single stitched image at the breath
-        // slot, and skip organic-intelligence since it's already inside.
-        if (p.slug === "organic-intelligence") return null;
+        // Pages 4 (bloom-live) and 5 (breath) sat as one open spread in the
+        // notebook — the word "Water" arches across the binding. Render them
+        // under a single stitched image at the breath slot, and skip
+        // bloom-live since it's already inside.
+        if (p.slug === "bloom-live") return null;
 
         if (p.slug === "breath") {
-          const oi = NOTEBOOK_PAGES.find((x) => x.slug === "organic-intelligence")!;
+          const bloom = NOTEBOOK_PAGES.find((x) => x.slug === "bloom-live")!;
           return (
             <section
-              key="breath-organic-intelligence-spread"
+              key="breath-bloom-live-spread"
               className="my-14 scroll-mt-16"
-              id="breath-organic-intelligence-spread"
+              id="breath-bloom-live-spread"
             >
               <h2 className="text-xl font-medium tracking-tight mb-4">
                 <span className="text-muted-foreground/60 font-mono mr-3">
-                  {String(p.n).padStart(2, "0")} · {String(oi.n).padStart(2, "0")}
+                  {String(bloom.n).padStart(2, "0")} · {String(p.n).padStart(2, "0")}
                 </span>
                 {t("silence.spread.heading")}
               </h2>
               <div className="not-prose my-6 mx-auto max-w-3xl rounded-2xl border border-border/30 overflow-hidden bg-stone-950 shadow-xl">
                 <Image
-                  src="/silence/2026-05-04-brahmavihara/spread-pages-5-6.jpg"
+                  src="/silence/2026-05-04-brahmavihara/sheet-spread.jpg"
                   alt={t("silence.spread.alt")}
-                  width={8000}
-                  height={2252}
+                  width={6767}
+                  height={2234}
                   className="w-full h-auto"
                   sizes="(max-width: 768px) 100vw, 1024px"
                 />
@@ -192,22 +192,22 @@ export default async function SilencePage() {
               </div>
 
               <div
-                id="organic-intelligence"
+                id="bloom-live"
                 className="space-y-4 text-stone-300 leading-relaxed mt-10 scroll-mt-16"
               >
                 <h3 className="text-lg font-medium tracking-tight">
                   <span className="text-muted-foreground/60 font-mono mr-3">
-                    {String(oi.n).padStart(2, "0")}
+                    {String(bloom.n).padStart(2, "0")}
                   </span>
-                  {t("silence.notebook.organic-intelligence.title")}
+                  {t("silence.notebook.bloom-live.title")}
                 </h3>
-                <MarkdownProse text={t("silence.notebook.organic-intelligence.body")} />
+                <MarkdownProse text={t("silence.notebook.bloom-live.body")} />
                 <p className="rounded-md border-l-2 border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm text-stone-300 italic">
-                  <ProseLine text={t("silence.notebook.organic-intelligence.held")} />
+                  <ProseLine text={t("silence.notebook.bloom-live.held")} />
                 </p>
                 <p className="not-prose text-xs">
                   <Link
-                    href="/silence/organic-intelligence"
+                    href="/silence/bloom-live"
                     className="text-amber-500/80 hover:text-amber-400"
                   >
                     {t("silence.holdOnItsOwn")}
