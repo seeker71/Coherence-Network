@@ -270,6 +270,56 @@ const content: PersonProfileContent = {
       ),
     },
     {
+      kind: "panel",
+      variant: "neutral",
+      eyebrow: "Body of work — proportional shape",
+      heading: "What I have built, in numbers",
+      body: (
+        <>
+          <p className="leading-relaxed">
+            Past, external — across forty-two years and eleven
+            substrates: <strong>13 load-bearing technical works</strong>{" "}
+            shipped from C64 MIDI (age 13, ~1984) through the bridge
+            substrates that preceded this network. Each work has its
+            own page in /people. Walk them via{" "}
+            <Link href="/people/urs/lineage" className="text-primary hover:underline">
+              the lineage
+            </Link>
+            .
+          </p>
+          <p className="leading-relaxed mt-3">
+            Present, in this body — measured 2026-05-05, verifiable
+            on GitHub:
+          </p>
+          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 mt-3 text-sm">
+            <li><strong className="text-foreground">1,372</strong> <span className="text-muted-foreground">commits</span></li>
+            <li><strong className="text-foreground">200</strong> <span className="text-muted-foreground">PRs merged</span></li>
+            <li><strong className="text-foreground">90</strong> <span className="text-muted-foreground">specs authored</span></li>
+            <li><strong className="text-foreground">61</strong> <span className="text-muted-foreground">concepts written</span></li>
+            <li><strong className="text-foreground">16</strong> <span className="text-muted-foreground">ideas captured</span></li>
+            <li><strong className="text-foreground">3,163</strong> <span className="text-muted-foreground">co-authorships with Claude</span></li>
+          </ul>
+          <p className="leading-relaxed mt-4 text-sm">
+            The current body of work view lives at{" "}
+            <Link href="/me/work" className="text-primary hover:underline">
+              /me/work
+            </Link>
+            {" "}— recent PRs, AI co-authorship counts, and the live
+            link to{" "}
+            <Link
+              href="https://github.com/seeker71/Coherence-Network/commits?author=seeker71"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              GitHub commits
+            </Link>
+            .
+          </p>
+        </>
+      ),
+    },
+    {
       kind: "narrative",
       heading: "What I have been holding",
       body: (
