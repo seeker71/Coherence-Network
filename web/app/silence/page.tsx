@@ -137,21 +137,22 @@ export default async function SilencePage() {
 
       {NOTEBOOK_PAGES.map((p) => {
         // Pages 4 (bloom-live) and 5 (breath) sat as one open spread in the
-        // notebook. Render them under a single stitched image at the bloom-live
-        // slot, and skip breath since it's already inside the spread.
-        if (p.slug === "breath") return null;
+        // notebook — the word "Water" arches across the binding. Render them
+        // under a single stitched image at the breath slot, and skip
+        // bloom-live since it's already inside.
+        if (p.slug === "bloom-live") return null;
 
-        if (p.slug === "bloom-live") {
-          const breath = NOTEBOOK_PAGES.find((x) => x.slug === "breath")!;
+        if (p.slug === "breath") {
+          const bloom = NOTEBOOK_PAGES.find((x) => x.slug === "bloom-live")!;
           return (
             <section
-              key="bloom-live-breath-spread"
+              key="breath-bloom-live-spread"
               className="my-14 scroll-mt-16"
-              id="bloom-live-breath-spread"
+              id="breath-bloom-live-spread"
             >
               <h2 className="text-xl font-medium tracking-tight mb-4">
                 <span className="text-muted-foreground/60 font-mono mr-3">
-                  {String(p.n).padStart(2, "0")} · {String(breath.n).padStart(2, "0")}
+                  {String(bloom.n).padStart(2, "0")} · {String(p.n).padStart(2, "0")}
                 </span>
                 {t("silence.spread.heading")}
               </h2>
@@ -159,8 +160,8 @@ export default async function SilencePage() {
                 <Image
                   src="/silence/2026-05-04-brahmavihara/sheet-spread.jpg"
                   alt={t("silence.spread.alt")}
-                  width={8024}
-                  height={2252}
+                  width={6767}
+                  height={2234}
                   className="w-full h-auto"
                   sizes="(max-width: 768px) 100vw, 1024px"
                 />
@@ -172,7 +173,7 @@ export default async function SilencePage() {
               >
                 <h3 className="text-lg font-medium tracking-tight">
                   <span className="text-muted-foreground/60 font-mono mr-3">
-                    {String(breath.n).padStart(2, "0")}
+                    {String(p.n).padStart(2, "0")}
                   </span>
                   {t("silence.notebook.breath.title")}
                 </h3>
@@ -196,7 +197,7 @@ export default async function SilencePage() {
               >
                 <h3 className="text-lg font-medium tracking-tight">
                   <span className="text-muted-foreground/60 font-mono mr-3">
-                    {String(p.n).padStart(2, "0")}
+                    {String(bloom.n).padStart(2, "0")}
                   </span>
                   {t("silence.notebook.bloom-live.title")}
                 </h3>
