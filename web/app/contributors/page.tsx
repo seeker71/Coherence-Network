@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 import { useLiveRefresh } from "@/lib/live_refresh";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
@@ -120,29 +121,31 @@ function ContributorsPageContent() {
   const loadRows = useCallback(async () => {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
-    try {
-      const [contributorsRes, flowRes] = await Promise.all([
-        fetch(`${API_URL}/api/contributors`, { cache: "no-store" }),
-        fetch(`${API_URL}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
-      ]);
-      if (!contributorsRes.ok) {
-        const body = await contributorsRes.text();
-        throw new Error(`contributors HTTP ${contributorsRes.status}: ${body.slice(0, 200)}`);
-      }
-      if (!flowRes.ok) {
-        const body = await flowRes.text();
-        throw new Error(`flow HTTP ${flowRes.status}: ${body.slice(0, 200)}`);
-      }
-      const contributorsJson = await contributorsRes.json();
-      const flowJson = (await flowRes.json()) as FlowResponse;
-      const contributorData = contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : []);
-      setRows(contributorData);
-      setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
-      setStatus("ok");
-    } catch (e) {
+    const [contributorsJson, flowJson] = await Promise.all([
+      fetchJsonOrNull<{ items?: Contributor[] } | Contributor[]>(
+        `${API_URL}/api/contributors`,
+        { cache: "no-store" },
+        8000,
+        3,
+      ),
+      fetchJsonOrNull<FlowResponse>(
+        `${API_URL}/api/inventory/flow?runtime_window_seconds=86400`,
+        { cache: "no-store" },
+        20000,
+        3,
+      ),
+    ]);
+    if (contributorsJson === null && flowJson === null) {
       setStatus("error");
-      setError(String(e));
+      setError("api unreachable");
+      return;
     }
+    const contributorData = Array.isArray(contributorsJson)
+      ? contributorsJson
+      : contributorsJson?.items ?? [];
+    setRows(contributorData);
+    setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
+    setStatus("ok");
   }, []);
 
   useLiveRefresh(loadRows);
