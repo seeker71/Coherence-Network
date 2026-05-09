@@ -21,6 +21,7 @@ import type { LocaleCode } from "@/lib/locales";
 import { TemplateInfluenceWeb } from "./TemplateInfluenceWeb";
 import { LineageStrip } from "./LineageStrip";
 import { AttentionPresence } from "./AttentionPresence";
+import { InfluenceLineageStrip } from "./InfluenceLineageStrip";
 
 export type PersonProfileFact = {
   label: ReactNode;
@@ -180,6 +181,14 @@ export function PersonProfileTemplate({
             <AttentionPresence assetId={graphSlug} />
           </div>
         )}
+
+        {/* Influence lineage — surfaces the cross-layer edges from
+            /api/graph/nodes/{slug}/edges so a visitor lands on a work
+            and immediately sees what shaped it, what grew out of it,
+            and which cells contributed. The graph holds these edges;
+            this strip puts them one click from the top of the page
+            instead of buried in BodyOfEvidence below. */}
+        <InfluenceLineageStrip slug={graphSlug} />
 
         {/* Source-language disclosure — when the visitor's locale is
             not English but the content module bound to this page is
