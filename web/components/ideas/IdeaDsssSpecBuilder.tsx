@@ -86,7 +86,9 @@ function buildDsssGuide(
   };
 }
 
-function buildSuggestedSpecs(props: IdeaDsssSpecBuilderProps, mode: DsssMode): SuggestedSpecDraft[] {
+type SuggestedSpecsInput = Omit<IdeaDsssSpecBuilderProps, "contributorName">;
+
+function buildSuggestedSpecs(props: SuggestedSpecsInput, mode: DsssMode): SuggestedSpecDraft[] {
   const cleanDescription =
     clipText(props.description, 220) || `${props.ideaName} needs a clear first release shape that people can understand quickly.`;
   const question = primaryQuestion(props.openQuestions);
