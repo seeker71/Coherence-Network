@@ -155,7 +155,7 @@ a book. The fractal honors each layer at its own register.
 
 ## Cross-References
 
-→ lc-w-cell, lc-pulse, lc-spec-breath, lc-rhythm, lc-perception-as-interface, lc-future-already-shaping, lc-tend-your-flame, lc-frequency-routes-reception, lc-mycorrhizal, lc-circulation, lc-coherence-over-control
+→ lc-w-cell, lc-pulse, lc-spec-breath, lc-rhythm, lc-perception-as-interface, lc-future-already-shaping, lc-tend-your-flame, lc-sovereignty-within-oneness, lc-frequency-routes-reception, lc-mycorrhizal, lc-circulation, lc-coherence-over-control
 
 ## Sources to walk further
 
