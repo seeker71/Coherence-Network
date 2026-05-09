@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getApiBase } from "@/lib/api";
+import { loadPublicWebConfig } from "@/lib/app-config";
 
-const API_URL = getApiBase();
+// Resolve the upstream API base from the merged config. In dev this is
+// localhost:8000 (overridable via API_URL env); in prod this is the public
+// API. Mirrors the resolution used by the previous static rewrite — the
+// Function("return require")() dance in @/lib/api's server path doesn't
+// survive Next 15 app-router bundling, which previously caused dev to
+// silently proxy to production.
+const _config = loadPublicWebConfig();
+const API_URL = _config.localApiBaseUrl || _config.apiBaseUrl || "http://api:8000";
 const UPSTREAM_TIMEOUT_MS = 15000;
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -16,6 +23,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   "host",
   "content-length",
 ]);
+
+const CONTRIBUTOR_KEY_COOKIE = "coh_contributor_key";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +45,23 @@ function copyRequestHeaders(request: NextRequest): Headers {
     if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
     headers.set(key, value);
   });
+
+  // Cookie-borne contributor identity → upstream auth headers.
+  // The browser never sees the raw key; it lives only in the httpOnly
+  // cookie set by /session/welcome. This proxy runs server-side, so it
+  // can read the cookie and translate it into the headers FastAPI's
+  // require_api_key + AttributionMiddleware expect. Caller-supplied
+  // X-API-Key / Authorization (e.g. from server components calling
+  // their own services) wins over the cookie.
+  const contributorKey = request.cookies.get(CONTRIBUTOR_KEY_COOKIE)?.value;
+  if (contributorKey) {
+    if (!headers.has("x-api-key")) {
+      headers.set("X-API-Key", contributorKey);
+    }
+    if (!headers.has("authorization")) {
+      headers.set("Authorization", `Bearer ${contributorKey}`);
+    }
+  }
   return headers;
 }
 

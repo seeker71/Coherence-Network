@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 174
+**Total files**: 175
 
 | Route | File | Purpose |
 |---|---|---|
@@ -181,4 +181,5 @@
 | `/vision/realize` | [page.tsx](vision/realize/page.tsx) | _no top-of-file purpose_ |
 | `/vitality` | [page.tsx](vitality/page.tsx) | _no top-of-file purpose_ |
 | `/weave` | [page.tsx](weave/page.tsx) | _no top-of-file purpose_ |
+| `/welcome` | [page.tsx](welcome/page.tsx) | /welcome — the naming gesture. A visitor names themselves, the server |
 | `/with-us` | [page.tsx](with-us/page.tsx) | _no top-of-file purpose_ |
