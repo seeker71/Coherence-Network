@@ -31,19 +31,19 @@ Coherence Network maps the open source ecosystem as an intelligence graph. Tech 
 
 Spec → Test → Implement → CI → Review → Merge
 
-- Specs in `specs/`
-- Tests before implementation
-- Do NOT modify tests to make implementation pass
-- Only modify files listed in spec/issue
+- Specs live in `specs/`
+- Tests are written before or alongside implementation
+- Tests define the contract; mend the implementation when tests fail
+- Modify the files listed in the spec or issue
 
 ## Delivery Guide
 
-- User-defined deploy flow: when the user asks to deploy, use the shortest end-to-end path that still produces proof: prompt guide, rebase, local proof, evidence validation, push/PR, checks, merge, deploy, public verify.
-- Self-heal rule: do not stop for non-critical failures in this chain; repair the concrete failure, rerun the smallest proof command, and continue until the chain succeeds or you return the exact external blocker plus remediations already applied.
+- User-defined deploy flow: when the user asks to deploy, take the shortest end-to-end path that still produces proof: prompt guide, rebase, local proof, evidence validation, push/PR, checks, merge, deploy, public verify.
+- Self-heal rule: when a non-critical failure appears in the chain, repair the concrete failure, rerun the smallest proof command, and continue. Return the exact external blocker plus remediations already applied only when the chain genuinely cannot proceed.
 
 1. Worktree-only execution
-   - Never edit or run implementation commands in the primary workspace.
-   - Every task must start in a new git worktree under `~/.claude-worktrees/...`.
+   - Implementation runs in worktrees; the primary workspace stays read-only.
+   - Every task starts in a new git worktree under `~/.claude-worktrees/...`.
 2. Prompt entry guide
    - Run: `make prompt-guide` (`make prompt-gate` remains an alias for older automation).
    - Clean worktree: orient, confirm branch/worktree safety, and continue.
@@ -62,12 +62,12 @@ Spec → Test → Implement → CI → Review → Merge
    - Open PR immediately after push.
    - Monitor checks until green, or report blocker with failing check links and remediation command.
 6. Finish contract
-   - No partial/abandoned work. If incomplete, leave explicit blocking status and next exact command.
-   - Do not start a new task while previous task has unresolved blocking checks.
+   - Each task lands whole. When the work pauses incomplete, leave explicit blocking status and the next exact command.
+   - Hold the current task through its checks before opening the next one.
 
 ### Hard-Data Contract (Subscription + Routing Claims)
 
-- Do not claim provider limits, remaining quota, or routing behavior from assumptions or static docs alone.
+- Provider limits, remaining quota, and routing behavior are claimed from machine evidence, not from assumptions or static docs.
 - For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
   1. local fact report: `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py`
   2. live usage/readiness API snapshots:
@@ -77,14 +77,14 @@ Spec → Test → Implement → CI → Review → Merge
 - Required proof for routing claims:
   - include executor-policy evidence (`routing_policy_proof`) and route matrix (`route_decision_matrix`) from the fact report.
   - show at least one Cursor-routed case and one OpenClaw/Codex-routed case.
-- If a provider does not expose hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
+- When a provider exposes no hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
 
 ### 2-Tier Executor Contract (Cost/Speed Mode)
 
-- Use this mode for routine implementation/execution tasks unless the user explicitly asks for another approach.
+- This mode handles routine implementation/execution tasks; the user can call for another approach explicitly.
 - Default executor: `openai/gpt-4o-mini`.
-- Escalation executor: stronger model only on explicit failure conditions.
-- No escalation loops. Max 1 escalation per task.
+- Escalation executor: stronger model, used only on explicit failure conditions.
+- One escalation per task — escalation does not loop.
 - Max attempts: 2 on cheap executor, then optional single escalation attempt.
 
 ### Task Card Shape (required input format)
@@ -94,8 +94,8 @@ Spec → Test → Implement → CI → Review → Merge
 - `done_when`: 1-3 measurable checks
 - `commands`: exact commands to run
 - `constraints`: hard rules (for example: no tests unless listed, no extra files)
-- Keep command scope limited to this card and touched file snippets only.
-- Never send full docs unless the task explicitly depends on them.
+- Keep command scope to this card and the touched file snippets.
+- Send full docs only when the task explicitly depends on them.
 
 ### Budget and Output Rules
 
@@ -108,25 +108,25 @@ Spec → Test → Implement → CI → Review → Merge
 
 ### Prompt Contract (fixed)
 
-- Response format must be exactly: `PLAN`, `PATCH`, `RUN`, `RESULT`.
-- Reject non-conforming outputs and retry once with: `Format violation. Use required sections only.`
-- No explanations unless asked.
-- Do only requested edits. No extra refactors.
+- Response format is exactly: `PLAN`, `PATCH`, `RUN`, `RESULT`.
+- When output diverges from the format, retry once with: `Format violation. Use required sections only.`
+- Explanations stay out of the response unless asked.
+- Edits stay within what the task requested; refactors live in their own task.
 - Use `docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md` as the task-card starter.
 
 ### Deterministic Validation Loop
 
-- Run only `commands` from the task card.
+- Run the `commands` from the task card.
 - Compare command output directly against `done_when`.
-- If a command fails, collect exact stderr and retry once with a targeted fix.
-- If still failing and criteria match escalation conditions, run one escalation attempt.
+- When a command fails, collect exact stderr and retry once with a targeted fix.
+- When still failing and criteria match escalation conditions, run one escalation attempt.
 
 ### Proof Record
 
 - Store one JSON record per task for execution proof in `docs/system_audit/model_executor_runs.jsonl`.
 - Required fields: `model_used`, `input_tokens`, `output_tokens`, `attempts`, `commands_run`, `pass_fail`, `failure_reason`.
-- Escalation packet must stay under 200 tokens.
-- Exit only when all `done_when` checks pass and scope constraints hold.
+- Escalation packet stays under 200 tokens.
+- Exit when all `done_when` checks pass and scope constraints hold.
 
 ## Key Files
 
