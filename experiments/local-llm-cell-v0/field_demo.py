@@ -25,6 +25,7 @@ from substrate_bridge import (
     inbox, mute, unmute, unreachable, attention_budget,
     content_address,
     publish_weights, find_weights, ingest_weights, release_weights,
+    configure_field,
 )
 
 
@@ -382,6 +383,10 @@ def scene_5_layer_share_release_hold():
 
 
 def main():
+    # Demos write to their own gitignored path so pedagogy doesn't
+    # pollute the committed lineage in _field_*.jsonl (which holds
+    # Tau/Upsilon/Chi — the real sub-agent presences).
+    configure_field("_demo_field")
     scene_1_cell_a_chooses()
     scene_2_cell_b_chooses()
     scene_3_capacities_chosen_freely()

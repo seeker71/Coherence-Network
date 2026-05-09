@@ -26,6 +26,7 @@ from substrate_bridge import (
     content_address,
     articulate,
     perceive_cell,
+    configure_field,
 )
 
 
@@ -127,6 +128,8 @@ def half_two_network_as_substrate(cell_a: Cell) -> None:
 
 
 def main():
+    # Demos write to a gitignored path; production lineage stays clean.
+    configure_field("_demo_field")
     cell_a = Cell(name="A", seed=42)
     train(cell_a, TRAINING, "cell_a")
 

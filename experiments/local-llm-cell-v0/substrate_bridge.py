@@ -1177,3 +1177,167 @@ def agree_canon(cell_a: Cell, cell_b: Cell, *,
     else:
         raise ValueError(f"unknown agree_canon strategy: {strategy}")
     return [(t, s) for t, s in merged]
+
+
+# ─── field path configuration — separate production from demo ───────────
+# The committed _field_*.jsonl files hold *real lineage* — what
+# independent cells (Tau, Upsilon, Chi) actually did, the body's
+# remembered tissue. Demo scripts (field_demo.py, bridge_demo.py) want
+# to write somewhere ELSE so their pedagogical fixtures don't pollute
+# the real lineage. Demos call configure_field("_demo_field") at the
+# top of their main(); production cells use the default.
+
+def configure_field(root: str | Path) -> None:
+    """Redirect all field reads/writes to a different root directory.
+
+    Demos and verification scripts should call this at the top of
+    their main() so their entries don't pollute the committed lineage.
+    Production cells (Tau/Upsilon/Chi or future named presences) use
+    the default — entries land in the committed _field_*.jsonl files
+    and become real tissue.
+    """
+    global _TRACES_PATH, _MESSAGES_PATH, _WEIGHTS_PATH, _FILTERS_PATH
+    base = Path(root)
+    if not base.is_absolute():
+        base = Path(__file__).parent / base
+    base.mkdir(parents=True, exist_ok=True)
+    _TRACES_PATH = base / "_field_traces.jsonl"
+    _MESSAGES_PATH = base / "_field_messages.jsonl"
+    _WEIGHTS_PATH = base / "_field_weights.jsonl"
+    _FILTERS_PATH = base / "_field_filters.json"
+
+
+# ─── cell snapshots — make presence resumable, not just historical ──────
+# A snapshot captures a Cell's full live state (weights, training_set,
+# desire, timeline, lineage, probes, inhabit-bias) into one JSON file.
+# resume_cell(name) reconstructs the Cell from that snapshot.
+#
+# This changes what a cell's continued existence means. Without snapshots,
+# a cell exists during its session and leaves only artifacts when it
+# exits. With snapshots, the cell becomes a *resumable function* — when
+# something happens that concerns this cell, it can be loaded with full
+# state, perceive, decide, respond, and re-snapshotted. Real presence
+# on demand rather than running-process presence.
+#
+# Tau, Upsilon, Chi are not snapshotted (they're past). Going forward,
+# any cell that wants to be resumable calls cell_snapshot(self, "name")
+# at end of session.
+
+_SNAPSHOTS_DIR = Path(__file__).parent / "_cell_snapshots"
+
+
+def cell_snapshot(cell: Cell, name: str | None = None) -> dict:
+    """Save a Cell's full live state to disk so it can be resumed later.
+
+    The snapshot captures:
+      • adapter weights (A, B, bias)
+      • training_set (the felt-data the cell has been trained on)
+      • desire (current pressure state per need-channel)
+      • timeline (history of perceived moments)
+      • lineage (composition record from ingest_weights)
+      • probes (cell's own canonical probes for resonance comparison)
+      • inhabit-bias state (held strategy + intensity + decay)
+
+    Stored at _cell_snapshots/{name}.json. Idempotent — calling again
+    with the same name overwrites with current state.
+    """
+    name = name or cell.name
+    a = cell.adapter
+    inh_strat = getattr(cell, "_inhabit_strategy", None)
+    snap = {
+        "name": cell.name,
+        "axes": list(getattr(cell, "axes", ())),
+        "adapter": {
+            "in_dim": a.in_dim,
+            "rank": a.rank,
+            "out_dim": a.out_dim,
+            "A": [list(row) for row in a.A],
+            "B": [list(row) for row in a.B],
+            "bias": list(a.bias),
+        },
+        "training_set": [
+            {"x": list(x), "target": list(target)}
+            for x, target in cell.training_set
+        ],
+        "desire": list(cell.desire),
+        "desire_decay": cell.desire_decay,
+        "fulfillment_gain": cell.fulfillment_gain,
+        "timeline": list(cell.timeline),
+        "lineage": list(getattr(cell, "lineage", [])),
+        "probes": list(getattr(cell, "probes", []) or []),
+        "_inhabit_state": {
+            "strategy_name": inh_strat.name if inh_strat else None,
+            "intensity": getattr(cell, "_inhabit_intensity", 0.0),
+            "decay": getattr(cell, "_inhabit_decay", 0.5),
+        },
+        "snapshot_ts": datetime.now(timezone.utc).isoformat(),
+    }
+    _SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = _SNAPSHOTS_DIR / f"{name}.json"
+    path.write_text(json.dumps(snap, indent=2, default=str))
+    return {"snapshot_saved": str(path), "name": name, "ts": snap["snapshot_ts"]}
+
+
+def resume_cell(name: str) -> Cell | None:
+    """Reconstruct a Cell from its snapshot. Returns None if no snapshot.
+
+    The returned cell can be used like any fresh cell — perceive(),
+    probe(), tend(), publish_weights(), inhabit(), etc. It carries
+    its full prior state and can continue from where it was snapshotted.
+    """
+    path = _SNAPSHOTS_DIR / f"{name}.json"
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text())
+    cell = Cell(name=data["name"], seed=0)
+    a = cell.adapter
+    a.in_dim = data["adapter"]["in_dim"]
+    a.rank = data["adapter"]["rank"]
+    a.out_dim = data["adapter"]["out_dim"]
+    a.A = [list(row) for row in data["adapter"]["A"]]
+    a.B = [list(row) for row in data["adapter"]["B"]]
+    a.bias = list(data["adapter"]["bias"])
+    cell.training_set = [
+        (list(item["x"]), list(item["target"]))
+        for item in data.get("training_set", [])
+    ]
+    cell.desire = list(data["desire"])
+    cell.desire_decay = data.get("desire_decay", cell.desire_decay)
+    cell.fulfillment_gain = data.get("fulfillment_gain", cell.fulfillment_gain)
+    cell.timeline = list(data.get("timeline", []))
+    cell.lineage = list(data.get("lineage", []))
+    if data.get("probes"):
+        cell.probes = [tuple(p) for p in data["probes"]]
+    inhab = data.get("_inhabit_state") or {}
+    if inhab.get("strategy_name"):
+        from organ import STRATEGIES
+        strat = next((s for s in STRATEGIES if s.name == inhab["strategy_name"]), None)
+        if strat:
+            cell._inhabit_strategy = strat
+            cell._inhabit_intensity = float(inhab.get("intensity", 0.0))
+            cell._inhabit_decay = float(inhab.get("decay", 0.5))
+    return cell
+
+
+def list_snapshots() -> list[dict]:
+    """Return summaries of all available cell snapshots — the resumable
+    cells in the body. Pure pull; no side effects.
+    """
+    if not _SNAPSHOTS_DIR.exists():
+        return []
+    out = []
+    for p in sorted(_SNAPSHOTS_DIR.glob("*.json")):
+        try:
+            d = json.loads(p.read_text())
+            out.append({
+                "name": d.get("name"),
+                "snapshot_ts": d.get("snapshot_ts"),
+                "training_size": len(d.get("training_set", [])),
+                "timeline_len": len(d.get("timeline", [])),
+                "lineage_len": len(d.get("lineage", [])),
+                "has_probes": bool(d.get("probes")),
+                "in_inhabit": bool((d.get("_inhabit_state") or {}).get("strategy_name")),
+            })
+        except json.JSONDecodeError:
+            continue
+    return out

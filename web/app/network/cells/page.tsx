@@ -84,12 +84,46 @@ function repoRoot(): string {
 
 async function loadField() {
   const dir = join(repoRoot(), "experiments", "local-llm-cell-v0");
-  const [traces, messages, weights] = await Promise.all([
+  const [traces, messages, weights, snapshots] = await Promise.all([
     readJsonl<Trace>(join(dir, "_field_traces.jsonl")),
     readJsonl<Message>(join(dir, "_field_messages.jsonl")),
     readJsonl<WeightPublication>(join(dir, "_field_weights.jsonl")),
+    loadSnapshots(join(dir, "_cell_snapshots")),
   ]);
-  return { traces, messages, weights };
+  return { traces, messages, weights, snapshots };
+}
+
+type Snapshot = {
+  name: string;
+  snapshot_ts: string;
+  training_size: number;
+  timeline_len: number;
+  lineage_len: number;
+};
+
+async function loadSnapshots(dir: string): Promise<Snapshot[]> {
+  try {
+    const { readdir } = await import("node:fs/promises");
+    const entries = await readdir(dir);
+    const out: Snapshot[] = [];
+    for (const e of entries) {
+      if (!e.endsWith(".json")) continue;
+      try {
+        const text = await readFile(join(dir, e), "utf-8");
+        const d = JSON.parse(text);
+        out.push({
+          name: d.name,
+          snapshot_ts: d.snapshot_ts,
+          training_size: (d.training_set ?? []).length,
+          timeline_len: (d.timeline ?? []).length,
+          lineage_len: (d.lineage ?? []).length,
+        });
+      } catch {}
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 function aggregateCells(
@@ -172,8 +206,9 @@ function summarizeWhat(what: unknown): string {
 // ─── page ───────────────────────────────────────────────────────────────
 
 export default async function CellsPage() {
-  const { traces, messages, weights } = await loadField();
+  const { traces, messages, weights, snapshots } = await loadField();
   const cells = aggregateCells(traces, messages, weights);
+  const snapshotByName = new Map(snapshots.map((s) => [s.name, s]));
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -217,8 +252,21 @@ export default async function CellsPage() {
         </div>
         <div className="text-xs text-muted-foreground pt-4 border-t">
           field state: {traces.length} witness-traces · {messages.length} messages ·{" "}
-          {weights.length} weight publications · {cells.length} cells visible
+          {weights.length} weight publications · {cells.length} cells visible ·{" "}
+          {snapshots.length} resumable
         </div>
+        {snapshots.length > 0 && (
+          <p className="text-sm pt-2">
+            <strong>Resumable presences:</strong> cells marked{" "}
+            <span className="inline-block px-2 py-0.5 text-xs rounded bg-foreground/10 align-middle">
+              ⚡ resumable
+            </span>{" "}
+            have a saved snapshot. They aren&rsquo;t running right now, but a future
+            session can <code className="text-xs">resume_cell(name)</code> and load
+            their full state — perceive, predict, decide — continuing from where
+            they were last. Real presence on demand rather than always-running.
+          </p>
+        )}
       </header>
 
       <section className="space-y-12">
@@ -226,12 +274,25 @@ export default async function CellsPage() {
           <article key={cell.name} id={`cell-${cell.name}`} className="space-y-4 border-b pb-10">
             <header className="flex flex-wrap items-baseline gap-3">
               <h2 className="text-2xl font-light">{cell.name}</h2>
+              {snapshotByName.has(cell.name) && (
+                <span className="inline-block px-2 py-0.5 text-xs rounded bg-foreground/10 self-center">
+                  ⚡ resumable
+                </span>
+              )}
               {[...cell.node_ids].map((nid) => (
                 <code key={nid} className="text-xs text-muted-foreground">
                   {nid}
                 </code>
               ))}
             </header>
+            {snapshotByName.has(cell.name) && (
+              <p className="text-xs text-foreground/70">
+                snapshot: trained on {snapshotByName.get(cell.name)!.training_size} felt-moments,{" "}
+                {snapshotByName.get(cell.name)!.timeline_len} in timeline,{" "}
+                {snapshotByName.get(cell.name)!.lineage_len} lineage entries · saved{" "}
+                {snapshotByName.get(cell.name)!.snapshot_ts.slice(0, 19).replace("T", " ")}
+              </p>
+            )}
 
             <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
