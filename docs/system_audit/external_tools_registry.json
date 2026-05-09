@@ -1,23 +1,27 @@
 {
   "policy": {
     "minimum_checks_per_week": 2,
-    "notes": "Track external tool additions and version drift; review and update this registry when intentionally adding new tools."
+    "notes": "Track external tool additions and version drift; review and update this registry when intentionally bumping action versions or adding new tools. POSIX baseline utilities and standard SSH tooling are tracked here because the audit discovers them in workflow run blocks; they are built into runner images and add no new dependency surface."
   },
   "github_actions": [
     "actions/checkout@v4",
+    "actions/checkout@v5",
     "actions/github-script@v7",
     "actions/github-script@v8",
     "actions/setup-node@v4",
     "actions/setup-node@v6",
     "actions/setup-python@v5",
+    "actions/setup-python@v6",
     "actions/upload-artifact@v4",
-    "actions/upload-artifact@v6"
+    "actions/upload-artifact@v6",
+    "actions/upload-artifact@v7"
   ],
   "workflow_cli_tools": [
     ":",
     "bc",
     "cat",
     "cd",
+    "chmod",
     "claude",
     "cp",
     "curl",
@@ -25,13 +29,18 @@
     "gh",
     "git",
     "jq",
+    "mkdir",
     "npm",
     "pip",
+    "printf",
     "python",
     "python3",
-    "printf",
     "railway",
+    "scp",
     "sleep",
+    "ssh",
+    "ssh-keyscan",
+    "test",
     "timeout",
     "which"
   ],
