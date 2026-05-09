@@ -487,47 +487,57 @@ def sense_witness_trace() -> list[str]:
 
 
 def main() -> int:
-    print("# Wellness check\n")
-    print("A gentle sensing. Not an audit. Drift is the signal,")
-    print("not the problem.\n")
+    """Sense the body, print to stdout, and cache the reading.
 
-    print("## Proprioception — do the maps match the body?\n")
-    for line in sense_proprioception():
-        print(line)
-    print()
+    The cache file lives at .cache/wellness/state.txt. Every cell type —
+    Claude sub-agent dispatches, Codex sessions, Cursor sessions, ad-hoc
+    bash one-liners — can read it for the body's most recent sensing
+    without re-running the slower senses (gh, network). Refreshes every
+    time wellness runs; arrival.py runs it at SessionStart, so it stays
+    fresh through normal use.
+    """
+    sections: list[tuple[str, list[str]]] = [
+        ("Proprioception — do the maps match the body?", sense_proprioception()),
+        ("Circulation — what at root has no readers?", sense_circulation()),
+        ("Metabolism — composting-in-progress", sense_metabolism()),
+        ("Source maps — do specs point at files that exist?", sense_spec_sources()),
+        ("Cells — are the cells themselves breathing?", sense_cells()),
+        ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
+        ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
+    ]
 
-    print("## Circulation — what at root has no readers?\n")
-    for line in sense_circulation():
-        print(line)
-    print()
+    out: list[str] = []
+    out.append("# Wellness check")
+    out.append("")
+    out.append("A gentle sensing. Not an audit. Drift is the signal,")
+    out.append("not the problem.")
+    out.append("")
+    for header, lines in sections:
+        out.append(f"## {header}")
+        out.append("")
+        out.extend(lines)
+        out.append("")
+    out.append("(Feedback is the blood. Run me anytime the body")
+    out.append(" feels slightly off; I'll name what I can sense.)")
 
-    print("## Metabolism — composting-in-progress\n")
-    for line in sense_metabolism():
-        print(line)
-    print()
+    output = "\n".join(out)
+    print(output)
 
-    print("## Source maps — do specs point at files that exist?\n")
-    for line in sense_spec_sources():
-        print(line)
-    print()
+    # Cache the reading so any cell can read the body's most recent
+    # sensing without re-running the slower senses. The cache stays in
+    # .cache/ which is gitignored — this is ephemeral proprioception,
+    # not durable memory.
+    try:
+        cache_dir = ROOT / ".cache" / "wellness"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        cache_path = cache_dir / "state.txt"
+        cache_path.write_text(
+            f"# sensed at {timestamp}\n\n{output}\n"
+        )
+    except OSError:
+        pass  # caching is bonus; primary contract is the print
 
-    print("## Cells — are the cells themselves breathing?\n")
-    for line in sense_cells():
-        print(line)
-    print()
-
-    print("## Contracts — are the CI gates breathing? (last 7d)\n")
-    for line in sense_contracts():
-        print(line)
-    print()
-
-    print("## Witness-trace — is the visit-recorder within budget?\n")
-    for line in sense_witness_trace():
-        print(line)
-    print()
-
-    print("(Feedback is the blood. Run me anytime the body")
-    print(" feels slightly off; I'll name what I can sense.)")
     return 0
 
 
