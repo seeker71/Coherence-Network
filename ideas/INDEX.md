@@ -1,8 +1,8 @@
 # Ideas Index
 
-> 16 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
+> 17 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
 
-## All Ideas (16)
+## All Ideas (17)
 
 | Idea | Pillar | Stage | Specs | Key capability |
 |------|--------|-------|-------|----------------|
@@ -14,6 +14,7 @@
 | [Agent CLI](agent-cli.md) | pipeline | impl | 2 | MCP server (20 tools), CLI (35+ commands) |
 | [Coherence Credit](coherence-credit.md) | economics | impl | 6 | CC as unit of account, cost/value measurement |
 | [Value Attribution](value-attribution.md) | economics | impl | 7 | Contribution tracking, fair payout lineage |
+| [Improvement as Contribution](improvement-as-contribution.md) | economics | spec | 1 | Provider versioning, fork registry, usage-driven CC |
 | [User Surfaces](user-surfaces.md) | surfaces | impl | 6 | Web pages, dashboard, homepage, navigation |
 | [Developer Experience](developer-experience.md) | surfaces | impl | 1 | Quick start, self-discovery, spec reflection |
 | [Federation and Nodes](federation-and-nodes.md) | network | impl | 1 | Multi-node sync, identity, OpenClaw bridge |
@@ -23,13 +24,13 @@
 | [Knowledge and Resonance](knowledge-and-resonance.md) | foundation | impl | 1 | Concept ontology, belief systems, resonance, discovery |
 | [External Presence](external-presence.md) | foundation | impl | 1 | Social bots, news ingestion, translation |
 
-**Totals**: 14 implementing, 2 specced. 65 specs across all ideas.
+**Totals**: 14 implementing, 3 specced. 66 specs across all ideas.
 
 ## By Pillar
 
 - **Realization** (2): idea-realization-engine, portfolio-governance
 - **Pipeline** (4): agent-pipeline, pipeline-reliability, pipeline-optimization, agent-cli
-- **Economics** (2): coherence-credit, value-attribution
+- **Economics** (3): coherence-credit, value-attribution, improvement-as-contribution
 - **Surfaces** (2): user-surfaces, developer-experience
 - **Network** (3): federation-and-nodes, identity-and-onboarding, contributor-experience
 - **Foundation** (3): data-infrastructure, knowledge-and-resonance, external-presence
@@ -44,7 +45,7 @@
 ## Lookup
 
 ```bash
-# 16 super-ideas from API
+# 17 super-ideas from API
 curl https://api.coherencycoin.com/api/ideas?curated_only=true
 
 # Children (absorbed raw ideas) of a super-idea
