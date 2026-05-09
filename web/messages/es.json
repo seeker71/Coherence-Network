@@ -2039,6 +2039,41 @@
         "frequent": "frecuente",
         "founded": "fundado"
       }
+    },
+    "findThem": "Encuéntralos",
+    "atAGlance": "De un vistazo",
+    "category": "Categoría",
+    "home": "Hogar",
+    "works": "Obras",
+    "lineage": "Linaje",
+    "presenceMap": "Mapa de presencia",
+    "entryPoints": "Puntos de entrada",
+    "officialSource": "Fuente oficial",
+    "graphNode": "Nodo del grafo",
+    "heldOpen": "Mantenida abierta",
+    "heldOpenBody": "Esta página es una puerta mantenida abierta para {name}. No se pide nada; si eres tú, puedes tomar la página tal cual o enviar cambios — se aplicarán el mismo día.",
+    "thisIsMe": "esta soy yo",
+    "gatheringHeld": "Lo que sostuvo este encuentro",
+    "creationKind": {
+      "album": "álbum",
+      "track": "pista",
+      "video": "video",
+      "film": "película",
+      "event": "evento",
+      "book": "libro",
+      "teaching": "enseñanza",
+      "podcast": "podcast",
+      "episode": "episodio",
+      "essay": "ensayo",
+      "article": "artículo",
+      "course": "curso",
+      "workshop": "taller",
+      "work": "obra",
+      "software-system": "sistema de software",
+      "kernel-driver": "driver de kernel",
+      "hardware-firmware-software": "hardware · firmware · software",
+      "hardware-firmware-system": "hardware · firmware · sistema",
+      "thesis": "tesis"
     }
   }
 }

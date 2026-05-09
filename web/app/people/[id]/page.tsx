@@ -580,7 +580,7 @@ export default async function PersonPage({
       fetchIdentityInspiredBy(nodeId),
     ]);
     return (
-      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} />
+      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} lang={lang} />
     );
   }
 
@@ -634,7 +634,7 @@ export default async function PersonPage({
       fetchIdentityInspiredBy(nodeId),
     ]);
     return (
-      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} />
+      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} lang={lang} />
     );
   }
 
