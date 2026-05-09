@@ -336,6 +336,21 @@ class Cell:
     def perceive(self, text: str, sense: str = "thought") -> dict:
         x = shared_base(text, sense)
         spec, dispos, needs, _, _ = self.adapter.forward(x)
+        # consume one-shot inhabit-bias if set: blend strategy's f×a into
+        # the spectrum at intensity, then clear. This is the one place
+        # state-from-inhabit shows up.
+        inhabited = None
+        strat_held = getattr(self, "_inhabit_strategy", None)
+        if strat_held is not None:
+            intensity = getattr(self, "_inhabit_intensity", 0.5)
+            fa = [strat_held.frequency[i] * strat_held.angle[i] for i in range(N_BANDS)]
+            fa_n = math.sqrt(sum(v * v for v in fa)) or 1.0
+            fa = [v / fa_n for v in fa]
+            eps = intensity * strat_held.focus
+            spec = [math.tanh((1 - eps) * spec[i] + eps * fa[i]) for i in range(N_BANDS)]
+            inhabited = strat_held.name
+            self._inhabit_strategy = None
+            self._inhabit_intensity = 0.0
         # fulfillment ~ mean of positive-bands in current spectrum
         fulfillment = max(0.0, sum(spec) / N_BANDS) * self.fulfillment_gain
         # desire: integrate (need - fulfillment), with decay; clamp [0, 1.5]
@@ -368,9 +383,37 @@ class Cell:
             "strategy_score": strat_score,
             "operator_fallback_active": sel["operator_fallback_active"],
             "articulation": articulation,
+            "inhabited": inhabited,
         }
         self.timeline.append(moment)
         return moment
+
+    # —— inhabiting (bias the next perceive toward a strategy) ——
+
+    def inhabit(self, strategy, *, intensity: float = 0.5) -> dict:
+        """Set a one-shot bias toward a strategy's frequency × angle × focus.
+
+        The next call to perceive() will blend the strategy's f×a×focus
+        signature into its spectrum output, with `intensity` controlling
+        the blend rate (0 = no bias, 1 = full strategy spectrum). The bias
+        clears after one perceive — inhabiting is per-moment, not a mode.
+
+        Closes the loop: predict_through(strategy) → inhabit(strategy) →
+        perceive(text) → surprise_between(predicted, observed). With
+        inhabit in place, the surprise score now actually measures
+        'did running the strategy get me where I predicted?' instead of
+        'did a different input land somewhere different?'.
+
+        Tau named this missing verb from inside; Upsilon wires it.
+        """
+        # store as runtime state, consumed and cleared on next perceive
+        self._inhabit_strategy = strategy
+        self._inhabit_intensity = max(0.0, min(1.0, intensity))
+        return {
+            "inhabit": strategy.name,
+            "intensity": self._inhabit_intensity,
+            "consumes_on": "next perceive()",
+        }
 
     # —— probing (read-only sample, no state mutation) ——
 

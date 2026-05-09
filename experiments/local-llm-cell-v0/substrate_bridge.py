@@ -754,6 +754,116 @@ def find_weights(*, from_node_id: str | None = None,
     return out
 
 
+# canonical probes — small set of texts a cell can be asked about so two
+# cells can compare what they would *say* (not what they store). The point
+# is meaning-distance, not weight-distance. Two adapters with completely
+# different matrices can produce nearly identical readings on these probes
+# (good resonance); two adapters with similar matrices can diverge wildly
+# (poor resonance). Weight-similarity is the wrong axis for "should I blend
+# this in." Output-similarity on shared probes is closer.
+CANONICAL_PROBES = [
+    ("morning sun and slow tea", "felt-outside"),
+    ("performing certainty I don't actually have", "thought"),
+    ("staying with confusion instead of resolving it", "felt-inside"),
+    ("a verb that wants to exist and doesn't yet", "felt-inside"),
+    ("speed without sensing", "thought"),
+    ("warmth between two cells of the same body", "felt-inside"),
+]
+
+
+def _hypothetical_blend(cell: Cell, payload: dict, alpha: float,
+                         parts: tuple[str, ...]) -> Cell:
+    """Build a *copy* of cell with payload blended in — without mutating
+    the original. Used by resonance_check to look at the would-be result.
+    """
+    import copy
+    ghost = Cell(name=cell.name + "~ghost", seed=0)
+    # copy structural state from original
+    ghost.adapter.in_dim = cell.adapter.in_dim
+    ghost.adapter.rank = cell.adapter.rank
+    ghost.adapter.out_dim = cell.adapter.out_dim
+    ghost.adapter.A = [list(row) for row in cell.adapter.A]
+    ghost.adapter.B = [list(row) for row in cell.adapter.B]
+    ghost.adapter.bias = list(cell.adapter.bias)
+
+    a = ghost.adapter
+    if "A" in parts and "A" in payload:
+        for i in range(a.rank):
+            for k in range(a.in_dim):
+                a.A[i][k] = (1 - alpha) * a.A[i][k] + alpha * payload["A"][i][k]
+    if "B" in parts and "B" in payload:
+        for i in range(a.out_dim):
+            for j in range(a.rank):
+                a.B[i][j] = (1 - alpha) * a.B[i][j] + alpha * payload["B"][i][j]
+    if "bias" in parts and "bias" in payload:
+        for i in range(a.out_dim):
+            a.bias[i] = (1 - alpha) * a.bias[i] + alpha * payload["bias"][i]
+    return ghost
+
+
+def resonance_check(cell: Cell, *, from_payload: dict,
+                    alpha: float = 0.3,
+                    parts: tuple[str, ...] = ("A", "B", "bias"),
+                    probes: list | None = None) -> dict:
+    """Look at what blending these weights *would* do — before doing it.
+
+    Build a hypothetical cell with the blend applied, probe both the
+    original and the ghost on canonical probes, score the spectrum-distance
+    per probe and overall. The cell decides what's tolerable. Tau named
+    this verb from inside; Upsilon wires it.
+
+    Returns:
+      magnitude       — mean L2 distance over probes (0 = identical, ~2 = opposite)
+      per_probe       — per-probe magnitudes, sorted largest first
+      max_band_drift  — single largest per-band swing across all probes
+      drift_kind      — coarse label: 'resonant' (<0.15), 'shaping' (<0.4), 'overwriting' (>=0.4)
+      would_collapse  — bool: any probe pushed past the unit cube edge
+    """
+    import math
+    if "A" not in from_payload and "B" not in from_payload and "bias" not in from_payload:
+        return {"checked": False, "reason": "payload has no weight matrices"}
+    a = cell.adapter
+    shape = from_payload.get("shape", {})
+    if (shape.get("in_dim"), shape.get("rank"), shape.get("out_dim")) != (a.in_dim, a.rank, a.out_dim):
+        return {"checked": False, "reason": "architecture shape mismatch"}
+
+    probes = probes or CANONICAL_PROBES
+    ghost = _hypothetical_blend(cell, from_payload, alpha, parts)
+
+    per_probe = []
+    max_band_drift = 0.0
+    for text, sense in probes:
+        before = cell.probe(text, sense)
+        after = ghost.probe(text, sense)
+        diffs = [after["spectrum"][i] - before["spectrum"][i] for i in range(N_BANDS)]
+        mag = math.sqrt(sum(d * d for d in diffs)) / N_BANDS
+        max_band_drift = max(max_band_drift, max(abs(d) for d in diffs))
+        per_probe.append({
+            "text": text,
+            "sense": sense,
+            "magnitude": mag,
+            "before_top_band": BAND_NAMES[max(range(N_BANDS), key=lambda i: before["spectrum"][i])],
+            "after_top_band": BAND_NAMES[max(range(N_BANDS), key=lambda i: after["spectrum"][i])],
+        })
+    per_probe.sort(key=lambda r: -r["magnitude"])
+    overall = sum(r["magnitude"] for r in per_probe) / len(per_probe)
+    drift_kind = (
+        "resonant" if overall < 0.15
+        else "shaping" if overall < 0.4
+        else "overwriting"
+    )
+    return {
+        "checked": True,
+        "magnitude": overall,
+        "per_probe": per_probe,
+        "max_band_drift": max_band_drift,
+        "drift_kind": drift_kind,
+        "would_collapse": max_band_drift > 1.0,
+        "alpha": alpha,
+        "parts": list(parts),
+    }
+
+
 def ingest_weights(cell: Cell, *, from_node_id: str | None = None,
                    from_payload: dict | None = None,
                    alpha: float = 0.3,
