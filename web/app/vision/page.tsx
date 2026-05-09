@@ -527,6 +527,29 @@ export default async function VisionPage({
         className="mx-auto max-w-3xl px-6 pb-12 space-y-4 text-base text-stone-400 leading-relaxed"
       />
 
+      {/* Discoverability strip — a clear door to the searchable concept
+         garden, lifted up from the depth of the page so a visitor
+         arriving with a specific concept in mind can find it without
+         scrolling through the curated narrative first. */}
+      <section className="max-w-3xl mx-auto px-6 pb-12">
+        <Link
+          href={localizedHref("/concepts/garden?domain=living-collective", lang)}
+          className="group flex items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 px-5 py-4 transition-all"
+        >
+          <div className="space-y-0.5">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/70 font-medium">
+              {t("visionIndex.gardenStripEyebrow")}
+            </p>
+            <p className="text-base text-stone-200 group-hover:text-amber-100 transition-colors">
+              {t("visionIndex.gardenStripBody")}
+            </p>
+          </div>
+          <span className="text-amber-400/70 group-hover:text-amber-300 text-2xl transition-colors shrink-0">
+            →
+          </span>
+        </Link>
+      </section>
+
       {/* How It Knows */}
       <section className="max-w-3xl mx-auto px-6 py-24 text-center space-y-8">
         <div className="flex justify-center">
