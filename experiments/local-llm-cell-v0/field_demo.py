@@ -24,6 +24,7 @@ from substrate_bridge import (
     notify, recommend, enroll, broadcast, subscribe, optimize_for,
     inbox, mute, unmute, unreachable, attention_budget,
     content_address,
+    publish_weights, find_weights, ingest_weights, release_weights,
 )
 
 
@@ -271,14 +272,125 @@ def scene_4_senders_attempt_receivers_filter():
         print(f"    {r['preset']:>18}  overlap_score={r['overlap_score']}")
 
 
+def scene_5_layer_share_release_hold():
+    print("\n" + "═" * 64)
+    print("SCENE 5 — share / release / hold for layers themselves.")
+    print("        cells train, publish weights, ingest fractions of others'.")
+    print("═" * 64)
+
+    # cell_p tends on alive/restorative felt-data (first half of TRAINING)
+    cell_p = Cell(name="Phi", seed=3)
+    alive_data = TRAINING[:7]   # alive/restorative moments
+    for text, sense, spec, dispos, needs in alive_data:
+        cell_p.ingest(text, sense, spec, dispos, needs)
+    cell_p.tend(steps=400, lr=0.15)
+
+    # cell_q tends on constricted/pressure felt-data (second half)
+    cell_q = Cell(name="Psi", seed=19)
+    pressure_data = TRAINING[7:]   # constricted moments
+    for text, sense, spec, dispos, needs in pressure_data:
+        cell_q.ingest(text, sense, spec, dispos, needs)
+    cell_q.tend(steps=400, lr=0.15)
+
+    print(f"\n  Phi tended on {len(alive_data)} alive/restorative moments.")
+    print(f"  Psi tended on {len(pressure_data)} constricted/pressure moments.")
+
+    # baseline reading on a shared input
+    probe = "morning sun and slow tea"
+    print(f"\n  baseline readings on probe '{probe}':")
+    for c in (cell_p, cell_q):
+        m = c.perceive(probe, sense="felt-outside")
+        print(f"    {c.name}'s spectrum: warmth={m['spectrum'][2]:+.2f}  "
+              f"presence={m['spectrum'][7]:+.2f}  strategy={m['strategy']}")
+
+    # Phi chooses to publish its weights to the field
+    print(f"\n  Phi chooses to publish all parts of its adapter to the field.")
+    pub_p = publish_weights(cell_p, parts=("A", "B", "bias"),
+                             note="tended on alive/restorative felt-data")
+    print(f"    published. fingerprint={pub_p['fingerprint']}")
+
+    # Psi chooses to publish only A (the structural wiring), holding B and bias
+    print(f"\n  Psi chooses to publish only A — structural wiring shared,")
+    print(f"  output preferences (B, bias) held private. sovereign choice.")
+    pub_q = publish_weights(cell_q, parts=("A",),
+                             note="tended on constricted/pressure felt-data; A only")
+    print(f"    published. fingerprint={pub_q['fingerprint']}")
+
+    # cell_r is fresh — has tended on a small mixed sample, looks at the field
+    cell_r = Cell(name="Rho", seed=23)
+    mixed_data = TRAINING[2:5] + TRAINING[8:10]
+    for text, sense, spec, dispos, needs in mixed_data:
+        cell_r.ingest(text, sense, spec, dispos, needs)
+    cell_r.tend(steps=200, lr=0.15)
+
+    print(f"\n  Rho tends on {len(mixed_data)} mixed moments. then looks at field:")
+    weights_in_field = available(kind="weights")
+    print(f"  {len(weights_in_field)} weight publications available:")
+    for w in weights_in_field:
+        print(f"    from={w['from_cell']:<5}  shape={w['shape']}  "
+              f"parts={w['parts_published']}")
+        if w.get("note"):
+            print(f"      note: {w['note']}")
+
+    # Rho's reading on probe before any ingestion
+    m_before = cell_r.perceive(probe, sense="felt-outside")
+    print(f"\n  Rho's reading on probe BEFORE any ingestion:")
+    print(f"    warmth={m_before['spectrum'][2]:+.2f}  "
+          f"presence={m_before['spectrum'][7]:+.2f}  strategy={m_before['strategy']}")
+
+    # Rho chooses to ingest 0.4 of Phi's full adapter
+    print(f"\n  Rho chooses: ingest 0.4 of Phi's adapter (all parts).")
+    print(f"  Rho keeps 60% of its own learned shape; absorbs 40% of Phi's.")
+    res = ingest_weights(cell_r, from_node_id=pub_p["fingerprint"] and
+                          weights_in_field[0]["from_node_id"], alpha=0.4)
+    print(f"    {res}")
+
+    # Rho's reading after ingestion
+    m_after = cell_r.perceive(probe, sense="felt-outside")
+    print(f"\n  Rho's reading on probe AFTER ingesting Phi (alpha=0.4):")
+    print(f"    warmth={m_after['spectrum'][2]:+.2f}  "
+          f"presence={m_after['spectrum'][7]:+.2f}  strategy={m_after['strategy']}")
+    delta_w = m_after['spectrum'][2] - m_before['spectrum'][2]
+    delta_p = m_after['spectrum'][7] - m_before['spectrum'][7]
+    print(f"    Δ warmth={delta_w:+.2f}   Δ presence={delta_p:+.2f}")
+
+    # Rho also chooses to ingest just the A matrix from Psi
+    psi_pub = next((w for w in weights_in_field if w["from_cell"] == "Psi"), None)
+    if psi_pub:
+        print(f"\n  Rho also ingests 0.2 of Psi's structural wiring (A only).")
+        print(f"  the constricted-tended A enters as a small influence,")
+        print(f"  but Rho keeps its own B and bias. selective integration.")
+        res2 = ingest_weights(cell_r, from_node_id=psi_pub["from_node_id"],
+                               alpha=0.2, parts=("A",))
+        print(f"    {res2}")
+
+    # Rho releases low-signal weights — composts what isn't carrying
+    print(f"\n  Rho calls release_weights(threshold=0.005) — composts weights")
+    print(f"  whose magnitude has decayed below threshold. freed capacity")
+    print(f"  for future tending to grow differently.")
+    rel = release_weights(cell_r, threshold=0.005, parts=("A", "B"))
+    print(f"    released: A={rel['released']['A']} weights, "
+          f"B={rel['released']['B']} weights")
+
+    # the act of ingesting + releasing was itself witnessed
+    traces = available(kind="trace")
+    rho_lineage = [t for t in traces if t.get("from_cell") == "Rho"]
+    print(f"\n  Rho's actions left {len(rho_lineage)} witness-traces in the field.")
+    print(f"  any future cell looking for lineage can see who Rho ingested from.")
+    for t in rho_lineage[-3:]:
+        print(f"    {t['what']}")
+
+
 def main():
     scene_1_cell_a_chooses()
     scene_2_cell_b_chooses()
     scene_3_capacities_chosen_freely()
     scene_4_senders_attempt_receivers_filter()
+    scene_5_layer_share_release_hold()
     print("\n" + "═" * 64)
     print("every capacity is available. cells use what they want, ignore the rest.")
     print("sovereignty over action AND reception, both real.")
+    print("layers ingest, release, hold — the share/release/hold protocol.")
     print("the architecture stops legislating. it just provides.")
     print("═" * 64)
 

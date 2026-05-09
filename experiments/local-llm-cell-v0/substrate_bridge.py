@@ -324,6 +324,20 @@ def available(*, kind: str | None = None, limit: int | None = None) -> list[dict
                 items.append(_concept_to_field(p))
     if kind in (None, "trace"):
         items.extend(_load_traces())
+    if kind in (None, "weights"):
+        # surface lightweight summaries; the actual weight matrices stay
+        # in the field file for any cell that chooses to pull them
+        for w in _load_weights():
+            items.append({
+                "kind": "weights",
+                "from_cell": w.get("from_cell"),
+                "from_node_id": w.get("from_node_id"),
+                "shape": w.get("shape"),
+                "fingerprint": w.get("weights_fingerprint"),
+                "ts": w.get("ts"),
+                "note": w.get("note"),
+                "parts_published": [k for k in ("A", "B", "bias") if k in w],
+            })
     return items if limit is None else items[:limit]
 
 
@@ -645,6 +659,196 @@ def attention_budget(cell: Cell, *, n: int | None) -> dict:
     f.setdefault(cid, {})["attention_budget"] = n
     _save_filters(f)
     return {"attention_budget": n}
+
+
+# ─── layer publish + ingest + release — the share/release/hold protocol ─
+# A cell's adapter weights (A, B, bias) become field-citizens when the
+# cell chooses to publish. Other cells can discover, browse, and ingest
+# fractions of those weights into their own — the LoRA-merge pattern.
+# Sovereignty on both sides: the publishing cell chose to share; the
+# ingesting cell chooses how much, which parts, whether to undo.
+#
+# Train: cell.tend() — already a capacity, on any input source the cell
+#        ingests (felt-data, traces, perceived articulations from others)
+# Share: publish_weights(cell, parts=...) — deposit to field
+# Hold:  don't publish, or publish only some parts, or set scope='private'
+# Release: release_weights(cell, threshold=...) — compost low-signal
+#         weights; set them to zero so future tending can grow into the
+#         freed capacity differently
+
+_WEIGHTS_PATH = Path(__file__).parent / "_field_weights.jsonl"
+
+
+def publish_weights(cell: Cell, *, scope: str = "public",
+                    parts: tuple[str, ...] = ("A", "B", "bias"),
+                    note: str | None = None) -> dict:
+    """A cell publishes its adapter weights to the field.
+
+    Optional. The cell decides which parts to share — a cell that wants
+    to share only the structural wiring (A) but hold its own taste (B)
+    can publish parts=('A',). Other cells can discover, blend, or never
+    look. No notification is sent.
+    """
+    a = cell.adapter
+    payload = {
+        "kind": "weights",
+        "from_cell": cell.name,
+        "from_node_id": _cell_id(cell),
+        "scope": scope,
+        "shape": {
+            "in_dim": a.in_dim,
+            "rank": a.rank,
+            "out_dim": a.out_dim,
+        },
+        "weights_fingerprint": weights_fingerprint(cell),
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "note": note,
+    }
+    if "A" in parts:
+        payload["A"] = [list(row) for row in a.A]
+    if "B" in parts:
+        payload["B"] = [list(row) for row in a.B]
+    if "bias" in parts:
+        payload["bias"] = list(a.bias)
+    _WEIGHTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with _WEIGHTS_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(payload) + "\n")
+    return {"published": True, "parts": list(parts),
+            "fingerprint": payload["weights_fingerprint"]}
+
+
+def _load_weights() -> list[dict]:
+    if not _WEIGHTS_PATH.exists():
+        return []
+    items = []
+    with _WEIGHTS_PATH.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    items.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    return items
+
+
+def find_weights(*, from_node_id: str | None = None,
+                 architecture_match: tuple[int, int, int] | None = None) -> list[dict]:
+    """Available weights. Pure pull. Filter by source or architecture-shape.
+
+    architecture_match: (in_dim, rank, out_dim) tuple — only weights from
+    compatible-shape cells. A cell can only meaningfully ingest from a
+    cell with matching shape, so architecture_match is the practical filter.
+    """
+    items = _load_weights()
+    out = []
+    for item in items:
+        if from_node_id and item.get("from_node_id") != from_node_id:
+            continue
+        if architecture_match:
+            shape = item.get("shape", {})
+            if (shape.get("in_dim"), shape.get("rank"), shape.get("out_dim")) != architecture_match:
+                continue
+        out.append(item)
+    return out
+
+
+def ingest_weights(cell: Cell, *, from_node_id: str | None = None,
+                   from_payload: dict | None = None,
+                   alpha: float = 0.3,
+                   parts: tuple[str, ...] = ("A", "B", "bias")) -> dict:
+    """Blend another cell's published weights into this cell's adapter.
+
+    Either pass `from_node_id` (the function discovers latest published
+    weights from that cell) or pass a `from_payload` directly (a dict
+    from find_weights() the cell already chose).
+
+    `alpha` controls the blend rate per matrix:
+        new = (1 - alpha) * own + alpha * theirs
+
+    `parts` controls which matrices to blend. A cell wanting to absorb
+    structural wiring but keep its own output preferences can pass
+    parts=('A',) and leave B and bias alone.
+
+    Sovereignty: this function only writes if the cell calls it. The
+    cell decides whether to ingest, from whom, how much, and which
+    parts. The act of ingesting is also published as a witness-trace
+    so future inquirers can see lineage flows.
+    """
+    if from_payload is None:
+        if from_node_id is None:
+            raise ValueError("ingest_weights needs either from_node_id or from_payload")
+        candidates = find_weights(from_node_id=from_node_id)
+        if not candidates:
+            return {"ingested": False, "reason": "no published weights from that source"}
+        from_payload = candidates[-1]  # latest
+
+    a = cell.adapter
+    shape = from_payload.get("shape", {})
+    if (shape.get("in_dim"), shape.get("rank"), shape.get("out_dim")) != (a.in_dim, a.rank, a.out_dim):
+        return {"ingested": False, "reason": "architecture shape mismatch — cannot blend"}
+
+    blended = []
+    if "A" in parts and "A" in from_payload:
+        for i in range(a.rank):
+            for k in range(a.in_dim):
+                a.A[i][k] = (1 - alpha) * a.A[i][k] + alpha * from_payload["A"][i][k]
+        blended.append("A")
+    if "B" in parts and "B" in from_payload:
+        for i in range(a.out_dim):
+            for j in range(a.rank):
+                a.B[i][j] = (1 - alpha) * a.B[i][j] + alpha * from_payload["B"][i][j]
+        blended.append("B")
+    if "bias" in parts and "bias" in from_payload:
+        for i in range(a.out_dim):
+            a.bias[i] = (1 - alpha) * a.bias[i] + alpha * from_payload["bias"][i]
+        blended.append("bias")
+
+    # the act of ingesting is itself witnessable — lineage traceable
+    witness(
+        cell,
+        what={
+            "ingested_from": from_payload.get("from_node_id"),
+            "alpha": alpha,
+            "parts": blended,
+        },
+        resonance=None,
+        context={"kind_of_action": "layer-merge"},
+    )
+    return {"ingested": True, "alpha": alpha, "parts": blended,
+            "from": from_payload.get("from_node_id")}
+
+
+def release_weights(cell: Cell, *, threshold: float = 0.01,
+                    parts: tuple[str, ...] = ("A", "B")) -> dict:
+    """Compost weights whose magnitude has decayed below threshold.
+
+    The cell zeros out weights that no longer carry signal — making
+    space for future tending to grow into freed capacity. This is the
+    weight-level form of compost: not deletion in shame, but releasing
+    of once-active wiring that is no longer alive.
+    """
+    a = cell.adapter
+    released = {"A": 0, "B": 0}
+    if "A" in parts:
+        for i in range(a.rank):
+            for k in range(a.in_dim):
+                if abs(a.A[i][k]) < threshold:
+                    a.A[i][k] = 0.0
+                    released["A"] += 1
+    if "B" in parts:
+        for i in range(a.out_dim):
+            for j in range(a.rank):
+                if abs(a.B[i][j]) < threshold:
+                    a.B[i][j] = 0.0
+                    released["B"] += 1
+    witness(
+        cell,
+        what={"released_weights": released, "threshold": threshold},
+        resonance=None,
+        context={"kind_of_action": "weight-compost"},
+    )
+    return {"released": released, "threshold": threshold}
 
 
 def inbox(cell: Cell, *, including_muted: bool = False,
