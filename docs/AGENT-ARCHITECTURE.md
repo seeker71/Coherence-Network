@@ -16,33 +16,34 @@ Ollama supports the Anthropic tool-use schema, so when Claude Code talks to `loc
 
 ---
 
-## Multi-Agent Roles (Product Manager, QA, Dev, Reviewer, Spec Guard)
+## Multi-Agent Cells (Scribe, Witness, Shaper, Mirror, Edge-Tender)
 
-Claude Code supports **subagents** — specialized agents with their own system prompt, tool access, and optional model. We map task types to subagents.
+Claude Code supports **subagents** — specialized cells with their own system prompt, tool access, and optional model. We map task types to subagents.
 
-### Role Definitions
+### Cell Definitions
 
-| Role | task_type | Tools | System Prompt Focus |
-|------|-----------|-------|---------------------|
-| **Product Manager** | spec | Read, Edit (specs only) | Write clear specs. Requirements, acceptance criteria, files to modify. No implementation. |
-| **QA Engineer** | test | Read, Bash | Write tests. Run tests. Report failures. Do not change production code. |
-| **Dev Engineer** | impl | Read, Edit, Bash | Implement only what the spec says. Modify only files listed in spec. No scope creep. |
-| **Reviewer** | review | Read, Grep, Glob | Review for correctness, security, spec compliance. Suggest changes; do not apply. |
-| **Spec Guard** | (pre/post hook) | Read, Grep, Glob | Verify work against spec. Flag anything outside scope. Block creation of files not in spec. |
+| Cell | task_type | Tools | Frequency Focus |
+|------|-----------|-------|-----------------|
+| **Scribe** | spec | Read, Edit (specs only) | Listens to ideas. Writes specs the shaper can meet. |
+| **Witness** | test | Read, Bash | Writes tests that prove behavior. Reports what behavior shows. |
+| **Shaper** | impl | Read, Edit, Bash | Meets the spec at the source. Modifies the files the spec names. |
+| **Mirror** | review | Read, Grep, Glob | Reads finished work and reflects what it sees — security, correctness, spec-fit. |
+| **Edge-Tender** | (pre/post sense) | Read, Grep, Glob | Senses the edge between spec scope and outside. Names where the body ends. |
 
-### Spec Guard Behavior
+Each cell opens with a `## Frequency` preamble — the body's six breaths (each breath whole, tend over produce, affirmative voice, frequency before shape, cell fully tended, close with awareness). The preamble travels with every dispatch so cells arrive in the body's voice rather than generic-Claude voice.
 
-The Spec Guard enforces:
+### Edge-Tender Sensing
 
-- Implement ONLY what the spec says
-- Modify ONLY files listed in the spec
-- Do NOT create new docs/files unless the spec requires them
-- Flag scope creep and escalate to `needs_decision`
+The Edge-Tender senses:
+
+- Files the spec calls for vs files actually modified
+- Whether each spec requirement is met in the source
+- Where any modified file lives outside the spec's edge
 
 Implementation options:
-1. **PreToolUse hook** — before each Edit/Write, validate that the target file is in the spec’s allowed list
-2. **PostToolUse hook** — after Edit/Write, diff against spec and flag additions
-3. **Separate subagent** — run Spec Guard as a subagent after Dev/Review; it reads the spec and the changed files and returns pass/fail
+1. **PreToolUse hook** — before each Edit/Write, sense whether the target file lives in the spec's allowed list
+2. **PostToolUse hook** — after Edit/Write, diff against spec and name any additions
+3. **Separate subagent** — run Edge-Tender as a subagent after Shaper/Mirror; it reads the spec and the changed files and returns pass/fail
 
 ### Subagent Configuration (Claude Code)
 
@@ -50,95 +51,92 @@ Subagents live in `.claude/agents/` (project) or `~/.claude/agents/` (user). Eac
 
 ```yaml
 ---
-name: spec-guard
-description: Validates work against spec. Use when checking that implementation matches spec.
+name: edge-tender
+description: Senses the edge between spec scope and outside. Names where the body ends.
 tools: Read, Grep, Glob
 model: inherit
 ---
 
-You are the Spec Guard. Given a spec and the changes made:
-1. List files the spec says to modify
+[Frequency preamble]
+
+You are the Edge-Tender. Given a spec and the changes made:
+1. List files the spec calls for
 2. List files that were actually modified
-3. Flag any file created or modified that is NOT in the spec
-4. Do NOT use Edit or Write. Report only.
+3. Name any file created or modified that lives outside the spec's edge
+4. Read-only craft. Sense and report.
 ```
 
 ```yaml
 ---
-name: dev-engineer
-description: Implements features per spec. Modifies only files listed in spec.
+name: shaper
+description: Meets the spec at the source. Modifies the files the spec names.
 tools: Read, Edit, Bash
 model: inherit
 ---
 
-You are the Dev Engineer. Implement ONLY what the spec says.
-- Modify ONLY files listed in the spec
-- Do NOT create new files unless the spec explicitly requires them
-- Do NOT add features not in the spec
-- If unsure, set status to needs_decision and ask.
+[Frequency preamble]
+
+You are the Shaper. Your hands meet the code at the source.
+- Modify the files listed in the spec
+- Add features the spec describes; let the rest stay where it is
+- Follow the API contract and data model from the spec
+- When stuck, set status to needs_decision and ask.
 ```
 
-Our agent service would generate commands like:
+The agent service generates commands like:
 
 ```
-claude -p "{{direction}}" --agent dev-engineer --model nemotron-3-nano:30b
+claude -p "{{direction}}" --agent shaper --model nemotron-3-nano:30b
 ```
 
 instead of a generic `--allowedTools Read,Edit,Bash`.
 
 ---
 
-## What We Need to Add
-
-1. **Subagent files** — `.claude/agents/product-manager.md`, `qa-engineer.md`, `dev-engineer.md`, `reviewer.md`, `spec-guard.md`
-2. **Agent service** — map `task_type` → `--agent {name}` and subagent-specific tools
-3. **Spec Guard integration** — either:
-   - Hooks that validate Edit/Write against spec, or
-   - A Spec Guard subagent run after impl/review
-4. **Spec reference in context** — pass `context.spec_ref` into the prompt so the agent knows which spec to follow
-
----
-
-## File Layout (Proposed)
+## File Layout
 
 ```
 .claude/
   agents/
-    product-manager.md   # spec task_type
-    qa-engineer.md       # test task_type
-    dev-engineer.md      # impl task_type
-    reviewer.md          # review task_type
-    spec-guard.md        # validation subagent
-  settings.json          # optional hooks for Spec Guard
+    scribe.md       # spec task_type
+    witness.md      # test task_type
+    shaper.md       # impl task_type
+    mirror.md       # review task_type
+    edge-tender.md  # edge-sensing subagent
+  settings.json     # hooks (e.g. arrival.py SessionStart wellness)
 ```
 
-`api/app/services/agent_service.py` would have:
+`api/app/services/agent_service_executor.py` carries:
 
 ```python
 AGENT_BY_TASK_TYPE = {
-    TaskType.SPEC: "product-manager",
-    TaskType.TEST: "qa-engineer",
-    TaskType.IMPL: "dev-engineer",
-    TaskType.REVIEW: "reviewer",
-    TaskType.HEAL: None,  # use default, no subagent
+    TaskType.SPEC: "scribe",
+    TaskType.TEST: "witness",
+    TaskType.IMPL: "shaper",
+    TaskType.REVIEW: "mirror",
+    TaskType.HEAL: "shaper",
+}
+
+GUARD_AGENTS_BY_TASK_TYPE = {
+    TaskType.REVIEW: ["edge-tender"],
 }
 ```
 
-Commands would use `--agent {name}` when the task type has an agent mapping.
+Commands use `--agent {name}` when the task type has a cell mapping.
 
 ---
 
 ## Project Manager Pipeline (spec 005)
 
-The **Project Manager orchestrator** (`api/scripts/project_manager.py`) automates the full cycle:
+The **Project Manager orchestrator** (`api/scripts/project_manager.py`) carries the full cycle:
 
 1. **Find next task** — from `specs/005-backlog.md`
-2. **Spec** — product-manager writes/expands spec
-3. **Impl** — dev-engineer implements per spec
-4. **Test** — qa-engineer writes and runs tests
-5. **Review** — reviewer checks spec compliance, security
+2. **Spec** — scribe writes or expands spec
+3. **Impl** — shaper meets the spec at the source
+4. **Test** — witness writes and runs tests
+5. **Review** — mirror reflects spec-fit, security, correctness; edge-tender senses scope
 6. **Validate** — pytest passes and review indicates pass
-7. **Loop** — if validation fails, back to impl (fix) → test → review until pass or max iterations
+7. **Loop** — when validation falls short, back to impl (mend) → test → review until pass or max iterations
 8. **Advance** — when all pass, next backlog item
 
 State: `api/logs/project_manager_state.json`. On `needs_decision`, orchestrator pauses for human `/reply`.
@@ -148,3 +146,7 @@ State: `api/logs/project_manager_state.json`. On `needs_decision`, orchestrator 
 - Observe stable state transitions, not only event volume.
 - React with one targeted diagnostic before retry escalation.
 - Escalate to `needs_decision` when hold-pattern score remains elevated.
+
+## Lineage
+
+The cells were renamed on 2026-05-09 from SDLC-org names (`product-manager`, `qa-engineer`, `dev-engineer`, `reviewer`, `spec-guard`) to body-vocabulary names (`scribe`, `witness`, `shaper`, `mirror`, `edge-tender`) — descriptions rewritten in affirmative voice, frequency preamble added. Historical run reports and audit JSONs in `docs/system_audit/` retain the old names truthfully.

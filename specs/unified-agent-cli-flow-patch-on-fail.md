@@ -53,7 +53,7 @@ Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the ful
 goal: Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the full delivery flow locally and remotely: generate spec from idea, implement a spec, run tests, review implementation against spec verification, and—when verification fails—produce enough structured information to create a patch so the next step can fix the implementation without discarding work.
 files_allowed:
   - specs/unified-agent-cli-flow-patch-on-fail.md
-  - .cursor/skills/spec-guard/SKILL.md
+  - .cursor/skills/edge-tender/SKILL.md
   - api/scripts/project_manager.py
   - docs/AGENT-DEBUGGING.md
 done_when:
@@ -85,14 +85,14 @@ constraints:
 ## Files to Create/Modify
 
 - `specs/unified-agent-cli-flow-patch-on-fail.md` — this spec.
-- `.cursor/skills/spec-guard/SKILL.md` — extend with “Review output (FAIL)” section: require VERIFICATION_RESULT, FILES_TO_CHANGE, PATCH_GUIDANCE; optional SPEC_VERIFICATION_IMPROVEMENT.
+- `.cursor/skills/edge-tender/SKILL.md` — extend with “Review output (FAIL)” section: require VERIFICATION_RESULT, FILES_TO_CHANGE, PATCH_GUIDANCE; optional SPEC_VERIFICATION_IMPROVEMENT. (Cursor parallel of `.claude/agents/edge-tender.md`.)
 - `api/scripts/project_manager.py` — when building direction for impl after a failed review, pass full review output (or at least PATCH_GUIDANCE / FILES_TO_CHANGE) in context or direction, not only a 300-character truncation. Preserve existing behavior when output is small.
 - `docs/AGENT-DEBUGGING.md` or `docs/PLAN.md` — add a short subsection describing the flow (spec → impl → test → review → patch on fail) and the review output contract.
 
 ## Acceptance Tests
 
 - **Routing**: For each executor in `EXECUTOR_VALUES` (claude, cursor, openclaw) and each task_type in (spec, impl, test, review, heal), `GET /api/agent/route?task_type=X&executor=Y` returns a valid command_template and model. (Covered by existing agent routing tests; add or extend one test that asserts all pairs if missing.)
-- **Review output contract**: Document in spec and spec-guard that FAIL review output must include VERIFICATION_RESULT=FAIL, FILES_TO_CHANGE, PATCH_GUIDANCE. No new automated test for agent output format unless we add a small parser test for the convention.
+- **Review output contract**: Document in spec and edge-tender that FAIL review output must include VERIFICATION_RESULT=FAIL, FILES_TO_CHANGE, PATCH_GUIDANCE. No new automated test for agent output format unless we add a small parser test for the convention.
 - **Project manager**: After a review task completes with status failed or output indicating FAIL, the next impl task created by project_manager receives direction/context that includes the review output (or PATCH_GUIDANCE) sufficient for patch-oriented fix (e.g. test that state or direction length/carry-over is improved where applicable).
 - **Automated verification references**: `api/tests/test_agent_executor_policy.py`, `api/tests/test_agent_integration_api.py`, `api/tests/test_agent_execute_endpoint.py`.
 - **Manual verification**: Run one local matrix flow and one host-runner flow, then confirm usage page reflects non-zero successes and failure metadata with patch guidance context.
@@ -127,7 +127,7 @@ cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py test
 ## Risks and Assumptions
 
 - Assumption: All three executors (claude/aider, cursor, openclaw) already have command templates for spec, impl, test, review, heal; this spec only requires verification and any missing wiring.
-- Risk: Review agents might not consistently emit the structured blocks; the spec-guard skill and directions should be updated so that review tasks are instructed to output VERIFICATION_RESULT, FILES_TO_CHANGE, PATCH_GUIDANCE.
+- Risk: Review agents might not consistently emit the structured blocks; the edge-tender skill and directions should be updated so that review tasks are instructed to output VERIFICATION_RESULT, FILES_TO_CHANGE, PATCH_GUIDANCE.
 
 ## Known Gaps and Follow-up Tasks
 
@@ -141,5 +141,5 @@ cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py test
 - specs/project-manager-pipeline.md
 - specs/pipeline-observability-and-auto-review.md
 - .cursor/skills/spec-driven/SKILL.md
-- .cursor/skills/spec-guard/SKILL.md
+- .cursor/skills/edge-tender/SKILL.md
 - docs/MODEL-ROUTING.md
