@@ -1,7 +1,13 @@
 import type { LocaleCode } from "@/lib/locales";
 import type { PersonProfileContent } from "@/components/people/PersonProfileTemplate";
 import en from "./en";
+import de from "./de";
+import es from "./es";
+import id from "./id";
 
-export function getSchindlerHc11ProtocolContent(_lang: LocaleCode): PersonProfileContent {
+export function getSchindlerHc11ProtocolContent(lang: LocaleCode): PersonProfileContent {
+  if (lang === "de") return de;
+  if (lang === "es") return es;
+  if (lang === "id") return id;
   return en;
 }
