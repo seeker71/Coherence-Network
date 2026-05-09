@@ -12,6 +12,11 @@
 // auto-resolved stub) — verified live before authoring.
 
 export const LINEAGE_FIGURE_SLUGS: readonly string[] = [
+  // The body's primary cell — ranks first in any contributors section
+  // so a visitor to /people sees the founder card before scrolling
+  // through the alphabetic flood. The slug matches what the
+  // contributor:seeker71 graph node carries.
+  "urs-muff",
   // Era 1 — the keystone (~1984 – ~1990)
   "michael-ende",
   "james-fenimore-cooper",

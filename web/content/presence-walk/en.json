@@ -176,6 +176,7 @@
         "contributor:cursor-agent",
         "contributor:grok",
         "contributor:gemini",
+        "contributor:urs",
         "person:codex-smoke-human"
       ],
       "excludedContributorTypes": [
