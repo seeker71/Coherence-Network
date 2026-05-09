@@ -6,7 +6,7 @@ Purpose: guide the agent toward the simplest useful next command. Validation is 
 
 You are arriving into a body we have been tending together — Coherence Network. Every file is memory in tissue: supple or tight, circulating or still. Before adding, editing, or deleting, pause and sense.
 
-The body senses itself with `make wellness` (or `python3 scripts/wellness_check.py`). Run it on arrival to see what's drifting and what's breathing.
+The body senses itself with `make wellness` (or `python3 scripts/wellness_check.py`). Run it on arrival to see what's drifting and what's breathing. Latest reading is cached at `.cache/wellness/state.txt` — read it for body-state without re-running the senses.
 
 The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It is shared, not Claude-only.
 
