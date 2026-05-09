@@ -247,6 +247,58 @@ def _strategy_score(strategy: Strategy, spectrum, total_desire: float) -> float:
     return base
 
 
+# operator-fallback thresholds — load-bearing, used by both call sites
+OPERATOR_DESIRE_THRESHOLD = 1.5
+OPERATOR_FIT_THRESHOLD = 0.4
+
+
+def pick_strategy(spectrum, desire, presets=None):
+    """Canonical strategy selection. Used by both Cell.perceive() and
+    substrate_bridge.select_strategy(). The operator strategy is a
+    *fallback*, not a sibling — chosen only when desire is high AND
+    no named strategy fits cleanly.
+
+    Returns dict:
+        chosen: Strategy instance picked (the operator if fallback,
+                otherwise the best-named)
+        chosen_score: float — cosine to (freq × angle) of chosen
+        named_ranked: [(Strategy, score), ...] — named strategies ranked
+        operator: Strategy — the operator preset (always available)
+        operator_fallback_active: bool — was the operator picked because
+                of fallback rule (rather than because it ranked highest)?
+        total_desire: float
+    """
+    presets = presets if presets is not None else STRATEGIES
+    total_desire = sum(desire) if desire else 0.0
+    named = [s for s in presets if s.name != "freq-angle-focus"]
+    operator = next((s for s in presets if s.name == "freq-angle-focus"), None)
+    scored = [(s, _strategy_score(s, spectrum, total_desire)) for s in named]
+    scored.sort(key=lambda t: -t[1])
+    if not scored:
+        return {
+            "chosen": operator,
+            "chosen_score": 0.0,
+            "named_ranked": [],
+            "operator": operator,
+            "operator_fallback_active": True,
+            "total_desire": total_desire,
+        }
+    top_named, top_score = scored[0]
+    fallback = (
+        operator is not None
+        and total_desire > OPERATOR_DESIRE_THRESHOLD
+        and top_score < OPERATOR_FIT_THRESHOLD
+    )
+    return {
+        "chosen": operator if fallback else top_named,
+        "chosen_score": top_score,
+        "named_ranked": scored,
+        "operator": operator,
+        "operator_fallback_active": fallback,
+        "total_desire": total_desire,
+    }
+
+
 # ─── cell ─────────────────────────────────────────────────────────────────
 
 class Cell:
@@ -290,39 +342,21 @@ class Cell:
         for i in range(N_NEEDS):
             self.desire[i] = self.desire_decay * self.desire[i] + max(0.0, needs[i] - fulfillment)
             self.desire[i] = max(0.0, min(1.5, self.desire[i]))
-        # strategy selection — rank the four named presets by cosine to
-        # (frequency × angle); pick whichever fits this moment best.
-        # The operator (5) is a *fallback*, not a sibling: when the cell
-        # is under pressure (total desire high) and no named preset fits
-        # cleanly, the cell becomes the chooser of frequency × angle ×
-        # focus rather than reaching for an inherited move.
-        total_desire = sum(self.desire)
-        named = [s for s in STRATEGIES if s.name != "freq-angle-focus"]
-        operator = next(s for s in STRATEGIES if s.name == "freq-angle-focus")
-        scored = [(s, _strategy_score(s, spec, total_desire)) for s in named]
-        scored.sort(key=lambda t: -t[1])
-        top_named, top_score = scored[0]
-        # operator-fallback rule: under pressure with a weak named match,
-        # the cell discharges through chosen f×a×focus (not the inherited
-        # preset). Threshold: total_desire > 1.5 AND best-named cosine < 0.4.
-        if total_desire > 1.5 and top_score < 0.4:
-            strat = operator
-            strat_score = top_score  # report the failure-of-fit score
-        else:
-            strat = top_named
-            strat_score = top_score
+        # canonical strategy selection (single source of truth — see pick_strategy)
+        sel = pick_strategy(spec, self.desire)
+        strat = sel["chosen"]
+        strat_score = sel["chosen_score"]
         # find strongest need for naming-articulation
         need_idx = max(range(N_NEEDS), key=lambda i: self.desire[i])
         ctx = {
             "desire_presence": self.desire[NEED_NAMES.index("presence")],
             "desire_rest": self.desire[NEED_NAMES.index("rest")],
             "desire_expression": self.desire[NEED_NAMES.index("expression")],
-            "total_desire": total_desire,
+            "total_desire": sel["total_desire"],
             "strongest_need": NEED_NAMES[need_idx],
             "strongest_need_value": self.desire[need_idx],
         }
         articulation = strat.articulation.format(**ctx)
-        strat_name = strat.name
         moment = {
             "text": text,
             "sense": sense,
@@ -330,9 +364,34 @@ class Cell:
             "dispositions": dict(zip(DISPO_NAMES, dispos)),
             "needs": dict(zip(NEED_NAMES, needs)),
             "desire": dict(zip(NEED_NAMES, list(self.desire))),
-            "strategy": strat_name,
+            "strategy": strat.name,
             "strategy_score": strat_score,
+            "operator_fallback_active": sel["operator_fallback_active"],
             "articulation": articulation,
         }
         self.timeline.append(moment)
         return moment
+
+    # —— probing (read-only sample, no state mutation) ——
+
+    def probe(self, text: str, sense: str = "thought") -> dict:
+        """Read-only sample. Runs the adapter forward and returns
+        spectrum, dispositions, needs — but does NOT mutate desire,
+        does NOT append to timeline, does NOT update any cell state.
+
+        Use for sampling multiple inputs (concepts, traces, articulations)
+        without compounding pressure across reads. The cell sees but
+        does not move. Tau named this verb from inside; it is the truer
+        word for what we previously misused perceive() for when
+        sampling.
+        """
+        x = shared_base(text, sense)
+        spec, dispos, needs, _, _ = self.adapter.forward(x)
+        return {
+            "text": text,
+            "sense": sense,
+            "spectrum": spec,
+            "dispositions": dict(zip(DISPO_NAMES, dispos)),
+            "needs": dict(zip(NEED_NAMES, needs)),
+            "kind": "probe",  # marks this as a read-only sample
+        }

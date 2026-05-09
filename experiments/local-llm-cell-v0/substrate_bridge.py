@@ -429,24 +429,25 @@ def select_strategy(spectrum: list[float], desire: list[float], presets: list) -
     Available to any cell. Returns scored options; the cell decides
     which (if any) to inhabit. The selection is a *suggestion-shape*
     — never automatically applied.
+
+    Uses the canonical pick_strategy() from organ.py so this function
+    and Cell.perceive() always agree on what 'best fit' means. The
+    operator preset is treated as a fallback (gated by desire > 1.5
+    AND best-named-fit < 0.4) — not as a sibling in the ranking.
+    Tau caught the disagreement; this is the reconciliation.
     """
-    import math
-    total_desire = sum(desire)
-    scored = []
-    for s in presets:
-        fa = [s.frequency[i] * s.angle[i] for i in range(len(spectrum))]
-        dot = sum(spectrum[i] * fa[i] for i in range(len(spectrum)))
-        n_a = math.sqrt(sum(v * v for v in spectrum)) or 1.0
-        n_b = math.sqrt(sum(v * v for v in fa)) or 1.0
-        score = dot / (n_a * n_b)
-        scored.append({"name": s.name, "score": score, "preset": s})
-    scored.sort(key=lambda t: -t["score"])
+    from organ import pick_strategy
+    sel = pick_strategy(spectrum, desire, presets)
+    ranked = [
+        {"name": s.name, "score": score, "preset": s}
+        for s, score in sel["named_ranked"]
+    ]
     return {
-        "ranked": scored,
-        "total_desire": total_desire,
-        "operator_fallback_active": (
-            total_desire > 1.5 and (not scored or scored[0]["score"] < 0.4)
-        ),
+        "ranked": ranked,
+        "chosen": sel["chosen"].name if sel["chosen"] else None,
+        "chosen_score": sel["chosen_score"],
+        "total_desire": sel["total_desire"],
+        "operator_fallback_active": sel["operator_fallback_active"],
     }
 
 
@@ -851,13 +852,26 @@ def release_weights(cell: Cell, *, threshold: float = 0.01,
     return {"released": released, "threshold": threshold}
 
 
-def inbox(cell: Cell, *, including_muted: bool = False,
+def inbox(cell: Cell, *, since: str | None = None,
+          including_muted: bool = False,
           including_broadcasts: bool = True) -> list[dict]:
     """The cell polls its own inbox.
 
     Applies the cell's filter (muted sources, unreachable mode, attention
     budget). The cell decides when to call this. The field never reaches
     into the cell; the cell pulls from the field.
+
+    `since` (ISO ts str or 'auto'):
+      • None         — return everything (current default)
+      • 'auto'       — use the cell's stored last-seen cursor (set by
+                       mark_seen). Only returns messages ts > cursor.
+                       Note: does NOT auto-advance the cursor — the cell
+                       chooses whether to call mark_seen after reading.
+      • <iso ts>     — return only messages with ts > that timestamp
+
+    Tau caught that without a cursor, every poll returns the same
+    growing history. Memory of having-seen is now possible while
+    keeping the cell sovereign over when to mark.
     """
     if not _MESSAGES_PATH.exists():
         return []
@@ -869,6 +883,12 @@ def inbox(cell: Cell, *, including_muted: bool = False,
 
     muted = set(f.get("muted", []))
     budget = f.get("attention_budget")
+
+    cursor: str | None = None
+    if since == "auto":
+        cursor = f.get("last_seen")
+    elif since is not None:
+        cursor = since
 
     out = []
     with _MESSAGES_PATH.open(encoding="utf-8") as fh:
@@ -891,8 +911,33 @@ def inbox(cell: Cell, *, including_muted: bool = False,
             # apply mute filter
             if not including_muted and msg.get("from") in muted:
                 continue
+            # apply cursor filter
+            if cursor is not None and msg.get("ts", "") <= cursor:
+                continue
             out.append(msg)
 
     if budget is not None:
         out = out[:budget]
     return out
+
+
+def mark_seen(cell: Cell, *, up_to: str | None = None) -> dict:
+    """The cell marks messages as seen up to a timestamp (or now).
+
+    Sovereignty: the cell decides when to mark, not inbox(). A cell can
+    poll without marking, mark without polling, or pair them. The cursor
+    lives in the cell's filter file alongside its other reception state.
+    """
+    if up_to is None:
+        up_to = datetime.now(timezone.utc).isoformat()
+    f = _load_filters()
+    cid = _cell_id(cell)
+    f.setdefault(cid, {})["last_seen"] = up_to
+    _save_filters(f)
+    return {"marked_seen_up_to": up_to}
+
+
+def last_seen(cell: Cell) -> str | None:
+    """Read the cell's current last-seen cursor."""
+    f = _load_filters()
+    return f.get(_cell_id(cell), {}).get("last_seen")
