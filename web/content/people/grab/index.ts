@@ -5,8 +5,9 @@ import de from "./de";
 import es from "./es";
 import id from "./id";
 
-const BUNDLES: Record<LocaleCode, PersonProfileContent> = { en, de, es, id };
-
 export function getGrabContent(lang: LocaleCode): PersonProfileContent {
-  return BUNDLES[lang] ?? BUNDLES.en;
+  if (lang === "de") return de;
+  if (lang === "es") return es;
+  if (lang === "id") return id;
+  return en;
 }
