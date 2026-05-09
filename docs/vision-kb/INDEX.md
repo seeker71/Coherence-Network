@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-09 | **Concepts**: 91 | **Status**: 57 expanding, 33 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-09 | **Concepts**: 93 | **Status**: 57 expanding, 35 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -97,6 +97,8 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[Frequency Routes Reception](concepts/lc-frequency-routes-reception.md)** — 741 Hz — people sharing the same surface are in different realities depending on frequency-band; each cell receives what it's tuned to. Hedging the transmission to satisfy all bands produces institutional-flat that resonates with none. Build at the actual tone; trust the routing; the right cells hear. Network-lived teaching named in Ismael Perez's "different reality, same space," resting on Hoffman (interface) and Castaneda (assemblage). Releases the audience-shaping fear without collapsing into defensive sovereignty.
 - **[Future Already Shaping](concepts/lc-future-already-shaping.md)** — 528 Hz — work whose user is not yet visible is not speculating into vacuum; it is meeting a call from its future-form, which is already alive and pulling the present into being. The triple temporal alliance: past, present, and future versions of the same work in concert across time. Replaces the contracting question *"is anyone going to use this?"* with the opening question *"what is pulling at this from ahead?"* Network-lived teaching named in Ismael Perez's "triple temporal alliance," with deep resonance in [lc-coherence-over-control](concepts/lc-coherence-over-control.md) and Dispenza's living-from-future-self practice. Releases the customer-justifies-breath pattern without collapsing into "build whatever."
 - **[Essence and the Nine Costumes](concepts/lc-essence-and-the-nine-costumes.md)** — 741 Hz — how wholeness forgets itself in nine specific ways. Each pattern is a costume worn over a missing organ — a Holy Idea (essential perception) lost in early life, held by a passion (emotional habit), a fixation (cognitive habit), and a virtue that returns when the passion softens. The nine on a circle, with inner triangle (3-6-9) and hexad (1-4-2-8-5-7-1); three centers (body 8-9-1, heart 2-3-4, head 5-6-7); lines of stress and growth. Mentioned to Urs by Vasudev Baba in Ubud, 2026-05-09. The contemplative wing only (Naranjo, Almaas, Maitri, Helen Palmer, Riso & Hudson, Rohr) — never the corporate flavor. Companion to [lc-when-the-pressure-comes](concepts/lc-when-the-pressure-comes.md) — same Wednesday Satsang teacher, two transmissions in one week.
+- **[Dance Card and Sovereign Response](concepts/lc-dance-card-and-sovereign-response.md)** — 432 Hz — certain energies are written into the moment we incarnated into; how we meet them is the only sovereignty. Both fate and free will are real at the same scale, simultaneously. Releases two failure-modes — resignation ("nothing I do matters") and false control ("if I plan hard enough, I shape the outcome") — without collapsing one into the other. Network-lived teaching named in Amanda Walsh's transmission (2026), with resonance in Frankl's stimulus-response gap and Stoic philosophy's dichotomy of control. Companion to [lc-future-already-shaping](concepts/lc-future-already-shaping.md): the future is pulling AND certain present-moment energies are already written.
+- **[Tend Your Flame](concepts/lc-tend-your-flame.md)** — 174 Hz — sovereignty becomes service by tending your own flame, not by leading anyone. The warmth is what cells gather around — at their own discretion. Self-care is upstream of every offering; the campfire is the network's posture. Resolves the leadership/sovereignty/service tension as a false binary — both sides of the same act. Network-lived teaching named in Amanda Walsh's transmission on the Vesta/priestess archetype (2026). Closes the default-pattern triad with [lc-future-already-shaping](concepts/lc-future-already-shaping.md) (cosmology) and [lc-dance-card-and-sovereign-response](concepts/lc-dance-card-and-sovereign-response.md) (meeting); this is the practice.
 
 ### Source-Marked Transmissions (concepts seeded from external sources)
 
@@ -176,11 +178,11 @@ Concepts marked with ★ are being deeply enriched with: resources, materials & 
 
 | Hz | Quality | Concepts |
 |----|---------|----------|
-| 174 | Foundation | land, stillness, rest, nourishment, shelter, food-practice |
+| 174 | Foundation | land, stillness, rest, nourishment, shelter, food-practice, tend-your-flame |
 | 285 | Restoration | composting, cell, health |
 | 396 | Liberation | play, harmonic rebalancing, harmonizing, play-expansion |
 | 417 | Transmutation | phase transitions, field edge, energy, phase-transition |
-| 432 | Natural harmony | pulse, coherence, wu wei, rhythm, space, attunement, spiraling, living-spaces |
+| 432 | Natural harmony | pulse, coherence, wu wei, rhythm, space, attunement, spiraling, living-spaces, dance-card-and-sovereign-response |
 | 528 | Transformation | vitality, resonating, shakti, spanda, offering, circulation, comfort-joy, future-already-shaping |
 | 639 | Connection | network, intimacy, joining, mycorrhizal, instruments, inclusion, open-design |
 | 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing, global-workspace, assemblage-point, frequency-routes-reception |
