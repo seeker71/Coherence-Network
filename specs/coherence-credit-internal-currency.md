@@ -18,7 +18,7 @@ done_when:
   - "cc_from_usd and usd_from_cc are verified inverses"
   - "Every idea in SEED_IDEAS (scripts/seed_db.py) has value_basis with 6 required keys"
   - "Existing tests (test_ideas.py, test_idea_hierarchy.py) pass without regression"
-test: "python3 -m pytest api/tests/test_idea_hierarchy.py api/tests/test_ideas.py -x -q"
+test: "python3 -m pytest api/tests/test_coherence_credit.py -x -q"
 constraints:
   - "Purely additive — no existing formulas or service logic modified"
   - "New Idea fields must be Optional with None defaults for backward compatibility"
