@@ -40,6 +40,12 @@
 | [web/app/INDEX.md](web/app/INDEX.md) | 172 | Web routes — every visible page in the app |
 | [scripts/INDEX.md](scripts/INDEX.md) | 91 | Scripts — operational tools, generators, syncers |
 
+## Experiments
+
+| Path | Purpose |
+|---|---|
+| [experiments/memory-as-framebuffer-v0/](experiments/memory-as-framebuffer-v0/) | Runtime as recordable video. Rust crate with .mfb lossless substrate + ffmpeg preview mp4 + `mfb-html` viewer (Identity / Vitality modes; provenance-resolved cell inspector + recipe leaderboard). Sibling specs in `specs/`: `memory-as-framebuffer-v0`, `-v1-pointers`, `-v1-3d`, `-v1-render-trait`, `substrate-render-fabric-v0`. |
+
 ## Convention
 
 Every new source file gets a one-line purpose statement at the top:
