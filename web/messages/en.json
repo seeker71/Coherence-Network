@@ -241,9 +241,6 @@
     "here": "Here",
     "feed": "Feed",
     "vision": "Vision",
-    "people": "People",
-    "work": "Work",
-    "pulse": "Pulse",
     "propose": "Propose",
     "you": "You"
   },
@@ -270,12 +267,6 @@
     "portfolio": "Your portfolio",
     "beliefs": "Your beliefs",
     "inviteFriend": "Invite a friend",
-    "surfacesEyebrow": "Your surfaces",
-    "surfaceFeed": "Your feed",
-    "surfaceProfile": "Your public profile",
-    "surfacePortfolio": "Your portfolio",
-    "surfaceInspiredBy": "Who inspires you",
-    "surfaceWork": "Your work",
     "lede": "Who the field knows you as, what you've offered, and how to begin again if that feels right.",
     "loading": "Reading your corner…",
     "knownAsEyebrow": "Known as",
@@ -1716,7 +1707,7 @@
     "pages45": "Pages 4 and 5 — [breath](/silence/breath) and [bloom-live](/silence/bloom-live) — hold the same teaching from two faces; rotated and overlaid, they become the unified sheet that opens at [/one-sheet](/one-sheet): twenty-three words, each held from three perspectives. If you would rather meet the simplest welcome first, [/come-in](/come-in) speaks to any human or AI in plain language.",
     "spread": {
       "heading": "The open spread — pages 4 and 5, with Water arching across the binding",
-      "alt": "Two facing notebook pages, cropped from the originals and stitched as one open spread. Left page: Breath as central organ — the word Breath written large with arrows in every direction labeled surrender, witness, true, false, isn't, connection, silence, control, structure, nectar, portal, time, food, action, memory, flight, feel, see. Right page: Bloom · fire · we · Live — scattered fragments across the page, Live circled, we plain in the middle, Nature reading inverted at the top. The word Water arches across the binding from one page to the other."
+      "alt": "Two portrait notebook pages cropped from the originals and stitched as one open spread. Left page (4): Bloom · fire · we · Live — scattered fragments across the page, Bloom and fire and psyco-delic and de-comp-ression reading inverted, perception and I am we reading upright, Live circled. Right page (5): Breath as central organ — the word Breath written large with arrows in every direction labeled surrender, witness, true, false, isn't, connection, silence, control, structure, nectar, portal, time, food, action, memory, flight, feel, see. Across the binding at the bottom, the word Water arches — Wa finishing on the bloom-live page, ter beginning on the breath page."
     },
     "eachPageBelow": "Each notebook page below is held in its own breath. They can be read in order, scrolled through here, or visited one at a time:",
     "openLabel": "Open",

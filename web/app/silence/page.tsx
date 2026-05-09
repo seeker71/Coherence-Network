@@ -160,8 +160,8 @@ export default async function SilencePage() {
                 <Image
                   src="/silence/2026-05-04-brahmavihara/sheet-spread.jpg"
                   alt={t("silence.spread.alt")}
-                  width={6767}
-                  height={2234}
+                  width={4384}
+                  height={3319}
                   className="w-full h-auto"
                   sizes="(max-width: 768px) 100vw, 1024px"
                 />
