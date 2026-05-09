@@ -269,6 +269,162 @@ def sense_contracts() -> list[str]:
     return findings
 
 
+def sense_cells() -> list[str]:
+    """Are the agent cells themselves breathing?
+
+    Wellness has senses for artifacts (specs, indexes, contracts, witness-trace)
+    but until now has been silent on the cells — the body's hands. This sense
+    reads three layers of cell health:
+
+    1. **Structural soundness** — each .claude/agents/*.md has frontmatter
+       (name + description + tools), the frontmatter name matches the
+       filename stem, and the body carries a ## Frequency preamble.
+    2. **Affirmative voice** — descriptions describe what the cell IS,
+       rather than what it forbids. Flags well-known negation markers.
+    3. **Dispatch wiring** — names in agent_service_executor.py's
+       AGENT_BY_TASK_TYPE and GUARD_AGENTS_BY_TASK_TYPE resolve to real files.
+    4. **Cursor parallel** — where .cursor/skills/{name}/ mirrors a Claude cell,
+       the SKILL.md frontmatter agrees.
+    """
+    findings: list[str] = []
+    agents_dir = ROOT / ".claude" / "agents"
+    if not agents_dir.is_dir():
+        return ["  (.claude/agents/ not present)"]
+    agent_files = sorted(agents_dir.glob("*.md"))
+    if not agent_files:
+        return ["  (no agents in .claude/agents/)"]
+
+    NEGATION_MARKERS = (
+        "do not ", "don't ", " no scope creep",
+        " no implementation", " no editing",
+        "suggest changes; do not apply",
+    )
+
+    soft: list[str] = []
+    affirmative = 0
+    with_preamble = 0
+    structural_ok = 0
+    for path in agent_files:
+        text = path.read_text()
+        fm_m = re.match(r"---\n(.*?)\n---", text, re.DOTALL)
+        if not fm_m:
+            soft.append(f"  · {path.name}: frontmatter absent")
+            continue
+        fm = fm_m.group(1)
+        name_m = re.search(r"^name:\s*(\S+)", fm, re.MULTILINE)
+        desc_m = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
+        tools_m = re.search(r"^tools:", fm, re.MULTILINE)
+        stem = path.stem
+        struct_ok = True
+        if not name_m:
+            soft.append(f"  · {path.name}: frontmatter missing 'name:'")
+            struct_ok = False
+        elif name_m.group(1).strip() != stem:
+            soft.append(
+                f"  · {path.name}: name '{name_m.group(1).strip()}' "
+                f"differs from filename stem '{stem}'"
+            )
+            struct_ok = False
+        if not desc_m:
+            soft.append(f"  · {path.name}: frontmatter missing 'description:'")
+            struct_ok = False
+        else:
+            desc = desc_m.group(1).strip().lower()
+            if any(marker in desc for marker in NEGATION_MARKERS):
+                short = desc_m.group(1).strip()
+                soft.append(
+                    f"  · {path.name}: description carries negation — "
+                    f"\"{short[:70]}{'…' if len(short) > 70 else ''}\""
+                )
+            else:
+                affirmative += 1
+        if not tools_m:
+            soft.append(f"  · {path.name}: frontmatter missing 'tools:'")
+            struct_ok = False
+        if "## Frequency" in text:
+            with_preamble += 1
+        else:
+            soft.append(f"  · {path.name}: missing '## Frequency' preamble")
+        if struct_ok:
+            structural_ok += 1
+
+    n = len(agent_files)
+    summary_bits = [f"{n} agents present"]
+    if affirmative == n:
+        summary_bits.append("affirmative")
+    else:
+        summary_bits.append(f"affirmative {affirmative}/{n}")
+    if with_preamble == n:
+        summary_bits.append("frequency preamble in each")
+    else:
+        summary_bits.append(f"preamble {with_preamble}/{n}")
+    findings.append("  " + " · ".join(summary_bits))
+    findings.extend(soft)
+
+    # Dispatch wiring — does every name in the api map resolve to a cell?
+    executor_path = ROOT / "api" / "app" / "services" / "agent_service_executor.py"
+    if executor_path.exists():
+        exec_text = executor_path.read_text()
+        dispatched: set[str] = set()
+        for block_pat in (
+            r"AGENT_BY_TASK_TYPE[^=]*=\s*\{(.*?)\n\}",
+            r"GUARD_AGENTS_BY_TASK_TYPE[^=]*=\s*\{(.*?)\n\}",
+        ):
+            block_m = re.search(block_pat, exec_text, re.DOTALL)
+            if block_m:
+                for s in re.findall(r'"([a-z][a-z\-]+)"', block_m.group(1)):
+                    dispatched.add(s)
+        present_stems = {p.stem for p in agent_files}
+        missing = sorted(dispatched - present_stems)
+        if missing:
+            findings.append("")
+            findings.append("  dispatch wiring drift (api → .claude/agents/):")
+            for name in missing:
+                findings.append(
+                    f"  · '{name}' dispatched but no .claude/agents/{name}.md"
+                )
+        elif dispatched:
+            findings.append(
+                f"  dispatch wiring coherent ({len(dispatched)} names → .claude/agents/)"
+            )
+
+    # Cursor parallel — every .cursor/skills/{name}/ that mirrors a Claude
+    # cell should agree on its name in frontmatter.
+    cursor_dir = ROOT / ".cursor" / "skills"
+    if cursor_dir.is_dir():
+        mirror_drift: list[str] = []
+        mirror_count = 0
+        for skill_dir in sorted(cursor_dir.iterdir()):
+            if not skill_dir.is_dir():
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.exists():
+                continue
+            stem = skill_dir.name
+            if not (agents_dir / f"{stem}.md").exists():
+                continue  # skill without claude mirror — fine
+            mirror_count += 1
+            sk_m = re.search(
+                r"^name:\s*(\S+)", skill_md.read_text(), re.MULTILINE,
+            )
+            if sk_m and sk_m.group(1).strip() != stem:
+                mirror_drift.append(
+                    f"  · cursor skill '{stem}/SKILL.md' has frontmatter "
+                    f"name '{sk_m.group(1).strip()}' (drifted from dir)"
+                )
+        if mirror_drift:
+            findings.append("")
+            findings.append("  cursor parallel:")
+            findings.extend(mirror_drift)
+        elif mirror_count:
+            word = "mirror" if mirror_count == 1 else "mirrors"
+            findings.append(
+                f"  cursor parallel: {mirror_count} {word} coherent"
+            )
+
+    return findings
+
+
 def sense_witness_trace() -> list[str]:
     """How is the witness-trace breathing?
 
@@ -352,6 +508,11 @@ def main() -> int:
 
     print("## Source maps — do specs point at files that exist?\n")
     for line in sense_spec_sources():
+        print(line)
+    print()
+
+    print("## Cells — are the cells themselves breathing?\n")
+    for line in sense_cells():
         print(line)
     print()
 
