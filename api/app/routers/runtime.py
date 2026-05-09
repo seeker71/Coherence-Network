@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Query, Request
 from pydantic import BaseModel
 
+from app.models.pagination import PaginatedResponse
 from app.models.runtime import (
     EndpointAttentionReport,
     RuntimeEvent,
@@ -29,13 +30,20 @@ async def create_runtime_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     return runtime_service.record_event(payload)
 
 
-@router.get("/runtime/events", response_model=list[RuntimeEvent], summary="List Runtime Events")
+@router.get("/runtime/events", response_model=PaginatedResponse[RuntimeEvent], summary="List Runtime Events")
 async def list_runtime_events(
     limit: int = Query(100, ge=1, le=2000),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     source: str | None = Query(default=None, max_length=64),
     force_refresh: bool = Query(False),
-) -> list[RuntimeEvent]:
-    return runtime_service.cached_runtime_events(limit=limit, source=source, force_refresh=force_refresh)
+) -> PaginatedResponse[RuntimeEvent]:
+    # Telemetry stream is high-volume and time-cursor would be cleaner long-term;
+    # for now, fetch a window large enough to cover offset+limit and slice. The
+    # underlying service caches the full window so subsequent pages reuse it.
+    window = max(limit + offset, limit)
+    full = runtime_service.cached_runtime_events(limit=window, source=source, force_refresh=force_refresh)
+    page = full[offset : offset + limit]
+    return PaginatedResponse(items=page, total=len(full), limit=limit, offset=offset)
 
 
 @router.get("/runtime/change-token", summary="Runtime Change Token")

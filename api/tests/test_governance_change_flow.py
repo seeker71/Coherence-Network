@@ -282,7 +282,8 @@ async def test_approval_lifecycle_and_queries_flow():
 
         # List surfaces all change requests (at minimum ours).
         listing = (await c.get("/api/governance/change-requests")).json()
-        assert len(listing) >= 1
+        assert listing["total"] >= 1
+        assert len(listing["items"]) >= 1
 
         # Get-by-id round-trips; unknown id → 404.
         fetched = (await c.get(f"/api/governance/change-requests/{idea_cr_id}")).json()

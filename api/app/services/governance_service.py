@@ -264,12 +264,22 @@ def _apply_change_request(change_request: ChangeRequest) -> dict[str, Any]:
 
 
 def list_change_requests(limit: int = 200) -> list[ChangeRequest]:
+    items, _total = list_change_requests_page(limit=limit, offset=0)
+    return items
+
+
+def list_change_requests_page(
+    limit: int = 200, offset: int = 0
+) -> tuple[list[ChangeRequest], int]:
     ensure_schema()
     with _session() as session:
+        base = session.query(ChangeRequestRecord).order_by(
+            ChangeRequestRecord.updated_at.desc(), ChangeRequestRecord.created_at.desc()
+        )
+        total = base.count()
         rows = (
-            session.query(ChangeRequestRecord)
-            .order_by(ChangeRequestRecord.updated_at.desc(), ChangeRequestRecord.created_at.desc())
-            .limit(max(1, min(limit, 1000)))
+            base.offset(max(0, int(offset)))
+            .limit(max(1, min(int(limit), 1000)))
             .all()
         )
         out: list[ChangeRequest] = []
@@ -280,7 +290,7 @@ def list_change_requests(limit: int = 200) -> list[ChangeRequest]:
                 .all()
             )
             out.append(_to_model(row, votes))
-        return out
+        return out, total
 
 
 def get_change_request(change_request_id: str) -> ChangeRequest | None:

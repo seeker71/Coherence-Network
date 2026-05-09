@@ -12,20 +12,24 @@ from app.models.friction import (
     FrictionEvent,
     FrictionReport,
 )
+from app.models.pagination import PaginatedResponse
 from app.services import friction_service
 
 router = APIRouter()
 
 
-@router.get("/friction/events", response_model=list[FrictionEvent], summary="List Events")
+@router.get("/friction/events", response_model=PaginatedResponse[FrictionEvent], summary="List Events")
 async def list_events(
     limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     status: Optional[str] = Query(None),
-) -> list[FrictionEvent]:
+) -> PaginatedResponse[FrictionEvent]:
     events, _ignored = friction_service.load_events()
     if status:
         events = [e for e in events if e.status == status]
-    return events[:limit]
+    total = len(events)
+    page = events[offset : offset + limit]
+    return PaginatedResponse(items=page, total=total, limit=limit, offset=offset)
 
 
 @router.post("/friction/events", response_model=FrictionEvent, status_code=201, summary="Create Event")

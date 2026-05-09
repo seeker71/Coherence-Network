@@ -186,16 +186,18 @@ def get_equivalent(domain: str, name: str) -> EquivalentResponse:
 def list_cells(
     domain: str | None = Query(None, description="Filter by domain"),
     limit: int = Query(50, ge=1, le=500),
-) -> list[CellOut]:
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
+) -> dict[str, Any]:
     """List cells (optionally filtered by domain)."""
     with session_scope() as session:
-        q = session.query(SubstrateNamedCellORM)
+        base = session.query(SubstrateNamedCellORM)
         if domain is not None:
-            q = q.filter_by(domain=domain)
-        q = q.limit(limit)
-        rows = q.all()
+            base = base.filter_by(domain=domain)
+        total = base.count()
+        rows = base.offset(offset).limit(limit).all()
         from app.services.substrate.kernel import _orm_to_cell  # internal helper
-        return [CellOut.from_cell(_orm_to_cell(session, r)) for r in rows]
+        items = [CellOut.from_cell(_orm_to_cell(session, r)) for r in rows]
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 class PathAnnotationOut(BaseModel):
