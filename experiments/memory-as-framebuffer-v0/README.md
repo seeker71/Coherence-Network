@@ -222,3 +222,28 @@ The viewer reconstructs full state from the .mfb's delta-encoded frames —
 stepping forward applies deltas, stepping backward replays from the start.
 For 6-second captures (~390 frames) the HTML lands ~250–700 KB; opens
 instantly. Easily shareable as a single artifact.
+
+### Vitality mode + recipe leaderboard
+
+A header toggle switches the viewer between **Identity** mode (the
+default — cells colored by type tag, side panel shows the cell inspector)
+and **Vitality** mode (cells colored by total write count, side panel
+shows ranked recipes by total cell-writes).
+
+For the recipe leaderboard to label entries with `examples/fizzbuzz.rs:42`
+instead of raw hex hashes, the runtime writes a `{capture}.provmap` JSON
+sidecar at `shutdown_framebuffer()` that maps every observed provenance
+hash back to its `(file, line)`. The mfb-html bin auto-loads it next
+to the `.mfb` if present.
+
+Vitality mode is what surfaces *busy areas of the heap* and *which recipe
+is most alive in this run*. For fizzbuzz: the shift loop at
+`examples/fizzbuzz.rs:42` dominates with ~24,000 writes (visiting each
+of 99 history cells per snapshot frame), with the four fizz/buzz/fizzbuzz
+branch sites visible at realistic ratios (plain > fizz > buzz > fizzbuzz).
+Click any recipe in the list to highlight every cell that recipe writes
+to in the current frame.
+
+The cell inspector also shows the resolved source location (`Source:
+examples/fizzbuzz.rs:34`) and the cell's lifetime write count, both
+read from the same provmap + write-count tables embedded in the HTML.
