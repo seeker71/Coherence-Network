@@ -195,6 +195,93 @@ def sense_spec_sources() -> list[str]:
     return lines
 
 
+def sense_chain() -> list[str]:
+    """Sense the idea→spec→code→test chain at the segment everything
+    else doesn't see: tests the spec claims to have but that don't exist.
+
+    sense_spec_sources catches missing source files. This catches the
+    quieter leak: a spec frontmatter declares `test: cd api && pytest
+    tests/test_foo.py` and the spec proudly lives, but the test file
+    never landed. The body acts as if it's tested when it isn't.
+
+    Drafts skipped (forward projections). Specs without a test:
+    declaration are noted softly as a separate count.
+    """
+    specs_dir = ROOT / "specs"
+    if not specs_dir.is_dir():
+        return ["  specs/ directory not found"]
+
+    test_path_re = re.compile(r"\b(?:api/)?tests/[\w/]+\.py")
+    healthy = 0
+    counted = 0  # non-draft specs we evaluated for chain reach
+    missing_tests: dict[str, list[str]] = {}
+    no_test_declared: list[str] = []
+    orphan_specs: list[str] = []
+
+    for spec in sorted(specs_dir.glob("*.md")):
+        if spec.name in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md"):
+            continue
+        text = spec.read_text()
+        head, *rest = text.split("---", 2)
+        if not rest:
+            continue
+        fm = rest[0] if len(rest) == 1 else rest[0]
+        status_m = re.search(r"^\s*status\s*:\s*(\S+)", fm, re.MULTILINE)
+        status = (status_m.group(1).strip().strip('"').strip("'") if status_m else "").lower()
+        if status == "draft":
+            continue
+        counted += 1
+
+        # idea_id presence
+        idea_m = re.search(r"^\s*idea_id\s*:\s*(\S+)", fm, re.MULTILINE)
+        if not idea_m:
+            orphan_specs.append(spec.stem)
+
+        # Source path existence (any source: file: declared, all of them present?)
+        src_paths = [m.group(1).strip() for m in re.finditer(r"^\s*-\s*file:\s*(\S+)", fm, re.MULTILINE)]
+        src_paths = [p for p in src_paths if not p.startswith("..") and "://" not in p and not p.startswith("specs/")]
+        src_ok = bool(src_paths) and all((ROOT / p).exists() for p in src_paths)
+        src_declared = bool(src_paths)
+
+        # test: declaration (string or list) — extract test paths via the same regex coh_substrate uses
+        test_section_m = re.search(r"^test\s*:(.*?)(?:\n[a-z_]+\s*:|---|$)", fm, re.MULTILINE | re.DOTALL)
+        test_text = (test_section_m.group(1) if test_section_m else "")
+        test_paths = sorted(set(
+            (p if p.startswith("api/") else f"api/{p}") for p in test_path_re.findall(test_text)
+        ))
+        test_declared = bool(test_text.strip())
+        if not test_declared:
+            no_test_declared.append(spec.stem)
+            continue
+        miss = [t for t in test_paths if not (ROOT / t).exists()]
+        if miss:
+            missing_tests[spec.stem] = miss
+            continue
+
+        # Chain healthy if: idea_id present, source declared and present,
+        # tests declared and present.
+        if idea_m and src_ok and test_paths and not miss:
+            healthy += 1
+
+    lines = [
+        f"  chain healthy: {healthy}/{counted} non-draft specs reach idea→spec→code→test ({(healthy/counted*100) if counted else 0:.0f}%)"
+    ]
+    if missing_tests:
+        lines.append(f"  {len(missing_tests)} specs claim a test that doesn't exist on disk")
+        for slug in sorted(missing_tests)[:3]:
+            miss = ", ".join(missing_tests[slug][:2])
+            lines.append(f"    · {slug} — {miss}")
+        if len(missing_tests) > 3:
+            lines.append(f"    · (+{len(missing_tests) - 3} more)")
+    if no_test_declared:
+        lines.append(f"  {len(no_test_declared)} specs have no test: frontmatter (no proof claimed)")
+    if orphan_specs:
+        lines.append(f"  {len(orphan_specs)} orphan specs (no idea_id): {', '.join(orphan_specs)}")
+    if not missing_tests and not no_test_declared and not orphan_specs:
+        lines.append("  chain reach is whole — every claim has its proof")
+    return lines
+
+
 def sense_contracts() -> list[str]:
     """How are the CI contracts breathing the last 7 days?
 
@@ -501,6 +588,7 @@ def main() -> int:
         ("Circulation — what at root has no readers?", sense_circulation()),
         ("Metabolism — composting-in-progress", sense_metabolism()),
         ("Source maps — do specs point at files that exist?", sense_spec_sources()),
+        ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
