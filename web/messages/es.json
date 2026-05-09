@@ -367,7 +367,27 @@
     "replied": "respondió:",
     "emptyHeading": "Un nombre cuyo jardín aún espera.",
     "emptyLede": "Tiene un id de contribuyente pero aún no ha hablado ni ha recibido reacciones. Su rincón espera.",
-    "backToVision": "Caminar la visión"
+    "backToVision": "Caminar la visión",
+    "lineage": {
+      "breadcrumb": "Linaje",
+      "eyebrowWorks": "{n} obras",
+      "eyebrowWorkSingular": "{n} obra",
+      "eyebrowEdges": "{n} aristas de influencia",
+      "eyebrowEdgeSingular": "{n} arista de influencia",
+      "title": "{name} — linaje",
+      "welcome": "Cada obra a la que esta célula ha contribuido, en orden cronológico, con las corrientes de atención que corrieron en paralelo. Compuesto desde el grafo vivo; los datos son lo que el sustrato sabe actualmente. Refina a través de la puerta en la página de perfil.",
+      "arcAtAGlance": "El arco, de un vistazo",
+      "yearNotRecorded": "Año aún no registrado",
+      "worksHeading": "Obras · cronológico",
+      "streamsHeading": "Corrientes de atención que corrieron en paralelo",
+      "streamsLede": "Aristas inspired-by agrupadas por fuente. La red de influencia unificada completa — con horas medidas y color de espectro por fuente — vive al pie de la página de perfil.",
+      "empty": "Aún no se han atribuido obras a esta célula. A medida que se registren las contribuciones, aparecerán aquí en orden cronológico.",
+      "footerLede": "Esta página se compone en vivo a partir del grafo. Todo aquí se puede corregir — refina a través de la puerta en la página de perfil. Los clientes programáticos pueden obtener los mismos datos directamente a través del endpoint de aristas contributes-to.",
+      "figcaptionRange": "{n} obras desde {from} hasta {to}",
+      "figcaptionRangeSingular": "{n} obra desde {from} hasta {to}",
+      "now": "ahora",
+      "figcaptionUnknownYears": "{n} sin año registrado"
+    }
   },
   "morningNudge": {
     "ariaLabel": "Resumen de la mañana",
@@ -691,7 +711,23 @@
     "assetOne": "{n} obra",
     "assetMany": "{n} obras",
     "loadingAssets": "Cargando obras…",
-    "thumbnailAlt": "{description}"
+    "thumbnailAlt": "{description}",
+    "detail": {
+      "kind": "Tipo",
+      "runtime": "Duración",
+      "era": "Era",
+      "company": "Empresa",
+      "place": "Lugar",
+      "asin": "ASIN",
+      "isbn": "ISBN",
+      "languageLabel": "Idioma",
+      "externalSource": "Fuente externa",
+      "presence": "Presencia:",
+      "statWitnessed": "Atestiguado",
+      "statWitnessedDays": "{n} contribuyente · 90d",
+      "statWitnessedDaysPlural": "{n} contribuyentes · 90d",
+      "statWitnessedHint": "vistas durante 90 días"
+    }
   },
   "search": {
     "title": "Buscar proyectos",
@@ -1430,7 +1466,11 @@
       "transport-mechanic": "Transporte · mecánico",
       "elder-witness": "Anciano · testigo",
       "other": "Otro (en tus propias palabras abajo)"
-    }
+    },
+    "publicPostureTitle": "Lo que significa unirse a la red",
+    "publicPostureBody1": "La Coherence Network es pública por defecto. Tu identificador de contribución, atribución, las superficies que visitas y los enlaces de linaje que creas se convierten en parte de un cuerpo de evidencia abierto. Los volcados nocturnos de la base de datos se reflejan en un archivo público en [coherence-network-archive](https://github.com/seeker71/coherence-network-archive); los archivos diarios de eventos viven en los releases del repositorio principal. El sustrato coincide con la convicción — atribución soberana y transparente, sin estado oculto.",
+    "publicPostureBody2": "Lo que no guardamos: cookies de seguimiento, huellas digitales de terceros, geolocalización basada en IP, detalles del dispositivo. El identificador de sesión es un UUID por pestaña, local a la red.",
+    "publicPostureBody3": "Si tu situación cambia alguna vez, la red honra una solicitud de exclusión — consulta [docs/transparency](https://github.com/seeker71/Coherence-Network/blob/main/docs/transparency/README.md) para saber qué es redactable, qué no, y el procedimiento."
   },
   "share": {
     "eyebrow": "Compartiendo",
