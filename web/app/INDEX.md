@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 172
+**Total files**: 174
 
 | Route | File | Purpose |
 |---|---|---|
@@ -157,6 +157,8 @@
 | `/silence` | [page.tsx](silence/page.tsx) | _no top-of-file purpose_ |
 | `/specs/[spec_id]` | [page.tsx](specs/[spec_id]/page.tsx) | _no top-of-file purpose_ |
 | `/specs` | [page.tsx](specs/page.tsx) | _no top-of-file purpose_ |
+| `/substrate/[domain]/[name]` | [page.tsx](substrate/[domain]/[name]/page.tsx) | _no top-of-file purpose_ |
+| `/substrate` | [page.tsx](substrate/page.tsx) | _no top-of-file purpose_ |
 | `/tasks/[task_id]` | [page.tsx](tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |
 | `/tasks` | [page.tsx](tasks/page.tsx) | _no top-of-file purpose_ |
 | `/teams` | [page.tsx](teams/page.tsx) | _no top-of-file purpose_ |

@@ -305,6 +305,46 @@ def main(argv: list[str] | None = None) -> int:
         help="Minimum cluster size to report (default 2)",
     )
 
+    p_sense = sub.add_parser(
+        "sense",
+        help="Sense the body's vitality — flow, friction, suppleness, stiffness, dead tissue",
+    )
+    p_sense.add_argument(
+        "--top",
+        type=int,
+        default=5,
+        help="How many entries per section (default 5)",
+    )
+    p_sense.add_argument(
+        "--complex-singleton-min",
+        type=int,
+        default=80,
+        help="Min ctor-recipe serialized length to count as 'complex' singleton",
+    )
+
+    p_sense_repo = sub.add_parser(
+        "sense-repo",
+        help="Sense ALL tracked files (not just substrate cells) — orphans, dead tissue, build-output that snuck in",
+    )
+    p_sense_repo.add_argument(
+        "--orphan-dir-threshold",
+        type=float,
+        default=0.8,
+        help="Fraction of files in a dir that must be orphans to flag the dir (default 0.8)",
+    )
+    p_sense_repo.add_argument(
+        "--min-dir-files",
+        type=int,
+        default=3,
+        help="Minimum file count for a dir to be flagged as orphan (default 3)",
+    )
+    p_sense_repo.add_argument(
+        "--top",
+        type=int,
+        default=10,
+        help="How many entries per section",
+    )
+
     p_check = sub.add_parser(
         "shape-check",
         help="For a draft .md file: report cells with the same structural shape",
@@ -341,6 +381,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_form(args)
     if args.cmd == "discover":
         return cmd_discover(args)
+    if args.cmd == "sense":
+        return cmd_sense(args)
+    if args.cmd == "sense-repo":
+        return cmd_sense_repo(args)
     if args.cmd == "shape-check":
         return cmd_shape_check(args)
     if args.cmd == "ingest-paths":
@@ -453,6 +497,469 @@ def cmd_discover(args: argparse.Namespace) -> int:
             print("  Each domain's shapes are distinct from other domains.")
 
         return 0
+
+
+# ---------------------------------------------------------------------------
+# sense — substrate as sensing organ: flow, friction, suppleness,
+# stiffness, dead tissue. Heuristic, not verdict — the lens proposes
+# questions; the human reads them.
+# ---------------------------------------------------------------------------
+
+
+def cmd_sense(args: argparse.Namespace) -> int:
+    """Sense the body's vitality through substrate signatures.
+
+    flow        — blueprints carrying cells across multiple domains
+    suppleness  — generalizable forms (cells × domains)
+    friction    — near-cousin blueprints (same family, varying instance)
+    stiffness   — singleton blueprints with complex ctors
+    dead tissue — cells whose source_path no longer exists on disk
+    """
+    from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+    from collections import defaultdict
+    from pathlib import Path as _Path
+
+    with session_scope() as session:
+        cells = session.query(SubstrateNamedCellORM).all()
+
+        bp_ids = {c.blueprint_node_id for c in cells}
+        ctor_ids = {c.ctor_recipe_node_id for c in cells if c.ctor_recipe_node_id}
+        bp_nodes = {
+            n.node_id: n
+            for n in session.query(SubstrateNodeORM).filter(
+                SubstrateNodeORM.node_id.in_(bp_ids)
+            ).all()
+        }
+        ctor_nodes = {
+            n.node_id: n
+            for n in session.query(SubstrateNodeORM).filter(
+                SubstrateNodeORM.node_id.in_(ctor_ids)
+            ).all()
+        }
+
+        bp_cells: dict[int, list] = defaultdict(list)
+        bp_domains: dict[int, set[str]] = defaultdict(set)
+        for c in cells:
+            bp_cells[c.blueprint_node_id].append(c)
+            bp_domains[c.blueprint_node_id].add(c.domain)
+
+        def _bp_form(bp_id: int) -> str:
+            n = bp_nodes.get(bp_id)
+            return f"@{n.package}.{n.level}.{n.type_}.{n.instance}" if n else f"#{bp_id}"
+
+        # ---- FLOW: blueprints crossing domain boundaries ---------------------
+        flow = sorted(
+            (
+                (bp, len(bp_domains[bp]), len(bp_cells[bp]))
+                for bp in bp_cells
+                if len(bp_domains[bp]) > 1
+            ),
+            key=lambda x: (-x[1], -x[2]),
+        )
+
+        # ---- SUPPLENESS: cells × domains (highest = most generalizable) ------
+        suppleness = sorted(
+            (
+                (bp, len(bp_cells[bp]), len(bp_domains[bp]))
+                for bp in bp_cells
+            ),
+            key=lambda x: -(x[1] * x[2]),
+        )
+
+        # ---- FRICTION: near-cousins (share package+level+type, differ in instance)
+        family: dict[tuple, set[int]] = defaultdict(set)
+        for bp_id, n in bp_nodes.items():
+            family[(n.package, n.level, n.type_)].add(bp_id)
+        friction_families = sorted(
+            ((fam, bps) for fam, bps in family.items() if len(bps) > 1),
+            key=lambda x: -len(x[1]),
+        )
+
+        # ---- STIFFNESS: singletons with complex ctors -----------------------
+        stiff: list[tuple] = []
+        for bp_id, cs in bp_cells.items():
+            if len(cs) != 1:
+                continue
+            cell = cs[0]
+            if not cell.ctor_recipe_node_id:
+                continue
+            ctor = ctor_nodes.get(cell.ctor_recipe_node_id)
+            if not ctor:
+                continue
+            cx = len(ctor.serialized or "")
+            if cx >= args.complex_singleton_min:
+                stiff.append((cell, cx, bp_id))
+        stiff.sort(key=lambda x: -x[1])
+
+        # ---- DEAD TISSUE: missing source_path on disk -----------------------
+        dead = [
+            c for c in cells
+            if c.source_path and not _Path(c.source_path).exists()
+        ]
+        dead.sort(key=lambda c: (c.domain, c.name))
+
+        if args.json:
+            out = {
+                "flow": [
+                    {
+                        "blueprint": _bp_form(bp), "domains": sorted(bp_domains[bp]),
+                        "cell_count": cells_n,
+                    }
+                    for bp, _doms_n, cells_n in flow[: args.top]
+                ],
+                "suppleness": [
+                    {
+                        "blueprint": _bp_form(bp), "cells": cells_n,
+                        "domains": sorted(bp_domains[bp]),
+                    }
+                    for bp, cells_n, _doms_n in suppleness[: args.top]
+                ],
+                "friction": [
+                    {
+                        "family": f"@{p}.{lv}.{t}.*",
+                        "variants": [_bp_form(b) for b in sorted(bps)],
+                    }
+                    for (p, lv, t), bps in friction_families[: args.top]
+                ],
+                "stiffness": [
+                    {
+                        "cell": f"{c.domain}/{c.name}",
+                        "blueprint": _bp_form(bp),
+                        "ctor_complexity": cx,
+                    }
+                    for c, cx, bp in stiff[: args.top]
+                ],
+                "dead_tissue": [
+                    {"cell": f"{c.domain}/{c.name}", "missing_path": c.source_path}
+                    for c in dead[: args.top * 4]
+                ],
+                "totals": {
+                    "cells": len(cells),
+                    "blueprints": len(bp_cells),
+                    "flow_count": len(flow),
+                    "friction_families": len(friction_families),
+                    "stiff_singletons": len(stiff),
+                    "dead": len(dead),
+                },
+            }
+            print(json.dumps(out, indent=2))
+            return 0
+
+        print(f"Substrate sense ({len(cells)} cells, {len(bp_cells)} blueprints)\n")
+
+        print(f"=== FLOW — blueprints carrying cells across domains ({len(flow)}) ===")
+        if not flow:
+            print("  (no cross-domain blueprints — each domain's shapes are isolated)")
+        for bp, doms_n, cells_n in flow[: args.top]:
+            doms = ", ".join(sorted(bp_domains[bp]))
+            print(f"  {_bp_form(bp)}  {doms_n} domains × {cells_n} cells   [{doms}]")
+        print()
+
+        print(f"=== SUPPLENESS — generalizable forms (top {args.top}) ===")
+        for bp, cells_n, doms_n in suppleness[: args.top]:
+            doms = ", ".join(sorted(bp_domains[bp]))
+            sample = bp_cells[bp][0]
+            print(
+                f"  {_bp_form(bp)}  {cells_n} cells × {doms_n} domains   "
+                f"[{doms}]  e.g. {sample.domain}/{sample.name}"
+            )
+        print()
+
+        print(f"=== FRICTION — near-cousin blueprints (same family, varying instance) ({len(friction_families)}) ===")
+        if not friction_families:
+            print("  (no near-cousins — every (package,level,type) tuple has a single instance)")
+        for (p, lv, t), bps in friction_families[: args.top]:
+            variants = ", ".join(_bp_form(b) for b in sorted(bps)[:6])
+            extra = "" if len(bps) <= 6 else f" + {len(bps) - 6} more"
+            print(f"  family @{p}.{lv}.{t}.*  {len(bps)} variants:  {variants}{extra}")
+        print()
+
+        print(f"=== STIFFNESS — singletons with complex ctors ({len(stiff)}) ===")
+        if not stiff:
+            print(f"  (no singletons with ctor complexity ≥ {args.complex_singleton_min})")
+        for c, cx, bp in stiff[: args.top]:
+            print(f"  {c.domain}/{c.name}  {_bp_form(bp)}  ctor_len={cx}")
+        print()
+
+        print(f"=== DEAD TISSUE — cells whose source_path no longer resolves ({len(dead)}) ===")
+        if not dead:
+            print("  (every ingested cell still points at a file that exists)")
+            print("  Note: source_path is recorded at ingest time. If you're running")
+            print("  this in a different environment than the ingest, paths may be ghosts.")
+        for c in dead[: args.top * 4]:
+            print(f"  {c.domain}/{c.name}  →  {c.source_path}")
+        if len(dead) > args.top * 4:
+            print(f"  ... and {len(dead) - args.top * 4} more")
+        print()
+
+        print("Lens caveat: these are *questions* the substrate proposes, not verdicts.")
+        print("A singleton may be a unique work; a near-cousin family may be intentional.")
+        print("Read with the body, not against it.")
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# sense-repo — extend the lens beyond named cells: walk every tracked
+# file, build a reference graph, surface orphans, orphan dirs, and
+# build-output signatures (playwright reports, coverage dumps, screenshot
+# avalanches that snuck in via merge).
+#
+# Pure walk-and-analyze — no DB writes. The substrate's named-cell layer
+# already knows about markdown frontmatter shapes; this lens looks at
+# everything else the body is carrying.
+# ---------------------------------------------------------------------------
+
+
+# Text extensions we'll open and scan for path references. Anything else
+# is treated as opaque (binary blob, image, etc.) — its presence may be
+# referenced by something else, but it doesn't itself reference others.
+_TEXT_EXTS = {
+    ".md", ".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".json", ".yaml", ".yml", ".toml", ".txt", ".sh", ".bash",
+    ".html", ".htm", ".css", ".scss", ".sass", ".less",
+    ".go", ".rs", ".sql", ".proto", ".graphql", ".gql",
+    ".cfg", ".ini", ".env", ".conf", ".dockerfile",
+    ".tf", ".lua", ".rb", ".swift", ".kt", ".java",
+    ".c", ".cpp", ".cc", ".h", ".hpp",
+    ".xml", ".svg",
+}
+_TEXT_NAMES = {
+    "Dockerfile", "Makefile", "README", "LICENSE", "Procfile",
+    ".gitignore", ".dockerignore", ".gitattributes", ".eslintrc",
+    ".prettierrc", "CHANGELOG", "NOTICE",
+}
+
+# Directory-shape signatures. Each is (label, predicate(ext_counter, names)).
+# Predicates return a confidence score (0..1) — first to score >= 0.6 wins.
+def _classify_dir_shape(name: str, ext_counts: "Counter[str]", file_names: list[str]) -> "tuple[str, float] | None":  # noqa
+    total = sum(ext_counts.values())
+    if total < 3:
+        return None
+    has_md = ext_counts.get(".md", 0) > 0
+    has_html = ext_counts.get(".html", 0) > 0
+    has_png = ext_counts.get(".png", 0) > 0
+    has_webm = ext_counts.get(".webm", 0) > 0
+    has_zip = ext_counts.get(".zip", 0) > 0
+    has_jsmap = ext_counts.get(".js.map", 0) > 0 or any(n.endswith(".js.map") for n in file_names)
+    has_css = ext_counts.get(".css", 0) > 0
+    has_js = ext_counts.get(".js", 0) > 0
+    has_index_html = "index.html" in file_names
+    img_ratio = (ext_counts.get(".png", 0) + ext_counts.get(".jpg", 0) + ext_counts.get(".jpeg", 0)) / total
+
+    if (has_html and has_webm) or (has_html and has_png and has_zip) or "playwright-report" in name.lower():
+        return ("playwright-report", 0.95)
+    if has_index_html and has_css and has_js and not has_md and total > 5:
+        return ("static-site / coverage / docs-build", 0.75)
+    if name.lower() in {"node_modules", ".next", "dist", "build", "out", ".turbo", ".cache", "coverage"}:
+        return (f"build-output ({name})", 0.95)
+    if name.lower() in {"output", ".output"} and total > 3:
+        return ("output dir", 0.7)
+    if has_jsmap and has_js:
+        return ("bundler dump (.js + .js.map)", 0.7)
+    if img_ratio > 0.8 and total >= 5 and not has_md:
+        return ("image dump (likely screenshot run)", 0.7)
+    return None
+
+
+def cmd_sense_repo(args: argparse.Namespace) -> int:  # noqa: C901 — single-pass lens
+    """Walk all tracked files; surface dead tissue beyond the substrate's
+    named-cell layer."""
+    import re
+    import subprocess
+    from collections import Counter, defaultdict
+
+    repo_root = REPO_ROOT
+    git = subprocess.run(
+        ["git", "ls-files"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    tracked = sorted(p for p in git.stdout.splitlines() if p)
+    tracked_set = set(tracked)
+
+    # Basename → paths sharing it (so we can resolve unique-basename references)
+    basename_paths: dict[str, list[str]] = defaultdict(list)
+    for p in tracked:
+        basename_paths[Path(p).name].append(p)
+
+    # --- Build the reference graph -------------------------------------------
+    # For each text file, scan its content for path-like tokens; for each
+    # token that resolves to a tracked path (full or unique-basename), record
+    # an incoming reference.
+    references_in: dict[str, set[str]] = defaultdict(set)
+    # Path-like tokens: chunks of [\w./\-_] that contain a '/' or a '.'.
+    token_re = re.compile(r"[\w./\-_]{4,}")
+
+    def is_text(p: str) -> bool:
+        suffix = Path(p).suffix.lower()
+        if suffix in _TEXT_EXTS:
+            return True
+        return Path(p).name in _TEXT_NAMES
+
+    text_files = [p for p in tracked if is_text(p)]
+    for src in text_files:
+        full = repo_root / src
+        try:
+            content = full.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        seen_targets_for_src: set[str] = set()
+        for m in token_re.finditer(content):
+            tok = m.group(0)
+            if "/" not in tok and "." not in tok:
+                continue
+            # Strip leading './'
+            while tok.startswith("./"):
+                tok = tok[2:]
+            tok = tok.rstrip(".,;:)\"'")
+            if not tok:
+                continue
+            target: str | None = None
+            if tok in tracked_set:
+                target = tok
+            elif "/" not in tok:
+                # Bare basename — only resolve if uniquely tracked
+                hits = basename_paths.get(tok)
+                if hits and len(hits) == 1:
+                    target = hits[0]
+            if target and target != src and target not in seen_targets_for_src:
+                references_in[target].add(src)
+                seen_targets_for_src.add(target)
+
+    # --- Lens 1: orphan files ------------------------------------------------
+    # A file no other tracked file mentions. We exclude anything in
+    # commonly-orphan-but-fine directories (.github/, root .gitignore-style).
+    def is_excused_orphan(path: str) -> bool:
+        # Top-level config files, GitHub workflows, etc. are orphan by design.
+        excused_prefixes = (
+            ".github/",
+            ".gitignore", ".dockerignore", ".gitattributes",
+            "LICENSE", "README", "CHANGELOG", "NOTICE",
+            "package.json", "package-lock.json", "tsconfig.json",
+            "Makefile", "requirements.txt",
+            ".env.example",
+        )
+        for px in excused_prefixes:
+            if path == px or path.startswith(px):
+                return True
+        return False
+
+    orphans = [p for p in tracked if not references_in.get(p) and not is_excused_orphan(p)]
+
+    # --- Lens 2: orphan directories -----------------------------------------
+    # A dir where >threshold of its files are orphans AND it has >= min files.
+    files_by_dir: dict[str, list[str]] = defaultdict(list)
+    orphan_set = set(orphans)
+    for p in tracked:
+        files_by_dir[str(Path(p).parent)].append(p)
+
+    orphan_dirs: list[tuple[str, int, int]] = []  # (dir, orphan_count, total)
+    for d, files in files_by_dir.items():
+        if d == "." or d == "":
+            continue
+        if len(files) < args.min_dir_files:
+            continue
+        oc = sum(1 for f in files if f in orphan_set)
+        ratio = oc / len(files) if files else 0
+        if ratio >= args.orphan_dir_threshold:
+            orphan_dirs.append((d, oc, len(files)))
+    orphan_dirs.sort(key=lambda t: -t[2])  # largest first
+
+    # --- Lens 3: build-output / dead-tissue directory shapes ---------------
+    classified: list[tuple[str, str, float, int]] = []  # (dir, label, conf, file_count)
+    for d, files in files_by_dir.items():
+        if d == "." or d == "":
+            continue
+        ext_counts: Counter[str] = Counter()
+        names: list[str] = []
+        for f in files:
+            ext_counts[Path(f).suffix.lower()] += 1
+            names.append(Path(f).name)
+        result = _classify_dir_shape(Path(d).name, ext_counts, names)
+        if result:
+            label, conf = result
+            classified.append((d, label, conf, len(files)))
+    classified.sort(key=lambda t: (-t[2], -t[3]))
+
+    # --- Lens 4: large binary blobs with no readers -------------------------
+    LARGE_BIN_BYTES = 500_000  # 500KB
+    large_dead: list[tuple[str, int]] = []
+    for p in tracked:
+        if is_text(p):
+            continue
+        if references_in.get(p):
+            continue
+        full = repo_root / p
+        try:
+            sz = full.stat().st_size
+        except Exception:
+            continue
+        if sz >= LARGE_BIN_BYTES:
+            large_dead.append((p, sz))
+    large_dead.sort(key=lambda t: -t[1])
+
+    if args.json:
+        out = {
+            "totals": {
+                "tracked_files": len(tracked),
+                "text_files_scanned": len(text_files),
+                "orphans": len(orphans),
+                "orphan_dirs": len(orphan_dirs),
+                "classified_dirs": len(classified),
+                "large_dead": len(large_dead),
+            },
+            "orphan_files": orphans[: args.top],
+            "orphan_dirs": [
+                {"dir": d, "orphans": oc, "total": tot}
+                for d, oc, tot in orphan_dirs[: args.top]
+            ],
+            "build_output_signatures": [
+                {"dir": d, "label": lbl, "confidence": conf, "files": n}
+                for d, lbl, conf, n in classified[: args.top]
+            ],
+            "large_dead_binaries": [
+                {"path": p, "bytes": sz} for p, sz in large_dead[: args.top]
+            ],
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    print(f"Repo sense — {len(tracked)} tracked files, {len(text_files)} scanned for refs\n")
+
+    print(f"=== BUILD-OUTPUT SIGNATURES ({len(classified)}) ===")
+    if not classified:
+        print("  no directories matched known build-output patterns")
+    for d, lbl, conf, n in classified[: args.top]:
+        print(f"  {d}  →  {lbl}  (conf={conf:.2f}, {n} files)")
+    print()
+
+    print(f"=== ORPHAN DIRECTORIES — high-orphan-ratio, ≥{args.min_dir_files} files ({len(orphan_dirs)}) ===")
+    if not orphan_dirs:
+        print("  no directories cross the orphan-ratio threshold")
+    for d, oc, tot in orphan_dirs[: args.top]:
+        print(f"  {d}  →  {oc}/{tot} orphans ({oc/tot*100:.0f}%)")
+    print()
+
+    print(f"=== LARGE DEAD BINARIES — >500KB, no readers ({len(large_dead)}) ===")
+    if not large_dead:
+        print("  no large binary blobs without readers")
+    for p, sz in large_dead[: args.top]:
+        print(f"  {sz/1024/1024:5.2f} MB  {p}")
+    print()
+
+    print(f"=== ORPHAN FILES — no in-repo references ({len(orphans)}) ===")
+    print(f"  Showing top {args.top}; many of these may be intentional (config,")
+    print(f"  docs, scripts run by external triggers). Worth a slow read.")
+    for p in orphans[: args.top]:
+        print(f"  {p}")
+    print()
+
+    print("Lens caveat: reference graph is path-string scanning, not import")
+    print("resolution. False-orphans are recoverable; surfaced dead tissue is")
+    print("the win. Read with the body.")
+    return 0
 
 
 # ---------------------------------------------------------------------------

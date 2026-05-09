@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 125
+**Total files**: 126
 
 | File | Purpose |
 |---|---|
@@ -119,6 +119,7 @@
 | [service_registry_router.py](service_registry_router.py) | Service registry introspection endpoints. |
 | [settlement.py](settlement.py) | Settlement router — daily CC distribution batch per story-protocol-integration R8. |
 | [spec_registry.py](spec_registry.py) | Spec registry API routes. |
+| [substrate.py](substrate.py) | Coherence-substrate REST API. |
 | [task_activity_routes.py](task_activity_routes.py) | Task activity endpoints — live task visibility and SSE streaming. |
 | [traceability.py](traceability.py) | spec: full-code-traceability |
 | [translations.py](translations.py) | Translations router — POST human or machine translations for any entity. |
