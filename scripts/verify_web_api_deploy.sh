@@ -733,8 +733,18 @@ check_web_runtime_sha() {
   fi
 
   if [[ "$observed_sha" != "$expected_sha" ]]; then
-    echo "FAIL: web deployed SHA does not match expected main-head SHA"
-    return 1
+    # Two cases produce a mismatch: (a) the deploy is stale (live SHA is
+    # behind expected), or (b) main moved forward during this verification
+    # window (live SHA is ahead of expected — rollout race, not a failure).
+    # When this check is non-required, log it and pass; when required, fail.
+    # The api-side parity check (check_api_runtime_sha) honors `required`
+    # the same way; this brings the web side into symmetry.
+    if [[ "$required" == "1" ]]; then
+      echo "FAIL: web deployed SHA does not match expected main-head SHA"
+      return 1
+    fi
+    echo "WARN: web deployed SHA does not match expected main-head SHA (non-blocking; possibly rollout race)"
+    return 0
   fi
 
   echo "PASS"
