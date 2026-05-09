@@ -2250,7 +2250,8 @@
       "people": "Personas"
     },
     "noteEyebrow": "Una nota desde este cuerpo",
-    "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →"
+    "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →",
+    "sourceLanguageDisclosure": "Nota: el contenido curado de esta página está actualmente en inglés. La navegación, los encabezados y la capa de datos a continuación (títulos de obras, descripciones, cuerpo de evidencia) se traducen automáticamente a tu idioma; una traducción curada por el autor de la prosa más larga en esta página vendrá después. Mientras tanto, la función incorporada de tu navegador „traducir esta página“ mostrará el resto en tu idioma."
   },
   "presence": {
     "location": {

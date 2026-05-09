@@ -2169,7 +2169,8 @@
       "people": "People"
     },
     "noteEyebrow": "A note from this body",
-    "editProfileCta": "How to claim, edit, or remove this profile →"
+    "editProfileCta": "How to claim, edit, or remove this profile →",
+    "sourceLanguageDisclosure": "Note: this page's curated content is currently in English. The site chrome (navigation, headings, labels) and the data layer below (work titles, descriptions, body of evidence) translate automatically into your language; an author-curated translation of the longer prose on this page will follow. In the meantime, your browser's built-in translate-this-page feature will render the rest in your language too."
   },
   "presence": {
     "location": {
