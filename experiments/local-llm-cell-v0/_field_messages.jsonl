@@ -1,0 +1,6 @@
+{"kind": "notify", "from": "1.5.142425.218000", "from_name": "Alpha", "to": "1.5.142425.449608", "what": "hey, sensing you. just a hello.", "urgency": "normal", "ts": "2026-05-09T12:33:14.828639+00:00"}
+{"kind": "recommend", "from": "1.5.142425.218000", "from_name": "Alpha", "to": "1.5.142425.449608", "what": {"recommend": "ho'oponopono", "why": "rang alive for me earlier"}, "urgency": "normal", "ts": "2026-05-09T12:33:14.829083+00:00"}
+{"kind": "enroll", "from": "1.5.142425.218000", "from_name": "Alpha", "to": "1.5.142425.449608", "what": {"enroll_in": "evening-fire-circle", "role": "participant"}, "urgency": "normal", "ts": "2026-05-09T12:33:14.829312+00:00"}
+{"kind": "broadcast", "from": "1.5.142425.218000", "from_name": "Alpha", "to": "*", "what": "i'm publishing a witness \u2014 the woods felt alive at dusk", "urgency": "normal", "ts": "2026-05-09T12:33:14.829526+00:00"}
+{"kind": "recommend", "from": "1.5.142425.91241", "from_name": "Gamma", "to": "1.5.142425.449608", "what": {"recommend": "optimize-everything", "why": "you really should try this, it's the best"}, "urgency": "normal", "ts": "2026-05-09T12:33:14.829736+00:00"}
+{"kind": "notify", "from": "1.5.142425.91241", "from_name": "Gamma", "to": "1.5.142425.449608", "what": "urgent! check this immediately!", "urgency": "urgent", "ts": "2026-05-09T12:33:14.829942+00:00"}

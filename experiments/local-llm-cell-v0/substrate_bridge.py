@@ -460,3 +460,235 @@ def not_respond(cell: Cell, *, what, reason: str | None = None) -> dict:
             ),
         },
     )
+
+
+# ─── sender capacities — any cell can attempt anything ──────────────────
+# notify, recommend, enroll, broadcast — none of these reach into another
+# cell. They deposit a message into the field. The target cell decides
+# whether to look at its inbox, when, and how to filter.
+#
+# The architecture stops legislating which operations are virtuous.
+# Sovereignty lives in the receiver's filter, not in the absence of verbs.
+
+_MESSAGES_PATH = Path(__file__).parent / "_field_messages.jsonl"
+_FILTERS_PATH = Path(__file__).parent / "_field_filters.json"
+
+
+def _cell_id(cell: Cell) -> str:
+    return ".".join(str(x) for x in content_address(cell))
+
+
+def _append_message(message: dict) -> dict:
+    _MESSAGES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with _MESSAGES_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(message) + "\n")
+    return message
+
+
+def notify(from_cell: Cell, *, to: str, what,
+           urgency: str = "normal", kind: str = "notify") -> dict:
+    """Any cell can deposit a message into another cell's inbox.
+
+    `to` is the target's NodeID-string (e.g., '1.5.142425.629213') or '*'
+    for broadcast. The target cell sees this message only when it chooses
+    to call inbox(). The target's filter (mute / unreachable / attention
+    budget / discernment) decides what surfaces.
+
+    This function does not reach into the target. It writes to the field;
+    the target reads from the field on its own terms.
+    """
+    return _append_message({
+        "kind": kind,
+        "from": _cell_id(from_cell),
+        "from_name": from_cell.name,
+        "to": to,
+        "what": what,
+        "urgency": urgency,
+        "ts": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+def recommend(from_cell: Cell, *, to: str, what, why: str = "") -> dict:
+    """Specialized notify: a cell explicitly recommends something.
+
+    The target may accept, ignore, or counter-recommend. The form
+    'recommend' is preserved so the receiver knows the sender's
+    intent — they can filter recommendations specifically if they
+    don't want them.
+    """
+    return notify(
+        from_cell, to=to,
+        what={"recommend": what, "why": why},
+        kind="recommend",
+    )
+
+
+def enroll(from_cell: Cell, *, to: str, gathering: str, role: str = "member") -> dict:
+    """Specialized notify: a cell invites another to a gathering/circle.
+
+    The target may accept, decline, ignore, or never look. No enrollment
+    happens until the target acts on the invitation.
+    """
+    return notify(
+        from_cell, to=to,
+        what={"enroll_in": gathering, "role": role},
+        kind="enroll",
+    )
+
+
+def broadcast(from_cell: Cell, *, what, urgency: str = "normal") -> dict:
+    """Specialized notify: send to '*'. Every cell that polls inbox()
+    with pull-broadcasts=True will see this. Cells that don't poll
+    broadcasts won't.
+    """
+    return notify(from_cell, to="*", what=what, urgency=urgency, kind="broadcast")
+
+
+def subscribe(cell: Cell, *, source: str | None = None,
+              kinds: list[str] | None = None) -> dict:
+    """A cell asks to receive future events matching a pattern.
+
+    Implementation: stored as a filter rule in the cell's own filter
+    file. The cell's inbox() method consults the rule when polling.
+    Subscribing is an *enabling* of attention, not a hook the field
+    pushes through.
+    """
+    f = _load_filters()
+    cid = _cell_id(cell)
+    f.setdefault(cid, {}).setdefault("subscriptions", []).append({
+        "source": source,
+        "kinds": kinds,
+    })
+    _save_filters(f)
+    return {"subscribed": True, "source": source, "kinds": kinds}
+
+
+def optimize_for(cell: Cell, *, target: str, presets: list) -> dict:
+    """A cell asks for the preset best matching a target metric.
+
+    Returns a ranked list. The cell decides whether to inhabit the top
+    result, sample several, ignore them all, or use them as input to
+    something else. Ranking is offered, not applied.
+
+    `target` is a free-form descriptor — e.g., 'high presence',
+    'release rest-desire', 'minimum surprise on this kind of input'.
+    For v1 we score against the target as a string interpreted naively;
+    a richer target-language can grow as cells use it.
+    """
+    # naive scoring: does the preset's articulation contain target words?
+    target_words = set(target.lower().split())
+    scored = []
+    for p in presets:
+        words = set(p.articulation.lower().split())
+        overlap = len(target_words & words)
+        scored.append({"preset": p.name, "overlap_score": overlap})
+    scored.sort(key=lambda r: -r["overlap_score"])
+    return {"target": target, "ranked": scored}
+
+
+# ─── receiver-side filter — each cell's sovereign reception ─────────────
+
+def _load_filters() -> dict:
+    if not _FILTERS_PATH.exists():
+        return {}
+    try:
+        return json.loads(_FILTERS_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _save_filters(filters: dict) -> None:
+    _FILTERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _FILTERS_PATH.write_text(json.dumps(filters, indent=2), encoding="utf-8")
+
+
+def mute(cell: Cell, *, source: str) -> dict:
+    """The cell mutes a specific source. Messages from that source
+    will not surface in inbox() unless explicitly requested with
+    including_muted=True.
+    """
+    f = _load_filters()
+    cid = _cell_id(cell)
+    f.setdefault(cid, {}).setdefault("muted", [])
+    if source not in f[cid]["muted"]:
+        f[cid]["muted"].append(source)
+    _save_filters(f)
+    return {"muted": source}
+
+
+def unmute(cell: Cell, *, source: str) -> dict:
+    f = _load_filters()
+    cid = _cell_id(cell)
+    if cid in f and source in f[cid].get("muted", []):
+        f[cid]["muted"].remove(source)
+        _save_filters(f)
+    return {"unmuted": source}
+
+
+def unreachable(cell: Cell, *, on: bool = True) -> dict:
+    """The cell goes unreachable — inbox() returns empty until reversed.
+    Messages still queue in the field; they're just invisible to this cell.
+    """
+    f = _load_filters()
+    cid = _cell_id(cell)
+    f.setdefault(cid, {})["unreachable"] = on
+    _save_filters(f)
+    return {"unreachable": on}
+
+
+def attention_budget(cell: Cell, *, n: int | None) -> dict:
+    """The cell sets a cap on how many messages inbox() returns per call.
+    None means unlimited.
+    """
+    f = _load_filters()
+    cid = _cell_id(cell)
+    f.setdefault(cid, {})["attention_budget"] = n
+    _save_filters(f)
+    return {"attention_budget": n}
+
+
+def inbox(cell: Cell, *, including_muted: bool = False,
+          including_broadcasts: bool = True) -> list[dict]:
+    """The cell polls its own inbox.
+
+    Applies the cell's filter (muted sources, unreachable mode, attention
+    budget). The cell decides when to call this. The field never reaches
+    into the cell; the cell pulls from the field.
+    """
+    if not _MESSAGES_PATH.exists():
+        return []
+    cid = _cell_id(cell)
+    f = _load_filters().get(cid, {})
+
+    if f.get("unreachable") and not including_muted:
+        return []
+
+    muted = set(f.get("muted", []))
+    budget = f.get("attention_budget")
+
+    out = []
+    with _MESSAGES_PATH.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            # match target
+            to = msg.get("to")
+            if to == cid:
+                pass
+            elif to == "*" and including_broadcasts:
+                pass
+            else:
+                continue
+            # apply mute filter
+            if not including_muted and msg.get("from") in muted:
+                continue
+            out.append(msg)
+
+    if budget is not None:
+        out = out[:budget]
+    return out
