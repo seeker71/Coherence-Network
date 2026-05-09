@@ -164,6 +164,15 @@ fn main() -> io::Result<()> {
     let mut prov_writes: std::collections::HashMap<u32, u64> =
         std::collections::HashMap::new();
 
+    // Nutrient-flow accumulators: directed co-occurrence between cells in
+    // adjacent frames. If cell A was in frame N's changed-set and cell B is
+    // in frame N+1's, that counts as one A → B flow event.
+    let mut flows: std::collections::HashMap<(usize, usize), u64> =
+        std::collections::HashMap::new();
+    let mut cell_latest_prov: std::collections::HashMap<usize, u32> =
+        std::collections::HashMap::new();
+    let mut prev_changed_cells: Vec<usize> = Vec::new();
+
     while let Some(frame) = reader.next() {
         let frame = frame?;
         let live = live_cells(&frame);
@@ -200,6 +209,8 @@ fn main() -> io::Result<()> {
                 // Vitality counters: count one "write" per changed cell per frame.
                 *cell_writes.entry(idx).or_insert(0) += 1;
                 *prov_writes.entry(val.2).or_insert(0) += 1;
+                // Track this cell's most-recent provenance for flow labels.
+                cell_latest_prov.insert(idx, val.2);
             }
         }
         for &idx in prev_state.keys() {
@@ -207,6 +218,21 @@ fn main() -> io::Result<()> {
                 unsets.push(idx);
             }
         }
+
+        // Nutrient flow: every (a in prev frame's changed-set) → (b in this
+        // frame's changed-set) is one flow event. This captures "writing X
+        // tends to be followed by writing Y" — which file edits flow into
+        // which other edits, which tools follow which other tools.
+        if !prev_changed_cells.is_empty() && !sets.is_empty() {
+            for &a in &prev_changed_cells {
+                for (b_idx, _, _, _) in &sets {
+                    if a != *b_idx {
+                        *flows.entry((a, *b_idx)).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+        prev_changed_cells = sets.iter().map(|(idx, _, _, _)| *idx).collect();
 
         if frame_count > 0 {
             frames_json.push(',');
@@ -283,6 +309,30 @@ fn main() -> io::Result<()> {
         s
     };
 
+    // Top-N nutrient flows: sort by count desc, take 50. Each entry is
+    // [src_cell_idx, dst_cell_idx, src_latest_prov, dst_latest_prov, count]
+    // so the JS can resolve labels via PROVMAP and rank with bars.
+    const FLOW_LIMIT: usize = 50;
+    let mut flow_vec: Vec<((usize, usize), u64)> = flows.into_iter().collect();
+    flow_vec.sort_by(|a, b| b.1.cmp(&a.1));
+    flow_vec.truncate(FLOW_LIMIT);
+    let flow_count = flow_vec.len();
+    let flows_json = {
+        let mut s = String::from("[");
+        let mut first = true;
+        for ((a, b), n) in &flow_vec {
+            if !first {
+                s.push(',');
+            }
+            first = false;
+            let pa = cell_latest_prov.get(a).copied().unwrap_or(0);
+            let pb = cell_latest_prov.get(b).copied().unwrap_or(0);
+            s.push_str(&format!("[{},{},{},{},{}]", a, b, pa, pb, n));
+        }
+        s.push(']');
+        s
+    };
+
     let html = build_html(
         input,
         frame_count,
@@ -295,13 +345,14 @@ fn main() -> io::Result<()> {
         &cell_writes_json,
         &prov_writes_json,
         &provmap_json,
+        &flows_json,
     );
 
     let mut out_file = fs::File::create(output)?;
     out_file.write_all(html.as_bytes())?;
 
     eprintln!(
-        "wrote {} ({} frames, bbox {}x{} at ({},{}), {} unique cells, {} unique recipes, {} bytes)",
+        "wrote {} ({} frames, bbox {}x{} at ({},{}), {} unique cells, {} unique recipes, {} top flows, {} bytes)",
         output,
         frame_count,
         bbox_w,
@@ -310,6 +361,7 @@ fn main() -> io::Result<()> {
         min_y,
         cell_writes.len(),
         prov_writes.len(),
+        flow_count,
         std::fs::metadata(output)?.len()
     );
     Ok(())
@@ -327,6 +379,7 @@ fn build_html(
     cell_writes_json: &str,
     prov_writes_json: &str,
     provmap_json: &str,
+    flows_json: &str,
 ) -> String {
     // The viewer JS reconstructs full state from deltas. The PALETTE matches
     // the v0 mp4 renderer's tag colors so a viewer who's seen the mp4 has
@@ -493,6 +546,14 @@ fn build_html(
         all cells it writes to.
       </p>
       <ol id="recipes-list"></ol>
+      <hr style="border-color: #222; margin: 16px 0;">
+      <h3 style="margin-top: 0;">Nutrient flows</h3>
+      <p style="color: var(--muted); font-size: 12px; margin: 0 0 12px 0;">
+        Where energy moves between cells turn-to-turn. A → B means cell A
+        was written, then in the next frame cell B was written — co-occurrence
+        across adjacent frames. Top 50 by frequency.
+      </p>
+      <ol id="flows-list"></ol>
       <hr style="border-color: #222; margin: 12px 0;">
       <p style="color: var(--muted); font-size: 12px;">
         In Vitality mode, cells are colored by write rate (cool→hot).
@@ -514,6 +575,10 @@ const FRAMES = {frames_json};
 const CELL_WRITES = {cell_writes_json};
 const PROV_WRITES = {prov_writes_json};
 const PROVMAP = {provmap_json};
+// Top nutrient flows: directed co-occurrence between cells in adjacent
+// frames. Each row: [src_cell_idx, dst_cell_idx, src_latest_prov,
+// dst_latest_prov, count]. Sorted desc by count, capped at 50.
+const FLOWS = {flows_json};
 
 const PALETTE = {{
   free: "#000000",
@@ -562,6 +627,7 @@ const sideEl = document.getElementById("side");
 const inspectorPanel = document.getElementById("inspector");
 const recipesPanel = document.getElementById("recipes");
 const recipesList = document.getElementById("recipes-list");
+const flowsList = document.getElementById("flows-list");
 const modeIdentityBtn = document.getElementById("mode-identity");
 const modeVitalityBtn = document.getElementById("mode-vitality");
 const info = {{
@@ -750,9 +816,60 @@ function setMode(newMode) {{
   recolorAllLive();
 }}
 
+// Nutrient-flow leaderboard: rank by adjacent-frame co-occurrence, show
+// resolved labels via PROVMAP. Cells with no provenance map fall back to
+// "cell N". Hovering a flow row highlights both source and destination
+// cells in the heap.
+function buildFlowsList() {{
+  flowsList.innerHTML = "";
+  if (!Array.isArray(FLOWS) || FLOWS.length === 0) {{
+    const li = document.createElement("li");
+    li.style.color = "var(--muted)";
+    li.style.fontSize = "12px";
+    li.textContent = "No flows captured (need ≥2 adjacent frames with changed cells).";
+    flowsList.appendChild(li);
+    return;
+  }}
+  const top = FLOWS[0][4] || 1;
+  for (const [a, b, pa, pb, n] of FLOWS) {{
+    const li = document.createElement("li");
+    li.dataset.srcCell = a;
+    li.dataset.dstCell = b;
+    const labelA = provSourceLabel(pa) || `cell ${{a}}`;
+    const labelB = provSourceLabel(pb) || `cell ${{b}}`;
+    const pct = ((n / top) * 100).toFixed(1);
+    li.innerHTML =
+      `<span class="src">${{escapeHtml(labelA)}} → ${{escapeHtml(labelB)}}</span>` +
+      `<span class="count">${{n.toLocaleString()}}</span>` +
+      `<div class="bar" style="--bar-pct: ${{pct}}%"></div>`;
+    li.style.cursor = "pointer";
+    li.addEventListener("mouseenter", () => highlightFlow(a, b));
+    li.addEventListener("mouseleave", () => highlightFlow(null, null));
+    flowsList.appendChild(li);
+  }}
+}}
+
+function highlightFlow(srcIdx, dstIdx) {{
+  for (const [idx, _] of liveState.entries()) {{
+    const el = cellEls.get(idx);
+    if (!el) continue;
+    if (idx === srcIdx) {{
+      el.style.outline = "2px solid #ff7050";
+      el.style.zIndex = "3";
+    }} else if (idx === dstIdx) {{
+      el.style.outline = "2px solid #50ffa0";
+      el.style.zIndex = "3";
+    }} else if (highlightedProv === null) {{
+      el.style.outline = "";
+      el.style.zIndex = "";
+    }}
+  }}
+}}
+
 modeIdentityBtn.addEventListener("click", () => setMode("identity"));
 modeVitalityBtn.addEventListener("click", () => setMode("vitality"));
 buildRecipesList();
+buildFlowsList();
 
 scrub.addEventListener("input", () => {{
   applyFrameDelta(parseInt(scrub.value, 10));
@@ -811,6 +928,7 @@ applyFrameDelta(0);
         cell_writes_json = cell_writes_json,
         prov_writes_json = prov_writes_json,
         provmap_json = provmap_json,
+        flows_json = flows_json,
         GRID = GRID,
     )
 }
