@@ -38,6 +38,7 @@ Then:
 from __future__ import annotations
 
 import json
+import os
 import re
 import struct
 import sys
@@ -135,13 +136,12 @@ def parse_ts(ts_str: str) -> int:
     return int(dt.timestamp() * 1_000_000)
 
 
-def main() -> int:
-    if len(sys.argv) < 3:
-        print(f"usage: {sys.argv[0]} <session.jsonl> <output_base>", file=sys.stderr)
-        return 2
+def convert_session(session_path: Path, output_base: str) -> dict:
+    """Read a session JSONL, write {output_base}.mfb + .mfb.provmap.
 
-    session_path = Path(sys.argv[1])
-    output_base = sys.argv[2]
+    Returns a dict with stats: frames, tools, files, commits, prs, prov_entries,
+    plus top_tools and top_files for logging.
+    """
     mfb_path = f"{output_base}.mfb"
     provmap_path = f"{mfb_path}.provmap"
 
@@ -354,21 +354,269 @@ def main() -> int:
     with open(provmap_path, "w") as f:
         json.dump(pm, f)
 
+    return {
+        "mfb_path": mfb_path,
+        "provmap_path": provmap_path,
+        "frames": len(frames),
+        "tools": len(tool_idx),
+        "files": len(file_idx),
+        "commits": len(commit_idx),
+        "prs": len(pr_idx),
+        "prov_entries": len(prov_registry),
+        "top_tools": dict(sorted(tool_count.items(), key=lambda x: -x[1])[:5]),
+        "top_files": dict(
+            sorted(
+                ((Path(p).name, c) for p, c in file_count.items()),
+                key=lambda x: -x[1],
+            )[:5]
+        ),
+    }
+
+
+# ---- Live preview helpers ----
+
+AUTO_REFRESH_SCRIPT = """<script>
+(function() {
+  let lastModified = null;
+  async function check() {
+    try {
+      const r = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
+      const m = r.headers.get('last-modified');
+      if (lastModified && m && m !== lastModified) {
+        const scrub = document.getElementById('scrubber');
+        const max = scrub ? parseInt(scrub.max, 10) : 0;
+        const cur = scrub ? parseInt(scrub.value, 10) : 0;
+        const wasAtEnd = cur >= max - 1;
+        const activeMode = document.querySelector('.modes button.active');
+        sessionStorage.setItem('mfb_resume_pos', cur.toString());
+        sessionStorage.setItem('mfb_was_at_end', wasAtEnd ? '1' : '0');
+        sessionStorage.setItem('mfb_mode', activeMode ? activeMode.id : '');
+        location.reload();
+      }
+      lastModified = m;
+    } catch (e) {}
+  }
+  setInterval(check, 2000);
+  window.addEventListener('load', () => {
+    const wasAtEnd = sessionStorage.getItem('mfb_was_at_end') === '1';
+    const resumePos = sessionStorage.getItem('mfb_resume_pos');
+    const scrub = document.getElementById('scrubber');
+    if (scrub) {
+      if (wasAtEnd) {
+        scrub.value = scrub.max;
+      } else if (resumePos !== null) {
+        const v = Math.min(parseInt(resumePos, 10), parseInt(scrub.max, 10));
+        scrub.value = v;
+      }
+      scrub.dispatchEvent(new Event('input'));
+    }
+    // Restore mode (Identity / Vitality) if it was set before reload.
+    const savedMode = sessionStorage.getItem('mfb_mode');
+    if (savedMode) {
+      const btn = document.getElementById(savedMode);
+      if (btn && !btn.classList.contains('active')) btn.click();
+    }
+    // Live indicator on the meta line
+    const meta = document.querySelector('header .meta');
+    if (meta && !document.getElementById('live-indicator')) {
+      const live = document.createElement('span');
+      live.id = 'live-indicator';
+      live.textContent = ' \\u2022 \\u25cf LIVE';
+      live.style.color = '#79ffe1';
+      live.style.fontWeight = '500';
+      meta.appendChild(live);
+    }
+  });
+})();
+</script>"""
+
+
+def find_mfb_html_bin() -> str | None:
+    """Locate the mfb-html binary in the repo's experiments dir, building if needed."""
+    repo_root = Path(__file__).resolve().parent.parent
+    crate_dir = repo_root / "experiments" / "memory-as-framebuffer-v0"
+    bin_path = crate_dir / "target" / "release" / "mfb-html"
+    if not crate_dir.exists():
+        return None
+    if not bin_path.exists():
+        import subprocess as _sp
+        print("[mfb-html] building binary (one-time)...", file=sys.stderr)
+        try:
+            _sp.run(
+                ["cargo", "build", "--release", "--bin", "mfb-html"],
+                cwd=str(crate_dir),
+                check=True,
+            )
+        except Exception as e:
+            print(f"[mfb-html] build failed: {e}", file=sys.stderr)
+            return None
+    return str(bin_path)
+
+
+def render_html(mfb_path: str, html_path: str, mfb_html_bin: str) -> bool:
+    import subprocess as _sp
+    try:
+        _sp.run([mfb_html_bin, mfb_path, html_path], check=True, capture_output=True)
+        return True
+    except Exception as e:
+        print(f"[mfb-html] render failed: {e}", file=sys.stderr)
+        return False
+
+
+def inject_autorefresh(html_path: str) -> None:
+    """Inject the live-reload <script> just before </body>. Idempotent."""
+    try:
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+    except FileNotFoundError:
+        return
+    marker = "let lastModified = null;"
+    if marker in html:
+        return  # already injected
+    if "</body>" not in html:
+        return
+    html = html.replace("</body>", AUTO_REFRESH_SCRIPT + "</body>")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def serve_dir(directory: str, port: int) -> None:
+    import http.server
+    import socketserver
+
+    os.chdir(directory)
+
+    class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            super().end_headers()
+
+        def log_message(self, format, *args):
+            return  # silence default access logs
+
+    socketserver.TCPServer.allow_reuse_address = True
+    httpd = socketserver.TCPServer(("0.0.0.0", port), NoCacheHandler)
+    print(f"[serve] http://localhost:{port}  (cwd: {directory})", file=sys.stderr)
+    httpd.serve_forever()
+
+
+def main() -> int:
+    import argparse
+    import os as _os
+    import threading
+    import time
+
+    parser = argparse.ArgumentParser(
+        description="Convert a Claude session JSONL to a memory-as-framebuffer .mfb capture. "
+        "With --watch + --serve, runs as a live preview daemon."
+    )
+    parser.add_argument("session_jsonl", help="Path to ~/.claude/projects/<slug>/<uuid>.jsonl")
+    parser.add_argument("output_base", help="Output basename (no extension); writes .mfb + .mfb.provmap")
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Tail the JSONL and regenerate .mfb (and .html if --render-html or default in --serve) on growth",
+    )
+    parser.add_argument(
+        "--serve",
+        type=int,
+        default=None,
+        metavar="PORT",
+        help="Run an http.server on PORT serving the output directory (auto-implies --render-html and live-reload injection)",
+    )
+    parser.add_argument(
+        "--render-html",
+        action="store_true",
+        help="Also produce <output_base>.html via the mfb-html binary",
+    )
+    parser.add_argument(
+        "--mfb-html-bin",
+        default=None,
+        help="Path to mfb-html binary (auto-detected if omitted)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=2.0,
+        help="Poll interval (seconds) for --watch (default: 2.0)",
+    )
+    args = parser.parse_args()
+
+    session_path = Path(args.session_jsonl)
+    output_base = args.output_base
+    output_dir = str(Path(output_base).resolve().parent or Path("."))
+
+    render_html_flag = args.render_html or args.serve is not None
+    bin_path: str | None = None
+    if render_html_flag:
+        bin_path = args.mfb_html_bin or find_mfb_html_bin()
+        if not bin_path:
+            print(
+                "[warn] mfb-html binary not found; .html will not be regenerated. "
+                "Run `cargo build --release --bin mfb-html` in experiments/memory-as-framebuffer-v0/",
+                file=sys.stderr,
+            )
+
+    def regen() -> dict:
+        result = convert_session(session_path, output_base)
+        if render_html_flag and bin_path:
+            html_path = output_base + ".html"
+            if render_html(result["mfb_path"], html_path, bin_path):
+                if args.serve is not None or args.watch:
+                    inject_autorefresh(html_path)
+                result["html_path"] = html_path
+        return result
+
+    # Initial conversion.
+    result = regen()
     print(
-        f"wrote {mfb_path} ({len(frames)} frames, "
-        f"{len(tool_idx)} tools, {len(file_idx)} files, "
-        f"{len(commit_idx)} commits, {len(pr_idx)} PRs, "
-        f"{len(prov_registry)} prov entries)",
+        f"[init] {result['frames']} frames · {result['tools']} tools · "
+        f"{result['files']} files · {result['commits']} commits · "
+        f"{result['prs']} PRs · {result['prov_entries']} prov entries",
         file=sys.stderr,
     )
-    print(
-        f"top tools: {dict(sorted(tool_count.items(), key=lambda x: -x[1])[:5])}",
-        file=sys.stderr,
-    )
-    print(
-        f"top files: {dict(sorted(((Path(p).name, c) for p, c in file_count.items()), key=lambda x: -x[1])[:5])}",
-        file=sys.stderr,
-    )
+    print(f"[init] top tools: {result['top_tools']}", file=sys.stderr)
+
+    # Background HTTP server.
+    if args.serve is not None:
+        server_thread = threading.Thread(
+            target=serve_dir, args=(output_dir, args.serve), daemon=True
+        )
+        server_thread.start()
+
+    # Watch loop.
+    if args.watch:
+        try:
+            last_size = _os.path.getsize(session_path)
+        except FileNotFoundError:
+            last_size = 0
+
+        try:
+            while True:
+                time.sleep(args.interval)
+                try:
+                    size = _os.path.getsize(session_path)
+                except FileNotFoundError:
+                    continue
+                if size != last_size:
+                    last_size = size
+                    result = regen()
+                    print(
+                        f"[watch] {time.strftime('%H:%M:%S')} {size} bytes · "
+                        f"{result['frames']} frames · {result['tools']} tools · "
+                        f"{result['files']} files",
+                        file=sys.stderr,
+                    )
+        except KeyboardInterrupt:
+            print("\n[watch] stopping", file=sys.stderr)
+    elif args.serve is not None:
+        # Serving but not watching — keep main thread alive.
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("\n[serve] stopping", file=sys.stderr)
+
     return 0
 
 
