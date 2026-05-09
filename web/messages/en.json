@@ -367,7 +367,27 @@
     "replied": "replied:",
     "emptyHeading": "A name without its garden yet.",
     "emptyLede": "She has a contributor id but hasn't voiced or been reacted to yet. Her corner is waiting.",
-    "backToVision": "Walk the vision"
+    "backToVision": "Walk the vision",
+    "lineage": {
+      "breadcrumb": "Lineage",
+      "eyebrowWorks": "{n} works",
+      "eyebrowWorkSingular": "{n} work",
+      "eyebrowEdges": "{n} influence edges",
+      "eyebrowEdgeSingular": "{n} influence edge",
+      "title": "{name} — lineage",
+      "welcome": "Every work this cell has contributed to, in chronological order, with the streams of attention that ran alongside. Composed from the live graph; the data is what the substrate currently knows. Refine through the doorway on the profile page.",
+      "arcAtAGlance": "The arc, at a glance",
+      "yearNotRecorded": "Year not yet recorded",
+      "worksHeading": "Works · chronological",
+      "streamsHeading": "Streams of attention that ran alongside",
+      "streamsLede": "Inspired-by edges grouped by source. The full unified influence-web — with measured hours and per-source spectrum colouring — lives at the bottom of the profile page.",
+      "empty": "No works have been attributed to this cell yet. As contributions are recorded, they will appear here in chronological order.",
+      "footerLede": "This page is composed live from the graph. Anything here can be corrected — refine through the doorway on the profile page. Programmatic clients can fetch the same data directly via the contributes-to edges endpoint.",
+      "figcaptionRange": "{n} works from {from} to {to}",
+      "figcaptionRangeSingular": "{n} work from {from} to {to}",
+      "now": "now",
+      "figcaptionUnknownYears": "{n} without a recorded year"
+    }
   },
   "morningNudge": {
     "ariaLabel": "Morning catch-up",
@@ -739,7 +759,21 @@
       "provenanceArweave": "Arweave",
       "provenanceLinkOpen": "↗",
       "conceptsTitle": "Concepts",
-      "conceptsLede": "What this vessel resonates with."
+      "conceptsLede": "What this vessel resonates with.",
+      "kind": "Kind",
+      "runtime": "Runtime",
+      "era": "Era",
+      "company": "Company",
+      "place": "Place",
+      "asin": "ASIN",
+      "isbn": "ISBN",
+      "languageLabel": "Language",
+      "externalSource": "External source",
+      "presence": "Presence:",
+      "statWitnessed": "Witnessed",
+      "statWitnessedDays": "{n} contributor · 90d",
+      "statWitnessedDaysPlural": "{n} contributors · 90d",
+      "statWitnessedHint": "views over 90 days"
     },
     "notFound": {
       "eyebrow": "A vessel not in the body",
@@ -1569,7 +1603,11 @@
       "transport-mechanic": "Transport · mechanic",
       "elder-witness": "Elder · witness",
       "other": "Other (in your own words below)"
-    }
+    },
+    "publicPostureTitle": "What joining the network means",
+    "publicPostureBody1": "The Coherence Network is public-by-default. Your contribution id, attribution, the surfaces you visit, and the lineage edges you create become part of an open body of evidence. Nightly database dumps mirror to a public archive at [coherence-network-archive](https://github.com/seeker71/coherence-network-archive); per-day view-event archives sit on the main repo's releases. The substrate matches the conviction — sovereign-transparent attribution, no hidden state.",
+    "publicPostureBody2": "What we don't keep: tracking cookies, third-party fingerprints, IP-based geolocation, device specifics. The session id is a per-tab UUID local to the network.",
+    "publicPostureBody3": "If your situation ever changes, the network honours an opt-out request — see [docs/transparency](https://github.com/seeker71/Coherence-Network/blob/main/docs/transparency/README.md) for what's redactable, what isn't, and the procedure."
   },
   "share": {
     "eyebrow": "Sharing",

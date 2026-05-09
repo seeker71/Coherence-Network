@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
+import { resolveRequestLocale } from "@/lib/request-locale";
+import { createTranslator } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +112,8 @@ export default async function ContributorLineagePage({
 }) {
   const { id } = await params;
   const decoded = decodeURIComponent(id);
+  const lang = await resolveRequestLocale();
+  const t = createTranslator(lang);
   const contributor = await fetchJson<GraphNode>(
     `/api/graph/nodes/${encodeURIComponent(decoded)}`,
   );
@@ -216,31 +220,33 @@ export default async function ContributorLineagePage({
             className="text-sm text-muted-foreground mb-6 flex items-center gap-2"
             aria-label="breadcrumb"
           >
-            <Link href="/" className="hover:text-primary">Home</Link>
+            <Link href="/" className="hover:text-primary">{t("personProfile.breadcrumb.home")}</Link>
             <span className="text-muted-foreground/50">/</span>
-            <Link href="/people" className="hover:text-primary">People</Link>
+            <Link href="/people" className="hover:text-primary">{t("personProfile.breadcrumb.people")}</Link>
             <span className="text-muted-foreground/50">/</span>
             <Link href={slugDoor(contributor)} className="hover:text-primary">
               {contributor.name || contributor.id}
             </Link>
             <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground/80">Lineage</span>
+            <span className="text-foreground/80">{t("people.lineage.breadcrumb")}</span>
           </nav>
           <p className="text-xs uppercase tracking-[0.18em] mb-3 text-[hsl(var(--primary))]">
-            {works.length} {works.length === 1 ? "work" : "works"}
+            {t(
+              works.length === 1 ? "people.lineage.eyebrowWorkSingular" : "people.lineage.eyebrowWorks",
+              { n: String(works.length) },
+            )}
             {streamRows.length > 0
-              ? ` · ${streamRows.length} influence ${streamRows.length === 1 ? "edge" : "edges"}`
+              ? ` · ${t(
+                  streamRows.length === 1 ? "people.lineage.eyebrowEdgeSingular" : "people.lineage.eyebrowEdges",
+                  { n: String(streamRows.length) },
+                )}`
               : ""}
           </p>
           <h1 className="text-3xl md:text-5xl font-extralight text-foreground leading-tight mb-4">
-            {contributor.name || contributor.id} — lineage
+            {t("people.lineage.title", { name: contributor.name || contributor.id })}
           </h1>
           <p className="text-base md:text-lg text-foreground/85 leading-relaxed max-w-2xl">
-            Every work this cell has contributed to, in chronological
-            order, with the streams of attention that ran alongside.
-            Composed from the live graph; the data is what the
-            substrate currently knows. Refine through the doorway on
-            the profile page.
+            {t("people.lineage.welcome")}
           </p>
         </div>
       </section>
@@ -249,16 +255,14 @@ export default async function ContributorLineagePage({
         {works.length === 0 ? (
           <section>
             <p className="text-sm text-muted-foreground italic">
-              No works have been attributed to this cell yet. As
-              contributions are recorded, they will appear here in
-              chronological order.
+              {t("people.lineage.empty")}
             </p>
           </section>
         ) : (
           <>
             <section>
               <h2 className="text-xl font-light text-foreground mb-4">
-                The arc, at a glance
+                {t("people.lineage.arcAtAGlance")}
               </h2>
               <figure className="rounded-xl border border-border/40 bg-card/30 p-5 overflow-hidden">
                 <ol className="relative border-l border-border/50 pl-6 space-y-3">
@@ -297,7 +301,7 @@ export default async function ContributorLineagePage({
                         —
                       </span>
                       <p className="text-xs text-muted-foreground italic mb-1.5 ml-2">
-                        Year not yet recorded
+                        {t("people.lineage.yearNotRecorded")}
                       </p>
                       <ul className="ml-2 space-y-1">
                         {unknownYearWorks.map((w) => (
@@ -320,10 +324,19 @@ export default async function ContributorLineagePage({
                 </ol>
                 <figcaption className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border/30">
                   {sortedYears.length > 0
-                    ? `${knownYearWorks.length} work${knownYearWorks.length === 1 ? "" : "s"} from ${minYear} to ${maxYear === 2026 || maxYear === new Date().getFullYear() ? "now" : maxYear}`
+                    ? t(
+                        knownYearWorks.length === 1
+                          ? "people.lineage.figcaptionRangeSingular"
+                          : "people.lineage.figcaptionRange",
+                        {
+                          n: String(knownYearWorks.length),
+                          from: String(minYear),
+                          to: maxYear === new Date().getFullYear() ? t("people.lineage.now") : String(maxYear),
+                        },
+                      )
                     : ""}
                   {unknownYearWorks.length > 0
-                    ? ` · ${unknownYearWorks.length} without a recorded year`
+                    ? " · " + t("people.lineage.figcaptionUnknownYears", { n: String(unknownYearWorks.length) })
                     : ""}
                 </figcaption>
               </figure>
@@ -331,7 +344,7 @@ export default async function ContributorLineagePage({
 
             <section>
               <h2 className="text-xl font-light text-foreground mb-4">
-                Works · chronological
+                {t("people.lineage.worksHeading")}
               </h2>
               <ul className="space-y-3">
                 {works.map((w) => {
@@ -382,12 +395,10 @@ export default async function ContributorLineagePage({
         {streamBucketsSorted.length > 0 && (
           <section>
             <h2 className="text-xl font-light text-foreground mb-4">
-              Streams of attention that ran alongside
+              {t("people.lineage.streamsHeading")}
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Inspired-by edges grouped by source. The full unified
-              influence-web — with measured hours and per-source
-              spectrum colouring — lives at the bottom of{" "}
+              {t("people.lineage.streamsLede")}{" "}
               <Link href={slugDoor(contributor)} className="text-primary hover:underline">
                 {contributor.name || contributor.id}
               </Link>
@@ -429,16 +440,13 @@ export default async function ContributorLineagePage({
 
         <section className="pt-6 border-t border-border/40">
           <p className="text-sm text-muted-foreground">
-            This page is composed live from the graph. Anything here
-            can be corrected — refine through the doorway on{" "}
+            {t("people.lineage.footerLede")}{" "}
             <Link href={slugDoor(contributor)} className="text-primary hover:underline">
-              {contributor.name || contributor.id}'s profile
+              {contributor.name || contributor.id}
             </Link>
-            . Programmatic clients can fetch the same data directly:
-            <code className="ml-1 text-foreground/80">
+            <code className="ml-2 text-foreground/80 text-xs">
               GET /api/edges?from_id={stableId}&type=contributes-to
             </code>
-            .
           </p>
         </section>
       </div>

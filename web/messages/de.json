@@ -367,7 +367,27 @@
     "replied": "hat geantwortet:",
     "emptyHeading": "Ein Name, dessen Garten noch wartet.",
     "emptyLede": "Sie hat eine Mitwirkenden-ID, aber noch nicht gesprochen oder Reaktionen empfangen. Ihre Ecke wartet.",
-    "backToVision": "Die Vision begehen"
+    "backToVision": "Die Vision begehen",
+    "lineage": {
+      "breadcrumb": "Lineage",
+      "eyebrowWorks": "{n} Werke",
+      "eyebrowWorkSingular": "{n} Werk",
+      "eyebrowEdges": "{n} Einflusskanten",
+      "eyebrowEdgeSingular": "{n} Einflusskante",
+      "title": "{name} — Lineage",
+      "welcome": "Jedes Werk, zu dem diese Zelle beigetragen hat, in chronologischer Reihenfolge, mit den Aufmerksamkeitsströmen, die nebenher liefen. Aus dem lebenden Graphen zusammengesetzt; die Daten sind das, was das Substrat derzeit weiß. Verfeinere über den Eingang auf der Profilseite.",
+      "arcAtAGlance": "Der Bogen auf einen Blick",
+      "yearNotRecorded": "Jahr noch nicht erfasst",
+      "worksHeading": "Werke · chronologisch",
+      "streamsHeading": "Aufmerksamkeitsströme, die nebenher liefen",
+      "streamsLede": "Inspired-by-Kanten nach Quelle gruppiert. Das vollständige vereinheitlichte Einflussnetz — mit gemessenen Stunden und Spektrum-Färbung pro Quelle — lebt am unteren Rand der Profilseite.",
+      "empty": "Dieser Zelle wurden noch keine Werke zugeschrieben. Wenn Beiträge erfasst werden, erscheinen sie hier in chronologischer Reihenfolge.",
+      "footerLede": "Diese Seite wird live aus dem Graphen zusammengesetzt. Alles hier kann korrigiert werden — verfeinere über den Eingang auf der Profilseite. Programmgesteuerte Clients können dieselben Daten direkt über den contributes-to-Kanten-Endpunkt abrufen.",
+      "figcaptionRange": "{n} Werke von {from} bis {to}",
+      "figcaptionRangeSingular": "{n} Werk von {from} bis {to}",
+      "now": "jetzt",
+      "figcaptionUnknownYears": "{n} ohne erfasstes Jahr"
+    }
   },
   "morningNudge": {
     "ariaLabel": "Morgen-Rückblick",
@@ -691,7 +711,23 @@
     "assetOne": "{n} Werk",
     "assetMany": "{n} Werke",
     "loadingAssets": "Werke werden geladen …",
-    "thumbnailAlt": "{description}"
+    "thumbnailAlt": "{description}",
+    "detail": {
+      "kind": "Art",
+      "runtime": "Laufzeit",
+      "era": "Zeitraum",
+      "company": "Unternehmen",
+      "place": "Ort",
+      "asin": "ASIN",
+      "isbn": "ISBN",
+      "languageLabel": "Sprache",
+      "externalSource": "Externe Quelle",
+      "presence": "Präsenz:",
+      "statWitnessed": "Bezeugt",
+      "statWitnessedDays": "{n} Mitwirkender · 90 T",
+      "statWitnessedDaysPlural": "{n} Mitwirkende · 90 T",
+      "statWitnessedHint": "Aufrufe über 90 Tage"
+    }
   },
   "search": {
     "title": "Projekte suchen",
@@ -1430,7 +1466,11 @@
       "transport-mechanic": "Transport · Mechaniker",
       "elder-witness": "Ältester · Zeuge",
       "other": "Anders (in deinen eigenen Worten unten)"
-    }
+    },
+    "publicPostureTitle": "Was es heißt, dem Netzwerk beizutreten",
+    "publicPostureBody1": "Das Coherence Network ist standardmäßig öffentlich. Deine Mitwirkenden-ID, Zuschreibung, die Oberflächen, die du besuchst, und die Verbindungslinien, die du erstellst, werden Teil eines offenen Evidenzkörpers. Nächtliche Datenbank-Dumps spiegeln in ein öffentliches Archiv bei [coherence-network-archive](https://github.com/seeker71/coherence-network-archive); tagesweise Ereignis-Archive liegen in den Releases des Hauptrepos. Das Substrat entspricht der Überzeugung — souveräne, transparente Zuschreibung, kein verborgener Zustand.",
+    "publicPostureBody2": "Was wir nicht aufbewahren: Tracking-Cookies, Drittanbieter-Fingerabdrücke, IP-basierte Geolokalisierung, Geräte-Details. Die Sitzungs-ID ist eine UUID pro Tab, lokal im Netzwerk.",
+    "publicPostureBody3": "Sollte sich deine Situation jemals ändern, ehrt das Netzwerk eine Opt-Out-Anfrage — siehe [docs/transparency](https://github.com/seeker71/Coherence-Network/blob/main/docs/transparency/README.md) für das, was redigierbar ist, was nicht, und das Verfahren."
   },
   "share": {
     "eyebrow": "Teilen",

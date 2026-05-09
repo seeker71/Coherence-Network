@@ -373,13 +373,13 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
                 <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-400 pt-1">
                   {asset.creation_kind && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Kind</dt>
+                      <dt className="text-stone-500">{t("assets.detail.kind")}</dt>
                       <dd className="text-stone-300">{asset.creation_kind}</dd>
                     </div>
                   )}
                   {asset.runtime_length_min && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Runtime</dt>
+                      <dt className="text-stone-500">{t("assets.detail.runtime")}</dt>
                       <dd className="text-stone-300">
                         {Math.floor(asset.runtime_length_min / 60)}h{" "}
                         {asset.runtime_length_min % 60}m
@@ -388,37 +388,37 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
                   )}
                   {asset.era && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Era</dt>
+                      <dt className="text-stone-500">{t("assets.detail.era")}</dt>
                       <dd className="text-stone-300">{asset.era}</dd>
                     </div>
                   )}
                   {asset.company && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Company</dt>
+                      <dt className="text-stone-500">{t("assets.detail.company")}</dt>
                       <dd className="text-stone-300">{asset.company}</dd>
                     </div>
                   )}
                   {asset.location && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Place</dt>
+                      <dt className="text-stone-500">{t("assets.detail.place")}</dt>
                       <dd className="text-stone-300">{asset.location}</dd>
                     </div>
                   )}
                   {asset.asin && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">ASIN</dt>
+                      <dt className="text-stone-500">{t("assets.detail.asin")}</dt>
                       <dd className="text-stone-300 font-mono">{asset.asin}</dd>
                     </div>
                   )}
                   {asset.isbn && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">ISBN</dt>
+                      <dt className="text-stone-500">{t("assets.detail.isbn")}</dt>
                       <dd className="text-stone-300 font-mono">{asset.isbn}</dd>
                     </div>
                   )}
                   {asset.language && (
                     <div className="flex items-baseline gap-1.5">
-                      <dt className="text-stone-500">Language</dt>
+                      <dt className="text-stone-500">{t("assets.detail.languageLabel")}</dt>
                       <dd className="text-stone-300">{asset.language}</dd>
                     </div>
                   )}
@@ -437,7 +437,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
                     rel="noreferrer noopener"
                     className="inline-flex items-center gap-1.5 text-sm text-amber-300 hover:text-amber-200 underline-offset-4 hover:underline"
                   >
-                    <span>External source</span>
+                    <span>{t("assets.detail.externalSource")}</span>
                     <span aria-hidden="true">↗</span>
                     <span className="text-stone-500 font-mono text-xs ml-1 break-all">
                       {asset.canonical_url.replace(/^https?:\/\//, "").slice(0, 60)}
@@ -451,7 +451,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
                   so a visitor can walk the rich context surface. */}
               {asset.slug && (
                 <p className="text-xs text-stone-500 pt-1">
-                  Presence:{" "}
+                  {t("assets.detail.presence")}{" "}
                   <Link
                     href={`/people/${encodeURIComponent(asset.slug)}`}
                     className="text-stone-300 hover:text-amber-300 underline-offset-4 hover:underline"
@@ -505,16 +505,19 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
               endpoint aggregates 90 days of those traces so the
               visitor can see how many cells have met this vessel. */}
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-emerald-500/10 to-emerald-500/5 p-4">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-400/80">Witnessed</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-400/80">{t("assets.detail.statWitnessed")}</p>
             <p className="mt-2 text-2xl sm:text-3xl font-light text-stone-100">
               {viewStats?.total_views ?? "—"}
             </p>
             <p className="mt-1 text-xs text-stone-400">
               {viewStats?.unique_contributors
-                ? `${viewStats.unique_contributors} contributor${
-                    viewStats.unique_contributors === 1 ? "" : "s"
-                  } · 90d`
-                : "views over 90 days"}
+                ? t(
+                    viewStats.unique_contributors === 1
+                      ? "assets.detail.statWitnessedDays"
+                      : "assets.detail.statWitnessedDaysPlural",
+                    { n: String(viewStats.unique_contributors) },
+                  )
+                : t("assets.detail.statWitnessedHint")}
             </p>
           </div>
         </section>
