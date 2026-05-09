@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
@@ -368,6 +369,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   }
 
   const idea = ideaResult.idea;
+  const cookieStore = await cookies();
+  const contributorName = cookieStore.get("coh_contributor_name")?.value || null;
   const [flowResult, stakes, activity, registrySpecs, childIdeas] = await Promise.all([
     loadFlowForIdea(ideaId),
     loadIdeaStakes(ideaId),
@@ -463,6 +466,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           estimatedCost={idea.estimated_cost}
           openQuestions={idea.open_questions.filter((q) => !q.answer).map((q) => q.question)}
           existingSpecIds={flow?.spec.spec_ids ?? []}
+          contributorName={contributorName}
         />
 
         <div className="border-t border-amber-200/40 dark:border-amber-800/20 pt-4">
