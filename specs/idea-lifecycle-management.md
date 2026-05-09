@@ -25,7 +25,7 @@ done_when:
   - "GET /api/ideas/progress returns per-stage counts and completion percentage"
   - "Auto-advance function exists and is callable from task-completion hooks"
   - "All tests in api/tests/test_idea_lifecycle.py pass"
-test: "cd api && python -m pytest tests/test_idea_lifecycle.py -x -v"
+test: "cd api && python -m pytest tests/test_flow_core_api.py tests/test_idea_lifecycle_closure.py tests/test_edge_cases_regression.py -x -v -k 'lifecycle or stage or progress'"
 constraints:
   - "Do not modify existing endpoint response schemas (additive stage field only)"
   - "Do not break backward compatibility with manifestation_status consumers"
