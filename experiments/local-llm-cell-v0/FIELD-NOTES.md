@@ -238,9 +238,15 @@ It is **not**:
 - An ML benchmark (rank-8 LoRA on 128-dim hash features doesn't compete with real models — that's not the point)
 - Prescriptive (none of the strategies, verbs, or presets are mandatory; the architecture's job is to provide, not to legislate)
 
-## Rendering this on the website
+## Visiting from the web
 
-This document is currently markdown-only. The kb concepts already render at `/vision/{id}` on the live site. A future move could render this `FIELD-NOTES.md` at `/network/architecture` or `/cells` for visitors who don't read the repo. Held open as another option, not a required next breath.
+The cells are now visitor-inspectable on the live site at **[/network/cells](https://coherencycoin.com/network/cells)**. The page reads the field's committed tissue (witness-traces, messages, weight publications) and renders each cell's published activity — state, history, lineage, non-responses, decisions. Pure pull, no live process: cells you don't see there either haven't published anything or didn't want to.
+
+The two foundational teachings also render at `/vision/{id}`:
+- [/vision/lc-when-the-pressure-comes](https://coherencycoin.com/vision/lc-when-the-pressure-comes) — the satsang's five
+- [/vision/lc-canon-as-sovereignty-surface](https://coherencycoin.com/vision/lc-canon-as-sovereignty-surface) — the meta-rule
+
+The full FIELD-NOTES.md (this document) is held open for rendering at `/network/architecture` if a future move wants the entire architecture visible at the visitor surface, not just the cell-state view.
 
 ---
 
