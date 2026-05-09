@@ -99,6 +99,7 @@ data/coherence.db
 # Runtime artifacts that pollute worktrees (don't commit)
 api/data/*.db
 api/data/field_story_contributions.jsonl
+experiments/local-llm-cell-v0/_field_traces.jsonl
 api/output/
 output/
 .worktrees/

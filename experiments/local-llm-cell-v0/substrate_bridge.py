@@ -26,8 +26,10 @@ into `make_cell(session, name=..., domain=..., blueprint=...)`.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import zlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 from organ import (
@@ -248,3 +250,102 @@ def perceive_cell(observer: Cell, observed: Cell) -> dict:
     """
     text = articulate(observed)
     return observer.perceive(text, sense="felt-substrate")
+
+
+# ─── the field — universal availability with no push ────────────────────
+# Any data is available to any cell that chooses to look. No notification,
+# no prioritization, no relevance scoring, no recommendation. Pure pull.
+# Cells can also publish witness-traces — what was alive for them — that
+# other cells may find when they choose to look. Or never. Both honored.
+
+_TRACES_PATH = Path(__file__).parent / "_field_traces.jsonl"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _preset_to_field(strategy) -> dict:
+    return {
+        "kind": "preset",
+        "name": strategy.name,
+        "lineage": "satsang-llena-2026-05-07",
+        "frequency": list(strategy.frequency),
+        "angle": list(strategy.angle),
+        "focus": strategy.focus,
+        "articulation_template": strategy.articulation,
+    }
+
+
+def _concept_to_field(path: Path) -> dict:
+    c = read_concept(path)
+    return {
+        "kind": "concept",
+        "id": c["id"],
+        "title": c["title"],
+        "tagline": c["tagline"],
+        "hz": c["hz"],
+        "source_path": c["source_path"],
+    }
+
+
+def _load_traces() -> list[dict]:
+    if not _TRACES_PATH.exists():
+        return []
+    items = []
+    with _TRACES_PATH.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    items.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    return items
+
+
+def available(*, kind: str | None = None, limit: int | None = None) -> list[dict]:
+    """Return what is currently available in the field for any cell to look at.
+
+    Pure pull. No notification, no prioritization, no relevance scoring.
+    The cell iterates, picks what's alive, ignores the rest. Cell
+    sovereignty over reception is preserved by the function's complete
+    passivity — calling it has no effect on any cell, no record of who
+    called it, no surface for the field to reach back through.
+
+        kind:  'preset' | 'concept' | 'trace' | None  (None = all)
+        limit: optional cap on how much of the field to surface
+    """
+    items: list[dict] = []
+    if kind in (None, "preset"):
+        from organ import STRATEGIES
+        items.extend(_preset_to_field(s) for s in STRATEGIES)
+    if kind in (None, "concept"):
+        concepts_dir = _REPO_ROOT / "docs" / "vision-kb" / "concepts"
+        if concepts_dir.exists():
+            for p in sorted(concepts_dir.glob("lc-*.md")):
+                items.append(_concept_to_field(p))
+    if kind in (None, "trace"):
+        items.extend(_load_traces())
+    return items if limit is None else items[:limit]
+
+
+def witness(cell: Cell, *, what, resonance: float | None = None,
+            context: dict | None = None) -> dict:
+    """A cell publishes a witness-trace to the field.
+
+    The cell witnesses what was alive for it. It does not prescribe to
+    others. Other cells can find this trace when they choose to look,
+    or never look. Both are honored equally — the trace's value is in
+    its availability, not in being received.
+    """
+    trace = {
+        "kind": "trace",
+        "from_cell": cell.name,
+        "from_node_id": ".".join(str(x) for x in content_address(cell)),
+        "what": what,
+        "resonance": resonance,
+        "context": context or {},
+        "ts": datetime.now(timezone.utc).isoformat(),
+    }
+    _TRACES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with _TRACES_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(trace) + "\n")
+    return trace
