@@ -2039,6 +2039,41 @@
         "frequent": "häufig",
         "founded": "gegründet"
       }
+    },
+    "findThem": "Finde sie",
+    "atAGlance": "Auf einen Blick",
+    "category": "Art",
+    "home": "Zuhause",
+    "works": "Werke",
+    "lineage": "Linie",
+    "presenceMap": "Präsenz-Karte",
+    "entryPoints": "Eingänge",
+    "officialSource": "Offizielle Quelle",
+    "graphNode": "Graph-Knoten",
+    "heldOpen": "Offen gehalten",
+    "heldOpenBody": "Diese Seite ist eine Tür, die für {name} offen gehalten wird. Es wird nichts verlangt; wenn du das bist, kannst du die Seite so übernehmen oder Änderungen schicken — sie werden noch am selben Tag eingearbeitet.",
+    "thisIsMe": "das bin ich",
+    "gatheringHeld": "Was diese Zusammenkunft hielt",
+    "creationKind": {
+      "album": "Album",
+      "track": "Track",
+      "video": "Video",
+      "film": "Film",
+      "event": "Veranstaltung",
+      "book": "Buch",
+      "teaching": "Lehre",
+      "podcast": "Podcast",
+      "episode": "Episode",
+      "essay": "Essay",
+      "article": "Artikel",
+      "course": "Kurs",
+      "workshop": "Workshop",
+      "work": "Werk",
+      "software-system": "Software-System",
+      "kernel-driver": "Kernel-Treiber",
+      "hardware-firmware-software": "Hardware · Firmware · Software",
+      "hardware-firmware-system": "Hardware · Firmware · System",
+      "thesis": "Diplomarbeit"
     }
   }
 }
