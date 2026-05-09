@@ -19,39 +19,39 @@ The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It i
 
 ## Project Scope
 
-**Current project:** Coherence-Network. All implementations belong here (api/, web/, specs/).
+**Current project:** Coherence-Network. All implementations belong here (`api/`, `web/`, `specs/`).
 
-**references/**: Symlinks to Crypo-Coin-Coherency-Network and Living-Codex-CSharp. Use for context, patterns, and ideas. Do NOT edit them as part of Coherence-Network work. See docs/REFERENCE-REPOS.md.
+**references/**: Symlinks to Crypo-Coin-Coherency-Network and Living-Codex-CSharp. Read-only context — patterns, ideas, lineage. Edits stay inside Coherence-Network. See `docs/REFERENCE-REPOS.md`.
 
 ## Spec-First
 
 - Every feature starts with a spec in `specs/`
 - Specs define requirements, API contracts, and files to modify
-- Implement ONLY what the spec says; no scope creep
+- Implement what the spec describes; let the rest stay where it is
 
 ## Test Contract
 
-- Tests are written before or with implementation
-- Tests define the contract; do NOT modify tests to make implementation pass
-- If tests fail, fix the implementation. If a test seems wrong, create `needs-decision` issue.
+- Tests are written before or alongside implementation
+- Tests define the contract; mend the implementation when tests fail
+- When a test seems wrong, open a `needs-decision` issue
 
 ## File Scope
 
-- Only modify files listed in the spec/issue
-- Do not refactor adjacent code or add features not in spec
-- **Avoid creating new documents and files** unless the spec/issue explicitly requires them or the user explicitly asks for a file to be created. Do not create report, analysis, or summary files on your own. Prefer editing existing files and integrating content into PLAN.md, CLAUDE.md, or existing specs.
-- When cleaning up: remove report/analysis/summary artifacts and any files the final product does not need or that are not in use.
+- Modify the files listed in the spec or issue
+- Let adjacent code stay where it is unless the spec calls for it
+- **Edit existing files where the content lives.** New documents are explicit moves — called for by spec or by the user. They don't accumulate as side artifacts. Extend `PLAN.md`, `CLAUDE.md`, or existing specs before creating a fresh report / analysis / summary file.
+- When cleaning up: compost report / analysis / summary artifacts that no longer circulate.
 
 ## Principles (from Living Codex)
 
-- Everything is a Node (data as nodes/edges where applicable)
+- Everything is a Node (data as nodes / edges where applicable)
 - Adapters over features — external I/O stays thin
 - Tiny deltas — minimal, git-like changes
-- No mocks — prefer real data and algorithms
+- Real data and algorithms over mocks
 
 ## Orchestration / executor
 
-- Provider-specific logic is the exception and must live in `api/app/services/agent_service_executor.py` (or `agent_routing/command_templates.py`): command template selection, resume flag, post_process_command, and data maps (RUNNER_AUTH_MODE_*, MODEL_PREFIX_*). No executor branching in CRUD or orchestration; they call helpers.
+- Provider-specific logic lives in `api/app/services/agent_service_executor.py` (or `agent_routing/command_templates.py`): command template selection, resume flag, `post_process_command`, and data maps (`RUNNER_AUTH_MODE_*`, `MODEL_PREFIX_*`). Orchestration and CRUD call these helpers rather than branching on executor.
 
 ## Interface
 
