@@ -17,8 +17,9 @@
  *      of what they've already contributed; naming themselves doesn't
  *      create anything, it claims what's already theirs.
  *
- *   3. Named contributor — shows the avatar+name dropdown with
- *      links to their corner.
+ *   3. Named contributor — avatar+name button that links straight
+ *      to /me, the single You hub. From there the visitor reaches
+ *      their feed, public profile, portfolio, and lineage surfaces.
  */
 
 import Link from "next/link";
@@ -113,71 +114,22 @@ export function MeButton() {
 
   const display = authorName.trim() || t("me.you");
   const initial = (display[0] || "·").toUpperCase();
-  const profileHref = contributorId
-    ? `/profile/${encodeURIComponent(contributorId)}`
-    : "/feed/you";
 
+  // Tapping the avatar goes straight to /me — the single You hub.
+  // From there the visitor finds their feed, their public profile,
+  // their lineage, their portfolio. One door, not five.
   return (
-    <details className="relative">
-      <summary
-        className="list-none cursor-pointer flex items-center gap-2 rounded-full border border-border/40 bg-background/60 px-2 py-1 text-sm hover:border-border hover:bg-accent/40 transition-colors"
-        aria-label={t("me.menuLabel")}
-      >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/30 to-teal-500/30 text-xs font-medium text-amber-200">
-          {initial}
-        </span>
-        <span className="hidden md:inline max-w-[6rem] truncate text-foreground/90">
-          {display}
-        </span>
-      </summary>
-      <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md shadow-xl z-50">
-        <div className="p-3 space-y-0.5">
-          <div className="px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground/80">
-            {t("me.menuHeading")}
-          </div>
-          <Link
-            href={profileHref}
-            className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors"
-          >
-            {t("me.viewProfile")}
-          </Link>
-          <Link
-            href="/feed/you"
-            className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors"
-          >
-            {t("me.myCorner")}
-          </Link>
-          <Link
-            href="/here"
-            className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors"
-          >
-            {t("me.hereNow")}
-          </Link>
-          {contributorId && (
-            <Link
-              href={`/contributors/${encodeURIComponent(contributorId)}/portfolio`}
-              className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors"
-            >
-              {t("me.portfolio")}
-            </Link>
-          )}
-          {contributorId && (
-            <Link
-              href={`/profile/${encodeURIComponent(contributorId)}/beliefs`}
-              className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors"
-            >
-              {t("me.beliefs")}
-            </Link>
-          )}
-          <div className="border-t border-border/30 my-2" />
-          <Link
-            href="/feed/you#invite"
-            className="block rounded-lg px-3 py-2 text-sm text-teal-300 hover:bg-teal-950/30 transition-colors"
-          >
-            {t("me.inviteFriend")}
-          </Link>
-        </div>
-      </div>
-    </details>
+    <Link
+      href="/me"
+      aria-label={t("me.menuLabel")}
+      className="flex items-center gap-2 rounded-full border border-border/40 bg-background/60 px-2 py-1 text-sm hover:border-border hover:bg-accent/40 transition-colors"
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/30 to-teal-500/30 text-xs font-medium text-amber-200">
+        {initial}
+      </span>
+      <span className="hidden md:inline max-w-[6rem] truncate text-foreground/90">
+        {display}
+      </span>
+    </Link>
   );
 }

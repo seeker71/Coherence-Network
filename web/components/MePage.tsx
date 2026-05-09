@@ -278,6 +278,54 @@ export function MePage() {
         )}
       </section>
 
+      {/* Your surfaces — the hub that stitches /me together with the
+         other personal doors. Only renders for a visitor with a name
+         or contributor id; an unnamed arrival sees the unnamed warmth
+         above first and reaches the same surfaces through /come-in. */}
+      {(hasName || hasContributor) && (
+        <section className="px-5 py-4 rounded-2xl border border-border bg-card">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-2">
+            {t("me.surfacesEyebrow")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href="/feed/you"
+              className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+            >
+              {t("me.surfaceFeed")}
+            </a>
+            {hasContributor && identity?.contributorId && (
+              <a
+                href={`/profile/${encodeURIComponent(identity.contributorId)}`}
+                className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+              >
+                {t("me.surfaceProfile")}
+              </a>
+            )}
+            {hasContributor && identity?.contributorId && (
+              <a
+                href={`/contributors/${encodeURIComponent(identity.contributorId)}/portfolio`}
+                className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+              >
+                {t("me.surfacePortfolio")}
+              </a>
+            )}
+            <a
+              href="/me/inspired-by"
+              className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+            >
+              {t("me.surfaceInspiredBy")}
+            </a>
+            <a
+              href="/me/work"
+              className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+            >
+              {t("me.surfaceWork")}
+            </a>
+          </div>
+        </section>
+      )}
+
       {/* Meeting-context — "You arrived via…". The gatherings where this
          contributor was met. Teaches the reader their own origin-thread
          and shows why their first reads may land where they do. */}
