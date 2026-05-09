@@ -18,7 +18,7 @@
 
 - **Prompt patterns:** Which directions produce first-try success?
 - **Models:** Which task_type + model combinations work best?
-- **Subagents:** Product-manager vs dev-engineer vs reviewer — which deliver?
+- **Subagents:** Scribe vs shaper vs mirror — which cells deliver?
 - **Specs:** Which spec structures lead to clean implementation?
 - **Tools:** Cursor vs Claude Code vs Ollama — when does each shine?
 

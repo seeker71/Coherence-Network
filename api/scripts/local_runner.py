@@ -2801,7 +2801,7 @@ def build_prompt(task: dict) -> str:
     direction = task.get("direction", "")
     task_type = task.get("task_type", "unknown")
     context = task.get("context", {}) or {}
-    agent = context.get("task_agent", "dev-engineer")
+    agent = context.get("task_agent", "shaper")
     workspace_id = context.get("workspace_id", "coherence-network") if isinstance(context, dict) else "coherence-network"
 
     # Task-type-specific instructions
