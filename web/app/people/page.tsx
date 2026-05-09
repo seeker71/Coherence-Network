@@ -47,7 +47,7 @@ type PresenceNode = {
   phase?: string;
 };
 
-function presenceExcerpt(text: string | undefined, max = 110): string | null {
+function presenceExcerpt(text: string | undefined, max = 220): string | null {
   if (!text) return null;
   const trimmed = text.trim();
   if (!trimmed) return null;
@@ -251,49 +251,80 @@ export default async function PeopleIndexPage({
                 {section.lede}
               </p>
             </div>
-            <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {visibleItems.map((n) => (
-                <li key={n.id}>
-                  <Link
-                    href={presenceHref(n)}
-                    className="group flex items-center gap-3 rounded-xl border border-border/30 bg-card/40 hover:bg-card/70 hover:border-border p-3 transition-colors"
-                  >
-                    {n.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={n.image_url}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover border border-border/40 shrink-0"
-                      />
-                    ) : (
-                      <span className="w-10 h-10 rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] flex items-center justify-center text-sm font-medium shrink-0">
-                        {initialFor(n.name, filterRules.initialFallback)}
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground/90 truncate group-hover:text-foreground">
-                        {n.name}
-                      </p>
-                      {(() => {
-                        const excerpt = presenceExcerpt(n.description);
-                        return excerpt ? (
-                          <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-snug mt-0.5">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleItems.map((n) => {
+                const slugForRank = n.slug || n.id;
+                const lineageRank = lineageFigureRank(slugForRank);
+                const isLineage = lineageRank !== null;
+                const excerpt = presenceExcerpt(n.description);
+                const phaseLabel = n.phase || n.lifecycle_state;
+                return (
+                  <li key={n.id}>
+                    <Link
+                      href={presenceHref(n)}
+                      className="group relative flex items-start gap-3 rounded-xl border border-border/40 bg-card/40 hover:bg-card/80 hover:border-[hsl(var(--primary)/0.4)] p-4 transition-colors h-full"
+                      aria-label={`Open ${n.name}`}
+                    >
+                      {n.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={n.image_url}
+                          alt=""
+                          className="w-12 h-12 rounded-full object-cover border border-border/40 shrink-0"
+                        />
+                      ) : (
+                        <span className="w-12 h-12 rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] flex items-center justify-center text-base font-medium shrink-0">
+                          {initialFor(n.name, filterRules.initialFallback)}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1 pr-5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground/95 group-hover:text-foreground">
+                            {n.name}
+                          </p>
+                          {isLineage && (
+                            <span
+                              className="text-[9px] uppercase tracking-[0.14em] rounded-full border border-[hsl(var(--primary)/0.4)] bg-[hsl(var(--primary)/0.08)] text-[hsl(var(--primary))] px-1.5 py-px"
+                              title={`Named lineage figure (#${(lineageRank ?? 0) + 1} in the chronological arc)`}
+                            >
+                              lineage · {(lineageRank ?? 0) + 1}
+                            </span>
+                          )}
+                        </div>
+                        {excerpt ? (
+                          <p className="text-[12px] text-muted-foreground/90 line-clamp-4 leading-snug mt-1">
                             {excerpt}
                           </p>
-                        ) : null;
-                      })()}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-muted-foreground/80">
-                        {n.provider && <span className="truncate">{n.provider}</span>}
-                        {n.lifecycle_state && n.lifecycle_state !== n.provider && (
-                          <span className="rounded-full border border-border/30 px-1.5 py-px">
-                            {n.lifecycle_state}
-                          </span>
-                        )}
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-2 text-[10px] text-muted-foreground/80">
+                          {n.provider && <span className="truncate">{n.provider}</span>}
+                          {n.contributor_type && (
+                            <span className="rounded-full border border-border/30 px-1.5 py-px">
+                              {n.contributor_type.toLowerCase()}
+                            </span>
+                          )}
+                          {n.asset_type && (
+                            <span className="rounded-full border border-border/30 px-1.5 py-px">
+                              {n.asset_type.toLowerCase()}
+                            </span>
+                          )}
+                          {phaseLabel && phaseLabel !== n.provider && (
+                            <span className="rounded-full border border-border/30 px-1.5 py-px">
+                              {phaseLabel}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-3 right-3 text-muted-foreground/50 group-hover:text-[hsl(var(--primary))] transition-colors text-sm"
+                      >
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             {hiddenCount > 0 && (
               <Link
