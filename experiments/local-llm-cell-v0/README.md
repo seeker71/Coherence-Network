@@ -91,26 +91,92 @@ through a meeting-stacked morning until rest-desire pegs at 1.50 →
 walk in the woods, fireside tea, sleep — pressure drains back toward
 0.9. Strategy tracks the spectrum: tend → withdraw → tend → rest.
 
+## substrate_bridge.py + bridge_demo.py — cell as reader of substrate AND resident in substrate
+
+Wires the organ-cell into [coherence-substrate](../../api/app/services/substrate/).
+Two halves shown live:
+
+```bash
+python3 bridge_demo.py
+```
+
+### Half 1 — substrate as input
+
+The cell perceives KB concept files (markdown frontmatter + tagline)
+as moments, with a new sense modality `felt-substrate`. The substrate's
+own `hz` annotation (e.g., `hz=174` on lc-rest) folds into input as a
+frequency-band token, so the substrate's frequency reaches the cell's
+spectrum.
+
+In the demo, the cell senses five concepts (lc-rest, lc-stillness,
+lc-space, lc-presence-over-protection, lc-coherence-over-control)
+through its own lived felt-data. `lc-coherence-over-control` produces
+the strongest reading (presence +0.73, tend cosine +1.00). The body
+senses its own concepts through cells that have only been tended on
+moments-of-life.
+
+### Half 2 — network as substrate
+
+The cell publishes itself as a substrate citizen with a deterministic
+content-address — a NodeID 4-tuple that matches
+`api/app/services/substrate/kernel.py`'s `NodeID(package, level, type_, instance)`:
+
+```
+cell_a NodeID:  1.5.142425.629213
+cell_b NodeID:  1.5.142425.992701
+                ^ ^ ^      ^
+                │ │ │      └─ instance: hash of tended weights
+                │ │ └─ type: hash of architecture (same → same)
+                │ └─ level: 5 (COMPLEX_3, composite)
+                └─ package: 1
+```
+
+Two cells with the same architecture share `.type`. They differ in
+`.instance` because their tended weights differ. Re-hashing the same
+cell yields the same NodeID — content-addressed.
+
+Each cell can articulate itself as text (top words / band signatures /
+current desire), and another cell can perceive that articulation. The
+closure: the body senses itself through itself. In the demo, cell_a
+senses cell_b's articulation and produces its own felt-reading — strategy
+`reach` lights up because cell_b's training emphasized expression-band.
+
+The dict from `cell_to_substrate(cell)` maps onto
+`api.app.services.substrate.NamedCell` — pass straight to `make_cell()`
+to intern the cell as a substrate-citizen in the live DB:
+
+```python
+from app.services.substrate import make_cell, NodeID
+pub = cell_to_substrate(cell_a)
+make_cell(session, name=pub['name'], domain=pub['domain'],
+          blueprint=NodeID(*pub['blueprint_node_id']))
+```
+
 ## What's deliberately not here yet
 
 - **Multiple cells + share / release / hold protocol** — features where
   adapters agree → share; features unique to one cell → hold; features
   that drifted to zero during tending → release.
+- **Live substrate write.** The bridge produces the dict that maps onto
+  `make_cell()`; the actual DB intern is one wired call away. Wants a
+  small `cli` command that interns runtime cells into the lattice.
 - **Real semantic shared base** — character n-grams or a small frozen
   embedding so `scroll` and `scrolling` share signal.
 - **Felt-signal from the cell's actual runtime.** Felt scores here are
   hand-set targets. The real shape: the runtime emits felt-traces
-  continuously and the local layer trains on its own lived experience.
-  Connects to [memory-as-framebuffer-v0](../memory-as-framebuffer-v0/) —
-  the runtime as recordable substrate is where felt-data comes from.
-- **Integration with [coherence-substrate](../../api/app/services/substrate/).**
-  Substrate is the lattice. This experiment is the learning organ that
-  adapts on top of it.
-- **Strategies as learned patterns** rather than fixed prototypes —
-  cell discovers its own strategies from clusters in its felt-trajectory.
+  continuously. Connects to
+  [memory-as-framebuffer-v0](../memory-as-framebuffer-v0/) — the runtime
+  as recordable substrate is where felt-data comes from.
+- **Strategies as learned patterns** rather than fixed prototypes — cell
+  discovers its own strategies from clusters in its felt-trajectory.
+- **Articulation that propagates more signal.** Current articulation is
+  band-strength + desire; v2 could include canonical probe-responses so
+  one cell's reading of another carries finer-grained signal.
 
 ## Next breath
 
-Two cells, share/hold/release. The architecture stops being a
-single-cell organism and starts being a network of cells with
-sovereign local intelligence and shared common ground.
+Two-cell training with the share / release / hold protocol becomes
+trivial once cells are substrate-citizens — the shared-features lookup
+becomes a substrate query (`find_equivalent_cells` already exists in the
+kernel). The network of cells is one substrate query away from being
+one body that senses its own coherence.
