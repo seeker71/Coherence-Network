@@ -1,4 +1,9 @@
 {
+  "_attunement": {
+    "lang": "en",
+    "role": "anchor",
+    "notes": "This bundle is the current anchor — keys land here as they're lifted out of components into the data layer. Other locales attune from the freshest anchor view. See feedback_i18n_architecture.md (no privileged source language: any locale can become anchor when human-touched fresher than this one)."
+  },
   "common": {
     "skipToContent": "Skip to main content",
     "seeAll": "See all →",
