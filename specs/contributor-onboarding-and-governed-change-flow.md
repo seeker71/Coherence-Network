@@ -16,7 +16,7 @@ done_when:
   - "Change request stores proposer attribution and vote attribution."
   - "Human or machine reviewer can cast yes/no vote via API and web."
   - "Approved request auto-applies by default and records apply result."
-test: "- `pytest -q tests/test_ideas.py tests/test_spec_registry_api.py tests/test_governance_api.py tests/test_inventory_api.py`"
+test: "cd api && pytest -q tests/test_contributor_journey.py"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
