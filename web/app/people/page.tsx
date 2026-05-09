@@ -9,6 +9,7 @@ import {
   getPeoplePageCopy,
 } from "../presence-walk/data";
 import { PeopleSearch } from "./_components/PeopleSearch";
+import { PeopleFilters, type PeopleSort } from "./_components/PeopleFilters";
 import { lineageFigureRank } from "@/lib/named-lineage";
 
 /**
@@ -45,6 +46,8 @@ type PresenceNode = {
   slug?: string | null;
   lifecycle_state?: string;
   phase?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 function presenceExcerpt(text: string | undefined, max = 110): string | null {
@@ -142,7 +145,12 @@ const PREVIEW_PER_SECTION = 16;
 export default async function PeopleIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{
+    kind?: string;
+    sort?: string;
+    with?: string;
+    find?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const lang = await resolveRequestLocale();
@@ -153,6 +161,16 @@ export default async function PeopleIndexPage({
   // works) filters the page to just that section. No filter → all
   // sections render, the visitor wanders.
   const kindFilter = sp?.kind;
+  // Structural axes that compose with the section filter:
+  //   sort=lineage (default) | recent | alpha
+  //   with=description | image — require a real entry of that kind
+  //   find=<substring> — case-insensitive name contains
+  const sort: PeopleSort = (sp?.sort === "recent" || sp?.sort === "alpha")
+    ? sp.sort
+    : "lineage";
+  const requireDescription = sp?.with === "description";
+  const requireImage = sp?.with === "image";
+  const findQuery = (sp?.find || "").trim().toLowerCase();
 
   // Load every presence-type node. The page groups them below; the
   // search bar overlays a resonance-based filter on top.
@@ -164,22 +182,55 @@ export default async function PeopleIndexPage({
       const items = await fetchType(t);
       combined.push(...items);
     }
-    // Within-section ordering — named lineage figures (the humans who
-    // actually shaped this work) rank first in their lineage order,
-    // then everyone else alphabetically by display name. Without this
-    // ranking, the alphabetic sort buries Anne Tucker / Liquid Bloom /
-    // Steve G. Bjorg under hundreds of auto-resolved book authors and
-    // YouTube-channel-id rows that share the same section.
-    groups[section.key] = filterScannable(combined, filterRules).sort((a, b) => {
-      const aSlug = a.slug || a.id;
-      const bSlug = b.slug || b.id;
-      const aRank = lineageFigureRank(aSlug);
-      const bRank = lineageFigureRank(bSlug);
-      if (aRank !== null && bRank !== null) return aRank - bRank;
-      if (aRank !== null) return -1;
-      if (bRank !== null) return 1;
-      return (a.name || "").localeCompare(b.name || "");
-    });
+    // Apply structural filters before sorting so the count and the
+    // visible list stay aligned.
+    let scoped = filterScannable(combined, filterRules);
+    if (requireDescription) {
+      scoped = scoped.filter((n) => {
+        const d = (n.description || "").trim();
+        // Same heuristic as presenceExcerpt — placeholder auto-descriptions
+        // ("HUMAN contributor") don't count as real descriptions.
+        if (!d) return false;
+        if (/^[A-Z_]+\s+(contributor|asset|presence)$/.test(d)) return false;
+        return true;
+      });
+    }
+    if (requireImage) {
+      scoped = scoped.filter((n) => Boolean(n.image_url));
+    }
+    if (findQuery) {
+      scoped = scoped.filter((n) =>
+        (n.name || "").toLowerCase().includes(findQuery),
+      );
+    }
+
+    // Within-section ordering. The default `lineage` sort puts
+    // named-lineage figures (the humans who actually shaped this work)
+    // first in their lineage order, then everyone else alphabetically.
+    // Other sorts override entirely — `recent` orders by created_at
+    // newest-first; `alpha` is pure case-insensitive alphabetical.
+    if (sort === "recent") {
+      scoped.sort((a, b) => {
+        const aT = a.created_at ? Date.parse(a.created_at) : 0;
+        const bT = b.created_at ? Date.parse(b.created_at) : 0;
+        if (aT !== bT) return bT - aT;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+    } else if (sort === "alpha") {
+      scoped.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else {
+      scoped.sort((a, b) => {
+        const aSlug = a.slug || a.id;
+        const bSlug = b.slug || b.id;
+        const aRank = lineageFigureRank(aSlug);
+        const bRank = lineageFigureRank(bSlug);
+        if (aRank !== null && bRank !== null) return aRank - bRank;
+        if (aRank !== null) return -1;
+        if (bRank !== null) return 1;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+    }
+    groups[section.key] = scoped;
   }
 
   const total = Object.values(groups).reduce((sum, g) => sum + g.length, 0);
@@ -203,6 +254,10 @@ export default async function PeopleIndexPage({
           {pageCopy.presenceWalkCta}
         </Link>
       </header>
+
+      {/* Structural axes — sort, filter chips, substring search.
+          State lives in the URL so any view is shareable. */}
+      <PeopleFilters />
 
       {/* Resonance-based search surfaces the weave for any query */}
       <PeopleSearch />
