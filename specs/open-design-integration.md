@@ -1,6 +1,6 @@
 ---
 idea_id: user-surfaces
-status: active
+status: draft
 source:
   - file: api/app/services/design_artifact_service.py
     symbols: [generate_artifact, list_artifacts_for_concept, get_artifact]
