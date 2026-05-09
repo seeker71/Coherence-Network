@@ -1,16 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
-import { useLiveRefresh } from "@/lib/live_refresh";
+import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
 
 const API_URL = getApiBase();
+const PAGE_SIZE = 100;
 
 function formatDate(iso: string, locale: string): string {
   try {
@@ -107,10 +108,7 @@ function ContributorsPageContent() {
   const t = useT();
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Contributor[]>([]);
   const [flowRows, setFlowRows] = useState<FlowItem[]>([]);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "HUMAN" | "AGENT" | "SYSTEM">("ALL");
 
   const selectedContributorId = useMemo(
@@ -118,37 +116,58 @@ function ContributorsPageContent() {
     [searchParams]
   );
 
-  const loadRows = useCallback(async () => {
-    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
-    setError(null);
-    const [contributorsJson, flowJson] = await Promise.all([
-      fetchJsonOrNull<{ items?: Contributor[] } | Contributor[]>(
-        `${API_URL}/api/contributors`,
-        { cache: "no-store" },
-        8000,
-        3,
-      ),
-      fetchJsonOrNull<FlowResponse>(
+  const buildContributorsUrl = useCallback(
+    (offset: number, limit: number) =>
+      `${API_URL}/api/contributors?offset=${offset}&limit=${limit}`,
+    [],
+  );
+
+  const contributors = usePagedList<Contributor>({
+    buildUrl: buildContributorsUrl,
+    pageSize: PAGE_SIZE,
+    timeoutMs: 8000,
+    retries: 3,
+  });
+  const rows = contributors.items;
+
+  // Flow is a single inventory snapshot, not a paginated list — fetch once
+  // alongside the first page of contributors.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const flowJson = await fetchJsonOrNull<FlowResponse>(
         `${API_URL}/api/inventory/flow?runtime_window_seconds=86400`,
         { cache: "no-store" },
         20000,
         3,
-      ),
-    ]);
-    if (contributorsJson === null && flowJson === null) {
-      setStatus("error");
-      setError("api unreachable");
-      return;
-    }
-    const contributorData = Array.isArray(contributorsJson)
-      ? contributorsJson
-      : contributorsJson?.items ?? [];
-    setRows(contributorData);
-    setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
-    setStatus("ok");
+      );
+      if (cancelled) return;
+      setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useLiveRefresh(loadRows);
+  // Sentinel: when the bottom marker enters the viewport, ask for more.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            contributors.loadMore();
+          }
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [contributors.loadMore]);
 
   const counts = useMemo(() => {
     let human = 0;
@@ -234,6 +253,11 @@ function ContributorsPageContent() {
     return sorted;
   }, [rows, typeFilter, selectedContributorId, relationsByContributor]);
 
+  const isFirstLoad = contributors.loading && rows.length === 0;
+  const initialError =
+    contributors.error && rows.length === 0 ? contributors.error : null;
+  const totalKnown = contributors.total;
+
   return (
     <main className="bg-stone-950 min-h-screen">
       {/* Hero — the network of cells finding each other */}
@@ -291,7 +315,9 @@ function ContributorsPageContent() {
             ].join(" ")}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("contributors.statAll")}</p>
-            <p className="mt-2 text-3xl font-light text-stone-100">{counts.total}</p>
+            <p className="mt-2 text-3xl font-light text-stone-100">
+              {totalKnown !== null && totalKnown > counts.total ? totalKnown : counts.total}
+            </p>
             <p className="mt-1 text-xs text-stone-400">{t("contributors.statAllHint")}</p>
           </button>
           <button
@@ -363,27 +389,29 @@ function ContributorsPageContent() {
         )}
 
         <div className="space-y-4">
-          {status === "loading" && (
+          {isFirstLoad && (
             <p className="text-stone-400 text-sm">{t("common.loading")}</p>
           )}
-          {status === "error" && (
+          {initialError && (
             <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
-              {t("contributors.errorPrefix")} {error}
+              {t("contributors.errorPrefix")} {initialError}
             </div>
           )}
 
-          {status === "ok" && (
+          {!isFirstLoad && !initialError && (
             <>
               <p className="text-sm text-stone-400">
-                {filteredRows.length === rows.length
-                  ? filteredRows.length === 1
+                {totalKnown !== null && rows.length < totalKnown
+                  ? t("contributors.countOfTotal", { n: filteredRows.length, total: totalKnown })
+                  : filteredRows.length === 1
                     ? t("contributors.countOneCell")
-                    : t("contributors.countManyCells", { n: filteredRows.length })
-                  : t("contributors.countOfTotal", { n: filteredRows.length, total: rows.length })}
+                    : filteredRows.length === rows.length
+                      ? t("contributors.countManyCells", { n: filteredRows.length })
+                      : t("contributors.countOfTotal", { n: filteredRows.length, total: rows.length })}
               </p>
 
               <ul className="grid gap-3 sm:grid-cols-2">
-                {filteredRows.slice(0, 100).map((c) => {
+                {filteredRows.map((c) => {
                   const tone = toneFor(c.type);
                   const rel = relationsByContributor.get(c.id);
                   const hasRelations = rel && (
@@ -518,6 +546,24 @@ function ContributorsPageContent() {
                     </Link>
                     {t("contributors.emptyBodyAfter")}
                   </p>
+                </div>
+              )}
+
+              {/* Sentinel + loading-more row — only when there's more to fetch */}
+              {!contributors.loadedAll && (
+                <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                  {contributors.loading && (
+                    <p className="text-stone-500 text-sm">{t("common.loading")}</p>
+                  )}
+                  {!contributors.loading && contributors.error && (
+                    <button
+                      type="button"
+                      onClick={contributors.loadMore}
+                      className="text-stone-400 hover:text-amber-300 text-sm underline-offset-4 hover:underline"
+                    >
+                      {t("common.loading")}
+                    </button>
+                  )}
                 </div>
               )}
 
