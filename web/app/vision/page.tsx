@@ -7,6 +7,7 @@ import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { getApiBase } from "@/lib/api";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { RecentlyAlive } from "@/components/RecentlyAlive";
 
 type HubSection = {
   id: string;
@@ -526,6 +527,14 @@ export default async function VisionPage({
         pageId="vision"
         className="mx-auto max-w-3xl px-6 pb-12 space-y-4 text-base text-stone-400 leading-relaxed"
       />
+
+      {/* Recently alive — surfaces the body's attention this week.
+         Concepts trending in /api/views/trending become chips here so
+         the visitor sees the body alive: where attention has been,
+         which concepts other cells have been sitting with. The data
+         is recorded from every page read; this returns it to the
+         visitor instead of leaving the trace silent. */}
+      <RecentlyAlive />
 
       {/* Discoverability strip — a clear door to the searchable concept
          garden, lifted up from the depth of the page so a visitor
