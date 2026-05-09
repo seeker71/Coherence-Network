@@ -16,6 +16,7 @@ pub mod render;
 pub mod snapshot;
 
 use once_cell::sync::OnceCell;
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub use allocator::{CellHandle, SlabFramebuffer, CELL_BYTES, GRID, NUM_CELLS};
@@ -120,6 +121,32 @@ impl Drop for Framebuffer {
 
 static FRAMEBUFFER: OnceCell<Framebuffer> = OnceCell::new();
 
+/// Process-global registry mapping `crc32(file:line)` provenance hashes back
+/// to their `(file, line)` origin. Populated by `compute_and_register_prov()`
+/// every time a `track!` or `Tracked::new[_at]()` runs. Dumped to a
+/// `{MFB_CAPTURE}.provmap` JSON sidecar at `shutdown_framebuffer()` so any
+/// downstream renderer (mfb-html, future 3D, etc.) can resolve hashes back
+/// to source locations and group cells by recipe.
+static PROV_REGISTRY: OnceCell<Mutex<HashMap<u32, (String, u32)>>> = OnceCell::new();
+
+fn prov_registry() -> &'static Mutex<HashMap<u32, (String, u32)>> {
+    PROV_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Compute the provenance hash for a `(file, line)` source location AND
+/// register the mapping in the global registry. All three primitive write
+/// sites (`Tracked::new`, `Tracked::new_at`, `track!` via
+/// `write_with_provenance`) route through this so the registry is complete
+/// at shutdown time.
+fn compute_and_register_prov(file: &str, line: u32) -> u32 {
+    let hash = crc32fast::hash(format!("{}:{}", file, line).as_bytes());
+    if let Ok(mut reg) = prov_registry().lock() {
+        reg.entry(hash)
+            .or_insert_with(|| (file.to_string(), line));
+    }
+    hash
+}
+
 /// Initialize the global framebuffer. Spawns the snapshot thread which spawns ffmpeg
 /// and pipes RGBA frames at MFB_FPS (default 60) to OUTPUT (default "framebuffer.mp4").
 ///
@@ -170,7 +197,11 @@ pub fn framebuffer() -> &'static Framebuffer {
         .expect("framebuffer not initialized; call init_framebuffer() first")
     }
 
-/// Shut down the global framebuffer (closes ffmpeg, finalizes mp4).
+/// Shut down the global framebuffer (closes ffmpeg, finalizes mp4 + .mfb).
+/// Also dumps the provenance registry to a `{MFB_CAPTURE}.provmap` JSON
+/// sidecar so downstream renderers can resolve provenance hashes back to
+/// `(file, line)` source locations.
+///
 /// Idempotent. Should be called at the end of main; otherwise the OnceCell
 /// is leaked at process exit and ffmpeg may not flush cleanly.
 pub fn shutdown_framebuffer() {
@@ -181,6 +212,38 @@ pub fn shutdown_framebuffer() {
             }
         }
     }
+    if let Ok(capture_path) = std::env::var("MFB_CAPTURE") {
+        let provmap_path = format!("{}.provmap", capture_path);
+        if let Err(e) = write_provmap_json(&provmap_path) {
+            eprintln!(
+                "memory-as-framebuffer: failed to write {}: {}",
+                provmap_path, e
+            );
+        }
+    }
+}
+
+/// Serialize the provenance registry to a JSON file at `path`. Manual
+/// serialization avoids pulling serde into the crate just for this.
+fn write_provmap_json(path: &str) -> std::io::Result<()> {
+    let reg = prov_registry()
+        .lock()
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "provmap mutex poisoned"))?;
+    let mut s = String::from("{");
+    let mut first = true;
+    for (hash, (file, line)) in reg.iter() {
+        if !first {
+            s.push(',');
+        }
+        first = false;
+        let escaped = file.replace('\\', "\\\\").replace('"', "\\\"");
+        s.push_str(&format!(
+            "\"{}\":{{\"file\":\"{}\",\"line\":{}}}",
+            hash, escaped, line
+        ));
+    }
+    s.push('}');
+    std::fs::write(path, s)
 }
 
 /// A tracked primitive value. Construction allocates a cell; the tag and
@@ -196,7 +259,7 @@ impl<T: TrackedPrimitive> Tracked<T> {
     #[track_caller]
     pub fn new(value: T) -> Self {
         let caller = std::panic::Location::caller();
-        let prov = crc32fast::hash(format!("{}:{}", caller.file(), caller.line()).as_bytes());
+        let prov = compute_and_register_prov(caller.file(), caller.line());
 
         let fb = framebuffer();
         let handle = {
@@ -224,7 +287,7 @@ impl<T: TrackedPrimitive> Tracked<T> {
     #[track_caller]
     pub fn new_at(idx: usize, value: T) -> Self {
         let caller = std::panic::Location::caller();
-        let prov = crc32fast::hash(format!("{}:{}", caller.file(), caller.line()).as_bytes());
+        let prov = compute_and_register_prov(caller.file(), caller.line());
 
         let fb = framebuffer();
         let handle = {
@@ -260,7 +323,7 @@ impl<T: TrackedPrimitive> Tracked<T> {
     /// Write a new value AND stamp provenance at the given file:line.
     /// Used by the `track!` macro; not normally called directly.
     pub fn write_with_provenance(&mut self, value: T, file: &str, line: u32) {
-        let prov = crc32fast::hash(format!("{}:{}", file, line).as_bytes());
+        let prov = compute_and_register_prov(file, line);
         let fb = framebuffer();
         {
             let mut data = fb.data.lock().unwrap();
