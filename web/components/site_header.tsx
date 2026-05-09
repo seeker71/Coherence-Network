@@ -39,6 +39,7 @@ const SECONDARY_NAV: NavItemKey[] = [
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
   { href: "/specs", labelKey: "nav.specs" },
+  { href: "/substrate", labelKey: "nav.substrate" },
   { href: "/blog", labelKey: "nav.blog" },
   { href: "/search", labelKey: "nav.search" },
   { href: "/automation", labelKey: "nav.automation" },

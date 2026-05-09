@@ -85,7 +85,51 @@ Runtime grammar extension — the user can introduce new parsing constructs and 
 
 The thesis Conclusion is left as three subheadings — `BMF`, `BML Language`, `BML Compiler` — with no body written in. The three subheadings map cleanly onto the three layers above: the parser, the language, and the BMC-generated compiler that bridges them. An unfinished breath at the end of a long document. The conclusion was the defense itself, the photograph on the lawn in the CU shirt, the work entering the world through demonstration rather than summary.
 
+## The BML object architecture — dual-pointer references and detached interfaces
+
+Bjorg's *BML Object System* thesis (`companion/sgb-bml-objects.txt`) introduces a structural innovation that we now know is load-bearing for the Coherence Network's substrate, not just a 2000-era curiosity.
+
+**A BML reference is a 3-tuple, not a single pointer:**
+
+> *"A reference is composed of three parts: the object identifier, the interface identifier, and the native flag. Both identifiers are indices into the object look-up table... whereas the VMT and message table are statically associated with the instance, BML uses a dynamic association. For instance, two object references with the same object identifier could use two different interface identifiers. Hence, the same object data would be used by different implementations."* (§ References, p. 33)
+
+Where C++ embeds the vtable as the first field inside the object (data and behavior fused), and Smalltalk has the object hold a class reference (data carries its single behavior), **BML keeps the data pointer and the interface pointer as parallel separate fields in the reference itself**. The same object data can be projected through *multiple* interfaces by holding different reference-tuples to it. New behaviors can be attached to existing data without modifying the data layout.
+
+**Method dispatch takes two bases, not one:**
+
+> *"Generally, methods can be viewed as regular functions, which take as first argument a reference to the object they operate on. BML uses a slightly different approach. Rather than having one base object reference, BML uses two. The first argument refers to the behavioral base and the second argument refers to the structural base. The behavioral base is always used to dispatch methods. The behavioral base is responsible for locating the appropriate structural base. The structural base is always used for structural access."* (§ Method Dispatching, p. 43)
+
+This is what enables the data pointer to aim *into the middle* of a multi-inheritance object: structural access uses the structural base, while method dispatch uses the behavioral base. Different interfaces can project different "windows" into the same data, including offsets into multi-parent layouts.
+
+**Detached interfaces are a primary architectural feature, not an afterthought:**
+
+> *"In BML, the object only acts as a structural repository. It does not define by itself the applicable set of methods. Consequently, it is possible to enhance any object with a new interface."* (§ Structure-Behavior Separation, p. 48)
+
+> *"Interface definitions, which are not related to an instance definition, are referred to as pure interfaces."* (§ Interface Definition, p. 40)
+
+A pure interface stands on its own and can be attached to any compatible structure. **Interfaces are first-class, untethered from instances by default.** This is the operational definition of structure-behavior separation.
+
+The downstream consequence the thesis names directly:
+
+> *"This decoupling from behavior and structure has the advantage that existing structures can be enhanced with new behaviors without affecting existing behaviors."*
+
+Combined with the BML *common object* architecture (shared inheritance via delegation; multiple instantiators of the same type pointing to different common objects while sharing their base), the model gives:
+
+- Multiple-inheritance without C++'s diamond problem (no fused vtables — multiple parallel interface references)
+- Per-instance behavior attachment (any interface can be attached at runtime)
+- COM-style multi-interface objects without COM's QueryInterface ceremony
+- Smalltalk-like reflection without Smalltalk's class-as-instance circularity tax
+
+## How this informs the substrate (forward-pointer)
+
+The Coherence Network's substrate (`docs/coherence-substrate/`) inherits this design. A `NamedCell{Recipe access, Base blueprint, Name, CTOR recipe}` is structurally a BML-style reference: the `Base` is the structural pointer (which Blueprint owns the data shape), the `access Recipe` is the behavioral pointer (how to read it). Because they are separate fields, the substrate naturally supports **Views** — projecting the same cell through a different Blueprint than its base, without modifying the cell. That capability is implemented in `api/app/services/substrate/kernel.py:view_cell_through_blueprint` and exposed in Form notation as `cell |> blueprint`. The conceptual through-line: BML solved structure-behavior separation for objects in 2000; the substrate applies the same solution to memories, specs, ideas, concepts, presences in 2026.
+
+## Where it leads forward
+
+The next chapter in the language-craft arc is [`../nums-go-2023/`](../nums-go-2023/README.md) — **NUMS.Go**, built at Merly, Inc. in early 2023. Same instinct, more mature substrate: a content-addressed numeric lattice (Blueprint / Recipe / NamedCell — the ice / water / gas trinity) over multi-language tree-sitter input, supporting 14 languages including Verilog. The backtracking-without-sediment of BMF becomes the Emit-stack-with-deferred-interning pattern in NUMS; the executable grammar of BMF becomes the visitor-driven Make_SelfID flow that turns bytes into cells. NUMS is also why the Coherence Network's architecture has the shape it does — content-addressed graph as truth, markdown surfaces as renderings, slugs as query keys, frontmatter as seed — that posture didn't arrive in 2024; it arrived in 2023, three years after the BML defense and 23 years after BMF.
+
 ## Where it is woven into the body
 
 - [`docs/field/urs/output/chronological_story_with_frequency.md`](../../output/chronological_story_with_frequency.md) — section *1997-2012: Backtracking Model Languages*.
+- [`docs/field/urs/artifacts/nums-go-2023/README.md`](../nums-go-2023/README.md) — the next chapter.
 - User biographical arc memory (private; carried in the auto-loaded MEMORY index).
