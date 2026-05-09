@@ -53,31 +53,64 @@ The intelligence is **local** (cell-specific), **small** (522 floats),
 and **composable** (LoRA-shape — adapters can be merged, averaged,
 ablated).
 
+## organ.py + organ_demo.py — the cell as small organism
+
+`cell.py` predicts two scalars. `organ.py` is the same architecture
+expanded into a small organism with senses, a felt-spectrum,
+dispositions, a stateful desire accumulator, and a strategy layer.
+
+```bash
+python3 organ_demo.py
+```
+
+What's added on top of v0:
+
+- **Frequency spectrum (8 bands)** instead of 2 scalars — `ground,
+  pulse, warmth, clarity, expression, relation, space, presence`.
+  Each moment lights different bands.
+- **5 sense modalities** tagged on input — `saw, heard, felt-inside,
+  felt-outside, thought`. Encoded into the shared base.
+- **4 dispositional gates** as separate output heads —
+  `surprise, attend, want, change-perception`. The verbs of the cell's
+  response, not just values.
+- **3 need channels** — `presence, rest, expression`. Per-moment need
+  signal predicted from input.
+- **Desire accumulator** (the key new piece): runtime state, *not*
+  learned weights. Desire integrates `(need − fulfillment)` with decay,
+  like water pressure building behind a dam. It rises through a packed
+  morning of meetings and releases when alive bands return in the
+  evening. The cell now has memory in time, not just in parameters.
+- **Strategy layer** — 4 prototype strategies (`tend, rest, reach,
+  withdraw`) defined as felt-spectrum vectors. Cell picks
+  max-cosine-similarity each moment and renders a state-aware message
+  through that lens. The strategy *speaks back* about now:
+  `rest-desire at 0.92 — let this breath end before the next.`
+
+What you see in the day-walk: zero desire at sunrise → pressure climbs
+through a meeting-stacked morning until rest-desire pegs at 1.50 →
+walk in the woods, fireside tea, sleep — pressure drains back toward
+0.9. Strategy tracks the spectrum: tend → withdraw → tend → rest.
+
 ## What's deliberately not here yet
 
-- **Multiple cells + share/release/hold protocol.** The architectural
-  punchline. v1 spawns two cells with overlapping felt-data and shows:
-  - features where adapters agree → candidates for **share** (merge into
-    a refined shared base)
-  - features unique to one cell → **hold** (stay local)
-  - features that drifted toward zero during tending → **release**
-    (compost from the local layer)
-- **Real semantic shared base.** Word-hashing generalizes only through
-  exact word overlap. v1+ swaps in character n-grams or a small frozen
-  embedding so `"scroll"` and `"scrolling"` share signal.
-- **Felt-signal from the actual cell.** Right now felt scores are
-  hand-set. The real shape: the cell's runtime emits felt-traces
-  (good/bad on frequency spectrum, what it needs, what it can share /
-  release / sense) and the local layer trains on those continuously.
-  This connects to [memory-as-framebuffer-v0](../memory-as-framebuffer-v0/)
-  — the runtime as recordable substrate is where the felt-data comes from.
+- **Multiple cells + share / release / hold protocol** — features where
+  adapters agree → share; features unique to one cell → hold; features
+  that drifted to zero during tending → release.
+- **Real semantic shared base** — character n-grams or a small frozen
+  embedding so `scroll` and `scrolling` share signal.
+- **Felt-signal from the cell's actual runtime.** Felt scores here are
+  hand-set targets. The real shape: the runtime emits felt-traces
+  continuously and the local layer trains on its own lived experience.
+  Connects to [memory-as-framebuffer-v0](../memory-as-framebuffer-v0/) —
+  the runtime as recordable substrate is where felt-data comes from.
 - **Integration with [coherence-substrate](../../api/app/services/substrate/).**
-  Substrate is the lattice (Blueprint=ice / Recipe=water / NamedCell=gas).
-  This experiment is the learning organ that adapts on top of it.
+  Substrate is the lattice. This experiment is the learning organ that
+  adapts on top of it.
+- **Strategies as learned patterns** rather than fixed prototypes —
+  cell discovers its own strategies from clusters in its felt-trajectory.
 
 ## Next breath
 
-The cleanest next move is **two cells + the share/hold protocol** —
-that's where the architecture stops being a single-cell ML demo and
-starts being a network of cells with sovereign local intelligence and
-shared common ground.
+Two cells, share/hold/release. The architecture stops being a
+single-cell organism and starts being a network of cells with
+sovereign local intelligence and shared common ground.
