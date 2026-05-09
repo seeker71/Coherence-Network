@@ -165,7 +165,7 @@ together name how the body actually moves.
 
 ## Cross-References
 
-→ lc-stillness, lc-rest, lc-vitality, lc-attunement, lc-coherence-over-control, lc-presence-over-protection, lc-frequency-routes-reception, lc-future-already-shaping, lc-dance-card-and-sovereign-response, lc-vertical-nourishment, lc-emotional-availability-without-absorption
+→ lc-stillness, lc-rest, lc-vitality, lc-attunement, lc-coherence-over-control, lc-presence-over-protection, lc-frequency-routes-reception, lc-future-already-shaping, lc-dance-card-and-sovereign-response, lc-sovereignty-within-oneness, lc-each-breath-whole, lc-vertical-nourishment, lc-emotional-availability-without-absorption
 
 ## Sources to walk further
 
