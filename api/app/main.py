@@ -59,6 +59,7 @@ from app.routers import cc_exchange as cc_exchange_router
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
+from app.routers import substrate as substrate_router
 from app.routers import locales as locales_router
 from app.routers import entity_views as entity_views_router
 from app.routers import debug as debug_router
@@ -760,6 +761,7 @@ from app.routers import creator_economy as creator_economy_router
 app.include_router(creator_economy_router.router, prefix="/api", tags=["creator-economy"])
 app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["creator-economy"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(substrate_router.router, prefix="/api/substrate", tags=["substrate"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])

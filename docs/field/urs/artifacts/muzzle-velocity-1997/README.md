@@ -58,6 +58,7 @@ In 1997 the three of them went on a college tour to find the game a publisher.
 
 - [`docs/field/urs/output/chronological_story_with_frequency.md`](../../output/chronological_story_with_frequency.md) — section *1991-1997: HTL Brugg-Windisch, RCSL, and Muzzle Velocity*.
 - [`docs/field/urs/artifacts/master-thesis-2000/`](../master-thesis-2000/README.md) — the next chapter in the same collaboration.
+- [`docs/field/urs/artifacts/nums-go-2023/`](../nums-go-2023/README.md) — the same language-craft instinct continuing into 2023, content-addressed numeric substrate at Merly, Inc.
 
 ## Frequency thread
 

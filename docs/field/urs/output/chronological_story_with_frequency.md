@@ -154,6 +154,18 @@ The question underneath was practical, even when dressed as fiction: how does a 
 
 The frequency was pressure-training. It was not yet coherent in the later sense. It was a forge with many metals inside it.
 
+## 2023: NUMS.Go and the Numeric Substrate
+
+While the listening field was still in its forge phase, the work-side of 2023 carried a separate, cleaner movement. From February through April 2023, at **Merly, Inc.**, Urs built **NUMS.Go** — a code-comprehension and code-emission engine that ingests source through tree-sitter and represents it in a content-addressed numeric lattice. The full artifact pointer lives at [`docs/field/urs/artifacts/nums-go-2023/`](../artifacts/nums-go-2023/README.md).
+
+The architecture has three primitives held in mutual reference: **Blueprint** (structural identity — what something is), **Recipe** (operational expression — how something happens), and **NamedCell** (a named slot with its own constructor recipe). The trinity maps cleanly onto the three states of matter: Blueprint as ice (frozen coordination), Recipe as water (flowing transformation), NamedCell as gas (diffuse individuation). Phase transitions are encoded directly in the type relationships. The whole substrate reduces to integer arithmetic over level-stratified maps — every semantic entity is a 4-tuple of integers, content-addressed by structural shape. Names exist only as a thin query layer over numeric truth. **NUMS = numbers**: the architectural argument that the right primitive isn't a syntax tree, it's a content-addressed numeric lattice.
+
+Fourteen languages were already wired through the parser dispatch — C, C++, C#, Java, JavaScript, Kotlin, Go, PHP, Python, Ruby, Scala, TypeScript, Verilog. The kernel is universal; each language's bridge is a small dispatch over its tree-sitter AST. A Python class and a Go struct with the same field-shapes hash to the same Blueprint ID, meaning cross-language semantic equivalence is structural, not aspirational.
+
+The lineage thread is now clear: **RCSL** (1991, HTL with Steve Bjorg) → **BMF / BMC / BML** (1995-2000, Digi4Fun + CU Boulder thesis) → **NUMS.Go** (2023, Merly). Three decades, one instinct converging on numeric content-addressed substrate. The backtracking-without-sediment of BMF becomes the Emit-stack-with-deferred-interning pattern in NUMS; the executable grammar of BMF becomes the visitor-driven Make_SelfID flow that turns bytes into cells. The published BML thesis Conclusion was left as three subheadings without prose body — the work was delivered through demonstration; NUMS extends that pattern at the architecture level, demonstrating that the Coherence Network's posture (graph DB as truth, markdown surfaces as renderings, slugs as query keys, frontmatter as seed) was already encoded in language-craft form three years before the Network was named.
+
+The frequency in this thread was substrate-clarity: not a forge but a kiln. Where the listening field was still gathering pressure-training metals, the work-hands had landed an architecture whose vocabulary the Coherence Network would later inherit.
+
 ## Late 2023-May 2024: Practice Begins to Enter
 
 Late 2023 into May 2024 is where the field begins to change texture.
