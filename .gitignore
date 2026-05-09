@@ -100,6 +100,8 @@ data/coherence.db
 api/data/*.db
 api/data/field_story_contributions.jsonl
 api/output/
+output/
+.worktrees/
 **/tsconfig.tsbuildinfo
 test-results/
 web/test-results/

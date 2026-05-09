@@ -277,7 +277,7 @@ ProviderVersionSummary:
   cc_earned: float
 ```
 
-## Files
+## Files to Create/Modify
 
 - `api/app/models/renderer.py` — add `parent_renderer_id: Optional[str] = None` and `version: str = "1.0.0"` to `RendererCreate` and `Renderer`
 - `api/app/routers/renderers.py` — add `fork_renderer()` handler for `POST /api/renderers/{id}/fork`
@@ -402,3 +402,10 @@ curl -s "https://api.coherencycoin.com/api/improvements/generator/sdxl-v1/compar
 - **Assumption**: `attribute_render_cc()` already routes CC by `renderer_id` directly. If it ever fell back to a "best renderer for MIME type" lookup, this spec's independence guarantee would break. Verify this before implementation.
 - **Assumption**: `contributor_id` in the fork body corresponds to an existing contributor record. If validation is required, add a `GET /api/contributors/{id}` existence check in the fork handler — same pattern as `POST /api/contributions`.
 - **Risk**: The `compare` endpoint uses in-process render event counts. If render events are stored in a dict (current pattern), counts are correct within a single process but won't aggregate across multiple API workers. Acceptable for the first slice; noted for distributed deployment.
+
+## Known Gaps and Follow-up Tasks
+
+- Graph-backed persistence for the improvement registry — current in-process pattern doesn't survive restarts. Same gap as `asset-renderer-plugin`; the resolution should be shared.
+- Generator → asset → read → CC chain — this spec registers generator versions and tracks `assets_generated`; the per-read CC attribution path is its own follow-up spec.
+- Cross-worker aggregation of render event counts for the `compare` endpoint when API runs with multiple workers.
+- Node performance measurement infrastructure (latency probes, benchmarks) is intentionally out of scope; a separate spec when there's measurement appetite.
