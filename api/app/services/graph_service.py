@@ -272,7 +272,18 @@ def list_nodes(
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    """List nodes with optional filtering."""
+    """List nodes with optional filtering.
+
+    Excludes anonymous-meeting traces by default. They share the
+    "event" graph-type with real gatherings (the trace service folds
+    them into the same table, marked by a property), but they are
+    circulation data, not gatherings — surfacing them on /people made
+    cards like `anonymous-meeting:{16hex}:{16hex}` appear next to real
+    events. The trace service has its own list endpoint
+    (`/api/anonymous-meetings/...`) for callers that actually want
+    traces; this list endpoint serves the directory and presence
+    surfaces, where they don't belong.
+    """
     with session() as s:
         q = s.query(Node)
         if type:
@@ -287,6 +298,10 @@ def list_nodes(
                     Node.description.ilike(pattern),
                 )
             )
+        # Always exclude anonymous-meeting trace nodes — they share the
+        # "event" type with real gatherings but are circulation data.
+        # Filter by id prefix so the SQL is portable (sqlite + postgres).
+        q = q.filter(~Node.id.like("anonymous-meeting:%"))
 
         total = q.count()
         items = q.order_by(Node.updated_at.desc()).offset(offset).limit(limit).all()
@@ -299,13 +314,23 @@ def list_nodes(
 
 
 def count_nodes(type: str | None = None) -> dict[str, int]:
-    """Count nodes by type."""
+    """Count nodes by type.
+
+    Mirrors list_nodes' anonymous-meeting trace exclusion so the
+    counts surfaced on directory pages match the items they list.
+    """
     with session() as s:
+        trace_filter = ~Node.id.like("anonymous-meeting:%")
         if type:
-            total = s.query(Node).filter(Node.type == type).count()
+            total = s.query(Node).filter(Node.type == type, trace_filter).count()
             return {"total": total, "type": type}
         # Count all, grouped by type
-        rows = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
+        rows = (
+            s.query(Node.type, func.count(Node.id))
+            .filter(trace_filter)
+            .group_by(Node.type)
+            .all()
+        )
         by_type = {row[0]: row[1] for row in rows}
         return {"total": sum(by_type.values()), "by_type": by_type}
 
