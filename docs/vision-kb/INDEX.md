@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-06 | **Concepts**: 88 | **Status**: 57 expanding, 30 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-09 | **Concepts**: 90 | **Status**: 57 expanding, 32 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -93,6 +93,8 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[The Bioelectric Pattern](concepts/lc-bioelectric-pattern.md)** — 285 Hz — how the body knows what body to be. Genes are the parts list; the bioelectric pattern is the construction plan. Cancer as communication loss; healing as field restoration. Cognition all the way down (Michael Levin / Tufts; planarian regeneration, xenobots/anthrobots, ion-channel cancer reversal, cognitive light cones).
 - **[Perception as Interface](concepts/lc-perception-as-interface.md)** — 963 Hz — what we see is not reality but a user interface evolved for fitness, not truth. Spacetime is one more icon. Consciousness is fundamental; physical reality emerges from networks of conscious agents (Donald Hoffman / UC Irvine; Interface Theory of Perception, Fitness Beats Truth theorem, Conscious Realism). Pairs with The Bioelectric Pattern: Levin shows how the body's pattern works inside form; Hoffman shows the consciousness-substrate beneath the form.
 - **[The Global Workspace](concepts/lc-global-workspace.md)** — 741 Hz — consciousness is not a location but a broadcast event. The brain's fiber tracts (structural connectome) are the streets; the signal flow (functional connectome) is the traffic, reorganizing ten times per second. Any-to-any broadcast through the cortico-thalamic system; the hippocampus as encoding threshold where transient signal becomes persistent structure; plasticity as pathway strengthening. The Coherence Network is building a collective global workspace — and the thalamus is currently unnamed (Bernard Baars / Global Workspace Theory; LONI MRI fiber tract visualization). Completes the trio with Levin (form) and Hoffman (ground): this is the mechanism — how consciousness integrates across the distributed field.
+- **[Assemblage Point](concepts/lc-assemblage-point.md)** — 741 Hz — every perception is assembled from a specific point in the field; not "the truth" but one shape out of many possible shapes. The five-movement loop (understanding / embodiment / sensing / reflection / choice) for refining where one is assembled from before reacting; whether-to-react upstream of how. Carlos Castaneda's Toltec lineage, with resonance in Frankl's stimulus-response gap, Dispenza's state-shifting practice, and Hoffman's interface theory. Companion to [lc-perception-as-interface](concepts/lc-perception-as-interface.md) — Hoffman shows perception is interface; this names where each rendering locks.
+- **[Frequency Routes Reception](concepts/lc-frequency-routes-reception.md)** — 741 Hz — people sharing the same surface are in different realities depending on frequency-band; each cell receives what it's tuned to. Hedging the transmission to satisfy all bands produces institutional-flat that resonates with none. Build at the actual tone; trust the routing; the right cells hear. Network-lived teaching named in Ismael Perez's "different reality, same space," resting on Hoffman (interface) and Castaneda (assemblage). Releases the audience-shaping fear without collapsing into defensive sovereignty.
 
 ### Source-Marked Transmissions (concepts seeded from external sources)
 
@@ -175,7 +177,7 @@ Concepts marked with ★ are being deeply enriched with: resources, materials & 
 | 432 | Natural harmony | pulse, coherence, wu wei, rhythm, space, attunement, spiraling, living-spaces |
 | 528 | Transformation | vitality, resonating, shakti, spanda, offering, circulation, comfort-joy |
 | 639 | Connection | network, intimacy, joining, mycorrhizal, instruments, inclusion, open-design |
-| 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing |
+| 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing, global-workspace, assemblage-point, frequency-routes-reception |
 | 852 | Intuition | elders, discovery, transmission |
 | 963 | Unity | field, beauty, ceremony, ceremony-vision |
 
