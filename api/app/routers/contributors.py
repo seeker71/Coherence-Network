@@ -5,13 +5,19 @@ import hashlib
 import re
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.models.contributor import Contributor, ContributorCreate
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
 from app.services import graph_service, contributor_service
+from app.services.locale_projection import (
+    DEFAULT_LOCALE,
+    SUPPORTED_LOCALES,
+    project,
+    resolve_caller_lang,
+)
 
 router = APIRouter()
 
@@ -569,8 +575,19 @@ def create_contributor(contributor: ContributorCreate) -> Contributor:
     summary="Get contributor by ID",
     responses={404: {"model": ErrorDetail, "description": "Contributor not found"}},
 )
-def get_contributor(contributor_id: str) -> Contributor:
-    """Retrieve a single contributor by name or UUID."""
+def get_contributor(
+    contributor_id: str,
+    request: Request,
+    lang: str | None = Query(None),
+) -> Contributor:
+    """Retrieve a single contributor by name or UUID.
+
+    Locale-projected when the caller's lang resolves to a non-default
+    SUPPORTED_LOCALES member. The contributor's name + description (their
+    bio) translate via the same entity_views + libretranslate path graph
+    nodes use, with attune-on-miss writing the EN anchor + translated view
+    on first read.
+    """
     # Try by name first, then by UUID
     node = graph_service.get_node(f"contributor:{contributor_id}")
     if not node:
@@ -582,7 +599,43 @@ def get_contributor(contributor_id: str) -> Contributor:
                 break
     if not node:
         raise HTTPException(status_code=404, detail="Contributor not found")
+    target_lang = resolve_caller_lang(request, lang)
+    if target_lang and target_lang != DEFAULT_LOCALE and target_lang in SUPPORTED_LOCALES:
+        _project_contributor_node(node, target_lang)
     return _node_to_contributor(node)
+
+
+def _project_contributor_node(node: dict, lang: str) -> None:
+    """Project a contributor's name + description into the caller's locale.
+
+    Anchor-write on first miss, attune via libretranslate, write
+    translated view, re-project. Failures fail-warm: returns source
+    text rather than blocking the read."""
+    node_id = node.get("id")
+    if not node_id:
+        return
+    project(node, "node", node_id, lang, title_field="name", body_field="description")
+    try:
+        from app.services import translation_cache_service as _tcache
+        from app.services import translator_service as _ts
+        if _tcache.canonical_view("node", node_id, lang) is None and _ts.has_backend():
+            anchors = _tcache.all_canonical_views("node", node_id)
+            if not _tcache.find_anchor(anchors):
+                _tcache.write_view(
+                    entity_type="node",
+                    entity_id=node_id,
+                    lang=DEFAULT_LOCALE,
+                    content_title=node.get("name", "") or "",
+                    content_description=node.get("description", "") or "",
+                    content_markdown="",
+                    author_type=_tcache.AUTHOR_TYPE_ORIGINAL_HUMAN,
+                )
+            _ts.attune_from_anchor(
+                entity_type="node", entity_id=node_id, target_lang=lang,
+            )
+            project(node, "node", node_id, lang, title_field="name", body_field="description")
+    except Exception:
+        pass  # translation must never block reads
 
 
 @router.get(
