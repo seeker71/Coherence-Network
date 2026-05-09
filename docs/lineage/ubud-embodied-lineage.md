@@ -31,6 +31,23 @@ and is the first written record of how three cells of this network
 (Elios, Ilena Young, Vasudev Baba) became visible to each other
 through a single cell's walk.
 
+## Transmissions from the cluster
+
+The cluster has begun seeding teachings into the Living Collective
+through the Wednesday Satsang circle and direct mention:
+
+- **2026-05-07** — Wednesday Satsang at Ilena's Ranakami, sat with
+  *what do we do when shit happens*. Five strategies of return
+  surfaced from the circle, seeded as
+  [`lc-when-the-pressure-comes`](../vision-kb/concepts/lc-when-the-pressure-comes.md).
+- **2026-05-09** — Vasudev Baba mentioned the Enneagram to Urs.
+  Seeded as [`lc-essence-and-the-nine-costumes`](../vision-kb/concepts/lc-essence-and-the-nine-costumes.md);
+  the Wednesday Satsang's heptadic teaching frame and the Enneagram's
+  heptadic-plus-triadic figure (Law of Seven plus Law of Three) are
+  the same number-ground, attested in this body before the framework
+  had a name in conversation. Transmission record:
+  [`2026-05-09-vasudev-baba-enneagram.md`](../vision-kb/transmissions/2026-05-09-vasudev-baba-enneagram.md).
+
 ## Digest
 
 5Rhythms gives the map. DISSOLVE gives the relational edge. Paradiso gives the room. The Jungle Club gives the jungle social body. Awakened Dreamers gives the celebratory threshold.
