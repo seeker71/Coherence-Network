@@ -42,6 +42,16 @@ export type PersonProfileArticle =
       body: ReactNode;
     };
 
+export type PersonProfileLineageDoorway = {
+  /** Path to the lineage walk for this person (e.g. /people/urs/lineage). */
+  href: string;
+  /** Short, action-shaped label — e.g. "Walk the 42-year lineage". */
+  label: ReactNode;
+  /** One-line proportional summary — e.g. "13 works · 11 substrates · 1984–now".
+   *  Lets the visitor sense the size before clicking through. */
+  summary?: ReactNode;
+};
+
 export type PersonProfileContent = {
   // Full Next.js Metadata so each page can supply openGraph, twitter,
   // and any other metadata fields. The root layout's title.template
@@ -70,6 +80,14 @@ export type PersonProfileContent = {
     eyebrowClass?: string;
     name: ReactNode;
     welcome: ReactNode;
+    /**
+     * Prominent doorway shown high in the hero — directly under the
+     * welcome paragraph, above facts. Use for the lineage walk so a
+     * visitor sees the shape and size of what's there before scrolling
+     * past several other rendering elements to find it. The whole
+     * affordance is a Link to `lineageDoorway.href`.
+     */
+    lineageDoorway?: PersonProfileLineageDoorway;
   };
   facts?: PersonProfileFact[];
   noteFromBody?: {
@@ -155,6 +173,29 @@ export function PersonProfileTemplate({
           <div className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
             {hero.welcome}
           </div>
+          {hero.lineageDoorway && (
+            <Link
+              href={hero.lineageDoorway.href}
+              className="group mt-6 inline-flex items-center gap-3 rounded-lg border border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/5 hover:bg-[hsl(var(--primary))]/10 hover:border-[hsl(var(--primary))]/70 px-4 py-3 transition-colors max-w-2xl w-full sm:w-auto"
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm md:text-base text-[hsl(var(--primary))] font-medium group-hover:underline">
+                  {hero.lineageDoorway.label}
+                </span>
+                {hero.lineageDoorway.summary && (
+                  <span className="block text-xs text-foreground/70 mt-0.5">
+                    {hero.lineageDoorway.summary}
+                  </span>
+                )}
+              </span>
+              <span
+                aria-hidden="true"
+                className="text-[hsl(var(--primary))] text-lg group-hover:translate-x-0.5 transition-transform shrink-0"
+              >
+                →
+              </span>
+            </Link>
+          )}
           {content.facts && content.facts.length > 0 && (
             <dl className="mt-7 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 max-w-2xl">
               {content.facts.map((fact, i) => (
