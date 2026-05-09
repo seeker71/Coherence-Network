@@ -528,6 +528,18 @@ function ContributorsPageContent() {
                             >
                               {t("contributors.linkPortfolio")}
                             </Link>
+                            {c.canonical_url && (
+                              <a
+                                href={c.canonical_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-stone-400 hover:text-amber-300 underline-offset-4 hover:underline"
+                                title={c.canonical_url}
+                              >
+                                {t("contributors.linkExternal")}
+                                <span aria-hidden="true"> ↗</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       </div>

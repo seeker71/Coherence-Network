@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import { fetchJsonOrNull } from "@/lib/fetch";
 import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
@@ -31,6 +32,14 @@ function formatCost(value: string | number): string {
   return `CC ${n.toFixed(2)}`;
 }
 
+function externalHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 type Asset = {
   id: string;
   type: string;
@@ -39,6 +48,22 @@ type Asset = {
   created_at: string;
   image_url?: string | null;
   file_path?: string | null;
+  // Extended fields the body holds — not all populated for every asset.
+  name?: string | null;
+  canonical_url?: string | null;
+  creator_id?: string | null;
+  creation_kind?: string | null;
+  asset_type?: string | null;
+  era?: string | null;
+  company?: string | null;
+  language?: string | null;
+  runtime_length_min?: number | null;
+  isbn?: string | null;
+  asin?: string | null;
+  ipfs_cid?: string | null;
+  arweave_tx?: string | null;
+  content_hash?: string | null;
+  slug?: string | null;
 };
 
 function AssetsPageContent() {
@@ -46,6 +71,7 @@ function AssetsPageContent() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [creatorNames, setCreatorNames] = useState<Map<string, string>>(new Map());
 
   const selectedAssetId = useMemo(() => (searchParams.get("asset_id") || "").trim(), [searchParams]);
 
@@ -62,6 +88,28 @@ function AssetsPageContent() {
   });
   const rows = assets.items;
   const totalKnown = assets.total;
+
+  // Resolve creator names so the "by {creator}" chip can link with a real
+  // name instead of a uuid. Best-effort — if the lookup fails, the chip
+  // falls back to the raw id (still navigable).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const json = await fetchJsonOrNull<
+        { items?: Array<{ id: string; name?: string }> } | Array<{ id: string; name?: string }>
+      >(`${API_URL}/api/contributors?limit=1000`, { cache: "no-store" }, 10000, 3);
+      if (cancelled || !json) return;
+      const items = Array.isArray(json) ? json : json.items ?? [];
+      const map = new Map<string, string>();
+      for (const c of items) {
+        if (c.id && c.name) map.set(c.id, c.name);
+      }
+      setCreatorNames(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Sentinel: when the bottom marker enters the viewport, ask for more.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -241,9 +289,21 @@ function AssetsPageContent() {
           <section className="space-y-3">
             <ul className="grid gap-3 sm:grid-cols-2">
               {filteredRows.map((a) => {
-                const name = decodeEntities(a.description || a.type || t("assets.untitled"));
+                const title = decodeEntities(a.name || a.description || a.type || t("assets.untitled"));
+                const story =
+                  a.name && a.description && a.description !== a.name
+                    ? decodeEntities(a.description)
+                    : null;
                 const thumbSrc = a.file_path || a.image_url || null;
                 const tone = assetTypeTone(a.type);
+                const sourceHost = a.canonical_url ? externalHost(a.canonical_url) : null;
+                const creatorName = a.creator_id ? creatorNames.get(a.creator_id) : null;
+                const identifierChips: { label: string; value: string }[] = [];
+                if (a.isbn) identifierChips.push({ label: "ISBN", value: a.isbn });
+                if (a.asin) identifierChips.push({ label: "ASIN", value: a.asin });
+                if (a.ipfs_cid) identifierChips.push({ label: "IPFS", value: a.ipfs_cid.slice(0, 12) + "…" });
+                if (a.arweave_tx) identifierChips.push({ label: "AR", value: a.arweave_tx.slice(0, 10) + "…" });
+                if (a.content_hash) identifierChips.push({ label: "sha", value: a.content_hash.slice(0, 10) + "…" });
                 return (
                   <li
                     key={a.id}
@@ -268,7 +328,7 @@ function AssetsPageContent() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={thumbSrc}
-                          alt={t("assets.thumbnailAlt", { description: name })}
+                          alt={t("assets.thumbnailAlt", { description: title })}
                           loading="lazy"
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                         />
@@ -282,7 +342,7 @@ function AssetsPageContent() {
                             href={`/assets/${encodeURIComponent(a.id)}`}
                             className="font-medium text-stone-100 hover:text-amber-200 transition-colors leading-snug min-w-0 break-words"
                           >
-                            {name}
+                            {title}
                           </Link>
                           {Number(a.total_cost) > 0 && (
                             <span className="text-amber-300 text-sm whitespace-nowrap font-medium">
@@ -291,6 +351,47 @@ function AssetsPageContent() {
                           )}
                         </div>
 
+                        {story && (
+                          <p className="text-xs text-stone-400 leading-snug line-clamp-3">
+                            {story}
+                          </p>
+                        )}
+
+                        {/* Provenance chips: who made it, when, in what tongue */}
+                        {(creatorName || a.creator_id || a.era || a.company || a.language || a.runtime_length_min) && (
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            {(creatorName || a.creator_id) && (
+                              <Link
+                                href={`/contributors/${encodeURIComponent(a.creator_id || "")}/portfolio`}
+                                className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-300 hover:border-amber-400/50 transition-colors"
+                              >
+                                {t("assets.byCreator", { name: creatorName || a.creator_id || "" })}
+                              </Link>
+                            )}
+                            {a.era && (
+                              <span className="inline-flex items-center rounded-full border border-stone-600/40 bg-card/40 px-2 py-0.5 text-stone-300" title={t("assets.eraTitle")}>
+                                {a.era}
+                              </span>
+                            )}
+                            {a.company && (
+                              <span className="inline-flex items-center rounded-full border border-border/30 bg-card/40 px-2 py-0.5 text-stone-400">
+                                {a.company}
+                              </span>
+                            )}
+                            {a.language && (
+                              <span className="inline-flex items-center rounded-full border border-border/30 bg-card/40 px-2 py-0.5 text-stone-400">
+                                {a.language}
+                              </span>
+                            )}
+                            {a.runtime_length_min && a.runtime_length_min > 0 && (
+                              <span className="inline-flex items-center rounded-full border border-border/30 bg-card/40 px-2 py-0.5 text-stone-400">
+                                {t("assets.runtimeMin", { n: a.runtime_length_min })}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Type + date — kept compact */}
                         <div className="flex flex-wrap items-center gap-2 text-[11px]">
                           {a.type && (
                             <span className="inline-flex items-center rounded-full border border-border/30 bg-card/40 px-2 py-0.5 text-stone-400">
@@ -304,6 +405,23 @@ function AssetsPageContent() {
                           )}
                         </div>
 
+                        {/* Identifier chips — content-addressed proofs */}
+                        {identifierChips.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono">
+                            {identifierChips.map((chip) => (
+                              <span
+                                key={`${chip.label}:${chip.value}`}
+                                className="inline-flex items-center rounded border border-border/20 bg-card/30 px-1.5 py-0.5 text-stone-500"
+                                title={chip.label}
+                              >
+                                <span className="text-stone-600">{chip.label}</span>
+                                <span className="ml-1 text-stone-400">{chip.value}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Bottom links — open in body, view source, contributions */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
                           <Link
                             href={`/assets/${encodeURIComponent(a.id)}`}
@@ -311,6 +429,18 @@ function AssetsPageContent() {
                           >
                             {t("assets.linkOpen")}
                           </Link>
+                          {a.canonical_url && (
+                            <a
+                              href={a.canonical_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-stone-400 hover:text-amber-300 underline-offset-4 hover:underline"
+                              title={a.canonical_url}
+                            >
+                              {sourceHost ? t("assets.linkSourceHost", { host: sourceHost }) : t("assets.linkSource")}
+                              <span aria-hidden="true"> ↗</span>
+                            </a>
+                          )}
                           <Link
                             href={`/contributions?asset_id=${encodeURIComponent(a.id)}`}
                             className="text-stone-400 hover:text-amber-300 underline-offset-4 hover:underline"
