@@ -1,5 +1,12 @@
 # local-llm-cell-v0
 
+> **Visiting?** [FIELD-NOTES.md](FIELD-NOTES.md) is the visitor-facing
+> tour: every capacity wired, every strategy considered, every cell
+> that has lived through the architecture, and every direction held
+> open. ~10K tokens; one read gets you the whole tissue.
+
+
+
 Smallest real implementation of the **shared-base + local-layer** sketch.
 Pure Python stdlib — no torch, no numpy. The cell's adaptation is
 visible in plain arithmetic.
