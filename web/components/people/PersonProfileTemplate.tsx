@@ -19,6 +19,7 @@ import { Panel } from "@/components/Panel";
 import { createTranslator } from "@/lib/i18n";
 import type { LocaleCode } from "@/lib/locales";
 import { TemplateInfluenceWeb } from "./TemplateInfluenceWeb";
+import { LineageStrip } from "./LineageStrip";
 
 export type PersonProfileFact = {
   label: ReactNode;
@@ -163,6 +164,12 @@ export function PersonProfileTemplate({
       </section>
 
       <div className="max-w-3xl mx-auto px-6 py-12">
+        {/* Lineage strip — renders only when the current slug is one
+            of the 13 chronological works. Stitches each work page
+            into the lineage so the visitor walks the body's own time
+            instead of arriving at a dead-end leaf. */}
+        <LineageStrip slug={graphSlug} />
+
         {/* Source-language disclosure — when the visitor's locale is
             not English but the content module bound to this page is
             English (no de.tsx / es.tsx / id.tsx sibling for this slug
