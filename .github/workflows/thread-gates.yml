@@ -102,6 +102,20 @@ jobs:
             --base "$BASE_SHA" \
             --head "$HEAD_SHA"
 
+      - name: i18n contract — chrome lifted, locale parity holds
+        # Forward-looking gate: only fails when this diff introduces
+        # NEW hardcoded English chrome in web/ TSX or NEW en.json keys
+        # missing from de/es/id. Legacy gaps are not flagged — they
+        # migrate one breath at a time. See feedback_i18n_architecture.md.
+        if: steps.changed_surfaces.outputs.web == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-parse HEAD~1)"
+          fi
+          python3 scripts/check_i18n.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
       - name: Record collective review status (PRs, non-blocking)
         if: ${{ github.event_name == 'pull_request' }}
         env:
