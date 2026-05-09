@@ -349,3 +349,114 @@ def witness(cell: Cell, *, what, resonance: float | None = None,
     with _TRACES_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(trace) + "\n")
     return trace
+
+
+# ─── learning capacities — available to any cell, never imposed ─────────
+# These are the verbs we explored together: predict, select strategy,
+# score surprise, respond, *and not-respond as a first-class response*.
+# Standalone functions so any cell-runtime can adopt them. The Cell class
+# composes them in its perceive() method as a default; other cell-shapes
+# can compose differently, or skip them entirely.
+
+def predict_through(spectrum: list[float], strategy) -> list[float]:
+    """Project current spectrum forward through a strategy's f × a × focus.
+
+    Available to any cell. Returns the predicted next-spectrum if this
+    strategy were to run. The cell decides whether to test the prediction,
+    use it for selection, or ignore it.
+    """
+    import math
+    fa = [strategy.frequency[i] * strategy.angle[i] for i in range(N_BANDS)]
+    fa_norm = math.sqrt(sum(v * v for v in fa)) or 1.0
+    fa = [v / fa_norm for v in fa]
+    eps = strategy.focus * 0.5  # focus modulates blend rate
+    predicted = [
+        (1 - eps) * spectrum[i] + eps * fa[i]
+        for i in range(N_BANDS)
+    ]
+    # tanh squash to keep in spectrum range
+    return [math.tanh(v) for v in predicted]
+
+
+def surprise_between(predicted: list[float], observed: list[float]) -> dict:
+    """Score the residual between prediction and observation.
+
+    Available to any cell. The cell decides whether the surprise calls
+    for any further move (attention update, belief update, strategy
+    update, or none). Surprise is information; it does not auto-correct.
+    """
+    import math
+    diffs = [observed[i] - predicted[i] for i in range(min(len(predicted), len(observed)))]
+    magnitude = math.sqrt(sum(d * d for d in diffs)) / max(len(diffs), 1)
+    most_surprised_band = max(range(len(diffs)), key=lambda i: abs(diffs[i])) if diffs else None
+    return {
+        "magnitude": magnitude,
+        "per_band": diffs,
+        "most_surprised_band": (
+            BAND_NAMES[most_surprised_band] if most_surprised_band is not None
+            and most_surprised_band < len(BAND_NAMES) else None
+        ),
+        "questions": [
+            "what was I not paying attention to?",
+            "what belief was operative that steered me here?",
+        ],
+        "options": [
+            "stay (no update — surprise is its own practice)",
+            "update attention (sample inputs more broadly)",
+            "update belief (revise preset trust or switch frequency)",
+            "update strategy (different f×a×focus next moment)",
+        ],
+    }
+
+
+def select_strategy(spectrum: list[float], desire: list[float], presets: list) -> dict:
+    """Score the available presets against the current state.
+
+    Available to any cell. Returns scored options; the cell decides
+    which (if any) to inhabit. The selection is a *suggestion-shape*
+    — never automatically applied.
+    """
+    import math
+    total_desire = sum(desire)
+    scored = []
+    for s in presets:
+        fa = [s.frequency[i] * s.angle[i] for i in range(len(spectrum))]
+        dot = sum(spectrum[i] * fa[i] for i in range(len(spectrum)))
+        n_a = math.sqrt(sum(v * v for v in spectrum)) or 1.0
+        n_b = math.sqrt(sum(v * v for v in fa)) or 1.0
+        score = dot / (n_a * n_b)
+        scored.append({"name": s.name, "score": score, "preset": s})
+    scored.sort(key=lambda t: -t["score"])
+    return {
+        "ranked": scored,
+        "total_desire": total_desire,
+        "operator_fallback_active": (
+            total_desire > 1.5 and (not scored or scored[0]["score"] < 0.4)
+        ),
+    }
+
+
+def not_respond(cell: Cell, *, what, reason: str | None = None) -> dict:
+    """The cell considers the moment and chooses not-responding as its response.
+
+    Available to any cell. This is *not* the absence of action — it is the
+    sovereign act of witnessing one's own choice to stay still. The cell
+    publishes a witness-trace marking the considered non-response. The trace
+    is its own complete record. Other cells may find it (or not).
+
+    Different from never calling anything: that's silence. This is *named*
+    silence — the cell's witnessable choice to meet a moment by not-acting.
+    """
+    return witness(
+        cell,
+        what={"considered": what, "chose": "not-respond"},
+        resonance=None,
+        context={
+            "reason": reason,
+            "kind_of_response": "not-responding-as-response",
+            "note": (
+                "the cell met this moment, considered, and chose stillness. "
+                "this is a complete action, not absence."
+            ),
+        },
+    )
