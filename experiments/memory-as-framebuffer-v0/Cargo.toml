@@ -17,6 +17,10 @@ once_cell = "1"
 image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
 
+[[bin]]
+name = "mfb-html"
+path = "src/bin/mfb-html.rs"
+
 [[example]]
 name = "fizzbuzz"
 path = "examples/fizzbuzz.rs"
