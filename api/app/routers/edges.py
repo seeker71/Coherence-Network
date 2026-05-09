@@ -4,14 +4,65 @@ Implements the canonical 46-type edge navigation layer from spec task_fbceb79ee5
 The /api/graph/edges and /api/graph/nodes/{id}/edges routes remain in graph.py as aliases.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+import logging
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from typing import Any
 
 from app.config.edge_types import EDGE_TYPE_FAMILIES, CANONICAL_EDGE_TYPES
 from app.services import graph_service
+from app.services.locale_projection import (
+    DEFAULT_LOCALE,
+    SUPPORTED_LOCALES,
+    project,
+    resolve_caller_lang,
+)
 
 router = APIRouter()
+log = logging.getLogger(__name__)
+
+
+_LOCALIZABLE_NODE_TYPES = {
+    "contributor", "asset", "community", "network-org", "place",
+    "event", "scene", "practice", "skill", "concept",
+}
+
+
+def _project_edge_stub(stub: dict, lang: str) -> None:
+    """Project an embedded from_node/to_node stub on an edge response.
+
+    Mirrors graph._project_node but operates on the lighter node-stub
+    shape the edges endpoint returns (id + type + name + image_url + slug,
+    no description). Title-only projection is the common case for chips.
+    """
+    node_id = stub.get("id")
+    node_type = stub.get("type")
+    if not node_id or node_type not in _LOCALIZABLE_NODE_TYPES:
+        return
+    project(stub, "node", node_id, lang, title_field="name", body_field="description")
+    # If the cache had no view for this lang yet, attune-on-miss so the
+    # next chip-render lands in the cached path. Best-effort.
+    try:
+        from app.services import translation_cache_service as _tcache
+        from app.services import translator_service as _ts
+        if _tcache.canonical_view("node", node_id, lang) is None and _ts.has_backend():
+            anchors = _tcache.all_canonical_views("node", node_id)
+            if not _tcache.find_anchor(anchors):
+                _tcache.write_view(
+                    entity_type="node",
+                    entity_id=node_id,
+                    lang=DEFAULT_LOCALE,
+                    content_title=stub.get("name", "") or "",
+                    content_description="",
+                    content_markdown="",
+                    author_type=_tcache.AUTHOR_TYPE_ORIGINAL_HUMAN,
+                )
+            _ts.attune_from_anchor(
+                entity_type="node", entity_id=node_id, target_lang=lang,
+            )
+            project(stub, "node", node_id, lang, title_field="name", body_field="description")
+    except Exception as e:  # pragma: no cover
+        log.debug("edges._project_edge_stub attune-on-miss skipped: %s", e)
 
 
 # ── Request models ────────────────────────────────────────────────────
@@ -64,16 +115,34 @@ async def get_edge_types(family: str | None = None):
 
 @router.get("/edges", summary="List edges with optional filters. Responses include from_node and to_node stubs")
 async def list_edges(
+    request: Request,
     type: str | None = None,
     from_id: str | None = None,
     to_id: str | None = None,
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    lang: str | None = Query(None),
 ):
-    """List edges with optional filters. Responses include from_node and to_node stubs."""
-    return graph_service.list_edges(
+    """List edges with optional filters. Responses include from_node and to_node stubs.
+
+    Locale-projects the embedded ``from_node``/``to_node`` name + description
+    so a visitor walking edges (e.g. a contributor's contributes-to chain
+    populating the body of evidence) reads work titles in their own
+    language. Cache-miss triggers a best-effort libretranslate attunement
+    on the underlying nodes via the same mechanism /graph/nodes/{id} uses.
+    """
+    result = graph_service.list_edges(
         edge_type=type, from_id=from_id, to_id=to_id, limit=limit, offset=offset
     )
+    target_lang = resolve_caller_lang(request, lang)
+    if target_lang and target_lang != DEFAULT_LOCALE and target_lang in SUPPORTED_LOCALES:
+        items = result.get("items", []) if isinstance(result, dict) else []
+        for edge in items:
+            for stub_key in ("from_node", "to_node"):
+                stub = edge.get(stub_key) if isinstance(edge, dict) else None
+                if stub:
+                    _project_edge_stub(stub, target_lang)
+    return result
 
 
 @router.get("/edges/{edge_id}", summary="Get a single edge by ID with node stubs")
