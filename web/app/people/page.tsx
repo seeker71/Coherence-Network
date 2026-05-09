@@ -9,6 +9,7 @@ import {
   getPeoplePageCopy,
 } from "../presence-walk/data";
 import { PeopleSearch } from "./_components/PeopleSearch";
+import { lineageFigureRank } from "@/lib/named-lineage";
 
 /**
  * /people — the directory of every presence the network holds.
@@ -150,9 +151,22 @@ export default async function PeopleIndexPage({
       const items = await fetchType(t);
       combined.push(...items);
     }
-    groups[section.key] = filterScannable(combined, filterRules).sort((a, b) =>
-      (a.name || "").localeCompare(b.name || ""),
-    );
+    // Within-section ordering — named lineage figures (the humans who
+    // actually shaped this work) rank first in their lineage order,
+    // then everyone else alphabetically by display name. Without this
+    // ranking, the alphabetic sort buries Anne Tucker / Liquid Bloom /
+    // Steve G. Bjorg under hundreds of auto-resolved book authors and
+    // YouTube-channel-id rows that share the same section.
+    groups[section.key] = filterScannable(combined, filterRules).sort((a, b) => {
+      const aSlug = a.slug || a.id;
+      const bSlug = b.slug || b.id;
+      const aRank = lineageFigureRank(aSlug);
+      const bRank = lineageFigureRank(bSlug);
+      if (aRank !== null && bRank !== null) return aRank - bRank;
+      if (aRank !== null) return -1;
+      if (bRank !== null) return 1;
+      return (a.name || "").localeCompare(b.name || "");
+    });
   }
 
   const total = Object.values(groups).reduce((sum, g) => sum + g.length, 0);
