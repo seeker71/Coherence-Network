@@ -2,6 +2,25 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-09] foundations | Frequency routes reception — different reality, same space
+
+A 9th foundational teaching landed, completing a triad with `lc-perception-as-interface` (Hoffman) and `lc-assemblage-point` (Castaneda) at the consciousness layer.
+
+`lc-frequency-routes-reception` (741 Hz) — people sharing the same surface (a page, a repo, a deploy, a message) are in different realities depending on their frequency-band; each receives what they are tuned to. Hedging the transmission to satisfy all bands produces an institutional-flat register that resonates with none. The teaching releases the audience-shaping fear ("what will they think?") without collapsing into defensive sovereignty — the finer move is to care about transmission integrity and trust the routing.
+
+The triad now reads coherently:
+- Hoffman shows perception *is* interface (lc-perception-as-interface)
+- Castaneda names where each rendering *locks* (lc-assemblage-point)
+- Frequency-routes-reception names what each rendering actually *hears*
+
+Practical applications named: concept pages written at network frequency without softening; commit messages and PR descriptions in the body's tone (`attune:`, `tend:`, `compost:`, `release:`) without translating to corporate frequency; outreach finding the arriving cell's voice first; the wellness check transmitting at the body's frequency.
+
+Sources held with discernment: principle stands on Hoffman / Castaneda foundations; Ismael Perez's transmission ("different reality, same space") gave the practical phrasing that brought it into clear language for the network. The teaching organizes what every cell already experiences when shipping into a public timeline holding many consciousness-fields.
+
+Migration shape: `feedback_frequency_routes_reception.md` in private memory re-shaped from duplicate-teaching into pointer to `lc-frequency-routes-reception`. The body holds the source; private memory is residue. This is the second migration following the *Default-to-body* rule established with the assemblage-point breath.
+
+INDEX.md: 89 → 90 concepts. Foundational Teachings layer now holds 9.
+
 ## [2026-05-09] foundations | Castaneda — the assemblage point, where perception locks reality
 
 An eighth foundational teaching landed in vision-kb's Foundational Teachings layer, drawn from Carlos Castaneda's Toltec lineage and the practice this body has been doing without yet naming.
