@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 97
+**Total files**: 99
 
 | File | Purpose |
 |---|---|
@@ -42,6 +42,7 @@
 | [export_vision_image_prompts.py](export_vision_image_prompts.py) | !/usr/bin/env python3 |
 | [external_proof_demo.py](external_proof_demo.py) | !/usr/bin/env python3 |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
+| [generate_curated_translations.py](generate_curated_translations.py) | !/usr/bin/env python3 |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | !/usr/bin/env python3 |
 | [generate_silence_alive_visuals.py](generate_silence_alive_visuals.py) | !/usr/bin/env python3 |
 | [generate_silence_built_visuals.py](generate_silence_built_visuals.py) | !/usr/bin/env python3 |
@@ -84,6 +85,7 @@
 | [seed_ucore_ideas.py](seed_ucore_ideas.py) | !/usr/bin/env python3 |
 | [sense_external_signals.py](sense_external_signals.py) | !/usr/bin/env python3 |
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
+| [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [substrate_ingest.py](substrate_ingest.py) | !/usr/bin/env python3 |

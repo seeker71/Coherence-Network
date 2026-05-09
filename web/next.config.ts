@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { loadPublicWebConfig } from "./lib/app-config";
 
 const securityHeaders = [
   {
@@ -23,8 +22,6 @@ const securityHeaders = [
     value: "on",
   },
 ];
-
-const API_BASE = loadPublicWebConfig().localApiBaseUrl || "http://api:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -59,14 +56,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${API_BASE}/api/:path*`,
-      },
-    ];
-  },
+  // /api/:path* is served by the catchall route handler in
+  // app/api/[...path]/route.ts. The handler runs server-side and
+  // translates the httpOnly contributor cookie set by /session/welcome
+  // into upstream X-API-Key + Authorization headers — a static rewrite
+  // here would bypass that translation, so the proxy lives in code, not
+  // routing config.
 };
 
 export default nextConfig;
