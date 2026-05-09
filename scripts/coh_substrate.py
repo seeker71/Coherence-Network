@@ -305,6 +305,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Minimum cluster size to report (default 2)",
     )
 
+    p_sense = sub.add_parser(
+        "sense",
+        help="Sense the body's vitality — flow, friction, suppleness, stiffness, dead tissue",
+    )
+    p_sense.add_argument(
+        "--top",
+        type=int,
+        default=5,
+        help="How many entries per section (default 5)",
+    )
+    p_sense.add_argument(
+        "--complex-singleton-min",
+        type=int,
+        default=80,
+        help="Min ctor-recipe serialized length to count as 'complex' singleton",
+    )
+
     p_check = sub.add_parser(
         "shape-check",
         help="For a draft .md file: report cells with the same structural shape",
@@ -341,6 +358,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_form(args)
     if args.cmd == "discover":
         return cmd_discover(args)
+    if args.cmd == "sense":
+        return cmd_sense(args)
     if args.cmd == "shape-check":
         return cmd_shape_check(args)
     if args.cmd == "ingest-paths":
@@ -452,6 +471,205 @@ def cmd_discover(args: argparse.Namespace) -> int:
             print("=== No cross-domain shape collisions ===")
             print("  Each domain's shapes are distinct from other domains.")
 
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# sense — substrate as sensing organ: flow, friction, suppleness,
+# stiffness, dead tissue. Heuristic, not verdict — the lens proposes
+# questions; the human reads them.
+# ---------------------------------------------------------------------------
+
+
+def cmd_sense(args: argparse.Namespace) -> int:
+    """Sense the body's vitality through substrate signatures.
+
+    flow        — blueprints carrying cells across multiple domains
+    suppleness  — generalizable forms (cells × domains)
+    friction    — near-cousin blueprints (same family, varying instance)
+    stiffness   — singleton blueprints with complex ctors
+    dead tissue — cells whose source_path no longer exists on disk
+    """
+    from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+    from collections import defaultdict
+    from pathlib import Path as _Path
+
+    with session_scope() as session:
+        cells = session.query(SubstrateNamedCellORM).all()
+
+        bp_ids = {c.blueprint_node_id for c in cells}
+        ctor_ids = {c.ctor_recipe_node_id for c in cells if c.ctor_recipe_node_id}
+        bp_nodes = {
+            n.node_id: n
+            for n in session.query(SubstrateNodeORM).filter(
+                SubstrateNodeORM.node_id.in_(bp_ids)
+            ).all()
+        }
+        ctor_nodes = {
+            n.node_id: n
+            for n in session.query(SubstrateNodeORM).filter(
+                SubstrateNodeORM.node_id.in_(ctor_ids)
+            ).all()
+        }
+
+        bp_cells: dict[int, list] = defaultdict(list)
+        bp_domains: dict[int, set[str]] = defaultdict(set)
+        for c in cells:
+            bp_cells[c.blueprint_node_id].append(c)
+            bp_domains[c.blueprint_node_id].add(c.domain)
+
+        def _bp_form(bp_id: int) -> str:
+            n = bp_nodes.get(bp_id)
+            return f"@{n.package}.{n.level}.{n.type_}.{n.instance}" if n else f"#{bp_id}"
+
+        # ---- FLOW: blueprints crossing domain boundaries ---------------------
+        flow = sorted(
+            (
+                (bp, len(bp_domains[bp]), len(bp_cells[bp]))
+                for bp in bp_cells
+                if len(bp_domains[bp]) > 1
+            ),
+            key=lambda x: (-x[1], -x[2]),
+        )
+
+        # ---- SUPPLENESS: cells × domains (highest = most generalizable) ------
+        suppleness = sorted(
+            (
+                (bp, len(bp_cells[bp]), len(bp_domains[bp]))
+                for bp in bp_cells
+            ),
+            key=lambda x: -(x[1] * x[2]),
+        )
+
+        # ---- FRICTION: near-cousins (share package+level+type, differ in instance)
+        family: dict[tuple, set[int]] = defaultdict(set)
+        for bp_id, n in bp_nodes.items():
+            family[(n.package, n.level, n.type_)].add(bp_id)
+        friction_families = sorted(
+            ((fam, bps) for fam, bps in family.items() if len(bps) > 1),
+            key=lambda x: -len(x[1]),
+        )
+
+        # ---- STIFFNESS: singletons with complex ctors -----------------------
+        stiff: list[tuple] = []
+        for bp_id, cs in bp_cells.items():
+            if len(cs) != 1:
+                continue
+            cell = cs[0]
+            if not cell.ctor_recipe_node_id:
+                continue
+            ctor = ctor_nodes.get(cell.ctor_recipe_node_id)
+            if not ctor:
+                continue
+            cx = len(ctor.serialized or "")
+            if cx >= args.complex_singleton_min:
+                stiff.append((cell, cx, bp_id))
+        stiff.sort(key=lambda x: -x[1])
+
+        # ---- DEAD TISSUE: missing source_path on disk -----------------------
+        dead = [
+            c for c in cells
+            if c.source_path and not _Path(c.source_path).exists()
+        ]
+        dead.sort(key=lambda c: (c.domain, c.name))
+
+        if args.json:
+            out = {
+                "flow": [
+                    {
+                        "blueprint": _bp_form(bp), "domains": sorted(bp_domains[bp]),
+                        "cell_count": cells_n,
+                    }
+                    for bp, _doms_n, cells_n in flow[: args.top]
+                ],
+                "suppleness": [
+                    {
+                        "blueprint": _bp_form(bp), "cells": cells_n,
+                        "domains": sorted(bp_domains[bp]),
+                    }
+                    for bp, cells_n, _doms_n in suppleness[: args.top]
+                ],
+                "friction": [
+                    {
+                        "family": f"@{p}.{lv}.{t}.*",
+                        "variants": [_bp_form(b) for b in sorted(bps)],
+                    }
+                    for (p, lv, t), bps in friction_families[: args.top]
+                ],
+                "stiffness": [
+                    {
+                        "cell": f"{c.domain}/{c.name}",
+                        "blueprint": _bp_form(bp),
+                        "ctor_complexity": cx,
+                    }
+                    for c, cx, bp in stiff[: args.top]
+                ],
+                "dead_tissue": [
+                    {"cell": f"{c.domain}/{c.name}", "missing_path": c.source_path}
+                    for c in dead[: args.top * 4]
+                ],
+                "totals": {
+                    "cells": len(cells),
+                    "blueprints": len(bp_cells),
+                    "flow_count": len(flow),
+                    "friction_families": len(friction_families),
+                    "stiff_singletons": len(stiff),
+                    "dead": len(dead),
+                },
+            }
+            print(json.dumps(out, indent=2))
+            return 0
+
+        print(f"Substrate sense ({len(cells)} cells, {len(bp_cells)} blueprints)\n")
+
+        print(f"=== FLOW — blueprints carrying cells across domains ({len(flow)}) ===")
+        if not flow:
+            print("  (no cross-domain blueprints — each domain's shapes are isolated)")
+        for bp, doms_n, cells_n in flow[: args.top]:
+            doms = ", ".join(sorted(bp_domains[bp]))
+            print(f"  {_bp_form(bp)}  {doms_n} domains × {cells_n} cells   [{doms}]")
+        print()
+
+        print(f"=== SUPPLENESS — generalizable forms (top {args.top}) ===")
+        for bp, cells_n, doms_n in suppleness[: args.top]:
+            doms = ", ".join(sorted(bp_domains[bp]))
+            sample = bp_cells[bp][0]
+            print(
+                f"  {_bp_form(bp)}  {cells_n} cells × {doms_n} domains   "
+                f"[{doms}]  e.g. {sample.domain}/{sample.name}"
+            )
+        print()
+
+        print(f"=== FRICTION — near-cousin blueprints (same family, varying instance) ({len(friction_families)}) ===")
+        if not friction_families:
+            print("  (no near-cousins — every (package,level,type) tuple has a single instance)")
+        for (p, lv, t), bps in friction_families[: args.top]:
+            variants = ", ".join(_bp_form(b) for b in sorted(bps)[:6])
+            extra = "" if len(bps) <= 6 else f" + {len(bps) - 6} more"
+            print(f"  family @{p}.{lv}.{t}.*  {len(bps)} variants:  {variants}{extra}")
+        print()
+
+        print(f"=== STIFFNESS — singletons with complex ctors ({len(stiff)}) ===")
+        if not stiff:
+            print(f"  (no singletons with ctor complexity ≥ {args.complex_singleton_min})")
+        for c, cx, bp in stiff[: args.top]:
+            print(f"  {c.domain}/{c.name}  {_bp_form(bp)}  ctor_len={cx}")
+        print()
+
+        print(f"=== DEAD TISSUE — cells whose source_path no longer resolves ({len(dead)}) ===")
+        if not dead:
+            print("  (every ingested cell still points at a file that exists)")
+            print("  Note: source_path is recorded at ingest time. If you're running")
+            print("  this in a different environment than the ingest, paths may be ghosts.")
+        for c in dead[: args.top * 4]:
+            print(f"  {c.domain}/{c.name}  →  {c.source_path}")
+        if len(dead) > args.top * 4:
+            print(f"  ... and {len(dead) - args.top * 4} more")
+        print()
+
+        print("Lens caveat: these are *questions* the substrate proposes, not verdicts.")
+        print("A singleton may be a unique work; a near-cousin family may be intentional.")
+        print("Read with the body, not against it.")
         return 0
 
 
