@@ -101,8 +101,11 @@ def _ingest_domain(domain: str) -> int:
         return 1
     base, ingester, filter_fn = _INGESTERS[domain]
     if not base.exists():
-        print(f"{domain} dir not found: {base}", file=sys.stderr)
-        return 1
+        # Some domains live outside the repo (memory) and are absent in
+        # production / CI / fresh checkouts. Skipping is the right shape:
+        # `--all` should populate what it can find, not refuse the run.
+        print(f"{domain}: dir not found ({base}) — skipped", file=sys.stderr)
+        return 0
     md_files = sorted([p for p in base.glob("*.md") if filter_fn(p)])
     print(f"Ingesting {len(md_files)} {domain} files from {base}")
     success = fail = 0

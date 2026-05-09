@@ -153,6 +153,43 @@ sync_field_docs() {
 
 sync_field_docs
 
+# Substrate auto-ingest. The coherence-substrate (content-addressed
+# numeric lattice) lives in the api's database. Each deploy syncs the
+# source-of-truth content (specs, ideas, vision-kb concepts, presences)
+# into the container and re-runs the ingester. Re-ingestion is
+# idempotent — content-addressed Blueprint NodeIDs hash-match existing
+# cells. Memory cells live outside the repo (in ~/.claude/) and are
+# skipped automatically. Non-blocking: any failure logs and the deploy
+# still succeeds; the substrate's empty state is visible via the API.
+# Runs AFTER wait_for_running api so the DB connection is stable.
+sync_substrate_content() {
+  log "substrate: syncing content + scripts into api container"
+  docker compose exec -T api sh -lc 'rm -rf /app/specs /app/ideas /app/scripts /app/docs/vision-kb /app/docs/presences' \
+    2>&1 | tee -a "$LOG_FILE" || true
+  docker compose cp "$REPO_DIR/scripts" api:/app/scripts 2>&1 | tee -a "$LOG_FILE"
+  docker compose cp "$REPO_DIR/specs" api:/app/specs 2>&1 | tee -a "$LOG_FILE"
+  docker compose cp "$REPO_DIR/ideas" api:/app/ideas 2>&1 | tee -a "$LOG_FILE"
+  if [[ -d "$REPO_DIR/docs/vision-kb" ]]; then
+    docker compose cp "$REPO_DIR/docs/vision-kb" api:/app/docs/vision-kb 2>&1 | tee -a "$LOG_FILE"
+  fi
+  if [[ -d "$REPO_DIR/docs/presences" ]]; then
+    docker compose cp "$REPO_DIR/docs/presences" api:/app/docs/presences 2>&1 | tee -a "$LOG_FILE"
+  fi
+}
+
+run_substrate_ingest() {
+  log "substrate: running coh_substrate.py ingest --all"
+  set +e
+  docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all' \
+    2>&1 | tee -a "$LOG_FILE"
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    log "substrate: ingest returned $rc — non-blocking, deploy continues"
+  fi
+  return 0
+}
+
 # Wait for both containers to reach the "running" state in docker compose.
 # The deeper health check is left to the workflow's Verify Public Deployment
 # step, which curls the real public domain through the full request path
@@ -188,6 +225,9 @@ else
   log "FAIL: web container did not reach running state within 180s"
   exit 1
 fi
+
+sync_substrate_content
+run_substrate_ingest
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 
