@@ -9,6 +9,7 @@
 //! pointer windows, 3D, LOD, navigation, or substrate integration.
 
 pub mod allocator;
+pub mod capture;
 pub mod ffmpeg;
 pub mod pointer;
 pub mod render;
@@ -18,6 +19,7 @@ use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
 pub use allocator::{CellHandle, SlabFramebuffer, CELL_BYTES, GRID, NUM_CELLS};
+pub use capture::{CaptureReader, CaptureSink, FrameSnapshot, MFB_MAGIC, MFB_VERSION};
 pub use ffmpeg::FfmpegPipe;
 pub use pointer::{
     is_pointer_tag, BoxPtr, Pointer, PointerKind, RcPtr, WeakPtr, CYCLE_TERMINATOR_RGB,
@@ -121,6 +123,12 @@ static FRAMEBUFFER: OnceCell<Framebuffer> = OnceCell::new();
 /// Initialize the global framebuffer. Spawns the snapshot thread which spawns ffmpeg
 /// and pipes RGBA frames at MFB_FPS (default 60) to OUTPUT (default "framebuffer.mp4").
 ///
+/// If `MFB_CAPTURE` env var is set, the snapshot thread *also* writes a
+/// lossless `.mfb` binary capture to that path — every snapshot's raw
+/// `(data_plane, provenance_plane)` is recorded, so future renderers can
+/// reconstruct any view from canonical data instead of from h264-lossy
+/// rendered pixels.
+///
 /// Returns an error if ffmpeg is not on PATH or already initialized.
 pub fn init_framebuffer(output_path: &str) -> Result<(), String> {
     let fps: u32 = std::env::var("MFB_FPS")
@@ -133,9 +141,20 @@ pub fn init_framebuffer(output_path: &str) -> Result<(), String> {
 
     let fb = Framebuffer::new();
 
+    // Optional lossless substrate capture, opened *before* spawning the
+    // snapshot thread so any open() failure surfaces immediately.
+    let capture_sink = if let Ok(capture_path) = std::env::var("MFB_CAPTURE") {
+        Some(
+            CaptureSink::open(&capture_path, fps)
+                .map_err(|e| format!("failed to open MFB_CAPTURE={}: {}", capture_path, e))?,
+        )
+    } else {
+        None
+    };
+
     // Spawn ffmpeg + snapshot thread.
     let pipe = FfmpegPipe::spawn(output_path, fps)?;
-    let thread = SnapshotThread::spawn(fps, pipe);
+    let thread = SnapshotThread::spawn(fps, pipe, capture_sink);
     *fb.snapshot.lock().unwrap() = Some(thread);
 
     FRAMEBUFFER

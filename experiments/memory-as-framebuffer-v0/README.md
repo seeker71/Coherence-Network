@@ -158,5 +158,38 @@ linked-list example places the head and tail pointers nearby on purpose.
 ## Configuration
 
 - `MFB_FPS` env var overrides the snapshot rate (default 60).
+- `MFB_CAPTURE=path.mfb` triggers lossless substrate capture alongside the
+  preview mp4. See "Substrate vs preview" below.
 - `init_framebuffer(path)` chooses the output mp4 (default `framebuffer.mp4`
   if you call it that way; the example passes `"fizzbuzz.mp4"`).
+
+## Substrate vs preview — the .mfb capture sidecar
+
+The mp4 the snapshot thread produces is a **preview**. h264 + yuv420p chroma
+subsampling is lossy, and the renderer itself mixes (tag, payload entropy,
+provenance) into a single color per pixel — irreversible. Set
+`MFB_CAPTURE=path.mfb` and the snapshot thread *also* writes a lossless
+binary capture: every snapshot's raw `(data_plane, provenance_plane)`
+recorded with delta encoding (only cells that changed since last frame).
+
+```bash
+MFB_CAPTURE=fizzbuzz.mfb cargo run --release --example fizzbuzz
+```
+
+Any future renderer (3D, Superliminal, hover-to-inspect HTML, frequency
+chart) reads the .mfb and reconstructs the substrate state per frame:
+
+```rust
+use mfb::CaptureReader;
+
+for frame in CaptureReader::open("fizzbuzz.mfb")? {
+    let frame = frame?;
+    // frame.data: 1 MB of (tag, payload) bytes
+    // frame.provenance: 65,536 source-location hashes
+    // frame.frame_index, frame.timestamp_us: timing
+    render_my_view(&frame);
+}
+```
+
+See [`src/capture.rs`](src/capture.rs) for the binary format. The current
+mp4 stays as the gestalt preview; the .mfb is canonical.
