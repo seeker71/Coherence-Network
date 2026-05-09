@@ -52,9 +52,16 @@ type Edge = {
   from_node?: { id: string; type: string; name?: string; slug?: string | null };
 };
 
-async function fetchJson<T>(path: string): Promise<T | null> {
+async function fetchJson<T>(path: string, lang?: string): Promise<T | null> {
+  // Forward the caller's locale to the API so locale-projection in
+  // /api/graph/nodes and /api/edges projects name+description into the
+  // visitor's language. Without this query-param the API falls back to
+  // Accept-Language; server components don't forward that header by
+  // default, so we pass lang explicitly.
+  const url = new URL(`${getApiBase()}${path}`);
+  if (lang) url.searchParams.set("lang", lang);
   try {
-    const r = await fetch(`${getApiBase()}${path}`, { next: { revalidate: 30 } });
+    const r = await fetch(url.toString(), { next: { revalidate: 30 } });
     if (!r.ok) return null;
     return (await r.json()) as T;
   } catch {
@@ -116,6 +123,7 @@ export default async function ContributorLineagePage({
   const t = createTranslator(lang);
   const contributor = await fetchJson<GraphNode>(
     `/api/graph/nodes/${encodeURIComponent(decoded)}`,
+    lang,
   );
   if (!contributor) notFound();
 
@@ -125,9 +133,11 @@ export default async function ContributorLineagePage({
   const [contributesEnv, inspiredEnv] = await Promise.all([
     fetchJson<{ items?: Edge[] }>(
       `/api/edges?from_id=${encodeURIComponent(stableId)}&type=contributes-to&limit=200`,
+      lang,
     ),
     fetchJson<{ items?: Edge[] }>(
       `/api/edges?from_id=${encodeURIComponent(stableId)}&type=inspired-by&limit=300`,
+      lang,
     ),
   ]);
 
@@ -138,7 +148,7 @@ export default async function ContributorLineagePage({
   const works: GraphNode[] = (
     await Promise.all(
       contributesEdges.map((e) =>
-        fetchJson<GraphNode>(`/api/graph/nodes/${encodeURIComponent(e.to_id)}`),
+        fetchJson<GraphNode>(`/api/graph/nodes/${encodeURIComponent(e.to_id)}`, lang),
       ),
     )
   ).filter((n): n is GraphNode => Boolean(n));
