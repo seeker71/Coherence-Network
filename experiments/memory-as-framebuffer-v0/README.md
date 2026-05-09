@@ -193,3 +193,32 @@ for frame in CaptureReader::open("fizzbuzz.mfb")? {
 
 See [`src/capture.rs`](src/capture.rs) for the binary format. The current
 mp4 stays as the gestalt preview; the .mfb is canonical.
+
+## HTML replay viewer (mfb-html)
+
+The first downstream renderer that consumes .mfb. Generates a single
+self-contained HTML file (no server, no install — open in any browser)
+with playback + hover-to-inspect:
+
+```bash
+MFB_CAPTURE=fizzbuzz.mfb cargo run --release --example fizzbuzz
+cargo run --release --bin mfb-html -- fizzbuzz.mfb fizzbuzz.html
+open fizzbuzz.html  # macOS — or just double-click
+```
+
+What you get:
+
+- **Heap as a CSS grid** auto-sized to the active bounding box, with the
+  same color palette as the v0 mp4 renderer (so type identity carries over)
+- **Cell inspector** on hover: index, grid (x,y), tag name, *decoded
+  value* (u32 reads as a number, pointers read as "→ cell N", floats as
+  floats, bool as true/false), and provenance hash
+- **Timeline scrubber + play/pause** at the foot, plus left/right arrow
+  keys for frame-by-frame stepping and space to toggle play
+- **Aspect-aware layout**: a 10×10 fizzbuzz heap renders square; a 41×1
+  linked-list renders as a horizontal strip
+
+The viewer reconstructs full state from the .mfb's delta-encoded frames —
+stepping forward applies deltas, stepping backward replays from the start.
+For 6-second captures (~390 frames) the HTML lands ~250–700 KB; opens
+instantly. Easily shareable as a single artifact.
