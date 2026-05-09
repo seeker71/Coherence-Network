@@ -54,18 +54,34 @@ function presenceHref(n: PresenceNode): string {
   return `/people/${encodeURIComponent(n.id)}`;
 }
 
-async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
-  try {
-    const res = await fetch(
-      `${getApiBase()}/api/graph/nodes?type=${encodeURIComponent(type)}&limit=${limit}`,
-      { next: { revalidate: 30 } },
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.items || []) as PresenceNode[];
-  } catch {
-    return [];
+// Walk every page of /api/graph/nodes for this type so the directory
+// reflects the body's actual count, not whatever fits in one slice. The
+// graph endpoint caps `limit` at 500; most types have well under that,
+// but `contributor` is already past 200 and growing — without the walk,
+// /people silently truncates lineage.
+async function fetchType(type: string): Promise<PresenceNode[]> {
+  const PAGE = 500;
+  const HARD_CAP_PAGES = 20; // safety valve at 10k items
+  const all: PresenceNode[] = [];
+  for (let page = 0; page < HARD_CAP_PAGES; page++) {
+    try {
+      const offset = page * PAGE;
+      const res = await fetch(
+        `${getApiBase()}/api/graph/nodes?type=${encodeURIComponent(type)}&offset=${offset}&limit=${PAGE}`,
+        { next: { revalidate: 30 } },
+      );
+      if (!res.ok) break;
+      const data = await res.json();
+      const items = (data.items || []) as PresenceNode[];
+      all.push(...items);
+      const total = typeof data.total === "number" ? data.total : null;
+      if (items.length < PAGE) break;
+      if (total !== null && all.length >= total) break;
+    } catch {
+      break;
+    }
   }
+  return all;
 }
 
 function filterScannable(

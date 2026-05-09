@@ -1,16 +1,18 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
-import { useLiveRefresh } from "@/lib/live_refresh";
+import { fetchJsonOrNull } from "@/lib/fetch";
+import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
 import { decodeEntities } from "@/lib/html-entities";
 
 const API_URL = getApiBase();
+const PAGE_SIZE = 100;
 
 function formatDate(iso: string, locale: string): string {
   try {
@@ -69,9 +71,6 @@ function ContributionsPageContent() {
   const t = useT();
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Contribution[]>([]);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
   const [liveCoherenceScore, setLiveCoherenceScore] = useState<number | null>(null);
   const [contributorNames, setContributorNames] = useState<NameLookup>(new Map());
   const [assetNames, setAssetNames] = useState<NameLookup>(new Map());
@@ -85,50 +84,92 @@ function ContributionsPageContent() {
     [searchParams]
   );
 
-  const loadRows = useCallback(async () => {
-    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
-    setError(null);
-    try {
-      const [contribRes, coherenceRes, contributorsRes, assetsRes] = await Promise.all([
-        fetch(`${API_URL}/api/contributions`, { cache: "no-store" }),
-        fetch(`${API_URL}/api/coherence/score`, { cache: "no-store" }),
-        fetch(`${API_URL}/api/contributors`, { cache: "no-store" }).catch(() => null),
-        fetch(`${API_URL}/api/assets`, { cache: "no-store" }).catch(() => null),
+  const buildContributionsUrl = useCallback(
+    (offset: number, limit: number) =>
+      `${API_URL}/api/contributions?offset=${offset}&limit=${limit}`,
+    [],
+  );
+
+  const contributions = usePagedList<Contribution>({
+    buildUrl: buildContributionsUrl,
+    pageSize: PAGE_SIZE,
+    timeoutMs: 10000,
+    retries: 3,
+  });
+  const rows = contributions.items;
+  const totalKnown = contributions.total;
+
+  // Sentinel: when bottom marker enters viewport, ask for the next page.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            contributions.loadMore();
+          }
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [contributions.loadMore]);
+
+  // Auxiliary fetches: live coherence score (single value) + name lookups
+  // (best-effort; names that miss fall back to truncated id).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [coherenceJson, contributorsJson, assetsJson] = await Promise.all([
+        fetchJsonOrNull<CoherenceScoreResponse>(
+          `${API_URL}/api/coherence/score`,
+          { cache: "no-store" },
+          8000,
+          3,
+        ),
+        fetchJsonOrNull<{ items?: Array<{ id: string; name?: string }> } | Array<{ id: string; name?: string }>>(
+          `${API_URL}/api/contributors?limit=1000`,
+          { cache: "no-store" },
+          10000,
+          3,
+        ),
+        fetchJsonOrNull<{ items?: Array<{ id: string; description?: string; type?: string }> } | Array<{ id: string; description?: string; type?: string }>>(
+          `${API_URL}/api/assets?limit=1000`,
+          { cache: "no-store" },
+          10000,
+          3,
+        ),
       ]);
-      const contribJson = await contribRes.json();
-      if (!contribRes.ok) throw new Error(JSON.stringify(contribJson));
-      const data = contribJson?.items ?? (Array.isArray(contribJson) ? contribJson : []);
-      const coherenceJson = coherenceRes.ok ? ((await coherenceRes.json()) as CoherenceScoreResponse) : null;
+      if (cancelled) return;
+
+      if (coherenceJson && Number.isFinite(coherenceJson.score)) {
+        setLiveCoherenceScore(Number(coherenceJson.score));
+      }
 
       const cNames = new Map<string, string>();
-      const aNames = new Map<string, string>();
-      if (contributorsRes?.ok) {
-        const cJson = await contributorsRes.json();
-        for (const c of cJson?.items ?? (Array.isArray(cJson) ? cJson : [])) {
-          if (c.id && c.name) cNames.set(c.id, c.name);
-        }
-      }
-      if (assetsRes?.ok) {
-        const aJson = await assetsRes.json();
-        for (const a of aJson?.items ?? (Array.isArray(aJson) ? aJson : [])) {
-          if (a.id) aNames.set(a.id, decodeEntities(a.description || a.type || "Untitled asset"));
-        }
+      const cItems = Array.isArray(contributorsJson)
+        ? contributorsJson
+        : contributorsJson?.items ?? [];
+      for (const c of cItems) {
+        if (c.id && c.name) cNames.set(c.id, c.name);
       }
       setContributorNames(cNames);
+
+      const aNames = new Map<string, string>();
+      const aItems = Array.isArray(assetsJson) ? assetsJson : assetsJson?.items ?? [];
+      for (const a of aItems) {
+        if (a.id) aNames.set(a.id, decodeEntities(a.description || a.type || "Untitled asset"));
+      }
       setAssetNames(aNames);
-
-      setRows(data);
-      setLiveCoherenceScore(
-        coherenceJson && Number.isFinite(coherenceJson.score) ? Number(coherenceJson.score) : null,
-      );
-      setStatus("ok");
-    } catch (e) {
-      setStatus("error");
-      setError(String(e));
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  useLiveRefresh(loadRows);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -206,6 +247,13 @@ function ContributionsPageContent() {
     return null;
   })();
 
+  const isFirstLoad = contributions.loading && rows.length === 0;
+  const initialError = contributions.error && rows.length === 0 ? contributions.error : null;
+  const visibleEntriesLabel =
+    totalKnown !== null && rows.length < totalKnown && !contributorFilter && !assetFilter
+      ? `${filteredRows.length.toLocaleString(locale)} / ${totalKnown.toLocaleString(locale)}`
+      : filteredRows.length.toLocaleString(locale);
+
   return (
     <main className="bg-stone-950 min-h-screen">
       {/* Hero — value flowing through the body */}
@@ -270,7 +318,7 @@ function ContributionsPageContent() {
         <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("contributions.statEntries")}</p>
-            <p className="mt-2 text-3xl font-light text-stone-100">{filteredRows.length.toLocaleString(locale)}</p>
+            <p className="mt-2 text-3xl font-light text-stone-100">{visibleEntriesLabel}</p>
             <p className="mt-1 text-xs text-stone-400">{t("contributions.statEntriesHint")}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-amber-500/10 to-amber-500/5 p-4">
@@ -292,17 +340,17 @@ function ContributionsPageContent() {
           </div>
         </section>
 
-        {status === "loading" && <p className="text-stone-400 text-sm">{t("contributions.loading")}</p>}
-        {status === "error" && (
+        {isFirstLoad && <p className="text-stone-400 text-sm">{t("contributions.loading")}</p>}
+        {initialError && (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
-            {t("contributions.errorPrefix")} {error}
+            {t("contributions.errorPrefix")} {initialError}
           </div>
         )}
 
-        {status === "ok" && (
+        {!isFirstLoad && !initialError && (
           <section className="space-y-3">
             <ul className="space-y-3">
-              {filteredRows.slice(0, 100).map((c, idx) => {
+              {filteredRows.map((c, idx) => {
                 const cost = effectiveCost(c);
                 const commitHash = c.metadata?.commit_hash;
                 const displayCoherence = c.coherence_score > 0 ? c.coherence_score : liveCoherenceScore;
@@ -407,6 +455,24 @@ function ContributionsPageContent() {
                     {t("contributions.emptyCtaContribute")}
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {/* Sentinel + loading-more — only when there's more to fetch */}
+            {!contributions.loadedAll && (
+              <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                {contributions.loading && (
+                  <p className="text-stone-500 text-sm">{t("common.loading")}</p>
+                )}
+                {!contributions.loading && contributions.error && (
+                  <button
+                    type="button"
+                    onClick={contributions.loadMore}
+                    className="text-stone-400 hover:text-amber-300 text-sm underline-offset-4 hover:underline"
+                  >
+                    {t("common.loading")}
+                  </button>
+                )}
               </div>
             )}
           </section>
