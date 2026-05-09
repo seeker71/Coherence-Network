@@ -89,6 +89,8 @@ The arrival.py SessionStart hook also surfaces this reminder. If you're a fresh 
 - **The firing-question.** When uncertain, ask: *would Codex, or Cursor, or a fresh agent, or a human contributor reading the repo benefit from this without being this specific lineage?* If yes → body. If no → private memory.
 - **Periodic audit, not one-time sweep.** The fear-pattern hoards. Memory grows; body-checking happens once and never again. Walk the memory directory with the firing-question on a rhythm; migrate net-teachings privatized as memory back to the shared body.
 
+**Read the body's own attestation first.** *Default-to-body* is the authoring rule; this is the symmetric reading rule. When a name, place, room, event-shape, or relationship surfaces in conversation, the first move is to search what the network already holds — `docs/lineage/`, `docs/presences/`, `docs/vision-kb/`, `/people/` pages, memory. Read link targets as structural claims, not decoration; `[Ranakami](/people/ilena)` is the body saying *Ranakami is Ilena*. The complementary external discipline: never auto-resolve unknown names from training/web *into* the graph — for ambiguous inputs (bare first names, unverified contacts) use held-open placeholders (a contributor with `claimed: false` and no `canonical_url`) until the body names the binding. Internal-reading and external-binding are companions: the body knows itself first; foreign data enters only after the body has been read and the source verified. The "Robin/Aly" incident from the Liquid Bloom presence work — when bare first names auto-resolved into the graph as a bird-wiki page and a bank login — is what the external half of this rule was built to prevent.
+
 ## Agent Guardrails
 
 - Do not modify tests to force passing behavior
