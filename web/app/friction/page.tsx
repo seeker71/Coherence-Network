@@ -84,10 +84,11 @@ export default function FrictionPage() {
         throw new Error(`HTTP ${reportRes.status}/${eventsRes.status}/${entryRes.status}`);
       }
       const reportJson = (await reportRes.json()) as FrictionReport;
-      const eventsJson = (await eventsRes.json()) as FrictionEvent[];
+      const eventsJson = (await eventsRes.json()) as { items?: FrictionEvent[] } | FrictionEvent[];
+      const eventsList = Array.isArray(eventsJson) ? eventsJson : eventsJson?.items ?? [];
       const entryJson = (await entryRes.json()) as FrictionEntryPointReport;
       setReport(reportJson);
-      setEvents(eventsJson);
+      setEvents(eventsList);
       setEntryPoints(entryJson);
       setStatus("ok");
       setError(null);

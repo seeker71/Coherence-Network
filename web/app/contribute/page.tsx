@@ -148,7 +148,7 @@ export default function ContributePage() {
         open_questions: Array.isArray(item.open_questions) ? item.open_questions : [],
       }));
       const specRows = (Array.isArray(specsJson) ? specsJson : []) as SpecEntry[];
-      const requestRows = (Array.isArray(crJson) ? crJson : []) as ChangeRequest[];
+      const requestRows = (Array.isArray(crJson) ? crJson : (crJson?.items ?? [])) as ChangeRequest[];
 
       setContributors(contributorRows);
       setIdeas(ideaRows);

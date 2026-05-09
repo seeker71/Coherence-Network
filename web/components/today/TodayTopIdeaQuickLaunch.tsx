@@ -340,9 +340,14 @@ export default function TodayTopIdeaQuickLaunch({
     try {
       const eventsResponse = await fetch(`/api/runtime/events?limit=80`, { cache: "no-store" });
       if (eventsResponse.ok) {
-        const eventsPayload = (await eventsResponse.json()) as RuntimeEvent[];
-        if (Array.isArray(eventsPayload)) {
-          timeline = eventsPayload
+        const eventsPayload = (await eventsResponse.json()) as RuntimeEvent[] | { items?: RuntimeEvent[] };
+        const eventsList = Array.isArray(eventsPayload)
+          ? eventsPayload
+          : Array.isArray(eventsPayload?.items)
+            ? eventsPayload.items
+            : [];
+        if (eventsList.length) {
+          timeline = eventsList
             .filter((event) => {
               const metadata = asRecord(event.metadata);
               return String(metadata.task_id || "").trim() === taskId;

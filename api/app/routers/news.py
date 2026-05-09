@@ -110,6 +110,7 @@ def _ideas_as_dicts(ideas) -> list[dict]:
 async def get_news_feed(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     source: Optional[str] = Query(None, description="Filter by source name"),
     refresh: bool = Query(False, description="Force refresh feeds"),
     lang: Optional[str] = Query(None, description="Target language. When set, item titles and descriptions are rendered in this locale on-demand."),
@@ -137,7 +138,8 @@ async def get_news_feed(
             scored.append((sc, it))
         scored.sort(key=lambda x: x[0], reverse=True)
         out_items = [it for sc, it in scored if sc >= pov_min_score]
-    out_items = out_items[:limit]
+    total = len(out_items)
+    out_items = out_items[offset : offset + limit]
     item_dicts = [i.to_dict() for i in out_items]
     if target_lang and target_lang != "en":
         for d in item_dicts:
@@ -152,6 +154,9 @@ async def get_news_feed(
     payload = {
         "count": len(item_dicts),
         "items": item_dicts,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
         "lang": target_lang,
     }
     if pov:
