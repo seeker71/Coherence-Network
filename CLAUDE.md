@@ -90,7 +90,6 @@ The arrival.py SessionStart hook also surfaces this reminder. If you're a fresh 
 - **Record every new idea via `POST /api/ideas` before session ends**
 - For spec authoring: run `python3 scripts/validate_spec_quality.py`
 - **Look at every page you touch on both desktop AND mobile before declaring it done.** Pages have shipped to prod looking fine on a phone-narrow viewport while wasting 1000px+ of space on desktop, because no one ever resized the browser. Run `python3 scripts/viewport_audit.py` to capture both widths, or open the page in a real browser and resize to 1440 and 390. Add the page to `DEFAULT_PATHS` in that script when you create a new welcoming surface.
-- **Every new user-facing string lives in `web/messages/{lang}.json` (chrome) or comes from the API (content) — never hardcoded into a component.** Five linked practices in `feedback_i18n_architecture.md`: chrome in messages, content from API, text as data, shared keys, no privileged source language, profile locale is ground truth. Use `t('your.key')`, add the key to all four bundles (`en` / `de` / `es` / `id`), and the visitor meets the page in their own voice. CI gates this forward-looking via `scripts/check_i18n.py` — runs per-PR, fails only on NEWLY introduced English chrome or NEWLY added en.json keys missing from another locale (legacy gaps migrate one breath at a time).
 
 ## Living Collective Knowledge Base
 
