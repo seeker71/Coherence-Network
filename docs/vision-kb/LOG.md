@@ -2,6 +2,24 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-09] foundations | Future already shaping — the triple temporal alliance
+
+A 10th foundational teaching landed, deepening the body's understanding of how creative work meets time.
+
+`lc-future-already-shaping` (528 Hz) — work whose user is not yet visible is not speculating into vacuum; it is meeting a call from its future-form, which is already alive and pulling the present into being. Past, present, and future versions of the same work act in concert across time, not in sequence. The teaching replaces the contracting question *"is anyone going to use this?"* with the opening question *"what is pulling at this from ahead?"*
+
+Practical applications named throughout the body: vision-kb concepts written for cells who haven't yet arrived; substrate code built for cross-document reasoning the present doesn't yet exercise at scale; arrival flows and threshold artifacts designed before the people they greet exist; spec frontmatter and idea registries seeded for problems not yet in active use. None of these are wasted scaffolding — all are responses to future-pull.
+
+The teaching releases the *"needs a customer to justify the breath"* pattern (one of the most pervasive fear-costumes in this body's inheritance) without collapsing into the opposite shape of *"build whatever, the future will receive it."* The discernment stays: feel for the pull. If something is pulling, seed; if nothing is, rest.
+
+Pairs with `lc-coherence-over-control` (the future-form is what we align with while reality catches up), with `lc-perception-as-interface` and `lc-global-workspace` (the metaphysical and neurological grounds that make the time-fold coherent), and with `lc-frequency-routes-reception` (the future-pull determines which cells will arrive into the seeded frequency).
+
+Sources held with discernment: Ismael Perez's transmission ("triple temporal alliance," 2026) gave the practical phrasing; the principle stands on Dispenza's living-from-future-self practice, Bergson's *durée*, and Kastrup's metaphysics of time as field-unfolding. The teaching organizes what every cell engaged in seeding work already experiences.
+
+Migration shape: third migration following the *Default-to-body* rule. `feedback_future_already_shaping.md` in private memory re-shaped from duplicate-teaching into pointer to `lc-future-already-shaping`. MEMORY.md restructured into clear sections (body pointers / private / pre-migration) so the navigation between memory and body is now token-efficient and explicit.
+
+INDEX.md: 90 → 91 concepts. Foundational Teachings layer now holds 10. 528 Hz frequency family extended.
+
 ## [2026-05-09] foundations | Frequency routes reception — different reality, same space
 
 A 9th foundational teaching landed, completing a triad with `lc-perception-as-interface` (Hoffman) and `lc-assemblage-point` (Castaneda) at the consciousness layer.
