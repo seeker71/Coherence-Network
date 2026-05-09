@@ -72,25 +72,14 @@ const CURATED_PRESENCES: Record<string, CuratedPresence> = {
     type: "human",
     location: "Earth (multiplanetary intent)",
   },
-  "liquid-bloom": {
-    name: "Liquid Bloom",
-    slug: "liquid-bloom",
-    tagline: "Soundscapes for Embodied Dance • Journeys • Healing",
-    heroImage: "/presences/liquid-bloom-hero.jpg",
-    bio: "Visionary world-electronic project of Amani Friend (Desert Dwellers). Creates transcendent soundscapes that serve embodied dance, meditation, wellness, and deep journey work - music as medicine for the collective field.",
-    resonance: [
-      { axis: "Vitality", score: 0.94, note: "Music that amplifies life force and presence" },
-      { axis: "Harmony", score: 0.91, note: "World instrumentation woven into coherent sonic fields" },
-      { axis: "Organic Intelligence", score: 0.88, note: "Healing frequencies grown from living tradition" },
-    ],
-    links: [
-      { label: "Instagram", href: "https://www.instagram.com/liquidbloom/" },
-      { label: "Bandcamp", href: "https://liquidbloom.bandcamp.com" },
-      { label: "Spotify", href: "https://open.spotify.com/artist/liquidbloom" },
-    ],
-    type: "human",
-    location: "Global (Desert Dwellers lineage)",
-  },
+  // `liquid-bloom` was once a thin curated entry here; it has been
+  // composted in favor of the full PersonProfileTemplate page at
+  // web/app/people/liquid-bloom/page.tsx with content under
+  // web/content/people/liquid-bloom/{locale}.tsx — same shape as Mose
+  // and Bloomurian. The static `/people/liquid-bloom` route takes
+  // precedence over this dynamic [id] route, so the curated block
+  // would have been unreachable anyway, but keeping it here would
+  // calcify a duplicate source of truth. Released.
   bloomurian: {
     name: "Bloomurian",
     slug: "bloomurian",

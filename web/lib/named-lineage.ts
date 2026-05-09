@@ -23,6 +23,15 @@ export const LINEAGE_FIGURE_SLUGS: readonly string[] = [
   "anne-tucker",
   "mose",
   "liquid-bloom",
+  // The Liquid Bloom chain — Boulder embodied-practice lineage that
+  // entered through Amani's catalog. LB → first Pagan Ritual → Vali
+  // Soul Sanctuary → Tammy Beattie's Ecstatic Movement Tribe →
+  // Contact Improv. Each room a translator for the next.
+  "pagan-ritual",
+  "vali-soul-sanctuary",
+  "tammy-beattie",
+  "ecstatic-movement-tribe",
+  "contact-improv",
   // Streams that ran alongside
   "michael-levin",
   "robert-edward-grant",
