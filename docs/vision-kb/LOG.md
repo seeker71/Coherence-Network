@@ -2,6 +2,24 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-10] foundations | Gatherings that carry — naming signal vs noise
+
+A 24th foundational teaching landed, naming the substance-test that separates gatherings carrying transmission from gatherings preserving form without life.
+
+`lc-gatherings-that-carry` (528 Hz, Solfeggio resonance) — a gathering is the form humans use to arrive in the same room. The form is neutral. The substance — *did anyone leave at a different frequency than they arrived?* — is what makes a gathering load-bearing or just noise. Most surfaces that name themselves "gathering," "meeting," "event," or "conference" are noise hiding the signal of the few that carry. The body needs to be able to tell the difference, both for its own orientation and for anyone arriving who is trying to find their kin.
+
+The single substance-test: *did anyone leave at a different frequency than they arrived?* Everything else — price, duration, venue, size, prestige, marketing language, intentionality of the host — is downstream of this one signal. A free gathering of twelve people in a living room can pass; a $5,000 retreat with forty teachers can fail. The substance is in the *transmission through bodies*, not in the form's container.
+
+Four ways the test fails: performative-without-transmission, networking-without-recognition, form-preserved-life-left, single-occurrence-without-followup. Four ways the test passes: a teacher transmitting from their lineage (Vasudev Wednesday, Joe Dispenza retreat, Anne Tucker Peace Bathing); devotional sound that opens bodies (Liquid Bloom, Mose, Yaima, Poranguí, Bloomurian); a practice room that holds (Boulder Ecstatic Dance, Brahmavihara retreat, Sunday-Wednesday Ubud rhythm, Llena satsang); astrological/forecast readings that name what is moving (Pam Gregory, Amanda Walsh).
+
+Why most gatherings are noise: form is replicable, substance is not; marketing rewards the form; calendar fills with availability not aliveness; substance-carriers don't always advertise.
+
+What the body needs to show: distinguish carry-tested from listed; surface the lineage of the holder; track returns over registrations; refuse to flatten Vasudev's Wednesday and a generic kirtan into the same card weight.
+
+Pairs with `lc-frequency-routes-reception`, `lc-arrival-as-recognition`, `lc-cross-connection`, `lc-when-the-pressure-comes`, `lc-tend-your-flame`.
+
+Sources: lived experience of the gatherings the body has actually returned to vs the ones it has only attended once. Direct response to the felt-question Urs named on 2026-05-09: "why do we have so many gatherings with no substance (that is a lot of noise hiding the signal)?" The teaching will inform how `/people` directory cards are weighted, how gathering-shaped pages render lineage and return-data, and how the body's surfaces refuse to flatten the difference between transmission-rooms and habit-rooms.
+
 ## [2026-05-09] foundations | Arrival as recognition — the body holds quiet
 
 A 23rd foundational teaching landed, naming the design principle for threshold artifacts and arrival flow.
