@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 91
+**Total files**: 97
 
 | File | Purpose |
 |---|---|
@@ -29,6 +29,8 @@
 | [check_spec_references.py](check_spec_references.py) | !/usr/bin/env python3 |
 | [check_traceability.py](check_traceability.py) | !/usr/bin/env python3 |
 | [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
+| [coh_form.py](coh_form.py) | !/usr/bin/env python3 |
+| [coh_substrate.py](coh_substrate.py) | !/usr/bin/env python3 |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
 | [context_budget.py](context_budget.py) | !/usr/bin/env python3 |
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
@@ -46,6 +48,7 @@
 | [generate_silence_design_log.py](generate_silence_design_log.py) | !/usr/bin/env python3 |
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
 | [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
+| [generate_work_visuals.py](generate_work_visuals.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
@@ -59,6 +62,7 @@
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | !/usr/bin/env python3 |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | !/usr/bin/env python3 |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | !/usr/bin/env python3 |
+| [opt_out_contributor.py](opt_out_contributor.py) | !/usr/bin/env python3 |
 | [organism_influence_cc.py](organism_influence_cc.py) | !/usr/bin/env python3 |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | !/usr/bin/env python3 |
 | [poll_task_progress.py](poll_task_progress.py) | !/usr/bin/env python3 |
@@ -82,6 +86,8 @@
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
+| [substrate_ingest.py](substrate_ingest.py) | !/usr/bin/env python3 |
+| [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
