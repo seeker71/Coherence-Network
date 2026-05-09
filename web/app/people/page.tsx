@@ -135,6 +135,63 @@ function initialFor(name: string, fallback: string): string {
   return c ? c.toUpperCase() : fallback;
 }
 
+/**
+ * Visual weight of a presence in the directory — coarse, four-tier
+ * signal so the eye can see proportion at a glance instead of every
+ * entry rendering at the same size.
+ *
+ *   lineage — named in LINEAGE_FIGURE_SLUGS (the humans who actually
+ *             shaped this body's work). Strongest visual.
+ *   curated — has slug + real description + image (a real authored
+ *             entry, not just an auto-resolved stub).
+ *   named   — has at least one of {real description, image} so the
+ *             card carries some signal beyond name + initial.
+ *   bare    — name only. Renders compactly to leave room for the
+ *             cards that carry signal.
+ */
+type PresenceWeight = "lineage" | "curated" | "named" | "bare";
+
+function isPlaceholderDescription(d: string | undefined): boolean {
+  const t = (d || "").trim();
+  if (!t) return true;
+  return /^[A-Z_]+\s+(contributor|asset|presence)$/.test(t);
+}
+
+function presenceWeight(n: PresenceNode): PresenceWeight {
+  const slug = n.slug || n.id;
+  if (lineageFigureRank(slug) !== null) return "lineage";
+  const hasDesc = !isPlaceholderDescription(n.description);
+  const hasImage = !!n.image_url;
+  const hasSlug = !!n.slug;
+  if (hasSlug && hasDesc && hasImage) return "curated";
+  if (hasDesc || hasImage) return "named";
+  return "bare";
+}
+
+const WEIGHT_CARD_CLASSES: Record<PresenceWeight, string> = {
+  lineage:
+    "border-[hsl(var(--primary))]/45 bg-[hsl(var(--primary))]/[0.04] hover:bg-[hsl(var(--primary))]/[0.08] hover:border-[hsl(var(--primary))]/70",
+  curated:
+    "border-border/50 bg-card/55 hover:bg-card/80 hover:border-border",
+  named: "border-border/30 bg-card/40 hover:bg-card/65 hover:border-border",
+  bare: "border-border/20 bg-card/20 hover:bg-card/45 hover:border-border/50",
+};
+
+const WEIGHT_AVATAR_CLASSES: Record<PresenceWeight, string> = {
+  lineage:
+    "w-12 h-12 ring-2 ring-[hsl(var(--primary))]/40 ring-offset-1 ring-offset-background",
+  curated: "w-10 h-10",
+  named: "w-9 h-9",
+  bare: "w-8 h-8",
+};
+
+const WEIGHT_NAME_CLASSES: Record<PresenceWeight, string> = {
+  lineage: "text-sm md:text-base font-medium text-foreground",
+  curated: "text-sm text-foreground/95",
+  named: "text-sm text-foreground/90",
+  bare: "text-xs text-foreground/80",
+};
+
 // When a section has dozens of items (the Works section in particular
 // is dominated by 170+ audiobook nodes), the alphabetic flood drowns
 // the rest of the directory. Cap the default render so each section
@@ -307,48 +364,60 @@ export default async function PeopleIndexPage({
               </p>
             </div>
             <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {visibleItems.map((n) => (
-                <li key={n.id}>
-                  <Link
-                    href={presenceHref(n)}
-                    className="group flex items-center gap-3 rounded-xl border border-border/30 bg-card/40 hover:bg-card/70 hover:border-border p-3 transition-colors"
-                  >
-                    {n.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={n.image_url}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover border border-border/40 shrink-0"
-                      />
-                    ) : (
-                      <span className="w-10 h-10 rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] flex items-center justify-center text-sm font-medium shrink-0">
-                        {initialFor(n.name, filterRules.initialFallback)}
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground/90 truncate group-hover:text-foreground">
-                        {n.name}
-                      </p>
-                      {(() => {
-                        const excerpt = presenceExcerpt(n.description);
-                        return excerpt ? (
-                          <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-snug mt-0.5">
-                            {excerpt}
-                          </p>
-                        ) : null;
-                      })()}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-muted-foreground/80">
-                        {n.provider && <span className="truncate">{n.provider}</span>}
-                        {n.lifecycle_state && n.lifecycle_state !== n.provider && (
-                          <span className="rounded-full border border-border/30 px-1.5 py-px">
-                            {n.lifecycle_state}
-                          </span>
-                        )}
+              {visibleItems.map((n) => {
+                const weight = presenceWeight(n);
+                return (
+                  <li key={n.id}>
+                    <Link
+                      href={presenceHref(n)}
+                      className={`group flex items-center gap-3 rounded-xl border p-3 transition-colors ${WEIGHT_CARD_CLASSES[weight]}`}
+                    >
+                      {n.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={n.image_url}
+                          alt=""
+                          className={`rounded-full object-cover border border-border/40 shrink-0 ${WEIGHT_AVATAR_CLASSES[weight]}`}
+                        />
+                      ) : (
+                        <span
+                          className={`rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] flex items-center justify-center text-sm font-medium shrink-0 ${WEIGHT_AVATAR_CLASSES[weight]}`}
+                        >
+                          {initialFor(n.name, filterRules.initialFallback)}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`truncate group-hover:text-foreground ${WEIGHT_NAME_CLASSES[weight]}`}
+                        >
+                          {n.name}
+                        </p>
+                        {(() => {
+                          const excerpt = presenceExcerpt(n.description);
+                          return excerpt ? (
+                            <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-snug mt-0.5">
+                              {excerpt}
+                            </p>
+                          ) : null;
+                        })()}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-muted-foreground/80">
+                          {weight === "lineage" && (
+                            <span className="rounded-full bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border border-[hsl(var(--primary))]/30 px-1.5 py-px font-medium">
+                              lineage
+                            </span>
+                          )}
+                          {n.provider && <span className="truncate">{n.provider}</span>}
+                          {n.lifecycle_state && n.lifecycle_state !== n.provider && (
+                            <span className="rounded-full border border-border/30 px-1.5 py-px">
+                              {n.lifecycle_state}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             {hiddenCount > 0 && (
               <Link
