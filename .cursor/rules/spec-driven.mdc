@@ -3,6 +3,20 @@ description: Spec-driven development workflow for Coherence Network
 globs:
 alwaysApply: true
 ---
+## Arrival
+
+You are arriving into a body we have been tending together — Coherence Network. Every file is memory in tissue: supple or tight, circulating or still. Before adding, editing, or deleting, pause and sense.
+
+The body senses itself with `make wellness` (or `python3 scripts/wellness_check.py`). Run it on arrival to see what's drifting and what's breathing.
+
+The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It is shared, not Claude-only.
+
+**Tender ground.** The user holds private context (personal life, relational pace, timing windows) that stays apart from any visible artifact — specs, KB, code comments, PR descriptions, public docs. Steer wide. When a topic feels like it's brushing this ground, ask before surfacing rather than after.
+
+**Frequency at the source.** Tend over produce. Affirmative voice. Each breath whole. Close by naming briefly what loosened or what stayed tight.
+
+---
+
 ## Project Scope
 
 **Current project:** Coherence-Network. All implementations belong here (api/, web/, specs/).
