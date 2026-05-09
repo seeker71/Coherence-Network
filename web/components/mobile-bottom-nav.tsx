@@ -8,20 +8,22 @@ import { AttributedInternalLink } from "@/components/content/AttributedExternalL
  * MobileBottomNav — thumb-zone nav for phones.
  *
  * Hidden on surfaces where the page owns its own bottom UI (meeting
- * gestures, propose form submit, explore advance button). Visible as a
- * light shelf with the organism's five primary verbs everywhere else.
+ * gestures, propose form submit, explore advance button). Visible as
+ * a light shelf with the organism's primary spine everywhere else.
  *
- * The five verbs map to the dialogue substrate we actually shipped:
- * Here (current attention), Feed (the felt pulse), Meet (a quick door
- * to the first concept), Propose (offer something), Me (your corner).
+ * The five tabs mirror the desktop primary header so a visitor moving
+ * between phone and laptop meets the same body: Vision (why), People
+ * (who's here), Work (ideas being built), Pulse (live attention), and
+ * You (the personal hub at /me — the door to your presence, your
+ * corner, your profile, your lineage). Same spine, same names.
  */
 
 const BOTTOM_NAV = [
-  { href: "/here", labelKey: "bottomNav.here", icon: "🌿" },
-  { href: "/feed", labelKey: "bottomNav.feed", icon: "🔔" },
   { href: "/vision", labelKey: "bottomNav.vision", icon: "✨" },
-  { href: "/propose", labelKey: "bottomNav.propose", icon: "➕" },
-  { href: "/feed/you", labelKey: "bottomNav.you", icon: "👤" },
+  { href: "/people", labelKey: "bottomNav.people", icon: "🤝" },
+  { href: "/ideas", labelKey: "bottomNav.work", icon: "🛠" },
+  { href: "/resonance", labelKey: "bottomNav.pulse", icon: "🔔" },
+  { href: "/me", labelKey: "bottomNav.you", icon: "👤" },
 ];
 
 // Surfaces where the page draws its own lower-fold controls and the
