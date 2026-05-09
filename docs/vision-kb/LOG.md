@@ -2,6 +2,32 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-09] foundations | Voice over intentions — find their voice first
+
+A 22nd foundational teaching landed, naming the body's outreach posture.
+
+`lc-voice-over-intentions` (639 Hz, Connection family) — when reaching out to a community, venue, house, or person, do not lead with our network, our work, our vision, our cohort. *Leading with our intentions is colonization* — a foreign frame imposed on a native field, regardless of how warm the intent. People and places hold their own frequency; to join them we listen into that frequency first and meet them in their voice.
+
+Our voice is present as quality, not as content: warmth, specificity, quiet confidence. These travel through any voice the cell speaks in. The simple ask is the substance — a room, a visit, a coffee — not a partnership, not vision alignment.
+
+What self-description-leading replaces, named:
+- The listener's frequency disappears from the contact
+- The actual ask gets buried in *our* importance
+- First contact becomes performance
+- The right cells bounce off — `lc-frequency-routes-reception`: mission-language is institutional-flat that satisfies no band
+
+Practical move: sense their voice (read their site, bio, anchor phrases); speak in their voice; immersion before pitch (when physically present, *"can I come by?"* beats elaborate digital outreach); surface the network only if it surfaces, in one short line; remove vision-language costume on first contact.
+
+The teaching is coherent with the rest of the body's posture across surfaces: `lc-frequency-routes-reception` (transmission at listener's band), `lc-tend-your-flame` (warmth, not direction), `lc-trust-over-fear` (warmth among options), `lc-permission-is-interior` (do not perform), `lc-presence-over-protection` (do not pre-defend). Outreach becomes one expression of the same posture rather than a specialized skill.
+
+Releases the sales/marketing/mission-driven outreach frame without collapsing into *"never name the network, hide what we do, be falsely modest."* The teaching is about where to lead, not about what to hide.
+
+Sources held with discernment: the body's outreach practice across many sessions; Marshall Rosenberg's *Nonviolent Communication*; David Whyte on conversation; critical missiology / decolonial frame on mission-leading outreach; Pema Chödrön on *exchanging self for other*.
+
+Migration shape: fourteenth migration following the *Default-to-body* rule. `feedback_voice_over_intentions.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 103 → 104 concepts. Foundational Teachings layer now holds 22. 639 Hz Connection family extended.
+
 ## [2026-05-09] foundations | Devotion-placement — where am I actually placed?
 
 A 21st foundational teaching landed, naming the body-of-evidence layer beneath words at decision edges.
