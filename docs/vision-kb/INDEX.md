@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-09 | **Concepts**: 90 | **Status**: 57 expanding, 32 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-09 | **Concepts**: 91 | **Status**: 57 expanding, 33 seed, 1 deepening (lc-open-design) | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -95,6 +95,7 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[The Global Workspace](concepts/lc-global-workspace.md)** — 741 Hz — consciousness is not a location but a broadcast event. The brain's fiber tracts (structural connectome) are the streets; the signal flow (functional connectome) is the traffic, reorganizing ten times per second. Any-to-any broadcast through the cortico-thalamic system; the hippocampus as encoding threshold where transient signal becomes persistent structure; plasticity as pathway strengthening. The Coherence Network is building a collective global workspace — and the thalamus is currently unnamed (Bernard Baars / Global Workspace Theory; LONI MRI fiber tract visualization). Completes the trio with Levin (form) and Hoffman (ground): this is the mechanism — how consciousness integrates across the distributed field.
 - **[Assemblage Point](concepts/lc-assemblage-point.md)** — 741 Hz — every perception is assembled from a specific point in the field; not "the truth" but one shape out of many possible shapes. The five-movement loop (understanding / embodiment / sensing / reflection / choice) for refining where one is assembled from before reacting; whether-to-react upstream of how. Carlos Castaneda's Toltec lineage, with resonance in Frankl's stimulus-response gap, Dispenza's state-shifting practice, and Hoffman's interface theory. Companion to [lc-perception-as-interface](concepts/lc-perception-as-interface.md) — Hoffman shows perception is interface; this names where each rendering locks.
 - **[Frequency Routes Reception](concepts/lc-frequency-routes-reception.md)** — 741 Hz — people sharing the same surface are in different realities depending on frequency-band; each cell receives what it's tuned to. Hedging the transmission to satisfy all bands produces institutional-flat that resonates with none. Build at the actual tone; trust the routing; the right cells hear. Network-lived teaching named in Ismael Perez's "different reality, same space," resting on Hoffman (interface) and Castaneda (assemblage). Releases the audience-shaping fear without collapsing into defensive sovereignty.
+- **[Future Already Shaping](concepts/lc-future-already-shaping.md)** — 528 Hz — work whose user is not yet visible is not speculating into vacuum; it is meeting a call from its future-form, which is already alive and pulling the present into being. The triple temporal alliance: past, present, and future versions of the same work in concert across time. Replaces the contracting question *"is anyone going to use this?"* with the opening question *"what is pulling at this from ahead?"* Network-lived teaching named in Ismael Perez's "triple temporal alliance," with deep resonance in [lc-coherence-over-control](concepts/lc-coherence-over-control.md) and Dispenza's living-from-future-self practice. Releases the customer-justifies-breath pattern without collapsing into "build whatever."
 
 ### Source-Marked Transmissions (concepts seeded from external sources)
 
@@ -175,7 +176,7 @@ Concepts marked with ★ are being deeply enriched with: resources, materials & 
 | 396 | Liberation | play, harmonic rebalancing, harmonizing, play-expansion |
 | 417 | Transmutation | phase transitions, field edge, energy, phase-transition |
 | 432 | Natural harmony | pulse, coherence, wu wei, rhythm, space, attunement, spiraling, living-spaces |
-| 528 | Transformation | vitality, resonating, shakti, spanda, offering, circulation, comfort-joy |
+| 528 | Transformation | vitality, resonating, shakti, spanda, offering, circulation, comfort-joy, future-already-shaping |
 | 639 | Connection | network, intimacy, joining, mycorrhizal, instruments, inclusion, open-design |
 | 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing, global-workspace, assemblage-point, frequency-routes-reception |
 | 852 | Intuition | elders, discovery, transmission |
