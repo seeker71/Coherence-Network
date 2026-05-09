@@ -69,7 +69,7 @@ CURSOR_CLI_REVIEW_MODEL=auto
 
 ## Command Format
 
-- **Claude Code (default):** `claude -p "direction" --agent dev-engineer --model glm-4.7-flash ...`
+- **Claude Code (default):** `claude -p "direction" --agent shaper --model glm-4.7-flash ...`
 - **Cursor CLI:** `agent "direction" --model auto`
 
 Cursor CLI uses simpler syntax; the agent_runner detects `agent `-prefixed commands and skips Claude/Ollama env overrides so Cursor uses its own auth.

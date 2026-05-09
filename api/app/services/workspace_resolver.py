@@ -12,7 +12,7 @@ A workspace bundle contains:
   workspaces/{slug}/
     workspace.yaml       — manifest (name, description, pillars, visibility)
     pillars.yaml         — taxonomy declaration (can override workspace.yaml)
-    .agents/             — per-workspace agent personas (product-manager.md, dev-engineer.md, ...)
+    .agents/             — per-workspace agent personas (scribe.md, shaper.md, witness.md, mirror.md, edge-tender.md)
     templates/           — spec.md, idea.md, task.md templates
     guides/              — onboarding, contribution rules
     ideas/               — workspace-specific idea .md files (optional)

@@ -35,7 +35,7 @@
 │ LAYER 2: TASK EXECUTION                                                      │
 │   API (create_task, PATCH)  agent_service (routing, templates)               │
 │   Cursor CLI / Claude Code  agent "direction" --model X                      │
-│   Subagents                product-manager, qa-engineer, dev-engineer, etc.  │
+│   Subagents                scribe, witness, shaper, mirror, edge-tender      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         │
 ┌─────────────────────────────────────────────────────────────────────────────┐

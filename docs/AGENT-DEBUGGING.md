@@ -370,7 +370,7 @@ Copy the `command` from the task and run it in a terminal:
 ```bash
 cd /path/to/Coherence-Network
 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY="" \
-  claude -p "Your direction" --agent dev-engineer --model glm-4.7-flash:latest --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions
+  claude -p "Your direction" --agent shaper --model glm-4.7-flash:latest --allowedTools Read,Edit,Grep,Glob,Bash --dangerously-skip-permissions
 ```
 
 Observe stdout/stderr directly.

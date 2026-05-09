@@ -27,20 +27,20 @@ from app.services.agent_routing.executor_routing_loader import (
 ROUTING = routing_service.ROUTING
 
 AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
-    TaskType.SPEC: "product-manager",
-    TaskType.TEST: "qa-engineer",
-    TaskType.IMPL: "dev-engineer",
-    TaskType.REVIEW: "reviewer",
-    TaskType.HEAL: "dev-engineer",
-    TaskType.CODE_REVIEW: "reviewer",
-    TaskType.MERGE: "dev-engineer",
-    TaskType.DEPLOY: "dev-engineer",
-    TaskType.VERIFY: "qa-engineer",
-    TaskType.REFLECT: "product-manager",
+    TaskType.SPEC: "scribe",
+    TaskType.TEST: "witness",
+    TaskType.IMPL: "shaper",
+    TaskType.REVIEW: "mirror",
+    TaskType.HEAL: "shaper",
+    TaskType.CODE_REVIEW: "mirror",
+    TaskType.MERGE: "shaper",
+    TaskType.DEPLOY: "shaper",
+    TaskType.VERIFY: "witness",
+    TaskType.REFLECT: "scribe",
 }
 
 GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
-    TaskType.REVIEW: ["spec-guard"],
+    TaskType.REVIEW: ["edge-tender"],
 }
 
 # --- Executor-specific data: from config (executor_routing.json); no hardcoded maps. Openrouter uses enforce_openrouter_free_model; no prefix. ---

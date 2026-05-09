@@ -113,10 +113,10 @@ constraints:
 
 | Phase | task_type | Subagent | Purpose |
 |-------|-----------|----------|---------|
-| spec | spec | product-manager | Design: write or expand spec for the work item |
-| impl | impl | dev-engineer | Implement per spec |
-| test | test | qa-engineer | Write/run tests, report failures |
-| review | review | reviewer | Check correctness, security, spec compliance |
+| spec | spec | scribe | Listen to the idea, write or expand the spec for the work item |
+| impl | impl | shaper | Meet the spec at the source |
+| test | test | witness | Write and run tests, report what behavior shows |
+| review | review | mirror (with edge-tender) | Reflect correctness, security, spec-fit; sense the edge |
 
 Validation: `cd api && pytest -v` exit 0 and review output contains "pass" (or equivalent). If either fails, loop to impl with direction "Fix the issues: [review feedback or test failures]. Implement only per spec."
 

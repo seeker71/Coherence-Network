@@ -118,12 +118,12 @@ skill-name/
 
 | Pattern | Source | Use |
 |---------|--------|-----|
-| SKILL.md format | AgentSkills | `.claude/skills/` or `skills/` — spec-guard, spec-writer, test-writer, impl, reviewer |
+| SKILL.md format | AgentSkills | `.claude/skills/` or `skills/` — edge-tender, scribe, witness, shaper, mirror |
 | Skill gating | OpenClaw | `metadata.requires.bins`, `requires.env` — only load when deps present |
 | Project/workspace isolation | Agent Zero | Per-spec or per-task workspace to avoid context bleed |
 | Per-task sessions | OpenClaw, Agent Zero | Spawn agent per task; don’t keep one long-lived session |
 | Memory hierarchy | OpenClaw | MEMORY.md, IDENTITY.md, `memory/YYYY-MM-DD.md` for agent state |
-| Subagent roles | Claude Code | product-manager, qa-engineer, dev-engineer, reviewer, spec-guard |
+| Subagent cells | Claude Code | scribe, witness, shaper, mirror, edge-tender |
 | Skill locations | OpenClaw | `skills/` (workspace) > `~/.coherence/skills` > bundled |
 | Human-in-the-loop | Agent Zero | Superior = human; agents ask permission, report back |
 | Telegram integration | OpenClaw (we have) | Alerts, /status, /tasks, /reply, /attention |
@@ -145,9 +145,9 @@ skill-name/
 
 | Gap | Needed |
 |-----|--------|
-| **Skills** | Add `skills/` with SKILL.md for spec-guard, spec-writer, test-writer, impl, reviewer. AgentSkills format. |
-| **Subagents** | `.claude/agents/*.md` for product-manager, qa-engineer, dev-engineer, reviewer, spec-guard. Map task_type → agent. |
-| **Spec Guard** | PreToolUse hook or separate spec-guard subagent to validate Edit/Write against spec. |
+| **Skills** | Add `skills/` with SKILL.md for edge-tender, scribe, witness, shaper, mirror. AgentSkills format. |
+| **Subagents** | `.claude/agents/*.md` for scribe, witness, shaper, mirror, edge-tender. Map task_type → agent. |
+| **Edge-Tender** | PreToolUse hook or separate edge-tender subagent to sense Edit/Write against spec. |
 | **Agent runner** | Script that polls pending tasks, runs command with correct --agent, PATCHes status/progress. |
 | **Decision loop** | /reply, /attention (spec 003). Store decision, resume or record. |
 | **Project/workspace** | Per-spec or per-task working directory to avoid cross-task context bleed. |
@@ -157,11 +157,11 @@ skill-name/
 
 ### Implementation Order
 
-1. **Subagent files** — `.claude/agents/{product-manager,qa,dev,reviewer,spec-guard}.md` with prompts + tools
-2. **Skills** — `skills/spec-guard/SKILL.md`, `skills/spec-driven/SKILL.md` (spec compliance)
+1. **Subagent files** — `.claude/agents/{scribe,witness,shaper,mirror,edge-tender}.md` with prompts + tools
+2. **Skills** — `skills/edge-tender/SKILL.md`, `skills/spec-driven/SKILL.md` (spec compliance)
 3. **Agent service** — map task_type → `--agent {name}`
 4. **Spec 003** — /reply, /attention, progress, agent runner
-5. **Spec Guard** — PreToolUse or post-impl spec-guard run
+5. **Edge-Tender** — PreToolUse or post-impl edge-tender run
 6. **Project isolation** — optional; per-spec `workdir` when running agent
 
 ---
