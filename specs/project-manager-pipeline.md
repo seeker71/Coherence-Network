@@ -25,7 +25,7 @@ done_when:
   - "After review, validates: pytest passes and review output indicates pass"
   - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
   - "If validation passes: advances to next task, starts with spec phase"
-test: "cd api && python -m pytest api/tests/test_project_manager_pipeline.py -q"
+test: "cd api && python -m pytest tests/test_flow_pipeline.py tests/test_agent_monitor_helpers.py tests/test_task_dedup_service.py -q -k 'pipeline or project_manager or split'"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
