@@ -97,8 +97,15 @@ def get_idea_lifecycle(idea_id: str) -> dict | None:
 
 
 def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
+    items, _total = get_resonance_feed_page(window_hours=window_hours, limit=limit, offset=0)
+    return items
+
+
+def get_resonance_feed_page(
+    window_hours: int = 24, limit: int = 20, offset: int = 0
+) -> tuple[list[dict], int]:
     from app.services.idea_service import _read_ideas, get_idea  # noqa: F401
-    """Return ideas with recent activity, sorted by most-recent-activity-first.
+    """Return ideas with recent activity plus the total active count.
 
     Activity is determined by governance change requests updated within the
     window and ideas whose questions were recently answered.  When governance
@@ -148,18 +155,17 @@ def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
                 idea_activity.setdefault(idea.id, cutoff)
                 break
 
-    # Sort by recency
+    # Sort by recency, build the full active feed before paginating so the
+    # caller knows the true total even when only a slice is returned.
     sorted_ids = sorted(idea_activity.keys(), key=lambda iid: idea_activity[iid], reverse=True)
 
-    feed: list[dict] = []
+    full: list[dict] = []
     for idea_id in sorted_ids:
-        if len(feed) >= max(1, limit):
-            break
         idea = idea_map.get(idea_id)
         if idea is None:
             continue
         scored = _with_score(idea)
-        feed.append({
+        full.append({
             "idea_id": idea.id,
             "name": idea.name,
             "last_activity_at": idea_activity[idea_id].isoformat(),
@@ -167,7 +173,10 @@ def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
             "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
         })
 
-    return feed
+    total = len(full)
+    start = max(0, int(offset))
+    end = start + max(1, int(limit))
+    return full[start:end], total
 
 
 def get_concept_resonance_matches(

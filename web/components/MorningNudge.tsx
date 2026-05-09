@@ -159,7 +159,7 @@ export function MorningNudge() {
       if (ideasRes.status === "fulfilled" && ideasRes.value) {
         const arr = Array.isArray(ideasRes.value)
           ? ideasRes.value
-          : ideasRes.value.ideas || [];
+          : ideasRes.value.items ?? ideasRes.value.ideas ?? [];
         ideas = arr.filter((i: { last_activity_at?: string }) => {
           if (!i.last_activity_at) return false;
           return Date.parse(i.last_activity_at) > lastVisitMs;

@@ -402,7 +402,7 @@ def cmd_thread(args):
     if not data:
         print("No messages in thread")
         return
-    messages = data if isinstance(data, list) else data.get("messages", [])
+    messages = data if isinstance(data, list) else data.get("items", data.get("messages", []))
     if not messages:
         print("No messages in thread")
         return

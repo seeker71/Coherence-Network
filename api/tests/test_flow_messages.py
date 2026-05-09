@@ -160,7 +160,9 @@ async def test_thread_shows_both_directions():
         # Get thread
         r3 = await c.get(f"/api/messages/thread/{alice}/{bob}")
         assert r3.status_code == 200, r3.text
-        thread = r3.json()
+        envelope = r3.json()
+        assert envelope["total"] == 2
+        thread = envelope["items"]
         assert len(thread) == 2
         thread_ids = [m["id"] for m in thread]
         assert msg1_id in thread_ids
