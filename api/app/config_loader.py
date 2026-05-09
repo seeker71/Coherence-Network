@@ -366,7 +366,7 @@ def _default_config() -> dict[str, Any]:
         },
         "translator": {
             "backend": "libretranslate",
-            "libretranslate_url": "https://libretranslate.com",
+            "libretranslate_url": "http://libretranslate:5000",
             "libretranslate_key": None,
             "anthropic_api_key": None,
             "anthropic_api_url": "https://api.anthropic.com/v1/messages",
