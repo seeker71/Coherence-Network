@@ -12,9 +12,10 @@ import "@rainbow-me/rainbowkit/styles.css";
 const queryClient = new QueryClient();
 
 /**
- * Wallet context provider — wraps the whole app so any page can access
- * wallet state. Children always render (SSR-safe); the RainbowKit overlay
- * activates after hydration.
+ * Wallet context provider — wraps wagmi/RainbowKit around children that
+ * call wallet hooks. Renders nothing until mounted so wagmi hooks like
+ * useConfig never fire without WagmiProvider in the tree (SSR-safe).
+ * Wrap only the subtrees that need wallet state, not the whole app.
  */
 export default function WalletProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -23,10 +24,8 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Always render children so SSR works. Wallet UI components
-  // use their own mounted checks internally.
   if (!mounted) {
-    return <>{children}</>;
+    return null;
   }
 
   return (
