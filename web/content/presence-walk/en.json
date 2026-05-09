@@ -149,6 +149,7 @@
     },
     "filterRules": {
       "ignoredIdIncludes": [
+        "anonymous-meeting:",
         ":wanderer-",
         ":presence-visitor",
         ":test-",
