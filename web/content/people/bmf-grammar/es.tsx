@@ -193,6 +193,114 @@ class BMF [public] : Application {
       ),
     },
     {
+      kind: "panel",
+      variant: "cool",
+      eyebrow: "Muestra · gramática BML en BMF",
+      heading: "Cómo se ven realmente las reglas BMF",
+      body: (
+        <>
+          <p>
+            BMF is BNF augmented with execution. The notation reads like
+            EBNF with a few specific moves that matter:
+          </p>
+          <ul className="text-[12px] leading-6 my-3 pl-5 list-disc text-foreground/80">
+            <li><code className="text-foreground/90">::=</code> rule definition · <code className="text-foreground/90">|</code> branch (OR-list, tried in order, backtracked)</li>
+            <li><code className="text-foreground/90">{`{ ... }`}</code> zero-or-more · <code className="text-foreground/90">[ ... ]</code> optional · <code className="text-foreground/90">{`< 'a'..'z' >`}</code> character class</li>
+            <li><code className="text-foreground/90">item \\ separator</code> separator-list (same as <code className="text-foreground/90">item {`{ separator item }`}</code>)</li>
+            <li><code className="text-foreground/90">$tag:Element</code> tag a sub-element so action code can lift it by name</li>
+            <li><code className="text-foreground/90">Rule( arg1, arg2 ) ::= ...</code> template rule — arguments bound at call-site, resolved at parse-time</li>
+          </ul>
+          <p>
+            With those moves, here is a fragment of BML's own grammar
+            written in BMF — the same notation the parser is reading
+            while parsing it. These rules are pulled directly from the
+            2000 thesis (
+            <code className="text-foreground/80">backtracking-model-languages.txt</code>
+            ):
+          </p>
+          <pre className="text-[11px] leading-5 bg-background/60 border border-border/40 rounded-lg p-4 overflow-x-auto font-mono">
+{`// BML grammar fragment, written in BMF
+// (Backtracking Model Form — the same form parsing this file)
+
+Number     ::= < '0'..'9' > [ '.' < '0'..'9' > ];
+Identifier ::= < 'a'..'z' | 'A'..'Z' | '_' >
+                 { < 'a'..'z' | 'A'..'Z' | '_' | '0'..'9' > };
+
+Expression ::= Term { ( "-" | "+" ) Term };
+Term       ::= "(" Expression ")" | Number | Identifier;
+
+// template rule — argument-passing, anticipating ANTLR
+List( item, separator ) ::= item { separator item };
+Other      ::= List( Identifier, "," );
+
+// BML's own control flow, in BMF
+If     ::= "if" "(" Expression ")" $then:Statement
+             [ "else" $else:Statement ];
+
+Select ::= LabelDecl "select" "(" Expression ")" SwitchBlock;
+SwitchBlock ::= "{"
+                  { ( "case" CaseExpr \\\\ "," ":" | "default" ":" )
+                      Statement }
+                "}";
+CaseExpr    ::= Expression [ ".." Expression ];
+
+For    ::= LabelDecl "for" "(" [ Expression ] ";"
+                              [ Expression ] ";"
+                              [ Expression ] ")" Statement;
+
+// the backtracking statement — BMF's own discipline,
+// expressed in the language it parses
+Choice ::= "choice" CodeBlock \\\\ ",";
+
+// binary types — read raw bytes with the same grammar machine
+BinaryType ::= "binary" Identifier "["
+                  "size"    "=" int ","
+                  "mapping" "=" ( "signed" | "unsigned"
+                                | "float"  | "double" | "no" )
+               "]";`}
+          </pre>
+          <p>
+            Read <code className="text-foreground/80">If</code> closely:
+            the two <code className="text-foreground/80">Statement</code>{" "}
+            occurrences carry tags <code className="text-foreground/80">$then</code>{" "}
+            and <code className="text-foreground/80">$else</code>. When the
+            rule matches, the action code attached to{" "}
+            <code className="text-foreground/80">If</code> can ask the parse
+            stack for the entry tagged{" "}
+            <code className="text-foreground/80">$then</code> and get the
+            then-branch's already-built object — no positional indexing,
+            no second pass over the tree. The parse tree decorates itself
+            as it grows.
+          </p>
+          <p>
+            Read <code className="text-foreground/80">Choice</code> closely:
+            BML's backtracking statement is{" "}
+            <code className="text-foreground/80">"choice" CodeBlock \\ ","</code>
+            {" "}— a comma-separated list of code blocks. The grammar of
+            the language carries the same backtracking discipline as the
+            grammar engine that parses it. The parser, the assembly
+            (
+            <Link href="/people/bmcpu-vm" className="text-primary hover:underline">BMCPU</Link>
+            ), and the language all unwind the same way.
+          </p>
+          <p>
+            The full self-description lives at{" "}
+            <Link
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              companion/source-samples/BMF-grammar.bml
+            </Link>
+            {" "}— the BMF compiler driver, written in BML, compiled by
+            JBMF, parsing files described by grammars written in BMF.
+            Three layers of self-bootstrap, all visible in one file.
+          </p>
+        </>
+      ),
+    },
+    {
       kind: "narrative",heading: "Elige, retroceder, deshacer",
       body: (
         <>
