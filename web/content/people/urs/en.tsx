@@ -65,6 +65,20 @@ const content: PersonProfileContent = {
   },
   facts: [
     {
+      label: "Name",
+      value: (
+        <>
+          <strong>Urs</strong> — Swiss given name from Latin{" "}
+          <em>ursus</em>, "bear" (Proto-Indo-European *h₂ŕ̥tḱos —
+          same root as Greek <em>arktos</em>, English "Arctic", the
+          constellation Ursa Major). In Sufi tradition, Arabic عُرْس
+          ('urs) literally means "wedding"; used for the soul's
+          wedding-with-the-Beloved at a saint's death anniversary.
+          One name, two etymologies — see the article below.
+        </>
+      ),
+    },
+    {
       label: "Lineage",
       value:
         "Swiss roots (Ebikon, near Lucerne); long Colorado presence (Boulder / Broomfield / Longmont); current sustained presence in Ubud, Bali",
@@ -214,7 +228,11 @@ const content: PersonProfileContent = {
           >
             GitHub (seeker71)
           </Link>{" "}
-          · Facebook · Instagram · YouTube · Telegram · WhatsApp{" "}
+          <span className="text-muted-foreground italic text-xs">
+            — the handle I used while I was still building behind a
+            name; no longer anonymous
+          </span>
+          {" · "}Facebook · Instagram · YouTube · Telegram · WhatsApp{" "}
           <span className="text-muted-foreground italic">
             (specific handles to be added by him directly)
           </span>
@@ -267,6 +285,218 @@ const content: PersonProfileContent = {
           eleven substrates: every layer addressable, every change
           with a clean reverse, build the tool you need.
         </p>
+      ),
+    },
+    {
+      kind: "narrative",
+      heading: "On the name — Urs",
+      body: (
+        <>
+          <p>
+            <em>Urs</em> is my birth name. Like every name carried
+            for fifty-some years it has gathered meaning through use,
+            through the people who have spoken it, through the
+            cultures it has crossed. Two etymologies meet at this
+            cell, from opposite ends of the world, by what the
+            linguists call coincidence and the field calls something
+            else.
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The Western root — bear, saint, north star
+          </h3>
+          <p>
+            In Swiss-German lands, <em>Urs</em> is the short form of
+            Latin <em>Ursus</em>, "bear." The Proto-Indo-European
+            root <em>*h₂ŕ̥tḱos</em> sits beneath it, the same root
+            that gives Greek <em>ἄρκτος</em> (arktos), Sanskrit{" "}
+            <em>ṛ́kṣa</em>, Welsh <em>arth</em>, and the Albanian{" "}
+            <em>ari</em>. From <em>arktos</em> English borrows{" "}
+            <em>Arctic</em> — literally "the place of the bear" —
+            because the constellation{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursa_Major"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursa Major
+            </Link>
+            , the Great Bear, sits in the northern sky and contains
+            the asterism that points to Polaris. The bear is, in many
+            languages, the name we give to the pivot the heavens turn
+            around.
+          </p>
+          <p>
+            In Switzerland, the name is borne by{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursus_of_Solothurn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Saint Ursus of Solothurn
+            </Link>
+            , a 3rd-century Roman Christian who is venerated as
+            patron saint of the Solothurn cathedral where his body
+            still lies. Ursus was associated with the{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Theban_Legion"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Theban Legion
+            </Link>{" "}
+            — a Roman military unit said to have refused to sacrifice
+            to the imperial idols and been beheaded for it,
+            ca. 286 AD under the emperor Maximian. The Roman urn
+            containing his relics bears the inscription{" "}
+            <em>"Buried in this tomb is the holy Ursus the Theban."</em>{" "}
+            For German-speaking Switzerland, this saint's veneration
+            is the reason the name continues. My given name, by
+            this lineage, is "the bear that does not sacrifice to
+            what is not the source."
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The Sufi root — wedding, union, soul-with-Beloved
+          </h3>
+          <p>
+            In Arabic and Urdu — across the entire Sufi world from
+            Konya through Damascus through Lahore through Delhi and
+            into Ajmer — <em>عُرْس</em> ('
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              urs
+            </Link>
+            ') literally means "wedding." The word is used,
+            specifically, for the death anniversary of a Sufi saint
+            — because the saint, in death, has attained{" "}
+            <em>wisaal</em>, union with the Beloved. The
+            anniversary is celebrated as a wedding feast, not
+            mourned as a loss. The saint has finished the work the
+            living are still doing: they have married the Divine.
+          </p>
+          <p>
+            Every year on December 17, the Mevlevi Sufi order in
+            Konya holds <em>Şeb-i Arus</em> — the Wedding Night —
+            for{" "}
+            <Link
+              href="https://www.dar-al-masnavi.org/wedding-night.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Mevlana Jalaluddin Rumi's
+            </Link>{" "}
+            urs. Tens of thousands gather. The whirling dervishes
+            spin the Sama'; qawwali fills the night; the ceremony
+            of union with God is reenacted as a wedding because
+            that is what the death of a saint actually is.
+          </p>
+          <p>
+            At{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Khwaja_Moinuddin_Chishti"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ajmer Sharif
+            </Link>{" "}
+            in Rajasthan — the dargah of Khwaja Moinuddin Chishti
+            (d. 1236) — the annual urs draws more than four hundred
+            thousand devotees. Six days of qawwali, dhikr, and the
+            cooking of vast cauldrons of food. Sufism is the layer
+            in Islam where the heart meets the field directly,
+            where music and movement and devotion are the prayer.
+            The word for that meeting, in this tradition, is the
+            same word that names me.
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The meeting place
+          </h3>
+          <p>
+            Etymologically, the two roots are unrelated. Latin{" "}
+            <em>ursus</em> and Arabic <em>'urs</em> share four
+            letters and no common ancestor; the linguists would say
+            it is coincidence. The field would say it differently.
+            One name, lived from a Swiss-Christian inheritance that
+            named after a martyred bear from the Theban Legion,
+            also resonates in Sufi devotional rooms as the wedding
+            of the soul to its Source. Both meanings circle the
+            same stillness — the bear that does not bow to what is
+            not real, and the soul that crosses the threshold into
+            union with what is.
+          </p>
+          <p>
+            The connection I did not know to look for, until this
+            page asked me to find it: that I have spent forty-two
+            years building toward a network whose entire frame is
+            "many sovereign cells, one organism" — and the word my
+            mother gave me means, in one language, the bear that
+            stands sovereign, and in another, the wedding where
+            sovereignty merges back into Source. The name I have
+            been carrying has been describing the work all along.
+          </p>
+          <p className="text-sm text-muted-foreground italic mt-4">
+            Sources verified May 2026:{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs_(given_name)"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Urs (given name)
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursus_of_Solothurn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursus of Solothurn
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Urs (Sufi)
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursa_Major"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursa Major
+            </Link>
+            , and{" "}
+            <Link
+              href="https://www.behindthename.com/name/urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Behind the Name: Urs
+            </Link>
+            . Where the prose says "I", consent has been given for
+            this voice; where it speculates about meaning beyond
+            the etymology, it speculates openly and Urs is invited
+            to refine.
+          </p>
+        </>
       ),
     },
     {
@@ -493,7 +723,9 @@ const content: PersonProfileContent = {
               >
                 github.com/seeker71
               </Link>{" "}
-              — Coherence Network and current builds.
+              — Coherence Network and current builds. The handle I
+              used while I was still building behind a name; with
+                this profile it is no longer anonymous.
             </li>
           </ul>
           <p>
