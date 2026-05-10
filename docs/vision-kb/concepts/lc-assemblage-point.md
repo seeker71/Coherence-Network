@@ -176,6 +176,15 @@ The same loop runs at every scale:
 - **Donald Hoffman, *The Case Against Reality*** — pairs with
   this concept; if perception is interface, the assemblage
   point is where each render locks.
+- **[Vasudev Baba — On Frequency, Consciousness and the
+  Assemblage Point](../transmissions/2026-05-11-vasudev-baba-on-frequency.md)**
+  (2026-05-11, written) — reads Castaneda's assemblage point as
+  the geometry underneath the chakra map: each chakra is a
+  position the point can be anchored at; *same Ten Commandments,
+  different assemblage point*. Grounds *frequency* in HeartMath's
+  heart-field measurements without forcing chakra anatomy onto
+  modern physiology. See also the teacher's presence at
+  [/people/vasudev-baba](../../presences/vasudev-baba.md).
 
 The body's discernment holds Castaneda's lineage as **direct
 phenomenological teaching** — the descriptions of energy body and
