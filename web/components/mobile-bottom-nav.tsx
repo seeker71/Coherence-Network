@@ -12,16 +12,18 @@ import { AttributedInternalLink } from "@/components/content/AttributedExternalL
  * a light shelf with the organism's primary spine everywhere else.
  *
  * The five tabs mirror the desktop primary header so a visitor moving
- * between phone and laptop meets the same body: Vision (why), People
- * (who's here), Work (ideas being built), Pulse (live attention), and
- * You (the personal hub at /me — the door to your presence, your
- * corner, your profile, your lineage). Same spine, same names.
+ * between phone and laptop meets the same body: Vision (why),
+ * Presences (who and what is held — humans, places, gatherings,
+ * practices, works), Becoming (ideas in motion toward form), Pulse
+ * (live attention), and You (the personal hub at /me — the door to
+ * your presence, your corner, your profile, your lineage). Same
+ * spine, same names.
  */
 
 const BOTTOM_NAV = [
   { href: "/vision", labelKey: "bottomNav.vision", icon: "✨" },
-  { href: "/people", labelKey: "bottomNav.people", icon: "🤝" },
-  { href: "/ideas", labelKey: "bottomNav.work", icon: "🛠" },
+  { href: "/presences", labelKey: "bottomNav.people", icon: "🤝" },
+  { href: "/ideas", labelKey: "bottomNav.work", icon: "🌱" },
   { href: "/resonance", labelKey: "bottomNav.pulse", icon: "🔔" },
   { href: "/me", labelKey: "bottomNav.you", icon: "👤" },
 ];

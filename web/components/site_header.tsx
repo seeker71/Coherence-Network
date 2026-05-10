@@ -27,7 +27,7 @@ type NavItemKey = {
 // pages that live inside that layer.
 const PRIMARY_NAV: NavItemKey[] = [
   { href: "/vision", labelKey: "nav.layer.vision" },
-  { href: "/people", labelKey: "nav.layer.presences" },
+  { href: "/presences", labelKey: "nav.layer.presences" },
   { href: "/ideas", labelKey: "nav.layer.work" },
   { href: "/resonance", labelKey: "nav.layer.pulse", isHeartbeat: true },
 ];

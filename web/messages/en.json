@@ -70,7 +70,7 @@
     "layer": {
       "vision": "The Vision",
       "presences": "The Presences",
-      "work": "The Work",
+      "work": "The Becoming",
       "pulse": "The Pulse"
     },
     "sub": {
@@ -241,8 +241,8 @@
     "here": "Here",
     "feed": "Feed",
     "vision": "Vision",
-    "people": "People",
-    "work": "Work",
+    "people": "Presences",
+    "work": "Becoming",
     "pulse": "Pulse",
     "propose": "Propose",
     "you": "You"
