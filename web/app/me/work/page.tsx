@@ -21,6 +21,7 @@ import Link from "next/link";
 import { readIdentity } from "@/lib/identity";
 import { useT } from "@/components/MessagesProvider";
 import { L } from "@/components/inline-link";
+import { getApiBase } from "@/lib/api";
 
 interface BodyOfWork {
   display_name: string;
@@ -131,13 +132,113 @@ function StatTile({
   );
 }
 
+/**
+ * Generic body-of-work for any contributor with graph data.
+ *
+ * V1 hardcoded for the founder cell; V2 computes from the live graph
+ * for any visitor whose contributor_id resolves to a node. The richer
+ * founder data (commit counts, PR list, AI co-authorships) still
+ * comes from the static FOUNDER_BODY_OF_WORK because it requires git
+ * walks the page can't do client-side. For everyone else, we render
+ * what the graph already knows: name, description, and the assets
+ * they have a `contributes-to` edge into.
+ */
+type AnyContributorBody = {
+  name: string;
+  description: string;
+  github_handle?: string;
+  email?: string;
+  domains?: string[];
+  contributed_assets: Array<{
+    id: string;
+    name: string;
+    slug?: string | null;
+    type?: string;
+    asset_type?: string;
+    role?: string;
+    era?: string;
+  }>;
+  contributed_assets_total: number;
+};
+
+async function fetchAnyBodyOfWork(contributorId: string): Promise<AnyContributorBody | null> {
+  if (!contributorId) return null;
+  const api = getApiBase();
+  // Resolve the node — the API forgives id, slug, and bare-name forms.
+  const nodeRes = await fetch(`${api}/api/graph/nodes/${encodeURIComponent(contributorId)}`);
+  if (!nodeRes.ok) return null;
+  const node = await nodeRes.json();
+  if (!node?.id) return null;
+  // Pull contributed-to edges so we can show the body of work the graph
+  // already knows about. Cap at 30 for the page; visitors who want the
+  // full list can walk the contributor's profile page.
+  let contributed_assets: AnyContributorBody["contributed_assets"] = [];
+  let contributed_assets_total = 0;
+  try {
+    const edgesRes = await fetch(
+      `${api}/api/graph/nodes/${encodeURIComponent(node.id)}/edges?direction=outgoing&edge_type=contributes-to&limit=200`,
+    );
+    if (edgesRes.ok) {
+      const data = await edgesRes.json();
+      const edges = Array.isArray(data) ? data : data.items || data.edges || [];
+      contributed_assets_total = edges.length;
+      // Resolve each asset to a name in parallel — the directory-cap
+      // keeps the fan-out bounded.
+      const slice = edges.slice(0, 30);
+      const assets = await Promise.all(
+        slice.map(async (e: { to_id?: string; properties?: Record<string, unknown> }) => {
+          const toId = e.to_id;
+          if (!toId) return null;
+          const ar = await fetch(`${api}/api/graph/nodes/${encodeURIComponent(toId)}`);
+          if (!ar.ok) return null;
+          const a = await ar.json();
+          return {
+            id: a.id,
+            name: a.name || a.id,
+            slug: a.slug,
+            type: a.type,
+            asset_type: a.asset_type,
+            role: typeof e.properties?.role === "string" ? e.properties.role : undefined,
+            era: typeof e.properties?.era === "string" ? e.properties.era : undefined,
+          };
+        }),
+      );
+      contributed_assets = assets.filter(Boolean) as AnyContributorBody["contributed_assets"];
+    }
+  } catch {
+    // best-effort — empty list when the edges endpoint isn't healthy
+  }
+  return {
+    name: node.name || "",
+    description: node.description || "",
+    github_handle: typeof node.github === "string" ? node.github : undefined,
+    email: typeof node.email === "string" ? node.email : undefined,
+    domains: Array.isArray(node.domains) ? node.domains : undefined,
+    contributed_assets,
+    contributed_assets_total,
+  };
+}
+
 export default function BodyOfWorkPage() {
   const t = useT();
   const [identity, setIdentity] = useState<ReturnType<typeof readIdentity> | null>(null);
+  const [genericBody, setGenericBody] = useState<AnyContributorBody | null>(null);
+  const [loadingGeneric, setLoadingGeneric] = useState(false);
 
   useEffect(() => {
     setIdentity(readIdentity());
   }, []);
+
+  useEffect(() => {
+    if (!identity) return;
+    if (isFounder(identity.name, identity.contributorId)) return;
+    if (!identity.contributorId) return;
+    setLoadingGeneric(true);
+    fetchAnyBodyOfWork(identity.contributorId)
+      .then((b) => setGenericBody(b))
+      .catch(() => setGenericBody(null))
+      .finally(() => setLoadingGeneric(false));
+  }, [identity]);
 
   if (!identity) {
     return (
@@ -169,22 +270,123 @@ export default function BodyOfWorkPage() {
       </div>
 
       {!work ? (
-        <section className="rounded-2xl border border-border/30 bg-card/30 p-6 space-y-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            {t("meWork.emptyEyebrow")}
-          </p>
-          <p className="text-sm text-stone-300 leading-relaxed">
-            {renderProse(t("meWork.emptyBody"))}
-          </p>
-          <p className="text-sm">
-            <Link
-              href="https://github.com/seeker71/Coherence-Network"
-              className="text-amber-400 hover:text-amber-300"
-            >
-              {t("meWork.verifyOnGithub")}
-            </Link>
-          </p>
-        </section>
+        loadingGeneric ? (
+          <section className="rounded-2xl border border-border/30 bg-card/30 p-6">
+            <p className="text-sm text-muted-foreground">
+              {t("meWork.loading")}
+            </p>
+          </section>
+        ) : genericBody && genericBody.contributed_assets_total > 0 ? (
+          <>
+            {/* Generic body-of-work — what the graph knows for any
+                contributor. Less rich than the founder view (no commit
+                or PR counts) but sovereign: every cell sees their own
+                trace through the body, not a generic empty-state. */}
+            <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-amber-500">
+                {t("meWork.truthEyebrow")}
+              </p>
+              <p className="text-sm text-stone-200 leading-relaxed">
+                Below is what the network's graph already holds about
+                what you have contributed. The richer view (commit
+                history, PR list, AI co-authorships) is computed for
+                the founder cell from git directly; the generic view
+                surfaces the asset edges every contributor's graph
+                profile carries.
+              </p>
+            </section>
+
+            {genericBody.description && (
+              <section className="rounded-2xl border border-border/30 bg-card/30 p-5 space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {t("meWork.howIShowUpHeading") || "How the body knows you"}
+                </p>
+                <p className="text-sm text-stone-300 leading-relaxed">
+                  {genericBody.description}
+                </p>
+                {genericBody.domains && genericBody.domains.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {genericBody.domains.map((d) => (
+                      <span
+                        key={d}
+                        className="rounded-full border border-border/40 bg-card/40 px-2 py-0.5 text-[10px] text-muted-foreground"
+                      >
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatTile
+                label="Contributed assets"
+                value={genericBody.contributed_assets_total.toLocaleString()}
+                hint="Edges of type `contributes-to` in the graph"
+              />
+              {genericBody.github_handle && (
+                <StatTile
+                  label="GitHub handle"
+                  value={genericBody.github_handle}
+                  hint="As recorded on the contributor node"
+                />
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                Contributed to
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {genericBody.contributed_assets.map((a) => (
+                  <li key={a.id}>
+                    <Link
+                      href={a.slug ? `/people/${a.slug}` : `/people/${encodeURIComponent(a.id)}`}
+                      className="group flex flex-col rounded-xl border border-border/30 bg-card/40 hover:bg-card/65 hover:border-border p-3 transition-colors"
+                    >
+                      <p className="text-sm text-foreground/90 group-hover:text-foreground">
+                        {a.name}
+                      </p>
+                      {(a.role || a.era || a.asset_type || a.type) && (
+                        <p className="text-[10px] text-muted-foreground/85 mt-1">
+                          {[a.role, a.era, a.asset_type || a.type]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {genericBody.contributed_assets_total >
+                genericBody.contributed_assets.length && (
+                <p className="text-xs text-muted-foreground italic">
+                  Showing {genericBody.contributed_assets.length} of{" "}
+                  {genericBody.contributed_assets_total} — the rest are
+                  reachable from the contributor profile.
+                </p>
+              )}
+            </section>
+          </>
+        ) : (
+          <section className="rounded-2xl border border-border/30 bg-card/30 p-6 space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              {t("meWork.emptyEyebrow")}
+            </p>
+            <p className="text-sm text-stone-300 leading-relaxed">
+              {renderProse(t("meWork.emptyBody"))}
+            </p>
+            <p className="text-sm">
+              <Link
+                href="https://github.com/seeker71/Coherence-Network"
+                className="text-amber-400 hover:text-amber-300"
+              >
+                {t("meWork.verifyOnGithub")}
+              </Link>
+            </p>
+          </section>
+        )
       ) : (
         <>
           <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-2">
