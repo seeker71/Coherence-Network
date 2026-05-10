@@ -27,6 +27,11 @@ export type InspiredByNode = {
   image_url?: string | null;
   provider?: string;
   tagline?: string;
+  /** Human-readable slug (e.g. "robert-edward-grant") for routing to
+   *  the internal /people/{slug} page. The API returns it on graph
+   *  nodes; when present the card renders an "open page →" link
+   *  alongside the canonical_url visit. */
+  slug?: string | null;
   /** False on placeholder nodes minted by the resolver; undefined or
    *  true on living contributors. The card surfaces this as a soft
    *  "unclaimed" tag. */
@@ -85,12 +90,12 @@ export function Avatar({ item }: { item: InspiredByItem }) {
       <img
         src={item.node.image_url}
         alt=""
-        className="w-12 h-12 rounded-lg object-cover shrink-0 border border-border/30"
+        className="w-14 h-14 rounded-lg object-cover shrink-0 border border-border/30"
       />
     );
   }
   return (
-    <div className="w-12 h-12 rounded-lg bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] flex items-center justify-center font-medium shrink-0">
+    <div className="w-14 h-14 rounded-lg bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] flex items-center justify-center text-lg font-medium shrink-0">
       {(item.node.name || "·").trim().charAt(0).toUpperCase()}
     </div>
   );
@@ -128,9 +133,10 @@ export type CardProps = {
 export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
   const shared = highlightShared && !!item.shared_with_viewer;
   const presences = Array.isArray(item.node.presences) ? item.node.presences : [];
+  const description = item.node.tagline || item.node.description || "";
   const baseClass = shared
     ? "border-[hsl(var(--chart-2)/0.45)] bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card))_55%,hsl(var(--chart-2)/0.10)_100%)]"
-    : "border-border/30 bg-card/50 hover:bg-card/70";
+    : "border-border/30 bg-card/50 hover:bg-card/70 hover:border-border/60";
   return (
     <li
       className={`group relative rounded-2xl border p-4 transition-colors ${baseClass}`}
@@ -143,10 +149,10 @@ export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
           · shared
         </span>
       )}
-      <div className="flex gap-3 items-start">
+      <div className="flex gap-3.5 items-start">
         <Avatar item={item} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               {TYPE_LABEL[item.node.type] || item.node.type}
             </span>
@@ -159,14 +165,23 @@ export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
               <WeightDots weight={item.weight} />
             </span>
           </div>
-          <p className="font-medium text-foreground truncate">{item.node.name}</p>
-          {item.node.tagline || item.node.description ? (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-              {item.node.tagline || item.node.description}
+          {/* Name — wraps to a second line if needed (long titles like
+              "Peaceful Heart, Warrior Spirit: The True Story…" used to
+              get truncated to a single line). The body knows the full
+              name; the card now shows it. */}
+          <p className="text-base font-medium text-foreground leading-snug">
+            {item.node.name}
+          </p>
+          {description ? (
+            // Description gets four lines of breathing room (was two).
+            // The graph holds 300-450 chars of context for figures like
+            // Goethe and Ramtha; a 2-line clamp turned that into noise.
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-4">
+              {description}
             </p>
           ) : null}
           <PresencesRow presences={presences} />
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2.5 flex-wrap">
             {item.node.canonical_url && (
               <a
                 href={item.node.canonical_url}
@@ -177,9 +192,17 @@ export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
                 visit →
               </a>
             )}
+            {item.node.slug && (
+              <a
+                href={`/people/${item.node.slug}`}
+                className="text-xs text-[hsl(var(--primary))] hover:opacity-80"
+              >
+                open page →
+              </a>
+            )}
             {item.node.claimed === false && (
               <span
-                className="text-[10px] text-muted-foreground/70 italic"
+                className="text-[10px] text-muted-foreground/70 italic ml-auto"
                 title="Placeholder held open for the real person to claim"
               >
                 unclaimed
