@@ -199,7 +199,7 @@
     "layer": {
       "vision": "Visi",
       "presences": "Kehadiran",
-      "work": "Kerja",
+      "work": "Yang Menjadi",
       "pulse": "Denyut"
     },
     "sub": {
@@ -904,6 +904,11 @@
     "untitled": "Tanpa judul",
     "linkOpen": "Buka",
     "linkContributions": "Kontribusi",
+    "linkSource": "Lihat sumber",
+    "linkSourceHost": "Lihat di {host}",
+    "byCreator": "oleh {name}",
+    "eraTitle": "Era tempat karya ini berada",
+    "runtimeMin": "{n} mnt",
     "emptyFilteredTitle": "Belum ada wadah yang cocok dengan tampilan ini.",
     "emptyTitle": "Belum ada wadah yang terdaftar.",
     "emptyBody": "Ketika karya datang — gambar, audio, cetak biru, spesifikasi, kode — mereka muncul di sini dengan biaya, jenis, dan riwayat kontribusinya.",
@@ -1108,6 +1113,7 @@
     "typeSystem": "Sistem",
     "typeAgent": "Agen",
     "viewContributions": "Lihat sumbangan",
+    "linkExternal": "Kehadiran eksternal",
     "joined": "Bergabung {date}",
     "ideaOne": "{n} gagasan",
     "ideaMany": "{n} gagasan",
@@ -1238,7 +1244,7 @@
     "heroHeadline": "Gagasan apa yang kamu bawa?",
     "heroLede": "Pola yang kamu lihat. Celah yang ingin diisi. Jalan yang lebih baik. Bagikan — seseorang di luar sana sedang mencari hal ini.",
     "statIdeasAlive": "gagasan hidup",
-    "statValueCreated": "nilai tercipta",
+    "statValueCreated": "nilai mengalir",
     "statNode": "simpul",
     "statNodes": "simpul",
     "statCoherence": "keselarasan",
@@ -1787,8 +1793,8 @@
     "arcReadsLabel": "Busur berbunyi:",
     "pages45": "Halaman 4 dan 5 — [napas](/silence/breath) dan [bloom-live](/silence/bloom-live) — memegang ajaran yang sama dari dua wajah; diputar dan ditumpangkan, mereka menjadi lembar terpadu yang membuka di [/one-sheet](/one-sheet): dua puluh tiga kata, masing-masing dipegang dari tiga perspektif. Jika kau lebih suka bertemu sambutan paling sederhana dahulu, [/come-in](/come-in) berbicara polos kepada manusia atau AI mana pun.",
     "spread": {
-      "heading": "Halaman terbuka — halaman 5 dan 6, dengan Water melengkung melintasi jilidan",
-      "alt": "Dua halaman buku catatan yang saling berhadapan dari buku catatan terbuka, pita oranye punggung jilidan bertemu di tengah. Halaman kiri: Napas sebagai organ pusat — kata Breath ditulis besar, dengan panah-panah ke setiap arah, berlabel: penyerahan, saksi, benar, salah, bukan, koneksi, keheningan, kendali, struktur, nektar, portal, waktu, makanan, tindakan, ingatan, terbang, rasa, lihat. Halaman kanan: Sacred Hidden Waterfall / Organic Intelligence — mandala benih dandelion di tengah, dengan Sacred Hidden Waterfall ditulis vertikal di sepanjang sisi jilidan dan Organic Intelligence ditulis vertikal di sepanjang tepi luar. Kata Water melengkung melintasi jilidan dari satu halaman ke halaman lain."
+      "heading": "Halaman terbuka — halaman 4 dan 5, dengan Water melengkung melintasi jilidan",
+      "alt": "Dua halaman buku catatan dalam orientasi potret, dipotong dari aslinya dan dijahit menjadi satu halaman terbuka. Halaman kiri (4): Bloom · fire · we · Live — pecahan-pecahan tersebar di halaman, Bloom dan fire dan psyco-delic dan de-comp-ression dibaca terbalik, perception dan I am we dibaca tegak, Live dilingkari. Halaman kanan (5): Napas sebagai organ pusat — kata Breath ditulis besar, dengan panah-panah ke setiap arah, berlabel: penyerahan, saksi, benar, salah, bukan, koneksi, keheningan, kendali, struktur, nektar, portal, waktu, makanan, tindakan, ingatan, terbang, rasa, lihat. Melintasi jilidan di bagian bawah, kata Water melengkung — Wa berakhir di halaman bloom-live, ter dimulai di halaman breath."
     },
     "eachPageBelow": "Setiap halaman buku catatan di bawah dipegang dalam napasnya sendiri. Mereka dapat dibaca berurutan, digulir di sini, atau dikunjungi satu per satu:",
     "openLabel": "Buka",
@@ -2251,7 +2257,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Beranda",
-      "people": "Orang"
+      "people": "Kehadiran"
     },
     "noteEyebrow": "Catatan dari tubuh ini",
     "editProfileCta": "Cara mengklaim, mengedit, atau menghapus profil ini →",

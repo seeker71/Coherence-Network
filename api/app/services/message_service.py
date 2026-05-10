@@ -174,7 +174,19 @@ def get_thread(
     *,
     limit: int = 50,
 ) -> list[dict[str, Any]]:
-    """Get conversation thread between two contributors.
+    """Get conversation thread between two contributors (oldest first)."""
+    items, _total = get_thread_page(contributor_a, contributor_b, limit=limit, offset=0)
+    return items
+
+
+def get_thread_page(
+    contributor_a: str,
+    contributor_b: str,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[dict[str, Any]], int]:
+    """Page of conversation thread between two contributors plus total length.
 
     Returns messages where from=a,to=b OR from=b,to=a, sorted by
     created_at ascending (oldest first for thread view).
@@ -214,7 +226,10 @@ def get_thread(
 
     # Sort ascending (oldest first) for thread view
     thread_messages.sort(key=lambda m: m.get("created_at", ""))
-    return thread_messages[:limit]
+    total = len(thread_messages)
+    start = max(0, int(offset))
+    end = start + max(1, int(limit))
+    return thread_messages[start:end], total
 
 
 def mark_read(message_id: str, contributor_id: str) -> dict[str, Any] | None:

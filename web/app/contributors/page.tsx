@@ -1,15 +1,18 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
-import { useLiveRefresh } from "@/lib/live_refresh";
+import { fetchJsonOrNull } from "@/lib/fetch";
+import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
+import { LensesNav } from "@/components/LensesNav";
 
 const API_URL = getApiBase();
+const PAGE_SIZE = 100;
 
 function formatDate(iso: string, locale: string): string {
   try {
@@ -106,10 +109,7 @@ function ContributorsPageContent() {
   const t = useT();
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<Contributor[]>([]);
   const [flowRows, setFlowRows] = useState<FlowItem[]>([]);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "HUMAN" | "AGENT" | "SYSTEM">("ALL");
 
   const selectedContributorId = useMemo(
@@ -117,35 +117,58 @@ function ContributorsPageContent() {
     [searchParams]
   );
 
-  const loadRows = useCallback(async () => {
-    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
-    setError(null);
-    try {
-      const [contributorsRes, flowRes] = await Promise.all([
-        fetch(`${API_URL}/api/contributors`, { cache: "no-store" }),
-        fetch(`${API_URL}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
-      ]);
-      if (!contributorsRes.ok) {
-        const body = await contributorsRes.text();
-        throw new Error(`contributors HTTP ${contributorsRes.status}: ${body.slice(0, 200)}`);
-      }
-      if (!flowRes.ok) {
-        const body = await flowRes.text();
-        throw new Error(`flow HTTP ${flowRes.status}: ${body.slice(0, 200)}`);
-      }
-      const contributorsJson = await contributorsRes.json();
-      const flowJson = (await flowRes.json()) as FlowResponse;
-      const contributorData = contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : []);
-      setRows(contributorData);
+  const buildContributorsUrl = useCallback(
+    (offset: number, limit: number) =>
+      `${API_URL}/api/contributors?offset=${offset}&limit=${limit}`,
+    [],
+  );
+
+  const contributors = usePagedList<Contributor>({
+    buildUrl: buildContributorsUrl,
+    pageSize: PAGE_SIZE,
+    timeoutMs: 8000,
+    retries: 3,
+  });
+  const rows = contributors.items;
+
+  // Flow is a single inventory snapshot, not a paginated list — fetch once
+  // alongside the first page of contributors.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const flowJson = await fetchJsonOrNull<FlowResponse>(
+        `${API_URL}/api/inventory/flow?runtime_window_seconds=86400`,
+        { cache: "no-store" },
+        20000,
+        3,
+      );
+      if (cancelled) return;
       setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
-      setStatus("ok");
-    } catch (e) {
-      setStatus("error");
-      setError(String(e));
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useLiveRefresh(loadRows);
+  // Sentinel: when the bottom marker enters the viewport, ask for more.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            contributors.loadMore();
+          }
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [contributors.loadMore]);
 
   const counts = useMemo(() => {
     let human = 0;
@@ -231,6 +254,11 @@ function ContributorsPageContent() {
     return sorted;
   }, [rows, typeFilter, selectedContributorId, relationsByContributor]);
 
+  const isFirstLoad = contributors.loading && rows.length === 0;
+  const initialError =
+    contributors.error && rows.length === 0 ? contributors.error : null;
+  const totalKnown = contributors.total;
+
   return (
     <main className="bg-stone-950 min-h-screen">
       {/* Hero — the network of cells finding each other */}
@@ -275,6 +303,9 @@ function ContributorsPageContent() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-10 space-y-6 sm:space-y-8">
         <LedgerNav />
 
+        {/* Lenses — sibling perspectives on the same body. */}
+        <LensesNav current="contributors" />
+
         {/* Stat tiles — the body's count of itself */}
         <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <button
@@ -288,7 +319,9 @@ function ContributorsPageContent() {
             ].join(" ")}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("contributors.statAll")}</p>
-            <p className="mt-2 text-3xl font-light text-stone-100">{counts.total}</p>
+            <p className="mt-2 text-3xl font-light text-stone-100">
+              {totalKnown !== null && totalKnown > counts.total ? totalKnown : counts.total}
+            </p>
             <p className="mt-1 text-xs text-stone-400">{t("contributors.statAllHint")}</p>
           </button>
           <button
@@ -360,27 +393,29 @@ function ContributorsPageContent() {
         )}
 
         <div className="space-y-4">
-          {status === "loading" && (
+          {isFirstLoad && (
             <p className="text-stone-400 text-sm">{t("common.loading")}</p>
           )}
-          {status === "error" && (
+          {initialError && (
             <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">
-              {t("contributors.errorPrefix")} {error}
+              {t("contributors.errorPrefix")} {initialError}
             </div>
           )}
 
-          {status === "ok" && (
+          {!isFirstLoad && !initialError && (
             <>
               <p className="text-sm text-stone-400">
-                {filteredRows.length === rows.length
-                  ? filteredRows.length === 1
+                {totalKnown !== null && rows.length < totalKnown
+                  ? t("contributors.countOfTotal", { n: filteredRows.length, total: totalKnown })
+                  : filteredRows.length === 1
                     ? t("contributors.countOneCell")
-                    : t("contributors.countManyCells", { n: filteredRows.length })
-                  : t("contributors.countOfTotal", { n: filteredRows.length, total: rows.length })}
+                    : filteredRows.length === rows.length
+                      ? t("contributors.countManyCells", { n: filteredRows.length })
+                      : t("contributors.countOfTotal", { n: filteredRows.length, total: rows.length })}
               </p>
 
               <ul className="grid gap-3 sm:grid-cols-2">
-                {filteredRows.slice(0, 100).map((c) => {
+                {filteredRows.map((c) => {
                   const tone = toneFor(c.type);
                   const rel = relationsByContributor.get(c.id);
                   const hasRelations = rel && (
@@ -497,6 +532,18 @@ function ContributorsPageContent() {
                             >
                               {t("contributors.linkPortfolio")}
                             </Link>
+                            {c.canonical_url && (
+                              <a
+                                href={c.canonical_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-stone-400 hover:text-amber-300 underline-offset-4 hover:underline"
+                                title={c.canonical_url}
+                              >
+                                {t("contributors.linkExternal")}
+                                <span aria-hidden="true"> ↗</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -515,6 +562,24 @@ function ContributorsPageContent() {
                     </Link>
                     {t("contributors.emptyBodyAfter")}
                   </p>
+                </div>
+              )}
+
+              {/* Sentinel + loading-more row — only when there's more to fetch */}
+              {!contributors.loadedAll && (
+                <div ref={sentinelRef} className="flex items-center justify-center py-6">
+                  {contributors.loading && (
+                    <p className="text-stone-500 text-sm">{t("common.loading")}</p>
+                  )}
+                  {!contributors.loading && contributors.error && (
+                    <button
+                      type="button"
+                      onClick={contributors.loadMore}
+                      className="text-stone-400 hover:text-amber-300 text-sm underline-offset-4 hover:underline"
+                    >
+                      {t("common.loading")}
+                    </button>
+                  )}
                 </div>
               )}
 

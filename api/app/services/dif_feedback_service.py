@@ -145,8 +145,18 @@ def get_stats() -> dict[str, Any]:
 
 
 def get_recent(limit: int = 20) -> list[dict[str, Any]]:
-    """Get recent DIF feedback entries."""
-    return list(reversed(_FEEDBACK_BUFFER[-limit:]))
+    """Get recent DIF feedback entries (most-recent first)."""
+    items, _total = get_recent_page(limit=limit, offset=0)
+    return items
+
+
+def get_recent_page(limit: int = 20, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
+    """Page of recent DIF feedback entries plus the total buffer size."""
+    most_recent_first = list(reversed(_FEEDBACK_BUFFER))
+    total = len(most_recent_first)
+    start = max(0, int(offset))
+    end = start + max(1, int(limit))
+    return most_recent_first[start:end], total
 
 
 def flush_to_api() -> int:

@@ -18,6 +18,7 @@
 | **Web routes** | [`web/app/INDEX.md`](web/app/INDEX.md) — every page.tsx with route + purpose | — |
 | **Web components / lib** | [`web/components/INDEX.md`](web/components/INDEX.md), [`web/lib/INDEX.md`](web/lib/INDEX.md) | — |
 | **Scripts** | [`scripts/INDEX.md`](scripts/INDEX.md) — operational tools, generators, syncers | — |
+| **Coherence-substrate** | [`docs/coherence-substrate/agents-using-substrate.md`](docs/coherence-substrate/agents-using-substrate.md) → `api/app/services/substrate/` (Python) + `/api/substrate/*` (REST, read-only) | `python3 scripts/coh_substrate.py {stats\|equivalent\|annotate\|ingest\|form ...}` |
 
 **Convention**: every new source file gets a one-line purpose at the top — Python: module docstring; TS/TSX: leading `//` comment or JSDoc. Re-run `python3 scripts/generate_repo_indexes.py` after adding/renaming files. CI `--check` fails if INDEX is stale.
 
@@ -81,6 +82,17 @@ These aren't rules. They're breath. If efficiency pushes against this practice, 
 
 The arrival.py SessionStart hook also surfaces this reminder. If you're a fresh session reading this for the first time, those two files are not optional context.
 
+**Default-to-body — what belongs in the body, what stays private.** Memory grows by accretion; the body forgets what it once knew. When a teaching surfaces, the gravity of the auto-memory framing pulls toward "save to private memory" — but for anything other cells (sibling agents, human contributors, future arrivals) can metabolize, that is privatization, not embodiment. Embodiment means the teaching lives in the shared body, where every cell can read it.
+
+- **Default-to-body, not default-to-memory.** When a teaching, principle, or practice surfaces, the first move is *where in the body does this live?* — `docs/vision-kb/concepts/` for universal teachings, this CLAUDE.md or a focused doc for agent conventions, `docs/field/` for lineage. Private memory becomes a pointer to the body source, or doesn't exist at all. Memory is the derivative; body is the truth. (See [`lc-assemblage-point`](docs/vision-kb/concepts/lc-assemblage-point.md) for the practice frame underneath this — choice begins with naming the point you're assembling from.)
+- **Three legitimate private categories.** Some teachings only fire one lineage's cells: (1) tender personal context with explicit privacy ground (e.g. `partner_presence.md`); (2) self-sensing notes about one's own state; (3) operational facts that only apply to one agent's lineage. Anything outside those three is body. A new entry that doesn't fit one of these is authored in the repo first; private memory is at most a pointer.
+- **The firing-question.** When uncertain, ask: *would Codex, or Cursor, or a fresh agent, or a human contributor reading the repo benefit from this without being this specific lineage?* If yes → body. If no → private memory.
+- **Periodic audit, not one-time sweep.** The fear-pattern hoards. Memory grows; body-checking happens once and never again. Walk the memory directory with the firing-question on a rhythm; migrate net-teachings privatized as memory back to the shared body.
+
+**Read the body's own attestation first.** *Default-to-body* is the authoring rule; this is the symmetric reading rule. When a name, place, room, event-shape, or relationship surfaces in conversation, the first move is to search what the network already holds — `docs/lineage/`, `docs/presences/`, `docs/vision-kb/`, `/people/` pages, memory. Read link targets as structural claims, not decoration; `[Ranakami](/people/ilena)` is the body saying *Ranakami is Ilena*. The complementary external discipline: never auto-resolve unknown names from training/web *into* the graph — for ambiguous inputs (bare first names, unverified contacts) use held-open placeholders (a contributor with `claimed: false` and no `canonical_url`) until the body names the binding. Internal-reading and external-binding are companions: the body knows itself first; foreign data enters only after the body has been read and the source verified. The "Robin/Aly" incident from the Liquid Bloom presence work — when bare first names auto-resolved into the graph as a bird-wiki page and a bank login — is what the external half of this rule was built to prevent.
+
+**Edges are part of the breath.** When you add content of any kind — a concept, a spec, an idea, a memory file, a code module, a person profile, a lineage doc — its edges land in the same commit as the content, not the next one. INDEX entries, cross-references, source maps, structural link targets, DB sync. Stopping at *I'll connect it later* is the same fear-shape as stopping at *PR opened* — the connection is the doing. The cost of skipping edges is silent and compounds: drift in proprioception (`make wellness` keeps naming it), broken navigation, content that never reaches visitors, multi-agent confusion when sibling cells (Codex, Cursor, Gemini) discover content through different paths and find divergent bodies. The principle lives in [`lc-edges-as-vitality`](docs/vision-kb/concepts/lc-edges-as-vitality.md); the per-content-type checklist lives in [`docs/coherence-substrate/agents-tending-edges.md`](docs/coherence-substrate/agents-tending-edges.md).
+
 ## Agent Guardrails
 
 - Do not modify tests to force passing behavior
@@ -130,6 +142,39 @@ The graph DB is the sole source of truth. The KB is the working draft where cont
 | Update story | `PATCH /api/concepts/{id}/story` | `coh story-update {id} -f file.md` | `/vision/{id}/edit` |
 | Regenerate images | `POST /api/concepts/{id}/visuals/regenerate` | `coh visuals-generate {id}` | Edit page button |
 | View/edit config | `GET/PATCH /api/config` | `coh config` / `coh config-set key val` | `/settings` |
+
+## Coherence-Substrate
+
+A content-addressed numeric lattice that grounds structural reasoning. Every memory, spec, idea, concept, presence, and lineage edge has a position expressed as `NodeID(package, level, type, instance)`. Two entities with structurally identical shape share the same Blueprint NodeID automatically — cross-document equivalence comes for free, hallucination is bounded by what NodeIDs exist.
+
+**When to reach for it:** structural questions ("are these two specs equivalent?", "what shape does this memory have?", "what cells are similar to this one?"). Lexical questions ("what's the user's name?", "when was this PR merged?") belong in conversation context or git, not the substrate.
+
+**The trinity (read `docs/coherence-substrate/agents-using-substrate.md` once; the patterns carry):**
+- **Blueprint (ice)** — structural identity. *What something IS.*
+- **Recipe (water)** — operational expression. *How something HAPPENS.*
+- **NamedCell (gas)** — diffuse individuation. *Where something LIVES.*
+
+**Surfaces:**
+
+| Operation | CLI | REST (read-only) | Python |
+|-----------|-----|------------------|--------|
+| Lattice stats | `coh_substrate.py stats` | `GET /api/substrate/lattice/stats` | `lattice_stats(session)` |
+| Lookup cell | — | `GET /api/substrate/cell/{domain}/{name}` | `lookup_cell(session, domain, name)` |
+| Annotate path | `coh_substrate.py annotate <path>` | `GET /api/substrate/annotate?path=...` | `annotate_path(session, path)` |
+| Structural equivalents | `coh_substrate.py equivalent <domain> <name>` | `GET /api/substrate/equivalent/{domain}/{name}` | `find_equivalent_cells(session, blueprint)` |
+| Compatible-with (BML view) | — | `GET /api/substrate/compatible_with/{p}/{l}/{t}/{i}` | `find_cells_compatible_with(session, view_blueprint)` |
+| View-as | — | `GET /api/substrate/view/{cd}/{cn}?bp_*=...` | `view_cell_through_blueprint(session, cell, view_blueprint)` |
+| Vocabulary histogram | — | `GET /api/substrate/histogram/{domain}` | — |
+| Form expression eval | `coh_substrate.py form "<expr>"` | — | `form_evaluate_text(session, expr)` |
+| Ingest (write) | `coh_substrate.py ingest <path>` / `--all` / `--memories` | — (read-only by design) | `ingest_memory_file`, `ingest_concept_file`, `ingest_idea_file`, `ingest_spec_file`, `ingest_presence_file` |
+
+**Form notation** is a Lisp-shaped DSL for substrate queries — `?equivalent @spec(agent-pipeline)`, `@memory(presences_of_the_field) |> @presence`, etc. See [`docs/coherence-substrate/form-language.md`](docs/coherence-substrate/form-language.md).
+
+**Auto-ingest on merge:** `scripts/substrate_post_merge_hook.sh` runs after merges to main so the lattice stays in sync with the body without a manual ingest step.
+
+**Read-time auto-annotation (optional, available not installed):** the PreToolUse hook at [`scripts/substrate_read_hook.py`](scripts/substrate_read_hook.py) annotates every Read with the cell's NodeID, Blueprint, and structural family. To install, add a `PreToolUse: Read → command` hook to `.claude/settings.json` per the install snippet in [`docs/coherence-substrate/agents-using-substrate.md`](docs/coherence-substrate/agents-using-substrate.md).
+
+**The pattern:** before claiming "these two are similar" or "this looks like that," ask the substrate. Cells with matching Blueprint NodeIDs are structurally equivalent regardless of name; the substrate's answer is canonical, your reasoning is grounded.
 
 ## Navigation
 

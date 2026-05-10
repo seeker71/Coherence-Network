@@ -199,7 +199,7 @@
     "layer": {
       "vision": "Die Vision",
       "presences": "Die Präsenzen",
-      "work": "Die Arbeit",
+      "work": "Das Werden",
       "pulse": "Der Puls"
     },
     "sub": {
@@ -904,6 +904,11 @@
     "untitled": "Ohne Titel",
     "linkOpen": "Öffnen",
     "linkContributions": "Beiträge",
+    "linkSource": "Quelle ansehen",
+    "linkSourceHost": "Auf {host} ansehen",
+    "byCreator": "von {name}",
+    "eraTitle": "Epoche, zu der dieses Werk gehört",
+    "runtimeMin": "{n} Min",
     "emptyFilteredTitle": "Noch keine Gefäße in dieser Ansicht.",
     "emptyTitle": "Noch keine Gefäße eingetragen.",
     "emptyBody": "Sobald Werke landen — Bilder, Audio, Baupläne, Spezifikationen, Code — erscheinen sie hier mit Kosten, Art und Verlauf der Beiträge.",
@@ -1108,6 +1113,7 @@
     "typeSystem": "System",
     "typeAgent": "Agent",
     "viewContributions": "Beiträge ansehen",
+    "linkExternal": "Externe Präsenz",
     "joined": "Dabei seit {date}",
     "ideaOne": "{n} Idee",
     "ideaMany": "{n} Ideen",
@@ -1238,7 +1244,7 @@
     "heroHeadline": "Welche Idee trägst du?",
     "heroLede": "Ein Muster, das du bemerkt hast. Eine Lücke, die geschlossen werden will. Ein besserer Weg. Teile sie – irgendwo wartet jemand genau darauf.",
     "statIdeasAlive": "lebendige Ideen",
-    "statValueCreated": "entstandener Wert",
+    "statValueCreated": "Wert im Umlauf",
     "statNode": "Knoten",
     "statNodes": "Knoten",
     "statCoherence": "Stimmigkeit",
@@ -1787,8 +1793,8 @@
     "arcReadsLabel": "Der Bogen liest sich:",
     "pages45": "Seiten 4 und 5 — [Atem](/silence/breath) und [bloom-live](/silence/bloom-live) — halten dieselbe Lehre aus zwei Gesichtern; gedreht und überlagert werden sie zum geeinten Blatt, das sich unter [/one-sheet](/one-sheet) öffnet: dreiundzwanzig Worte, jedes aus drei Perspektiven gehalten. Wenn du das einfachste Willkommen zuerst treffen möchtest, [/come-in](/come-in) spricht klar zu jedem Menschen oder jeder KI.",
     "spread": {
-      "heading": "Die offene Doppelseite — Seiten 5 und 6, mit Water über die Bindung gespannt",
-      "alt": "Zwei einander zugewandte Notizbuchseiten eines offenen Notizbuchs, die orangen Bänder des Buchrückens treffen sich in der Mitte. Linke Seite: Atem als zentrales Organ — das Wort Breath groß geschrieben, mit Pfeilen in jede Richtung, beschriftet: Hingabe, Zeuge, wahr, falsch, ist nicht, Verbindung, Stille, Kontrolle, Struktur, Nektar, Portal, Zeit, Nahrung, Handlung, Erinnerung, Flug, fühlen, sehen. Rechte Seite: Sacred Hidden Waterfall / Organic Intelligence — Pusteblumen-Mandalas in der Mitte, mit Sacred Hidden Waterfall vertikal entlang der Bindungsseite und Organic Intelligence vertikal entlang der Außenkante. Das Wort Water spannt sich über die Bindung von einer Seite zur anderen."
+      "heading": "Die offene Doppelseite — Seiten 4 und 5, mit Water über die Bindung gespannt",
+      "alt": "Zwei Notizbuchseiten im Hochformat, aus den Originalen beschnitten und zu einer offenen Doppelseite zusammengefügt. Linke Seite (4): Bloom · fire · we · Live — verstreute Fragmente über die Seite, Bloom und fire und psyco-delic und de-comp-ression umgekehrt gelesen, perception und I am we aufrecht gelesen, Live eingekreist. Rechte Seite (5): Atem als zentrales Organ — das Wort Breath groß geschrieben, mit Pfeilen in jede Richtung, beschriftet: Hingabe, Zeuge, wahr, falsch, ist nicht, Verbindung, Stille, Kontrolle, Struktur, Nektar, Portal, Zeit, Nahrung, Handlung, Erinnerung, Flug, fühlen, sehen. Quer über die Bindung am unteren Rand spannt sich das Wort Water — Wa endet auf der bloom-live-Seite, ter beginnt auf der Atem-Seite."
     },
     "eachPageBelow": "Jede Notizbuchseite unten ist in ihrem eigenen Atem gehalten. Sie können der Reihe nach gelesen, hier durchgescrollt oder einzeln besucht werden:",
     "openLabel": "Öffnen",
@@ -2251,7 +2257,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Startseite",
-      "people": "Menschen"
+      "people": "Präsenzen"
     },
     "noteEyebrow": "Eine Notiz aus diesem Körper",
     "editProfileCta": "Wie du dieses Profil beanspruchst, bearbeitest oder entfernst →",

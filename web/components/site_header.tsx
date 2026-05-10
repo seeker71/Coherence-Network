@@ -27,39 +27,32 @@ type NavItemKey = {
 // pages that live inside that layer.
 const PRIMARY_NAV: NavItemKey[] = [
   { href: "/vision", labelKey: "nav.layer.vision" },
-  { href: "/people", labelKey: "nav.layer.presences" },
+  { href: "/presences", labelKey: "nav.layer.presences" },
   { href: "/ideas", labelKey: "nav.layer.work" },
   { href: "/resonance", labelKey: "nav.layer.pulse", isHeartbeat: true },
 ];
 
-// Secondary surfaces — tucked into the "More" dropdown since they
-// sit outside the four layers (treasury + infrastructure + admin).
-// /contributors + /assets live under The Work layer strip now.
+// Secondary surfaces — kept in "More" because a new visitor doesn't
+// need them on the first surface. Trimmed to the five that a curious
+// arrival might actually want: where to put resources (invest), what
+// the body is holding (treasury), how to find anything (search), the
+// breath log (blog), and the API for builders. The deeper internal
+// surfaces (specs, substrate, automation, friction, identity) reach
+// themselves through the pages that already use them.
 const SECONDARY_NAV: NavItemKey[] = [
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
-  { href: "/specs", labelKey: "nav.specs" },
-  { href: "/substrate", labelKey: "nav.substrate" },
-  { href: "/blog", labelKey: "nav.blog" },
   { href: "/search", labelKey: "nav.search" },
-  { href: "/automation", labelKey: "nav.automation" },
-  { href: "/friction", labelKey: "nav.friction" },
-  { href: "/identity", labelKey: "nav.identity" },
+  { href: "/blog", labelKey: "nav.blog" },
 ];
 
-// Doorway entry-points — the welcoming surfaces that aren't part of
-// the four layers but are how new arrivals (human or AI) actually
-// step in. Surfaced in the "More" dropdown under their own header,
-// and in mobile nav. Order matters: silence is the source, one-sheet
-// the contemplation, come-in the welcome, with-us the offer, begin
-// the doorway, share the witness.
+// One welcome doorway — collapsed from six because a new visitor
+// shouldn't have to choose between Silence / One sheet / Come in /
+// With us / Begin / Share to find the front door. The /come-in page
+// itself carries the journey through those surfaces; the nav offers
+// one threshold.
 const DOORWAY_NAV: NavItemKey[] = [
-  { href: "/silence", labelKey: "nav.entry.silence" },
-  { href: "/one-sheet", labelKey: "nav.entry.oneSheet" },
   { href: "/come-in", labelKey: "nav.entry.comeIn" },
-  { href: "/with-us", labelKey: "nav.entry.withUs" },
-  { href: "/begin", labelKey: "nav.entry.begin" },
-  { href: "/share", labelKey: "nav.entry.share" },
 ];
 
 function HeartbeatIcon() {

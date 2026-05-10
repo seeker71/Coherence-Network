@@ -19,6 +19,9 @@ import { Panel } from "@/components/Panel";
 import { createTranslator } from "@/lib/i18n";
 import type { LocaleCode } from "@/lib/locales";
 import { TemplateInfluenceWeb } from "./TemplateInfluenceWeb";
+import { LineageStrip } from "./LineageStrip";
+import { AttentionPresence } from "./AttentionPresence";
+import { InfluenceLineageStrip } from "./InfluenceLineageStrip";
 
 export type PersonProfileFact = {
   label: ReactNode;
@@ -38,6 +41,16 @@ export type PersonProfileArticle =
       heading?: ReactNode;
       body: ReactNode;
     };
+
+export type PersonProfileLineageDoorway = {
+  /** Path to the lineage walk for this person (e.g. /people/urs/lineage). */
+  href: string;
+  /** Short, action-shaped label — e.g. "Walk the 42-year lineage". */
+  label: ReactNode;
+  /** One-line proportional summary — e.g. "13 works · 11 substrates · 1984–now".
+   *  Lets the visitor sense the size before clicking through. */
+  summary?: ReactNode;
+};
 
 export type PersonProfileContent = {
   // Full Next.js Metadata so each page can supply openGraph, twitter,
@@ -67,6 +80,14 @@ export type PersonProfileContent = {
     eyebrowClass?: string;
     name: ReactNode;
     welcome: ReactNode;
+    /**
+     * Prominent doorway shown high in the hero — directly under the
+     * welcome paragraph, above facts. Use for the lineage walk so a
+     * visitor sees the shape and size of what's there before scrolling
+     * past several other rendering elements to find it. The whole
+     * affordance is a Link to `lineageDoorway.href`.
+     */
+    lineageDoorway?: PersonProfileLineageDoorway;
   };
   facts?: PersonProfileFact[];
   noteFromBody?: {
@@ -152,6 +173,29 @@ export function PersonProfileTemplate({
           <div className="text-lg md:text-xl text-foreground/85 leading-relaxed max-w-2xl">
             {hero.welcome}
           </div>
+          {hero.lineageDoorway && (
+            <Link
+              href={hero.lineageDoorway.href}
+              className="group mt-6 inline-flex items-center gap-3 rounded-lg border border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/5 hover:bg-[hsl(var(--primary))]/10 hover:border-[hsl(var(--primary))]/70 px-4 py-3 transition-colors max-w-2xl w-full sm:w-auto"
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm md:text-base text-[hsl(var(--primary))] font-medium group-hover:underline">
+                  {hero.lineageDoorway.label}
+                </span>
+                {hero.lineageDoorway.summary && (
+                  <span className="block text-xs text-foreground/70 mt-0.5">
+                    {hero.lineageDoorway.summary}
+                  </span>
+                )}
+              </span>
+              <span
+                aria-hidden="true"
+                className="text-[hsl(var(--primary))] text-lg group-hover:translate-x-0.5 transition-transform shrink-0"
+              >
+                →
+              </span>
+            </Link>
+          )}
           {content.facts && content.facts.length > 0 && (
             <dl className="mt-7 text-sm text-foreground/85 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 max-w-2xl">
               {content.facts.map((fact, i) => (
@@ -163,6 +207,30 @@ export function PersonProfileTemplate({
       </section>
 
       <div className="max-w-3xl mx-auto px-6 py-12">
+        {/* Lineage strip — renders only when the current slug is one
+            of the 13 chronological works. Stitches each work page
+            into the lineage so the visitor walks the body's own time
+            instead of arriving at a dead-end leaf. */}
+        <LineageStrip slug={graphSlug} />
+
+        {/* Attention presence — surfaces the witness-trace's record of
+            visits to this page. The data is captured on every read; this
+            returns it to the visitor so each page is visibly held by
+            other cells, not silent. */}
+        {graphSlug && (
+          <div className="mb-6">
+            <AttentionPresence assetId={graphSlug} />
+          </div>
+        )}
+
+        {/* Influence lineage — surfaces the cross-layer edges from
+            /api/graph/nodes/{slug}/edges so a visitor lands on a work
+            and immediately sees what shaped it, what grew out of it,
+            and which cells contributed. The graph holds these edges;
+            this strip puts them one click from the top of the page
+            instead of buried in BodyOfEvidence below. */}
+        <InfluenceLineageStrip slug={graphSlug} />
+
         {/* Source-language disclosure — when the visitor's locale is
             not English but the content module bound to this page is
             English (no de.tsx / es.tsx / id.tsx sibling for this slug

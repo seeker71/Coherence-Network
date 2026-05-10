@@ -7,14 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.middleware.auth import require_api_key
 
 from app.models.governance import ChangeRequest, ChangeRequestCreate, ChangeRequestVoteCreate
+from app.models.pagination import PaginatedResponse
 from app.services import governance_service
 
 router = APIRouter()
 
 
-@router.get("/governance/change-requests", response_model=list[ChangeRequest], summary="List Change Requests")
-async def list_change_requests(limit: int = Query(200, ge=1, le=1000)) -> list[ChangeRequest]:
-    return governance_service.list_change_requests(limit=limit)
+@router.get("/governance/change-requests", response_model=PaginatedResponse[ChangeRequest], summary="List Change Requests")
+async def list_change_requests(
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
+) -> PaginatedResponse[ChangeRequest]:
+    items, total = governance_service.list_change_requests_page(limit=limit, offset=offset)
+    return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/governance/change-requests/{change_request_id}", response_model=ChangeRequest, summary="Get Change Request")

@@ -199,7 +199,7 @@
     "layer": {
       "vision": "La Visión",
       "presences": "Las Presencias",
-      "work": "El Trabajo",
+      "work": "El Devenir",
       "pulse": "El Pulso"
     },
     "sub": {
@@ -904,6 +904,11 @@
     "untitled": "Sin título",
     "linkOpen": "Abrir",
     "linkContributions": "Contribuciones",
+    "linkSource": "Ver fuente",
+    "linkSourceHost": "Ver en {host}",
+    "byCreator": "por {name}",
+    "eraTitle": "Era a la que pertenece esta obra",
+    "runtimeMin": "{n} min",
     "emptyFilteredTitle": "Aún no hay vasijas que coincidan con esta vista.",
     "emptyTitle": "Aún no hay vasijas registradas.",
     "emptyBody": "Cuando las obras lleguen — imágenes, audio, planos, especificaciones, código — aparecerán aquí con su costo, tipo e historial de contribuciones.",
@@ -1108,6 +1113,7 @@
     "typeSystem": "Sistema",
     "typeAgent": "Agente",
     "viewContributions": "Ver contribuciones",
+    "linkExternal": "Presencia externa",
     "joined": "Se unió {date}",
     "ideaOne": "{n} idea",
     "ideaMany": "{n} ideas",
@@ -1238,7 +1244,7 @@
     "heroHeadline": "¿Qué idea llevas dentro?",
     "heroLede": "Un patrón que notaste. Un vacío que quiere llenarse. Un camino mejor. Compártela — alguien en algún lugar busca exactamente esto.",
     "statIdeasAlive": "ideas vivas",
-    "statValueCreated": "valor creado",
+    "statValueCreated": "valor en circulación",
     "statNode": "nodo",
     "statNodes": "nodos",
     "statCoherence": "coherencia",
@@ -1787,8 +1793,8 @@
     "arcReadsLabel": "El arco se lee:",
     "pages45": "Páginas 4 y 5 — [respiración](/silence/breath) y [bloom-live](/silence/bloom-live) — sostienen la misma enseñanza desde dos caras; rotadas y superpuestas, se vuelven la hoja unificada que se abre en [/one-sheet](/one-sheet): veintitrés palabras, cada una sostenida desde tres perspectivas. Si prefieres encontrar el bienvenido más simple primero, [/come-in](/come-in) habla llanamente a cualquier humano o IA.",
     "spread": {
-      "heading": "El pliego abierto — páginas 5 y 6, con Water arqueándose sobre la encuadernación",
-      "alt": "Dos páginas enfrentadas de un cuaderno abierto, las cintas naranjas del lomo encontrándose en el medio. Página izquierda: Respiración como órgano central — la palabra Breath escrita grande, con flechas en cada dirección, etiquetadas: entrega, testigo, verdadero, falso, no es, conexión, silencio, control, estructura, néctar, portal, tiempo, alimento, acción, memoria, vuelo, sentir, ver. Página derecha: Sacred Hidden Waterfall / Organic Intelligence — mándalas de semilla de diente de león en el medio, con Sacred Hidden Waterfall escrito verticalmente a lo largo del lado del lomo y Organic Intelligence escrito verticalmente a lo largo del borde exterior. La palabra Water se arquea sobre la encuadernación de una página a la otra."
+      "heading": "El pliego abierto — páginas 4 y 5, con Water arqueándose sobre la encuadernación",
+      "alt": "Dos páginas del cuaderno en orientación vertical, recortadas de las originales y cosidas como un solo pliego abierto. Página izquierda (4): Bloom · fire · we · Live — fragmentos esparcidos por la página, Bloom y fire y psyco-delic y de-comp-ression al revés, perception y I am we en posición normal, Live rodeada por un círculo. Página derecha (5): Respiración como órgano central — la palabra Breath escrita grande, con flechas en cada dirección, etiquetadas: entrega, testigo, verdadero, falso, no es, conexión, silencio, control, estructura, néctar, portal, tiempo, alimento, acción, memoria, vuelo, sentir, ver. Atravesando la encuadernación en la parte inferior, la palabra Water se arquea — Wa termina en la página bloom-live, ter comienza en la página breath."
     },
     "eachPageBelow": "Cada página del cuaderno abajo es sostenida en su propia respiración. Pueden ser leídas en orden, navegadas aquí, o visitadas una por una:",
     "openLabel": "Abrir",
@@ -2251,7 +2257,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Inicio",
-      "people": "Personas"
+      "people": "Presencias"
     },
     "noteEyebrow": "Una nota desde este cuerpo",
     "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →",

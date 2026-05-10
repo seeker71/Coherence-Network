@@ -132,12 +132,17 @@ export async function loadRuntimeSlice(
     warnings.push(`runtime summary (${seconds}s)`);
   }
 
-  const fallbackEvents = await fetchJsonOrNull<RuntimeEvent[]>(
+  const fallbackEvents = await fetchJsonOrNull<RuntimeEvent[] | { items?: RuntimeEvent[] }>(
     `${apiBase}/api/runtime/events?limit=${Math.max(150, pageSize * 6)}`,
     RUNTIME_EVENTS_FALLBACK_TIMEOUT_MS,
   );
-  if (fallbackEvents && Array.isArray(fallbackEvents)) {
-    const fallback = summarizeRuntimeEvents(fallbackEvents, pageSize, offset);
+  const fallbackList = Array.isArray(fallbackEvents)
+    ? fallbackEvents
+    : Array.isArray(fallbackEvents?.items)
+      ? fallbackEvents.items
+      : null;
+  if (fallbackList) {
+    const fallback = summarizeRuntimeEvents(fallbackList, pageSize, offset);
     warnings.push("runtime summary fallback to recent runtime events");
     return { runtime: fallback.runtime, hasMore: fallback.hasMore, warnings };
   }

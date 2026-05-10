@@ -345,6 +345,27 @@ def main(argv: list[str] | None = None) -> int:
         help="How many entries per section",
     )
 
+    p_chain = sub.add_parser(
+        "chain",
+        help="Sense the idea→spec→code→test chain: where each idea reaches and where it breaks",
+    )
+    p_chain.add_argument(
+        "--top",
+        type=int,
+        default=12,
+        help="How many entries per section (default 12)",
+    )
+    p_chain.add_argument(
+        "--idea",
+        default=None,
+        help="Restrict to a single idea_id (drilldown view)",
+    )
+    p_chain.add_argument(
+        "--spec",
+        default=None,
+        help="Restrict to a single spec slug (drilldown view)",
+    )
+
     p_check = sub.add_parser(
         "shape-check",
         help="For a draft .md file: report cells with the same structural shape",
@@ -385,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_sense(args)
     if args.cmd == "sense-repo":
         return cmd_sense_repo(args)
+    if args.cmd == "chain":
+        return cmd_chain(args)
     if args.cmd == "shape-check":
         return cmd_shape_check(args)
     if args.cmd == "ingest-paths":
@@ -959,6 +982,298 @@ def cmd_sense_repo(args: argparse.Namespace) -> int:  # noqa: C901 — single-pa
     print("Lens caveat: reference graph is path-string scanning, not import")
     print("resolution. False-orphans are recoverable; surfaced dead tissue is")
     print("the win. Read with the body.")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# chain — sense the idea → spec → code → test artery
+#
+# This is the body's main circulatory question: every idea should land
+# in code that runs and is tested. Today the body has separate sensors
+# for each segment (specs/INDEX drift, missing source paths). This
+# walks the chain end-to-end and surfaces where it breaks.
+#
+# v1: walks specs/ and ideas/ filesystem (frontmatter), checks file
+# existence + test-file resolution. Witness segment (correlation with
+# live deploys) is a future extension.
+# ---------------------------------------------------------------------------
+
+
+def _parse_spec_frontmatter(path: Path) -> "dict | None":
+    """Lift the YAML frontmatter from a markdown file. Returns None on
+    parse failure or no frontmatter."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    if not text.startswith("---"):
+        return None
+    end = text.find("\n---", 3)
+    if end < 0:
+        return None
+    fm_text = text[3:end].strip()
+    try:
+        import yaml  # type: ignore
+        return yaml.safe_load(fm_text) or {}
+    except Exception:
+        # Fallback to a tolerant key-value parser
+        out: dict = {}
+        for line in fm_text.splitlines():
+            if ":" in line and not line.startswith(" ") and not line.startswith("-"):
+                k, v = line.split(":", 1)
+                out[k.strip()] = v.strip()
+        return out
+
+
+def _extract_test_paths(test_command) -> list[str]:
+    """Extract pytest test-file paths from a spec.test command. Accepts
+    a string or a list of strings (some specs use YAML list form)."""
+    if not test_command:
+        return []
+    if isinstance(test_command, list):
+        text = " \n ".join(str(x) for x in test_command)
+    else:
+        text = str(test_command)
+    import re
+    paths = set()
+    for m in re.finditer(r"\b(?:api/)?tests/[\w/]+\.py", text):
+        path = m.group(0)
+        if not path.startswith("api/"):
+            path = f"api/{path}"
+        paths.add(path)
+    return sorted(paths)
+
+
+def _spec_source_paths(fm: dict) -> list[str]:
+    """source: in spec frontmatter is a list of {file, symbols}. Return
+    just the file paths."""
+    src = fm.get("source", [])
+    if not isinstance(src, list):
+        return []
+    out = []
+    for entry in src:
+        if isinstance(entry, dict) and "file" in entry:
+            out.append(str(entry["file"]))
+        elif isinstance(entry, str):
+            out.append(entry)
+    return out
+
+
+def cmd_chain(args: argparse.Namespace) -> int:  # noqa: C901 — chain walk
+    """Walk the idea→spec→code→test artery for every spec; surface where
+    each chain breaks."""
+    from collections import defaultdict
+
+    repo_root = REPO_ROOT
+    spec_dir = repo_root / "specs"
+    idea_dir = repo_root / "ideas"
+    skip_specs = {"INDEX.md", "TEMPLATE.md", "MANIFEST.md"}
+    skip_ideas = {"INDEX.md", "TEMPLATE.md"}
+
+    spec_files = sorted(p for p in spec_dir.glob("*.md") if p.name not in skip_specs)
+    idea_files = sorted(p for p in idea_dir.glob("*.md") if p.name not in skip_ideas)
+
+    # ---- Spec rows: parse each spec, walk its references --------------------
+    spec_rows: list[dict] = []
+    for sp in spec_files:
+        fm = _parse_spec_frontmatter(sp) or {}
+        slug = sp.stem
+        idea_id = fm.get("idea_id") or fm.get("idea")
+        sources = _spec_source_paths(fm)
+        test_cmd = fm.get("test", "") or ""
+        test_paths = _extract_test_paths(test_cmd)
+
+        sources_present = []
+        sources_missing = []
+        for s in sources:
+            full = repo_root / s
+            (sources_present if full.exists() else sources_missing).append(s)
+
+        tests_present = []
+        tests_missing = []
+        for t in test_paths:
+            full = repo_root / t
+            (tests_present if full.exists() else tests_missing).append(t)
+
+        spec_rows.append({
+            "slug": slug,
+            "path": str(sp.relative_to(repo_root)),
+            "idea_id": idea_id,
+            "sources": sources,
+            "sources_present": sources_present,
+            "sources_missing": sources_missing,
+            "tests_declared": test_paths,
+            "tests_present": tests_present,
+            "tests_missing": tests_missing,
+            "test_cmd": test_cmd,
+            "status": fm.get("status", "?"),
+        })
+
+    # Index by idea
+    specs_by_idea: dict[str, list[dict]] = defaultdict(list)
+    for r in spec_rows:
+        if r["idea_id"]:
+            specs_by_idea[r["idea_id"]].append(r)
+
+    # ---- Idea rows: which ideas have specs? --------------------------------
+    idea_rows: list[dict] = []
+    for ip in idea_files:
+        fm = _parse_spec_frontmatter(ip) or {}
+        slug = ip.stem
+        # Ideas reference specs by listing names; index via specs_by_idea
+        linked = specs_by_idea.get(slug, [])
+        idea_rows.append({
+            "slug": slug,
+            "path": str(ip.relative_to(repo_root)),
+            "spec_count": len(linked),
+            "specs": [s["slug"] for s in linked],
+        })
+
+    # Drilldown modes
+    if args.spec:
+        target = next((r for r in spec_rows if r["slug"] == args.spec), None)
+        if not target:
+            print(f"No spec found for slug: {args.spec}", file=sys.stderr)
+            return 1
+        if args.json:
+            print(json.dumps(target, indent=2))
+            return 0
+        print(f"Spec: {target['slug']}  status={target['status']}")
+        print(f"  idea_id: {target['idea_id'] or '(none — orphan spec)'}")
+        print(f"  sources ({len(target['sources'])}):")
+        for s in target["sources_present"]:
+            print(f"    ✓ {s}")
+        for s in target["sources_missing"]:
+            print(f"    ✗ {s}  (missing on disk)")
+        print(f"  test cmd: {target['test_cmd'] or '(none)'}")
+        for t in target["tests_present"]:
+            print(f"    ✓ {t}")
+        for t in target["tests_missing"]:
+            print(f"    ✗ {t}  (missing on disk)")
+        return 0
+
+    if args.idea:
+        target = next((r for r in idea_rows if r["slug"] == args.idea), None)
+        if not target:
+            print(f"No idea found for slug: {args.idea}", file=sys.stderr)
+            return 1
+        if args.json:
+            print(json.dumps(target, indent=2))
+            return 0
+        print(f"Idea: {target['slug']}")
+        if not target["specs"]:
+            print("  no specs link to this idea (broken at spec segment)")
+        else:
+            print(f"  {target['spec_count']} specs:")
+            for sname in target["specs"]:
+                row = next(r for r in spec_rows if r["slug"] == sname)
+                src_ok = len(row["sources_present"])
+                src_miss = len(row["sources_missing"])
+                test_ok = len(row["tests_present"])
+                test_miss = len(row["tests_missing"])
+                src_mark = "✓" if src_miss == 0 and row["sources"] else ("·" if not row["sources"] else "✗")
+                test_mark = "✓" if test_miss == 0 and row["tests_declared"] else ("·" if not row["tests_declared"] else "✗")
+                print(f"    {src_mark}{test_mark}  {sname}  source={src_ok}/{src_ok+src_miss}  test={test_ok}/{test_ok+test_miss}")
+        return 0
+
+    # ---- Aggregate signatures ---------------------------------------------
+    orphan_specs = [r for r in spec_rows if not r["idea_id"]]
+    specs_no_source = [r for r in spec_rows if not r["sources"]]
+    specs_with_missing_source = [r for r in spec_rows if r["sources_missing"]]
+    specs_no_test = [r for r in spec_rows if not r["tests_declared"]]
+    specs_with_missing_test = [r for r in spec_rows if r["tests_missing"]]
+    specs_full_chain = [
+        r for r in spec_rows
+        if r["idea_id"]
+        and r["sources"] and not r["sources_missing"]
+        and r["tests_declared"] and not r["tests_missing"]
+    ]
+    ideas_no_spec = [r for r in idea_rows if r["spec_count"] == 0]
+
+    if args.json:
+        out = {
+            "totals": {
+                "ideas": len(idea_rows),
+                "specs": len(spec_rows),
+                "specs_full_chain": len(specs_full_chain),
+                "orphan_specs": len(orphan_specs),
+                "specs_with_missing_source": len(specs_with_missing_source),
+                "specs_with_missing_test": len(specs_with_missing_test),
+                "ideas_no_spec": len(ideas_no_spec),
+            },
+            "specs_with_missing_source": [
+                {
+                    "slug": r["slug"], "missing": r["sources_missing"],
+                    "present": len(r["sources_present"]),
+                }
+                for r in specs_with_missing_source[: args.top]
+            ],
+            "specs_with_missing_test": [
+                {"slug": r["slug"], "missing": r["tests_missing"]}
+                for r in specs_with_missing_test[: args.top]
+            ],
+            "specs_no_test_declared": [r["slug"] for r in specs_no_test[: args.top]],
+            "orphan_specs": [r["slug"] for r in orphan_specs[: args.top]],
+            "ideas_no_spec": [r["slug"] for r in ideas_no_spec[: args.top]],
+            "full_chain_specs": [r["slug"] for r in specs_full_chain[: args.top]],
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    # Human-readable output
+    print(f"Chain sense — {len(idea_rows)} ideas → {len(spec_rows)} specs → code → tests\n")
+
+    print(f"=== HEALTHY ARTERIES — full chain reachable ({len(specs_full_chain)}/{len(spec_rows)}) ===")
+    for r in specs_full_chain[: args.top]:
+        srcs = len(r["sources_present"])
+        tsts = len(r["tests_present"])
+        print(f"  ✓✓ {r['slug']}  idea={r['idea_id']}  src={srcs}  test={tsts}")
+    if len(specs_full_chain) > args.top:
+        print(f"  ... and {len(specs_full_chain) - args.top} more")
+    print()
+
+    print(f"=== BROKEN AT CODE — spec exists, source files missing ({len(specs_with_missing_source)}) ===")
+    for r in specs_with_missing_source[: args.top]:
+        miss = ", ".join(r["sources_missing"][:3])
+        extra = "" if len(r["sources_missing"]) <= 3 else f" + {len(r['sources_missing']) - 3} more"
+        print(f"  ✗  {r['slug']}: missing {miss}{extra}")
+    print()
+
+    print(f"=== BROKEN AT TEST — spec exists, test file missing ({len(specs_with_missing_test)}) ===")
+    for r in specs_with_missing_test[: args.top]:
+        miss = ", ".join(r["tests_missing"])
+        print(f"  ✗  {r['slug']}: missing {miss}")
+    print()
+
+    print(f"=== NO TEST DECLARED — spec has no test: frontmatter ({len(specs_no_test)}) ===")
+    for r in specs_no_test[: args.top]:
+        print(f"  ·  {r['slug']}  status={r['status']}")
+    if len(specs_no_test) > args.top:
+        print(f"  ... and {len(specs_no_test) - args.top} more")
+    print()
+
+    print(f"=== NO SOURCE DECLARED — spec has no source: frontmatter ({len(specs_no_source)}) ===")
+    for r in specs_no_source[: args.top]:
+        print(f"  ·  {r['slug']}  status={r['status']}")
+    if len(specs_no_source) > args.top:
+        print(f"  ... and {len(specs_no_source) - args.top} more")
+    print()
+
+    print(f"=== ORPHAN SPECS — no idea_id ({len(orphan_specs)}) ===")
+    for r in orphan_specs[: args.top]:
+        print(f"  ?  {r['slug']}")
+    if len(orphan_specs) > args.top:
+        print(f"  ... and {len(orphan_specs) - args.top} more")
+    print()
+
+    print(f"=== IDEAS WITHOUT SPECS — thinking that hasn't been planned ({len(ideas_no_spec)}) ===")
+    for r in ideas_no_spec[: args.top]:
+        print(f"  ?  {r['slug']}")
+    print()
+
+    print("Drill into one with `coh substrate chain --idea <slug>` or `--spec <slug>`.")
+    print("Lens caveat: 'no source: declared' may be intentional for non-code specs")
+    print("(governance, lineage, contracts). Read with the body.")
     return 0
 
 

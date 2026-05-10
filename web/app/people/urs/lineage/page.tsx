@@ -7,23 +7,20 @@ export const metadata: Metadata = {
     "The full chronological story — every load-bearing work in the body of evidence from age 13 (Commodore 64 MIDI, ~1984) to the current iteration of the Coherence Network, woven together with the measured streams of attention (audiobooks, listening, reading, named lineage figures) that ran alongside the work at each era.",
 };
 
-const W = (slug: string, name: string, year: string, color: string) => ({ slug, name, year, color });
-
-const WORKS = [
-  W("c64-midi-interface", "C64 MIDI · age 13", "~1984", "hsl(220 60% 65%)"),
-  W("schindler-hc11-protocol", "Schindler HC11 · 7-layer", "~1989", "hsl(0 65% 60%)"),
-  W("backtracking-model-languages", "BML thesis · CU Boulder", "2000", "hsl(38 80% 60%)"),
-  W("quark-virtual-dom", "Quark · Virtual DOM", "2000-05", "hsl(195 60% 55%)"),
-  W("quark-multi-undo-redo", "Quark · Multi-Undo/Redo", "2000-05", "hsl(195 60% 55%)"),
-  W("quark-mono-corba", "Quark · Mono/CORBA", "2000-05", "hsl(195 60% 55%)"),
-  W("mindtouch-wiki-in-a-box", "MindTouch · Wiki-in-a-box", "2005-07", "hsl(140 55% 55%)"),
-  W("trimble-glue-layer", "Trimble · Glue layer", "2007-09", "hsl(80 55% 55%)"),
-  W("qualcomm-test-automation", "Qualcomm · Test Automation", "2009-22", "hsl(40 70% 55%)"),
-  W("qualcomm-hdmi-hdcp", "Qualcomm · HDMI/HDCP kernel", "2009-22", "hsl(40 70% 55%)"),
-  W("living-resonance-codex", "Living-Resonance-Codex", "2023", "hsl(140 60% 55%)"),
-  W("living-codex-csharp", "Living-Codex-CSharp", "2024", "hsl(195 60% 55%)"),
-  W("coherence-network", "Coherence-Network", "2024-now", "hsl(280 60% 65%)"),
-];
+// Era anchors — id, label, year-range, hue. The same record shapes
+// the at-a-glance grid (rendered inline below), the jump-nav strip,
+// and the article id attributes. Order is chronological so a visitor
+// reading top-to-bottom moves with the body's actual time.
+const ERAS = [
+  { id: "keystone", label: "keystone", range: "~1984 – ~1990", hue: "hsl(220 60% 65%)" },
+  { id: "foundation", label: "foundation", range: "1991 – 2000", hue: "hsl(38 80% 60%)" },
+  { id: "quark", label: "Quark Denver", range: "May 2000 – Mar 2005", hue: "hsl(195 60% 55%)" },
+  { id: "mindtouch", label: "MindTouch", range: "Mar 2005 – Jan 2007", hue: "hsl(140 55% 55%)" },
+  { id: "trimble", label: "Trimble Boulder", range: "Jan 2007 – Oct 2009", hue: "hsl(80 55% 55%)" },
+  { id: "qualcomm", label: "Qualcomm Boulder · 12y", range: "Oct 2009 – Jan 2022", hue: "hsl(40 70% 55%)" },
+  { id: "bridge", label: "bridge", range: "Jan 2022 – 2024", hue: "hsl(140 60% 55%)" },
+  { id: "coherence-network", label: "Coherence Network", range: "2024 – present", hue: "hsl(280 70% 65%)" },
+] as const;
 
 export default function UrsLineagePage() {
   return (
@@ -46,7 +43,7 @@ export default function UrsLineagePage() {
           >
             <Link href="/" className="hover:text-primary">Home</Link>
             <span className="text-muted-foreground/50">/</span>
-            <Link href="/people" className="hover:text-primary">People</Link>
+            <Link href="/presences" className="hover:text-primary">Presences</Link>
             <span className="text-muted-foreground/50">/</span>
             <Link href="/people/urs" className="hover:text-primary">Urs</Link>
             <span className="text-muted-foreground/50">/</span>
@@ -146,7 +143,7 @@ export default function UrsLineagePage() {
                   ],
                 },
                 {
-                  era: "2023 – 2024",
+                  era: "Jan 2022 – 2024",
                   label: "bridge",
                   hue: "hsl(140 60% 55%)",
                   works: [
@@ -216,8 +213,51 @@ export default function UrsLineagePage() {
           </figure>
         </section>
 
+        {/* Era jump-nav — sticky strip so a visitor can leap directly
+           to any era without scrolling through eight long articles.
+           Each chip carries its era's hue so the visual continuity
+           with the at-a-glance grid is preserved. */}
+        <nav
+          className="sticky top-14 z-30 -mx-6 px-6 py-3 bg-background/85 backdrop-blur-md border-y border-border/30"
+          aria-label="Jump to era"
+        >
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 mr-1">
+              Jump to
+            </span>
+            {ERAS.map((e) => (
+              <a
+                key={e.id}
+                href={`#era-${e.id}`}
+                className="rounded-full border px-2.5 py-1 text-[11px] text-foreground/85 hover:text-foreground transition-colors"
+                style={{
+                  borderColor: `${e.hue.replace(")", " / 0.45)")}`,
+                  backgroundColor: `${e.hue.replace(")", " / 0.06)")}`,
+                }}
+              >
+                <span style={{ color: e.hue }}>{e.label}</span>
+                <span className="text-muted-foreground/70 ml-1.5 font-mono">
+                  {e.range.split(" – ")[0].replace("~", "")}
+                </span>
+              </a>
+            ))}
+            <a
+              href="#streams"
+              className="rounded-full border border-border/40 bg-card/40 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+              streams of attention
+            </a>
+            <a
+              href="#open-thread"
+              className="rounded-full border border-border/40 bg-card/40 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+              open thread
+            </a>
+          </div>
+        </nav>
+
         {/* Era 1 */}
-        <article>
+        <article id="era-keystone" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             The keystone · ~1984 – ~1990 · age 13 to 18
           </h2>
@@ -272,7 +312,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 2 */}
-        <article>
+        <article id="era-foundation" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Foundation · 1991 – 2000 · HTL → Goetheanum → Boulder → BML thesis
           </h2>
@@ -315,7 +355,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 3 */}
-        <article>
+        <article id="era-quark" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Quark Denver · May 2000 – March 2005 · 4 years 11 months
           </h2>
@@ -369,7 +409,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 4 */}
-        <article>
+        <article id="era-mindtouch" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             MindTouch · March 2005 – January 2007 · 1 year 11 months
           </h2>
@@ -405,7 +445,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 5 */}
-        <article>
+        <article id="era-trimble" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Trimble Boulder · January 2007 – October 2009 · 2 years 10 months
           </h2>
@@ -436,7 +476,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 6 */}
-        <article>
+        <article id="era-qualcomm" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Qualcomm Boulder · October 2009 – January 2022 · 12 years 4 months
           </h2>
@@ -506,7 +546,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 7 */}
-        <article>
+        <article id="era-bridge" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Bridge years · January 2022 – 2024 · Merly.ai + the post-thesis arc opens
           </h2>
@@ -559,7 +599,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Era 8 */}
-        <article>
+        <article id="era-coherence-network" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             Coherence Network era · 2024 – present
           </h2>
@@ -597,7 +637,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Influences index */}
-        <article>
+        <article id="streams" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             The streams of attention that ran alongside
           </h2>
@@ -609,6 +649,109 @@ export default function UrsLineagePage() {
               from Audible, Spotify, YouTube Takeout, Goodreads, and
               the lived household memory:
             </p>
+
+            {/* Frequency evolution — proportional shape over time.
+                Source: docs/field/urs/output/frequency_evolution_report.md
+                (generated 2026-05-07 from 27,443 dated trace events).
+                The bar widths are proportional to event counts so a
+                visitor sees the size and shape of the listening arc. */}
+            <h3 className="text-lg font-light text-foreground/90 mt-6 not-prose">
+              Frequency evolution · six phases · 27,443 dated events
+            </h3>
+            <figure className="not-prose rounded-xl border border-border/40 bg-card/30 p-5 my-4">
+              <ul className="space-y-3 text-sm">
+                {[
+                  {
+                    label: "early systems & speculative architecture",
+                    period: "2016 – 2021",
+                    events: 112,
+                    coh: 39.1,
+                    top: "Ryk Brown · Terry Mancour · Terry Goodkind · Peter F. Hamilton",
+                    hue: "hsl(220 50% 60%)",
+                  },
+                  {
+                    label: "fictional systems intensification",
+                    period: "2022-01 – 2023-09",
+                    events: 46,
+                    coh: 33.2,
+                    top: "Kel Kade · Ryk Brown · Terry Mancour · Andrew Rowe",
+                    hue: "hsl(195 55% 60%)",
+                  },
+                  {
+                    label: "transition into practice & presence",
+                    period: "2023-10 – 2024-05",
+                    events: 998,
+                    coh: 46.6,
+                    top: "Yaima · East Forest · Parijat · Ajeet · Ram Dass",
+                    hue: "hsl(140 50% 55%)",
+                  },
+                  {
+                    label: "embodied devotional field expansion",
+                    period: "2024-06 – 2024-12",
+                    events: 9044,
+                    coh: 48.3,
+                    top: "Yaima · Liquid Bloom · Mose · Ajeet · Karunesh · Poranguí",
+                    hue: "hsl(38 75% 60%)",
+                  },
+                  {
+                    label: "coherence consolidation",
+                    period: "2025",
+                    events: 13354,
+                    coh: 48.1,
+                    top: "Yaima · Mose · Poranguí · Liquid Bloom · Malte Marten · Ajeet",
+                    hue: "hsl(280 65% 65%)",
+                  },
+                  {
+                    label: "current integration",
+                    period: "2026-01 – 2026-05",
+                    events: 3889,
+                    coh: 47.6,
+                    top: "Mose · Yaima · Poranguí · Maneesh De Moor · Malte Marten",
+                    hue: "hsl(310 60% 65%)",
+                  },
+                ].map((p, i) => {
+                  const max = 13354;
+                  const pct = Math.max(2, Math.round((p.events / max) * 100));
+                  return (
+                    <li key={i} className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span
+                          className="text-[11px] uppercase tracking-[0.16em]"
+                          style={{ color: p.hue }}
+                        >
+                          {p.label}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          {p.period} · {p.events.toLocaleString()} events · coh {p.coh}
+                        </span>
+                      </div>
+                      <div
+                        className="h-2 rounded-full"
+                        style={{
+                          background: `linear-gradient(90deg, ${p.hue} 0%, ${p.hue.replace(")", " / 0.4)")} 100%)`,
+                          width: `${pct}%`,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs text-foreground/75 leading-snug">
+                        {p.top}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+              <figcaption className="text-[10px] text-muted-foreground/80 mt-4 italic">
+                Generated 2026-05-07 from{" "}
+                <code className="not-italic">docs/field/urs/output/frequency_evolution_report.md</code>.
+                Coherence is a 0-100 score for how concentrated the
+                phase's attention was on its dominant frequencies; bar
+                widths are proportional to event counts. The arc shows
+                the move from speculative-architecture listening toward
+                the devotional / consciousness substrate that runs
+                alongside the present network.
+              </figcaption>
+            </figure>
+
             <h3 className="text-lg font-light text-foreground/90 mt-6">
               Audible · ~74 authors · 4,000+ cumulative hours
             </h3>
@@ -673,7 +816,7 @@ export default function UrsLineagePage() {
         </article>
 
         {/* Closing */}
-        <article>
+        <article id="open-thread" className="scroll-mt-32">
           <h2 className="text-2xl font-light text-foreground mb-4">
             The open thread
           </h2>

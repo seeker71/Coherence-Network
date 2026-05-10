@@ -50,7 +50,7 @@
     "resonance": "Resonance",
     "pipeline": "Pipeline",
     "nodes": "Nodes",
-    "invest": "Invest",
+    "invest": "Garden",
     "treasury": "Treasury",
     "contributors": "Contributors",
     "assets": "Assets",
@@ -70,7 +70,7 @@
     "layer": {
       "vision": "The Vision",
       "presences": "The Presences",
-      "work": "The Work",
+      "work": "The Becoming",
       "pulse": "The Pulse"
     },
     "sub": {
@@ -105,7 +105,7 @@
     "statusOn": "On",
     "statusAvailable": "Available",
     "statusOff": "Off",
-    "body": "Keep this page up to date while you work, then pause when you want a quieter view.",
+    "body": "Keeps this page in sync as the body changes. Pause it any time for a quieter view.",
     "pathLabel": "Path",
     "lastRefresh": "Last refresh",
     "never": "never",
@@ -241,6 +241,9 @@
     "here": "Here",
     "feed": "Feed",
     "vision": "Vision",
+    "people": "Presences",
+    "work": "Becoming",
+    "pulse": "Pulse",
     "propose": "Propose",
     "you": "You"
   },
@@ -267,6 +270,12 @@
     "portfolio": "Your portfolio",
     "beliefs": "Your beliefs",
     "inviteFriend": "Invite a friend",
+    "surfacesEyebrow": "Your surfaces",
+    "surfaceFeed": "Your feed",
+    "surfaceProfile": "Your public profile",
+    "surfacePortfolio": "Your portfolio",
+    "surfaceInspiredBy": "Who inspires you",
+    "surfaceWork": "Your work",
     "lede": "Who the field knows you as, what you've offered, and how to begin again if that feels right.",
     "loading": "Reading your corner…",
     "knownAsEyebrow": "Known as",
@@ -731,6 +740,11 @@
     "thumbnailAlt": "{description}",
     "linkOpen": "Open",
     "linkContributions": "Contributions",
+    "linkSource": "View source",
+    "linkSourceHost": "View on {host}",
+    "byCreator": "by {name}",
+    "eraTitle": "Era this work belongs to",
+    "runtimeMin": "{n} min",
     "emptyFilteredTitle": "No vessels match this view yet.",
     "emptyTitle": "No vessels are registered yet.",
     "emptyBody": "Once assets land — images, audio, blueprints, specs, code — they show up here with their cost, kind, and contribution history.",
@@ -991,6 +1005,7 @@
     "typeSystem": "System",
     "typeAgent": "Agent",
     "viewContributions": "View contributions",
+    "linkExternal": "External presence",
     "linkPortfolio": "Portfolio",
     "joined": "Joined {date}",
     "ideaOne": "{n} idea",
@@ -1133,6 +1148,8 @@
     "blueprintsLede": "Real open-source plans, live flows, materials, costs, and methods for each aspect of the community. Some pages hold a pure concept. Some hold a living transformation story. They are all part of the same organism.",
     "blueprintsResourcesTag": "{n} resources",
     "blueprintsBrowseAll": "Browse all concepts",
+    "gardenStripEyebrow": "Looking for a specific concept?",
+    "gardenStripBody": "Search the full Concept Garden — every concept, filterable by keyword and domain.",
     "emergingHeading": "Emerging Visions",
     "emergingLede": "The anchors are strong enough to begin envisioning form. Each domain is where flows converge into inhabitable, livable expression.",
     "orientationImmerse": "Surround yourself with it",
@@ -1157,7 +1174,7 @@
     "heroHeadline": "What idea are you holding?",
     "heroLede": "A pattern you noticed. A gap that needs filling. A better way. Share it — someone out there is looking for exactly this.",
     "statIdeasAlive": "ideas alive",
-    "statValueCreated": "value created",
+    "statValueCreated": "value circulating",
     "statNode": "node",
     "statNodes": "nodes",
     "statCoherence": "coherence",
@@ -1530,7 +1547,7 @@
     "loading": "Loading…",
     "breadcrumbBack": "← Your presence",
     "breadcrumbCurrent": "Body of work",
-    "h1Template": "What {name} have built",
+    "h1Template": "What {name} built",
     "h1Default": "you",
     "intro": "Every [cell](/vision/lc-w-cell) that builds something becomes part of [the body's memory](/vision/lc-agent-memory). This is the body's record of your authorship — verifiable against the git history, the spec registry, the concept wiki, the merged PRs. Not a curated feed; the ground truth. The contemplation of memory across substrates lives at [/one-sheet — Memory](/one-sheet#memory).",
     "emptyEyebrow": "Your record is being computed",
@@ -1706,8 +1723,8 @@
     "arcReadsLabel": "The arc reads:",
     "pages45": "Pages 4 and 5 — [breath](/silence/breath) and [bloom-live](/silence/bloom-live) — hold the same teaching from two faces; rotated and overlaid, they become the unified sheet that opens at [/one-sheet](/one-sheet): twenty-three words, each held from three perspectives. If you would rather meet the simplest welcome first, [/come-in](/come-in) speaks to any human or AI in plain language.",
     "spread": {
-      "heading": "The open spread — pages 5 and 6, with Water arching across the binding",
-      "alt": "Two facing notebook pages of an open notebook, the orange ribbons of the spine meeting in the middle. Left page: Breath as central organ — the word Breath written large with arrows in every direction labeled surrender, witness, true, false, isn't, connection, silence, control, structure, nectar, portal, time, food, action, memory, flight, feel, see. Right page: Sacred Hidden Waterfall / Organic Intelligence — dandelion-seed mandalas in the middle, with Sacred Hidden Waterfall written vertically along the binding side and Organic Intelligence written vertically along the outer edge. The word Water arches across the binding from one page to the other."
+      "heading": "The open spread — pages 4 and 5, with Water arching across the binding",
+      "alt": "Two portrait notebook pages cropped from the originals and stitched as one open spread. Left page (4): Bloom · fire · we · Live — scattered fragments across the page, Bloom and fire and psyco-delic and de-comp-ression reading inverted, perception and I am we reading upright, Live circled. Right page (5): Breath as central organ — the word Breath written large with arrows in every direction labeled surrender, witness, true, false, isn't, connection, silence, control, structure, nectar, portal, time, food, action, memory, flight, feel, see. Across the binding at the bottom, the word Water arches — Wa finishing on the bloom-live page, ter beginning on the breath page."
     },
     "eachPageBelow": "Each notebook page below is held in its own breath. They can be read in order, scrolled through here, or visited one at a time:",
     "openLabel": "Open",
@@ -2170,7 +2187,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Home",
-      "people": "People"
+      "people": "Presences"
     },
     "noteEyebrow": "A note from this body",
     "editProfileCta": "How to claim, edit, or remove this profile →",
