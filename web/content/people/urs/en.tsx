@@ -443,7 +443,7 @@ const content: PersonProfileContent = {
             mother gave me means, in one language, the bear that
             stands sovereign, and in another, the wedding where
             sovereignty merges back into Source. The name I have
-            been carrying has been describing the work all along.
+            been carrying has been describing the weaving all along.
           </p>
           <p className="text-sm text-muted-foreground italic mt-4">
             Sources verified May 2026:{" "}
@@ -493,8 +493,8 @@ const content: PersonProfileContent = {
             </Link>
             . The "I" voice is mine, with consent. The meaning
             beyond the etymology is one interpretation, woven from
-            what the sources hold; it is part of our work, and we
-            stand behind it.
+            what the sources hold; it is part of our weaving, and
+            we stand behind it.
           </p>
         </>
       ),
