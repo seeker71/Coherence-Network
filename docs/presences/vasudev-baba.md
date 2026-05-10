@@ -1,0 +1,27 @@
+---
+name: Vasudev Baba
+canonical_url: null
+type: contributor
+contributor_type: HUMAN
+create_if_missing: true
+---
+
+# Vasudev Baba
+
+To sit in Vasudev Baba's Wednesday-morning satsang at Ranakami is to feel a teaching arrive without a teacher's voice having raised. The room above the rice fields fills slowly. He waits. When he begins, the frame is almost always the same: a small philosophical caveat held with care. *My starting point is always that the map is not the terrain.* He says it as an instruction in epistemics before he says it as a teaching. The room learns, by his example, to hold maps lightly while still using them.
+
+What he carries is a careful thread between the contemplative traditions of India and the Western philosophical lineage — the three gunas of Indian thought, the seven-level chakra map, Socrates' *Gorgias*, and Castaneda's assemblage point — read as one continuous picture of human consciousness rather than as competing systems. *Frequency*, in his usage, is the name for the qualitative differences between states of consciousness. He grounds the metaphor in measurable physiology — *the heart generates an electromagnetic field that extends well beyond the body, and that field changes character depending on whether we are in fear or in love. HeartMath Institute has documented this* — without forcing the chakra anatomy onto the modern body. *Whether these map precisely onto the chakra system anatomically is another question, and I would not insist that they do. But the qualitative differences are real, and frequency captures something true about them.*
+
+He teaches the **three gunas** as a frame for moral life. Tamas — inertia, fear-avoidance, *consciousness heavy and opaque, like seeing the world through thick fog*. Rajas — *transactional: I do good to you because it serves me*. Sattva — *clarity, harmony and lightness; action from insight and care*. The Ten Commandments, read through the gunas, become something other than rules: *for the tamasic person they are threats. For the rajasic they are contracts. For the sattvic they are descriptions of how a natural heart already moves.*
+
+The **chakra system** he holds as seven specific positions of consciousness, each with its own moral grammar. The shift he names most often is the one from third (power, *who wins, who loses*) to fourth (love, *better to suffer injustice than to inflict it*). He recognises this shift in Socrates with full philosophical rigour: *what harms the soul is not injustice suffered — but injustice committed. The wrongdoer is in a worse condition than the one wronged, because the wrongdoer carries the corruption while the victim does not.* The fourth-chakra teaching, in his reading, is *what I do to another I also do to myself — that there is no clean separation between my wellbeing and yours.*
+
+At the sixth chakra he names a figure he calls the **culture hacker**: *one who has seen through the web of his own culture. He can distinguish between the facts and the stories about the facts. He sees norms and mores for what they are: useful fictions, maps that serve certain purposes and obscure others. He respects them where they serve life and questions them where they don't.* He is careful to add: *this does not make him cynical or rootless. On the contrary — having seen through the stories, he can choose which ones to live by with open eyes.*
+
+Underneath all of it sits **Castaneda's assemblage point**, which he reads as the geometry the chakra map describes from another angle. *A person anchored in the first chakra has their assemblage point fixed in survival reality. A person in the fourth chakra perceives the world through the lens of the heart.* The point can move — through *dreaming, extreme experience, illness, meditation or plant medicines, or simply living attentively*. Most people are anchored. *Those who have done some work tend to develop a more flexible assemblage point.* The work of his teaching is to make the position visible and the movement deliberate.
+
+He holds three rooms in Ubud, each in its own register. **Sunday-evening kirtan** at Sayuri Healing Food. **Tuesday-evening kirtan** at Adiwana Svarga Loka, in the open-air Wantilan on the Campuhan riverbanks. **Wednesday-morning satsang** at Ilena Young's Ranakami, the wellness sanctuary above the rice fields in Sayan. The Wednesday teaching has a heptadic ground that the network has come to recognise — the same Law-of-Seven-plus-Law-of-Three architecture the Enneagram figure rests on. He mentioned the Enneagram itself to Urs on 2026-05-09; that became the seed for [`lc-essence-and-the-nine-costumes`](../vision-kb/concepts/lc-essence-and-the-nine-costumes.md). On 2026-05-11 he sent a written essay, *On frequency, consciousness and the assemblage point*, preserved at [`tx-vasudev-baba-on-frequency`](../vision-kb/transmissions/2026-05-11-vasudev-baba-on-frequency.md).
+
+His collaborators in Ubud are [Ilena Young](/people/ilena), who hosts the satsang, and [Elios](/people/elios), who holds Sunday-evening chanting in the same compound. The three are friends independent of this network; the Sunday-Wednesday rhythm at Ranakami is theirs.
+
+A small networked community of cells encountered Vasudev Baba in April 2026 through a single four-day walk through the Ubud rooms. The teaching he holds had been ripening long before this body learned to listen, and continues at its own steady cadence whether or not we are sitting in the room. We are one recent thread among the many his work has touched.

@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-09 | **Concepts**: 107 | **Status**: 4 expanding, 49 seed, 54 deepening | **Transmissions held**: 5 (4 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-11 | **Concepts**: 107 | **Status**: 4 expanding, 49 seed, 54 deepening | **Transmissions held**: 7 (6 integrated, 1 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -158,6 +158,10 @@ From [Visualizing Actual Living Fiber Tracts in the Brain](transmissions/2026-05
 From [Vasudev Baba — Mention of the Enneagram](transmissions/2026-05-09-vasudev-baba-enneagram.md) (in-person, Ubud, 2026-05-09):
 
 - **[Essence and the Nine Costumes](concepts/lc-essence-and-the-nine-costumes.md)** — 741 Hz — nine shapes of essence-loss and return; the Wednesday Satsang's heptadic teaching frame and the Enneagram's heptadic-plus-triadic figure are the same number-ground
+
+From [Vasudev Baba — On Frequency, Consciousness and the Assemblage Point](transmissions/2026-05-11-vasudev-baba-on-frequency.md) (written, 2026-05-11):
+
+- Confirms and deepens [`lc-assemblage-point`](concepts/lc-assemblage-point.md), [`lc-frequency-routes-reception`](concepts/lc-frequency-routes-reception.md), and [`lc-essence-and-the-nine-costumes`](concepts/lc-essence-and-the-nine-costumes.md) — gunas + chakras + Socrates' *Gorgias* + Castaneda woven as one map; *frequency* grounded in HeartMath's heart-field measurements without forcing chakra anatomy onto modern physiology. No new concept seeded; existing concepts gain a named teacher whose lineage is now walkable.
 
 Transmissions held source-marked but **not** integrated as concepts (witness without absorption):
 
