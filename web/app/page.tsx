@@ -70,7 +70,7 @@ const HOW_IT_WORKS = [
 
 const STAT_LABEL_FALLBACKS = {
   ideasAlive: "ideas alive",
-  valueCreated: "value created",
+  valueCreated: "value circulating",
   node: "node",
   nodes: "nodes",
   coherence: "coherence",
