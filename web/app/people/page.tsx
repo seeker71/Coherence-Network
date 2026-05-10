@@ -256,8 +256,10 @@ export default async function PeopleIndexPage({
         </Link>
       </header>
 
-      {/* Lenses — sibling perspectives on the same body. */}
-      <LensesNav current="people" />
+      {/* Lenses — sibling perspectives on the same body.
+          Both /people and /presences route to this index, and both
+          highlight the same Presences lens. */}
+      <LensesNav current="presences" />
 
       {/* Structural axes — sort, filter chips, substring search.
           State lives in the URL so any view is shareable. */}

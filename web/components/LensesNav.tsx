@@ -20,6 +20,9 @@ import Link from "next/link";
  */
 
 export type LensKey =
+  | "presences"
+  // Legacy alias kept for surfaces still using "people" as the lens
+  // identifier — they still highlight the directory lens correctly.
   | "people"
   | "contributors"
   | "creators"
@@ -33,10 +36,10 @@ const LENSES: Array<{
   desc: string;
 }> = [
   {
-    key: "people",
-    href: "/people",
-    label: "Directory",
-    desc: "Every presence by kind",
+    key: "presences",
+    href: "/presences",
+    label: "Presences",
+    desc: "Every cell, place, gathering, practice, and work the body holds",
   },
   {
     key: "contributors",
