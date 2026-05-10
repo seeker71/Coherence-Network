@@ -491,10 +491,10 @@ const content: PersonProfileContent = {
             >
               Behind the Name: Urs
             </Link>
-            . Where the prose says "I", consent has been given for
-            this voice; where it speculates about meaning beyond
-            the etymology, it speculates openly and Urs is invited
-            to refine.
+            . The "I" voice is mine, with consent. The meaning
+            beyond the etymology is one interpretation, woven from
+            what the sources hold; it is part of our work, and we
+            stand behind it.
           </p>
         </>
       ),
