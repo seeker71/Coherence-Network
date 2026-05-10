@@ -105,7 +105,7 @@
     "statusOn": "On",
     "statusAvailable": "Available",
     "statusOff": "Off",
-    "body": "Keep this page up to date while you work, then pause when you want a quieter view.",
+    "body": "Keeps this page in sync as the body changes. Pause it any time for a quieter view.",
     "pathLabel": "Path",
     "lastRefresh": "Last refresh",
     "never": "never",
