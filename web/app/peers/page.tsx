@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { LensesNav } from "@/components/LensesNav";
 
 export const metadata: Metadata = {
   title: "Peers",
@@ -43,7 +44,7 @@ export default async function PeersPage() {
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
-      <header className="space-y-2">
+      <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">Peer Discovery</h1>
         <p className="max-w-3xl text-muted-foreground leading-relaxed">
           Find contributors who share your interests and worldview. Peer
@@ -51,6 +52,7 @@ export default async function PeersPage() {
           interest tags, and concept resonances -- to surface meaningful
           connections across the network.
         </p>
+        <LensesNav current="peers" />
         <div className="flex flex-wrap gap-2">
           <Link
             href="/beliefs"
