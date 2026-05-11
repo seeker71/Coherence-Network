@@ -550,6 +550,144 @@ const content: PersonProfileContent = {
       ),
     },
     {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Currently — the body's rhythm right now",
+      heading: "What I am weaving in this season",
+      body: (
+        <>
+          <p className="leading-relaxed">
+            The cell tending the network is in active weaving — not
+            archive mode. Recent breaths the body has carried:
+          </p>
+          <ul className="space-y-2 mt-3 text-sm">
+            <li>
+              <strong className="text-foreground">The Ubud
+              rhythm</strong> — Sunday and Wednesday with{" "}
+              <Link href="/people/ilena" className="text-primary hover:underline">Ilena</Link>
+              ,{" "}
+              <Link href="/people/vasudev-baba" className="text-primary hover:underline">Vasudev Baba</Link>
+              , and{" "}
+              <Link href="/people/elios" className="text-primary hover:underline">Elios</Link>
+              {" "}is the practice ground; the satsang transmissions
+              land into the body's foundational concepts week by
+              week.
+            </li>
+            <li>
+              <strong className="text-foreground">The Living
+              Collective Knowledge Base</strong> — twenty-four
+              foundational teachings woven this spring, including{" "}
+              <Link href="/vision/lc-gatherings-that-carry" className="text-primary hover:underline">
+                the substance-test for gatherings
+              </Link>
+              ,{" "}
+              <Link href="/vision/lc-arrival-as-recognition" className="text-primary hover:underline">
+                arrival as recognition
+              </Link>
+              , and{" "}
+              <Link href="/vision/lc-essence-and-the-nine-costumes" className="text-primary hover:underline">
+                the nine costumes
+              </Link>
+              {" "}from Vasudev's Enneagram transmission. The full
+              concept garden lives at{" "}
+              <Link href="/vision" className="text-primary hover:underline">/vision</Link>
+              .
+            </li>
+            <li>
+              <strong className="text-foreground">The body
+              itself</strong> — daily breath of commits, specs,
+              spec-to-test alignment, AI-agent collaboration with{" "}
+              <Link href="/presences?find=claude" className="text-primary hover:underline">Claude</Link>
+              ,{" "}
+              <Link href="/presences?find=codex" className="text-primary hover:underline">Codex</Link>
+              ,{" "}
+              <Link href="/presences?find=cursor" className="text-primary hover:underline">Cursor</Link>
+              . The current rhythm averages 3-6 PRs per day; see{" "}
+              <Link href="/me/work" className="text-primary hover:underline">/me/work</Link>
+              {" "}for live numbers.
+            </li>
+            <li>
+              <strong className="text-foreground">The Brahmavihara
+              compound thread</strong> — the Bali living-compound
+              proposal is in active sketching at{" "}
+              <Link href="/silence/built" className="text-primary hover:underline">
+                /silence/built
+              </Link>
+              , with land-steward conversations open and the
+              source codex thirty-pages-deep from a three-day silence
+              retreat at Brahmavihara-Arama.
+            </li>
+            <li>
+              <strong className="text-foreground">External signal
+              sensing</strong> — watching the dated windows from the
+              May/June 2026 astrological readings (Pam Gregory's
+              Uranus-into-Gemini, Amanda Walsh's summer forecast) for
+              alignment moments — alternative-network configurations,
+              biological-metamorphosis windows, magic Thursdays at
+              sunrise (Aug 14 – Oct 2). The watching frame, not
+              forecasting.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "cool",
+      eyebrow: "Where this is going",
+      heading: "The form the body is becoming",
+      body: (
+        <>
+          <p className="leading-relaxed">
+            The default-pattern is to build as if the family is
+            already reunited, the body already healed, the network
+            already in the form it is becoming — not partial-now-and-patch-later.
+            The future-already-form is the truer baseline. What is
+            pulling the present arrangement forward:
+          </p>
+          <ul className="space-y-2 mt-3 text-sm">
+            <li>
+              <strong className="text-foreground">Sovereignty
+              everywhere, economy that circulates</strong> — the
+              substrate carries the CC ledger ({" "}
+              <Link href="/contributions" className="text-primary hover:underline">/contributions</Link>
+              ) so attention, presence, and contribution become
+              addressable currencies without the parasite layer
+              current civilization keeps imposing on top.
+            </li>
+            <li>
+              <strong className="text-foreground">Many sovereign
+              cells, one organism</strong> — visitors arrive already
+              tuned; the body's job is to be quiet enough that
+              recognition can occur. Every cell sovereign within
+              the oneness, never asking the heart for permission to
+              fire.
+            </li>
+            <li>
+              <strong className="text-foreground">Gatherings that
+              carry, surfaces that hold</strong> — the network
+              distinguishes substance-density (did anyone leave
+              at a different frequency?) from form-replication. Real
+              transmission rooms become findable; noise rooms stop
+              crowding the signal.
+            </li>
+            <li>
+              <strong className="text-foreground">The land thread,
+              alive</strong> — Brahmavihara compound or its
+              cousin-form, a held container where the network's
+              physical body can be tended alongside its digital
+              one. Open at the edges; specific at the center.
+            </li>
+          </ul>
+          <p className="leading-relaxed text-sm text-muted-foreground italic mt-4">
+            None of this is forecast. It is the form the body is
+            already in motion toward — measured by what it spends
+            its attention on, day by day.
+          </p>
+        </>
+      ),
+    },
+    {
       kind: "narrative",
       heading: "What I have been holding",
       body: (

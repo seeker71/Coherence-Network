@@ -26,6 +26,7 @@ interface Edge {
   from_id: string;
   to_id: string;
   strength?: number;
+  created_at?: string | null;
   from_node: { id: string; type: string; name: string; slug?: string | null };
   to_node: { id: string; type: string; name: string; slug?: string | null };
 }
@@ -35,6 +36,7 @@ interface Chip {
   name: string;
   type: string;
   strength?: number;
+  createdAt?: string | null;
 }
 
 function nodeHref(type: string, slug: string): string {
@@ -47,7 +49,13 @@ function otherSide(e: Edge, selfSlug: string, selfId: string): Chip | null {
   const fromIsSelf = e.from_node.slug === selfSlug || e.from_id === selfId || e.from_id === `asset:${selfSlug}` || e.from_id === `contributor:${selfSlug}`;
   const other = fromIsSelf ? e.to_node : e.from_node;
   if (!other.slug || !other.name) return null;
-  return { slug: other.slug, name: other.name, type: other.type, strength: e.strength };
+  return {
+    slug: other.slug,
+    name: other.name,
+    type: other.type,
+    strength: e.strength,
+    createdAt: e.created_at ?? null,
+  };
 }
 
 export function InfluenceLineageStrip({ slug }: { slug?: string }) {
@@ -115,7 +123,15 @@ export function InfluenceLineageStrip({ slug }: { slug?: string }) {
     }
   }
 
-  // Dedupe by slug, sort by strength descending
+  // Dedupe by slug, sort by strength descending — then by recency
+  // (newer edges first) within the same strength tier. Without this
+  // secondary sort, a presence with many edges at strength 1.0 (e.g.
+  // a contributor's contributes-to edges into 18 works, all rated 1)
+  // lands alphabetically on the first letters of the slugs, which
+  // for the founder cell surfaced bmcpu-vm / bmf-grammar / bml-language
+  // (1990s works) ahead of the present-day weaving. Recency tie-break
+  // keeps the strip representing the cell *now* rather than the
+  // alphabetic shape of their archive.
   const dedupe = (chips: Chip[]) => {
     const seen = new Set<string>();
     return chips
@@ -124,7 +140,14 @@ export function InfluenceLineageStrip({ slug }: { slug?: string }) {
         seen.add(c.slug);
         return true;
       })
-      .sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0));
+      .sort((a, b) => {
+        const ds = (b.strength ?? 0) - (a.strength ?? 0);
+        if (ds !== 0) return ds;
+        const aT = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const bT = b.createdAt ? Date.parse(b.createdAt) : 0;
+        if (aT !== bT) return bT - aT;
+        return (a.name || "").localeCompare(b.name || "");
+      });
   };
 
   const ib = dedupe(inspiredBy).slice(0, 5);
