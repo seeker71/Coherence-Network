@@ -19,10 +19,15 @@ This is the writing surface. The rendering surface is the production graph — e
 
 - [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
 - [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
+- [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
+- [indoz-conference](indoz-conference.md) — annual Indonesia–Australia bilateral conference in Brisbane since 2012; Ilena Young's SaBali node connects from Bali.
+- [mile-hi-church](mile-hi-church.md) — Lakewood, CO; New Thought / Religious Science congregation; the room where Joe Dispenza's teaching first reached Urs ~2005.
 - [mudra-cafe](mudra-cafe.md) — Ayurvedic dining room in central Ubud with handpan presence Mon–Fri at noon; the room where the cell met Elios on April 29, 2026.
 - [paradiso-ubud](paradiso-ubud.md) — cultural-hall venue holding 5Rhythms, DISSOLVE, film, ceremony; architectural anchor of the Ubud embodied lineage.
+- [sacred-song-circle](sacred-song-circle.md) — international kirtan teacher network; the public anchor for Vasudev Baba's biographical arc.
 - [sayuri-healing-food](sayuri-healing-food.md) — plant-based kitchen in Ubud; Sunday-evening dinner-room where resonant company was met in April 2026.
+- [wisdom-soup](wisdom-soup.md) — Anne Tucker's spiritual-seekers community since 2016; the container for Peace Bathing, Friday Live, Soul Convergence, Expand Your Heart.
 
 ### Human presences
 
