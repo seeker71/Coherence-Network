@@ -255,45 +255,45 @@
     ],
     "traces": {
       "liquid-bloom": {
-        "traceLabel": "field-story author trace",
+        "traceLabel": "in the listening trace",
         "traceHref": "/api/field-stories/urs-field-story/trace/author/Liquid%20Bloom%20-%20Topic",
-        "traceMetric": "643 field events",
+        "traceMetric": "643 listening events",
         "traceSource": "docs/field/urs/trace/author_index.jsonl",
         "traceWhy": "The listening trace, public source page, and presence-walk node all meet on Liquid Bloom.",
         "image": "/visuals/brand/liquid-bloom-bg-center.jpg",
         "imagePosition": "center 45%"
       },
       "bloomurian": {
-        "traceLabel": "lineage and meeting trace",
+        "traceLabel": "rooms shared",
         "traceHref": "/people/bloomurian",
-        "traceMetric": "Boulder, Ocean Bloom, and PORTAL traces",
+        "traceMetric": "Boulder · Ocean Bloom · PORTAL",
         "traceSource": "web/content/people/bloomurian/en.tsx",
         "traceWhy": "The profile and lineage seed carry the Boulder, Ocean Bloom, and PORTAL rooms where this relation was met.",
         "image": "/people/bloomurian/hero.jpg",
         "imagePosition": "center 28%"
       },
       "mose": {
-        "traceLabel": "field-story author trace",
+        "traceLabel": "in the listening trace",
         "traceHref": "/api/field-stories/urs-field-story/trace/author/Mose%20-%20Topic",
-        "traceMetric": "1385 field events",
+        "traceMetric": "1,385 listening events",
         "traceSource": "docs/field/urs/trace/author_index.jsonl",
         "traceWhy": "The strongest music trace in the field index points through Mose and into the Road to Unison dance lineage.",
         "image": "/people/mose/hero.jpg",
         "imagePosition": "center 25%"
       },
       "matias-de-stefano": {
-        "traceLabel": "field-story author trace",
+        "traceLabel": "in the listening trace",
         "traceHref": "/api/field-stories/urs-field-story/trace/author/PATH%20TO%20I%20AM%20-%20ENGLISH%20-%20Mat%C3%ADas%20de%20Stefano",
-        "traceMetric": "10 direct PATH TO I AM events",
+        "traceMetric": "10 PATH TO I AM listening events",
         "traceSource": "docs/field/urs/trace/author_index.jsonl",
         "traceWhy": "Direct Matias source traces join the profile's GaiaSphere, podcast, and planetary-memory references.",
         "image": "/people/matias-de-stefano/hero.jpg",
         "imagePosition": "center 35%"
       },
       "portal": {
-        "traceLabel": "lived-event trace",
+        "traceLabel": "room shared",
         "traceHref": "/people/portal",
-        "traceMetric": "Meow Wolf Denver, June 19 2025",
+        "traceMetric": "Meow Wolf Denver · June 19, 2025",
         "traceSource": "web/content/people/portal/en.tsx",
         "traceWhy": "PORTAL appears through the Late-Night Takeover room, Bloomurian's set, and the meeting trace around Psychedelic Science week.",
         "image": "/people/portal/hero.jpg",
