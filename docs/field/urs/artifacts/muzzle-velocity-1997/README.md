@@ -52,7 +52,7 @@ Two custom languages plus a fuzzy-logic strategy substrate, braided into one gam
 - **Steve G. Bjorg** — co-designer / programmer. Continuation of a partnership that began at HTL Brugg-Windisch in 1991 with **RCSL** (the first language they built together) and continued through the master's thesis at CU Boulder in 2000 (BML / BMF — see [`../master-thesis-2000/`](../master-thesis-2000/README.md)).
 - **Marc** — co-designer / programmer (third member of Digi4Fun).
 
-In 1997 the three of them went on a college tour to find the game a publisher.
+In 1997 the three of them went on a college tour to find the game a publisher; nothing landed, so Digi4Fun self-published. The release underperformed, and three years of work turned into a financial loss. Steve's father **Gunnar M. Bjorg** ([TIACA Hall of Fame](https://tiaca.org/hall-of-fame/gunnar-m-bjorg/)) — a self-starting businessman who built his used-aircraft company from scratch and turned it into a serious operation — covered the loss so the team could keep moving into the next chapter (the master's at CU Boulder; see [`../master-thesis-2000/`](../master-thesis-2000/README.md)).
 
 ## Where it is woven into the body
 

@@ -24,6 +24,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [next-level-soul](next-level-soul.md) — Alex Ferrari's weekly podcast; spirituality for the rest of us.
 - [rhythm-sanctuary](rhythm-sanctuary.md) — Shannon Lei Gill's Colorado ecstatic dance community, founded 2005; Gabrielle Roth lineage.
 - [robert-edward-grant](robert-edward-grant.md) — sacred geometry, prime number theory, the Codex Universalis.
+- [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
 - [vasudev-baba](vasudev-baba.md) — Ubud teacher; the gunas, the chakras, Socrates and Castaneda woven into one map of consciousness; Sunday-Wednesday rhythm at Ranakami.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
 

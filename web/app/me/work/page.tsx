@@ -33,36 +33,50 @@ interface BodyOfWork {
   ideas_captured: number;
   concepts_written: number;
   prs_merged: number;
-  ai_collaborators: { name: string; co_authorships: number }[];
+  ai_collaborators: {
+    name: string;
+    co_authorships: number;
+    /** PRs the agent authored end-to-end (e.g. titled "[codex] ..." for
+     *  the Codex agent). Captured separately from co_authorships because
+     *  agents contribute via two patterns — co-authored commits inside a
+     *  human-led PR, and whole PRs they did the work on. Counting only
+     *  trailer co-authorships severely undercounts the second pattern. */
+    prs_authored?: number;
+  }[];
   recent_prs: { number: number; date: string; title: string }[];
   github_url: string;
 }
 
 // Founder cell — Urs (seeker71). Numbers queried directly from git
-// + repo file counts on 2026-05-05. Verifiable at the github_url below.
+// + repo file counts on 2026-05-10. Verifiable at the github_url below.
+//
+// Codex's true contribution lives in a different shape than the Claude
+// pattern — Codex authors whole PRs (titled "[codex] …") rather than
+// co-authoring inside a human-led PR. The earlier count of 2 was the
+// Co-Authored-By trailer count; surfacing prs_authored alongside
+// (43 merged "[codex] …" PRs) names the contribution honestly.
 const FOUNDER_BODY_OF_WORK: BodyOfWork = {
   display_name: "Urs Muff",
   github_handle: "seeker71",
   first_commit: "2026-02-11",
-  last_commit: "2026-05-04",
-  commits: 1372,
-  specs_authored: 90,
-  ideas_captured: 16,
-  concepts_written: 61,
-  prs_merged: 200,
+  last_commit: "2026-05-10",
+  commits: 1867,
+  specs_authored: 126,
+  ideas_captured: 18,
+  concepts_written: 103,
+  prs_merged: 1329,
   ai_collaborators: [
-    { name: "Claude (Anthropic)", co_authorships: 3163 },
-    { name: "Cursor Agent", co_authorships: 1 },
-    { name: "Codex Agent", co_authorships: 2 },
-    { name: "Gemini", co_authorships: 0 },
+    { name: "Claude (Anthropic)", co_authorships: 1242 },
+    { name: "Codex (OpenAI)", co_authorships: 15, prs_authored: 43 },
+    { name: "Cursor Agent", co_authorships: 7 },
   ],
   recent_prs: [
-    { number: 1295, date: "2026-05-04", title: "identity: pre-fill page with visitor's actual identity" },
-    { number: 1294, date: "2026-05-04", title: "with-us: update contact email" },
-    { number: 1293, date: "2026-05-04", title: "with-us: ONE clean presentation page using existing visuals" },
-    { number: 1292, date: "2026-05-04", title: "weave: /silence/built compound vision + /weave open invitation" },
-    { number: 1288, date: "2026-05-04", title: "silence: Brahmavihara retreat — eight notebook pages" },
-    { number: 1283, date: "2026-04-30", title: "welcome: handoff workflow + voice discipline" },
+    { number: 1540, date: "2026-05-10", title: "attune: Steve G. Bjorg presence — RCSL first, Gunnar covered the loss" },
+    { number: 1539, date: "2026-05-10", title: "attune: 'value created' → 'value circulating' on homepage stats row" },
+    { number: 1538, date: "2026-05-10", title: "attune(nav): breadcrumbs say Presences too — finishing the rename" },
+    { number: 1537, date: "2026-05-10", title: "tend: lift filesystem paths off homepage presence cards" },
+    { number: 1536, date: "2026-05-10", title: "attune(nav): The Work → The Becoming, /people → /presences" },
+    { number: 1535, date: "2026-05-10", title: "attune: 'work' → 'weaving' in the name article — body's frequency" },
   ],
   github_url: "https://github.com/seeker71/Coherence-Network/commits?author=seeker71",
 };
@@ -231,10 +245,21 @@ export default function BodyOfWorkPage() {
 
   useEffect(() => {
     if (!identity) return;
-    if (isFounder(identity.name, identity.contributorId)) return;
-    if (!identity.contributorId) return;
+    // Fetch the graph-held body for everyone — including the founder.
+    // Earlier the founder branch returned the static FOUNDER_BODY_OF_WORK
+    // and never queried the graph, so the page hid Urs's external
+    // lineage (RCSL, Muzzle Velocity, BML thesis, MindTouch, Quark,
+    // Trimble, Schindler, Qualcomm, …) that already lives as
+    // contributes-to edges on contributor:seeker71. The founder gets
+    // both: the rich Coherence-Network commit stats from the static
+    // constants, *and* the graph's record of works-before-this-network.
+    const founderCell = isFounder(identity.name, identity.contributorId);
+    const lookupId = founderCell
+      ? "contributor:seeker71"
+      : identity.contributorId;
+    if (!lookupId) return;
     setLoadingGeneric(true);
-    fetchAnyBodyOfWork(identity.contributorId)
+    fetchAnyBodyOfWork(lookupId)
       .then((b) => setGenericBody(b))
       .catch(() => setGenericBody(null))
       .finally(() => setLoadingGeneric(false));
@@ -251,6 +276,20 @@ export default function BodyOfWorkPage() {
   const founder = isFounder(identity.name, identity.contributorId);
   const work = founder ? FOUNDER_BODY_OF_WORK : null;
   const displayName = identity.name || t("meWork.h1Default");
+
+  // Building span: derive from first → last commit so the page
+  // breathes with the body instead of carrying a hand-edited "83 days"
+  // forever. Updates each time the founder constants are refreshed.
+  const spanDays = work
+    ? Math.max(
+        1,
+        Math.round(
+          (new Date(work.last_commit).getTime() - new Date(work.first_commit).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      )
+    : 0;
+  const spanWeeks = Math.max(1, spanDays / 7);
 
   return (
     <main className="mx-auto max-w-3xl px-4 sm:px-6 py-12 space-y-10">
@@ -426,7 +465,7 @@ export default function BodyOfWorkPage() {
             />
             <StatTile
               label={t("meWork.stats.buildingSpan")}
-              value="83"
+              value={spanDays}
               unit={t("meWork.stats.buildingSpanUnit")}
               hint={interp(t("meWork.stats.buildingSpanHint"), {
                 firstCommit: work.first_commit,
@@ -435,12 +474,12 @@ export default function BodyOfWorkPage() {
             />
             <StatTile
               label={t("meWork.stats.avgPrsWeek")}
-              value={Math.round((work.prs_merged / 12) * 10) / 10}
+              value={Math.round((work.prs_merged / spanWeeks) * 10) / 10}
               hint={t("meWork.stats.avgPrsWeekHint")}
             />
             <StatTile
               label={t("meWork.stats.aiCollaborators")}
-              value={work.ai_collaborators.filter((a) => a.co_authorships > 0).length}
+              value={work.ai_collaborators.filter((a) => (a.co_authorships + (a.prs_authored ?? 0)) > 0).length}
               hint={t("meWork.stats.aiCollaboratorsHint")}
             />
           </section>
@@ -454,8 +493,12 @@ export default function BodyOfWorkPage() {
             </p>
             <ul className="space-y-2">
               {work.ai_collaborators
-                .filter((a) => a.co_authorships > 0)
-                .sort((a, b) => b.co_authorships - a.co_authorships)
+                .filter((a) => (a.co_authorships + (a.prs_authored ?? 0)) > 0)
+                .sort(
+                  (a, b) =>
+                    b.co_authorships + (b.prs_authored ?? 0) -
+                    (a.co_authorships + (a.prs_authored ?? 0)),
+                )
                 .map((a) => (
                   <li
                     key={a.name}
@@ -467,6 +510,11 @@ export default function BodyOfWorkPage() {
                       {a.co_authorships === 1
                         ? t("meWork.coAuthorshipSingular")
                         : t("meWork.coAuthorshipPlural")}
+                      {typeof a.prs_authored === "number" && a.prs_authored > 0 && (
+                        <span className="ml-2 text-muted-foreground/85">
+                          · {a.prs_authored} PR{a.prs_authored === 1 ? "" : "s"} authored end-to-end
+                        </span>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -511,6 +559,58 @@ export default function BodyOfWorkPage() {
               </a>
             </p>
           </section>
+
+          {/* Lineage of works — what the graph already holds about the
+              founder's contributions across the decades before this
+              network. RCSL (1992), Muzzle Velocity (1995-97), BML
+              thesis (2000), MindTouch, Quark, Trimble, Schindler,
+              Qualcomm, the C64 MIDI interface (age 13). The Coherence-
+              Network stats above are this body's slice; this section
+              holds the longer arc the graph has been carrying. */}
+          {genericBody && genericBody.contributed_assets_total > 0 && (
+            <section className="space-y-4">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                {t("meWork.lineageEyebrow")}
+              </p>
+              <p className="text-sm text-stone-300 leading-relaxed">
+                {renderProse(t("meWork.lineageBody"))}
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {genericBody.contributed_assets
+                  .filter((a) => a.type === "asset")
+                  .map((a) => (
+                    <li key={a.id}>
+                      <Link
+                        href={a.slug ? `/people/${a.slug}` : `/people/${encodeURIComponent(a.id)}`}
+                        className="group flex flex-col rounded-xl border border-border/30 bg-card/40 hover:bg-card/65 hover:border-border p-3 transition-colors"
+                      >
+                        <p className="text-sm text-foreground/90 group-hover:text-foreground">
+                          {a.name}
+                        </p>
+                        {(a.role || a.era || a.asset_type) && (
+                          <p className="text-[10px] text-muted-foreground/85 mt-1">
+                            {[a.era, a.role, a.asset_type]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+              {genericBody.contributed_assets_total >
+                genericBody.contributed_assets.length && (
+                <p className="text-xs text-muted-foreground italic">
+                  {interp(t("meWork.lineageMoreTemplate"), {
+                    shown: genericBody.contributed_assets.filter(
+                      (a) => a.type === "asset",
+                    ).length,
+                    total: genericBody.contributed_assets_total,
+                  })}
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="rounded-2xl border border-border/30 bg-card/20 p-5 space-y-3">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
