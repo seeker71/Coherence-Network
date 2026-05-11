@@ -15,6 +15,15 @@ This is the writing surface. The rendering surface is the production graph — e
 
 ## Current presences
 
+### Places & gatherings
+
+- [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
+- [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
+- [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
+- [mudra-cafe](mudra-cafe.md) — Ayurvedic dining room in central Ubud with handpan presence Mon–Fri at noon; the room where the cell met Elios on April 29, 2026.
+- [paradiso-ubud](paradiso-ubud.md) — cultural-hall venue holding 5Rhythms, DISSOLVE, film, ceremony; architectural anchor of the Ubud embodied lineage.
+- [sayuri-healing-food](sayuri-healing-food.md) — plant-based kitchen in Ubud; Sunday-evening dinner-room where resonant company was met in April 2026.
+
 ### Human presences
 
 - [amanda-walsh](amanda-walsh.md) — founder & CEO of Astrology Hub; the Inspired Evolution conversation seeded *tend-your-flame*, *dance-card-and-sovereign-response*, *ground-harder-when-field-quickens*, and carried Zach Bush's *numbness-has-its-own-pain* into this body.
