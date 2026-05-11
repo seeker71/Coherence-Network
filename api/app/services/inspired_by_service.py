@@ -1425,3 +1425,40 @@ def remove_inspired_by_edge(edge_id: str) -> bool:
     """Drop the inspired-by edge. The identity node stays — it's still
     claimable and still linked to its creations."""
     return graph_service.delete_edge(edge_id)
+
+
+def import_inspired_by_manual(
+    *,
+    source_contributor_id: str,
+    target_id: str,
+    weight: float = 0.8,
+) -> dict[str, Any] | None:
+    """Create an inspired-by edge between two existing graph nodes.
+
+    Mirrors ``import_inspired_by`` but skips the open-web resolution
+    step. Both nodes must already exist; this is a relation gesture,
+    not a creation gesture. Idempotent — calling twice with the same
+    pair refreshes the weight rather than creating a duplicate edge
+    (the underlying ``graph_service.create_edge`` upserts on the
+    (from, to, type) unique constraint).
+
+    Returns the edge as stored, or None when either node is missing.
+    """
+    source_id = _normalize_contributor_id(source_contributor_id)
+    source_node = graph_service.get_node(source_id)
+    if not source_node:
+        return None
+    target_node = graph_service.get_node(target_id)
+    if not target_node:
+        return None
+    # Clamp weight to [0, 1] as a defensive measure even though the
+    # router already validates.
+    w = max(0.0, min(1.0, float(weight)))
+    return graph_service.create_edge(
+        from_id=source_id,
+        to_id=target_node["id"],
+        type="inspired-by",
+        properties={"manual": True},
+        strength=w,
+        created_by="manual:inspired-by",
+    )
