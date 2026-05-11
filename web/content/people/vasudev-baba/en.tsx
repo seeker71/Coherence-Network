@@ -393,23 +393,111 @@ const content: PersonProfileContent = {
       kind: "panel",
       variant: "warm",
       eyebrow: "Recorded offerings",
-      heading: "Music & songbooks",
+      heading: "Albums, live archive, songbooks",
       body: (
         <>
           <p>
-            <strong>Albums.</strong> <em>108 Names</em> (with Radha
-            Kumari), <em>Mahadevaya</em>, <em>Midnight Blossom</em>{" "}
-            (instrumental, flute), <em>SUPER DELUXE</em> (reggae),{" "}
-            <em>Realms of Beauty</em> (sound healing, with Amma Sophia
-            Rose), <em>Little Star</em>, and <em>Estrela Bela</em>.
+            <strong>Studio albums</strong> — each linked directly to
+            its Spotify page:
+          </p>
+          <ul>
+            <li>
+              <Link
+                href="https://open.spotify.com/artist/6qwErnxVVaPa0gNLpUzbU2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>108 Names</em>
+              </Link>{" "}
+              — with Radha Kumari
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/artist/7wyGgm0yXGN0Ie3qvv4Gxo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>Mahadevaya</em>
+              </Link>{" "}
+              (2013)
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/album/7jayj5e2KhNxxQSfax834R"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>Midnight Blossom</em>
+              </Link>{" "}
+              — instrumental, flute
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/artist/1QxUNjo3ehTgRAqkgb9xSn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>SUPER DELUXE</em>
+              </Link>{" "}
+              — reggae project, ongoing since 2005
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/album/2ZNRLC6xiM80dMg8cvG7py"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>Realms of Beauty</em>
+              </Link>{" "}
+              — sound healing, with Amma Sophia Rose
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/album/617yEUykhgNpEZbaGakbjW"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>Little Star</em>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="https://open.spotify.com/album/2xTL3ZP8K5L2OJp7s6BeXx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                <em>Estrela Bela</em>
+              </Link>
+            </li>
+          </ul>
+          <p>
+            <strong>Sopa de Luz</strong> — a kirtan-and-reggae fusion
+            project co-created in Bali during 2020/2021 with musicians
+            who were grounded on the island through the closures of
+            that period. A second register for the bhakti voice.
           </p>
           <p>
             <strong>Live archive.</strong> Four full Svarga Loka kirtan
-            sets recorded in 2019 are preserved on Bandcamp under the
-            name <em>Jai Ma 108</em> — Vasudev with Maalika (harmonium
-            and backup vocals), Jai James Harvey and Joseph Wallin
-            (drums), Suzanne Solveil (kartals), David Phillips (bass +
-            recording). <em>In service to sharing the Divine Names.</em>
+            sets recorded in 2019 are preserved on{" "}
+            <Link
+              href="https://jaima108.bandcamp.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Bandcamp under <em>Jai Ma 108</em>
+            </Link>{" "}
+            — Vasudev with Maalika (harmonium and backup vocals), Jai
+            James Harvey and Joseph Wallin (drums), Suzanne Solveil
+            (kartals), David Phillips (bass + recording).{" "}
+            <em>In service to sharing the Divine Names.</em>
           </p>
           <p>
             <strong>Songbooks.</strong> <em>Mantras for Bhajan</em> and{" "}
@@ -417,38 +505,279 @@ const content: PersonProfileContent = {
             India, at Rainbow Gatherings, and through unscheduled
             meetings around the world.
           </p>
+        </>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "cool",
+      eyebrow: "Find them",
+      heading: "Public anchors",
+      body: (
+        <p className="flex flex-wrap gap-x-4 gap-y-2">
+          <Link
+            href="https://www.sacredsongcircle.com/vasudev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Sacred Song Circle profile
+          </Link>
+          <Link
+            href="https://www.instagram.com/vasudevmusic/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Instagram — @vasudevmusic
+          </Link>
+          <Link
+            href="https://www.youtube.com/channel/UC8hccm_A1lEjVZkJuPqKEAA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            YouTube channel
+          </Link>
+          <Link
+            href="https://www.facebook.com/groups/123972024418527/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Sacred Song Circle Facebook group
+          </Link>
+          <Link
+            href="https://open.spotify.com/artist/6qwErnxVVaPa0gNLpUzbU2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Spotify (108 Names artist)
+          </Link>
+          <Link
+            href="https://music.apple.com/us/artist/vasudev/388604645"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Apple Music
+          </Link>
+          <Link
+            href="https://jaima108.bandcamp.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Bandcamp — Jai Ma 108
+          </Link>
+          <Link
+            href="https://www.globalheartdance.net/home/the-event/musicians-432hz/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Global Heart Dance 432Hz musicians
+          </Link>
+        </p>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "cool",
+      eyebrow: "Festival & guest kirtan",
+      heading: "Where the voice has travelled",
+      body: (
+        <>
+          <p>
+            Beyond the steady Bali rooms, Vasudev's voice has been
+            heard at gatherings the wider bhakti world organises:
+          </p>
+          <ul>
+            <li>
+              <Link
+                href="https://balispiritfestival2019.sched.com/speaker/vasudev_amp_friends.1z9gc0fg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                BaliSpirit Festival 2019
+              </Link>{" "}
+              — Vasudev & Friends at Purnati Center for the Arts, Ubud
+              (Mar 25 – Apr 1, 2019)
+            </li>
+            <li>
+              <Link
+                href="https://www.youtube.com/watch?v=0_c0id0DbLE"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Dubai Kirtan Mela 2025 — Kirtan Rasa
+              </Link>{" "}
+              — Vasudev & Keshava, Day 3
+            </li>
+            <li>
+              <Link
+                href="https://soundcloud.com/charmcitykirtans/vasudev-new-vrindavan-24hr-kirtan-day-2-61922"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                New Vrindavan 24-Hour Kirtan
+              </Link>{" "}
+              — Day 2, June 19, 2022 (via Charm City Kirtans)
+            </li>
+            <li>
+              <Link
+                href="https://soundcloud.com/charmcitykirtans/vasudev-capital-kirtan-day-2-3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Capital Kirtan, Day 2
+              </Link>{" "}
+              — March 11, 2023 (via Charm City Kirtans)
+            </li>
+            <li>
+              <Link
+                href="https://soundcloud.com/charmcitykirtans/vasudev-krishna-new-vrindavan-24hr-kirtan-61524"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                New Vrindavan 24-Hour Kirtan
+              </Link>{" "}
+              — June 15, 2024
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Contributions to this body",
+      heading: "What Vasudev Baba has given the Coherence Network",
+      body: (
+        <>
+          <p>
+            From the other side of the same exchange — the record this
+            body has kept of what arrived through him. Every link is
+            an in-repo source the lineage can be walked back through.
+          </p>
+          <ul>
+            <li>
+              <strong>2026-05-07 · Wednesday Satsang on pressure.</strong>{" "}
+              The circle at Ranakami sat with <em>what do we do when
+              shit happens</em>. Five strategies of return surfaced —
+              the observer, naming the need, the gift, hoʻoponopono,
+              and frequency × angle × focus. Seeded into the body as{" "}
+              <Link
+                href="/vision/lc-when-the-pressure-comes"
+                className="text-primary hover:underline"
+              >
+                lc-when-the-pressure-comes
+              </Link>
+              .
+            </li>
+            <li>
+              <strong>2026-05-09 · The Enneagram mention.</strong>{" "}
+              A passing reference in conversation became the door
+              through which the Enneagram entered this body's
+              vocabulary as a contemplative typology — nine specific
+              shapes of essence-loss and return. Seeded as{" "}
+              <Link
+                href="/vision/lc-essence-and-the-nine-costumes"
+                className="text-primary hover:underline"
+              >
+                lc-essence-and-the-nine-costumes
+              </Link>
+              . Transmission record:{" "}
+              <Link
+                href="https://github.com/seeker71/Coherence-Network/blob/main/docs/vision-kb/transmissions/2026-05-09-vasudev-baba-enneagram.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                tx-vasudev-baba-enneagram
+              </Link>
+              .
+            </li>
+            <li>
+              <strong>
+                2026-05-11 · The written essay{" "}
+                <em>On frequency, consciousness and the assemblage point</em>.
+              </strong>{" "}
+              A short essay sent directly to Urs as a Word document.
+              It weaves the three gunas, the seven chakras, Socrates'{" "}
+              <em>Gorgias</em> and Castaneda's assemblage point as one
+              continuous picture, grounded in HeartMath's heart-field
+              measurements. Confirmed and deepened three concepts the
+              body already held —{" "}
+              <Link
+                href="/vision/lc-assemblage-point"
+                className="text-primary hover:underline"
+              >
+                lc-assemblage-point
+              </Link>
+              ,{" "}
+              <Link
+                href="/vision/lc-frequency-routes-reception"
+                className="text-primary hover:underline"
+              >
+                lc-frequency-routes-reception
+              </Link>
+              , and{" "}
+              <Link
+                href="/vision/lc-essence-and-the-nine-costumes"
+                className="text-primary hover:underline"
+              >
+                lc-essence-and-the-nine-costumes
+              </Link>{" "}
+              — and gave the assemblage-point concept a named teacher
+              whose lineage is now walkable. Full text preserved:{" "}
+              <Link
+                href="https://github.com/seeker71/Coherence-Network/blob/main/docs/vision-kb/transmissions/2026-05-11-vasudev-baba-on-frequency.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                tx-vasudev-baba-on-frequency
+              </Link>
+              .
+            </li>
+          </ul>
+          <p>
+            The lineage record of how the Ubud cells found each other
+            is held in three further documents — the constellation
+            map, the lived embodied lineage, and the four-day meeting
+            walk:
+          </p>
           <p className="flex flex-wrap gap-x-4 gap-y-1">
             <Link
-              href="https://open.spotify.com/album/3ksk645Ml95PYrAkDa2tbC"
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-constellation-of-cells.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
-              Spotify — 108 Names
+              Constellation of cells
             </Link>
             <Link
-              href="https://music.apple.com/us/artist/vasudev/388604645"
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
-              Apple Music
+              Ubud embodied lineage
             </Link>
             <Link
-              href="https://jaima108.bandcamp.com/"
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-ubud-meeting-walk.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
-              Bandcamp — Jai Ma 108
-            </Link>
-            <Link
-              href="https://www.sacredsongcircle.com/vasudev/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Sacred Song Circle profile
+              Ubud meeting walk
             </Link>
           </p>
         </>
@@ -487,54 +816,7 @@ const content: PersonProfileContent = {
   footer: (
     <>
       <p>
-        Public anchors:{" "}
-        <Link
-          href="https://www.sacredsongcircle.com/vasudev/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          Sacred Song Circle bio
-        </Link>
-        {" · "}
-        <Link
-          href="https://jaima108.bandcamp.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          Jai Ma 108 on Bandcamp
-        </Link>
-        {" · "}
-        <Link
-          href="https://open.spotify.com/album/3ksk645Ml95PYrAkDa2tbC"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          108 Names on Spotify
-        </Link>
-        {" · "}
-        <Link
-          href="https://music.apple.com/us/artist/vasudev/388604645"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          Vasudev on Apple Music
-        </Link>
-        {" · "}
-        <Link
-          href="https://jembendell.com/bali-temple-retreats/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          Brahma Vihara retreats
-        </Link>
-      </p>
-      <p>
-        Wednesday satsang held at{" "}
+        <strong>Wider weaving.</strong> Wednesday satsang held at{" "}
         <Link href="/people/ilena" className="text-primary hover:underline">
           Ranakami
         </Link>
@@ -547,7 +829,156 @@ const content: PersonProfileContent = {
         >
           Prof Jem Bendell
         </Link>
+        . Tuesday kirtan at{" "}
+        <Link
+          href="https://adiwanahotels.com/svargaloka-resort-ubud-bali/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Adiwana Svarga Loka
+        </Link>
         .
+      </p>
+      <p>
+        <strong>In-body record of his contributions:</strong>{" "}
+        <Link
+          href="/vision/lc-when-the-pressure-comes"
+          className="text-primary hover:underline"
+        >
+          lc-when-the-pressure-comes
+        </Link>
+        {" · "}
+        <Link
+          href="/vision/lc-essence-and-the-nine-costumes"
+          className="text-primary hover:underline"
+        >
+          lc-essence-and-the-nine-costumes
+        </Link>
+        {" · "}
+        <Link
+          href="/vision/lc-assemblage-point"
+          className="text-primary hover:underline"
+        >
+          lc-assemblage-point
+        </Link>
+        {" · "}
+        <Link
+          href="/vision/lc-frequency-routes-reception"
+          className="text-primary hover:underline"
+        >
+          lc-frequency-routes-reception
+        </Link>
+        {" · "}
+        <Link
+          href="https://github.com/seeker71/Coherence-Network/blob/main/docs/vision-kb/transmissions/2026-05-09-vasudev-baba-enneagram.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          tx · Enneagram (2026-05-09)
+        </Link>
+        {" · "}
+        <Link
+          href="https://github.com/seeker71/Coherence-Network/blob/main/docs/vision-kb/transmissions/2026-05-11-vasudev-baba-on-frequency.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          tx · On Frequency (2026-05-11)
+        </Link>
+      </p>
+      <p>
+        <strong>Public anchors:</strong>{" "}
+        <Link
+          href="https://www.sacredsongcircle.com/vasudev/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Sacred Song Circle
+        </Link>
+        {" · "}
+        <Link
+          href="https://www.instagram.com/vasudevmusic/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Instagram
+        </Link>
+        {" · "}
+        <Link
+          href="https://www.youtube.com/channel/UC8hccm_A1lEjVZkJuPqKEAA"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          YouTube
+        </Link>
+        {" · "}
+        <Link
+          href="https://www.facebook.com/groups/123972024418527/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Facebook group
+        </Link>
+        {" · "}
+        <Link
+          href="https://jaima108.bandcamp.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Bandcamp
+        </Link>
+        {" · "}
+        <Link
+          href="https://open.spotify.com/artist/6qwErnxVVaPa0gNLpUzbU2"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Spotify
+        </Link>
+        {" · "}
+        <Link
+          href="https://music.apple.com/us/artist/vasudev/388604645"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Apple Music
+        </Link>
+        {" · "}
+        <Link
+          href="https://jembendell.com/bali-temple-retreats/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Brahma Vihara retreats
+        </Link>
+        {" · "}
+        <Link
+          href="https://balispiritfestival2019.sched.com/speaker/vasudev_amp_friends.1z9gc0fg"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          BaliSpirit 2019
+        </Link>
+        {" · "}
+        <Link
+          href="https://www.youtube.com/watch?v=0_c0id0DbLE"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          Dubai Kirtan Mela 2025
+        </Link>
       </p>
       <p className="text-xs italic">
         This profile is a welcoming scaffold; Vasudev Baba is invited to
