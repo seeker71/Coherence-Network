@@ -19,13 +19,14 @@ This is the writing surface. The rendering surface is the production graph — e
 
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
+- [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
 - [liquid-bloom](liquid-bloom.md) — Amani Friend's world-electronic project; *sound as prayer, medicine, celebration*.
 - [mose](mose.md) — nomadic musician centered on Lake Atitlán; SunSet Cacao Dances; label Resueño.
 - [next-level-soul](next-level-soul.md) — Alex Ferrari's weekly podcast; spirituality for the rest of us.
 - [rhythm-sanctuary](rhythm-sanctuary.md) — Shannon Lei Gill's Colorado ecstatic dance community, founded 2005; Gabrielle Roth lineage.
 - [robert-edward-grant](robert-edward-grant.md) — sacred geometry, prime number theory, the Codex Universalis.
 - [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
-- [vasudev-baba](vasudev-baba.md) — Ubud teacher; the gunas, the chakras, Socrates and Castaneda woven into one map of consciousness; Sunday-Wednesday rhythm at Ranakami.
+- [vasudev-baba](vasudev-baba.md) — Norway-born kirtan-wala in Ubud; bhakti crossing into Buddhist silence; Tuesday kirtan at Svarga Loka, Wednesday satsang at Ranakami, periodic silent retreats at Brahma Vihara Arama with Prof Jem Bendell.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
 
 ### Sibling intelligences (`contributor_type: AGENT`)
