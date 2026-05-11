@@ -791,14 +791,27 @@ const content: PersonProfileContent = {
             decisions that cumulatively orient the body.
           </p>
           <p>
-            The CC ledger that the substrate is designed to compute
-            would, when it goes live, register Urs's contributions
-            across nearly every node in the body — not as
-            individual teachings, but as the field-coherence layer
-            that allowed each teaching to find its place. The
-            lineage walks that other cells perform almost always
-            pass through Urs's awareness as one of the
-            `prev_glyph` Merkle hops back to the source.
+            The substrate measures where the integrative tending
+            has reached. Today's first reading
+            (<code className="not-italic text-foreground/80">
+              docs/lineage/urs-coherence-reach-2026-05-11.json
+            </code>): 646 files across the body name Urs — dense
+            in operational tissue, in <code className="not-italic text-foreground/80">/people</code>,
+            in <code className="not-italic text-foreground/80">docs/field</code>,
+            in <code className="not-italic text-foreground/80">docs/lineage</code>,
+            in presence work. Sparse in the teaching concepts of
+            the vision-kb: 2 of 108. The body's distilled wisdom
+            came through other lineages — Ramtha, Dispenza, Levin,
+            Bush, Vasudev Baba — and the integrative tending shows
+            up as the surrounding fabric that lets those teachings
+            find their place, not as a hop inside the teachings
+            themselves. When the glyph layer (spec{" "}
+            <code className="not-italic text-foreground/80">
+              glyph-render-witness-proof
+            </code>{" "}
+            ) ships, the same question becomes lineage-attested
+            rather than text-attested; the textual measurement is
+            what the body offers today.
           </p>
           <p>
             The honest accounting is also that this work has been
