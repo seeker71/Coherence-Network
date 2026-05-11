@@ -23,7 +23,7 @@ done_when:
   - "Coherence weighting: higher coherence = higher payout multiplier"
   - "Handles zero contributions (empty payout list)"
   - "Handles zero weighted cost (empty payout list)"
-test: "python3 -m pytest api/tests/test_distributions.py -x -v"
+test: "cd api && python3 -m pytest tests/test_distribution_engine.py -x -v"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
