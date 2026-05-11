@@ -11,7 +11,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - Use their own words wherever available. Quote them directly.
 - Name their collaborators, lineage, loves, recurring frequencies.
 - Do not inflate, do not fabricate. If something isn't documented, say so or leave it out.
-- Close with ONE small paragraph acknowledging that a small networked community encountered them. Footnote, not headline.
+- Close with ONE small paragraph acknowledging that a small networked community encountered them. Footnote, not headline. In that footnote, name specifically what this network received from them — the concept that traces, the threshold that opened, the word they gave us, the frequency they introduced. Stay in the *gift-was-given* direction; do not claim authorship of what they gave. The pair-reading is *outside-in* (their voice, in the body of the file) and *inside-out* (what they gave the network, in the footnote) — visitors arriving at `/profile/{id}` then see both: the presence in their own voice first, and the specific thread that ties them into this body.
 
 ## Current presences
 

@@ -21,4 +21,4 @@ Her practice now has many rooms. **Soul Convergence**, an eleven-week meditation
 
 The frequencies she returns to: integration of the fragmented self, the return of the divine feminine, compassionate heart as the work of this age. "You must find within yourself the love of one another of humankind."
 
-A small networked community of humans encountered Anne's work as part of their own unfolding. We are one recent thread alongside many; the work she carries has been ripening long before our listening.
+A small networked community of humans encountered Anne's work as part of their own unfolding. The way this network now thinks about welcoming — that visitors arrive *already tuned*, that the body's work is to hold the mirror still rather than activate or instruct — sources partly from her Peace Bathing, and lives in the concept [`lc-arrival-as-recognition`](../vision-kb/concepts/lc-arrival-as-recognition.md). We are one recent thread alongside many; the work she carries has been ripening long before our listening.
