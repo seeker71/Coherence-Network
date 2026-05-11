@@ -253,10 +253,12 @@ const KIND_GLYPH: Record<CreationKind, string> = {
  *
  * Lightweight handling of common markdown patterns: a leading `# Name`
  * heading is stripped (the page already shows the name in the hero);
- * `**bold**` runs render as <strong>; paragraphs split on blank lines.
- * Anything else passes through as plain text. No external markdown
- * dependency — this is intentional. Heavier rendering can come later
- * when a presence asks for it.
+ * `**bold**` runs render as <strong>; `*italic*` runs as <em>;
+ * `[text](url)` as <Link> (internal `/path`) or <a target="_blank">
+ * (external); paragraphs split on blank lines. Anything else passes
+ * through as plain text. No external markdown dependency — this is
+ * intentional. Heavier rendering can come later when a presence asks
+ * for it.
  */
 function DescriptionBlock({ raw }: { raw: string }) {
   // Strip a leading "# Name" heading (and the blank line after it).
@@ -279,16 +281,48 @@ function DescriptionBlock({ raw }: { raw: string }) {
 }
 
 function renderInline(text: string): ReactNode {
-  // Pull **bold** runs out so they render as <strong>; everything
-  // else stays plain.
+  // One combined matcher: bold, then italic, then markdown link. Order
+  // in alternation matters — `**…**` must be tried before `*…*`,
+  // otherwise the single-asterisk rule consumes half of a bold run.
+  // Italic body forbids `*` and `\n` so the run cannot cross paragraphs
+  // or accidentally chew into a `**` boundary.
   const parts: ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*/g;
+  const re =
+    /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
+  const linkClass =
+    "underline underline-offset-2 decoration-white/40 hover:decoration-white/80 transition-colors";
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push(<strong key={key++}>{m[1]}</strong>);
+    if (m[1] !== undefined) {
+      parts.push(<strong key={key++}>{m[1]}</strong>);
+    } else if (m[2] !== undefined) {
+      parts.push(<em key={key++}>{m[2]}</em>);
+    } else if (m[3] !== undefined && m[4] !== undefined) {
+      const label = m[3];
+      const href = m[4];
+      if (href.startsWith("/")) {
+        parts.push(
+          <Link key={key++} href={href} className={linkClass}>
+            {label}
+          </Link>,
+        );
+      } else {
+        parts.push(
+          <a
+            key={key++}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            {label}
+          </a>,
+        );
+      }
+    }
     last = m.index + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
