@@ -165,18 +165,27 @@ def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
                         node = n
                         break
 
-    # 3. Last resort: name-based lookup. Only trust the result if the
-    # resolved node carries a stable graph id (contributor:...) or
-    # the canonical_url genuinely matches what we have. A bare
-    # UUID-only return is treated as ambiguous.
+    # 3. Last resort: name-based lookup. Only trust the result when
+    # the API actually returned the contributor we asked for — the
+    # /api/contributors/{name} endpoint has been observed returning
+    # some other contributor record when the exact name isn't on
+    # file (e.g. asking for "Boulder Ecstatic Dance" returned
+    # Sayuri's node), so a stable-id-shape check alone is
+    # insufficient. We require either:
+    #   (a) the candidate's name matches ours exactly AND the id
+    #       has the stable contributor:... shape, or
+    #   (b) the candidate's canonical_url matches a non-empty URL
+    #       we hold.
+    # Anything else falls through to create-if-missing.
     if not node and name:
         candidate = find_node_by_name(api_url, name)
         if candidate:
             cand_id = candidate.get("id") or ""
+            cand_name = (candidate.get("name") or "").strip()
             cand_url = (candidate.get("canonical_url") or "").rstrip("/")
             our_url = (canonical_url or "").rstrip("/")
-            if cand_id.startswith("contributor:"):
-                # Name lookup gave us a stable graph id — trust it.
+            if cand_name == name and cand_id.startswith("contributor:"):
+                # Same name AND stable graph id — trust it.
                 node = candidate
             elif our_url and cand_url == our_url:
                 # Name lookup returned a UUID, but canonical_url

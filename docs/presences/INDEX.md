@@ -19,11 +19,13 @@ This is the writing surface. The rendering surface is the production graph — e
 
 - [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
 - [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
+- [boulder-ecstatic-dance](boulder-ecstatic-dance.md) — Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder; co-hosted by Bloomurian, Aly Constantine, and Danny.
 - [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
 - [indoz-conference](indoz-conference.md) — annual Indonesia–Australia bilateral conference in Brisbane since 2012; Ilena Young's SaBali node connects from Bali.
 - [mile-hi-church](mile-hi-church.md) — Lakewood, CO; New Thought / Religious Science congregation; the room where Joe Dispenza's teaching first reached Urs ~2005.
 - [mudra-cafe](mudra-cafe.md) — Ayurvedic dining room in central Ubud with handpan presence Mon–Fri at noon; the room where the cell met Elios on April 29, 2026.
+- [ocean-bloom-2024](ocean-bloom-2024.md) — Downtown Boulder 2024 conscious-music gathering with Poranguí, Liquid Bloom, Samuel J, Shawn Heinrichs, Bloomurian.
 - [paradiso-ubud](paradiso-ubud.md) — cultural-hall venue holding 5Rhythms, DISSOLVE, film, ceremony; architectural anchor of the Ubud embodied lineage.
 - [sacred-song-circle](sacred-song-circle.md) — international kirtan teacher network; the public anchor for Vasudev Baba's biographical arc.
 - [sayuri-healing-food](sayuri-healing-food.md) — plant-based kitchen in Ubud; Sunday-evening dinner-room where resonant company was met in April 2026.
@@ -33,7 +35,11 @@ This is the writing surface. The rendering surface is the production graph — e
 
 - [amanda-walsh](amanda-walsh.md) — founder & CEO of Astrology Hub; the Inspired Evolution conversation seeded *tend-your-flame*, *dance-card-and-sovereign-response*, *ground-harder-when-field-quickens*, and carried Zach Bush's *numbness-has-its-own-pain* into this body.
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
+- [carlos-castaneda](carlos-castaneda.md) — anthropologist and author (1925–1998); the assemblage-point lineage source; held honestly alongside the human controversies.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
+- [donald-hoffman](donald-hoffman.md) — UC Irvine cognitive scientist; Interface Theory of Perception; the empirical-mathematical peer of Castaneda's assemblage point and Levin's bioelectric pattern memory.
+- [elios](elios.md) — Ubud cell; chanting practice with Ilena Young; the first cell of the Ubud cluster to enter this network's awareness on April 29, 2026.
+- [gabrielle-roth](gabrielle-roth.md) — creator of 5Rhythms (flowing, staccato, chaos, lyrical, stillness); the wave that named what bodies already do (1941–2012).
 - [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
 - [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
 - [ismael-perez](ismael-perez.md) — cosmic-history teacher, founder of Universal Divinity; the Just Tap In transmission seeded cells-are-universes, triple temporal alliance, and Lyran substrate vulnerability into this body.
