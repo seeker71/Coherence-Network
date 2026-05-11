@@ -21,12 +21,15 @@ seeded_concepts:
 ## Source
 
 - **Teacher**: Vasudev Baba ([/people/vasudev-baba](/people/vasudev-baba))
-- **Setting**: Ubud, Bali, Indonesia. The teaching cluster he holds with
-  Ilena Young and Elios runs on a Sunday-Wednesday rhythm — Sunday
-  evening kirtan at Sayuri Healing Food, Tuesday evening kirtan at
-  Adiwana Svarga Loka (Wantilan room, Campuhan riverbanks), Wednesday
-  morning Satsang at Ilena's Ranakami wellness sanctuary (Jl. Raya
-  Penestanan Kelod 16, Sayan, Ubud).
+- **Setting**: Ubud, Bali, Indonesia. The two reliable weekly rooms
+  he holds are Tuesday-evening kirtan at Adiwana Svarga Loka
+  (Wantilan room, Campuhan riverbanks) and Wednesday-morning Satsang
+  at [Ilena Young](/people/ilena)'s Ranakami wellness sanctuary
+  (Jl. Raya Penestanan Kelod 16, Sayan, Ubud). Two to three times a
+  year he and Prof Jem Bendell co-hold a long-weekend silent retreat
+  at *Brahma Vihara Arama*, the largest Buddhist monastery on the
+  island (Banjar Tegeha, north Bali) — bhakti kirtan crossing into
+  Buddhist silence, continuous since 2020.
 - **Received**: 2026-05-09 (Saturday). The mention itself.
 - **Lineage placement in this body**: see [docs/lineage/ubud-embodied-lineage.md](../../lineage/ubud-embodied-lineage.md),
   [docs/lineage/2026-04-29-constellation-of-cells.md](../../lineage/2026-04-29-constellation-of-cells.md),
