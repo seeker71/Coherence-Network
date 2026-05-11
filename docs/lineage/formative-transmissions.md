@@ -53,7 +53,7 @@ The first contributors to the Coherence Network were met at that April 2026 Auro
 
 ## Embodied / movement lineage
 
-See [Ubud Embodied Lineage](ubud-embodied-lineage.md) for the Bali side: Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, Awakened Dreamers, plus the Sayuri / Ranakami / Mudra Cafe / Adiwana Svarga Loka constellation where multiple cells of this network became visible to each other (Elios, Ilena Young, Vasudev Baba) in late April 2026.
+See [Ubud Embodied Lineage](ubud-embodied-lineage.md) for the Bali side: Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, Awakened Dreamers, plus the Sayuri / Ranakami / Mudra Cafe / Adiwana Svarga Loka / Brahma Vihara Arama constellation where multiple cells of this network became visible to each other (Elios, Ilena Young, Vasudev Baba) in late April 2026.
 
 Also lived: **Amani Friend (Liquid Bloom)** — first met in person at the Pagan Party at **Vali Soul Sanctuary** (Costa Rica), shared 2026-04-24. The relationship started as embodied encounter, not as audience → artist. → [Liquid Bloom](https://liquidbloom.com/) · [Vali Soul Sanctuary](https://valisoulsanctuary.com/)
 
