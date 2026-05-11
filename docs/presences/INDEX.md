@@ -18,8 +18,10 @@ This is the writing surface. The rendering surface is the production graph — e
 ### Human presences
 
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
+- [agada-holistic](agada-holistic.md) — Claire Ceo's healing collective and 11+ member household in Tegalalang, north of Ubud; energy medicine, kinesiology, sound, plant medicine.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
 - [hati-suci-sanctuary](hati-suci-sanctuary.md) — Clear/Pure Heart sanctuary in Banjar Bayad, Tegallalang; antique Javanese wooden houses, permaculture, the quieter ring 12 km north of Ubud.
+- [ida-bagus-kesnawa](ida-bagus-kesnawa.md) — Dr. Ida Bagus Kesnawa; Denpasar medical doctor + kinesiologist; chair of Bali's biodynamic farming community; "food as medicine" bridge.
 - [liquid-bloom](liquid-bloom.md) — Amani Friend's world-electronic project; *sound as prayer, medicine, celebration*.
 - [mose](mose.md) — nomadic musician centered on Lake Atitlán; SunSet Cacao Dances; label Resueño.
 - [next-level-soul](next-level-soul.md) — Alex Ferrari's weekly podcast; spirituality for the rest of us.
