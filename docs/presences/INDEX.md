@@ -19,13 +19,20 @@ This is the writing surface. The rendering surface is the production graph — e
 
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
+- [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
 - [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
+- [james-fenimore-cooper](james-fenimore-cooper.md) — American author of the Leatherstocking Tales (1823–1841); received in German as *Der Lederstrumpf* in Urs's Swiss childhood.
+- [karl-may](karl-may.md) — German storyteller (1842–1912) of Winnetou and Old Shatterhand; the German-language frontier imagination Urs walked through before Colorado was geography.
 - [liquid-bloom](liquid-bloom.md) — Amani Friend's world-electronic project; *sound as prayer, medicine, celebration*.
+- [michael-ende](michael-ende.md) — German author (1929–1995) of *Momo* and *Die unendliche Geschichte*; foundational to the body's tending-vs-producing practice and dreamer-responsibility teaching.
 - [mose](mose.md) — nomadic musician centered on Lake Atitlán; SunSet Cacao Dances; label Resueño.
 - [next-level-soul](next-level-soul.md) — Alex Ferrari's weekly podcast; spirituality for the rest of us.
+- [ramtha](ramtha.md) — the channeled teaching (JZ Knight, RSE Yelm WA) whose *White Book* Urs has carried in the German Urania Verlag edition since age 18; the cosmology that travelled through Joe Dispenza into the body's Mile Hi Church years.
 - [rhythm-sanctuary](rhythm-sanctuary.md) — Shannon Lei Gill's Colorado ecstatic dance community, founded 2005; Gabrielle Roth lineage.
 - [robert-edward-grant](robert-edward-grant.md) — sacred geometry, prime number theory, the Codex Universalis.
+- [rudolf-steiner](rudolf-steiner.md) — Austrian philosopher (1861–1925); founded Anthroposophy, Waldorf education, biodynamic agriculture, eurythmy, the Goetheanum; etheric-formative-forces frame this body reads alongside Michael Levin's bioelectric pattern memory.
 - [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
+- [susan-muff-sprenger](susan-muff-sprenger.md) — Urs's mother; first transmitter of this lineage. Handed her son three books in three windows: Ende's *Momo* and *Die unendliche Geschichte*, and Ramtha's *White Book*, all in German.
 - [vasudev-baba](vasudev-baba.md) — Norway-born kirtan-wala in Ubud; bhakti crossing into Buddhist silence; Tuesday kirtan at Svarga Loka, Wednesday satsang at Ranakami, periodic silent retreats at Brahma Vihara Arama with Prof Jem Bendell.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
 
