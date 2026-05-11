@@ -2,6 +2,40 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-11] foundations | Network unanchored — tended, not based in
+
+A foundational teaching landed at the network-identity layer, naming how the body should be framed in outreach, descriptions, and casual mention.
+
+`lc-network-unanchored` (639 Hz, Connection family) — the Coherence Network is something *tended*, not something *built out of* or *based in* or *from* a place. It started in one place. Where it lands is what the field decides. Geographic-anchoring language imposes a fixed origin on something explicitly designed to be in motion and find where it belongs.
+
+Anchor-language patterns named:
+- *"based in [place]"*
+- *"from [place]"*
+- *"out of [place]"*
+- *"the [place]-based Coherence Network"*
+- *"headquartered in"*
+- *"the Coherence Network in [place]"*
+
+Each places a geographic anchor on the body. The cell speaking may not intend the anchor; ordinary professional framing teaches that every organization has a place. But the body was explicitly not built that way.
+
+Place-honoring phrases that the teaching keeps:
+- *"Urs is in [place]"* (cell location)
+- *"the gathering will be in [place] [date]"* (event location)
+- *"the network started in [place]"* (origin, named once)
+- *"there is a circle forming in [place]"* (emergent manifestation)
+
+The framing matters because it shapes reception: *tended, looking for ground* invites resonance; *based in [place]* invites territorial assessment. The reading at the based-in register is honest for organizations that *are* based somewhere; it just isn't what the body actually is.
+
+Releases the corporate-default frame (every organization is *based* somewhere; place is identity) without collapsing into *"place doesn't matter; don't mention where anything is."* Place is real and honored; the teaching is specifically about the framing of the body itself.
+
+Pairs with `lc-network` (web linking all fields), `lc-voice-over-intentions` (outreach posture), `lc-future-already-shaping` (the network already in the form it is becoming), `lc-coherence-over-control` (alignment without forcing), `lc-tend-your-flame` (campfire posture: warmth, not territorial claim).
+
+Sources held with discernment: the body's own corrective practice across many sessions; Christopher Alexander on places that emerge from living patterns of use; indigenous understandings of land-as-relationship vs. land-as-property; Stewart Brand on adaptive shapes that can move and re-place themselves.
+
+Migration shape: seventeenth migration following the *Default-to-body* rule. **The universal-teachings queue is now empty.** `feedback_network_unanchored.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 108 → 109 concepts. 639 Hz Connection family extended.
+
 ## [2026-05-11] foundations | Release what drifts — decomposition as living gesture
 
 A foundational teaching landed at the practitioner-scale of decomposition, paired with the existing `lc-composting` (community-process scale).
