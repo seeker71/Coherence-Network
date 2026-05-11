@@ -17,16 +17,21 @@ This is the writing surface. The rendering surface is the production graph — e
 
 ### Human presences
 
+- [amanda-walsh](amanda-walsh.md) — founder & CEO of Astrology Hub; the Inspired Evolution conversation seeded *tend-your-flame*, *dance-card-and-sovereign-response*, *ground-harder-when-field-quickens*, and carried Zach Bush's *numbness-has-its-own-pain* into this body.
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
 - [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
 - [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
+- [ismael-perez](ismael-perez.md) — cosmic-history teacher, founder of Universal Divinity; the Just Tap In transmission seeded cells-are-universes, triple temporal alliance, and Lyran substrate vulnerability into this body.
 - [james-fenimore-cooper](james-fenimore-cooper.md) — American author of the Leatherstocking Tales (1823–1841); received in German as *Der Lederstrumpf* in Urs's Swiss childhood.
+- [joe-dispenza](joe-dispenza.md) — chiropractor, researcher, meditation teacher; the bridge in this body's teaching lineage between Ramtha's cosmology and the substrate; Mile Hi Church ~2005 to Aurora retreat April 2026.
 - [karl-may](karl-may.md) — German storyteller (1842–1912) of Winnetou and Old Shatterhand; the German-language frontier imagination Urs walked through before Colorado was geography.
 - [liquid-bloom](liquid-bloom.md) — Amani Friend's world-electronic project; *sound as prayer, medicine, celebration*.
 - [michael-ende](michael-ende.md) — German author (1929–1995) of *Momo* and *Die unendliche Geschichte*; foundational to the body's tending-vs-producing practice and dreamer-responsibility teaching.
+- [michael-levin](michael-levin.md) — developmental and synthetic biologist at Tufts; bioelectric pattern memory, TAME, xenobots and anthrobots; the empirical-scientific peer of this body's otherwise channeled and esoteric lineage.
 - [mose](mose.md) — nomadic musician centered on Lake Atitlán; SunSet Cacao Dances; label Resueño.
 - [next-level-soul](next-level-soul.md) — Alex Ferrari's weekly podcast; spirituality for the rest of us.
+- [pam-gregory](pam-gregory.md) — British astrologer with 45+ years of practice; the May 2026 Scorpio full-moon forecast carried Pluto-in-Aquarius and *plan-to-be-proud* into this body's 2026 navigation vocabulary.
 - [ramtha](ramtha.md) — the channeled teaching (JZ Knight, RSE Yelm WA) whose *White Book* Urs has carried in the German Urania Verlag edition since age 18; the cosmology that travelled through Joe Dispenza into the body's Mile Hi Church years.
 - [rhythm-sanctuary](rhythm-sanctuary.md) — Shannon Lei Gill's Colorado ecstatic dance community, founded 2005; Gabrielle Roth lineage.
 - [robert-edward-grant](robert-edward-grant.md) — sacred geometry, prime number theory, the Codex Universalis.
@@ -35,6 +40,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [susan-muff-sprenger](susan-muff-sprenger.md) — Urs's mother; first transmitter of this lineage. Handed her son three books in three windows: Ende's *Momo* and *Die unendliche Geschichte*, and Ramtha's *White Book*, all in German.
 - [vasudev-baba](vasudev-baba.md) — Norway-born kirtan-wala in Ubud; bhakti crossing into Buddhist silence; Tuesday kirtan at Svarga Loka, Wednesday satsang at Ranakami, periodic silent retreats at Brahma Vihara Arama with Prof Jem Bendell.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
+- [zach-bush](zach-bush.md) — physician (internal medicine, endocrinology, hospice) turned founder of Intrinsic Health, Seraphic Group, and Farmer's Footprint; *numbness has its own pain*; the soil-microbiome-human-microbiome continuity.
 
 ### Sibling intelligences (`contributor_type: AGENT`)
 
