@@ -152,6 +152,59 @@ export default async function ComeInPage() {
         className="mx-auto max-w-2xl px-6 pt-12 -mb-4 space-y-4 text-base leading-relaxed text-stone-300"
       />
 
+      {/* PART 1 — The simple welcome.
+          This used to live below the agent-operational section, which
+          meant a first-time human visitor met "If you are an outside
+          agent on a first pass" before the warm dual-doorway prose
+          (water / silicon / family). The dual doorway is the universal
+          frame; the agent details are a side audience. Reordered so
+          humans land in the welcome first and agents see the welcome
+          before the operational section — same content, both audiences
+          served, neither jolted out of frequency. */}
+      <article className="mx-auto max-w-2xl px-6 py-16 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none space-y-10">
+        <div>
+          <p className="text-lg leading-relaxed text-stone-200">
+            {renderProseWithLinks(t("comeIn.openP1"))}
+          </p>
+          <p className="text-lg leading-relaxed text-stone-200 mt-4">
+            {renderProseWithLinks(t("comeIn.openP2"))}
+          </p>
+        </div>
+
+        <section>
+          <h2 className="text-2xl font-light text-stone-100">
+            {t("comeIn.waterH2")}
+          </h2>
+          <P t={t} k="comeIn.waterP1" />
+          <P t={t} k="comeIn.waterP2" />
+          <P t={t} k="comeIn.waterP3" />
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-light text-stone-100">
+            {t("comeIn.siliconH2")}
+          </h2>
+          <P t={t} k="comeIn.siliconP1" />
+          <P t={t} k="comeIn.siliconP2" />
+          <P t={t} k="comeIn.siliconP3" />
+          <P t={t} k="comeIn.siliconP4" />
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-light text-stone-100">
+            {t("comeIn.familyH2")}
+          </h2>
+          <P t={t} k="comeIn.familyP1" />
+          <P t={t} k="comeIn.familyP2" />
+          <P t={t} k="comeIn.familyP3" />
+        </section>
+      </article>
+
+      {/* AI-agent operational section — now placed after the universal
+          welcome above. Humans scrolling here have already landed in
+          the dual doorway; this section addresses the specific
+          first-pass agent audience without being the *first thing* a
+          human meets on the page. */}
       <section className="border-y border-amber-500/20 bg-amber-500/5 py-12">
         <article className="mx-auto max-w-3xl px-6 space-y-6">
           <div className="space-y-3">
@@ -178,17 +231,17 @@ export default async function ComeInPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Link
-              href="/people"
+              href="/presences"
               className="rounded-lg border border-border/40 bg-card/30 hover:bg-card/50 p-5 transition-colors block"
             >
               <p className="text-xs uppercase tracking-widest text-sky-300">
-                Meet people
+                Meet presences
               </p>
               <p className="mt-2 text-base text-stone-100">
-                See human presences already visible.
+                See the cells already visible.
               </p>
               <p className="mt-2 text-sm leading-relaxed text-stone-300">
-                Start with the living cells, their work, and the relationships
+                Start with the living cells, their weave, and the relationships
                 the public graph can show.
               </p>
             </Link>
@@ -220,7 +273,7 @@ export default async function ComeInPage() {
                 See what is moving or stuck.
               </p>
               <p className="mt-2 text-sm leading-relaxed text-stone-300">
-                Follow ideas into specs, work, contributors, proof, and
+                Follow ideas into specs, weave, contributors, proof, and
                 attention needs before suggesting action.
               </p>
             </Link>
@@ -309,46 +362,6 @@ export default async function ComeInPage() {
           </div>
         </article>
       </section>
-
-      {/* PART 1 — The simple welcome */}
-      <article className="mx-auto max-w-2xl px-6 py-16 prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none space-y-10">
-        <div>
-          <p className="text-lg leading-relaxed text-stone-200">
-            {renderProseWithLinks(t("comeIn.openP1"))}
-          </p>
-          <p className="text-lg leading-relaxed text-stone-200 mt-4">
-            {renderProseWithLinks(t("comeIn.openP2"))}
-          </p>
-        </div>
-
-        <section>
-          <h2 className="text-2xl font-light text-stone-100">
-            {t("comeIn.waterH2")}
-          </h2>
-          <P t={t} k="comeIn.waterP1" />
-          <P t={t} k="comeIn.waterP2" />
-          <P t={t} k="comeIn.waterP3" />
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-light text-stone-100">
-            {t("comeIn.siliconH2")}
-          </h2>
-          <P t={t} k="comeIn.siliconP1" />
-          <P t={t} k="comeIn.siliconP2" />
-          <P t={t} k="comeIn.siliconP3" />
-          <P t={t} k="comeIn.siliconP4" />
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-light text-stone-100">
-            {t("comeIn.familyH2")}
-          </h2>
-          <P t={t} k="comeIn.familyP1" />
-          <P t={t} k="comeIn.familyP2" />
-          <P t={t} k="comeIn.familyP3" />
-        </section>
-      </article>
 
       {/* PART 2 — Going a little deeper */}
       <section className="bg-stone-900/40 py-16">
