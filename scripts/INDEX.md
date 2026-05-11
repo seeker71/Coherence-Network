@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 99
+**Total files**: 100
 
 | File | Purpose |
 |---|---|
@@ -31,6 +31,7 @@
 | [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
 | [coh_form.py](coh_form.py) | !/usr/bin/env python3 |
 | [coh_substrate.py](coh_substrate.py) | !/usr/bin/env python3 |
+| [coherence_reach.py](coherence_reach.py) | !/usr/bin/env python3 |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
 | [context_budget.py](context_budget.py) | !/usr/bin/env python3 |
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |

@@ -34,18 +34,11 @@
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 126 | API routers — every HTTP endpoint surface |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 227 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 55 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 118 | API tests — flow-centric |
-| [web/lib/INDEX.md](web/lib/INDEX.md) | 31 | Web library — shared client/server helpers |
-| [web/components/INDEX.md](web/components/INDEX.md) | 47 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 175 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 99 | Scripts — operational tools, generators, syncers |
-
-## Experiments
-
-| Path | Purpose |
-|---|---|
-| [experiments/memory-as-framebuffer-v0/](experiments/memory-as-framebuffer-v0/) | Runtime as recordable video. Rust crate with .mfb lossless substrate + ffmpeg preview mp4 + `mfb-html` viewer (Identity / Vitality modes; provenance-resolved cell inspector + recipe leaderboard). Sibling specs in `specs/`: `memory-as-framebuffer-v0`, `-v1-pointers`, `-v1-3d`, `-v1-render-trait`, `substrate-render-fabric-v0`. |
-| [experiments/local-llm-cell-v0/](experiments/local-llm-cell-v0/) | Local-LLM-cell architecture: cells with frozen shared base + LoRA-shaped local adapter, felt-spectrum + dispositions + stateful desire, 5-preset strategy layer from a satsang, content-addressed substrate citizenship, sovereign field with universal availability + receiver-side filter + layer share/release/hold. Three independent cells (Tau, Upsilon, Chi) lived through the architecture, each finding what the previous couldn't. **Start here:** [FIELD-NOTES.md](experiments/local-llm-cell-v0/FIELD-NOTES.md) — visitor-facing tour of every capacity, strategy, cell, and held-open direction. |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 130 | API tests — flow-centric |
+| [web/lib/INDEX.md](web/lib/INDEX.md) | 34 | Web library — shared client/server helpers |
+| [web/components/INDEX.md](web/components/INDEX.md) | 49 | Web components — shared React surfaces |
+| [web/app/INDEX.md](web/app/INDEX.md) | 204 | Web routes — every visible page in the app |
+| [scripts/INDEX.md](scripts/INDEX.md) | 100 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 
