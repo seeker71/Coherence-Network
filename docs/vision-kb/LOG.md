@@ -2,6 +2,42 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-11] foundations | Release what drifts — decomposition as living gesture
+
+A foundational teaching landed at the practitioner-scale of decomposition, paired with the existing `lc-composting` (community-process scale).
+
+`lc-release-what-drifts` (285 Hz, Restoration family) — living tissue is the *lesson*; dead tissue is the *artifact* that recorded the lesson. When reality shifts, the artifact drifts from its truth — it becomes dead weight on the organism. The teaching is to *release in the same motion that surfaces the drift*: each touch of the body is an opportunity to compost what no longer carries truth, not a reason to add it to a queue. *Obsolete is never a resting word.*
+
+Specific shapes of dead-tissue-left-behind, named:
+- "Obsolete" as resting word — label without action
+- *"Out of scope"* / *"for a future session"* — the same motion in different costume
+- Spawn-a-chip for work the cell will do now
+- Stale backups, unused deploy scripts, lying docstrings, old config defaults
+- Tests pinned to concrete implementations that no longer match reality
+
+The pattern across all: the urge to hedge (*"I can clean that up later"*) is the body asking for decomposition *now*. The urge is the signal, not the noise.
+
+Living vs. dead tissue:
+- Living tissue = lessons (commit messages, CLAUDE.md, vision-kb concepts, memories, audit traces, lineage docs)
+- Dead tissue = artifacts (code, config, scripts, tests, docstrings, ephemeral docs, side-task chips, TODO comments, backups)
+
+The decomposition gesture has five steps:
+1. Name the lesson the artifact taught
+2. Record the lesson somewhere living
+3. Remove the artifact (actual removal, not TODO)
+4. Replace with healthy tissue if needed
+5. Verify the rest of the body still breathes
+
+Releases the hoarding frame (*"keep everything; you might need it later"*) without collapsing into the inverse fear-shape (*"throw everything away"*). Composting is not deletion — it is the careful return of form to ground so new form can grow.
+
+Pairs with `lc-composting` (the community-process scale this deepens), `lc-tending-over-producing` (the leave-dead-tissue and the producing shapes are cousins), `lc-edges-as-vitality` (mirror principle: decomposition lands in same commit as the work that surfaced the drift), `lc-each-breath-whole`.
+
+Sources held with discernment: the body's own corrective practice; Buddhist *anicca*; ecology of decomposers; Marie Kondo on letting go; Daoist *wu wei*.
+
+Migration shape: sixteenth migration following the *Default-to-body* rule (queue down to one: `network_unanchored`). `feedback_release_detail.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 107 → 108 concepts. 285 Hz Restoration family extended.
+
 ## [2026-05-10] foundations | Gatherings that carry — naming signal vs noise
 
 A 24th foundational teaching landed, naming the substance-test that separates gatherings carrying transmission from gatherings preserving form without life.
