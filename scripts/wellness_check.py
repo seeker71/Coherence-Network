@@ -211,7 +211,11 @@ def sense_chain() -> list[str]:
     if not specs_dir.is_dir():
         return ["  specs/ directory not found"]
 
-    test_path_re = re.compile(r"\b(?:api/)?tests/[\w/]+\.py")
+    # Match three shapes of test path:
+    #   - api/tests/foo.py — explicit api-rooted
+    #   - mcp-server/tests/foo.py — explicit mcp-server-rooted
+    #   - tests/foo.py — bare, implicitly api/ (the common case)
+    test_path_re = re.compile(r"\b(?:api/|mcp-server/)?tests/[\w/]+\.py")
     healthy = 0
     counted = 0  # non-draft specs we evaluated for chain reach
     missing_tests: dict[str, list[str]] = {}
@@ -246,9 +250,14 @@ def sense_chain() -> list[str]:
         # test: declaration (string or list) — extract test paths via the same regex coh_substrate uses
         test_section_m = re.search(r"^test\s*:(.*?)(?:\n[a-z_]+\s*:|---|$)", fm, re.MULTILINE | re.DOTALL)
         test_text = (test_section_m.group(1) if test_section_m else "")
-        test_paths = sorted(set(
-            (p if p.startswith("api/") else f"api/{p}") for p in test_path_re.findall(test_text)
-        ))
+        def _resolve_test_path(p: str) -> str:
+            # Already explicit: leave alone (api/tests/... or mcp-server/tests/...)
+            if p.startswith("api/") or p.startswith("mcp-server/"):
+                return p
+            # Bare tests/...py — prepend api/ as the implicit default.
+            return f"api/{p}"
+
+        test_paths = sorted(set(_resolve_test_path(p) for p in test_path_re.findall(test_text)))
         test_declared = bool(test_text.strip())
         if not test_declared:
             no_test_declared.append(spec.stem)

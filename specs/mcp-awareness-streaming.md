@@ -20,7 +20,7 @@ done_when:
   - "Focused MCP tests cover stream parsing and dispatch endpoint routing."
   - "Morning brief collector tests cover node/message collection without the live API."
   - "Spec, MCP tests, and morning collector tests pass."
-test: "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q && cd ../api && python3 -m pytest tests/test_morning_coherence_brief.py -q"
+test: "python3 -m pytest mcp-server/tests/test_awareness_streaming.py api/tests/test_morning_coherence_brief.py -q"
 constraints:
   - "Use existing API streaming/message endpoints; do not invent a parallel streaming backend."
   - "Keep stream reads bounded by duration and event count."
