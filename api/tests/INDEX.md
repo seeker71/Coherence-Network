@@ -4,44 +4,56 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 118
+**Total files**: 141
 
 | File | Purpose |
 |---|---|
 | [conftest.py](conftest.py) | Pytest configuration and fixtures. |
 | [test_agent_control_plane.py](test_agent_control_plane.py) | _no top-of-file purpose_ |
+| [test_agent_execute_endpoint.py](test_agent_execute_endpoint.py) | Tests for the agent-execution-lifecycle-hooks spec |
+| [test_agent_integration_api.py](test_agent_integration_api.py) | Tests for the agent-orchestration-api spec |
 | [test_agent_invitation.py](test_agent_invitation.py) | Agent invitation tests for API, CLI, web, and MCP entry surfaces. |
 | [test_agent_memory_loop.py](test_agent_memory_loop.py) | Flow tests for the agent-memory-system spec. |
 | [test_agent_monitor_helpers.py](test_agent_monitor_helpers.py) | _no top-of-file purpose_ |
+| [test_agent_pipeline.py](test_agent_pipeline.py) | Tests for the coherence-network-agent-pipeline spec |
+| [test_agent_pipeline_status_diagnostics_api.py](test_agent_pipeline_status_diagnostics_api.py) | Tests for the attention-heuristics-pipeline-status spec |
 | [test_agent_runner_tool_failure_telemetry.py](test_agent_runner_tool_failure_telemetry.py) | Tests for tool-failure-awareness spec: runtime telemetry + friction events. |
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
+| [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
 | [test_attribution_middleware.py](test_attribution_middleware.py) | Tests for the attribution middleware. |
 | [test_audit_vision_image_candidates.py](test_audit_vision_image_candidates.py) | _no top-of-file purpose_ |
 | [test_auth_keys_api.py](test_auth_keys_api.py) | Tests for the /api/auth/keys HTTP layer. |
+| [test_auto_heal_service.py](test_auto_heal_service.py) | Tests for the auto-heal-from-diagnostics spec |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
 | [test_cc_economics.py](test_cc_economics.py) | Tests for CC Economics and Value Coherence. |
 | [test_cc_exchange.py](test_cc_exchange.py) | Tests for the CC ↔ External Exchange bridge. |
+| [test_cc_scoring.py](test_cc_scoring.py) | Tests for the coherence-algorithm-spec (specs/coherence-algorithm-spec.md). |
 | [test_check_generated_vision_assets.py](test_check_generated_vision_assets.py) | _no top-of-file purpose_ |
+| [test_coherence_credit.py](test_coherence_credit.py) | Tests for the cc-economics-and-value-coherence spec |
 | [test_commit_evidence_validator.py](test_commit_evidence_validator.py) | _no top-of-file purpose_ |
 | [test_concept_story_crud.py](test_concept_story_crud.py) | Flow-centric tests for concept story CRUD. |
 | [test_concept_views.py](test_concept_views.py) | Flow-centric tests for multilingual concept views. |
+| [test_contribution_cost_service.py](test_contribution_cost_service.py) | Tests for contribution_cost_service (spec: normalize-github-commit-cost-estimation). |
 | [test_contribution_flow.py](test_contribution_flow.py) | Tests for Contribution as Flow — resonance-weighted contribution scoring. |
+| [test_contributions.py](test_contributions.py) | Tests for the contributions-api spec (specs/contributions-api.md). |
 | [test_contributor_journey.py](test_contributor_journey.py) | Acceptance tests for spec: contributor-journey (idea: contributor-experience). |
 | [test_contributor_key_store.py](test_contributor_key_store.py) | DB-backed contributor API key store. |
 | [test_creator_economy.py](test_creator_economy.py) | Tests for creator-economy endpoints — spec R1, R2, R3, R4. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
+| [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
 | [test_external_agent_encounters.py](test_external_agent_encounters.py) | External agent encounter record tests. |
 | [test_external_presence.py](test_external_presence.py) | Acceptance tests for spec: external-presence-bots-and-news (idea: external-presence). |
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |
+| [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
@@ -71,9 +83,13 @@
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
 | [test_governance_change_flow.py](test_governance_change_flow.py) | Contributor onboarding + governed change flow (spec: |
+| [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
+| [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
+| [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
+| [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
@@ -82,22 +98,29 @@
 | [test_libretranslate_backend.py](test_libretranslate_backend.py) | LibreTranslate backend — verifies translation + glossary post-substitution. |
 | [test_mcp_remote_no_oauth.py](test_mcp_remote_no_oauth.py) | _no top-of-file purpose_ |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
+| [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
 | [test_persistence_contract_config.py](test_persistence_contract_config.py) | _no top-of-file purpose_ |
+| [test_pipeline_router.py](test_pipeline_router.py) | Tests for the coherence-network-agent-pipeline spec |
 | [test_portfolio_governance.py](test_portfolio_governance.py) | Acceptance tests for spec: portfolio-governance-health (idea: portfolio-governance). |
 | [test_presence_invitation.py](test_presence_invitation.py) | Acceptance tests for the graph-backed Presence invitation surface. |
+| [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
+| [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |
 | [test_renderers_router.py](test_renderers_router.py) | Route-level tests for /api/renderers/* endpoints. |
+| [test_request_logging.py](test_request_logging.py) | Tests for the api-request-logging-middleware spec |
 | [test_request_outcomes_middleware.py](test_request_outcomes_middleware.py) | Tests for the per-minute request outcomes counter. |
 | [test_right_sizing.py](test_right_sizing.py) | Right-sizing integration tests (spec 158). |
 | [test_runner_auto_contribution.py](test_runner_auto_contribution.py) | Tests for runner auto-contribution spec. |
 | [test_runner_spec_gate_guidance.py](test_runner_spec_gate_guidance.py) | _no top-of-file purpose_ |
+| [test_runtime_api.py](test_runtime_api.py) | Tests for the canonical-route-registry-and-runtime-mapping spec |
+| [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
