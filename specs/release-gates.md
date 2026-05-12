@@ -19,7 +19,7 @@ done_when:
   - "GET /api/gates/main-head — Get current main branch status"
   - "Integrates with GitHub API for PR status, checks, approvals"
   - "Supports polling with timeout for async CI completion"
-test: "python3 -m pytest api/tests/test_gates_api.py -x -v"
+test: "cd api && python3 -m pytest tests/test_release_gate_service.py -x -v"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
