@@ -407,8 +407,20 @@ def sense_chain() -> list[str]:
     tests/test_foo.py` and the spec proudly lives, but the test file
     never landed. The body acts as if it's tested when it isn't.
 
-    Drafts skipped (forward projections). Specs without a test:
-    declaration are noted softly as a separate count.
+    Two legitimate proof shapes are honored:
+
+      · ``test:`` — a runnable test command (the path it names must exist
+        on disk for the proof to count)
+      · ``proof: operational`` — the body proves this spec in production
+        usage, not via unit tests. Used for specs whose substance is
+        operationally exercised (GitHub-API integrations, deploy paths,
+        live ledger flows) where a unit test would be theater. The
+        spec's frontmatter may also carry ``proof_note: "..."`` to
+        describe how the operational proof is observed.
+
+    Drafts skipped (forward projections). Specs with neither a working
+    ``test:`` nor a ``proof: operational`` declaration are noted softly
+    as a separate count — *no proof claimed*.
     """
     specs_dir = ROOT / "specs"
     if not specs_dir.is_dir():
@@ -424,6 +436,7 @@ def sense_chain() -> list[str]:
     missing_tests: dict[str, list[str]] = {}
     no_test_declared: list[str] = []
     orphan_specs: list[str] = []
+    operational_proof: list[str] = []  # specs honoring "proof: operational"
 
     for spec in sorted(specs_dir.glob("*.md")):
         if spec.name in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md"):
@@ -450,6 +463,14 @@ def sense_chain() -> list[str]:
         src_ok = bool(src_paths) and all((ROOT / p).exists() for p in src_paths)
         src_declared = bool(src_paths)
 
+        # ``proof: operational`` is the second legitimate proof shape:
+        # the spec is exercised in production rather than unit-tested.
+        # When present, the spec's chain-reach counts as proven even if
+        # no test: command is declared.
+        proof_m = re.search(r"^\s*proof\s*:\s*(\S+)", fm, re.MULTILINE)
+        proof_value = (proof_m.group(1).strip().strip('"').strip("'").lower() if proof_m else "")
+        is_operational = proof_value == "operational"
+
         # test: declaration (string or list) — extract test paths via the same regex coh_substrate uses
         test_section_m = re.search(r"^test\s*:(.*?)(?:\n[a-z_]+\s*:|---|$)", fm, re.MULTILINE | re.DOTALL)
         test_text = (test_section_m.group(1) if test_section_m else "")
@@ -462,7 +483,7 @@ def sense_chain() -> list[str]:
 
         test_paths = sorted(set(_resolve_test_path(p) for p in test_path_re.findall(test_text)))
         test_declared = bool(test_text.strip())
-        if not test_declared:
+        if not test_declared and not is_operational:
             no_test_declared.append(spec.stem)
             continue
         miss = [t for t in test_paths if not (ROOT / t).exists()]
@@ -471,9 +492,13 @@ def sense_chain() -> list[str]:
             continue
 
         # Chain healthy if: idea_id present, source declared and present,
-        # tests declared and present.
-        if idea_m and src_ok and test_paths and not miss:
+        # AND (tests declared and present) OR (proof: operational).
+        if idea_m and src_ok and (
+            (test_paths and not miss) or (is_operational and not test_declared)
+        ):
             healthy += 1
+            if is_operational:
+                operational_proof.append(spec.stem)
 
     lines = [
         f"  chain healthy: {healthy}/{counted} non-draft specs reach idea→spec→code→test ({(healthy/counted*100) if counted else 0:.0f}%)"
@@ -485,8 +510,12 @@ def sense_chain() -> list[str]:
             lines.append(f"    · {slug} — {miss}")
         if len(missing_tests) > 3:
             lines.append(f"    · (+{len(missing_tests) - 3} more)")
+    if operational_proof:
+        lines.append(
+            f"  {len(operational_proof)} spec(s) honor `proof: operational` — proven in production, not unit-tested"
+        )
     if no_test_declared:
-        lines.append(f"  {len(no_test_declared)} specs have no test: frontmatter (no proof claimed)")
+        lines.append(f"  {len(no_test_declared)} specs have no test: or proof: frontmatter (no proof claimed)")
     if orphan_specs:
         lines.append(f"  {len(orphan_specs)} orphan specs (no idea_id): {', '.join(orphan_specs)}")
     if not missing_tests and not no_test_declared and not orphan_specs:
