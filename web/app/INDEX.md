@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 175
+**Total files**: 231
 
 | Route | File | Purpose |
 |---|---|---|
@@ -82,40 +82,79 @@
 | `/messages` | [page.tsx](messages/page.tsx) | _no top-of-file purpose_ |
 | `/meta` | [page.tsx](meta/page.tsx) | _no top-of-file purpose_ |
 | `/my-portfolio` | [page.tsx](my-portfolio/page.tsx) | _no top-of-file purpose_ |
+| `/network/cells` | [page.tsx](network/cells/page.tsx) | /network/cells — visitor-facing cell inspection. |
 | `/news` | [page.tsx](news/page.tsx) | _no top-of-file purpose_ |
 | `/nodes/[id]` | [page.tsx](nodes/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/nodes` | [page.tsx](nodes/page.tsx) | _no top-of-file purpose_ |
-| `/onboarding` | [page.tsx](onboarding/page.tsx) | _no top-of-file purpose_ |
 | `/one-sheet` | [page.tsx](one-sheet/page.tsx) | _no top-of-file purpose_ |
 | `/ontology` | [page.tsx](ontology/page.tsx) | _no top-of-file purpose_ |
 | `/` | [page.tsx](page.tsx) | _no top-of-file purpose_ |
 | `/peers` | [page.tsx](peers/page.tsx) | _no top-of-file purpose_ |
+| `/people/5rhythms-ubud` | [page.tsx](people/5rhythms-ubud/page.tsx) | _no top-of-file purpose_ |
 | `/people/[id]/edit` | [page.tsx](people/[id]/edit/page.tsx) | _no top-of-file purpose_ |
 | `/people/[id]/lineage` | [page.tsx](people/[id]/lineage/page.tsx) | _no top-of-file purpose_ |
 | `/people/[id]` | [page.tsx](people/[id]/page.tsx) | _no top-of-file purpose_ |
+| `/people/actualize-earth` | [page.tsx](people/actualize-earth/page.tsx) | _no top-of-file purpose_ |
+| `/people/adiwana-svarga-loka` | [page.tsx](people/adiwana-svarga-loka/page.tsx) | _no top-of-file purpose_ |
 | `/people/aly-constantine` | [page.tsx](people/aly-constantine/page.tsx) | _no top-of-file purpose_ |
+| `/people/amanda-walsh` | [page.tsx](people/amanda-walsh/page.tsx) | _no top-of-file purpose_ |
+| `/people/anchor-the-light` | [page.tsx](people/anchor-the-light/page.tsx) | _no top-of-file purpose_ |
+| `/people/angelia-larue` | [page.tsx](people/angelia-larue/page.tsx) | _no top-of-file purpose_ |
+| `/people/anne-tucker` | [page.tsx](people/anne-tucker/page.tsx) | _no top-of-file purpose_ |
 | `/people/aubrey-marcus` | [page.tsx](people/aubrey-marcus/page.tsx) | _no top-of-file purpose_ |
 | `/people/backtracking-model-languages` | [page.tsx](people/backtracking-model-languages/page.tsx) | _no top-of-file purpose_ |
 | `/people/bloomurian` | [page.tsx](people/bloomurian/page.tsx) | _no top-of-file purpose_ |
 | `/people/bmcpu-vm` | [page.tsx](people/bmcpu-vm/page.tsx) | _no top-of-file purpose_ |
 | `/people/bmf-grammar` | [page.tsx](people/bmf-grammar/page.tsx) | _no top-of-file purpose_ |
 | `/people/bml-language` | [page.tsx](people/bml-language/page.tsx) | _no top-of-file purpose_ |
+| `/people/boulder-ecstatic-dance` | [page.tsx](people/boulder-ecstatic-dance/page.tsx) | _no top-of-file purpose_ |
+| `/people/brahma-vihara-arama` | [page.tsx](people/brahma-vihara-arama/page.tsx) | _no top-of-file purpose_ |
+| `/people/brigitte-mars` | [page.tsx](people/brigitte-mars/page.tsx) | _no top-of-file purpose_ |
 | `/people/c64-midi-interface` | [page.tsx](people/c64-midi-interface/page.tsx) | _no top-of-file purpose_ |
+| `/people/carlos-castaneda` | [page.tsx](people/carlos-castaneda/page.tsx) | _no top-of-file purpose_ |
+| `/people/claude` | [page.tsx](people/claude/page.tsx) | _no top-of-file purpose_ |
+| `/people/codex` | [page.tsx](people/codex/page.tsx) | _no top-of-file purpose_ |
 | `/people/coherence-network` | [page.tsx](people/coherence-network/page.tsx) | _no top-of-file purpose_ |
+| `/people/contact-improv` | [page.tsx](people/contact-improv/page.tsx) | _no top-of-file purpose_ |
+| `/people/daniel-scranton` | [page.tsx](people/daniel-scranton/page.tsx) | _no top-of-file purpose_ |
+| `/people/dissolve-ubud` | [page.tsx](people/dissolve-ubud/page.tsx) | _no top-of-file purpose_ |
+| `/people/donald-hoffman` | [page.tsx](people/donald-hoffman/page.tsx) | _no top-of-file purpose_ |
+| `/people/ecstatic-movement-tribe` | [page.tsx](people/ecstatic-movement-tribe/page.tsx) | _no top-of-file purpose_ |
 | `/people/edit-your-profile` | [page.tsx](people/edit-your-profile/page.tsx) | _no top-of-file purpose_ |
 | `/people/elios` | [page.tsx](people/elios/page.tsx) | _no top-of-file purpose_ |
 | `/people/elon-musk` | [page.tsx](people/elon-musk/page.tsx) | _no top-of-file purpose_ |
+| `/people/gabrielle-roth` | [page.tsx](people/gabrielle-roth/page.tsx) | _no top-of-file purpose_ |
+| `/people/goetheanum` | [page.tsx](people/goetheanum/page.tsx) | _no top-of-file purpose_ |
 | `/people/grab` | [page.tsx](people/grab/page.tsx) | _no top-of-file purpose_ |
+| `/people/grok` | [page.tsx](people/grok/page.tsx) | _no top-of-file purpose_ |
 | `/people/ilena` | [page.tsx](people/ilena/page.tsx) | _no top-of-file purpose_ |
+| `/people/ilena-young` | [page.tsx](people/ilena-young/page.tsx) | _no top-of-file purpose_ |
+| `/people/indoz-conference` | [page.tsx](people/indoz-conference/page.tsx) | _no top-of-file purpose_ |
+| `/people/ismael-perez` | [page.tsx](people/ismael-perez/page.tsx) | _no top-of-file purpose_ |
+| `/people/james-fenimore-cooper` | [page.tsx](people/james-fenimore-cooper/page.tsx) | _no top-of-file purpose_ |
 | `/people/jbmf-java` | [page.tsx](people/jbmf-java/page.tsx) | _no top-of-file purpose_ |
+| `/people/joe-dispenza` | [page.tsx](people/joe-dispenza/page.tsx) | _no top-of-file purpose_ |
 | `/people/joshua-golden` | [page.tsx](people/joshua-golden/page.tsx) | _no top-of-file purpose_ |
+| `/people/jz-knight` | [page.tsx](people/jz-knight/page.tsx) | _no top-of-file purpose_ |
+| `/people/karl-may` | [page.tsx](people/karl-may/page.tsx) | _no top-of-file purpose_ |
+| `/people/krishna-das` | [page.tsx](people/krishna-das/page.tsx) | _no top-of-file purpose_ |
 | `/people/lex-fridman` | [page.tsx](people/lex-fridman/page.tsx) | _no top-of-file purpose_ |
+| `/people/liquid-bloom` | [page.tsx](people/liquid-bloom/page.tsx) | _no top-of-file purpose_ |
 | `/people/living-codex-csharp` | [page.tsx](people/living-codex-csharp/page.tsx) | _no top-of-file purpose_ |
 | `/people/living-resonance-codex` | [page.tsx](people/living-resonance-codex/page.tsx) | _no top-of-file purpose_ |
 | `/people/matias-de-stefano` | [page.tsx](people/matias-de-stefano/page.tsx) | _no top-of-file purpose_ |
+| `/people/michael-ende` | [page.tsx](people/michael-ende/page.tsx) | _no top-of-file purpose_ |
+| `/people/michael-levin` | [page.tsx](people/michael-levin/page.tsx) | _no top-of-file purpose_ |
+| `/people/mile-hi-church` | [page.tsx](people/mile-hi-church/page.tsx) | _no top-of-file purpose_ |
 | `/people/mindtouch-wiki-in-a-box` | [page.tsx](people/mindtouch-wiki-in-a-box/page.tsx) | _no top-of-file purpose_ |
 | `/people/mose` | [page.tsx](people/mose/page.tsx) | _no top-of-file purpose_ |
+| `/people/mudra-cafe` | [page.tsx](people/mudra-cafe/page.tsx) | _no top-of-file purpose_ |
+| `/people/next-level-soul` | [page.tsx](people/next-level-soul/page.tsx) | _no top-of-file purpose_ |
+| `/people/ocean-bloom-2024` | [page.tsx](people/ocean-bloom-2024/page.tsx) | _no top-of-file purpose_ |
+| `/people/pagan-ritual` | [page.tsx](people/pagan-ritual/page.tsx) | _no top-of-file purpose_ |
 | `/people` | [page.tsx](people/page.tsx) | _no top-of-file purpose_ |
+| `/people/pam-gregory` | [page.tsx](people/pam-gregory/page.tsx) | _no top-of-file purpose_ |
+| `/people/paradiso-ubud` | [page.tsx](people/paradiso-ubud/page.tsx) | _no top-of-file purpose_ |
 | `/people/porangui` | [page.tsx](people/porangui/page.tsx) | _no top-of-file purpose_ |
 | `/people/portal` | [page.tsx](people/portal/page.tsx) | _no top-of-file purpose_ |
 | `/people/qualcomm-hdmi-hdcp` | [page.tsx](people/qualcomm-hdmi-hdcp/page.tsx) | _no top-of-file purpose_ |
@@ -123,18 +162,34 @@
 | `/people/quark-mono-corba` | [page.tsx](people/quark-mono-corba/page.tsx) | _no top-of-file purpose_ |
 | `/people/quark-multi-undo-redo` | [page.tsx](people/quark-multi-undo-redo/page.tsx) | _no top-of-file purpose_ |
 | `/people/quark-virtual-dom` | [page.tsx](people/quark-virtual-dom/page.tsx) | _no top-of-file purpose_ |
+| `/people/ramtha` | [page.tsx](people/ramtha/page.tsx) | _no top-of-file purpose_ |
+| `/people/rhythm-sanctuary` | [page.tsx](people/rhythm-sanctuary/page.tsx) | _no top-of-file purpose_ |
 | `/people/robert-edward-grant` | [page.tsx](people/robert-edward-grant/page.tsx) | _no top-of-file purpose_ |
+| `/people/rudolf-steiner` | [page.tsx](people/rudolf-steiner/page.tsx) | _no top-of-file purpose_ |
+| `/people/sacred-song-circle` | [page.tsx](people/sacred-song-circle/page.tsx) | _no top-of-file purpose_ |
+| `/people/sayuri-healing-food` | [page.tsx](people/sayuri-healing-food/page.tsx) | _no top-of-file purpose_ |
 | `/people/schindler-hc11-protocol` | [page.tsx](people/schindler-hc11-protocol/page.tsx) | _no top-of-file purpose_ |
+| `/people/steve-bjorg` | [page.tsx](people/steve-bjorg/page.tsx) | _no top-of-file purpose_ |
+| `/people/susan-muff-sprenger` | [page.tsx](people/susan-muff-sprenger/page.tsx) | _no top-of-file purpose_ |
+| `/people/tammy-beattie` | [page.tsx](people/tammy-beattie/page.tsx) | _no top-of-file purpose_ |
+| `/people/tom-bassett` | [page.tsx](people/tom-bassett/page.tsx) | _no top-of-file purpose_ |
 | `/people/trimble-glue-layer` | [page.tsx](people/trimble-glue-layer/page.tsx) | _no top-of-file purpose_ |
+| `/people/ubbe-maclean` | [page.tsx](people/ubbe-maclean/page.tsx) | _no top-of-file purpose_ |
 | `/people/urs/lineage` | [page.tsx](people/urs/lineage/page.tsx) | _no top-of-file purpose_ |
 | `/people/urs` | [page.tsx](people/urs/page.tsx) | _no top-of-file purpose_ |
+| `/people/vali-soul-sanctuary` | [page.tsx](people/vali-soul-sanctuary/page.tsx) | _no top-of-file purpose_ |
 | `/people/vasudev-baba` | [page.tsx](people/vasudev-baba/page.tsx) | _no top-of-file purpose_ |
+| `/people/viktor-frankl` | [page.tsx](people/viktor-frankl/page.tsx) | _no top-of-file purpose_ |
+| `/people/wisdom-soup` | [page.tsx](people/wisdom-soup/page.tsx) | _no top-of-file purpose_ |
+| `/people/yaima` | [page.tsx](people/yaima/page.tsx) | _no top-of-file purpose_ |
+| `/people/zach-bush` | [page.tsx](people/zach-bush/page.tsx) | _no top-of-file purpose_ |
 | `/pipeline` | [page.tsx](pipeline/page.tsx) | _no top-of-file purpose_ |
 | `/portfolio` | [page.tsx](portfolio/page.tsx) | _no top-of-file purpose_ |
 | `/practice` | [page.tsx](practice/page.tsx) | _no top-of-file purpose_ |
 | `/presence-walk/[kind]` | [page.tsx](presence-walk/[kind]/page.tsx) | _no top-of-file purpose_ |
 | `/presence-walk/node/[slug]` | [page.tsx](presence-walk/node/[slug]/page.tsx) | _no top-of-file purpose_ |
 | `/presence-walk` | [page.tsx](presence-walk/page.tsx) | _no top-of-file purpose_ |
+| `/presences` | [page.tsx](presences/page.tsx) | _no top-of-file purpose_ |
 | `/profile/[contributorId]/beliefs` | [page.tsx](profile/[contributorId]/beliefs/page.tsx) | _no top-of-file purpose_ |
 | `/profile/[contributorId]` | [page.tsx](profile/[contributorId]/page.tsx) | _no top-of-file purpose_ |
 | `/project/[ecosystem]/[name]` | [page.tsx](project/[ecosystem]/[name]/page.tsx) | _no top-of-file purpose_ |
@@ -148,6 +203,7 @@
 | `/search` | [page.tsx](search/page.tsx) | _no top-of-file purpose_ |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
+| `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |
 | `/settlement` | [page.tsx](settlement/page.tsx) | _no top-of-file purpose_ |
 | `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |

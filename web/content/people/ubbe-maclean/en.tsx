@@ -5,13 +5,13 @@ const content: PersonProfileContent = {
   metadata: {
     title: "Ubbe MacLean — Asatru, psychotherapist, reiki master, rune-healer at Anchor the Light | Coherence Network",
     description:
-      "A welcome to Ubbe MacLean — practitioner of Asatru, clinically trained psychotherapist, life-enhancement coach, reiki master, author of Healing From the Tree: Using Runes for Emotional, Physical & Soul Healing. Co-leader of Anchor the Light alongside Brigitte Mars and Freya Aswynn.",
+      "A welcome to Ubbe MacLean — practitioner of Asatru, clinically trained psychotherapist, life-enhancement coach, reiki master, author of Healing From the Tree: Using Runes for Emotional, Physical & Soul Healing. Holds the Anchor the Light Ceremony as priestess pair with Angelia LaRue; Brigitte Mars is the elder presence in the wider pagan rituals.",
   },
   breadcrumbName: "Ubbe MacLean",
   hero: {
     background:
       "radial-gradient(ellipse at 30% 25%, hsl(45 60% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(220 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(40 50% 60%) 0%, hsl(155 30% 35%) 50%, hsl(220 30% 18%) 100%)",
-    eyebrow: "Asatru · psychotherapist · life-enhancement coach · reiki master · rune-healing author · co-leader of Anchor the Light",
+    eyebrow: "Asatru · psychotherapist · life-enhancement coach · reiki master · rune-healing author · priestess pair (with Angelia LaRue) at Anchor the Light",
     eyebrowClass: "text-[hsl(var(--chart-2))]",
     name: "Ubbe MacLean",
     welcome: (
@@ -35,7 +35,21 @@ const content: PersonProfileContent = {
           >
             Anchor the Light
           </Link>
-          , co-led with Brigitte Mars and Freya Aswynn.
+          , where he and{" "}
+          <Link
+            href="/people/angelia-larue"
+            className="text-[hsl(var(--primary))] hover:underline"
+          >
+            Angelia LaRue
+          </Link>{" "}
+          hold the Ceremony as the priestess pair, with{" "}
+          <Link
+            href="/people/brigitte-mars"
+            className="text-[hsl(var(--primary))] hover:underline"
+          >
+            Brigitte Mars
+          </Link>{" "}
+          as the elder presence in the wider pagan rituals.
         </p>
         <p className="text-sm text-foreground/70 mt-5 italic max-w-2xl">
           The cross-walk between clinical psychotherapy and
@@ -61,8 +75,23 @@ const content: PersonProfileContent = {
           >
             Anchor the Light
           </Link>{" "}
-          — the living spiritual path co-led with Brigitte Mars
-          and Freya Aswynn
+          — the living spiritual path; the Ceremony is held by
+          Ubbe and{" "}
+          <Link
+            href="/people/angelia-larue"
+            className="hover:text-primary transition-colors"
+          >
+            Angelia LaRue
+          </Link>{" "}
+          as priestess pair, with{" "}
+          <Link
+            href="/people/brigitte-mars"
+            className="hover:text-primary transition-colors"
+          >
+            Brigitte Mars
+          </Link>{" "}
+          as elder presence in the pagan rituals; wider community
+          draws on runologist Freya Aswynn
         </>
       ),
     },
@@ -240,7 +269,16 @@ const content: PersonProfileContent = {
         <Link href="/people/anchor-the-light" className="text-primary hover:underline">
           Anchor the Light
         </Link>{" "}
-        — co-led with Brigitte Mars and Freya Aswynn.
+        — Ceremony held with{" "}
+        <Link href="/people/angelia-larue" className="text-primary hover:underline">
+          Angelia LaRue
+        </Link>{" "}
+        as priestess pair;{" "}
+        <Link href="/people/brigitte-mars" className="text-primary hover:underline">
+          Brigitte Mars
+        </Link>{" "}
+        as elder presence; wider community draws on runologist
+        Freya Aswynn.
       </p>
       <p>
         <strong>Public anchors:</strong>{" "}

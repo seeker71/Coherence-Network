@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 47
+**Total files**: 49
 
 | File | Purpose |
 |---|---|
@@ -19,6 +19,7 @@
 | [InviteBanner.tsx](InviteBanner.tsx) | _no top-of-file purpose_ |
 | [InviteFriend.tsx](InviteFriend.tsx) | _no top-of-file purpose_ |
 | [KinActivity.tsx](KinActivity.tsx) | _no top-of-file purpose_ |
+| [LensesNav.tsx](LensesNav.tsx) | _no top-of-file purpose_ |
 | [LiveBreathPanel.tsx](LiveBreathPanel.tsx) | _no top-of-file purpose_ |
 | [LocaleSwitcher.tsx](LocaleSwitcher.tsx) | _no top-of-file purpose_ |
 | [LocaleSwitcherCompact.tsx](LocaleSwitcherCompact.tsx) | _no top-of-file purpose_ |
@@ -35,6 +36,7 @@
 | [ProposalOrigin.tsx](ProposalOrigin.tsx) | _no top-of-file purpose_ |
 | [ProposeForm.tsx](ProposeForm.tsx) | _no top-of-file purpose_ |
 | [ReactionBar.tsx](ReactionBar.tsx) | _no top-of-file purpose_ |
+| [RecentlyAlive.tsx](RecentlyAlive.tsx) | _no top-of-file purpose_ |
 | [SecondaryLayerNav.tsx](SecondaryLayerNav.tsx) | _no top-of-file purpose_ |
 | [ShareButton.tsx](ShareButton.tsx) | _no top-of-file purpose_ |
 | [SinceLastVisit.tsx](SinceLastVisit.tsx) | _no top-of-file purpose_ |
