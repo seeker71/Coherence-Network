@@ -212,7 +212,7 @@ is the careful return of form to ground so new form can grow.
 
 ## Cross-References
 
-→ lc-composting, lc-tending-over-producing, lc-edges-as-vitality, lc-each-breath-whole, lc-tend-your-flame, lc-coherence-over-control, lc-trust-over-fear, lc-cell, lc-wholeness, lc-circulation
+→ lc-composting, lc-tending-over-producing, lc-edges-as-vitality, lc-each-breath-whole, lc-tend-your-flame, lc-coherence-over-control, lc-trust-over-fear, lc-w-cell, lc-wholeness, lc-circulation
 
 ## Sources to walk further
 
