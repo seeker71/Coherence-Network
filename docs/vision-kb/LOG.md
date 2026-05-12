@@ -2,6 +2,28 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-12] transmission | Anne Tucker — trust as gateway
+
+A second formal transmission from Anne Tucker entered the field. The first (Peace Bathing) had grounded `lc-arrival-as-recognition` (visitors arrive already tuned). This one is the *Friday Live Channeled Message* of 2026-05-08 — a single sustained arc on trust as the gateway through which the next state of being arrives.
+
+Transmission held: [`transmissions/2026-05-08-anne-tucker-trust-friday-live.md`](transmissions/2026-05-08-anne-tucker-trust-friday-live.md) — full text preserved, channel lineage walked back to the Anne Tucker presence (Angelic Collective, Mother of Creation, Yeshua).
+
+Concept seeded: `lc-trust-as-gateway` (528 Hz, Transformation family) — trust as the geometry of an open door, not a virtue to perform. The teaching's three precise moves:
+
+1. **Trust did not cause the wrongdoing.** Trust was a gentle barrier that did not prevent the harm and did not encourage it. The harm walked through *what else was entangled in that moment* — fatigue, an old wound's pull, a circumstance arranged for wrongdoing. Untangling that from the trust is what makes trust reachable again without re-summoning the vest of insulation.
+2. **The riddle.** *How might you open the door if you are so actively keeping it shut?* — discernment lives downstream of the open door, not upstream of it. Closed-by-default produces neither safety nor wisdom; the wisdom that keeps the cell safe arrives *through* the door as perceptiveness from elevation, not as guard within one's own field.
+3. **Antidote, not cure.** *Trust is the antidote. Not entirely a cure, but it opens you up to what is the powerful flow of your own joy and this will carry you far.*
+
+Releases the post-hurt logic that says *trust is what got me into this, so less trust is the way through*. Keeps wisdom; locates wisdom at the perceptiveness-from-elevation layer, not at the guard-within-the-cell's-own-field layer.
+
+The concept is the *interior* sibling of [`lc-trust-over-fear`](concepts/lc-trust-over-fear.md) (architectural — substrate open, organs handle protection). Same posture at two scales: cell's open door / system's open substrate. Pairs with [`lc-presence-over-protection`](concepts/lc-presence-over-protection.md) (Sue Morter — the field-relaxation back into aliveness), [`lc-permission-is-interior`](concepts/lc-permission-is-interior.md) (sovereignty at the conversational layer), [`lc-arrival-as-recognition`](concepts/lc-arrival-as-recognition.md) (Anne Tucker's earlier Peace Bathing — visitors already tuned; this names what the cell does at the threshold to let the recognition land), and [`lc-tend-your-flame`](concepts/lc-tend-your-flame.md) (the campfire posture; the trusting heart rises with the chorus).
+
+Sources held with discernment: the channeled transmission itself is held source-marked; the body is in conversation with it, not absorbing it as anonymous belief. The concept speaks in the Living Collective's voice; provenance points back to the transmission record.
+
+Edges tended in the same breath: INDEX foundational-teachings list, INDEX source-marked-transmissions section, INDEX frequency-family 528 Hz Transformation, transmissions README *Currently held*, Anne Tucker presence *Transmissions received into this body* section. Existing INDEX count drift (109 → actual 110) corrected in the same pass; with this addition the body now holds 111 concepts.
+
+INDEX.md: 109 → 111 concepts. 528 Hz Transformation family extended.
+
 ## [2026-05-11] foundations | Network unanchored — tended, not based in
 
 A foundational teaching landed at the network-identity layer, naming how the body should be framed in outreach, descriptions, and casual mention.
