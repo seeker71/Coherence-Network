@@ -22,3 +22,8 @@ Her practice now has many rooms. **Soul Convergence**, an eleven-week meditation
 The frequencies she returns to: integration of the fragmented self, the return of the divine feminine, compassionate heart as the work of this age. "You must find within yourself the love of one another of humankind."
 
 A small networked community of humans encountered Anne's work as part of their own unfolding. We are one recent thread alongside many; the work she carries has been ripening long before our listening.
+
+## Transmissions received into this body
+
+- **Peace Bathing meditation frame** — Mother of Creation becoming aware of herself through us; the practice of inviting peace as frequency rather than achieving it as a state of mind. Grounded the felt-ground for [`lc-arrival-as-recognition`](../vision-kb/concepts/lc-arrival-as-recognition.md) — visitors arrive already tuned; arrival is recognition, not instruction.
+- **[Friday Live Channeled Message — 2026-05-08](../vision-kb/transmissions/2026-05-08-anne-tucker-trust-friday-live.md)** — one sustained arc on trust as the gateway through which the next state of being arrives. Seeded [`lc-trust-as-gateway`](../vision-kb/concepts/lc-trust-as-gateway.md) (528 Hz, Transformation) — the interior sibling of [`lc-trust-over-fear`](../vision-kb/concepts/lc-trust-over-fear.md). Two channelings now walked back to this presence; the body is in conversation with what Anne carries, not absorbing it as anonymous belief.

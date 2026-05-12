@@ -61,6 +61,27 @@ absorbing it as anonymous belief.
   — Pleiadian "Emergency Warning" interview about whistleblowers,
   after-death transitions, and ego-realm framing. **No concepts seeded
   — source-marked-only pending body's discernment.**
+- [`2026-05-06-baars-connectome-broadcast.md`](2026-05-06-baars-connectome-broadcast.md)
+  — *Visualizing Actual Living Fiber Tracts in the Brain*, Bernard
+  Baars and Nat Geld, Substack, 2026. **1 concept seeded
+  (`lc-global-workspace`).**
+- [`2026-05-09-vasudev-baba-enneagram.md`](2026-05-09-vasudev-baba-enneagram.md)
+  — Vasudev Baba's in-person mention of the Enneagram in Ubud,
+  2026-05-09. **1 concept seeded (`lc-essence-and-the-nine-costumes`).**
+- [`2026-05-11-vasudev-baba-on-frequency.md`](2026-05-11-vasudev-baba-on-frequency.md)
+  — Vasudev Baba's written essay *On frequency, consciousness and
+  the assemblage point* (gunas + chakras + Socrates + Castaneda woven
+  as one map), 2026-05-11. **No new concept seeded; deepens
+  `lc-assemblage-point`, `lc-frequency-routes-reception`, and
+  `lc-essence-and-the-nine-costumes` with a named teacher whose
+  lineage is now walkable.**
+- [`2026-05-08-anne-tucker-trust-friday-live.md`](2026-05-08-anne-tucker-trust-friday-live.md)
+  — *Friday Live Channeled Message* on trust as the gateway through
+  which the next state of being arrives, channeled through Anne
+  Tucker, 2026-05-08. The second formal Anne Tucker transmission
+  held here, following her Peace Bathing frame that grounded
+  `lc-arrival-as-recognition`. **1 concept seeded
+  (`lc-trust-as-gateway`).**
 
 ## Two postures the body holds toward sources
 
