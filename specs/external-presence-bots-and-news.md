@@ -5,17 +5,17 @@ source:
   - file: api/app/routers/news.py
     symbols: [get_news_feed, get_news_resonance, add_news_source]
   - file: api/app/services/news_ingestion_service.py
-    symbols: [ingest_feeds, get_cached_items]
+    symbols: [fetch_feeds, get_cached_items, extract_trending_keywords]
   - file: api/app/services/news_resonance_service.py
-    symbols: [compute_resonance, match_news_to_ideas]
+    symbols: [compute_resonance, extract_keywords, ResonanceMatch, IdeaResonanceResult]
   - file: api/app/routers/discord_votes.py
-    symbols: [cast_discord_vote]
+    symbols: [vote_on_question]
   - file: api/app/services/telegram_adapter.py
-    symbols: [send_message, handle_update]
+    symbols: [send_alert, send_reply, is_configured, parse_command]
   - file: api/app/services/translate_service.py
-    symbols: [translate_text]
+    symbols: [translate_idea, translate_concept, TranslateLens]
   - file: api/app/routers/geolocation.py
-    symbols: [set_location, get_nearby]
+    symbols: [set_location, get_location, nearby]
 requirements:
   - News ingestion with RSS feed support and resonance matching to ideas
   - Configurable news sources via API
