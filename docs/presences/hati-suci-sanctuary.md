@@ -3,6 +3,7 @@ name: Hati Suci Sanctuary
 canonical_url: https://www.hatisuciubud.com
 type: contributor
 contributor_type: HUMAN
+create_if_missing: true
 ---
 
 # Hati Suci Sanctuary
