@@ -391,6 +391,61 @@ const content: PersonProfileContent = {
         </>
       ),
     },
+    {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Contributions to this body",
+      heading: "What Robert Edward Grant has given the Coherence Network",
+      body: (
+        <ul>
+          <li>
+            The sacred-geometry / Codex Universalis line of
+            inquiry — prime-number patterns, geometric primitives,
+            the proposal that <em>form precedes substance</em>{" "}
+            at the mathematical level. Pairs with{" "}
+            <Link
+              href="/vision/lc-bioelectric-pattern"
+              className="text-primary hover:underline"
+            >
+              lc-bioelectric-pattern
+            </Link>{" "}
+            (
+            <Link href="/people/michael-levin" className="text-primary hover:underline">
+              Levin
+            </Link>
+            ) and{" "}
+            <Link
+              href="/vision/lc-perception-as-interface"
+              className="text-primary hover:underline"
+            >
+              lc-perception-as-interface
+            </Link>{" "}
+            (
+            <Link href="/people/donald-hoffman" className="text-primary hover:underline">
+              Hoffman
+            </Link>
+            ) as one substrate-claim from three different sides:
+            pattern is load-bearing.
+          </li>
+          <li>
+            The sacred-mathematics ↔ Akashic-memory cluster with{" "}
+            <Link href="/people/matias-de-stefano" className="text-primary hover:underline">
+              Matías De Stefano
+            </Link>{" "}
+            (Robert hosted Matías on his podcast Episode 49). Both
+            in the geometry-of-consciousness / ancient-memory
+            space; both at Gaia / Boulder events.
+          </li>
+          <li>
+            The Crown Sterling controversy is part of his public
+            record; this body holds him as one teacher among many,
+            without endorsing the commercial claims of his
+            cryptography work. The substrate of the geometric
+            teaching can stand on its own.
+          </li>
+        </ul>
+      ),
+    },
   ],
   footer: (
     <>

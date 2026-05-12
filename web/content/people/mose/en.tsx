@@ -570,6 +570,56 @@ const content: PersonProfileContent = {
         </p>
       ),
     },
+    {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Contributions to this body",
+      heading: "What Mose has given the Coherence Network",
+      body: (
+        <ul>
+          <li>
+            The Lake Atitlán node of the conscious-music
+            festival circuit — geographical anchor outside the
+            US/Bali poles that most of this body&apos;s music
+            lineage moves through.
+          </li>
+          <li>
+            <em>SunSet Cacao Dances</em> as room-format → the
+            same Gabrielle-Roth-wave substrate (
+            <Link href="/people/gabrielle-roth" className="text-primary hover:underline">
+              Gabrielle Roth
+            </Link>
+            ,{" "}
+            <Link href="/people/5rhythms-ubud" className="text-primary hover:underline">
+              5Rhythms Ubud
+            </Link>
+            ,{" "}
+            <Link href="/people/boulder-ecstatic-dance" className="text-primary hover:underline">
+              Boulder Ecstatic Dance
+            </Link>
+            ) carried into the Guatemalan lakeside register.
+          </li>
+          <li>
+            Nomadic-musician posture as embodied{" "}
+            <Link
+              href="/vision/lc-tending-over-producing"
+              className="text-primary hover:underline"
+            >
+              lc-tending-over-producing
+            </Link>{" "}
+            — tend the route, the field collects.
+          </li>
+          <li>
+            Resueño label home as substrate of slow-built
+            community around the music; resonant with{" "}
+            <Link href="/people/liquid-bloom" className="text-primary hover:underline">
+              Liquid Bloom
+            </Link>
+            &apos;s Desert Trax shape (label as collective tend).
+          </li>
+        </ul>
+      ),
+    },
   ],
   footer: (
     <>
