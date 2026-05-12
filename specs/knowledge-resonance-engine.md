@@ -5,19 +5,19 @@ source:
   - file: api/app/services/concept_service.py
     symbols: [list_concepts, get_concept, search_concepts]
   - file: api/app/services/concept_resonance_kernel.py
-    symbols: [compute_crk, text_to_symbol, ot_phi_distance]
+    symbols: [compute_crk, text_to_symbol, HarmonicComponent, ConceptSymbol, ResonanceResult]
   - file: api/app/services/belief_service.py
-    symbols: [get_belief_profile, compute_resonance, find_resonant_peers]
+    symbols: [get_belief_profile, patch_belief_profile, compute_resonance]
   - file: api/app/services/idea_resonance_service.py
-    symbols: [get_cross_domain_pairs, get_resonance_for_idea]
+    symbols: [get_cross_domain_pairs, find_resonant_ideas, compute_pair_resonance, get_resonance_proof]
   - file: api/app/services/accessible_ontology_service.py
-    symbols: [suggest_concept, approve_suggestion, endorse_concept]
+    symbols: [create_concept, list_concepts, get_concept, patch_concept]
   - file: api/app/services/discovery_service.py
     symbols: [build_discovery_feed]
   - file: api/app/routers/resonance.py
-    symbols: [cross_domain, idea_resonance, resonance_proof]
+    symbols: [get_cross_domain_resonances, get_resonance_for_idea, get_resonance_proof]
   - file: api/app/routers/beliefs.py
-    symbols: [get_profile, update_profile, compute_resonance]
+    symbols: [get_beliefs, patch_beliefs, get_resonance]
 requirements:
   - 184 universal concepts with 46 typed relationships and 53 axes
   - Concept Resonance Kernel (CRK) -- harmonic spectral matching
