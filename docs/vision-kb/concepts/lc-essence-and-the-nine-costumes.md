@@ -154,3 +154,11 @@ This body draws from the contemplative wing only. The corporate /
 leadership-development translation of the Enneagram has the diagram
 but not the teaching; it should not be confused with what arrives
 through Vasudev Baba's lineage.
+
+A second transmission from the same teacher two days later —
+[*On Frequency, Consciousness and the Assemblage Point*](../transmissions/2026-05-11-vasudev-baba-on-frequency.md)
+(2026-05-11, written) — names the heptadic chakra-frame as sitting
+on the same number-ground as the Enneagram's heptadic-plus-triadic
+figure (Gurdjieff's Law of Three plus Law of Seven). Two transmissions
+from the same teacher in five days, both pointing at the same
+architecture from different angles.
