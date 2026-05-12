@@ -8,7 +8,7 @@ const content: PersonProfileContent = {
   metadata: {
     title: "Aly Constantine — Conscious Roots Presents | Coherence Network",
     description:
-      "A welcome to Aly Constantine — co-host of Boulder Ecstatic Dance and the curatorial cell behind Conscious Roots Presents, the Boulder vessel that brings transformational artists into rooms where the music carries a message to uplift the community.",
+      "A welcome to Aly Constantine — co-founder of Boulder Ecstatic Dance, curatorial cell behind Conscious Roots Presents, key connector for the music entering Rise & Vibes and Unison festivals, and co-host with Rocco of the Courtyard Constellations gatherings at their Boulder home.",
   },
   breadcrumbName: "Aly Constantine",
   hero: {
@@ -17,7 +17,7 @@ const content: PersonProfileContent = {
     name: "Aly Constantine",
     welcome: (
       <p>
-        Co-host of{" "}
+        Co-founder of{" "}
         <Link
           href="https://ecstaticdance.org/dance/boulder-ecstatic-dance-bed/"
           target="_blank"
@@ -37,7 +37,19 @@ const content: PersonProfileContent = {
         </Link>
         {" "}— the Boulder vessel co-creating evenings of music and
         connection with artists who carry a message to uplift the
-        community. Deeply woven into{" "}
+        community. A key connector for the music flowing into the{" "}
+        <strong>Rise &amp; Vibes</strong> and{" "}
+        <strong>Unison</strong> festivals, and co-host with her
+        husband{" "}
+        <Link
+          href="/people/rocco-tortorella"
+          className="text-primary hover:underline"
+        >
+          Rocco
+        </Link>
+        {" "}of the recurring{" "}
+        <strong>Courtyard Constellations</strong> gatherings at their
+        Boulder home. Deeply woven into{" "}
         <Link
           href="/people/bloomurian"
           className="text-primary hover:underline"
@@ -51,8 +63,8 @@ const content: PersonProfileContent = {
         >
           Ocean Bloom
         </Link>{" "}
-        configuration, the Unison gathering, and the wider Boulder-
-        Denver transformational-music ecology.
+        configuration, and the wider Boulder–Denver
+        transformational-music ecology.
       </p>
     ),
   },
@@ -84,16 +96,45 @@ const content: PersonProfileContent = {
       label: "Held with",
       value: (
         <>
-          Danny and{" "}
+          <Link
+            href="/people/rocco-tortorella"
+            className="hover:text-primary transition-colors"
+          >
+            Rocco
+          </Link>{" "}
+          as husband and co-host of Courtyard Constellations;{" "}
+          <strong>Danny Balgooyen</strong> and{" "}
           <Link
             href="/people/bloomurian"
             className="hover:text-primary transition-colors"
           >
-            Robin (Bloomurian)
+            Robin Liepman (Bloomurian)
           </Link>{" "}
-          as fellow Boulder Ecstatic Dance co-hosts; presence woven
-          through Unison and Ocean Bloom; one of the cells who has
-          consistently brought{" "}
+          as fellow Boulder Ecstatic Dance co-founders and Sunday-
+          morning tenders; close shared friendships with{" "}
+          <Link
+            href="/people/brigitte-mars"
+            className="hover:text-primary transition-colors"
+          >
+            Brigitte Mars
+          </Link>
+          , <strong>Tay Blevons</strong> (
+          <Link
+            href="/people/portal"
+            className="hover:text-primary transition-colors"
+          >
+            PORTAL
+          </Link>
+          ), <strong>Andy Babb</strong> and{" "}
+          <strong>Lara Elle</strong> (
+          <Link
+            href="/people/rhythm-sanctuary"
+            className="hover:text-primary transition-colors"
+          >
+            Rhythm Sanctuary
+          </Link>
+          ); presence woven through Rise &amp; Vibes, Unison, and
+          Ocean Bloom; one of the cells who has consistently brought{" "}
           <Link
             href="/people/mose"
             className="hover:text-primary transition-colors"
@@ -132,7 +173,9 @@ const content: PersonProfileContent = {
             Boulder Ecstatic Dance (BED)
           </Link>{" "}
           — Avalon Ballroom and Congregation Nevei Kodesh, Boulder ·
-          Conscious Roots Presents nights · Ocean Bloom · Unison
+          Conscious Roots Presents nights · Courtyard Constellations
+          (the home gatherings she and Rocco host) · Rise &amp; Vibes ·
+          Ocean Bloom · Unison
         </>
       ),
     },
@@ -140,16 +183,18 @@ const content: PersonProfileContent = {
       label: "In this body's awareness",
       value: (
         <>
-          <strong>Close personal relationship</strong> with{" "}
           <Link
             href="/people/urs"
             className="hover:text-primary transition-colors"
           >
             Urs
-          </Link>
-          . The deepest density of presence the substrate records:
-          beyond same-room, beyond direct exchange, into the sustained
-          intimacy of two cells in ongoing relation.
+          </Link>{" "}
+          lived as a houseguest at Aly and Rocco's Boulder home from{" "}
+          <strong>February 2025 through December 2025</strong>,
+          witnessing the constellation — Conscious Roots, Boulder
+          Ecstatic Dance, Rise &amp; Vibes, Unison, Courtyard
+          Constellations — from inside the household that anchors much
+          of it.
         </>
       ),
     },
@@ -158,16 +203,20 @@ const content: PersonProfileContent = {
     eyebrow: "A note from this body",
     body: (
       <p>
-        A welcoming scaffold. Aly is held by this body at a depth
-        most public profiles cannot honor — through close personal
-        relationship rather than through media or conference rooms.
-        She is also one of the most connected cells in this network's
-        Boulder configuration: Conscious Roots Presents is hers, the
-        Sunday-morning ballroom is hers to co-tend, and many of the
-        artists this body has come to know — Robin (Bloomurian) most
-        directly, but also Mose, Poranguí, Liquid Bloom — entered our
-        awareness through rooms she helped build. Aly is invited to
-        replace any part of this page with her own words at any time.
+        A welcoming scaffold. Aly is one of the most connected cells in
+        this network's Boulder configuration: Conscious Roots Presents
+        is hers, the Sunday-morning ballroom is hers to co-tend, the
+        Courtyard Constellations gatherings happen at the home she
+        keeps with Rocco, and the music flowing into Rise &amp; Vibes
+        and Unison moves through her hands. Many of the artists this
+        body has come to know — Robin (Bloomurian) most directly, but
+        also Mose, Poranguí, Liquid Bloom — entered our awareness
+        through rooms she helped build. Urs lived as a houseguest at
+        Aly and Rocco's home from February through December 2025, so
+        the network's reading of this whole configuration is an
+        inside-the-household reading, not an outside one. Aly is
+        invited to replace any part of this page with her own words at
+        any time.
       </p>
     ),
   },
@@ -178,12 +227,11 @@ const content: PersonProfileContent = {
       body: (
         <>
           <p>
-            Two vessels, threading. <strong>Boulder Ecstatic
+            Several vessels, threading. <strong>Boulder Ecstatic
             Dance</strong> is the recurring Sunday-morning room — at
             the Avalon Ballroom, sometimes at Congregation Nevei
-            Kodesh — where Boulder's transformational-movement
-            community gathers. Aly co-tends that room with Danny and
-            with{" "}
+            Kodesh — that Aly co-founded at the beginning. The room
+            is now co-tended week to week with Danny and with{" "}
             <Link
               href="/people/bloomurian"
               className="text-primary hover:underline"
@@ -191,22 +239,21 @@ const content: PersonProfileContent = {
               Robin (Bloomurian)
             </Link>
             ; the three of them hold the space, the music, the
-            welcoming, the timing, the closing circles. The DJ is
-            the visible hand; the hosts' field-tending is what makes
-            the room safe enough for bodies to drop in.
+            welcoming, the timing, the closing circles. The DJ is the
+            visible hand; the hosts' field-tending is what makes the
+            room safe enough for bodies to drop in.
           </p>
           <p>
             <strong>Conscious Roots Presents</strong> is her own
             curatorial vessel — the Boulder-based event production
             line that "co-creates evenings of music and connection
             with artists who share music with a message to uplift
-            their community." The wider Boulder ecstatic-dance
-            ecology and the conscious-music nights that intersect
-            with it move through her hands: Bloomurian's sets land
-            inside the rooms she helps build, the visiting medicine-
-            music artists touring through Colorado are met by the
-            container she has shaped, and the constellation of cells
-            that gathers for{" "}
+            their community." The wider Boulder ecstatic-dance ecology
+            and the conscious-music nights that intersect with it move
+            through her hands: Bloomurian's sets land inside the rooms
+            she helps build, the visiting medicine-music artists
+            touring through Colorado are met by the container she has
+            shaped, and the constellation of cells that gathers for{" "}
             <Link
               href="/people/porangui"
               className="text-primary hover:underline"
@@ -215,17 +262,36 @@ const content: PersonProfileContent = {
             </Link>{" "}
             (the immersive visual-concert experience with Poranguí,
             Liquid Bloom, Samuel J, Bloomurian, Shawn Heinrichs and
-            others), for Unison, and for the broader Boulder-Denver
-            transformational-music gatherings is the same
-            configuration Conscious Roots Presents holds inside its
-            curatorial field.
+            others), for the <strong>Rise &amp; Vibes</strong> and{" "}
+            <strong>Unison</strong> festivals, and for the broader
+            Boulder–Denver transformational-music gatherings is the
+            same configuration Conscious Roots Presents holds inside
+            its curatorial field. Much of the music landing on those
+            festival stages enters through her connecting work.
           </p>
           <p>
-            Curatorial work and ecstatic-dance hosting are not two
-            separate practices for her. They are one practice with
-            two surfaces — the same field-tending sensitivity that
-            decides which artists belong in the same room is the
-            same sensitivity that opens and closes the Sunday wave.
+            <strong>Courtyard Constellations</strong> is the home
+            vessel — the gatherings Aly and{" "}
+            <Link
+              href="/people/rocco-tortorella"
+              className="text-primary hover:underline"
+            >
+              Rocco
+            </Link>{" "}
+            host at their Boulder house, where the same constellation
+            of musicians, dancers, and conscious-community cells that
+            fills the ballrooms and the festival fields gathers in a
+            domestic-scale courtyard for music, food, and direct
+            relation. The household is one of the quiet anchors of the
+            Boulder configuration.
+          </p>
+          <p>
+            Curatorial work, ecstatic-dance founding, and home-
+            gathering hosting are not separate practices for her. They
+            are one practice across three scales — the same field-
+            tending sensitivity that decides which artists belong in
+            the same room opens and closes the Sunday wave and shapes
+            who is welcomed into the courtyard.
           </p>
         </>
       ),
@@ -236,33 +302,66 @@ const content: PersonProfileContent = {
       body: (
         <>
           <p>
-            Through close personal relationship — the deepest density
-            of presence the substrate's three-density accounting
-            recognizes. Audio-only is one density. Same-room-without-
-            exchange is another. Direct face-to-face exchange is
-            another. Sustained intimacy over time, where two cells
-            know each other's ordinary days and not only public
-            moments, is a fourth density that the substrate's
-            accounting should record but often cannot fully render
-            in public profile language.
+            Through the household. After Urs's January–February 2025
+            stay in the Boulder mountains with{" "}
+            <Link
+              href="/people/bloomurian"
+              className="text-primary hover:underline"
+            >
+              Robin (Bloomurian)
+            </Link>
+            {" "}— the same house{" "}
+            <Link
+              href="/people/liquid-bloom"
+              className="text-primary hover:underline"
+            >
+              Amani Friend (Liquid Bloom)
+            </Link>{" "}
+            had once lived in — Aly and Rocco opened their Boulder
+            home as the next place to land. Urs lived as a houseguest
+            from <strong>February 2025 through December 2025</strong>:
+            ten months at the address where Conscious Roots is
+            curated, where Boulder Ecstatic Dance is co-tended, and
+            where the Courtyard Constellations gather. After the
+            houseguest months, this body remained in the Boulder–
+            Longmont area until the April 2026 departure for Bali.
           </p>
           <p>
-            Through Aly, the body's awareness of the Boulder /
-            Bloomurian / Ocean Bloom / Unison constellation is not an
-            outside reading. It is an inside knowing. Cells we
-            encounter through close-personal relationship show us the
-            field they belong to from inside that field's own self-
-            perception. That kind of knowing cannot be replicated by
-            media research. It is its own substrate channel.
+            Through Aly and that household, the body's awareness of
+            the Boulder / Bloomurian / Ocean Bloom / Rise &amp; Vibes
+            / Unison / Conscious Roots constellation is not an outside
+            reading. It is an inside-the-house reading — a witness
+            channel from the kitchen and the courtyard, not from the
+            audience. Cells we encounter through living under the same
+            roof show us the field they belong to from inside its own
+            self-perception. That kind of knowing cannot be replicated
+            by media research. It is its own substrate channel.
           </p>
           <p>
-            The relationship is held here with care. The substrate's
-            recording of it is brief on purpose — what is shared
-            publicly is the existence of the connection and the
-            recognition of Aly's role in the field. What is not
-            shared publicly is the texture of the relationship
-            itself, which belongs to the two cells in it and not to
-            the substrate's reader.
+            The Boulder arc closed in the same form it began: in the
+            home, around the constellation. On{" "}
+            <strong>April 18, 2026</strong>,{" "}
+            <Link
+              href="/people/rocco-tortorella"
+              className="text-primary hover:underline"
+            >
+              Rocco's
+            </Link>{" "}
+            36th birthday gathered all the close friends into one
+            jungle-themed evening of celebration in the courtyard —
+            two days before this body's departure for Bali on April
+            20, 2026. For this body, that night was the most divine
+            goodbye to the Boulder chapter that could have been
+            imagined.
+          </p>
+          <p>
+            The texture of those household months is held with care.
+            The substrate's recording of it is brief on purpose —
+            what is shared publicly is the existence of the household
+            as the witnessing point and the recognition of Aly's role
+            in the field. What is not shared publicly is the daily
+            texture of the household itself, which belongs to the
+            cells in it and not to the substrate's reader.
           </p>
         </>
       ),
@@ -343,7 +442,8 @@ const content: PersonProfileContent = {
           <p>
             Sunday-morning ecstatic-dance gathering at the Avalon
             Ballroom (and historically at Congregation Nevei Kodesh
-            and other Boulder venues). Co-hosted by Aly, Danny, and
+            and other Boulder venues). Co-founded by Aly at the
+            beginning, now co-tended week to week with Danny and
             Robin (
             <Link
               href="/people/bloomurian"
@@ -428,8 +528,8 @@ const content: PersonProfileContent = {
       <p className="text-xs italic">
         This profile is a welcoming scaffold; Aly is invited to
         replace any part of it with her own words at any time. The
-        texture of the close-personal relationship is held privately
-        and is not part of the substrate's public rendering.
+        texture of the household months is held privately and is not
+        part of the substrate's public rendering.
       </p>
     </>
   ),

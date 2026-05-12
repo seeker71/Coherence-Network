@@ -181,12 +181,12 @@ const content: PersonProfileContent = {
           >
             Boulder Ecstatic Dance
           </Link>{" "}
-          (recurring · co-hosted by{" "}
+          (recurring · co-founded by{" "}
           <Link href="/people/aly-constantine" className="hover:text-primary transition-colors">
             Aly Constantine
           </Link>
-          , Danny, and Bloomurian — close personal relationship
-          with Aly through this room) · Unison 2025 (Poranguí
+          , now co-tended with Danny and Bloomurian — houseguest
+          at Aly and Rocco's Boulder home Feb–Dec 2025) · Unison 2025 (Poranguí
           workshop + concert) ·{" "}
           <Link
             href="/people/ilena-young"
@@ -739,11 +739,22 @@ const content: PersonProfileContent = {
             — Bloomurian was performing that night. I saw Poranguí
             first at Ocean Bloom in Downtown Boulder in 2024,
             again at the MAPS-related show in 2025, and at Unison
-            2025 for his workshop and concert. Aly Constantine has
-            been deeply involved with Unison, Bloomurian, Ocean
-            Bloom, and Boulder Ecstatic Dance — and has been close
-            personal relationship of mine through that whole
-            configuration.
+            2025 for his workshop and concert. Aly Constantine
+            co-founded Boulder Ecstatic Dance and is a key connector
+            for the music entering Rise &amp; Vibes and Unison; she
+            and her husband{" "}
+            <Link href="/people/rocco-tortorella" className="text-primary hover:underline">Rocco</Link>{" "}
+            host the Courtyard Constellations gatherings at their
+            Boulder home, where I lived as a houseguest from February
+            through December 2025 and witnessed that whole
+            configuration from inside the household. After the
+            houseguest months I remained in the Boulder–Longmont area
+            until the April 2026 departure for Bali. The arc closed
+            with Rocco's 36th birthday on April 18, 2026 — a jungle-
+            themed gathering in the home courtyard, the whole
+            constellation circling him two days before I flew to Bali.
+            The most divine goodbye to that chapter I could have
+            imagined.
           </p>
           <p>
             The Ubud presence is recent enough to still be
