@@ -24,7 +24,7 @@ seeded_concepts:
 - **Setting**: Ubud, Bali, Indonesia. The two reliable weekly rooms
   he holds are Tuesday-evening kirtan at Adiwana Svarga Loka
   (Wantilan room, Campuhan riverbanks) and Wednesday-morning Satsang
-  at [Ilena Young](/people/ilena)'s Ranakami wellness sanctuary
+  at [Ilena Young](/people/ilena-young)'s Ranakami wellness sanctuary
   (Jl. Raya Penestanan Kelod 16, Sayan, Ubud). Two to three times a
   year he and Prof Jem Bendell co-hold a long-weekend silent retreat
   at *Brahma Vihara Arama*, the largest Buddhist monastery on the
