@@ -185,16 +185,44 @@ async function fetchGraphNode(id: string): Promise<Record<string, unknown> | nul
     5000,
   );
   if (node) return node;
+
   // The id might be a bare slug without the "contributor:" prefix
   // (that's what /contributors/graduate returns, and what lives in
   // localStorage). Try that shape too.
   if (!id.includes(":")) {
-    return fetchJsonOrNull<Record<string, unknown>>(
+    const prefixed = await fetchJsonOrNull<Record<string, unknown>>(
       `${base}/api/graph/nodes/${encodeURIComponent(`contributor:${id}`)}`,
       {},
       5000,
     );
+    if (prefixed) return prefixed;
   }
+
+  // Last fallback: the id is `contributor:{slug}` but the graph node
+  // for that presence is stored under a non-standard stable id —
+  // commonly `contributor:{16-hex}` from older auto-create flows.
+  // Such nodes still carry the human-readable slug in their `slug`
+  // field, so search the contributor list and match on that.
+  //
+  // This closes the gap where /people/contributor:michael-levin and
+  // similar URLs returned a sparse fallback page instead of the rich
+  // description body, because Levin's stable id is
+  // contributor:3f42d44094e36ce5 not contributor:michael-levin.
+  if (id.startsWith("contributor:")) {
+    const slug = id.slice("contributor:".length);
+    if (slug && !slug.match(/^[0-9a-f]{12,}$/)) {
+      const list = await fetchJsonOrNull<{ items: Record<string, unknown>[] }>(
+        `${base}/api/graph/nodes?type=contributor&limit=500`,
+        {},
+        5000,
+      );
+      const match = list?.items?.find(
+        (n) => typeof n.slug === "string" && n.slug === slug,
+      );
+      if (match) return match;
+    }
+  }
+
   return null;
 }
 
