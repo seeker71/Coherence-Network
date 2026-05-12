@@ -20,6 +20,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
 - [actualize-earth](actualize-earth.md) — Tom Bassett's Boulder-based platform for conscious connection, community-powered technology, and regenerative systems. Sibling-substrate to the Coherence Network.
 - [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
+- [anchor-the-light](anchor-the-light.md) — a living spiritual path co-led by Ubbe MacLean, Brigitte Mars, and Freya Aswynn; trans-tradition (Asatru + Reiki + psychotherapy + herbal + qi gong + sound healing + dance) ritual community.
 - [boulder-ecstatic-dance](boulder-ecstatic-dance.md) — Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder; co-hosted by Bloomurian, Aly Constantine, and Danny.
 - [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.

@@ -149,21 +149,29 @@ def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
     node = _fetch_graph_node(api_url, stable_id)
 
     # 2. Fall back to canonical_url match (only when we have a real URL).
+    # Two presences can legitimately share a canonical_url (e.g. Ubbe
+    # MacLean and Anchor the Light both anchored at anchorthelight.org).
+    # When the URL match returns a node with a different name than ours,
+    # that's a collision — fall through to create-if-missing rather than
+    # silently overwriting the other person's node.
     if not node and canonical_url:
-        node = find_node_by_url(api_url, canonical_url)
-        # find_node_by_url returns the /api/contributors view, whose id is a
-        # UUID. PATCH happens against /api/graph/nodes/{id}, which needs the
-        # stable graph id (contributor:...). Resolve it by canonical_url
-        # match in the graph-nodes index. Skip silently if the lookup fails
-        # — the later patch path will report the real error.
-        if node and not (node.get("id") or "").startswith("contributor:"):
-            status, list_data = _request("GET", f"{api_url}/api/graph/nodes?type=contributor&limit=500")
-            if status == 200 and list_data:
-                our_url = canonical_url.rstrip("/")
-                for n in list_data.get("items", []) or []:
-                    if (n.get("canonical_url") or "").rstrip("/") == our_url:
-                        node = n
-                        break
+        candidate = find_node_by_url(api_url, canonical_url)
+        if candidate:
+            cand_name = (candidate.get("name") or "").strip()
+            if cand_name == name:
+                node = candidate
+                # find_node_by_url returns the /api/contributors view, whose id is a
+                # UUID. PATCH happens against /api/graph/nodes/{id}, which needs the
+                # stable graph id (contributor:...). Resolve it via the graph-nodes
+                # index.
+                if node and not (node.get("id") or "").startswith("contributor:"):
+                    status, list_data = _request("GET", f"{api_url}/api/graph/nodes?type=contributor&limit=500")
+                    if status == 200 and list_data:
+                        our_url = canonical_url.rstrip("/")
+                        for n in list_data.get("items", []) or []:
+                            if (n.get("canonical_url") or "").rstrip("/") == our_url and (n.get("name") or "").strip() == name:
+                                node = n
+                                break
 
     # 3. Last resort: name-based lookup. Only trust the result when
     # the API actually returned the contributor we asked for — the
