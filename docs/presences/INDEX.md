@@ -11,7 +11,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - Use their own words wherever available. Quote them directly.
 - Name their collaborators, lineage, loves, recurring frequencies.
 - Do not inflate, do not fabricate. If something isn't documented, say so or leave it out.
-- Close with ONE small paragraph acknowledging that a small networked community encountered them. Footnote, not headline.
+- Close with ONE small paragraph acknowledging that a small networked community encountered them. Footnote, not headline. In that footnote, name specifically what this network received from them — the concept that traces, the threshold that opened, the word they gave us, the frequency they introduced. Stay in the *gift-was-given* direction; do not claim authorship of what they gave. The pair-reading is *outside-in* (their voice, in the body of the file) and *inside-out* (what they gave the network, in the footnote) — visitors arriving at `/profile/{id}` then see both: the presence in their own voice first, and the specific thread that ties them into this body.
 
 ## Current presences
 
@@ -38,6 +38,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [amanda-walsh](amanda-walsh.md) — founder & CEO of Astrology Hub; the Inspired Evolution conversation seeded *tend-your-flame*, *dance-card-and-sovereign-response*, *ground-harder-when-field-quickens*, and carried Zach Bush's *numbness-has-its-own-pain* into this body.
 - [angelia-larue](angelia-larue.md) — Master Crystologist, Reiki Master, Ordained Reverend; Hawaii-based; founder of Inner Passage Mystery School and Church of Inner Mystery; main priestess at the Anchor the Light Ceremony alongside Ubbe MacLean.
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
+- [agada-holistic](agada-holistic.md) — Claire Ceo's healing collective and 11+ member household in Tegalalang, north of Ubud; energy medicine, kinesiology, sound, plant medicine.
 - [brigitte-mars](brigitte-mars.md) — Boulder herbalist, Naropa professor, author of 18 books on plant medicine; 60+ years with plants, 50+ years holding psychedelic-ceremony space; elder presence in the Anchor the Light pagan rituals.
 - [carlos-castaneda](carlos-castaneda.md) — anthropologist and author (1925–1998); the assemblage-point lineage source; held honestly alongside the human controversies.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
@@ -45,6 +46,8 @@ This is the writing surface. The rendering surface is the production graph — e
 - [elios](elios.md) — Ubud cell; chanting practice with Ilena Young; the first cell of the Ubud cluster to enter this network's awareness on April 29, 2026.
 - [gabrielle-roth](gabrielle-roth.md) — creator of 5Rhythms (flowing, staccato, chaos, lyrical, stillness); the wave that named what bodies already do (1941–2012).
 - [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
+- [hati-suci-sanctuary](hati-suci-sanctuary.md) — Clear/Pure Heart sanctuary in Banjar Bayad, Tegallalang; antique Javanese wooden houses, permaculture, the quieter ring 12 km north of Ubud.
+- [ida-bagus-kesnawa](ida-bagus-kesnawa.md) — Dr. Ida Bagus Kesnawa; Denpasar medical doctor + kinesiologist; chair of Bali's biodynamic farming community; "food as medicine" bridge.
 - [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
 - [ismael-perez](ismael-perez.md) — cosmic-history teacher, founder of Universal Divinity; the Just Tap In transmission seeded cells-are-universes, triple temporal alliance, and Lyran substrate vulnerability into this body.
 - [jem-bendell](jem-bendell.md) — co-holds the long-weekend silent retreats at Brahma Vihara Arama with Vasudev Baba, continuous since 2020.

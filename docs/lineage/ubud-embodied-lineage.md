@@ -24,6 +24,9 @@ This matters because the Coherence Network is not built from ideas alone. It is 
 | Ranakami | Wellness sanctuary above the rice fields; Wednesday-morning Satsang held by Vasudev Baba and friends, and the room where Elios and Ilena offered a one-evening chanting practice the cell was invited into. The room where multiple cells of this network found each other. | [ranakami.com](https://ranakami.com/) — Jl. Raya Penestanan Kelod 16, Sayan, Ubud |
 | Brahma Vihara Arama | Largest Buddhist monastery on Bali; long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell, two to three times a year since 2020. | Banjar Tegeha, ~11 km from Lovina, north Bali |
 | Adiwana Svarga Loka | Open-air Wantilan on the Campuhan riverbanks; Tuesday-evening kirtan with Vasudev Baba. | [Adiwana Svarga Loka](https://adiwanahotels.com/svargaloka-resort-ubud-bali/) |
+| Agada Holistic | Claire Ceo's healing collective and 11+ member household north of Ubud (Tegalalang); energy medicine, kinesiology, sound, plant medicine. Monthly Holistic Health and Natural Medicine session by donation; *"test bodies welcome"*. | [agadaholistic.com](https://agadaholistic.com) — IG [@agada.holistic](https://www.instagram.com/agada.holistic) |
+| Dr. Ida Bagus Kesnawa | Denpasar medical doctor + kinesiologist; chair of Bali's biodynamic farming community (Asosiasi Biodinamik Indonesia); *"food as medicine"* bridge between human-body and field-body scales. Guest practitioner at the 2026-05-10 Agada session. | [doctorbaguskinesiology.com](https://doctorbaguskinesiology.com) |
+| Hati Suci Sanctuary | *Clear/Pure Heart* — five antique Javanese wooden houses on permaculture land in Banjar Bayad, Tegalalang; ~12 km north of Ubud; passive solar, wormery wastewater, rain catchment, chemical-free gardens. | [hatisuciubud.com](https://www.hatisuciubud.com) |
 
 The April 29, 2026 meeting walk through these rooms — Mudra Cafe →
 Sayuri dinner → a one-evening chanting at Ranakami offered by Elios
@@ -49,6 +52,17 @@ through the Wednesday Satsang circle and direct mention:
   the same number-ground, attested in this body before the framework
   had a name in conversation. Transmission record:
   [`2026-05-09-vasudev-baba-enneagram.md`](../vision-kb/transmissions/2026-05-09-vasudev-baba-enneagram.md).
+- **2026-05-10** — Sunday morning Holistic Health and Natural Medicine gathering
+  at [Agada Holistic](../presences/agada-holistic.md), hosted by Medicine Woman
+  Claire Ceo with guest practitioner [Dr. Ida Bagus Kesnawa](../presences/ida-bagus-kesnawa.md),
+  head of Bali's biodynamic farming community. Live demonstrations of kinesiology
+  through muscle test, surrogate body, and photograph; *"food as medicine"* named
+  as the bridge between his medical practice and his biodynamic work. Seeded as
+  [`lc-farm-as-organism`](../vision-kb/concepts/lc-farm-as-organism.md). Cluster
+  recognition: Claire, **Kalimba Claireaux**, **Giles**, and other practitioners
+  live as a household of 11+ attuned members in Tegalalang, met through the
+  prior three DISSOLVE encounters where Kalimba was present each time. Names
+  held open without external binding until lived relationship deepens.
 
 ## Digest
 

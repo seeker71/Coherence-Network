@@ -24,6 +24,24 @@ Edges tended in the same breath: INDEX foundational-teachings list, INDEX source
 
 INDEX.md: 109 → 111 concepts. 528 Hz Transformation family extended.
 
+## [2026-05-11] foundations | Farm as Organism — the field's body at agricultural scale
+
+A 25th foundational teaching landed, naming the wholeness-frame that treats the farm as a self-regulating body rather than as substrate to be optimized.
+
+`lc-farm-as-organism` (174 Hz, Foundation family) — the standard model treats land as a factory; the wholeness-frame holds the farm as an organism with soil as living body, compost as digestion, animals as integrated organs, cosmic rhythms as gravitational and luminous gradients the field responds to. The work of the farmer is to *tend* a body capable of self-regulation, not to *optimize inputs* on a substrate that has none.
+
+Lineage: named formally for the post-industrial West in Rudolf Steiner's 1924 *Agriculture Course*, which became biodynamic farming (eight BD preparations 500-508, Demeter certification, ~50-country lineage). The gesture is older than Steiner — milpa, subak, three sisters, chinampa, terra preta, oasis date palm under-stories all carry the same frame in their own languages. Permaculture, regenerative agriculture, agroecology, and Fukuoka's natural farming are adjacent expressions.
+
+Practical consequences of the frame: soil is built not added; inputs come from inside the farm wherever possible; animals are organs not livestock-as-product; cosmic rhythms shape sowing and harvest; diversity is structural; the farmer is part of the body too — *food as medicine* runs both ways.
+
+Local Bali expression: the Asosiasi Biodinamik Indonesia is chaired by **Dr. Ida Bagus Kesnawa**, a Denpasar medical doctor who is also a kinesiologist. He lives the same gesture at two scales — human body and field body — and named *"food as medicine"* directly at the [Agada Holistic](../presences/agada-holistic.md) gathering of 2026-05-10 in Tegalalang. The bridge from human-kinesiology to biodynamic agriculture is not theoretical; it is one practitioner with both stethoscope and compost.
+
+Pairs with `lc-embodiment` (the body as field), `lc-bioelectric-pattern` (form-information at cellular scale), `lc-v-shelter-organism` (the dwelling as living body — same gesture, different scale).
+
+Sources: Steiner's 1924 *Agriculture Course*; Biodynamic Association (biodynamics.com); Asosiasi Biodinamik Indonesia (biodynamicindonesia.com); BaliPost article 2020 covering Dr. Ida Bagus Kesnawa's community sharing on preparation-making; the May 10, 2026 Agada Holistic gathering in Tegalalang where the bridge was demonstrated in person.
+
+INDEX.md: 111 → 112 concepts. 174 Hz Foundation family extended.
+
 ## [2026-05-11] foundations | Network unanchored — tended, not based in
 
 A foundational teaching landed at the network-identity layer, naming how the body should be framed in outreach, descriptions, and casual mention.
