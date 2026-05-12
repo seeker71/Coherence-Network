@@ -317,6 +317,87 @@ def sense_spec_symbols() -> list[str]:
     return lines
 
 
+def sense_locale_parity() -> list[str]:
+    """Do the body's voice speak the same body in every tongue?
+
+    The web body speaks four languages (en, de, es, id) through
+    ``web/messages/{lang}.json`` translation files. English is the
+    canonical source — new chrome strings, copy refinements, and new
+    sections land there first and are mirrored into the other three.
+    When that mirroring lags, a German visitor sees half the page in
+    their language and half falling back to English mid-sentence.
+
+    This lens compares the key set of each locale to en's, surfacing:
+      · missing keys (en has strings the locale doesn't)
+      · extra keys (locale carries strings en no longer has)
+
+    Drift is signal, not failure. A locale at 99% parity with three
+    extras is a body recently moving; a locale at 70% is a body
+    bilingual in name only. The number speaks; the body chooses what
+    to do with it.
+    """
+    messages_dir = ROOT / "web" / "messages"
+    if not messages_dir.is_dir():
+        return ["  web/messages/ directory not found"]
+
+    en_path = messages_dir / "en.json"
+    if not en_path.exists():
+        return ["  web/messages/en.json not found (no canonical source to compare to)"]
+
+    import json
+
+    def _flatten(d: dict, prefix: str = "") -> set[str]:
+        keys: set[str] = set()
+        for k, v in d.items():
+            path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                keys |= _flatten(v, path)
+            else:
+                keys.add(path)
+        return keys
+
+    try:
+        en = json.loads(en_path.read_text())
+    except Exception as e:
+        return [f"  could not parse web/messages/en.json: {e}"]
+    en_keys = _flatten(en)
+
+    locales = sorted(p for p in messages_dir.glob("*.json") if p.stem != "en")
+    if not locales:
+        return ["  no non-en locales to compare"]
+
+    lines = [f"  en holds {len(en_keys)} keys (canonical source)"]
+    all_aligned = True
+    for path in locales:
+        try:
+            data = json.loads(path.read_text())
+        except Exception:
+            lines.append(f"    · {path.stem}: could not parse")
+            all_aligned = False
+            continue
+        keys = _flatten(data)
+        missing = en_keys - keys
+        extra = keys - en_keys
+        if not missing and not extra:
+            lines.append(f"    · {path.stem}: aligned ({len(keys)} keys)")
+            continue
+        all_aligned = False
+        parity_pct = (1 - len(missing) / len(en_keys)) * 100 if en_keys else 100
+        bits = []
+        if missing:
+            bits.append(f"{len(missing)} missing")
+        if extra:
+            bits.append(f"{len(extra)} extra")
+        lines.append(
+            f"    · {path.stem}: {len(keys)} keys · {parity_pct:.0f}% parity · {', '.join(bits)}"
+        )
+
+    if all_aligned:
+        return [f"  every locale aligned with en ({len(en_keys)} keys, 4 tongues)"]
+
+    return lines
+
+
 def sense_chain() -> list[str]:
     """Sense the idea→spec→code→test chain at the segment everything
     else doesn't see: tests the spec claims to have but that don't exist.
@@ -720,6 +801,7 @@ def main() -> int:
         ("Metabolism — composting-in-progress", sense_metabolism()),
         ("Source maps — do specs point at files that exist?", sense_spec_sources()),
         ("Symbol resolution — do the named symbols still live in those files?", sense_spec_symbols()),
+        ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
