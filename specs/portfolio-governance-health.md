@@ -3,19 +3,21 @@ idea_id: portfolio-governance
 status: done
 source:
   - file: api/app/services/governance_service.py
-    symbols: [create_change_request, vote_on_change_request, apply_approved]
+    symbols: [create_change_request, cast_vote, get_change_request, list_change_requests]
   - file: api/app/services/grounded_idea_metrics_service.py
-    symbols: [compute_idea_metrics, compute_portfolio_health]
+    symbols: [compute_idea_metrics, compute_all_idea_metrics, collect_all_data]
+  - file: api/app/services/idea_governance_views.py
+    symbols: [compute_governance_health, list_showcase_ideas]
   - file: api/app/services/coherence_service.py
-    symbols: [compute_coherence_score]
+    symbols: [compute_coherence]
   - file: api/app/services/right_sizing_service.py
     symbols: [build_report, compute_granularity_signal, apply_suggestion]
   - file: api/app/services/vitality_service.py
     symbols: [compute_vitality]
   - file: api/app/services/cc_economics_service.py
-    symbols: [get_supply, stake, unstake]
+    symbols: [supply, exchange_rate, stake, unstake, coherence_score]
   - file: api/app/services/distribution_engine.py
-    symbols: [compute_distribution]
+    symbols: [DistributionEngine, distribute]
 requirements:
   - Governance change requests with voting and auto-apply
   - Grounded idea metrics (actual_value vs potential_value)
