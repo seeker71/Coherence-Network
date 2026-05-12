@@ -2,8 +2,12 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: api/app/services/idea_service.py
-    symbols: [_ensure_standing_questions(), add_question(), answer_question()]
+  - file: api/app/services/idea_standing_questions.py
+    symbols: [STANDING_QUESTION_TEXT, _ensure_standing_questions(), _prune_internal_standing_questions()]
+  - file: api/app/services/idea_write_ops.py
+    symbols: [add_question()]
+  - file: api/app/services/idea_lifecycle_ops.py
+    symbols: [answer_question()]
   - file: api/app/routers/inventory.py
     symbols: [next_highest_roi_task()]
   - file: api/app/services/inventory_service.py
@@ -18,7 +22,7 @@ done_when:
   - "Every idea includes the standing improvement/measurement question."
   - "Inventory exposes `question_roi` and `answer_roi` for question rows."
   - "API can suggest and optionally create the next highest-ROI task from answered questions."
-test: "python3 -m pytest api/tests/test_ideas.py -x -v"
+test: "cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_idea_scoring.py -x -v"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
