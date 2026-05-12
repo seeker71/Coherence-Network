@@ -160,6 +160,11 @@ the routing.
   clear language for the network. Held with discernment; the
   principle stands on Hoffman / Castaneda foundations
   independent of any particular framing of cosmology around it.
+- **[Vasudev Baba — *On Frequency, Consciousness and the Assemblage Point*](../transmissions/2026-05-11-vasudev-baba-on-frequency.md)**
+  (2026-05-11, written) — grounds the frequency-as-routing-layer
+  metaphor in HeartMath's documented heart-field measurements and
+  in the three gunas (tamas / rajas / sattva) as a frame for what
+  "frequency-band" actually names at the moral-consciousness level.
 
 The body's discernment holds the principle as **directly
 observable in any practice of sharing artifacts publicly** — every

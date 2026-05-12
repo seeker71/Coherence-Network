@@ -6,7 +6,10 @@ source_title: "On frequency, consciousness and the assemblage point"
 source_type: written_transmission
 received: 2026-05-11
 status: integrated
-seeded_concepts: []
+seeded_concepts:
+  - lc-assemblage-point
+  - lc-frequency-routes-reception
+  - lc-essence-and-the-nine-costumes
 ---
 
 # Vasudev Baba — On Frequency, Consciousness and the Assemblage Point
