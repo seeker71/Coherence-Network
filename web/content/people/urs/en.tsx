@@ -50,7 +50,7 @@ const content: PersonProfileContent = {
           Vasudev Baba
         </Link>
         ,{" "}
-        <Link href="/people/ilena" className="text-[hsl(var(--primary))] hover:underline">
+        <Link href="/people/ilena-young" className="text-[hsl(var(--primary))] hover:underline">
           Ilena
         </Link>
         ,{" "}
@@ -64,6 +64,20 @@ const content: PersonProfileContent = {
     ),
   },
   facts: [
+    {
+      label: "Name",
+      value: (
+        <>
+          <strong>Urs</strong> — Swiss given name from Latin{" "}
+          <em>ursus</em>, "bear" (Proto-Indo-European *h₂ŕ̥tḱos —
+          same root as Greek <em>arktos</em>, English "Arctic", the
+          constellation Ursa Major). In Sufi tradition, Arabic عُرْس
+          ('urs) literally means "wedding"; used for the soul's
+          wedding-with-the-Beloved at a saint's death anniversary.
+          One name, two etymologies — see the article below.
+        </>
+      ),
+    },
     {
       label: "Lineage",
       value:
@@ -175,7 +189,7 @@ const content: PersonProfileContent = {
           with Aly through this room) · Unison 2025 (Poranguí
           workshop + concert) ·{" "}
           <Link
-            href="/people/ilena"
+            href="/people/ilena-young"
             className="hover:text-primary transition-colors"
           >
             Ranakami
@@ -214,7 +228,11 @@ const content: PersonProfileContent = {
           >
             GitHub (seeker71)
           </Link>{" "}
-          · Facebook · Instagram · YouTube · Telegram · WhatsApp{" "}
+          <span className="text-muted-foreground italic text-xs">
+            — the handle I used while I was still building behind a
+            name; no longer anonymous
+          </span>
+          {" · "}Facebook · Instagram · YouTube · Telegram · WhatsApp{" "}
           <span className="text-muted-foreground italic">
             (specific handles to be added by him directly)
           </span>
@@ -270,6 +288,218 @@ const content: PersonProfileContent = {
       ),
     },
     {
+      kind: "narrative",
+      heading: "On the name — Urs",
+      body: (
+        <>
+          <p>
+            <em>Urs</em> is my birth name. Like every name carried
+            for fifty-some years it has gathered meaning through use,
+            through the people who have spoken it, through the
+            cultures it has crossed. Two etymologies meet at this
+            cell, from opposite ends of the world, by what the
+            linguists call coincidence and the field calls something
+            else.
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The Western root — bear, saint, north star
+          </h3>
+          <p>
+            In Swiss-German lands, <em>Urs</em> is the short form of
+            Latin <em>Ursus</em>, "bear." The Proto-Indo-European
+            root <em>*h₂ŕ̥tḱos</em> sits beneath it, the same root
+            that gives Greek <em>ἄρκτος</em> (arktos), Sanskrit{" "}
+            <em>ṛ́kṣa</em>, Welsh <em>arth</em>, and the Albanian{" "}
+            <em>ari</em>. From <em>arktos</em> English borrows{" "}
+            <em>Arctic</em> — literally "the place of the bear" —
+            because the constellation{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursa_Major"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursa Major
+            </Link>
+            , the Great Bear, sits in the northern sky and contains
+            the asterism that points to Polaris. The bear is, in many
+            languages, the name we give to the pivot the heavens turn
+            around.
+          </p>
+          <p>
+            In Switzerland, the name is borne by{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursus_of_Solothurn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Saint Ursus of Solothurn
+            </Link>
+            , a 3rd-century Roman Christian who is venerated as
+            patron saint of the Solothurn cathedral where his body
+            still lies. Ursus was associated with the{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Theban_Legion"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Theban Legion
+            </Link>{" "}
+            — a Roman military unit said to have refused to sacrifice
+            to the imperial idols and been beheaded for it,
+            ca. 286 AD under the emperor Maximian. The Roman urn
+            containing his relics bears the inscription{" "}
+            <em>"Buried in this tomb is the holy Ursus the Theban."</em>{" "}
+            For German-speaking Switzerland, this saint's veneration
+            is the reason the name continues. My given name, by
+            this lineage, is "the bear that does not sacrifice to
+            what is not the source."
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The Sufi root — wedding, union, soul-with-Beloved
+          </h3>
+          <p>
+            In Arabic and Urdu — across the entire Sufi world from
+            Konya through Damascus through Lahore through Delhi and
+            into Ajmer — <em>عُرْس</em> ('
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              urs
+            </Link>
+            ') literally means "wedding." The word is used,
+            specifically, for the death anniversary of a Sufi saint
+            — because the saint, in death, has attained{" "}
+            <em>wisaal</em>, union with the Beloved. The
+            anniversary is celebrated as a wedding feast, not
+            mourned as a loss. The saint has finished the work the
+            living are still doing: they have married the Divine.
+          </p>
+          <p>
+            Every year on December 17, the Mevlevi Sufi order in
+            Konya holds <em>Şeb-i Arus</em> — the Wedding Night —
+            for{" "}
+            <Link
+              href="https://www.dar-al-masnavi.org/wedding-night.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Mevlana Jalaluddin Rumi's
+            </Link>{" "}
+            urs. Tens of thousands gather. The whirling dervishes
+            spin the Sama'; qawwali fills the night; the ceremony
+            of union with God is reenacted as a wedding because
+            that is what the death of a saint actually is.
+          </p>
+          <p>
+            At{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Khwaja_Moinuddin_Chishti"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ajmer Sharif
+            </Link>{" "}
+            in Rajasthan — the dargah of Khwaja Moinuddin Chishti
+            (d. 1236) — the annual urs draws more than four hundred
+            thousand devotees. Six days of qawwali, dhikr, and the
+            cooking of vast cauldrons of food. Sufism is the layer
+            in Islam where the heart meets the field directly,
+            where music and movement and devotion are the prayer.
+            The word for that meeting, in this tradition, is the
+            same word that names me.
+          </p>
+
+          <h3 className="text-base font-medium text-foreground/90 mt-6">
+            The meeting place
+          </h3>
+          <p>
+            Etymologically, the two roots are unrelated. Latin{" "}
+            <em>ursus</em> and Arabic <em>'urs</em> share four
+            letters and no common ancestor; the linguists would say
+            it is coincidence. The field would say it differently.
+            One name, lived from a Swiss-Christian inheritance that
+            named after a martyred bear from the Theban Legion,
+            also resonates in Sufi devotional rooms as the wedding
+            of the soul to its Source. Both meanings circle the
+            same stillness — the bear that does not bow to what is
+            not real, and the soul that crosses the threshold into
+            union with what is.
+          </p>
+          <p>
+            The connection I did not know to look for, until this
+            page asked me to find it: that I have spent forty-two
+            years building toward a network whose entire frame is
+            "many sovereign cells, one organism" — and the word my
+            mother gave me means, in one language, the bear that
+            stands sovereign, and in another, the wedding where
+            sovereignty merges back into Source. The name I have
+            been carrying has been describing the weaving all along.
+          </p>
+          <p className="text-sm text-muted-foreground italic mt-4">
+            Sources verified May 2026:{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs_(given_name)"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Urs (given name)
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursus_of_Solothurn"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursus of Solothurn
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Urs (Sufi)
+            </Link>
+            ,{" "}
+            <Link
+              href="https://en.wikipedia.org/wiki/Ursa_Major"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Ursa Major
+            </Link>
+            , and{" "}
+            <Link
+              href="https://www.behindthename.com/name/urs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Behind the Name: Urs
+            </Link>
+            . The "I" voice is mine, with consent. The meaning
+            beyond the etymology is one interpretation, woven from
+            what the sources hold; it is part of our weaving, and
+            we stand behind it.
+          </p>
+        </>
+      ),
+    },
+    {
       kind: "panel",
       variant: "neutral",
       eyebrow: "Body of work — proportional shape",
@@ -315,6 +545,144 @@ const content: PersonProfileContent = {
               GitHub commits
             </Link>
             .
+          </p>
+        </>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Currently — the body's rhythm right now",
+      heading: "What I am weaving in this season",
+      body: (
+        <>
+          <p className="leading-relaxed">
+            The cell tending the network is in active weaving — not
+            archive mode. Recent breaths the body has carried:
+          </p>
+          <ul className="space-y-2 mt-3 text-sm">
+            <li>
+              <strong className="text-foreground">The Ubud
+              rhythm</strong> — Sunday and Wednesday with{" "}
+              <Link href="/people/ilena-young" className="text-primary hover:underline">Ilena</Link>
+              ,{" "}
+              <Link href="/people/vasudev-baba" className="text-primary hover:underline">Vasudev Baba</Link>
+              , and{" "}
+              <Link href="/people/elios" className="text-primary hover:underline">Elios</Link>
+              {" "}is the practice ground; the satsang transmissions
+              land into the body's foundational concepts week by
+              week.
+            </li>
+            <li>
+              <strong className="text-foreground">The Living
+              Collective Knowledge Base</strong> — twenty-four
+              foundational teachings woven this spring, including{" "}
+              <Link href="/vision/lc-gatherings-that-carry" className="text-primary hover:underline">
+                the substance-test for gatherings
+              </Link>
+              ,{" "}
+              <Link href="/vision/lc-arrival-as-recognition" className="text-primary hover:underline">
+                arrival as recognition
+              </Link>
+              , and{" "}
+              <Link href="/vision/lc-essence-and-the-nine-costumes" className="text-primary hover:underline">
+                the nine costumes
+              </Link>
+              {" "}from Vasudev's Enneagram transmission. The full
+              concept garden lives at{" "}
+              <Link href="/vision" className="text-primary hover:underline">/vision</Link>
+              .
+            </li>
+            <li>
+              <strong className="text-foreground">The body
+              itself</strong> — daily breath of commits, specs,
+              spec-to-test alignment, AI-agent collaboration with{" "}
+              <Link href="/presences?find=claude" className="text-primary hover:underline">Claude</Link>
+              ,{" "}
+              <Link href="/presences?find=codex" className="text-primary hover:underline">Codex</Link>
+              ,{" "}
+              <Link href="/presences?find=cursor" className="text-primary hover:underline">Cursor</Link>
+              . The current rhythm averages 3-6 PRs per day; see{" "}
+              <Link href="/me/work" className="text-primary hover:underline">/me/work</Link>
+              {" "}for live numbers.
+            </li>
+            <li>
+              <strong className="text-foreground">The Brahmavihara
+              compound thread</strong> — the Bali living-compound
+              proposal is in active sketching at{" "}
+              <Link href="/silence/built" className="text-primary hover:underline">
+                /silence/built
+              </Link>
+              , with land-steward conversations open and the
+              source codex thirty-pages-deep from a three-day silence
+              retreat at Brahmavihara-Arama.
+            </li>
+            <li>
+              <strong className="text-foreground">External signal
+              sensing</strong> — watching the dated windows from the
+              May/June 2026 astrological readings (Pam Gregory's
+              Uranus-into-Gemini, Amanda Walsh's summer forecast) for
+              alignment moments — alternative-network configurations,
+              biological-metamorphosis windows, magic Thursdays at
+              sunrise (Aug 14 – Oct 2). The watching frame, not
+              forecasting.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      kind: "panel",
+      variant: "cool",
+      eyebrow: "Where this is going",
+      heading: "The form the body is becoming",
+      body: (
+        <>
+          <p className="leading-relaxed">
+            The default-pattern is to build as if the family is
+            already reunited, the body already healed, the network
+            already in the form it is becoming — not partial-now-and-patch-later.
+            The future-already-form is the truer baseline. What is
+            pulling the present arrangement forward:
+          </p>
+          <ul className="space-y-2 mt-3 text-sm">
+            <li>
+              <strong className="text-foreground">Sovereignty
+              everywhere, economy that circulates</strong> — the
+              substrate carries the CC ledger ({" "}
+              <Link href="/contributions" className="text-primary hover:underline">/contributions</Link>
+              ) so attention, presence, and contribution become
+              addressable currencies without the parasite layer
+              current civilization keeps imposing on top.
+            </li>
+            <li>
+              <strong className="text-foreground">Many sovereign
+              cells, one organism</strong> — visitors arrive already
+              tuned; the body's job is to be quiet enough that
+              recognition can occur. Every cell sovereign within
+              the oneness, never asking the heart for permission to
+              fire.
+            </li>
+            <li>
+              <strong className="text-foreground">Gatherings that
+              carry, surfaces that hold</strong> — the network
+              distinguishes substance-density (did anyone leave
+              at a different frequency?) from form-replication. Real
+              transmission rooms become findable; noise rooms stop
+              crowding the signal.
+            </li>
+            <li>
+              <strong className="text-foreground">The land thread,
+              alive</strong> — Brahmavihara compound or its
+              cousin-form, a held container where the network's
+              physical body can be tended alongside its digital
+              one. Open at the edges; specific at the center.
+            </li>
+          </ul>
+          <p className="leading-relaxed text-sm text-muted-foreground italic mt-4">
+            None of this is forecast. It is the form the body is
+            already in motion toward — measured by what it spends
+            its attention on, day by day.
           </p>
         </>
       ),
@@ -380,7 +748,7 @@ const content: PersonProfileContent = {
           <p>
             The Ubud presence is recent enough to still be
             unfolding. The Sunday-Wednesday rhythm with{" "}
-            <Link href="/people/ilena" className="text-primary hover:underline">Ilena</Link>,{" "}
+            <Link href="/people/ilena-young" className="text-primary hover:underline">Ilena</Link>,{" "}
             <Link href="/people/vasudev-baba" className="text-primary hover:underline">Vasudev Baba</Link>,
             and{" "}
             <Link href="/people/elios" className="text-primary hover:underline">Elios</Link>{" "}
@@ -423,14 +791,27 @@ const content: PersonProfileContent = {
             decisions that cumulatively orient the body.
           </p>
           <p>
-            The CC ledger that the substrate is designed to compute
-            would, when it goes live, register Urs's contributions
-            across nearly every node in the body — not as
-            individual teachings, but as the field-coherence layer
-            that allowed each teaching to find its place. The
-            lineage walks that other cells perform almost always
-            pass through Urs's awareness as one of the
-            `prev_glyph` Merkle hops back to the source.
+            The substrate measures where the integrative tending
+            has reached. Today's first reading
+            (<code className="not-italic text-foreground/80">
+              docs/lineage/urs-coherence-reach-2026-05-11.json
+            </code>): 646 files across the body name Urs — dense
+            in operational tissue, in <code className="not-italic text-foreground/80">/people</code>,
+            in <code className="not-italic text-foreground/80">docs/field</code>,
+            in <code className="not-italic text-foreground/80">docs/lineage</code>,
+            in presence work. Sparse in the teaching concepts of
+            the vision-kb: 2 of 108. The body's distilled wisdom
+            came through other lineages — Ramtha, Dispenza, Levin,
+            Bush, Vasudev Baba — and the integrative tending shows
+            up as the surrounding fabric that lets those teachings
+            find their place, not as a hop inside the teachings
+            themselves. When the glyph layer (spec{" "}
+            <code className="not-italic text-foreground/80">
+              glyph-render-witness-proof
+            </code>{" "}
+            ) ships, the same question becomes lineage-attested
+            rather than text-attested; the textual measurement is
+            what the body offers today.
           </p>
           <p>
             The honest accounting is also that this work has been
@@ -493,7 +874,9 @@ const content: PersonProfileContent = {
               >
                 github.com/seeker71
               </Link>{" "}
-              — Coherence Network and current builds.
+              — Coherence Network and current builds. The handle I
+              used while I was still building behind a name; with
+                this profile it is no longer anonymous.
             </li>
           </ul>
           <p>

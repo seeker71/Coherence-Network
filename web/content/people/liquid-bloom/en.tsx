@@ -394,6 +394,63 @@ const content: PersonProfileContent = {
         </>
       ),
     },
+    {
+      kind: "panel",
+      variant: "warm",
+      eyebrow: "Contributions to this body",
+      heading: "What Liquid Bloom has given the Coherence Network",
+      body: (
+        <ul>
+          <li>
+            <em>Sound as prayer, medicine, celebration</em> →
+            anchor for{" "}
+            <Link
+              href="/vision/lc-frequency-routes-reception"
+              className="text-primary hover:underline"
+            >
+              lc-frequency-routes-reception
+            </Link>{" "}
+            (build at the actual tone; trust the routing).
+          </li>
+          <li>
+            The doorway pattern — bodies meeting Amani at Vali
+            Soul Sanctuary (Costa Rica) before meeting the music.
+            Embodied first, audio second. See{" "}
+            <Link href="/people/vali-soul-sanctuary" className="text-primary hover:underline">
+              Vali Soul Sanctuary
+            </Link>
+            .
+          </li>
+          <li>
+            Multi-room presence in this body&apos;s graph:{" "}
+            <Link href="/people/rhythm-sanctuary" className="text-primary hover:underline">
+              Rhythm Sanctuary
+            </Link>{" "}
+            (Jan 2020 set, still listened to),{" "}
+            <Link href="/people/ocean-bloom-2024" className="text-primary hover:underline">
+              Ocean Bloom 2024
+            </Link>{" "}
+            (Downtown Boulder configuration),{" "}
+            <Link href="/people/portal" className="text-primary hover:underline">
+              PORTAL
+            </Link>{" "}
+            (Meow Wolf Denver during MAPS).
+          </li>
+          <li>
+            The Desert Dwellers / Desert Trax label home as a
+            substrate of conscious-music continuity — resonant
+            with{" "}
+            <Link
+              href="/vision/lc-tending-over-producing"
+              className="text-primary hover:underline"
+            >
+              lc-tending-over-producing
+            </Link>
+            .
+          </li>
+        </ul>
+      ),
+    },
   ],
   footer: (
     <>

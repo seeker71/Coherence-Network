@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { LensesNav } from "@/components/LensesNav";
 
 export const dynamic = "force-dynamic";
 
@@ -86,11 +87,15 @@ export default async function CreatorsLandingPage() {
       <h1 className="text-4xl font-extralight text-white mb-4">
         Your work, provably yours.
       </h1>
-      <p className="text-lg text-stone-300 leading-relaxed mb-10 max-w-2xl">
+      <p className="text-lg text-stone-300 leading-relaxed mb-6 max-w-2xl">
         Contribute blueprints, designs, research. Earn CC when others use your
         work. Every use is attributed on-chain and verifiable from outside the
         platform. No paywalls. No subscriptions. The audit trail is the proof.
       </p>
+
+      <div className="mb-10">
+        <LensesNav current="creators" />
+      </div>
 
       <section className="mb-12">
         <h2 className="text-lg font-light text-stone-300 mb-4">

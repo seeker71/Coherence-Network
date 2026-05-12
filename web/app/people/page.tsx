@@ -11,6 +11,7 @@ import {
 import { PeopleSearch } from "./_components/PeopleSearch";
 import { PeopleFilters, type PeopleSort } from "./_components/PeopleFilters";
 import { lineageFigureRank } from "@/lib/named-lineage";
+import { LensesNav } from "@/components/LensesNav";
 
 /**
  * /people — the directory of every presence the network holds.
@@ -254,6 +255,11 @@ export default async function PeopleIndexPage({
           {pageCopy.presenceWalkCta}
         </Link>
       </header>
+
+      {/* Lenses — sibling perspectives on the same body.
+          Both /people and /presences route to this index, and both
+          highlight the same Presences lens. */}
+      <LensesNav current="presences" />
 
       {/* Structural axes — sort, filter chips, substring search.
           State lives in the URL so any view is shareable. */}

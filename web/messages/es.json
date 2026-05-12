@@ -199,7 +199,7 @@
     "layer": {
       "vision": "La Visión",
       "presences": "Las Presencias",
-      "work": "El Trabajo",
+      "work": "El Devenir",
       "pulse": "El Pulso"
     },
     "sub": {
@@ -1234,7 +1234,7 @@
   "home": {
     "livingLineageEyebrow": "Linaje vivo",
     "livingLineageHeadline": "Presencias que dan forma al campo",
-    "livingLineageLede": "Estas son células que reconocemos como afines. Personas reales. Obra real. Presencia real.",
+    "livingLineageLede": "Estas son células que reconocemos como afines. Presencias reales. Tejido real. Relación real.",
     "livingLineageCta": "Encontrar",
     "livingLineageFootnote": "Presencias públicas, sostenidas con imágenes ancladas en sus fuentes y un camino de vuelta a sus propias páginas.",
     "meetOneConceptEyebrow": "Encuentra un concepto",
@@ -1244,7 +1244,7 @@
     "heroHeadline": "¿Qué idea llevas dentro?",
     "heroLede": "Un patrón que notaste. Un vacío que quiere llenarse. Un camino mejor. Compártela — alguien en algún lugar busca exactamente esto.",
     "statIdeasAlive": "ideas vivas",
-    "statValueCreated": "valor creado",
+    "statValueCreated": "valor en circulación",
     "statNode": "nodo",
     "statNodes": "nodos",
     "statCoherence": "coherencia",
@@ -2257,7 +2257,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Inicio",
-      "people": "Personas"
+      "people": "Presencias"
     },
     "noteEyebrow": "Una nota desde este cuerpo",
     "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →",

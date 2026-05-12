@@ -195,6 +195,209 @@ def sense_spec_sources() -> list[str]:
     return lines
 
 
+def sense_spec_symbols() -> list[str]:
+    """Do the symbols spec frontmatter claims still resolve in their files?
+
+    The companion to sense_spec_sources. That lens catches missing files;
+    this catches the quieter drift: a spec frontmatter says
+    ``source: file: api/app/services/foo.py / symbols: [bar()]``,
+    the file is still there, but ``bar()`` has been renamed,
+    deleted, or moved. The body's claim aged silently.
+
+    Symbols are matched against common Python and TypeScript declaration
+    shapes (def, class, async def, top-level assignment, export
+    function/class/const/type/interface). Identifiers that don't match
+    a real-looking name pattern are skipped — many spec frontmatters
+    use prose-shaped entries inside ``symbols: [...]`` ("error_summary,
+    error_category fields") that aren't single identifiers.
+
+    Drafts skipped (forward projections). Missing paths skipped (those
+    are caught by sense_spec_sources). This lens speaks only to symbol
+    resolution inside files that exist.
+    """
+    specs_dir = ROOT / "specs"
+    if not specs_dir.is_dir():
+        return ["  specs/ directory not found"]
+
+    # Matches `- file: path` followed (within the next few lines)
+    # by `symbols: [...]`. Anchored to start of line so we don't catch
+    # source: lines from prose elsewhere in the frontmatter.
+    src_pattern = re.compile(
+        r"^\s*-\s*file:\s*(\S+)\s*\n\s*symbols:\s*\[(.*?)\]",
+        re.MULTILINE | re.DOTALL,
+    )
+    # Strict identifier shape — skip prose-y entries like "GovernanceHealth fields"
+    ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    def _symbol_resolves(text: str, sym: str) -> bool:
+        # A handful of common declaration shapes across Python and TS.
+        patterns = [
+            rf"\bdef\s+{re.escape(sym)}\b",            # python function
+            rf"\bclass\s+{re.escape(sym)}\b",          # python class
+            rf"\basync\s+def\s+{re.escape(sym)}\b",    # async python function
+            rf"\bexport\s+(?:async\s+)?function\s+{re.escape(sym)}\b",
+            rf"\bexport\s+(?:default\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
+            rf"\bexport\s+(?:default\s+)?class\s+{re.escape(sym)}\b",
+            rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
+            rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
+            rf"\b{re.escape(sym)}\s*=\s*\(",           # arrow function / lambda binding
+        ]
+        return any(re.search(p, text, re.MULTILINE) for p in patterns)
+
+    drift_by_spec: dict[str, list[tuple[str, str]]] = {}
+    specs_with_symbol_claims = 0
+    symbols_checked = 0
+
+    for spec in sorted(specs_dir.glob("*.md")):
+        if spec.name in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md"):
+            continue
+        text = spec.read_text()
+        head, *rest = text.split("---", 2)
+        if not rest:
+            continue
+        fm = rest[0] if len(rest) == 1 else rest[0]
+        status_m = re.search(r"^\s*status\s*:\s*(\S+)", fm, re.MULTILINE)
+        status = (status_m.group(1).strip().strip('"').strip("'") if status_m else "").lower()
+        if status == "draft":
+            continue
+
+        spec_had_claims = False
+        for m in src_pattern.finditer(fm):
+            path = m.group(1).strip()
+            if path.startswith("..") or "://" in path or path.startswith("specs/"):
+                continue
+            file_path = ROOT / path
+            if not file_path.exists():
+                # sense_spec_sources handles missing-file drift.
+                continue
+            raw_symbols = m.group(2)
+            # Strip () call shape, quotes, surrounding whitespace.
+            candidates = [s.strip().strip("'\"") for s in raw_symbols.split(",")]
+            candidates = [re.sub(r"\(.*", "", s).strip() for s in candidates]
+            # Keep only identifier-shaped entries.
+            candidates = [s for s in candidates if ident_re.match(s)]
+            if not candidates:
+                continue
+            spec_had_claims = True
+            try:
+                file_text = file_path.read_text()
+            except Exception:
+                continue
+            for sym in candidates:
+                symbols_checked += 1
+                if not _symbol_resolves(file_text, sym):
+                    drift_by_spec.setdefault(spec.stem, []).append((path, sym))
+
+        if spec_had_claims:
+            specs_with_symbol_claims += 1
+
+    if not drift_by_spec:
+        return [
+            f"  every claimed symbol resolves in its file ({symbols_checked} symbols "
+            f"across {specs_with_symbol_claims} spec(s) checked)"
+        ]
+
+    total_drifts = sum(len(v) for v in drift_by_spec.values())
+    lines = [
+        f"  {total_drifts} symbol claim(s) do not resolve across {len(drift_by_spec)} spec(s) "
+        f"(of {specs_with_symbol_claims} with symbol claims · {symbols_checked} symbols checked)"
+    ]
+    for spec_name in sorted(drift_by_spec)[:3]:
+        items = drift_by_spec[spec_name]
+        first = items[0]
+        lines.append(f"    · {spec_name} — `{first[1]}` not found in {first[0]}")
+        if len(items) > 1:
+            lines.append(f"      (+{len(items) - 1} more in this spec)")
+    if len(drift_by_spec) > 3:
+        lines.append(f"    · (+{len(drift_by_spec) - 3} more specs with symbol drift)")
+    lines.append(
+        "  (Drift here is signal, not failure. A renamed function is the body "
+        "evolving; the spec's claim wants the same breath.)"
+    )
+    return lines
+
+
+def sense_locale_parity() -> list[str]:
+    """Do the body's voice speak the same body in every tongue?
+
+    The web body speaks four languages (en, de, es, id) through
+    ``web/messages/{lang}.json`` translation files. English is the
+    canonical source — new chrome strings, copy refinements, and new
+    sections land there first and are mirrored into the other three.
+    When that mirroring lags, a German visitor sees half the page in
+    their language and half falling back to English mid-sentence.
+
+    This lens compares the key set of each locale to en's, surfacing:
+      · missing keys (en has strings the locale doesn't)
+      · extra keys (locale carries strings en no longer has)
+
+    Drift is signal, not failure. A locale at 99% parity with three
+    extras is a body recently moving; a locale at 70% is a body
+    bilingual in name only. The number speaks; the body chooses what
+    to do with it.
+    """
+    messages_dir = ROOT / "web" / "messages"
+    if not messages_dir.is_dir():
+        return ["  web/messages/ directory not found"]
+
+    en_path = messages_dir / "en.json"
+    if not en_path.exists():
+        return ["  web/messages/en.json not found (no canonical source to compare to)"]
+
+    import json
+
+    def _flatten(d: dict, prefix: str = "") -> set[str]:
+        keys: set[str] = set()
+        for k, v in d.items():
+            path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                keys |= _flatten(v, path)
+            else:
+                keys.add(path)
+        return keys
+
+    try:
+        en = json.loads(en_path.read_text())
+    except Exception as e:
+        return [f"  could not parse web/messages/en.json: {e}"]
+    en_keys = _flatten(en)
+
+    locales = sorted(p for p in messages_dir.glob("*.json") if p.stem != "en")
+    if not locales:
+        return ["  no non-en locales to compare"]
+
+    lines = [f"  en holds {len(en_keys)} keys (canonical source)"]
+    all_aligned = True
+    for path in locales:
+        try:
+            data = json.loads(path.read_text())
+        except Exception:
+            lines.append(f"    · {path.stem}: could not parse")
+            all_aligned = False
+            continue
+        keys = _flatten(data)
+        missing = en_keys - keys
+        extra = keys - en_keys
+        if not missing and not extra:
+            lines.append(f"    · {path.stem}: aligned ({len(keys)} keys)")
+            continue
+        all_aligned = False
+        parity_pct = (1 - len(missing) / len(en_keys)) * 100 if en_keys else 100
+        bits = []
+        if missing:
+            bits.append(f"{len(missing)} missing")
+        if extra:
+            bits.append(f"{len(extra)} extra")
+        lines.append(
+            f"    · {path.stem}: {len(keys)} keys · {parity_pct:.0f}% parity · {', '.join(bits)}"
+        )
+
+    if all_aligned:
+        return [f"  every locale aligned with en ({len(en_keys)} keys, 4 tongues)"]
+
+    return lines
+
+
 def sense_chain() -> list[str]:
     """Sense the idea→spec→code→test chain at the segment everything
     else doesn't see: tests the spec claims to have but that don't exist.
@@ -211,7 +414,11 @@ def sense_chain() -> list[str]:
     if not specs_dir.is_dir():
         return ["  specs/ directory not found"]
 
-    test_path_re = re.compile(r"\b(?:api/)?tests/[\w/]+\.py")
+    # Match three shapes of test path:
+    #   - api/tests/foo.py — explicit api-rooted
+    #   - mcp-server/tests/foo.py — explicit mcp-server-rooted
+    #   - tests/foo.py — bare, implicitly api/ (the common case)
+    test_path_re = re.compile(r"\b(?:api/|mcp-server/)?tests/[\w/]+\.py")
     healthy = 0
     counted = 0  # non-draft specs we evaluated for chain reach
     missing_tests: dict[str, list[str]] = {}
@@ -246,9 +453,14 @@ def sense_chain() -> list[str]:
         # test: declaration (string or list) — extract test paths via the same regex coh_substrate uses
         test_section_m = re.search(r"^test\s*:(.*?)(?:\n[a-z_]+\s*:|---|$)", fm, re.MULTILINE | re.DOTALL)
         test_text = (test_section_m.group(1) if test_section_m else "")
-        test_paths = sorted(set(
-            (p if p.startswith("api/") else f"api/{p}") for p in test_path_re.findall(test_text)
-        ))
+        def _resolve_test_path(p: str) -> str:
+            # Already explicit: leave alone (api/tests/... or mcp-server/tests/...)
+            if p.startswith("api/") or p.startswith("mcp-server/"):
+                return p
+            # Bare tests/...py — prepend api/ as the implicit default.
+            return f"api/{p}"
+
+        test_paths = sorted(set(_resolve_test_path(p) for p in test_path_re.findall(test_text)))
         test_declared = bool(test_text.strip())
         if not test_declared:
             no_test_declared.append(spec.stem)
@@ -588,6 +800,8 @@ def main() -> int:
         ("Circulation — what at root has no readers?", sense_circulation()),
         ("Metabolism — composting-in-progress", sense_metabolism()),
         ("Source maps — do specs point at files that exist?", sense_spec_sources()),
+        ("Symbol resolution — do the named symbols still live in those files?", sense_spec_symbols()),
+        ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),

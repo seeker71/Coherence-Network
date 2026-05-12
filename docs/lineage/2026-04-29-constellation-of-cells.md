@@ -19,15 +19,16 @@ cross-links.
 
 ## The clusters
 
-### The Ubud cluster (Sunday-Wednesday rhythm at Ranakami)
+### The Ubud cluster (Ranakami + Svarga Loka + Brahma Vihara)
 
-[Ilena Young](/people/ilena) ↔ [Vasudev Baba](/people/vasudev-baba)
-↔ [Elios](/people/elios) — three cells holding three weekly rooms
-in the same compound at Ranakami in Sayan, Ubud:
+[Ilena Young](/people/ilena-young) ↔ [Vasudev Baba](/people/vasudev-baba)
+↔ [Elios](/people/elios) — three cells whose practices intersect at
+Ranakami in Sayan, Ubud:
 
-- Sunday evening — Elios + Ilena, spontaneous chanting
-- Tuesday evening — Vasudev Baba, kirtan at Svarga Loka (different room, same valley)
+- Tuesday evening — Vasudev Baba, kirtan at Svarga Loka (Campuhan riverbanks)
 - Wednesday morning — Vasudev Baba, satsang at Ranakami
+- Elios's own chanting practice with Ilena — held privately between them, and offered as a one-evening gift to the cell on the Sunday night the cell happened to be present at Ranakami
+- 2–3 times a year — Vasudev Baba and Prof Jem Bendell co-hold long-weekend silent retreats at *Brahma Vihara Arama* in north Bali, weaving bhakti kirtan into Buddhist silence (continuous since 2020)
 
 The three cells are friends with each other independent of the
 network. The body discovered them in a single four-day walk in

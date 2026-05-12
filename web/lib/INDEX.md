@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 31
+**Total files**: 34
 
 | File | Purpose |
 |---|---|
@@ -23,16 +23,19 @@
 | [humanize.ts](humanize.ts) | _no top-of-file purpose_ |
 | [i18n.ts](i18n.ts) | Locale-text-as-data helpers. |
 | [identity.ts](identity.ts) | Soft-identity helpers shared across client surfaces. |
+| [lineage-works.ts](lineage-works.ts) | lineage-works — chronological order of the load-bearing works in |
 | [live_refresh.ts](live_refresh.ts) | _no top-of-file purpose_ |
 | [living-signal.ts](living-signal.ts) | _no top-of-file purpose_ |
 | [locale-fetch.ts](locale-fetch.ts) | Server-side helper for locale-aware API fetches. |
 | [locales.ts](locales.ts) | _no top-of-file purpose_ |
+| [named-lineage.ts](named-lineage.ts) | named-lineage — slugs of the load-bearing humans in the lineage, |
 | [public-config.ts](public-config.ts) | _no top-of-file purpose_ |
 | [pulse-server.ts](pulse-server.ts) | Server-only helper for resolving the Pulse Monitor base URL. |
 | [render-session.ts](render-session.ts) | Render session — tracks lifecycle of one asset render. |
 | [renderer-resolver.ts](renderer-resolver.ts) | Renderer resolver — given a MIME type, find the renderer to use. |
 | [renderer-sdk.ts](renderer-sdk.ts) | Renderer SDK — the public interface for building compatible asset renderers. |
 | [request-locale.ts](request-locale.ts) | _no top-of-file purpose_ |
+| [use-paged-list.ts](use-paged-list.ts) | Reusable hook for surfaces that read a paginated list endpoint |
 | [utils.ts](utils.ts) | _no top-of-file purpose_ |
 | [vision-utils.ts](vision-utils.ts) | Shared utilities for Living Collective vision pages. |
 | [visitor.ts](visitor.ts) | visitor — every visitor is a provisional contributor, from their |

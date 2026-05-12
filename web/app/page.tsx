@@ -70,7 +70,7 @@ const HOW_IT_WORKS = [
 
 const STAT_LABEL_FALLBACKS = {
   ideasAlive: "ideas alive",
-  valueCreated: "value created",
+  valueCreated: "value circulating",
   node: "node",
   nodes: "nodes",
   coherence: "coherence",
@@ -601,13 +601,14 @@ export default async function Home() {
                 <p className="mt-2 min-h-12 text-xs leading-relaxed text-foreground/75 line-clamp-3">
                   {presence.traceWhy}
                 </p>
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <span
-                    className="min-w-0 truncate text-[10px] text-muted-foreground"
-                    title={presence.traceSource}
-                  >
-                    {presence.traceSource}
-                  </span>
+                <div className="mt-4 flex items-center justify-end gap-3">
+                  {/* The filesystem-source path lives in the i18n record
+                      (`traceSource`) for verifiability and is reachable
+                      via the trace link below; rendering the path itself
+                      on the homepage made the cards feel like developer
+                      output to a fresh visitor. The link still goes to
+                      the same evidence — you just no longer have to
+                      walk past the path to reach the door. */}
                   <AttributedInternalLink
                     href={presence.traceHref}
                     entityId={`trace:${presence.slug}`}

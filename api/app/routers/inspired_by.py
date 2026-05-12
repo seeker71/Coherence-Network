@@ -24,6 +24,31 @@ class InspiredByCreateRequest(BaseModel):
     source_contributor_id: str = Field(..., min_length=1, max_length=255)
 
 
+class InspiredByManualRequest(BaseModel):
+    """Direct link to an existing graph node — no web resolution.
+
+    Used for private/local cells the open-web resolver cannot find
+    (people whose practice is offline, communities that aren't on the
+    public web, sanctuaries that hold a frequency but not a domain).
+    The body's lineage prose may name them; this endpoint lets the
+    graph hold the relation too.
+    """
+
+    source_contributor_id: str = Field(..., min_length=1, max_length=255)
+    target_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Existing graph node id, e.g. 'contributor:ilena' or 'scene:vali-soul-sanctuary'",
+    )
+    weight: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Strength of the inspired-by relation; 0..1",
+    )
+
+
 @router.post(
     "/inspired-by",
     status_code=201,
@@ -44,6 +69,37 @@ async def create_inspired_by(body: InspiredByCreateRequest) -> dict[str, Any]:
             ),
         )
     return service.import_inspired_by(body.source_contributor_id, resolved)
+
+
+@router.post(
+    "/inspired-by/manual",
+    status_code=201,
+    summary="Link two existing nodes with an inspired-by edge (no resolver)",
+)
+async def create_inspired_by_manual(body: InspiredByManualRequest) -> dict[str, Any]:
+    """Create (or refresh) an inspired-by edge between two existing
+    graph nodes. The resolver-based POST /inspired-by handles open-web
+    cells; this endpoint handles cells the body already knows
+    locally — Ubud sanctuary teachers, private circles, communities
+    whose substance the web has no page for.
+
+    The source contributor and target node must both exist; this is a
+    relation step, not a creation step. Returns the edge as stored.
+    """
+    edge = service.import_inspired_by_manual(
+        source_contributor_id=body.source_contributor_id,
+        target_id=body.target_id,
+        weight=body.weight,
+    )
+    if edge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Source contributor or target node not found in the graph. "
+                "Use POST /api/inspired-by for cells that don't exist yet."
+            ),
+        )
+    return edge
 
 
 @router.get(

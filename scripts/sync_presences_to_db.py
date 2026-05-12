@@ -115,6 +115,12 @@ def find_node_by_name(api_url: str, name: str) -> dict | None:
     return data if status == 200 else None
 
 
+def _fetch_graph_node(api_url: str, node_id: str) -> dict | None:
+    """Fetch a graph node by its stable id, or None if not found."""
+    status, data = _request("GET", f"{api_url}/api/graph/nodes/{node_id}")
+    return data if status == 200 and data else None
+
+
 def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
     path = PRESENCES_DIR / f"{slug}.md"
     if not path.exists():
@@ -129,23 +135,87 @@ def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
         print(f"  ✗ {slug}: frontmatter missing `name`")
         return False
 
-    # Resolve the node: prefer canonical_url, fall back to name.
-    node = None
-    if canonical_url:
-        node = find_node_by_url(api_url, canonical_url)
+    # Resolve the node in priority order. The slug-derived stable id
+    # is tried first because it is deterministic and unambiguous —
+    # earlier versions fell back to a canonical_url match across all
+    # contributors, which silently collided when two nodes both had
+    # empty canonical_urls (the iterator's first-empty-match would
+    # win and the PATCH would overwrite the wrong node). Slug-first
+    # eliminates that class of bug.
+    node: dict | None = None
+    stable_id = f"contributor:{slug}"
+
+    # 1. Try the slug-derived stable id directly.
+    node = _fetch_graph_node(api_url, stable_id)
+
+    # 2. Fall back to canonical_url match (only when we have a real URL).
+    # Two presences can legitimately share a canonical_url (e.g. Ubbe
+    # MacLean and Anchor the Light both anchored at anchorthelight.org).
+    # When the URL match returns a node with a different name than ours,
+    # that's a collision — fall through to create-if-missing rather than
+    # silently overwriting the other person's node.
+    if not node and canonical_url:
+        candidate = find_node_by_url(api_url, canonical_url)
+        if candidate:
+            cand_name = (candidate.get("name") or "").strip()
+            if cand_name == name:
+                node = candidate
+                # find_node_by_url returns the /api/contributors view, whose id is a
+                # UUID. PATCH happens against /api/graph/nodes/{id}, which needs the
+                # stable graph id (contributor:...). Resolve it via the graph-nodes
+                # index.
+                if node and not (node.get("id") or "").startswith("contributor:"):
+                    status, list_data = _request("GET", f"{api_url}/api/graph/nodes?type=contributor&limit=500")
+                    if status == 200 and list_data:
+                        our_url = canonical_url.rstrip("/")
+                        for n in list_data.get("items", []) or []:
+                            if (n.get("canonical_url") or "").rstrip("/") == our_url and (n.get("name") or "").strip() == name:
+                                node = n
+                                break
+
+    # 3. Last resort: name-based lookup. Only trust the result when
+    # the API actually returned the contributor we asked for — the
+    # /api/contributors/{name} endpoint has been observed returning
+    # some other contributor record when the exact name isn't on
+    # file (e.g. asking for "Boulder Ecstatic Dance" returned
+    # Sayuri's node), so a stable-id-shape check alone is
+    # insufficient. We require either:
+    #   (a) the candidate's name matches ours exactly AND the id
+    #       has the stable contributor:... shape, or
+    #   (b) the candidate's canonical_url matches a non-empty URL
+    #       we hold.
+    # Anything else falls through to create-if-missing.
     if not node and name:
-        node = find_node_by_name(api_url, name)
+        candidate = find_node_by_name(api_url, name)
+        if candidate:
+            cand_id = candidate.get("id") or ""
+            cand_name = (candidate.get("name") or "").strip()
+            cand_url = (candidate.get("canonical_url") or "").rstrip("/")
+            our_url = (canonical_url or "").rstrip("/")
+            if cand_name == name and cand_id.startswith("contributor:"):
+                # Same name AND stable graph id — trust it.
+                node = candidate
+            elif our_url and cand_url == our_url:
+                # Name lookup returned a UUID, but canonical_url
+                # matches: resolve via the graph-nodes index.
+                status, list_data = _request("GET", f"{api_url}/api/graph/nodes?type=contributor&limit=500")
+                if status == 200 and list_data:
+                    for n in list_data.get("items", []) or []:
+                        if (n.get("canonical_url") or "").rstrip("/") == our_url:
+                            node = n
+                            break
+            # Otherwise (UUID id + empty/mismatched URL) we treat
+            # this as "no safe match" and fall through to create.
 
     headers = {"X-API-Key": api_key} if api_key else {}
 
     if not node:
         if not create_if_missing:
-            print(f"  ✗ {slug}: no matching node (canonical_url={canonical_url!r}, name={name!r}); set create_if_missing: true to create")
+            print(f"  ✗ {slug}: no matching node (slug={stable_id!r}, canonical_url={canonical_url!r}, name={name!r}); set create_if_missing: true to create")
             return False
-        # Create a new placeholder node
-        node_id = f"contributor:{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')}"
+        # Create a new node with the deterministic slug-derived id.
         payload = {
-            "id": node_id,
+            "id": stable_id,
             "type": fm.get("type", "contributor"),
             "name": name,
             "description": body.strip(),
@@ -157,33 +227,20 @@ def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
             },
         }
         if dry_run:
-            print(f"  ⊕ {slug}: would CREATE {node_id} (name={name!r}, url={canonical_url!r}, body={len(body)} chars)")
+            print(f"  ⊕ {slug}: would CREATE {stable_id} (name={name!r}, url={canonical_url!r}, body={len(body)} chars)")
             return True
         status, result = _request("POST", f"{api_url}/api/graph/nodes", payload, headers=headers)
         if status in (200, 201):
-            print(f"  ⊕ {slug}: created {node_id}")
+            print(f"  ⊕ {slug}: created {stable_id}")
             return True
         print(f"  ✗ {slug}: create failed (HTTP {status}): {result}")
         return False
 
-    # PATCH existing node
+    # PATCH existing node.
     node_id = node.get("id")
     if not node_id:
         print(f"  ✗ {slug}: resolved node has no id: {node}")
         return False
-
-    # The node_id from /api/contributors is a UUID generated on the fly;
-    # look it up via /api/graph/nodes by slug to get the stable id.
-    # The slug form is contributor:<slug>-<hash>; we find it via the
-    # canonical_url property.
-    if not node_id.startswith("contributor:"):
-        # Need the stable graph id — search graph nodes by URL
-        status, list_data = _request("GET", f"{api_url}/api/graph/nodes?type=contributor&limit=500")
-        if status == 200 and list_data:
-            for n in list_data.get("items", []) or []:
-                if (n.get("canonical_url") or "").rstrip("/") == (canonical_url or "").rstrip("/"):
-                    node_id = n.get("id", node_id)
-                    break
 
     current_name = node.get("name", "")
     current_desc = node.get("description", "") or ""
@@ -193,7 +250,7 @@ def sync_one(slug: str, api_url: str, api_key: str, dry_run: bool) -> bool:
     new_desc = body.strip()
     if current_desc.strip() != new_desc:
         updates["description"] = new_desc
-    # Also make sure canonical_url is set
+    # Ensure canonical_url is set to our frontmatter value.
     if canonical_url and (node.get("canonical_url") or "").rstrip("/") != canonical_url.rstrip("/"):
         updates.setdefault("properties", {})["canonical_url"] = canonical_url
 

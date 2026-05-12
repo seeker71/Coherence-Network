@@ -9,6 +9,7 @@ import { fetchJsonOrNull } from "@/lib/fetch";
 import { usePagedList } from "@/lib/use-paged-list";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LedgerNav } from "@/app/_components/LedgerNav";
+import { LensesNav } from "@/components/LensesNav";
 
 const API_URL = getApiBase();
 const PAGE_SIZE = 100;
@@ -301,6 +302,9 @@ function ContributorsPageContent() {
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-10 space-y-6 sm:space-y-8">
         <LedgerNav />
+
+        {/* Lenses — sibling perspectives on the same body. */}
+        <LensesNav current="contributors" />
 
         {/* Stat tiles — the body's count of itself */}
         <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">

@@ -18,7 +18,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
-    "@types/three": "^0.184.0",
+    "@types/three": "^0.184.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
@@ -27,15 +27,15 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "@tanstack/react-query": "^5.62.0",
-    "tailwind-merge": "^3.5.0",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.184.0",
-    "viem": "^2.48.8",
+    "viem": "^2.48.11",
     "wagmi": "^2.14.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "@tailwindcss/postcss": "^4.2.4",
+    "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^25",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
@@ -43,7 +43,7 @@
     "eslint": "^10",
     "eslint-config-next": "^16.2.4",
     "postcss": "^8",
-    "tailwindcss": "^4.2.4",
+    "tailwindcss": "^4.3.0",
     "typescript": "^5",
     "vitest": "^4.1.5"
   }

@@ -46,7 +46,7 @@ done_when:
   - "Focused API test proves the invitation payload includes web, API, CLI, and MCP entry surfaces and the attunement spectrum."
   - "Focused MCP test proves the invitation tool is registered and dispatches to `/api/agent/invitation`."
   - "CLI, homepage, web invitation, and status-report checks prove `coh agent invite`, the canonical public entry path, public collaboration paths, and a neutral external-agent reflection prompt are present."
-test: "cd api && python3 -m pytest tests/test_agent_invitation.py -q && cd ../mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q && cd .. && python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md"
+test: "python3 -m pytest api/tests/test_agent_invitation.py mcp-server/tests/test_awareness_streaming.py -q && python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md"
 constraints:
   - "Only change files listed in this spec plus generated README/server metadata for the MCP tool count."
   - "No database schema changes."

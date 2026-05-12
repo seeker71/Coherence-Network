@@ -18,7 +18,7 @@ done_when:
   - "`review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks tha..."
   - "On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive ..."
   - "Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be ti..."
-test: "cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py -v"
+test: "cd api && pytest -q tests/test_runner_spec_gate_guidance.py tests/test_flow_enforcement.py tests/test_runner_auto_contribution.py -v"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"

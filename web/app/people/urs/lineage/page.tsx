@@ -43,7 +43,7 @@ export default function UrsLineagePage() {
           >
             <Link href="/" className="hover:text-primary">Home</Link>
             <span className="text-muted-foreground/50">/</span>
-            <Link href="/people" className="hover:text-primary">People</Link>
+            <Link href="/presences" className="hover:text-primary">Presences</Link>
             <span className="text-muted-foreground/50">/</span>
             <Link href="/people/urs" className="hover:text-primary">Urs</Link>
             <span className="text-muted-foreground/50">/</span>

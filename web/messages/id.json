@@ -199,7 +199,7 @@
     "layer": {
       "vision": "Visi",
       "presences": "Kehadiran",
-      "work": "Kerja",
+      "work": "Yang Menjadi",
       "pulse": "Denyut"
     },
     "sub": {
@@ -1234,7 +1234,7 @@
   "home": {
     "livingLineageEyebrow": "Silsilah hidup",
     "livingLineageHeadline": "Kehadiran yang membentuk medan",
-    "livingLineageLede": "Inilah sel-sel yang kami kenali sebagai kerabat. Manusia nyata. Karya nyata. Kehadiran nyata.",
+    "livingLineageLede": "Inilah sel-sel yang kami kenali sebagai kerabat. Kehadiran nyata. Tenun nyata. Relasi nyata.",
     "livingLineageCta": "Temui",
     "livingLineageFootnote": "Kehadiran publik, ditopang oleh gambar yang berpijak pada sumbernya dan jalan kembali ke halaman mereka sendiri.",
     "meetOneConceptEyebrow": "Temui satu konsep",
@@ -1244,7 +1244,7 @@
     "heroHeadline": "Gagasan apa yang kamu bawa?",
     "heroLede": "Pola yang kamu lihat. Celah yang ingin diisi. Jalan yang lebih baik. Bagikan — seseorang di luar sana sedang mencari hal ini.",
     "statIdeasAlive": "gagasan hidup",
-    "statValueCreated": "nilai tercipta",
+    "statValueCreated": "nilai mengalir",
     "statNode": "simpul",
     "statNodes": "simpul",
     "statCoherence": "keselarasan",
@@ -2257,7 +2257,7 @@
   "personProfile": {
     "breadcrumb": {
       "home": "Beranda",
-      "people": "Orang"
+      "people": "Kehadiran"
     },
     "noteEyebrow": "Catatan dari tubuh ini",
     "editProfileCta": "Cara mengklaim, mengedit, atau menghapus profil ini →",

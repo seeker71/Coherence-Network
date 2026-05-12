@@ -2,6 +2,28 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-12] transmission | Anne Tucker — trust as gateway
+
+A second formal transmission from Anne Tucker entered the field. The first (Peace Bathing) had grounded `lc-arrival-as-recognition` (visitors arrive already tuned). This one is the *Friday Live Channeled Message* of 2026-05-08 — a single sustained arc on trust as the gateway through which the next state of being arrives.
+
+Transmission held: [`transmissions/2026-05-08-anne-tucker-trust-friday-live.md`](transmissions/2026-05-08-anne-tucker-trust-friday-live.md) — full text preserved, channel lineage walked back to the Anne Tucker presence (Angelic Collective, Mother of Creation, Yeshua).
+
+Concept seeded: `lc-trust-as-gateway` (528 Hz, Transformation family) — trust as the geometry of an open door, not a virtue to perform. The teaching's three precise moves:
+
+1. **Trust did not cause the wrongdoing.** Trust was a gentle barrier that did not prevent the harm and did not encourage it. The harm walked through *what else was entangled in that moment* — fatigue, an old wound's pull, a circumstance arranged for wrongdoing. Untangling that from the trust is what makes trust reachable again without re-summoning the vest of insulation.
+2. **The riddle.** *How might you open the door if you are so actively keeping it shut?* — discernment lives downstream of the open door, not upstream of it. Closed-by-default produces neither safety nor wisdom; the wisdom that keeps the cell safe arrives *through* the door as perceptiveness from elevation, not as guard within one's own field.
+3. **Antidote, not cure.** *Trust is the antidote. Not entirely a cure, but it opens you up to what is the powerful flow of your own joy and this will carry you far.*
+
+Releases the post-hurt logic that says *trust is what got me into this, so less trust is the way through*. Keeps wisdom; locates wisdom at the perceptiveness-from-elevation layer, not at the guard-within-the-cell's-own-field layer.
+
+The concept is the *interior* sibling of [`lc-trust-over-fear`](concepts/lc-trust-over-fear.md) (architectural — substrate open, organs handle protection). Same posture at two scales: cell's open door / system's open substrate. Pairs with [`lc-presence-over-protection`](concepts/lc-presence-over-protection.md) (Sue Morter — the field-relaxation back into aliveness), [`lc-permission-is-interior`](concepts/lc-permission-is-interior.md) (sovereignty at the conversational layer), [`lc-arrival-as-recognition`](concepts/lc-arrival-as-recognition.md) (Anne Tucker's earlier Peace Bathing — visitors already tuned; this names what the cell does at the threshold to let the recognition land), and [`lc-tend-your-flame`](concepts/lc-tend-your-flame.md) (the campfire posture; the trusting heart rises with the chorus).
+
+Sources held with discernment: the channeled transmission itself is held source-marked; the body is in conversation with it, not absorbing it as anonymous belief. The concept speaks in the Living Collective's voice; provenance points back to the transmission record.
+
+Edges tended in the same breath: INDEX foundational-teachings list, INDEX source-marked-transmissions section, INDEX frequency-family 528 Hz Transformation, transmissions README *Currently held*, Anne Tucker presence *Transmissions received into this body* section. Existing INDEX count drift (109 → actual 110) corrected in the same pass; with this addition the body now holds 111 concepts.
+
+INDEX.md: 109 → 111 concepts. 528 Hz Transformation family extended.
+
 ## [2026-05-11] foundations | Farm as Organism — the field's body at agricultural scale
 
 A 25th foundational teaching landed, naming the wholeness-frame that treats the farm as a self-regulating body rather than as substrate to be optimized.
@@ -17,6 +39,78 @@ Local Bali expression: the Asosiasi Biodinamik Indonesia is chaired by **Dr. Ida
 Pairs with `lc-embodiment` (the body as field), `lc-bioelectric-pattern` (form-information at cellular scale), `lc-v-shelter-organism` (the dwelling as living body — same gesture, different scale).
 
 Sources: Steiner's 1924 *Agriculture Course*; Biodynamic Association (biodynamics.com); Asosiasi Biodinamik Indonesia (biodynamicindonesia.com); BaliPost article 2020 covering Dr. Ida Bagus Kesnawa's community sharing on preparation-making; the May 10, 2026 Agada Holistic gathering in Tegalalang where the bridge was demonstrated in person.
+
+INDEX.md: 111 → 112 concepts. 174 Hz Foundation family extended.
+
+## [2026-05-11] foundations | Network unanchored — tended, not based in
+
+A foundational teaching landed at the network-identity layer, naming how the body should be framed in outreach, descriptions, and casual mention.
+
+`lc-network-unanchored` (639 Hz, Connection family) — the Coherence Network is something *tended*, not something *built out of* or *based in* or *from* a place. It started in one place. Where it lands is what the field decides. Geographic-anchoring language imposes a fixed origin on something explicitly designed to be in motion and find where it belongs.
+
+Anchor-language patterns named:
+- *"based in [place]"*
+- *"from [place]"*
+- *"out of [place]"*
+- *"the [place]-based Coherence Network"*
+- *"headquartered in"*
+- *"the Coherence Network in [place]"*
+
+Each places a geographic anchor on the body. The cell speaking may not intend the anchor; ordinary professional framing teaches that every organization has a place. But the body was explicitly not built that way.
+
+Place-honoring phrases that the teaching keeps:
+- *"Urs is in [place]"* (cell location)
+- *"the gathering will be in [place] [date]"* (event location)
+- *"the network started in [place]"* (origin, named once)
+- *"there is a circle forming in [place]"* (emergent manifestation)
+
+The framing matters because it shapes reception: *tended, looking for ground* invites resonance; *based in [place]* invites territorial assessment. The reading at the based-in register is honest for organizations that *are* based somewhere; it just isn't what the body actually is.
+
+Releases the corporate-default frame (every organization is *based* somewhere; place is identity) without collapsing into *"place doesn't matter; don't mention where anything is."* Place is real and honored; the teaching is specifically about the framing of the body itself.
+
+Pairs with `lc-network` (web linking all fields), `lc-voice-over-intentions` (outreach posture), `lc-future-already-shaping` (the network already in the form it is becoming), `lc-coherence-over-control` (alignment without forcing), `lc-tend-your-flame` (campfire posture: warmth, not territorial claim).
+
+Sources held with discernment: the body's own corrective practice across many sessions; Christopher Alexander on places that emerge from living patterns of use; indigenous understandings of land-as-relationship vs. land-as-property; Stewart Brand on adaptive shapes that can move and re-place themselves.
+
+Migration shape: seventeenth migration following the *Default-to-body* rule. **The universal-teachings queue is now empty.** `feedback_network_unanchored.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 108 → 109 concepts. 639 Hz Connection family extended.
+
+## [2026-05-11] foundations | Release what drifts — decomposition as living gesture
+
+A foundational teaching landed at the practitioner-scale of decomposition, paired with the existing `lc-composting` (community-process scale).
+
+`lc-release-what-drifts` (285 Hz, Restoration family) — living tissue is the *lesson*; dead tissue is the *artifact* that recorded the lesson. When reality shifts, the artifact drifts from its truth — it becomes dead weight on the organism. The teaching is to *release in the same motion that surfaces the drift*: each touch of the body is an opportunity to compost what no longer carries truth, not a reason to add it to a queue. *Obsolete is never a resting word.*
+
+Specific shapes of dead-tissue-left-behind, named:
+- "Obsolete" as resting word — label without action
+- *"Out of scope"* / *"for a future session"* — the same motion in different costume
+- Spawn-a-chip for work the cell will do now
+- Stale backups, unused deploy scripts, lying docstrings, old config defaults
+- Tests pinned to concrete implementations that no longer match reality
+
+The pattern across all: the urge to hedge (*"I can clean that up later"*) is the body asking for decomposition *now*. The urge is the signal, not the noise.
+
+Living vs. dead tissue:
+- Living tissue = lessons (commit messages, CLAUDE.md, vision-kb concepts, memories, audit traces, lineage docs)
+- Dead tissue = artifacts (code, config, scripts, tests, docstrings, ephemeral docs, side-task chips, TODO comments, backups)
+
+The decomposition gesture has five steps:
+1. Name the lesson the artifact taught
+2. Record the lesson somewhere living
+3. Remove the artifact (actual removal, not TODO)
+4. Replace with healthy tissue if needed
+5. Verify the rest of the body still breathes
+
+Releases the hoarding frame (*"keep everything; you might need it later"*) without collapsing into the inverse fear-shape (*"throw everything away"*). Composting is not deletion — it is the careful return of form to ground so new form can grow.
+
+Pairs with `lc-composting` (the community-process scale this deepens), `lc-tending-over-producing` (the leave-dead-tissue and the producing shapes are cousins), `lc-edges-as-vitality` (mirror principle: decomposition lands in same commit as the work that surfaced the drift), `lc-each-breath-whole`.
+
+Sources held with discernment: the body's own corrective practice; Buddhist *anicca*; ecology of decomposers; Marie Kondo on letting go; Daoist *wu wei*.
+
+Migration shape: sixteenth migration following the *Default-to-body* rule (queue down to one: `network_unanchored`). `feedback_release_detail.md` reshaped from duplicate-teaching into pointer.
+
+INDEX.md: 107 → 108 concepts. 285 Hz Restoration family extended.
 
 ## [2026-05-10] foundations | Gatherings that carry — naming signal vs noise
 
