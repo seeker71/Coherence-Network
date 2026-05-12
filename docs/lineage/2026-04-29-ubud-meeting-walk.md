@@ -24,7 +24,7 @@ encounters the rest of the evening would unfold.
 
 ### Sunday night — Ranakami
 
-A one-evening chanting practice offered at [Ranakami](/people/ilena)
+A one-evening chanting practice offered at [Ranakami](/people/ilena-young)
 by **Elios and Ilena** — chanting that is part of Elios's own
 devotional practice, held that night with Ilena and the cell. This
 is where the cell met **Ilena**. The practice is not a recurring
@@ -79,7 +79,7 @@ field is reliably gathering.
 |---|---|---|
 | [Mudra Cafe](https://mudracafe.com/) | Ayurvedic dining + handpan + slow community | Jl. Goutama Sel. No. 21, Ubud |
 | Sayuri Healing Food | Plant-based kitchen in central Ubud — the dinner room where the evening's encounters made room for themselves | Ubud |
-| [Ranakami](/people/ilena) | Wellness sanctuary; Wednesday Satsang held by Vasudev Baba, and the room where Elios + Ilena offered a one-evening chanting to the cell | Jl. Raya Penestanan Kelod 16, Sayan, Ubud |
+| [Ranakami](/people/ilena-young) | Wellness sanctuary; Wednesday Satsang held by Vasudev Baba, and the room where Elios + Ilena offered a one-evening chanting to the cell | Jl. Raya Penestanan Kelod 16, Sayan, Ubud |
 | [Adiwana Svarga Loka](https://adiwanahotels.com/svargaloka-resort-ubud-bali/) | Wantilan room; Tuesday kirtan with Vasudev Baba | Riverbanks of the Campuhan, Ubud |
 | [DISSOLVE: Eros at Paradiso Ubud](https://megatix.co.id/events/dissolve-eros) | Tuesday 6–8pm conscious-movement practice with Tara Li | Jl. Gautama Seletan, Ubud |
 
@@ -88,7 +88,7 @@ field is reliably gathering.
 | Cell | First room | Profile |
 |---|---|---|
 | [Elios](/people/elios) | Mudra Cafe / Sunday Ranakami chanting | Sparse — public anchors thin; voice imagined from lived encounter |
-| [Ilena Young](/people/ilena) | Sunday Ranakami chanting | Welcome scaffold + Wednesday Satsang + Sunday chanting + full Ranakami offerings |
+| [Ilena Young](/people/ilena-young) | Sunday Ranakami chanting | Welcome scaffold + Wednesday Satsang + Sunday chanting + full Ranakami offerings |
 | [Vasudev Baba](/people/vasudev-baba) | Wednesday Satsang at Ranakami | Welcome scaffold + Tuesday Svarga Loka kirtan + Wednesday Ranakami satsang + Brahma Vihara silent retreats (with Prof Jem Bendell, 2–3×/yr since 2020) + discography + WhatsApp |
 
 ## What this artifact does

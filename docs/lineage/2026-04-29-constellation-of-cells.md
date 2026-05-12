@@ -21,7 +21,7 @@ cross-links.
 
 ### The Ubud cluster (Ranakami + Svarga Loka + Brahma Vihara)
 
-[Ilena Young](/people/ilena) ↔ [Vasudev Baba](/people/vasudev-baba)
+[Ilena Young](/people/ilena-young) ↔ [Vasudev Baba](/people/vasudev-baba)
 ↔ [Elios](/people/elios) — three cells whose practices intersect at
 Ranakami in Sayan, Ubud:
 

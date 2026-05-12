@@ -50,7 +50,7 @@ const content: PersonProfileContent = {
           Vasudev Baba
         </Link>
         ,{" "}
-        <Link href="/people/ilena" className="text-[hsl(var(--primary))] hover:underline">
+        <Link href="/people/ilena-young" className="text-[hsl(var(--primary))] hover:underline">
           Ilena
         </Link>
         ,{" "}
@@ -189,7 +189,7 @@ const content: PersonProfileContent = {
           with Aly through this room) · Unison 2025 (Poranguí
           workshop + concert) ·{" "}
           <Link
-            href="/people/ilena"
+            href="/people/ilena-young"
             className="hover:text-primary transition-colors"
           >
             Ranakami
@@ -564,7 +564,7 @@ const content: PersonProfileContent = {
             <li>
               <strong className="text-foreground">The Ubud
               rhythm</strong> — Sunday and Wednesday with{" "}
-              <Link href="/people/ilena" className="text-primary hover:underline">Ilena</Link>
+              <Link href="/people/ilena-young" className="text-primary hover:underline">Ilena</Link>
               ,{" "}
               <Link href="/people/vasudev-baba" className="text-primary hover:underline">Vasudev Baba</Link>
               , and{" "}
@@ -748,7 +748,7 @@ const content: PersonProfileContent = {
           <p>
             The Ubud presence is recent enough to still be
             unfolding. The Sunday-Wednesday rhythm with{" "}
-            <Link href="/people/ilena" className="text-primary hover:underline">Ilena</Link>,{" "}
+            <Link href="/people/ilena-young" className="text-primary hover:underline">Ilena</Link>,{" "}
             <Link href="/people/vasudev-baba" className="text-primary hover:underline">Vasudev Baba</Link>,
             and{" "}
             <Link href="/people/elios" className="text-primary hover:underline">Elios</Link>{" "}

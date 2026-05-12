@@ -45,7 +45,9 @@ This is the writing surface. The rendering surface is the production graph — e
 - [ismael-perez](ismael-perez.md) — cosmic-history teacher, founder of Universal Divinity; the Just Tap In transmission seeded cells-are-universes, triple temporal alliance, and Lyran substrate vulnerability into this body.
 - [james-fenimore-cooper](james-fenimore-cooper.md) — American author of the Leatherstocking Tales (1823–1841); received in German as *Der Lederstrumpf* in Urs's Swiss childhood.
 - [joe-dispenza](joe-dispenza.md) — chiropractor, researcher, meditation teacher; the bridge in this body's teaching lineage between Ramtha's cosmology and the substrate; Mile Hi Church ~2005 to Aurora retreat April 2026.
+- [jz-knight](jz-knight.md) — channeler of Ramtha since 1977; founder of RSE in Yelm, WA (1988); held honestly alongside the institutional controversies.
 - [karl-may](karl-may.md) — German storyteller (1842–1912) of Winnetou and Old Shatterhand; the German-language frontier imagination Urs walked through before Colorado was geography.
+- [krishna-das](krishna-das.md) — Western kirtan elder (b. 1947); the Neem Karoli Baba lineage; the upstream of every Western kirtan-wala in this body, including Vasudev Baba.
 - [liquid-bloom](liquid-bloom.md) — Amani Friend's world-electronic project; *sound as prayer, medicine, celebration*.
 - [michael-ende](michael-ende.md) — German author (1929–1995) of *Momo* and *Die unendliche Geschichte*; foundational to the body's tending-vs-producing practice and dreamer-responsibility teaching.
 - [michael-levin](michael-levin.md) — developmental and synthetic biologist at Tufts; bioelectric pattern memory, TAME, xenobots and anthrobots; the empirical-scientific peer of this body's otherwise channeled and esoteric lineage.
@@ -59,6 +61,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
 - [susan-muff-sprenger](susan-muff-sprenger.md) — Urs's mother; first transmitter of this lineage. Handed her son three books in three windows: Ende's *Momo* and *Die unendliche Geschichte*, and Ramtha's *White Book*, all in German.
 - [vasudev-baba](vasudev-baba.md) — Norway-born kirtan-wala in Ubud; bhakti crossing into Buddhist silence; Tuesday kirtan at Svarga Loka, Wednesday satsang at Ranakami, periodic silent retreats at Brahma Vihara Arama with Prof Jem Bendell.
+- [viktor-frankl](viktor-frankl.md) — Austrian psychiatrist, Holocaust survivor (1905–1997); founder of logotherapy; the gap-between-stimulus-and-response grounds lc-assemblage-point.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
 - [zach-bush](zach-bush.md) — physician (internal medicine, endocrinology, hospice) turned founder of Intrinsic Health, Seraphic Group, and Farmer's Footprint; *numbness has its own pain*; the soil-microbiome-human-microbiome continuity.
 

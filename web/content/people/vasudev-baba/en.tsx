@@ -79,7 +79,7 @@ const content: PersonProfileContent = {
         <>
           Satsang at{" "}
           <Link
-            href="/people/ilena"
+            href="/people/ilena-young"
             className="hover:text-primary transition-colors"
           >
             Ranakami
@@ -292,7 +292,7 @@ const content: PersonProfileContent = {
           <p>
             Held at{" "}
             <Link
-              href="/people/ilena"
+              href="/people/ilena-young"
               className="text-primary hover:underline"
             >
               Ranakami
@@ -817,7 +817,7 @@ const content: PersonProfileContent = {
     <>
       <p>
         <strong>Wider weaving.</strong> Wednesday satsang held at{" "}
-        <Link href="/people/ilena" className="text-primary hover:underline">
+        <Link href="/people/ilena-young" className="text-primary hover:underline">
           Ranakami
         </Link>
         , Ubud. Brahma Vihara silent retreats co-held with{" "}
