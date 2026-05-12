@@ -231,12 +231,18 @@ def sense_spec_symbols() -> list[str]:
 
     def _symbol_resolves(text: str, sym: str) -> bool:
         # A handful of common declaration shapes across Python and TS.
+        # Note: every `export` form admits `default` between `export` and
+        # the keyword — Next.js page components use that convention
+        # (`export default function Home() {...}`); the body has dozens
+        # of pages that name their default export this way. Without
+        # `default` in the alternation, the lens would fire false-positive
+        # drifts for every named default export.
         patterns = [
             rf"\bdef\s+{re.escape(sym)}\b",            # python function
             rf"\bclass\s+{re.escape(sym)}\b",          # python class
             rf"\basync\s+def\s+{re.escape(sym)}\b",    # async python function
-            rf"\bexport\s+(?:async\s+)?function\s+{re.escape(sym)}\b",
-            rf"\bexport\s+(?:default\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
+            rf"\bexport\s+(?:default\s+)?(?:async\s+)?function\s+{re.escape(sym)}\b",
+            rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:default\s+)?class\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
             rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
