@@ -21,7 +21,11 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 const ALLOWED_DAYS = [7, 30, 90] as const;
-const DEFAULT_DAYS = 90;
+// Visitors arriving at /pulse want *now* — "is the body breathing?" — not
+// three months of archive. SSR'ing 90 days generates ~1MB of HTML and
+// ~4s download; 7 days is ~372KB / 1s. Toggle to 30 or 90 stays available
+// via ?days= for those reading deeper history.
+const DEFAULT_DAYS = 7;
 
 type PulseSnapshot = {
   now: PulseNow | null;
