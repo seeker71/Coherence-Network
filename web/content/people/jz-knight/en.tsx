@@ -46,7 +46,6 @@ const content: PersonProfileContent = {
   facts: [
     {
       label: "Born",
-      ves: undefined,
       value: "16 March 1946 (Roswell, New Mexico, USA) as Judith Darlene Hampton.",
     },
     {
