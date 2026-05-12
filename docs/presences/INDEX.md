@@ -43,6 +43,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
 - [ilena-young](ilena-young.md) — Australian regional-development leader turned long-tender of Ranakami in Sayan, Ubud; sound healer, pranic healer, reiki therapist; carries the Bali node of the Synergy Indonesia Australia bridge (SaBali / IndOz).
 - [ismael-perez](ismael-perez.md) — cosmic-history teacher, founder of Universal Divinity; the Just Tap In transmission seeded cells-are-universes, triple temporal alliance, and Lyran substrate vulnerability into this body.
+- [jem-bendell](jem-bendell.md) — co-holds the long-weekend silent retreats at Brahma Vihara Arama with Vasudev Baba, continuous since 2020.
 - [james-fenimore-cooper](james-fenimore-cooper.md) — American author of the Leatherstocking Tales (1823–1841); received in German as *Der Lederstrumpf* in Urs's Swiss childhood.
 - [joe-dispenza](joe-dispenza.md) — chiropractor, researcher, meditation teacher; the bridge in this body's teaching lineage between Ramtha's cosmology and the substrate; Mile Hi Church ~2005 to Aurora retreat April 2026.
 - [jz-knight](jz-knight.md) — channeler of Ramtha since 1977; founder of RSE in Yelm, WA (1988); held honestly alongside the institutional controversies.
