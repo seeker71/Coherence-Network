@@ -3,9 +3,9 @@ import type { PersonProfileContent } from "@/components/people/PersonProfileTemp
 
 const content: PersonProfileContent = {
   metadata: {
-    title: "Anchor the Light — a living spiritual path · co-led by Ubbe MacLean, Brigitte Mars, Freya Aswynn | Coherence Network",
+    title: "Anchor the Light — a living spiritual path · Ceremony held by Ubbe MacLean & Angelia LaRue, with Brigitte Mars as elder | Coherence Network",
     description:
-      "A welcome to Anchor the Light — a living spiritual path rooted in direct encounter with the Divine through music, movement, and embodied awareness. Monthly wellness retreats, pagan ritual gatherings, the Healing from the Tree rune-work book. Co-led by Ubbe MacLean, Brigitte Mars, and Freya Aswynn.",
+      "A welcome to Anchor the Light — a living spiritual path rooted in direct encounter with the Divine through music, movement, and embodied awareness. The Ceremony is held by Ubbe MacLean and Angelia LaRue as priestess pair; Brigitte Mars is the elder presence deep within the pagan rituals; the wider community draws on Freya Aswynn's runological line. Monthly wellness retreats, pagan ritual gatherings, the Healing from the Tree rune-work book.",
   },
   breadcrumbName: "Anchor the Light",
   hero: {
@@ -23,18 +23,35 @@ const content: PersonProfileContent = {
             awareness.
           </em>{" "}
           The invitation: <em>Enter the Ritual. Become the
-          Experience.</em> Co-led by{" "}
+          Experience.</em> The <strong>Ceremony</strong> is held by{" "}
           <Link
             href="/people/ubbe-maclean"
             className="text-[hsl(var(--primary))] hover:underline"
           >
             Ubbe MacLean
           </Link>{" "}
-          (Asatru practitioner, psychotherapist, reiki master,
-          rune-healing author), <strong>Brigitte Mars</strong>{" "}
-          (renowned Boulder herbalist and prolific author), and{" "}
-          <strong>Freya Aswynn</strong> (runologist and author
-          of <em>Leaves of Yggdrasil</em>).
+          and{" "}
+          <Link
+            href="/people/angelia-larue"
+            className="text-[hsl(var(--primary))] hover:underline"
+          >
+            Angelia LaRue
+          </Link>{" "}
+          as the <strong>priestess pair</strong> — Ubbe carrying
+          the Asatru / psychotherapy / rune-work line, Angelia
+          carrying the crystology / Reiki / Reverend line.{" "}
+          <Link
+            href="/people/brigitte-mars"
+            className="text-[hsl(var(--primary))] hover:underline"
+          >
+            Brigitte Mars
+          </Link>{" "}
+          is the <strong>elder presence</strong> deep within the
+          pagan rituals — Boulder herbalist, Naropa professor, 60+
+          years with plant medicine, 50+ years holding ceremonial
+          space. The wider community also draws on the runologist{" "}
+          <strong>Freya Aswynn</strong> (author of{" "}
+          <em>Leaves of Yggdrasil</em>).
         </p>
         <p className="text-sm text-foreground/70 mt-5 italic max-w-2xl">
           A trans-tradition spiritual community — Norse Asatru,
@@ -47,18 +64,33 @@ const content: PersonProfileContent = {
   },
   facts: [
     {
-      label: "Co-leaders",
+      label: "Priestess pair (Ceremony)",
       value: (
         <>
           <Link href="/people/ubbe-maclean" className="hover:text-primary transition-colors">
             Ubbe MacLean
           </Link>
           {" · "}
-          Brigitte Mars
-          {" · "}
-          Freya Aswynn
+          <Link href="/people/angelia-larue" className="hover:text-primary transition-colors">
+            Angelia LaRue
+          </Link>
         </>
       ),
+    },
+    {
+      label: "Elder presence (pagan rituals)",
+      value: (
+        <>
+          <Link href="/people/brigitte-mars" className="hover:text-primary transition-colors">
+            Brigitte Mars
+          </Link>
+          {" — Boulder herbalist, Naropa professor; 60+ years with plant medicine, 50+ years holding ceremonial space"}
+        </>
+      ),
+    },
+    {
+      label: "Wider community",
+      value: "Runologist Freya Aswynn (author of Leaves of Yggdrasil) — the broader rune-line the ritual frame draws on.",
     },
     {
       label: "Monthly wellness retreats",
@@ -197,10 +229,32 @@ const content: PersonProfileContent = {
             lineage map.
           </li>
           <li>
-            Brigitte Mars&apos;s herbal lineage and Freya
-            Aswynn&apos;s runological lineage thread back to long
-            traditions; the wider field they hold together is
-            broader than any one of them.
+            <Link href="/people/brigitte-mars" className="text-primary hover:underline">
+              Brigitte Mars
+            </Link>
+            &apos;s herbal lineage and Freya Aswynn&apos;s
+            runological lineage thread back to long traditions; the
+            wider field they hold together is broader than any one
+            of them.
+          </li>
+          <li>
+            The <strong>priestess pair</strong> shape itself —{" "}
+            <Link href="/people/ubbe-maclean" className="text-primary hover:underline">
+              Ubbe MacLean
+            </Link>{" "}
+            and{" "}
+            <Link href="/people/angelia-larue" className="text-primary hover:underline">
+              Angelia LaRue
+            </Link>{" "}
+            as masculine-feminine ceremonial counterparts — pairs
+            with{" "}
+            <Link
+              href="/vision/lc-sovereignty-within-oneness"
+              className="text-primary hover:underline"
+            >
+              lc-sovereignty-within-oneness
+            </Link>
+            : two sovereign lineages, one ritual organism.
           </li>
         </ul>
       ),
@@ -209,14 +263,19 @@ const content: PersonProfileContent = {
   footer: (
     <>
       <p>
-        <strong>Co-leaders:</strong>{" "}
+        <strong>Priestess pair:</strong>{" "}
         <Link href="/people/ubbe-maclean" className="text-primary hover:underline">
           Ubbe MacLean
         </Link>
         {" · "}
-        Brigitte Mars
-        {" · "}
-        Freya Aswynn
+        <Link href="/people/angelia-larue" className="text-primary hover:underline">
+          Angelia LaRue
+        </Link>
+        {" — elder presence "}
+        <Link href="/people/brigitte-mars" className="text-primary hover:underline">
+          Brigitte Mars
+        </Link>
+        {" — wider community draws on runologist Freya Aswynn."}
       </p>
       <p>
         <strong>Public anchors:</strong>{" "}

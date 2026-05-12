@@ -20,7 +20,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
 - [actualize-earth](actualize-earth.md) — Tom Bassett's Boulder-based platform for conscious connection, community-powered technology, and regenerative systems. Sibling-substrate to the Coherence Network.
 - [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
-- [anchor-the-light](anchor-the-light.md) — a living spiritual path co-led by Ubbe MacLean, Brigitte Mars, and Freya Aswynn; trans-tradition (Asatru + Reiki + psychotherapy + herbal + qi gong + sound healing + dance) ritual community.
+- [anchor-the-light](anchor-the-light.md) — a living spiritual path; the Ceremony is held by Ubbe MacLean and Angelia LaRue as priestess pair, with Brigitte Mars as elder presence in the pagan rituals; wider community draws on runologist Freya Aswynn. Trans-tradition (Asatru + Reiki + psychotherapy + herbal + qi gong + sound healing + dance) ritual community.
 - [boulder-ecstatic-dance](boulder-ecstatic-dance.md) — Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder; co-hosted by Bloomurian, Aly Constantine, and Danny.
 - [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
@@ -36,7 +36,9 @@ This is the writing surface. The rendering surface is the production graph — e
 ### Human presences
 
 - [amanda-walsh](amanda-walsh.md) — founder & CEO of Astrology Hub; the Inspired Evolution conversation seeded *tend-your-flame*, *dance-card-and-sovereign-response*, *ground-harder-when-field-quickens*, and carried Zach Bush's *numbness-has-its-own-pain* into this body.
+- [angelia-larue](angelia-larue.md) — Master Crystologist, Reiki Master, Ordained Reverend; Hawaii-based; founder of Inner Passage Mystery School and Church of Inner Mystery; main priestess at the Anchor the Light Ceremony alongside Ubbe MacLean.
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
+- [brigitte-mars](brigitte-mars.md) — Boulder herbalist, Naropa professor, author of 18 books on plant medicine; 60+ years with plants, 50+ years holding psychedelic-ceremony space; elder presence in the Anchor the Light pagan rituals.
 - [carlos-castaneda](carlos-castaneda.md) — anthropologist and author (1925–1998); the assemblage-point lineage source; held honestly alongside the human controversies.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
 - [donald-hoffman](donald-hoffman.md) — UC Irvine cognitive scientist; Interface Theory of Perception; the empirical-mathematical peer of Castaneda's assemblage point and Levin's bioelectric pattern memory.
