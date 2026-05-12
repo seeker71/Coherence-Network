@@ -18,6 +18,7 @@ This is the writing surface. The rendering surface is the production graph — e
 ### Places & gatherings
 
 - [5rhythms-ubud](5rhythms-ubud.md) — Gabrielle Roth's wave map (flowing, staccato, chaos, lyrical, stillness) held weekly in Ubud.
+- [actualize-earth](actualize-earth.md) — Tom Bassett's Boulder-based platform for conscious connection, community-powered technology, and regenerative systems. Sibling-substrate to the Coherence Network.
 - [adiwana-svarga-loka](adiwana-svarga-loka.md) — wellness resort on the Campuhan riverbanks whose open-air Wantilan hosts Vasudev Baba's Tuesday kirtan.
 - [boulder-ecstatic-dance](boulder-ecstatic-dance.md) — Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder; co-hosted by Bloomurian, Aly Constantine, and Danny.
 - [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
@@ -61,6 +62,8 @@ This is the writing surface. The rendering surface is the production graph — e
 - [rudolf-steiner](rudolf-steiner.md) — Austrian philosopher (1861–1925); founded Anthroposophy, Waldorf education, biodynamic agriculture, eurythmy, the Goetheanum; etheric-formative-forces frame this body reads alongside Michael Levin's bioelectric pattern memory.
 - [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
 - [susan-muff-sprenger](susan-muff-sprenger.md) — Urs's mother; first transmitter of this lineage. Handed her son three books in three windows: Ende's *Momo* and *Die unendliche Geschichte*, and Ramtha's *White Book*, all in German.
+- [tom-bassett](tom-bassett.md) — known as Juicy Life; CEO and Lead Engineer at Actualize Earth; Boulder-based; cross-walk of large-scale engineering and consciousness-evolution social networks.
+- [ubbe-maclean](ubbe-maclean.md) — a doorway held open; current public anchor Instagram @ubbemaclean.
 - [vasudev-baba](vasudev-baba.md) — Norway-born kirtan-wala in Ubud; bhakti crossing into Buddhist silence; Tuesday kirtan at Svarga Loka, Wednesday satsang at Ranakami, periodic silent retreats at Brahma Vihara Arama with Prof Jem Bendell.
 - [viktor-frankl](viktor-frankl.md) — Austrian psychiatrist, Holocaust survivor (1905–1997); founder of logotherapy; the gap-between-stimulus-and-response grounds lc-assemblage-point.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
