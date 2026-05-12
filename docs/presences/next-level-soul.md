@@ -17,4 +17,4 @@ What's dear to him is legible in the recurring questions. *What is consciousness
 
 The show's self-description on Apple captures the frequency: conversations exploring consciousness, healing, and awakening *"without dogma, fear, or hype."* Alex puts it plainer in the intro: *"I want it to be a beacon of light in your life. I want you to be able to come back to this show."*
 
-A small networked community exploring coherence and the realization of collective ideas encountered Next Level Soul as one of many threads — a place where the big questions are asked plainly, weekly, and in full view.
+A small networked community exploring coherence and the realization of collective ideas encountered Next Level Soul as one of many threads — a place where the big questions are asked plainly, weekly, and in full view. The backlog functions for this network as a map of contemporary Western esoterica: when another voice on a topic is needed — channelers, near-death experiencers, physicists, monks — his guest archive often holds the starting anchor. We listen alongside the millions who already do.
