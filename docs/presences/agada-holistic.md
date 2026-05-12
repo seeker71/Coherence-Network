@@ -3,6 +3,7 @@ name: Agada Holistic
 canonical_url: https://agadaholistic.com
 type: contributor
 contributor_type: HUMAN
+create_if_missing: true
 ---
 
 # Agada Holistic

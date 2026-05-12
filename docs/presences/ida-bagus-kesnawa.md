@@ -3,6 +3,7 @@ name: Dr. Ida Bagus Kesnawa
 canonical_url: https://doctorbaguskinesiology.com
 type: contributor
 contributor_type: HUMAN
+create_if_missing: true
 ---
 
 # Dr. Ida Bagus Kesnawa
