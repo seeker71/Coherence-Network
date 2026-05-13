@@ -2,7 +2,7 @@
 
 This inventory maps the local digital-history sources available for the Urs field story without committing bulky raw archives.
 
-Generated: `2026-05-08T03:24:35.159519+00:00`
+Generated: `2026-05-13T00:02:31.724515+00:00`
 
 ## Publication Boundary
 
