@@ -258,6 +258,26 @@ def _apply_change_request(change_request: ChangeRequest) -> dict[str, Any]:
             if event is None:
                 raise ValueError(f"lineage link '{lineage_id}' not found for federated usage event")
             return {"kind": "federation_usage_event", "id": event.id, "source": source_instance_id, "action": "created"}
+        # Substance proposals (concept / spec / idea / teaching) are held by
+        # the change request itself. The API never writes peer-authored
+        # substance into the deployed corpus — a maintainer walks an
+        # approved proposal into the repo as a PR. The applier records
+        # that the proposal has been received and held; the payload (full
+        # markdown + frontmatter) lives in ``change_request.payload`` and
+        # can be retrieved via the governance API or CLI.
+        if federation_type in (
+            "concept_proposal",
+            "spec_proposal",
+            "idea_proposal",
+            "teaching_proposal",
+        ):
+            item_id = item_data.get("id") if isinstance(item_data, dict) else None
+            return {
+                "kind": f"federation_{federation_type}",
+                "id": item_id,
+                "source": source_instance_id,
+                "action": "stored",
+            }
         return {"kind": "federation_import", "federation_type": federation_type, "source": source_instance_id, "action": "stored"}
 
     raise ValueError(f"unsupported request_type: {request_type}")

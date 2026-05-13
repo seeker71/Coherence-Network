@@ -20,11 +20,44 @@ class FederatedInstance(BaseModel):
 
 
 class FederatedPayload(BaseModel):
-    """Data package from a remote instance."""
+    """Data package from a remote instance.
+
+    Two layers travel together over the same envelope:
+
+    - **Telemetry** (``lineage_links``, ``usage_events``) — small, structured
+      observations from a peer instance about value-flow. Cheap to verify,
+      auto-appliable once a governance vote clears.
+    - **Substance** (``concept_proposals``, ``spec_proposals``,
+      ``idea_proposals``, ``teaching_proposals``) — body-level material a
+      peer instance would like this body to absorb. Each item becomes a
+      governance ChangeRequest with ``auto_apply_on_approval=False``: the
+      proposal is held by governance, and a maintainer walks it into the
+      repo via a PR. Substance never writes directly into the deployed
+      corpus.
+
+    Each proposal dict carries the markdown body plus enough metadata for
+    a maintainer to author the file locally. Suggested shape::
+
+        {
+            "id": "lc-some-concept",          # or spec slug, idea slug, doc path
+            "title": "…",
+            "body_markdown": "…",
+            "frontmatter": {…},                # optional
+            "origin_url": "https://peer…/concepts/lc-some-concept",
+            "license": "CC-BY-SA-4.0",         # optional
+        }
+
+    The applier records the proposal as ``"stored"`` — the body decides
+    how to weave it in.
+    """
     source_instance_id: str = Field(min_length=1)
     timestamp: str
     lineage_links: list[dict] = Field(default_factory=list)
     usage_events: list[dict] = Field(default_factory=list)
+    concept_proposals: list[dict] = Field(default_factory=list)
+    spec_proposals: list[dict] = Field(default_factory=list)
+    idea_proposals: list[dict] = Field(default_factory=list)
+    teaching_proposals: list[dict] = Field(default_factory=list)
     # Signature for future verification
     signature: Optional[str] = None
 
@@ -34,6 +67,7 @@ class FederationSyncResult(BaseModel):
     source_instance_id: str
     links_received: int = 0
     events_received: int = 0
+    proposals_received: int = 0
     governance_requests_created: int = 0
     accepted: int = 0
     rejected: int = 0

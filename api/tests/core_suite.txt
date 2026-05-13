@@ -8,6 +8,7 @@ tests/test_external_presence.py
 tests/test_external_proof_demo.py
 tests/test_failure_taxonomy_service.py
 tests/test_federation_layer.py
+tests/test_federation_substance.py
 tests/test_flow_activity.py
 tests/test_flow_agent_lifecycle.py
 tests/test_flow_cli.py
