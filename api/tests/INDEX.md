@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 142
+**Total files**: 144
 
 | File | Purpose |
 |---|---|
@@ -47,6 +47,7 @@
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
+| [test_doorway_teaching.py](test_doorway_teaching.py) | Doorway teaching tests — does what /come-in promises actually work? |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
@@ -132,6 +133,7 @@
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
 | [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
 | [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
+| [test_substrate_form_endpoint.py](test_substrate_form_endpoint.py) | Smoke tests for POST /api/substrate/form — the substrate-native query DSL |
 | [test_substrate_form_eval.py](test_substrate_form_eval.py) | Tests for the data-driven evaluator — operator-symbol → recipe-category. |
 | [test_substrate_form_operators.py](test_substrate_form_operators.py) | Tests for operator self-hosting — the last keyword-layer gap. |
 | [test_substrate_form_rules.py](test_substrate_form_rules.py) | Tests for runtime-registered Form keywords. |
