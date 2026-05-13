@@ -4,6 +4,7 @@ status: implemented
 owners: [urs, agent:codex]
 files:
   - file: docs/field/urs/tools/digital_influence_inventory.py
+  - file: docs/field/urs/input/source_body_registry.json
   - file: docs/field/urs/output/digital_influence_inventory.md
   - file: docs/field/urs/trace/digital_influence_inventory.json
   - file: docs/field/urs/manifest.json
@@ -30,6 +31,7 @@ The contributor has explicitly allowed watch and listen history to be public. Th
 ## Requirements
 
 - [x] Inventory local digital-history source files already present under `~/Downloads` and `~/CoherenceFieldAnalysis`.
+- [x] Keep source-body locations, glob patterns, custody classes, and ingestion policies in `docs/field/urs/input/source_body_registry.json` rather than hard-coding inventory policy in the builder.
 - [x] Publish compact source counts, date spans, and top influence candidates.
 - [x] Identify the missing YouTube history before `2024-05-07`.
 - [x] Name high-signal 2023 and early-2024 influence waves that are not yet represented in the published breath-cycle.
@@ -39,6 +41,7 @@ The contributor has explicitly allowed watch and listen history to be public. Th
 ## Files To Modify
 
 - `docs/field/urs/tools/digital_influence_inventory.py` builds the inventory.
+- `docs/field/urs/input/source_body_registry.json` names local source-body groups, exact source paths, patterns, and ingestion policies.
 - `docs/field/urs/output/digital_influence_inventory.md` is the human-readable report.
 - `docs/field/urs/trace/digital_influence_inventory.json` is the machine-readable trace.
 - `docs/field/urs/manifest.json` publishes the artifacts and builder.
@@ -47,6 +50,7 @@ The contributor has explicitly allowed watch and listen history to be public. Th
 ## Acceptance Criteria
 
 - The builder emits Markdown and JSON from local digital-history source bodies.
+- Source-body inventory policy lives in `docs/field/urs/input/source_body_registry.json`; the builder reads it.
 - The manifest exposes `digital-influence-inventory`, `trace-digital-influence-inventory`, and `digital-influence-inventory-builder`.
 - The API test proves the history-only YouTube Takeout has more than 60,000 events and that more than 10,000 2023 YouTube events are not yet represented in the current published trace.
 - `api/tests/test_field_story_trace_index.py::test_digital_influence_inventory_registers_full_history_attention` passes.

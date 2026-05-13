@@ -18,18 +18,8 @@ ANALYSIS_ROOT = Path("/Users/ursmuff/CoherenceFieldAnalysis")
 DOWNLOADS_DIR = Path("/Users/ursmuff/Downloads")
 HASH_ALGORITHM = "sha256"
 
-
-SOURCE_PATTERNS = [
-    ("youtube-takeout", ANALYSIS_ROOT / "input" / "youtube", ["*.zip", "*.html", "*.json", "*.jsonl"]),
-    ("audible-export", ANALYSIS_ROOT / "input" / "audible", ["*.json", "*.jsonl", "*.csv", "*.html"]),
-    ("browser-trace", ANALYSIS_ROOT / "input" / "browser", ["*.json", "*.jsonl", "*.sqlite", "*.db"]),
-    ("downloaded-takeout", DOWNLOADS_DIR, ["takeout-*.zip"]),
-    ("channeled-message-pdf", DOWNLOADS_DIR, ["Friday Live Channeled Message *.pdf"]),
-    ("photo-archive", DOWNLOADS_DIR, ["Photos-*.zip"]),
-    ("project-archive", DOWNLOADS_DIR, ["Water Project.zip", "Angelic-*.zip"]),
-]
-
 REPO_ARTIFACTS = [
+    "input/source_body_registry.json",
     "output/ten_year_events.jsonl",
     "trace/manifest.json",
     "trace/monthly_spectrum.json",
@@ -41,6 +31,28 @@ REPO_ARTIFACTS = [
     "trace/digital_influence_inventory.json",
     "output/chronological_story_with_frequency.md",
 ]
+
+
+def load_source_body_registry(field_dir: Path) -> dict[str, Any]:
+    return json.loads((field_dir / "input" / "source_body_registry.json").read_text(encoding="utf-8"))
+
+
+def registry_roots(
+    registry: dict[str, Any],
+    *,
+    analysis_root: Path = ANALYSIS_ROOT,
+    downloads_dir: Path = DOWNLOADS_DIR,
+) -> dict[str, Path]:
+    return {
+        "analysis_root": analysis_root,
+        "downloads_dir": downloads_dir,
+    }
+
+
+def source_group_root(group: dict[str, Any], roots: dict[str, Path]) -> Path:
+    root = roots[group["root_key"]]
+    relative = group.get("relative_path")
+    return root / relative if relative else root
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -91,10 +103,20 @@ def summarize_zip(path: Path) -> dict[str, Any]:
         return {}
 
 
-def collect_source_bodies() -> list[dict[str, Any]]:
+def collect_source_bodies(
+    field_dir: Path,
+    *,
+    analysis_root: Path = ANALYSIS_ROOT,
+    downloads_dir: Path = DOWNLOADS_DIR,
+) -> list[dict[str, Any]]:
+    registry = load_source_body_registry(field_dir)
+    roots = registry_roots(registry, analysis_root=analysis_root, downloads_dir=downloads_dir)
     rows: list[dict[str, Any]] = []
     seen: set[Path] = set()
-    for label, root, patterns in SOURCE_PATTERNS:
+    for group in registry.get("source_groups", []):
+        label = group["label"]
+        root = source_group_root(group, roots)
+        patterns = group.get("patterns", [])
         if not root.exists():
             continue
         for pattern in patterns:
@@ -107,8 +129,10 @@ def collect_source_bodies() -> list[dict[str, Any]]:
                 row = {
                     "id": source_id(label, path, digest),
                     "label": label,
+                    "ingestion_policy": group.get("ingestion_policy"),
                     "path": str(path),
-                    "path_class": "local_source_body",
+                    "path_class": group.get("path_class", "local_source_body"),
+                    "publication_boundary": group.get("publication_boundary"),
                     "size_bytes": stat.st_size,
                     "modified_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
                     "sha256": digest,
@@ -174,8 +198,14 @@ def repo_artifact_trace(field_dir: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def build(field_dir: Path) -> dict[str, Any]:
-    sources = collect_source_bodies()
+def build(
+    field_dir: Path,
+    *,
+    analysis_root: Path = ANALYSIS_ROOT,
+    downloads_dir: Path = DOWNLOADS_DIR,
+) -> dict[str, Any]:
+    registry = load_source_body_registry(field_dir)
+    sources = collect_source_bodies(field_dir, analysis_root=analysis_root, downloads_dir=downloads_dir)
     events = normalized_event_trace(field_dir)
     artifacts = repo_artifact_trace(field_dir)
     source_root = merkle_root([stable_json_hash(row) for row in sources])
@@ -192,6 +222,12 @@ def build(field_dir: Path) -> dict[str, Any]:
         "generated_at": datetime.now(UTC).isoformat(),
         "hash_algorithm": HASH_ALGORITHM,
         "publication_boundary": "This is a compact cryptographic trace. It publishes hashes, sizes, source classes, and Merkle roots; bulky raw source bodies remain outside the repo unless deliberately promoted.",
+        "source_body_registry": {
+            "path": str(field_dir / "input" / "source_body_registry.json"),
+            "schema_version": registry.get("schema_version"),
+            "publication_boundary": registry.get("publication_boundary"),
+            "root_keys": registry.get("root_keys"),
+        },
         "roots": {
             "source_body_merkle_root": source_root,
             "normalized_event_merkle_root": events["event_merkle_root"],
@@ -222,8 +258,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build field source crypto trace manifest.")
     parser.add_argument("--field-dir", type=Path, default=FIELD_DIR)
+    parser.add_argument("--analysis-root", type=Path, default=ANALYSIS_ROOT)
+    parser.add_argument("--downloads-dir", type=Path, default=DOWNLOADS_DIR)
     args = parser.parse_args()
-    payload = build(args.field_dir)
+    payload = build(args.field_dir, analysis_root=args.analysis_root, downloads_dir=args.downloads_dir)
     out = args.field_dir / "trace" / "source_crypto_trace.json"
     write_json(out, payload)
     print(f"source_bodies={len(payload['source_bodies'])}")

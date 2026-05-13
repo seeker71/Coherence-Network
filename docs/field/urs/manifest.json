@@ -48,6 +48,7 @@
     {"artifact_id": "influence-anchors", "path": "anchors/influence_anchors.json", "kind": "anchor", "content_type": "application/json"},
     {"artifact_id": "manual-reading-anchors", "path": "anchors/manual_reading_anchors.json", "kind": "anchor", "content_type": "application/json"},
     {"artifact_id": "project-lineage-anchors", "path": "anchors/project_lineage_anchors.json", "kind": "anchor", "content_type": "application/json"},
+    {"artifact_id": "source-body-registry", "path": "input/source_body_registry.json", "kind": "source-registry", "content_type": "application/json"},
     {"artifact_id": "resource-timeline", "path": "anchors/resource_timeline.json", "kind": "anchor", "content_type": "application/json"},
     {"artifact_id": "frequency-evolution-summary", "path": "output/frequency_evolution_summary.json", "kind": "summary", "content_type": "application/json"},
     {"artifact_id": "frequency-summary", "path": "output/frequency_summary.json", "kind": "summary", "content_type": "application/json"},
