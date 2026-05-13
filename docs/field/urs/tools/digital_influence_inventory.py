@@ -18,7 +18,6 @@ from typing import Any
 
 GENERIC_AUTHORS = {"here", "unknown", "empty artist - topic"}
 TAKEOUT_DATE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?")
-LOCAL_SOURCE_PDF_PATTERNS = ("Friday Live Channeled Message *.pdf",)
 PUBLISHED_TRACE_START = datetime(2024, 5, 7)
 
 
@@ -47,6 +46,30 @@ def read_json(path: Path) -> Any:
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def load_source_body_registry(field_dir: Path) -> dict[str, Any]:
+    return read_json(field_dir / "input" / "source_body_registry.json")
+
+
+def registry_roots(
+    registry: dict[str, Any],
+    *,
+    analysis_root: Path,
+    downloads_dir: Path,
+) -> dict[str, Path]:
+    return {
+        "analysis_root": analysis_root,
+        "downloads_dir": downloads_dir,
+    }
+
+
+def registry_path(item: dict[str, Any], roots: dict[str, Path]) -> Path:
+    return roots[item["root_key"]] / item["path"]
+
+
+def source_groups_by_label(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {group["label"]: group for group in registry.get("source_groups", [])}
 
 
 def sha256_file(path: Path) -> str:
@@ -150,12 +173,12 @@ def summarize_youtube_full(events: list[dict[str, Any]], story_text: str) -> dic
     return out
 
 
-def summarize_youtube_upload_parts(downloads_dir: Path) -> dict[str, Any]:
+def summarize_youtube_upload_parts(source: dict[str, Any], roots: dict[str, Path]) -> dict[str, Any]:
     audio_exts = {".mp3", ".m4a", ".flac", ".wav", ".aac"}
     video_exts = {".mp4", ".mov", ".m4v"}
     audio: Counter[str] = Counter()
     video: Counter[str] = Counter()
-    zips = sorted(downloads_dir.glob("takeout-20260506T023119Z-3-*.zip"))
+    zips = sorted(roots[source["root_key"]].glob(source["pattern"]))
     for zip_path in zips:
         with zipfile.ZipFile(zip_path) as archive:
             for name in archive.namelist():
@@ -237,9 +260,10 @@ def summarize_browser(analysis_root: Path) -> dict[str, Any]:
     }
 
 
-def summarize_photos(downloads_dir: Path) -> dict[str, Any]:
+def summarize_photos(sources: list[dict[str, Any]], roots: dict[str, Path]) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for zip_path in [downloads_dir / "Photos-3-001.zip"]:
+    for source in sources:
+        zip_path = registry_path(source, roots)
         if not zip_path.exists():
             continue
         dates = []
@@ -256,21 +280,24 @@ def summarize_photos(downloads_dir: Path) -> dict[str, Any]:
             "first_date_from_filename": min(dates) if dates else None,
             "last_date_from_filename": max(dates) if dates else None,
             "extensions": dict(exts.most_common()),
-        "publication_boundary": "filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath",
+            "publication_boundary": source.get(
+                "publication_boundary",
+                "filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath",
+            ),
         }
     return out
 
 
-def summarize_project_archives(downloads_dir: Path) -> dict[str, Any]:
+def summarize_project_archives(sources: list[dict[str, Any]], roots: dict[str, Path]) -> dict[str, Any]:
     archives = {}
-    for name in ["Angelic-20260507T052334Z-3-001.zip", "Water Project.zip"]:
-        path = downloads_dir / name
+    for source in sources:
+        path = registry_path(source, roots)
         if not path.exists():
             continue
         with zipfile.ZipFile(path) as archive:
             names = [entry for entry in archive.namelist() if not entry.endswith("/")]
             suffixes = Counter(Path(entry).suffix.lower() or "no-extension" for entry in names)
-        archives[name] = {
+        archives[path.name] = {
             "files": len(names),
             "extensions": dict(suffixes.most_common(15)),
             "sample_paths": names[:20],
@@ -310,11 +337,31 @@ def _date_hint_from_filename(path: Path) -> str | None:
     return f"{year}-{int(month):02d}-{int(day):02d}"
 
 
-def summarize_local_source_pdfs(downloads_dir: Path) -> dict[str, Any]:
+def source_group_paths(group: dict[str, Any], roots: dict[str, Path]) -> list[Path]:
+    root = roots[group["root_key"]]
+    relative = group.get("relative_path")
+    source_root = root / relative if relative else root
+    paths: list[Path] = []
+    for pattern in group.get("patterns", []):
+        paths.extend(sorted(source_root.glob(pattern)))
+    return paths
+
+
+def summarize_local_source_pdfs(
+    registry: dict[str, Any],
+    roots: dict[str, Path],
+) -> dict[str, Any]:
+    labels = registry.get("digital_inventory", {}).get("local_source_pdfs", {}).get("labels", [])
+    groups = source_groups_by_label(registry)
     items: list[dict[str, Any]] = []
     seen: set[Path] = set()
-    for pattern in LOCAL_SOURCE_PDF_PATTERNS:
-        for path in sorted(downloads_dir.glob(pattern)):
+    patterns: list[str] = []
+    for label in labels:
+        group = groups.get(label)
+        if not group:
+            continue
+        patterns.extend(group.get("patterns", []))
+        for path in source_group_paths(group, roots):
             if not path.is_file() or path in seen:
                 continue
             seen.add(path)
@@ -324,7 +371,7 @@ def summarize_local_source_pdfs(downloads_dir: Path) -> dict[str, Any]:
                 {
                     "file_name": path.name,
                     "path": str(path),
-                    "label": "channeled-message-pdf",
+                    "label": label,
                     "title_hint": path.stem,
                     "date_hint": _date_hint_from_filename(path),
                     "size_bytes": stat.st_size,
@@ -334,13 +381,13 @@ def summarize_local_source_pdfs(downloads_dir: Path) -> dict[str, Any]:
                     "pages": int(metadata["pages"]) if metadata.get("pages", "").isdigit() else None,
                     "author": metadata.get("author"),
                     "creator": metadata.get("creator"),
-                    "ingestion_policy": "metadata_hashes_and_summary_only",
-                    "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+                    "ingestion_policy": group.get("ingestion_policy"),
+                    "publication_boundary": group.get("publication_boundary"),
                 }
             )
     return {
         "count": len(items),
-        "patterns": list(LOCAL_SOURCE_PDF_PATTERNS),
+        "patterns": patterns,
         "items": items,
         "publication_boundary": "PDF source bodies are represented by metadata and hashes only until a specific summary/extracted-concept breath is chosen.",
     }
@@ -373,9 +420,12 @@ def summarize_published_trace(field_dir: Path) -> dict[str, Any]:
 
 
 def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str, Any]:
+    registry = load_source_body_registry(field_dir)
+    roots = registry_roots(registry, analysis_root=analysis_root, downloads_dir=downloads_dir)
+    inventory_sources = registry["digital_inventory"]
     story_text = (field_dir / "output" / "chronological_story_with_frequency.md").read_text(encoding="utf-8")
-    full_history = parse_youtube_watch_history(downloads_dir / "takeout-20260506T165642Z-3-001.zip")
-    part_history = parse_youtube_watch_history(downloads_dir / "takeout-20260506T023119Z-3-012.zip")
+    full_history = parse_youtube_watch_history(registry_path(inventory_sources["youtube"]["history_only_takeout"], roots))
+    part_history = parse_youtube_watch_history(registry_path(inventory_sources["youtube"]["full_takeout_part_012"], roots))
     youtube_full = summarize_youtube_full(full_history, story_text)
     youtube_part = summarize_youtube_full(part_history, story_text)
     missing_period = youtube_full["periods"]["before_published_trace"]
@@ -388,11 +438,20 @@ def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str
             "analysis_root": str(analysis_root),
             "downloads_dir": str(downloads_dir),
         },
+        "source_body_registry": {
+            "path": str(field_dir / "input" / "source_body_registry.json"),
+            "schema_version": registry.get("schema_version"),
+            "publication_boundary": registry.get("publication_boundary"),
+            "root_keys": registry.get("root_keys"),
+        },
         "published_trace": summarize_published_trace(field_dir),
         "youtube": {
             "history_only_takeout": youtube_full,
             "full_takeout_part_012": youtube_part,
-            "uploads_and_library_parts": summarize_youtube_upload_parts(downloads_dir),
+            "uploads_and_library_parts": summarize_youtube_upload_parts(
+                inventory_sources["youtube"]["uploads_and_library_parts"],
+                roots,
+            ),
             "published_gap": {
                 "integrated_before_2024_05_07_events": missing_period["events"],
                 "integrated_2023_events": youtube_full["periods"]["year_2023"]["events"],
@@ -406,9 +465,9 @@ def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str
         },
         "audible": summarize_audible(analysis_root),
         "browser": summarize_browser(analysis_root),
-        "photos": summarize_photos(downloads_dir),
-        "project_archives": summarize_project_archives(downloads_dir),
-        "local_source_pdfs": summarize_local_source_pdfs(downloads_dir),
+        "photos": summarize_photos(inventory_sources["photos"]["archives"], roots),
+        "project_archives": summarize_project_archives(inventory_sources["project_archives"]["archives"], roots),
+        "local_source_pdfs": summarize_local_source_pdfs(registry, roots),
         "agent_history": summarize_agent_history(),
     }
 

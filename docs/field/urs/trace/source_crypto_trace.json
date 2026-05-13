@@ -6,7 +6,7 @@
     "month_trace_api": "/api/field-stories/urs-field-story/trace/month/{YYYY-MM}",
     "work_trace_api": "/api/field-stories/urs-field-story/trace/work/{work_id}"
   },
-  "generated_at": "2026-05-13T11:22:43.188094+00:00",
+  "generated_at": "2026-05-13T11:39:04.764829+00:00",
   "hash_algorithm": "sha256",
   "normalized_event_trace": {
     "event_leaf_hash_algorithm": "sha256('event:' + canonical_json(row))",
@@ -41,6 +41,13 @@
   },
   "publication_boundary": "This is a compact cryptographic trace. It publishes hashes, sizes, source classes, and Merkle roots; bulky raw source bodies remain outside the repo unless deliberately promoted.",
   "repo_artifacts": [
+    {
+      "artifact_relpath": "input/source_body_registry.json",
+      "content_type": "application/json",
+      "path": "docs/field/urs/input/source_body_registry.json",
+      "sha256": "b9643fe74d90b0716ae9cfb4d795b6dbd01f76126aa75d5d9f85990bb5a08b2b",
+      "size_bytes": 4543
+    },
     {
       "artifact_relpath": "output/ten_year_events.jsonl",
       "content_type": "application/octet-stream",
@@ -101,8 +108,8 @@
       "artifact_relpath": "trace/digital_influence_inventory.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/digital_influence_inventory.json",
-      "sha256": "a3185f1df9456874687d9bfef0ab296c477a050bfd2cfe78b81380725b177b6b",
-      "size_bytes": 106006
+      "sha256": "462b84346a5c321527b9d38e56f8e367439ef6ba78ad45806cf0994d1fb4bbf0",
+      "size_bytes": 106891
     },
     {
       "artifact_relpath": "output/chronological_story_with_frequency.md",
@@ -113,20 +120,22 @@
     }
   ],
   "roots": {
-    "combined_trace_root": "3dbc40b02749a1fb8d792477c3e52401a0e8b2c5a2bc83ca6344fd8c0ff714fe",
+    "combined_trace_root": "f48e47790cfb41503c482e06fd8c1e948bc254687ac3e308aeed088c16dd2247",
     "normalized_event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
-    "repo_artifact_merkle_root": "dba1a0430f37bc4ca9b0fcea2cb28560c96cf10a30ae8d950db10ca3a1f7488d",
-    "source_body_merkle_root": "c8f0c8b91859a8f3ee23c8687b42e54ef312d287b89bc33029b39120cc2890f9"
+    "repo_artifact_merkle_root": "91b18a7051b31f4870530758525200b4f0630182a7f6d88f49cc7cdeb96a8fc5",
+    "source_body_merkle_root": "455948a757f0d11843b8895042df880d8c9ce66a74af4622fe2fcdfadd610dad"
   },
   "schema_version": "field-source-crypto-trace/v1",
   "source_bodies": [
     {
       "content_type": "application/zip",
       "id": "source:youtube-takeout:takeout-20260506t165642z-3-001.zip:6dbd39e21bba",
+      "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-06T17:48:31.874941+00:00",
       "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/takeout-20260506T165642Z-3-001.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/history/search-history.html",
         "Takeout/YouTube and YouTube Music/history/watch-history.html"
@@ -138,40 +147,48 @@
     {
       "content_type": "application/json",
       "id": "source:youtube-takeout:myactivity-playwright-raw.json:386abad259da",
+      "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-06T02:28:11.828689+00:00",
       "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/myactivity-playwright-raw.json",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sha256": "386abad259da1698a41c58524fc07ee51b67d00e06d36345e2e6b3dd1366f1b4",
       "size_bytes": 230776
     },
     {
       "content_type": "application/json",
       "id": "source:youtube-takeout:youtube-all-myactivity-raw.json:9fd50ede11b4",
+      "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-08T03:12:21.785095+00:00",
       "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/youtube-all-myactivity-raw.json",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sha256": "9fd50ede11b4faa450dc5814da89673cf6225db85a3f977c6327da4516058b57",
       "size_bytes": 22290450
     },
     {
       "content_type": "application/octet-stream",
       "id": "source:browser-trace:local_browser_events.jsonl:90ec076f4853",
+      "ingestion_policy": "compact_trace_allowed",
       "label": "browser-trace",
       "modified_at": "2026-05-06T02:21:23.685980+00:00",
       "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw browser databases and sessions remain local; compact event traces and domain/title summaries may be published.",
       "sha256": "90ec076f4853fbbcc6aad5c6a139d2323ffcafaf1a3761e3a991177ee68d1ab6",
       "size_bytes": 97209
     },
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-001.zip:1a564cbf1495",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:19:20.579533+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-001.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/live chats/live chats.csv",
         "Takeout/YouTube and YouTube Music/video metadata/video recordings.csv",
@@ -189,10 +206,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-002.zip:1a26a76407f7",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:20.458544+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-002.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Follow Me Home.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/I Don_t Wanna Live Without Your Love.mp3",
@@ -210,10 +229,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-003.zip:9c93a1839f91",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:13:09.609358+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-003.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Caught With Your Pants Down.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Its My Life.mp3",
@@ -231,10 +252,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-004.zip:4fed99442401",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:13:12.766740+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-004.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Sheila.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Hello(1).mp3",
@@ -252,10 +275,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-005.zip:18616602c64c",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:31.989212+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-005.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Last Dance.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/I Know.mp3",
@@ -273,10 +298,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-006.zip:0bb3ab581cd0",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:09:24.258587+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-006.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/(They Long To Be) Close To You.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Fast Car.mp3",
@@ -294,10 +321,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-007.zip:bae800618331",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:46.884798+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-007.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Horse with no name.mp4",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Doggy Dogg World.mp3",
@@ -315,10 +344,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-008.zip:d97843986dd1",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:53.665862+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-008.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Apologize.mp4",
         "Takeout/YouTube and YouTube Music/videos/Melvin Harold - Have You Ever Seen The Rain_.mp4",
@@ -336,10 +367,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-009.zip:ab1cdcb9164e",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:55.786683+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-009.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Baby I love you.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Messages.mp3",
@@ -357,10 +390,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-010.zip:6401cdfe9c12",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:57.159213+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-010.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Concerto For Group & Orchestra, 3rd Movement.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Boys.mp3",
@@ -378,10 +413,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-011.zip:03259919884c",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:51:25.599239+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-011.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Forever.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Silent Running.mp3",
@@ -399,10 +436,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-012.zip:4d27abff4026",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:42:04.771032+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-012.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/If I Was Your Girlfriend.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Forget Myself.mp3",
@@ -420,10 +459,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t023119z-3-013.zip:c211c6429bdc",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:41:45.268306+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-013.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Steamroller.mp3",
         "Takeout/YouTube and YouTube Music/music (library and uploads)/Highwayman  with Johnny Cash, Waylon Jennings, .mp3",
@@ -441,10 +482,12 @@
     {
       "content_type": "application/zip",
       "id": "source:downloaded-takeout:takeout-20260506t165642z-3-001.zip:6dbd39e21bba",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T17:48:31.874941+00:00",
       "path": "/Users/ursmuff/Downloads/takeout-20260506T165642Z-3-001.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
         "Takeout/YouTube and YouTube Music/history/search-history.html",
         "Takeout/YouTube and YouTube Music/history/watch-history.html"
@@ -456,30 +499,36 @@
     {
       "content_type": "application/pdf",
       "id": "source:channeled-message-pdf:friday-live-channeled-message-1.16.26.pdf:5c8a30ebb8d2",
+      "ingestion_policy": "metadata_hashes_and_summary_only",
       "label": "channeled-message-pdf",
       "modified_at": "2026-01-17T08:47:19.104015+00:00",
       "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 1.16.26.pdf",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
       "sha256": "5c8a30ebb8d2eeda1abba2813970359c207583abf2391ab1378230d41692f186",
       "size_bytes": 233747
     },
     {
       "content_type": "application/pdf",
       "id": "source:channeled-message-pdf:friday-live-channeled-message-5.8.26.pdf:80a4736c3763",
+      "ingestion_policy": "metadata_hashes_and_summary_only",
       "label": "channeled-message-pdf",
       "modified_at": "2026-05-12T01:23:17.257392+00:00",
       "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 5.8.26.pdf",
       "path_class": "local_source_body",
+      "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
       "sha256": "80a4736c3763be8bc76e15c3242b947b8a7f84bbb0247cbdee90d2ea0355999b",
       "size_bytes": 135871
     },
     {
       "content_type": "application/zip",
       "id": "source:photo-archive:photos-3-001.zip:538ba3330fce",
+      "ingestion_policy": "metadata_only",
       "label": "photo-archive",
       "modified_at": "2026-05-05T01:08:48.897974+00:00",
       "path": "/Users/ursmuff/Downloads/Photos-3-001.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Image pixels remain local; filenames, counts, archive hashes, and date hints may be published.",
       "sample_entries": [
         "20260504_093947.mp4",
         "20260504_095510.mp4",
@@ -497,10 +546,12 @@
     {
       "content_type": "application/zip",
       "id": "source:project-archive:water-project.zip:08de36bd792a",
+      "ingestion_policy": "metadata_and_selected_lineage_allowed",
       "label": "project-archive",
       "modified_at": "2026-05-07T03:38:31.494867+00:00",
       "path": "/Users/ursmuff/Downloads/Water Project.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Project archives remain local unless a specific lineage artifact is promoted; compact file counts, extensions, hashes, and sample paths may be published.",
       "sample_entries": [
         "Water Project/",
         "Water Project/Backtracking Model Languages.doc",
@@ -518,10 +569,12 @@
     {
       "content_type": "application/zip",
       "id": "source:project-archive:angelic-20260507t052334z-3-001.zip:2e5b76c9684f",
+      "ingestion_policy": "metadata_and_selected_lineage_allowed",
       "label": "project-archive",
       "modified_at": "2026-05-07T05:34:49.750274+00:00",
       "path": "/Users/ursmuff/Downloads/Angelic-20260507T052334Z-3-001.zip",
       "path_class": "local_source_body",
+      "publication_boundary": "Project archives remain local unless a specific lineage artifact is promoted; compact file counts, extensions, hashes, and sample paths may be published.",
       "sample_entries": [
         "Angelic/Old/obsolite/",
         "Angelic/Icons/Step Back Over.ico",
@@ -537,6 +590,21 @@
       "zip_entries": 2779
     }
   ],
+  "source_body_registry": {
+    "path": "docs/field/urs/input/source_body_registry.json",
+    "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
+    "root_keys": {
+      "analysis_root": {
+        "default_path": "/Users/ursmuff/CoherenceFieldAnalysis",
+        "description": "Local analysis workspace for extracted source bodies."
+      },
+      "downloads_dir": {
+        "default_path": "/Users/ursmuff/Downloads",
+        "description": "Local Downloads folder holding bulky export archives and source PDFs."
+      }
+    },
+    "schema_version": "field-source-body-registry/v1"
+  },
   "truth_boundary": {
     "exact_now": "Source bodies, normalized event file, and repo-served trace artifacts have SHA-256 hashes and Merkle roots.",
     "next_precision": "For exact row-to-source-body proofs in every API slice, normalized rows should gain source_body_id and event_hash fields during ingestion."

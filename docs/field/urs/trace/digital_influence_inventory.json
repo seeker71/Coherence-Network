@@ -822,7 +822,7 @@
       }
     ]
   },
-  "generated_at": "2026-05-13T11:22:31.222991+00:00",
+  "generated_at": "2026-05-13T11:38:52.578915+00:00",
   "local_source_pdfs": {
     "count": 2,
     "items": [
@@ -837,7 +837,7 @@
         "modified_at": "2026-01-17T08:47:19.104015+00:00",
         "pages": 5,
         "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 1.16.26.pdf",
-        "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+        "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
         "sha256": "5c8a30ebb8d2eeda1abba2813970359c207583abf2391ab1378230d41692f186",
         "size_bytes": 233747,
         "title_hint": "Friday Live Channeled Message 1.16.26"
@@ -853,7 +853,7 @@
         "modified_at": "2026-05-12T01:23:17.257392+00:00",
         "pages": 4,
         "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 5.8.26.pdf",
-        "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+        "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
         "sha256": "80a4736c3763be8bc76e15c3242b947b8a7f84bbb0247cbdee90d2ea0355999b",
         "size_bytes": 135871,
         "title_hint": "Friday Live Channeled Message 5.8.26"
@@ -873,7 +873,7 @@
       "files": 74,
       "first_date_from_filename": "20260504",
       "last_date_from_filename": "20260504",
-      "publication_boundary": "filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath"
+      "publication_boundary": "Filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath."
     }
   },
   "project_archives": {
@@ -956,6 +956,21 @@
     }
   },
   "schema_version": "digital-influence-inventory/v1",
+  "source_body_registry": {
+    "path": "docs/field/urs/input/source_body_registry.json",
+    "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
+    "root_keys": {
+      "analysis_root": {
+        "default_path": "/Users/ursmuff/CoherenceFieldAnalysis",
+        "description": "Local analysis workspace for extracted source bodies."
+      },
+      "downloads_dir": {
+        "default_path": "/Users/ursmuff/Downloads",
+        "description": "Local Downloads folder holding bulky export archives and source PDFs."
+      }
+    },
+    "schema_version": "field-source-body-registry/v1"
+  },
   "source_roots": {
     "analysis_root": "/Users/ursmuff/CoherenceFieldAnalysis",
     "downloads_dir": "/Users/ursmuff/Downloads",

@@ -1,0 +1,100 @@
+{
+  "schema_version": "field-source-body-registry/v1",
+  "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
+  "root_keys": {
+    "analysis_root": {
+      "default_path": "/Users/ursmuff/CoherenceFieldAnalysis",
+      "description": "Local analysis workspace for extracted source bodies."
+    },
+    "downloads_dir": {
+      "default_path": "/Users/ursmuff/Downloads",
+      "description": "Local Downloads folder holding bulky export archives and source PDFs."
+    }
+  },
+  "source_groups": [
+    {
+      "label": "youtube-takeout",
+      "root_key": "analysis_root",
+      "relative_path": "input/youtube",
+      "patterns": ["*.zip", "*.html", "*.json", "*.jsonl"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "compact_trace_allowed",
+      "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published."
+    },
+    {
+      "label": "audible-export",
+      "root_key": "analysis_root",
+      "relative_path": "input/audible",
+      "patterns": ["*.json", "*.jsonl", "*.csv", "*.html"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "compact_trace_allowed",
+      "publication_boundary": "Raw Audible exports remain local; derived counts, titles, authors, dates, and spectrum summaries may be published."
+    },
+    {
+      "label": "browser-trace",
+      "root_key": "analysis_root",
+      "relative_path": "input/browser",
+      "patterns": ["*.json", "*.jsonl", "*.sqlite", "*.db"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "compact_trace_allowed",
+      "publication_boundary": "Raw browser databases and sessions remain local; compact event traces and domain/title summaries may be published."
+    },
+    {
+      "label": "downloaded-takeout",
+      "root_key": "downloads_dir",
+      "patterns": ["takeout-*.zip"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "metadata_and_compact_trace_allowed",
+      "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published."
+    },
+    {
+      "label": "channeled-message-pdf",
+      "root_key": "downloads_dir",
+      "patterns": ["Friday Live Channeled Message *.pdf"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "metadata_hashes_and_summary_only",
+      "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen."
+    },
+    {
+      "label": "photo-archive",
+      "root_key": "downloads_dir",
+      "patterns": ["Photos-*.zip"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "metadata_only",
+      "publication_boundary": "Image pixels remain local; filenames, counts, archive hashes, and date hints may be published."
+    },
+    {
+      "label": "project-archive",
+      "root_key": "downloads_dir",
+      "patterns": ["Water Project.zip", "Angelic-*.zip"],
+      "path_class": "local_source_body",
+      "ingestion_policy": "metadata_and_selected_lineage_allowed",
+      "publication_boundary": "Project archives remain local unless a specific lineage artifact is promoted; compact file counts, extensions, hashes, and sample paths may be published."
+    }
+  ],
+  "digital_inventory": {
+    "youtube": {
+      "history_only_takeout": {"root_key": "downloads_dir", "path": "takeout-20260506T165642Z-3-001.zip"},
+      "full_takeout_part_012": {"root_key": "downloads_dir", "path": "takeout-20260506T023119Z-3-012.zip"},
+      "uploads_and_library_parts": {"root_key": "downloads_dir", "pattern": "takeout-20260506T023119Z-3-*.zip"}
+    },
+    "photos": {
+      "archives": [
+        {
+          "root_key": "downloads_dir",
+          "path": "Photos-3-001.zip",
+          "publication_boundary": "Filenames and counts only in this compact inventory; image pixels can be handled in a later image-specific breath."
+        }
+      ]
+    },
+    "project_archives": {
+      "archives": [
+        {"root_key": "downloads_dir", "path": "Angelic-20260507T052334Z-3-001.zip"},
+        {"root_key": "downloads_dir", "path": "Water Project.zip"}
+      ]
+    },
+    "local_source_pdfs": {
+      "labels": ["channeled-message-pdf"]
+    }
+  }
+}
