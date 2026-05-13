@@ -1,0 +1,78 @@
+{
+  "date": "2026-05-13",
+  "thread_branch": "codex/contributor-guidance",
+  "commit_scope": "Align existing contributor and agent docs so humans and agents can contribute to GitHub, work on the API, and use Coherence-style guidance in other local or public repos.",
+  "files_owned": [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/system_audit/commit_evidence_2026-05-13_contributor_guidance.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-13_contributor_guidance.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Prompt guide passed before edits. git diff --check passed. make wellness passed with existing symbol-resolution, locale-parity, and CI-pattern drift signals named by the checker. Commit evidence validation passed. The first rebase attempt correctly failed on unstaged task edits; the branch was stashed, rebased cleanly onto origin/main, and restored before continuing. Local PR guard and follow-through checks passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Documentation-only change; public verification applies after merge if the published docs surface changes."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation, PR CI, and merge are not complete yet."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "CONTRIBUTING.md",
+    "AGENTS.md"
+  ],
+  "task_ids": [
+    "codex-thread-contributor-guidance-20260513"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "frequency correction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "CONTRIBUTING.md",
+    "AGENTS.md"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CONTRIBUTING.md"
+  ],
+  "change_intent": "docs_only"
+}
