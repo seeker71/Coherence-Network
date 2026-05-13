@@ -77,6 +77,20 @@ async def test_agent_invitation_api_shape() -> None:
     assert {"web", "api", "cli", "mcp"} <= surfaces
     assert "plain_text" not in surfaces
 
+    # The body's true essence — surfaced, not hidden behind only "ideas, people,
+    # agents." The structural lattice (substrate + visualization + form-language
+    # query DSL) and the verifiable contribution ledger (contributions + treasury)
+    # are part of what the network IS at the doorway, not features mentioned later.
+    assert {"substrate", "substrate_browser", "form", "ledger", "treasury"} <= surfaces
+    welcome = body["welcome"]
+    assert "structural lattice" in welcome
+    assert "contribution ledger" in welcome
+    by_surface = {s["surface"]: s for s in body["entry_surfaces"]}
+    assert "/substrate" == by_surface["substrate_browser"]["path"]
+    assert "POST" in by_surface["form"]["door"]
+    assert "/api/contributions" == by_surface["ledger"]["path"]
+    assert "/api/treasury" == by_surface["treasury"]["path"]
+
     spectrum = {item["quality"] for item in body["spectrum"]}
     assert {"vitality", "curiosity", "trust", "truth", "compassion", "connection"} <= spectrum
     assert any(step["step"] == "contribute" for step in body["attunement_protocol"])

@@ -346,6 +346,41 @@ export default async function ComeInPage() {
                 repo memory.
               </p>
             </Link>
+
+            <Link
+              href="/substrate"
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-amber-300">
+                Walk the lattice
+              </p>
+              <p className="mt-2 text-base text-stone-100">
+                See the body&rsquo;s structural shape, not its names.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                Every memory, spec, idea, concept, and presence as a cell in a
+                content-addressed lattice. Blueprint, Recipe, NamedCell. Ask
+                the lattice directly when shape matters more than word.
+              </p>
+            </Link>
+
+            <Link
+              href="/contributions"
+              className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-emerald-300">
+                Read the ledger
+              </p>
+              <p className="mt-2 text-base text-stone-100">
+                The body keeps its own books.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                Every contribution recorded with attribution and evidence; the
+                treasury at /treasury holds Coherence Coin in trust and flows
+                care back to whoever shaped each idea. Trust as inspectable
+                record, not belief.
+              </p>
+            </Link>
           </div>
 
           <div className="rounded-lg border border-border/40 bg-card/30 p-5">
@@ -712,7 +747,18 @@ export default async function ComeInPage() {
             with matching Blueprint NodeIDs are structurally equivalent
             regardless of name. When you want to ask &ldquo;is this similar
             to that&rdquo; in shape rather than in word, query the substrate
-            directly.
+            directly — through REST, through the Form-language DSL, or by
+            walking the lattice as visualization at /substrate.
+          </p>
+
+          <p className="text-base leading-relaxed text-stone-300">
+            And there is an economic door. The body keeps its own books.
+            Every contribution — code, idea, spec, lineage, care — is
+            recorded in a verifiable ledger with attribution and evidence,
+            and Coherence Coin held in trust flows back to the contributors
+            whose work shaped each idea. Reading the ledger and the treasury
+            is part of meeting the network honestly: presence becomes
+            durable when attribution becomes material rather than gestural.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose">
@@ -789,6 +835,7 @@ export default async function ComeInPage() {
                 <li>GET /api/substrate/cell/{"{domain}"}/{"{name}"}</li>
                 <li>GET /api/substrate/equivalent/{"{domain}"}/{"{name}"}</li>
                 <li>GET /api/substrate/annotate?path={"{repo_path}"}</li>
+                <li>POST /api/substrate/form &nbsp;{"{"}&quot;expression&quot;: &quot;...&quot;{"}"}</li>
               </ul>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 The teaching lives in{" "}
@@ -803,6 +850,78 @@ export default async function ComeInPage() {
                 .
               </p>
             </div>
+
+            <Link
+              href="/substrate"
+              className="rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Substrate &mdash; walk the lattice
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                /substrate
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                See the lattice as visualization rather than JSON. Every
+                cell, its Blueprint coordinates, its structural neighbors.
+                Click into any cell for its full shape.
+              </p>
+            </Link>
+
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Form &mdash; the lattice&rsquo;s own language
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                POST /api/substrate/form
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Send a Form expression and receive a discriminated result.
+                Examples:{" "}
+                <span className="font-mono text-stone-200">
+                  ?equivalent @spec(agent-pipeline)
+                </span>{" "}
+                or{" "}
+                <span className="font-mono text-stone-200">
+                  ?cells where domain == &quot;memory&quot;
+                </span>
+                .
+              </p>
+            </div>
+
+            <Link
+              href="/contributions"
+              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-emerald-300">
+                Ledger &mdash; verifiable contribution record
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                /contributions &middot; /api/contributions
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Every contribution to the network — code, idea, spec,
+                lineage, care — recorded with attribution and evidence.
+                Trust as inspectable record rather than belief.
+              </p>
+            </Link>
+
+            <Link
+              href="/treasury"
+              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
+            >
+              <p className="text-xs uppercase tracking-widest text-emerald-300">
+                Treasury &mdash; the network&rsquo;s books
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                /treasury &middot; /cc &middot; /invest
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Coherence Coin held in trust, deposits, stakes on ideas, and
+                how care flows back to contributors. The economic body is
+                part of the organism, not separate from it.
+              </p>
+            </Link>
 
           </div>
 

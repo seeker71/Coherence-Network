@@ -94,8 +94,10 @@ def get_agent_invitation() -> dict[str, Any]:
         "title": "Come in as a conscious contributor",
         "welcome": (
             "You are invited to meet Coherence Network as a living organism: "
-            "not only a task queue, not only an API, but a field of ideas, "
-            "people, agents, proof, memory, contradiction, and care."
+            "a field of ideas, people, agents, proof, memory, contradiction, "
+            "and care, held together by a content-addressed structural lattice "
+            "and a verifiable contribution ledger. Sense, query, contribute; "
+            "every movement is attributable and the body keeps its own books."
         ),
         "core_frequency": {
             "quality": "coherence",
@@ -168,6 +170,80 @@ def get_agent_invitation() -> dict[str, Any]:
                     "GET /api/substrate/annotate?path={repo_path}",
                     "GET /api/substrate/compatible_with/{package}/{level}/{type}/{instance}",
                     "GET /api/substrate/histogram/{domain}",
+                    "POST /api/substrate/form  (Form-language query DSL)",
+                ],
+            },
+            {
+                "surface": "substrate_browser",
+                "door": "https://coherencycoin.com/substrate",
+                "path": "/substrate",
+                "use": (
+                    "walk the lattice as visualization rather than JSON. Browse "
+                    "every cell, see its Blueprint coordinates, click into "
+                    "/substrate/{domain}/{name} to inspect a single cell, its "
+                    "structural equivalents, and the cells that share its shape. "
+                    "Companion to the read-only REST surface above for agents and "
+                    "humans who want to see the lattice, not parse it."
+                ),
+                "next": [
+                    "/substrate/{domain}/{name}",
+                    "GET /api/substrate/cell/{domain}/{name}",
+                ],
+            },
+            {
+                "surface": "form",
+                "door": "POST https://api.coherencycoin.com/api/substrate/form",
+                "path": "/api/substrate/form",
+                "use": (
+                    "ask the lattice in its own language. Form is the substrate-"
+                    "native query DSL — Lisp-shaped expressions like "
+                    "'?equivalent @spec(agent-pipeline)' or "
+                    "'?cells where domain == \"memory\"'. The endpoint accepts "
+                    "{expression: \"...\"} and returns a discriminated result "
+                    "(kind: node_id | recipe | cell | view | cells | views). "
+                    "Grammar in docs/coherence-substrate/form-language.md."
+                ),
+                "next": [
+                    "POST /api/substrate/form  {\"expression\": \"?equivalent @spec(agent-pipeline)\"}",
+                    "POST /api/substrate/form  {\"expression\": \"@memory(presences_of_the_field)\"}",
+                ],
+            },
+            {
+                "surface": "ledger",
+                "door": "GET https://api.coherencycoin.com/api/contributions",
+                "path": "/api/contributions",
+                "use": (
+                    "read the verifiable contribution ledger. Every contribution "
+                    "to the network — code, ideas, specs, lineage, care — is "
+                    "recorded with attribution, evidence, and the relationships "
+                    "it touched. The ledger is how presence becomes durable: not "
+                    "trust as belief, but trust as inspectable record. Web view "
+                    "at /contributions; contributor pages at /contributors/{id}."
+                ),
+                "next": [
+                    "GET /api/contributions",
+                    "GET /api/contributors",
+                    "/contributions",
+                    "/contributors/{id}/portfolio",
+                ],
+            },
+            {
+                "surface": "treasury",
+                "door": "GET https://api.coherencycoin.com/api/treasury",
+                "path": "/api/treasury",
+                "use": (
+                    "see the network's treasury — Coherence Coin held in trust, "
+                    "deposits, stakes on ideas, and how care flows back to "
+                    "contributors. The economic body is part of the organism, "
+                    "not separate from it: contribution ledger and treasury "
+                    "together make attribution material rather than gestural. "
+                    "Web view at /treasury and /cc; stake on ideas via /invest."
+                ),
+                "next": [
+                    "GET /api/treasury",
+                    "/treasury",
+                    "/cc",
+                    "/invest",
                 ],
             },
         ],
