@@ -200,6 +200,12 @@ def test_digital_influence_inventory_registers_full_history_attention():
     assert trace["youtube"]["history_only_takeout"]["events"] > 60000
     assert trace["youtube"]["published_gap"]["missing_2023_events"] > 10000
     assert trace["youtube"]["published_gap"]["missing_before_2024_05_07_events"] > 30000
+    pdf_items = trace["local_source_pdfs"]["items"]
+    assert any(item["file_name"] == "Friday Live Channeled Message 5.8.26.pdf" for item in pdf_items)
+    friday_pdf = next(item for item in pdf_items if item["file_name"] == "Friday Live Channeled Message 5.8.26.pdf")
+    assert friday_pdf["label"] == "channeled-message-pdf"
+    assert friday_pdf["ingestion_policy"] == "metadata_hashes_and_summary_only"
+    assert friday_pdf["content_type"] == "application/pdf"
     assert trace["publication_boundary"].startswith("This compact artifact publishes")
 
 
@@ -219,6 +225,12 @@ def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     assert trace["normalized_event_trace"]["event_merkle_root"]
     assert trace["roots"]["combined_trace_root"]
     assert len(trace["source_bodies"]) >= 10
+    assert any(
+        row["label"] == "channeled-message-pdf"
+        and row["path"].endswith("Friday Live Channeled Message 5.8.26.pdf")
+        and row["content_type"] == "application/pdf"
+        for row in trace["source_bodies"]
+    )
     assert trace["dynamic_access"]["mcp_tool"] == "get_field_story_trace"
     assert trace["truth_boundary"]["next_precision"].startswith("For exact row-to-source-body proofs")
 

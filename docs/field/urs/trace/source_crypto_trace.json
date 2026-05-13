@@ -6,7 +6,7 @@
     "month_trace_api": "/api/field-stories/urs-field-story/trace/month/{YYYY-MM}",
     "work_trace_api": "/api/field-stories/urs-field-story/trace/work/{work_id}"
   },
-  "generated_at": "2026-05-13T00:02:48.625458+00:00",
+  "generated_at": "2026-05-13T11:22:43.188094+00:00",
   "hash_algorithm": "sha256",
   "normalized_event_trace": {
     "event_leaf_hash_algorithm": "sha256('event:' + canonical_json(row))",
@@ -101,8 +101,8 @@
       "artifact_relpath": "trace/digital_influence_inventory.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/digital_influence_inventory.json",
-      "sha256": "e8447bf5b62db7642303f93ef4d604bf27c57e9b81b73b31d6033efad536d96b",
-      "size_bytes": 104002
+      "sha256": "a3185f1df9456874687d9bfef0ab296c477a050bfd2cfe78b81380725b177b6b",
+      "size_bytes": 106006
     },
     {
       "artifact_relpath": "output/chronological_story_with_frequency.md",
@@ -113,10 +113,10 @@
     }
   ],
   "roots": {
-    "combined_trace_root": "21a16d4b5e5283f820a32f238e736db1e020539a53190b2d7753edfacfcd224c",
+    "combined_trace_root": "3dbc40b02749a1fb8d792477c3e52401a0e8b2c5a2bc83ca6344fd8c0ff714fe",
     "normalized_event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
-    "repo_artifact_merkle_root": "e8582e36ae46e1ac948de16629f7b7f42377ff4af863c4cbc9ee798238a69a7e",
-    "source_body_merkle_root": "f913a1e53db49ad868bb49def9e78108a1146a2e5d23368b9c3ce6addcafbe3e"
+    "repo_artifact_merkle_root": "dba1a0430f37bc4ca9b0fcea2cb28560c96cf10a30ae8d950db10ca3a1f7488d",
+    "source_body_merkle_root": "c8f0c8b91859a8f3ee23c8687b42e54ef312d287b89bc33029b39120cc2890f9"
   },
   "schema_version": "field-source-crypto-trace/v1",
   "source_bodies": [
@@ -452,6 +452,26 @@
       "sha256": "6dbd39e21bbac1a0e9dd6ac5b464edf93b638761391c894c151876c9561a5f5c",
       "size_bytes": 4081111,
       "zip_entries": 2
+    },
+    {
+      "content_type": "application/pdf",
+      "id": "source:channeled-message-pdf:friday-live-channeled-message-1.16.26.pdf:5c8a30ebb8d2",
+      "label": "channeled-message-pdf",
+      "modified_at": "2026-01-17T08:47:19.104015+00:00",
+      "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 1.16.26.pdf",
+      "path_class": "local_source_body",
+      "sha256": "5c8a30ebb8d2eeda1abba2813970359c207583abf2391ab1378230d41692f186",
+      "size_bytes": 233747
+    },
+    {
+      "content_type": "application/pdf",
+      "id": "source:channeled-message-pdf:friday-live-channeled-message-5.8.26.pdf:80a4736c3763",
+      "label": "channeled-message-pdf",
+      "modified_at": "2026-05-12T01:23:17.257392+00:00",
+      "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 5.8.26.pdf",
+      "path_class": "local_source_body",
+      "sha256": "80a4736c3763be8bc76e15c3242b947b8a7f84bbb0247cbdee90d2ea0355999b",
+      "size_bytes": 135871
     },
     {
       "content_type": "application/zip",

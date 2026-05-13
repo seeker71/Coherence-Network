@@ -822,7 +822,48 @@
       }
     ]
   },
-  "generated_at": "2026-05-13T00:02:31.724515+00:00",
+  "generated_at": "2026-05-13T11:22:31.222991+00:00",
+  "local_source_pdfs": {
+    "count": 2,
+    "items": [
+      {
+        "author": "Anne Tucker",
+        "content_type": "application/pdf",
+        "creator": "Microsoft Word",
+        "date_hint": "2026-01-16",
+        "file_name": "Friday Live Channeled Message 1.16.26.pdf",
+        "ingestion_policy": "metadata_hashes_and_summary_only",
+        "label": "channeled-message-pdf",
+        "modified_at": "2026-01-17T08:47:19.104015+00:00",
+        "pages": 5,
+        "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 1.16.26.pdf",
+        "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+        "sha256": "5c8a30ebb8d2eeda1abba2813970359c207583abf2391ab1378230d41692f186",
+        "size_bytes": 233747,
+        "title_hint": "Friday Live Channeled Message 1.16.26"
+      },
+      {
+        "author": "Anne Tucker",
+        "content_type": "application/pdf",
+        "creator": "Microsoft Word",
+        "date_hint": "2026-05-08",
+        "file_name": "Friday Live Channeled Message 5.8.26.pdf",
+        "ingestion_policy": "metadata_hashes_and_summary_only",
+        "label": "channeled-message-pdf",
+        "modified_at": "2026-05-12T01:23:17.257392+00:00",
+        "pages": 4,
+        "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 5.8.26.pdf",
+        "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+        "sha256": "80a4736c3763be8bc76e15c3242b947b8a7f84bbb0247cbdee90d2ea0355999b",
+        "size_bytes": 135871,
+        "title_hint": "Friday Live Channeled Message 5.8.26"
+      }
+    ],
+    "patterns": [
+      "Friday Live Channeled Message *.pdf"
+    ],
+    "publication_boundary": "PDF source bodies are represented by metadata and hashes only until a specific summary/extracted-concept breath is chosen."
+  },
   "photos": {
     "Photos-3-001.zip": {
       "extensions": {

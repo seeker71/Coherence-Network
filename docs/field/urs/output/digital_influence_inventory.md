@@ -2,7 +2,7 @@
 
 This inventory maps the local digital-history sources available for the Urs field story without committing bulky raw archives.
 
-Generated: `2026-05-13T00:02:31.724515+00:00`
+Generated: `2026-05-13T11:22:31.222991+00:00`
 
 ## Publication Boundary
 
@@ -16,6 +16,7 @@ This compact artifact publishes source counts, date spans, filenames, and aggreg
 - YouTube uploads/library archives: 4743 audio files and 5 video files across 13 archives.
 - Audible library/listen/purchase captures: 233 library, 50 listen-history, 198 purchase-history rows.
 - Local browser trace: 167 events, `2026-02-05T05:59:11.980937+00:00` to `2026-05-06T02:16:11.728236+00:00`.
+- Local source PDFs: 2 metadata-only bodies.
 
 ## Expanded Trace Before The Former Window
 
@@ -119,9 +120,17 @@ This compact artifact publishes source counts, date spans, filenames, and aggreg
 - `Angelic-20260507T052334Z-3-001.zip`: 2774 files
 - `Water Project.zip`: 8 files
 
+## Local Source PDFs
+
+PDF source bodies are represented by metadata and hashes only until a specific summary/extracted-concept breath is chosen.
+
+- `Friday Live Channeled Message 1.16.26.pdf`: `channeled-message-pdf`, 233747 bytes, 5 pages, author `Anne Tucker`, date hint `2026-01-16`; policy `metadata_hashes_and_summary_only`.
+- `Friday Live Channeled Message 5.8.26.pdf`: `channeled-message-pdf`, 135871 bytes, 4 pages, author `Anne Tucker`, date hint `2026-05-08`; policy `metadata_hashes_and_summary_only`.
+
 ## Next Breath
 
 - Use `trace/monthly_spectrum.json`, `trace/author_index.jsonl`, and `trace/work_index.jsonl` as the compact query layer for the expanded YouTube trace.
 - Add a 2023/early-2024 transition room for the flamenco/Spanish-guitar body wave and its bridge into devotional-body music.
 - Add a separate unresolved-author cleanup for `here` YouTube rows before treating them as real influence presences.
+- Decide whether `Friday Live Channeled Message 5.8.26.pdf` wants a separate summary/extracted-concept artifact; the raw PDF remains a local source body.
 - Keep Photos and Gmail at metadata/header level in this compact pass; deeper source-specific analysis can happen when that breath is useful.

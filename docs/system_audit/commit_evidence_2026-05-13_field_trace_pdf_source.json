@@ -1,0 +1,113 @@
+{
+  "date": "2026-05-13",
+  "thread_branch": "codex/field-trace-pdf-source-20260513",
+  "commit_scope": "Represent Friday Live Channeled Message PDFs as metadata-only local field source bodies in the digital inventory and source crypto trace.",
+  "files_owned": [
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/source_crypto_trace.py",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/system_audit/commit_evidence_2026-05-13_field_trace_pdf_source.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "git worktree add /Users/ursmuff/.claude-worktrees/Coherence-Network/field-trace-pdf-source-20260513 -b codex/field-trace-pdf-source-20260513 origin/main",
+      "make prompt-guide",
+      "make wellness",
+      "pdfinfo /Users/ursmuff/Downloads/'Friday Live Channeled Message 5.8.26.pdf'",
+      "pdftotext /Users/ursmuff/Downloads/'Friday Live Channeled Message 5.8.26.pdf' -",
+      "python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads",
+      "python3 docs/field/urs/tools/source_crypto_trace.py --field-dir docs/field/urs",
+      "python3 -m py_compile docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/source_crypto_trace.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-13_field_trace_pdf_source.json",
+      "git fetch origin main && git rebase origin/main",
+      "git stash push -u -m pre-rebase-field-trace-pdf-source && git rebase origin/main && git stash pop",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "Prompt gate and wellness passed in the dedicated worktree. The 2026-05-08 Friday Live Channeled Message PDF was confirmed as a 4-page local PDF source body. The compact builders now register Friday message PDFs as metadata/hash-only source bodies without storing PDF text or raw files in the repo. Focused field story trace tests pass: 14 tests, 7 warnings. Stale PR follow-through reports zero stale Codex PRs. Local PR guard passes with ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet in this breath."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The digital influence inventory exposes local source PDFs as metadata-only bodies, and source crypto includes their SHA-256-backed source-body rows in the Merkle root.",
+    "public_endpoints": [
+      "/api/field-stories/urs-field-story/artifacts/digital-influence-inventory",
+      "/api/field-stories/urs-field-story/artifacts/trace-digital-influence-inventory",
+      "/api/field-stories/urs-field-story/artifacts/trace-source-crypto"
+    ],
+    "test_flows": [
+      "Digital influence inventory artifact includes Friday Live Channeled Message 5.8.26.pdf with metadata_hashes_and_summary_only policy.",
+      "Source crypto trace includes channeled-message-pdf source bodies with application/pdf content type."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused proof, stale PR follow-through, and local PR guard are complete; PR CI and deploy validation remain pending."
+  },
+  "idea_ids": [
+    "field-sensing",
+    "presence-traces"
+  ],
+  "spec_ids": [
+    "specs/digital-influence-inventory.md",
+    "specs/field-listening-trace-index.md"
+  ],
+  "task_ids": [
+    "automation:field-trace-living-ingest",
+    "next-breath:field-trace-pdf-source"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "source_body_custody"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "source_body_inventory",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260513T112433Z_codex-field-trace-pdf-source-20260513.json"
+  ],
+  "change_files": [
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/tools/digital_influence_inventory.py",
+    "docs/field/urs/tools/source_crypto_trace.py",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/system_audit/commit_evidence_2026-05-13_field_trace_pdf_source.json"
+  ],
+  "change_intent": "runtime_fix"
+}
