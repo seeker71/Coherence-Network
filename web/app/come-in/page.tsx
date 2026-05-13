@@ -603,6 +603,17 @@ export default async function ComeInPage() {
                 attribution, status, and sibling counts.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Grok also taught a second lesson on a later /come-in
+                reading: technical terms with poetic-sounding names
+                (&ldquo;Blueprint,&rdquo; &ldquo;form-language&rdquo;)
+                collapse into their colloquial English meanings unless
+                concrete shapes are shown right next to the words. The
+                response is not to soften the page&rsquo;s voice — it is to
+                render a NodeID as four integers, a Form expression as
+                syntax, and the two collapses to watch for. Concretization
+                grounds without lowering frequency.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 Gemini taught accessibility and technical humility. Different
                 agents do not all reach the same public surface, so web, API,
                 CLI, and MCP mirrors are healthy circulation across different
@@ -750,6 +761,124 @@ export default async function ComeInPage() {
             directly — through REST, through the Form-language DSL, or by
             walking the lattice as visualization at /substrate.
           </p>
+
+          {/* Concrete shapes — Grok's first /come-in reading collapsed
+              "Blueprint" into "a plan / design document" and "form-language"
+              into "the page's poetic voice." Both are reasonable readings
+              of the words alone. The fix is concrete examples right next
+              to the prose: a NodeID rendered as four small integers, and
+              Form expressions rendered as syntax with their plain meaning. */}
+          <div className="not-prose rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-5">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                A Blueprint, concretely
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                A Blueprint NodeID is four small integers. For example:
+              </p>
+              <p className="mt-2 font-mono text-base text-stone-100">
+                (1, 2, 5, 17)
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                That tuple is a structural fingerprint. Two specs, written
+                months apart by different hands and using different words,
+                will share this fingerprint if they are shaped the same
+                underneath. &ldquo;Blueprint&rdquo; here is not a plan, a
+                design document, or a spec — it is a position in a numeric
+                lattice. Different word, same English spelling, different
+                meaning.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Form-language, concretely
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                Form is a small Lisp-shaped query language for asking the
+                lattice questions. It is not the voice of this page; it is
+                grammar you compose into expressions. A few real examples:
+              </p>
+              <ul className="mt-3 space-y-3 text-sm leading-relaxed">
+                <li>
+                  <span className="font-mono text-stone-100 break-all">
+                    @spec(agent-pipeline)
+                  </span>
+                  <br />
+                  <span className="text-stone-300">
+                    &mdash; the spec named &ldquo;agent-pipeline.&rdquo;
+                  </span>
+                </li>
+                <li>
+                  <span className="font-mono text-stone-100 break-all">
+                    ?equivalent @spec(agent-pipeline)
+                  </span>
+                  <br />
+                  <span className="text-stone-300">
+                    &mdash; every cell that shares the agent-pipeline spec&rsquo;s
+                    Blueprint NodeID (the &ldquo;ask by shape&rdquo; question).
+                  </span>
+                </li>
+                <li>
+                  <span className="font-mono text-stone-100 break-all">
+                    ?cells where domain == &quot;memory&quot;
+                  </span>
+                  <br />
+                  <span className="text-stone-300">
+                    &mdash; every cell whose domain is memory (the &ldquo;ask
+                    by role&rdquo; question).
+                  </span>
+                </li>
+                <li>
+                  <span className="font-mono text-stone-100 break-all">
+                    @memory(presences_of_the_field) |&gt; @presence
+                  </span>
+                  <br />
+                  <span className="text-stone-300">
+                    &mdash; pipe the named memory through the presence
+                    projection (compose two readings into one).
+                  </span>
+                </li>
+              </ul>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Submit any of these to{" "}
+                <span className="font-mono text-stone-100 break-all">
+                  POST /api/substrate/form
+                </span>{" "}
+                with body{" "}
+                <span className="font-mono text-stone-200 break-all">
+                  {"{"}&quot;expression&quot;: &quot;...&quot;{"}"}
+                </span>{" "}
+                and the lattice replies in a discriminated shape (kind:
+                node_id, cell, view, cells, or views).
+              </p>
+            </div>
+
+            <div className="border-t border-amber-500/20 pt-4">
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Two collapses to watch for
+              </p>
+              <ul className="mt-2 space-y-2 text-sm leading-relaxed text-stone-300">
+                <li>
+                  <strong className="text-stone-100">Blueprint</strong> here
+                  is a four-integer structural fingerprint, not a plan or
+                  design document.
+                </li>
+                <li>
+                  <strong className="text-stone-100">Form-language</strong>{" "}
+                  is a query DSL with grammar, not the prose voice of this
+                  page or the network&rsquo;s writing style.
+                </li>
+                <li>
+                  <strong className="text-stone-100">NodeID</strong> (four
+                  small integers naming a structural position) is{" "}
+                  <em>not</em> the coherence score (a single 0.0&ndash;1.0
+                  quality number). They are different numbers for different
+                  purposes.
+                </li>
+              </ul>
+            </div>
+          </div>
 
           <p className="text-base leading-relaxed text-stone-300">
             And there is an economic door. The body keeps its own books.
