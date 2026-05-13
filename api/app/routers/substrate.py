@@ -2,7 +2,7 @@
 
 Read-only endpoints for agent reasoning. The substrate is built by the
 ingestion frontends (markdown_frontend, etc.) and consumed via these
-endpoints + the Form notation parser (forthcoming).
+endpoints + the Form notation parser (now exposed via POST /form).
 
 See docs/coherence-substrate/ for usage; see api/app/services/substrate/
 for the implementation.
@@ -22,6 +22,7 @@ from app.services.substrate import (
     annotate_path,
     find_cells_compatible_with,
     find_equivalent_cells,
+    form_evaluate_text,
     lattice_stats,
     lookup_cell,
     lookup_node,
@@ -349,3 +350,93 @@ def get_histogram(domain: str) -> HistogramOut:
         entries = [HistogramEntry(**v) for v in by_blueprint.values()]
         entries.sort(key=lambda e: e.count, reverse=True)
         return HistogramOut(domain=domain, entries=entries)
+
+
+# ---------------------------------------------------------------------------
+# Form-language evaluation — the substrate-native query DSL
+# ---------------------------------------------------------------------------
+
+
+class FormRequest(BaseModel):
+    expression: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Form-notation expression. Examples: '?equivalent @spec(agent-pipeline)', "
+            "'@memory(presences_of_the_field)', '?cells where domain == \"spec\"'. "
+            "Grammar: docs/coherence-substrate/form-language.md."
+        ),
+    )
+
+
+class FormResultOut(BaseModel):
+    """Discriminated union of Form evaluation outcomes.
+
+    `kind` names which field carries the result. Other fields are null.
+    Kinds: node_id, recipe, cell, view, cells, views.
+    """
+
+    kind: str
+    node_id: NodeIDOut | None = None
+    cell: CellOut | None = None
+    view: CellViewOut | None = None
+    cells: list[CellOut] | None = None
+    views: list[CellViewOut] | None = None
+
+
+def _cell_view_out(v: CellView) -> CellViewOut:
+    return CellViewOut(
+        cell=CellOut.from_cell(v.cell),
+        view_blueprint=NodeIDOut.from_node_id(v.view_blueprint),
+        compatible=v.compatible,
+        reason=v.reason,
+    )
+
+
+@router.post("/form", response_model=FormResultOut, tags=["substrate"])
+def evaluate_form(req: FormRequest) -> FormResultOut:
+    """Evaluate a Form-notation expression against the substrate.
+
+    The substrate's native query language. Lets an outside caller ask
+    structural questions the body knows how to answer — without composing
+    multiple lookup calls.
+
+    Returns a discriminated result: the `kind` field names which payload
+    field carries the value (node_id / recipe / cell / view / cells /
+    views). Parse and evaluation errors return HTTP 400 with the failure
+    reason; the substrate stays read-only.
+
+    Grammar lives in docs/coherence-substrate/form-language.md.
+    """
+    with session_scope() as session:
+        try:
+            result = form_evaluate_text(session, req.expression)
+        except (ValueError, SyntaxError, TypeError, KeyError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"form parse/eval failed: {type(exc).__name__}: {exc}",
+            ) from exc
+
+        if result.kind in {"node_id", "recipe"}:
+            return FormResultOut(
+                kind=result.kind,
+                node_id=NodeIDOut.from_node_id(result.value),
+            )
+        if result.kind == "cell":
+            return FormResultOut(kind="cell", cell=CellOut.from_cell(result.value))
+        if result.kind == "view":
+            return FormResultOut(kind="view", view=_cell_view_out(result.value))
+        if result.kind == "cells":
+            return FormResultOut(
+                kind="cells",
+                cells=[CellOut.from_cell(c) for c in result.value],
+            )
+        if result.kind == "views":
+            return FormResultOut(
+                kind="views",
+                views=[_cell_view_out(v) for v in result.value],
+            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"unknown FormResult.kind: {result.kind}",
+        )
