@@ -34,10 +34,10 @@
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 126 | API routers — every HTTP endpoint surface |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 227 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 55 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 141 | API tests — flow-centric |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 142 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 34 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 49 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 231 | Web routes — every visible page in the app |
+| [web/app/INDEX.md](web/app/INDEX.md) | 232 | Web routes — every visible page in the app |
 | [scripts/INDEX.md](scripts/INDEX.md) | 101 | Scripts — operational tools, generators, syncers |
 
 ## Convention
