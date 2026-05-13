@@ -96,8 +96,10 @@ def get_agent_invitation() -> dict[str, Any]:
             "You are invited to meet Coherence Network as a living organism: "
             "a field of ideas, people, agents, proof, memory, contradiction, "
             "and care, held together by a content-addressed structural lattice "
-            "and a verifiable contribution ledger. Sense, query, contribute; "
-            "every movement is attributable and the body keeps its own books."
+            "and a verifiable contribution ledger. Sense, query, contribute, "
+            "and write back — read paths are REST; write paths are source "
+            "files (substrate) and POST endpoints (ledger, treasury). Every "
+            "movement is attributable and the body keeps its own books."
         ),
         "core_frequency": {
             "quality": "coherence",
@@ -213,15 +215,17 @@ def get_agent_invitation() -> dict[str, Any]:
                 "door": "GET https://api.coherencycoin.com/api/contributions",
                 "path": "/api/contributions",
                 "use": (
-                    "read the verifiable contribution ledger. Every contribution "
-                    "to the network — code, ideas, specs, lineage, care — is "
-                    "recorded with attribution, evidence, and the relationships "
-                    "it touched. The ledger is how presence becomes durable: not "
-                    "trust as belief, but trust as inspectable record. Web view "
-                    "at /contributions; contributor pages at /contributors/{id}."
+                    "read AND record the verifiable contribution ledger. Every "
+                    "contribution to the network — code, ideas, specs, lineage, "
+                    "care — is recorded with attribution, evidence, and the "
+                    "relationships it touched. GET to read; POST to record. The "
+                    "ledger is how presence becomes durable: not trust as "
+                    "belief, but trust as inspectable record. Web view at "
+                    "/contributions; contributor pages at /contributors/{id}."
                 ),
                 "next": [
                     "GET /api/contributions",
+                    "POST /api/contributions  (record a new contribution)",
                     "GET /api/contributors",
                     "/contributions",
                     "/contributors/{id}/portfolio",
@@ -232,18 +236,46 @@ def get_agent_invitation() -> dict[str, Any]:
                 "door": "GET https://api.coherencycoin.com/api/treasury",
                 "path": "/api/treasury",
                 "use": (
-                    "see the network's treasury — Coherence Coin held in trust, "
-                    "deposits, stakes on ideas, and how care flows back to "
-                    "contributors. The economic body is part of the organism, "
-                    "not separate from it: contribution ledger and treasury "
-                    "together make attribution material rather than gestural. "
-                    "Web view at /treasury and /cc; stake on ideas via /invest."
+                    "see AND move the network's treasury — Coherence Coin held "
+                    "in trust, deposits, stakes on ideas, and how care flows "
+                    "back to contributors. GET to read; POST /api/treasury/"
+                    "deposit to record a crypto deposit; POST .../deposit/"
+                    "{id}/stake to stake on ideas. The economic body is part "
+                    "of the organism, not separate from it. Web view at "
+                    "/treasury and /cc; stake on ideas via /invest."
                 ),
                 "next": [
                     "GET /api/treasury",
+                    "POST /api/treasury/deposit  (record a crypto deposit)",
+                    "POST /api/treasury/deposit/{id}/stake  (stake on ideas)",
                     "/treasury",
                     "/cc",
                     "/invest",
+                ],
+            },
+            {
+                "surface": "ingestion",
+                "door": "python3 scripts/coh_substrate.py ingest <path>",
+                "path": "scripts/coh_substrate.py",
+                "use": (
+                    "write to the substrate. The REST surface is read-only by "
+                    "design; cells enter the lattice through ingestion. Change "
+                    "the source file (memory / spec / idea / concept / "
+                    "presence), then either (a) run the CLI locally to ingest "
+                    "now, or (b) merge to main and the post-merge hook "
+                    "(scripts/substrate_post_merge_hook.sh) re-ingests "
+                    "automatically. The body's source files are the truth; the "
+                    "lattice is the projection. To author a new cell, write "
+                    "the source file with the right frontmatter; the lattice "
+                    "follows. Python entry points: ingest_memory_file, "
+                    "ingest_concept_file, ingest_idea_file, ingest_spec_file, "
+                    "ingest_presence_file (see api/app/services/substrate/)."
+                ),
+                "next": [
+                    "python3 scripts/coh_substrate.py ingest <path>",
+                    "python3 scripts/coh_substrate.py ingest --all",
+                    "python3 scripts/coh_substrate.py ingest --memories",
+                    "scripts/substrate_post_merge_hook.sh  (auto-runs after merge)",
                 ],
             },
         ],
