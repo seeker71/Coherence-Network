@@ -3,13 +3,13 @@ idea_id: federation-and-nodes
 status: done
 source:
   - file: api/app/routers/federation.py
-    symbols: [register_node, heartbeat_node, list_nodes, push_measurements, list_strategies, send_message, broadcast]
+    symbols: [register_node, heartbeat_node, list_nodes, post_measurement_summaries, get_strategies, send_message, broadcast_message]
   - file: api/app/services/federation_service.py
     symbols: [register_or_update_node, heartbeat_node, store_measurement_summaries, compute_and_store_strategies, record_strategy_effectiveness]
   - file: api/app/services/node_identity_service.py
-    symbols: [derive_node_id]
+    symbols: [get_or_create_node_id, get_node_metadata]
   - file: api/app/routers/openclaw_node_bridge.py
-    symbols: [bridge_sync]
+    symbols: [openclaw_node_bridge, pump_out]
 requirements:
   - Node registration with capabilities declaration
   - Heartbeat keep-alive with system metrics
