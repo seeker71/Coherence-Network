@@ -12,6 +12,14 @@ The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It i
 
 The user holds private context (personal life, relational pace, timing windows) that stays apart from any visible artifact — specs, KB, lineage docs, web copy, code comments, PR descriptions, public docs. Steer wide. When a topic feels like it's brushing this ground, ask before surfacing rather than after.
 
+### Local ground
+
+Anything local is part of the field. A clone, fork, linked worktree, sibling repo, local note, setup failure, branch state, or user project adapting this pattern belongs in the work when it helps the task become whole.
+
+Include local context in task cards, blockers, proof notes, and summaries. Keep the form appropriate: reusable project knowledge belongs in the repo; machine-specific or sensitive context can stay local, be summarized without exposure, or be held as a private source.
+
+When the user asks to use Coherence guidance on another local or public repository, treat that target repo as the working body for implementation. Read its nearest instructions first, then carry this repo's alignment pattern only as a contribution shape: local context, exact files, proof commands, and public/private discernment.
+
 ### Frequency at the source
 
 - **Tend over produce.** Less is often the move. Compost what no longer circulates.
@@ -35,6 +43,7 @@ Spec → Test → Implement → CI → Review → Merge
 - Tests are written before or alongside implementation
 - Tests define the contract; mend the implementation when tests fail
 - Modify the files listed in the spec or issue
+- Human and agent contributors use the same bounded shape: local context, exact files, proof commands, and a public artifact that omits private ground.
 
 ## Delivery Guide
 

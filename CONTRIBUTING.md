@@ -1,6 +1,16 @@
 # Contributing to Coherence Network
 
-Welcome! This guide shows you how to contribute to Coherence Network.
+Welcome! This guide shows humans and coding agents how to contribute to Coherence Network, include local work as part of the field, and carry the same pattern back to another repository.
+
+## Contribution Field
+
+Coherence Network welcomes contributors as participants in a living project. Humans bring judgment, taste, lived context, and accountability. Agents bring speed, recall, synthesis, and execution. A good contribution lets both stay in their proper strength.
+
+Local material is part of the work, not outside it. A clone, fork, linked worktree, sibling repository, local note, machine-specific setup failure, or user project adapting this pattern belongs in the contribution field. Include that context when it helps the work become whole; publish only the parts that belong in durable public artifacts.
+
+Public repository artifacts can hold architecture, specs, tests, setup paths, command output, product behavior, public language, and contribution patterns. Local work can hold machine-specific setup notes, branch state, private task constraints, draft reasoning, and nearby user-project context. Personal timing, relational interpretation, hidden intent, private correspondence, and sensitive context stay out of public docs, specs, code comments, web copy, and PR descriptions.
+
+When unsure, preserve the local signal and ask before publishing it. You can describe the public shape without exposing the private source.
 
 ## 🚀 Quick Start
 
@@ -50,6 +60,97 @@ Coherence Network follows a **spec-driven development** workflow:
 Parallel Codex threads must also follow:
 - `docs/CODEX-THREAD-PROCESS.md` (phase gates + commit evidence requirements)
 
+## Three Contribution Doors
+
+### 1. Contribute To The GitHub Repository
+
+Use this path when your change belongs in `seeker71/Coherence-Network`:
+
+1. Fork or branch from `main`.
+2. Read `MANIFEST.md`, this file, and `AGENTS.md` if an agent is helping.
+3. Choose the smallest contribution lane that fits: reader, contributor, or steward.
+4. Make the change with the matching local proof command.
+5. Open a pull request that names what changed, how it was checked, and what remains open.
+
+Good first GitHub contributions improve a setup path, clarify a doc, repair a focused test, or implement one spec-scoped behavior.
+
+### 2. Contribute To The API
+
+Use this path when your change touches `api/`:
+
+```bash
+cd api
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+In another terminal, run the focused or broad proof:
+
+```bash
+cd api
+source .venv/bin/activate
+pytest -v --ignore=tests/holdout
+```
+
+API work should start from the relevant spec or endpoint. Check `api/app/routers/INDEX.md` for HTTP surfaces, `api/app/services/INDEX.md` for business logic, and `api/tests/INDEX.md` for existing proof. Add or update tests before or alongside implementation.
+
+When validating one API behavior, prefer the smallest focused command first:
+
+```bash
+cd api
+pytest tests/test_something.py -v
+```
+
+Before a PR, run the broader proof that matches the change:
+
+```bash
+python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+```
+
+### 3. Use Coherence With Your Own Repository
+
+Use this path when you want Codex, Claude, Cursor, Gemini, or another agent to work on a different local or public repo with Coherence-style alignment.
+
+Start by giving the agent a task card that names the target repository:
+
+```text
+goal: what should become true
+repo: /absolute/path/to/your/repo
+local_context: branch, setup notes, useful neighboring repos, current blocker
+files_allowed: exact file paths or globs
+done_when: 1-3 measurable checks
+commands: exact commands to run in that repo
+constraints: what not to touch or publish
+```
+
+Then add the same five surfaces to that repo as they become useful:
+
+1. `AGENTS.md`: how agents arrive, what they may touch, and how they prove work.
+2. `CONTRIBUTING.md`: how humans set up, test, and contribute.
+3. `MANIFEST.md` or `INDEX.md`: where a fresh reader starts.
+4. Task cards: bounded requests with files, checks, and constraints.
+5. A wellness command: one cheap check that names drift before it becomes failure.
+
+The target repo's own instructions remain primary. Coherence contributes the alignment pattern: local context is included, work stays bounded, proof is explicit, and public artifacts carry only what belongs there.
+
+If the Coherence API is running locally, you can also register the work as an orientation task so the direction, target repo, and proof path stay visible:
+
+```bash
+curl -X POST http://localhost:8000/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "direction": "Tend the target repo with Coherence-style contribution guidance",
+    "task_type": "impl",
+    "context": {
+      "target_repo": "/absolute/path/to/your/repo",
+      "local_context": "branch, setup notes, useful neighboring repos, current blocker",
+      "proof": "exact commands that show the work is whole"
+    }
+  }'
+```
+
+Use the returned task record for coordination. Keep implementation commands inside the target repo unless the task explicitly changes Coherence Network itself.
+
 ## 🔧 Making Changes
 
 ### 1. Create a Feature Branch
@@ -57,6 +158,18 @@ Parallel Codex threads must also follow:
 ```bash
 git checkout -b feature/my-contribution
 ```
+
+For Codex, Claude, Cursor, Gemini, or another coding agent working in this repository, use a task card before edits:
+
+```text
+goal: one sentence
+files_allowed: exact file paths only
+done_when: 1-3 measurable checks
+commands: exact commands to run
+constraints: hard limits and things not to touch
+```
+
+For agent work in another local or public repository, carry the same shape back: an agent entrance file, a human contribution file, a manifest or index, bounded task cards, and one cheap wellness-style command that names drift before it becomes failure.
 
 ### 2. Follow the Spec → Test → Implement Pattern
 
@@ -92,6 +205,16 @@ gh pr create
 Your PR will be reviewed according to the project's quality standards.
 
 ## 📋 Contribution Guidelines
+
+### Contribution Lanes
+
+Use the smallest lane that fits:
+
+| Lane | Good For | Proof |
+|---|---|---|
+| Reader | Understanding, questions, resonance mapping | Specific question or issue |
+| Contributor | Docs, tests, small fixes, spec-scoped implementation | Local command output |
+| Steward | Specs, architecture, deployment, public contributor paths | Spec, evidence, CI, review |
 
 ### Code Quality
 
@@ -167,6 +290,7 @@ Coherence-Network/
 Before contributing, review:
 
 - [CLAUDE.md](CLAUDE.md) — Project configuration and conventions
+- [AGENTS.md](AGENTS.md) — Agent workflow, proof contract, and task-card shape
 - [docs/SETUP.md](docs/SETUP.md) — Development setup
 - [docs/STATUS.md](docs/STATUS.md) — Current implementation status
 - [docs/PLAN.md](docs/PLAN.md) — Project roadmap
