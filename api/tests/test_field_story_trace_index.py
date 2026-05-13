@@ -144,6 +144,7 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
     assert "trace-encounter-next-breath" in artifact_ids
     assert "digital-influence-inventory" in artifact_ids
     assert "trace-digital-influence-inventory" in artifact_ids
+    assert "source-body-registry" in artifact_ids
 
     report_response = client.get("/api/field-stories/urs-field-story/artifacts/influence-breath-cycle")
     assert report_response.status_code == 200, report_response.text
@@ -197,6 +198,7 @@ def test_digital_influence_inventory_registers_full_history_attention():
     assert trace_response.status_code == 200, trace_response.text
     trace = json.loads(trace_response.json()["content"])
     assert trace["schema_version"] == "digital-influence-inventory/v1"
+    assert trace["source_body_registry"]["schema_version"] == "field-source-body-registry/v1"
     assert trace["youtube"]["history_only_takeout"]["events"] > 60000
     assert trace["youtube"]["published_gap"]["missing_2023_events"] > 10000
     assert trace["youtube"]["published_gap"]["missing_before_2024_05_07_events"] > 30000
@@ -221,6 +223,7 @@ def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     trace = json.loads(response.json()["content"])
     assert trace["schema_version"] == "field-source-crypto-trace/v1"
     assert trace["hash_algorithm"] == "sha256"
+    assert trace["source_body_registry"]["schema_version"] == "field-source-body-registry/v1"
     assert trace["normalized_event_trace"]["line_count"] == 69082
     assert trace["normalized_event_trace"]["event_merkle_root"]
     assert trace["roots"]["combined_trace_root"]
