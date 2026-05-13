@@ -6,7 +6,7 @@
     "month_trace_api": "/api/field-stories/urs-field-story/trace/month/{YYYY-MM}",
     "work_trace_api": "/api/field-stories/urs-field-story/trace/work/{work_id}"
   },
-  "generated_at": "2026-05-13T11:39:04.764829+00:00",
+  "generated_at": "2026-05-13T12:07:07.831058+00:00",
   "hash_algorithm": "sha256",
   "normalized_event_trace": {
     "event_leaf_hash_algorithm": "sha256('event:' + canonical_json(row))",
@@ -42,9 +42,9 @@
   "publication_boundary": "This is a compact cryptographic trace. It publishes hashes, sizes, source classes, and Merkle roots; bulky raw source bodies remain outside the repo unless deliberately promoted.",
   "repo_artifacts": [
     {
-      "artifact_relpath": "input/source_body_registry.json",
+      "artifact_relpath": "source-bodies/registry.json",
       "content_type": "application/json",
-      "path": "docs/field/urs/input/source_body_registry.json",
+      "path": "docs/field/urs/source-bodies/registry.json",
       "sha256": "b9643fe74d90b0716ae9cfb4d795b6dbd01f76126aa75d5d9f85990bb5a08b2b",
       "size_bytes": 4543
     },
@@ -108,8 +108,8 @@
       "artifact_relpath": "trace/digital_influence_inventory.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/digital_influence_inventory.json",
-      "sha256": "462b84346a5c321527b9d38e56f8e367439ef6ba78ad45806cf0994d1fb4bbf0",
-      "size_bytes": 106891
+      "sha256": "114351d7313190f72304450448a0d6171ad02691fc6dbdd41110d9d002fc64d3",
+      "size_bytes": 106887
     },
     {
       "artifact_relpath": "output/chronological_story_with_frequency.md",
@@ -120,9 +120,9 @@
     }
   ],
   "roots": {
-    "combined_trace_root": "f48e47790cfb41503c482e06fd8c1e948bc254687ac3e308aeed088c16dd2247",
+    "combined_trace_root": "85657d0096b66596a1a6717c7a541dfc93c1e8cf1a94d12ffed6c1ac627d9bf4",
     "normalized_event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
-    "repo_artifact_merkle_root": "91b18a7051b31f4870530758525200b4f0630182a7f6d88f49cc7cdeb96a8fc5",
+    "repo_artifact_merkle_root": "021a5809c21d2661082cae45928a7d2d24e18689aac80d237aee8b6641ea6c97",
     "source_body_merkle_root": "455948a757f0d11843b8895042df880d8c9ce66a74af4622fe2fcdfadd610dad"
   },
   "schema_version": "field-source-crypto-trace/v1",
@@ -591,7 +591,7 @@
     }
   ],
   "source_body_registry": {
-    "path": "docs/field/urs/input/source_body_registry.json",
+    "path": "docs/field/urs/source-bodies/registry.json",
     "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
     "root_keys": {
       "analysis_root": {

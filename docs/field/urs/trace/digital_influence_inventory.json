@@ -822,7 +822,7 @@
       }
     ]
   },
-  "generated_at": "2026-05-13T11:38:52.578915+00:00",
+  "generated_at": "2026-05-13T12:06:54.957145+00:00",
   "local_source_pdfs": {
     "count": 2,
     "items": [
@@ -957,7 +957,7 @@
   },
   "schema_version": "digital-influence-inventory/v1",
   "source_body_registry": {
-    "path": "docs/field/urs/input/source_body_registry.json",
+    "path": "docs/field/urs/source-bodies/registry.json",
     "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
     "root_keys": {
       "analysis_root": {

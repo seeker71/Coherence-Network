@@ -199,6 +199,7 @@ def test_digital_influence_inventory_registers_full_history_attention():
     trace = json.loads(trace_response.json()["content"])
     assert trace["schema_version"] == "digital-influence-inventory/v1"
     assert trace["source_body_registry"]["schema_version"] == "field-source-body-registry/v1"
+    assert trace["source_body_registry"]["path"].endswith("source-bodies/registry.json")
     assert trace["youtube"]["history_only_takeout"]["events"] > 60000
     assert trace["youtube"]["published_gap"]["missing_2023_events"] > 10000
     assert trace["youtube"]["published_gap"]["missing_before_2024_05_07_events"] > 30000
@@ -213,10 +214,13 @@ def test_digital_influence_inventory_registers_full_history_attention():
 
 def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     story = field_story_service.get_field_story("urs-field-story", include_story=False)
-    artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
+    artifacts = {artifact["artifact_id"]: artifact for artifact in story["artifacts"]}
+    artifact_ids = set(artifacts)
 
     assert "trace-source-crypto" in artifact_ids
     assert "source-crypto-trace-builder" in artifact_ids
+    assert artifacts["source-body-registry"]["path"] == "source-bodies/registry.json"
+    assert artifacts["source-bodies-readme"]["path"] == "source-bodies/README.md"
 
     response = client.get("/api/field-stories/urs-field-story/artifacts/trace-source-crypto")
     assert response.status_code == 200, response.text
@@ -224,6 +228,7 @@ def test_source_crypto_trace_registers_hash_roots_for_dynamic_access():
     assert trace["schema_version"] == "field-source-crypto-trace/v1"
     assert trace["hash_algorithm"] == "sha256"
     assert trace["source_body_registry"]["schema_version"] == "field-source-body-registry/v1"
+    assert trace["source_body_registry"]["path"].endswith("source-bodies/registry.json")
     assert trace["normalized_event_trace"]["line_count"] == 69082
     assert trace["normalized_event_trace"]["event_merkle_root"]
     assert trace["roots"]["combined_trace_root"]

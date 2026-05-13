@@ -6,7 +6,7 @@ Local workspace for analyzing what entered Urs's field through Audible, YouTube,
 - Libation is installed at `/Applications/Libation.app`.
 - Libation settings/database were initialized at `~/Library/Application Support/Libation`.
 - Audible web login succeeded through Playwright on 2026-05-07.
-- Authenticated Audible exports are under `input/audible/playwright/`:
+- Authenticated Audible exports are under `/Users/ursmuff/CoherenceFieldAnalysis/input/audible/playwright/`:
   - `audible-listen-history.json` - visible web listen history.
   - `audible-purchase-history-2016-2026.json` - year-filtered purchases for the last ten years plus current year.
   - `audible-library.json` - current library holdings from all visible library pages.
@@ -16,17 +16,33 @@ Local workspace for analyzing what entered Urs's field through Audible, YouTube,
   - duration-weighted monthly influence using Audible catalog runtime length, with event counts kept as secondary context.
 - `trace/audible_duration_metadata.json` carries compact Audible catalog runtime metadata used by the duration-weighted trace.
 - `trace/youtube_podcast_spectrum.json` carries the podcast-shaped YouTube influence wave. RSS-era subscriptions are not in the local source body yet, so this treats YouTube as the current podcast surface and marks estimated episode lengths when Takeout lacks duration.
-- No local Google Takeout / YouTube history export was found under `Downloads`, `Documents`, or `Desktop`.
+- Local Google Takeout / YouTube history archives are named in `source-bodies/registry.json`; raw archives remain in `/Users/ursmuff/Downloads` while compact event traces circulate here.
 
-## Input Slots
-- `input/audible/` - place Libation exports here, preferably `libation-library.json` or `libation-library.csv`.
-  - Playwright-authenticated Audible exports in `input/audible/playwright/` are loaded automatically.
-- `input/youtube/` - place Google Takeout files here:
+## Field Story Structure
+
+- `anchors/` holds hand-tended reference points that shape interpretation.
+- `source-bodies/` names the raw archives, exports, browser traces, PDFs, and project bodies that remain in local custody while compact traces circulate through the repo.
+- `input/` holds explicit seeds for the next ingest or encounter breath.
+- `trace/` holds machine-readable indexes, hashes, and compact source evidence.
+- `output/` holds human-readable stories and reports generated from the trace.
+- `tools/` holds the small builders that digest source bodies into trace and output artifacts.
+
+## Source Bodies
+
+- `source-bodies/registry.json` is the custody map for local source-body groups, exact paths, glob patterns, ingestion policies, and publication boundaries.
+- Bulky source bodies stay in `/Users/ursmuff/CoherenceFieldAnalysis` or `/Users/ursmuff/Downloads` unless a later breath promotes a specific shape into this repo.
+- Builders read the registry and publish only compact counts, hashes, summaries, and evidence levels.
+
+## Local Source Body Slots
+- `/Users/ursmuff/CoherenceFieldAnalysis/input/audible/` receives Libation exports, preferably `libation-library.json` or `libation-library.csv`.
+  - Playwright-authenticated Audible exports in `/Users/ursmuff/CoherenceFieldAnalysis/input/audible/playwright/` are loaded automatically.
+- `/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/` receives Google Takeout files:
   - `Takeout/YouTube and YouTube Music/history/watch-history.json`
   - or `watch-history.html`
   - optionally `My Activity/YouTube/MyActivity.json` or `.html` if Takeout's YouTube history is incomplete.
 - `anchors/manual_reading_anchors.json` - manual seed anchors already provided by Urs.
-- `input/browser/local_browser_events.jsonl` - generated from local Chrome/Chromium traces when service exports are not available.
+- `/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl` is generated from local Chrome/Chromium traces when service exports are not available.
+- `input/encounter_next_breath.txt` is a repo-held seed for the next encounter pass, not a source-body registry.
 
 ## Export Commands
 After Audible login + scan in Libation:
