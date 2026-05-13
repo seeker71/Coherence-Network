@@ -83,6 +83,9 @@ class FederationSyncHistoryRecord(Base):
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
     links_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     events_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Count of substance proposals (concept/spec/idea/teaching) carried in
+    # this payload. Nullable for back-compat with pre-substance rows.
+    proposals_received: Mapped[int | None] = mapped_column(Integer, nullable=True, default=0)
     governance_requests_created: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     accepted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     rejected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -202,6 +205,33 @@ class FederatedAggregationRecord(Base):
 def _ensure_schema() -> None:
     _udb.ensure_schema()
     _ensure_node_measurement_summary_columns()
+    _ensure_federation_sync_history_columns()
+
+
+def _ensure_federation_sync_history_columns() -> None:
+    """Backfill the proposals_received column on older snapshots.
+
+    The substance-payload breath added this column; sqlite snapshots and
+    long-running postgres instances from before that breath need it added
+    in place. Same pattern as ``_ensure_node_measurement_summary_columns``.
+    """
+    eng = _udb.engine()
+    try:
+        inspector = inspect(eng)
+        if "federation_sync_history" not in inspector.get_table_names():
+            return
+        existing = {str(col.get("name")) for col in inspector.get_columns("federation_sync_history")}
+        if "proposals_received" in existing:
+            return
+        with eng.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE federation_sync_history "
+                    "ADD COLUMN proposals_received INTEGER NULL DEFAULT 0"
+                )
+            )
+    except Exception:
+        logger.exception("Failed to ensure federation_sync_history runtime columns")
 
 
 def _ensure_node_measurement_summary_columns() -> None:
@@ -321,16 +351,43 @@ def get_instance(instance_id: str) -> FederatedInstance | None:
 # Payload processing
 # ---------------------------------------------------------------------------
 
+# Map from FederatedPayload list-attribute → (federation_type discriminator,
+# short label used in change-request titles). Substance flows through the
+# same governance path as telemetry but auto_apply_on_approval=False because
+# the body's substance wants a maintainer's eye and a PR — the applier just
+# records the proposal as "stored".
+_SUBSTANCE_PROPOSAL_KINDS: tuple[tuple[str, str, str], ...] = (
+    ("concept_proposals", "concept_proposal", "concept"),
+    ("spec_proposals", "spec_proposal", "spec"),
+    ("idea_proposals", "idea_proposal", "idea"),
+    ("teaching_proposals", "teaching_proposal", "teaching"),
+)
+
+
 def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
     """Main entry point: receive data from a remote instance.
 
-    1. Validate source_instance_id is registered
-    2. For each lineage_link, create a governance ChangeRequest
-    3. For each usage_event, create a governance ChangeRequest
-    4. Store the payload for audit
-    5. Return sync result with counts
+    Two layers travel together:
+
+    - **Telemetry** (lineage_links, usage_events) — small structured
+      observations. Each becomes a governance ChangeRequest with
+      ``auto_apply_on_approval=True``: once two approvals clear, the
+      applier writes the link/event into the local lineage graph.
+    - **Substance** (concept_proposals, spec_proposals, idea_proposals,
+      teaching_proposals) — body-level material the peer would like this
+      body to absorb. Each becomes a governance ChangeRequest with
+      ``auto_apply_on_approval=False``: the proposal is held by governance
+      and a maintainer walks it into the repo as a PR. Substance never
+      writes directly into the deployed corpus.
+
+    Both layers require an instance with trust_level ≥ pending and
+    enforce required_approvals ≥ 2 (see governance_service).
     """
     result = FederationSyncResult(source_instance_id=payload.source_instance_id)
+
+    proposal_total = sum(
+        len(getattr(payload, attr)) for attr, _ft, _label in _SUBSTANCE_PROPOSAL_KINDS
+    )
 
     # 1. Validate registration
     instance = get_instance(payload.source_instance_id)
@@ -338,7 +395,9 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
         result.errors.append(
             f"Instance '{payload.source_instance_id}' is not registered"
         )
-        result.rejected = len(payload.lineage_links) + len(payload.usage_events)
+        result.rejected = (
+            len(payload.lineage_links) + len(payload.usage_events) + proposal_total
+        )
         return result
 
     if not check_trust_level(payload.source_instance_id, required_level="pending"):
@@ -346,6 +405,7 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
 
     result.links_received = len(payload.lineage_links)
     result.events_received = len(payload.usage_events)
+    result.proposals_received = proposal_total
     governance_created = 0
 
     # 2. Create governance requests for lineage links
@@ -394,13 +454,48 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
             logger.warning("Federation usage_event import failed", exc_info=True)
             result.errors.append(f"usage_event error: {exc}")
 
+    # 4. Create governance requests for substance proposals.
+    #
+    # auto_apply_on_approval is False: the applier records the proposal as
+    # "stored", and a maintainer walks it into the repo. Substance is held
+    # by governance, not written by the API.
+    for attr, federation_type, label in _SUBSTANCE_PROPOSAL_KINDS:
+        for item in getattr(payload, attr):
+            item_id = (item or {}).get("id") if isinstance(item, dict) else None
+            id_suffix = f" '{item_id}'" if item_id else ""
+            try:
+                cr = governance_service.create_change_request(
+                    ChangeRequestCreate(
+                        request_type=ChangeRequestType.FEDERATION_IMPORT,
+                        title=(
+                            f"Federation proposal: {label}{id_suffix} "
+                            f"from {payload.source_instance_id}"
+                        ),
+                        payload={
+                            "federation_type": federation_type,
+                            "source_instance_id": payload.source_instance_id,
+                            "data": item,
+                        },
+                        proposer_id=f"federation:{payload.source_instance_id}",
+                        proposer_type=ActorType.MACHINE,
+                        auto_apply_on_approval=False,
+                    )
+                )
+                governance_created += 1
+                result.accepted += 1
+            except Exception as exc:
+                logger.warning(
+                    "Federation %s import failed", federation_type, exc_info=True
+                )
+                result.errors.append(f"{federation_type} error: {exc}")
+
     result.governance_requests_created = governance_created
 
-    # 4. Update last_sync_at on the instance
+    # 5. Update last_sync_at on the instance
     instance.last_sync_at = datetime.now().isoformat()
     register_instance(instance)
 
-    # 5. Store payload for audit
+    # 6. Store payload for audit
     now_iso = datetime.now().isoformat()
     with _session() as s:
         rec = FederationSyncHistoryRecord(
@@ -409,6 +504,7 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
             timestamp=payload.timestamp,
             links_received=result.links_received,
             events_received=result.events_received,
+            proposals_received=result.proposals_received,
             governance_requests_created=result.governance_requests_created,
             accepted=result.accepted,
             rejected=result.rejected,
@@ -442,6 +538,7 @@ def list_sync_history(limit: int = 200) -> list[dict]:
                 "timestamp": r.timestamp,
                 "links_received": r.links_received,
                 "events_received": r.events_received,
+                "proposals_received": r.proposals_received or 0,
                 "governance_requests_created": r.governance_requests_created,
                 "accepted": r.accepted,
                 "rejected": r.rejected,

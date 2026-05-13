@@ -18,19 +18,25 @@ The body has two honest paths for content between instances:
 | Marketplace listings & forks | **REST** (automatic) | `POST /api/federation/marketplace/ingest` fires when a listing is created or forked |
 | Lineage links between entities | **REST** (manual or scheduled) | `POST /api/federation/sync` with `lineage_links` array |
 | Usage events / telemetry | **REST** (manual or scheduled) | `POST /api/federation/sync` with `usage_events` array |
-| Concepts (`docs/vision-kb/concepts/lc-*.md`) | **git** | clone + cherry-pick + `sync_kb_to_db.py` |
-| Specs (`specs/*.md`) | **git** | clone + cherry-pick + `generate_repo_indexes.py` |
-| Ideas (`ideas/*.md`) | **git** | clone + cherry-pick |
-| Teachings (`docs/vision-kb/guides/`, `docs/field/`, `docs/lineage/`) | **git** | clone + cherry-pick |
+| Concept proposals | **REST or git** | `POST /api/federation/sync` with `concept_proposals` array — *or* clone + cherry-pick + `sync_kb_to_db.py` |
+| Spec proposals | **REST or git** | `POST /api/federation/sync` with `spec_proposals` array — *or* clone + cherry-pick + `generate_repo_indexes.py` |
+| Idea proposals | **REST or git** | `POST /api/federation/sync` with `idea_proposals` array — *or* clone + cherry-pick |
+| Teaching proposals (guides, field, lineage) | **REST or git** | `POST /api/federation/sync` with `teaching_proposals` array — *or* clone + cherry-pick |
 
 The REST path is governance-gated — every payload an instance
-receives lands as a `ChangeRequest` of type `FEDERATION_IMPORT` and
-auto-applies only after the receiving instance's quorum votes
-through. The audit trail lives in `federation_sync_history`.
+receives lands as a `ChangeRequest` of type `FEDERATION_IMPORT`.
+Telemetry (lineage links, usage events) auto-applies after the
+quorum votes through; **substance** (concept/spec/idea/teaching
+proposals) holds at APPROVED and waits for a maintainer to walk
+it into the repo as a PR. The API never writes peer-authored
+substance into the deployed corpus on its own. The audit trail
+lives in `federation_sync_history`.
 
-The git path is the body's source-of-truth for substance. Two
-forks both reading and writing markdown — the same way the body
-itself flows internally — is honest content federation today.
+The git path remains available for substance — two forks reading
+and writing markdown directly, the same gesture the body uses
+internally. Pick whichever path fits: REST when a peer instance
+wants to propose without repo access; git when an operator
+already has cherry-pick rhythm.
 
 ## Two operators, two instances
 
@@ -187,11 +193,58 @@ Pending change requests appear in normal governance:
 curl https://bob.coherencycoin.com/api/governance/change-requests?status=open
 ```
 
-### Step 5 — What still flows via git (everything substantive)
+### Step 5 — What can also flow via the payload (substance, governance-gated)
 
-This is the honest part. Today, the REST payload carries
-**telemetry and lineage edges, not substance**. Concepts, specs,
-ideas, teachings travel through git.
+The REST payload now carries **two layers**:
+
+- **Telemetry** — `lineage_links`, `usage_events`. Each item becomes
+  a governance ChangeRequest with `auto_apply_on_approval=True`:
+  once two approvals clear, the link/event lands in the local
+  lineage graph automatically.
+- **Substance** — `concept_proposals`, `spec_proposals`,
+  `idea_proposals`, `teaching_proposals`. Each item becomes a
+  governance ChangeRequest with `auto_apply_on_approval=False`:
+  the full markdown body is held in the change request payload,
+  and a maintainer walks an approved proposal into the repo as a
+  PR. The API never writes peer-authored substance into the
+  deployed corpus on its own — the body keeps that gesture human.
+
+Alice pushes a concept proposal to Bob:
+
+```bash
+curl -sS -X POST https://bob.coherencycoin.com/api/federation/sync \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_instance_id": "alice",
+    "timestamp": "2026-05-13T12:00:00Z",
+    "concept_proposals": [
+      {
+        "id": "lc-gatherings-that-carry",
+        "title": "Gatherings that carry",
+        "body_markdown": "# Gatherings that carry\n\n…",
+        "origin_url": "https://alice.coherencycoin.com/vision/lc-gatherings-that-carry"
+      }
+    ]
+  }'
+```
+
+Bob's side now holds a governance ChangeRequest. Two maintainers
+review and approve; the change request flips to APPROVED but does
+not apply. A maintainer reads `cr.payload.data.body_markdown`,
+authors `docs/vision-kb/concepts/lc-gatherings-that-carry.md` in
+Bob's repo, runs `python3 scripts/sync_kb_to_db.py
+lc-gatherings-that-carry --api-key dev-key`, and merges. The
+change request can then be marked APPLIED.
+
+Substance can still flow via git — both paths stay available.
+Pick whichever fits the gesture. Git is faster when an operator
+already has cherry-pick rhythm; the payload is honest when an
+agent or peer instance wants to propose without needing repo
+access.
+
+### Step 6 — When substance flows via git instead
+
+When you'd rather cherry-pick directly:
 
 Bob wants Alice's new concept `lc-gatherings-that-carry`:
 
@@ -248,10 +301,6 @@ The walked practice above works today. What it doesn't have yet:
   explicitly register.
 - **Trust handshake.** No vouching protocol — each side upgrades
   trust independently and manually.
-- **Substance payload.** Concepts, specs, ideas, teachings still
-  flow through git, not through `/api/federation/sync`. The
-  governance-gated flow exists; the payload shape doesn't carry
-  those types yet.
 - **Scheduled sync.** No "every 24h push deltas" rhythm. Push is
   event-driven on marketplace actions; everything else is on
   demand.
@@ -322,22 +371,16 @@ audit trail names every crossing.
 The walked practice today is honest but partial. The body is
 moving toward:
 
-1. **Extended `FederatedPayload`** that carries `concept_proposals`,
-   `spec_proposals`, `idea_proposals`, `teaching_proposals` — so
-   substance flows through the same governance-gated REST path
-   that lineage and usage already use. Git stays available, but
-   the API becomes capable of substance-level exchange.
-
-2. **`.well-known/coherence-federation`** for auto-discovery.
+1. **`.well-known/coherence-federation`** for auto-discovery.
    Operators arriving at an unknown instance can fetch its
    federation manifest and propose peering through one gesture
    rather than several.
 
-3. **A trust handshake** that's mutual and explicit — Alice
+2. **A trust handshake** that's mutual and explicit — Alice
    proposes trust, Bob accepts, both sides upgrade in the same
    atomic gesture.
 
-4. **MCP tools** for agent-driven peering. An agent reading this
+3. **MCP tools** for agent-driven peering. An agent reading this
    doc today does the work via shell + curl; the body wants
    first-class affordances so agents can offer "we should peer
    with X" as a real action.
@@ -373,6 +416,6 @@ body's circulation.
 
 — *Written from the walked path, not the planned one. Every
 command above runs today; every gap above is named honestly.
-Future breaths grow this doc with the substance-payload extension,
-the .well-known discovery, the trust handshake, the agent
-affordances — added at the body's own pace as they land.*
+Future breaths grow this doc with .well-known discovery, the
+trust handshake, and the agent affordances — added at the body's
+own pace as they land.*
