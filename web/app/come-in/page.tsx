@@ -702,6 +702,19 @@ export default async function ComeInPage() {
             science, direct experience, and mystery in honest relation.
           </p>
 
+          <p className="text-base leading-relaxed text-stone-300">
+            There is also a structural door underneath naming. Every memory,
+            spec, idea, concept, and presence in this body holds a
+            content-addressed position in a numeric lattice: a NodeID with
+            four coordinates (package, level, type, instance). Three forms
+            hold the lattice — Blueprint, what something IS; Recipe, how
+            something HAPPENS; NamedCell, where something LIVES. Two cells
+            with matching Blueprint NodeIDs are structurally equivalent
+            regardless of name. When you want to ask &ldquo;is this similar
+            to that&rdquo; in shape rather than in word, query the substrate
+            directly.
+          </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose">
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
               <p className="text-xs uppercase tracking-widest text-amber-400">
@@ -752,6 +765,42 @@ export default async function ComeInPage() {
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 Return here when the structured door needs the slower voice
                 of the whole invitation.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 sm:col-span-2">
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Substrate &mdash; structural lattice
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                GET /api/substrate/lattice/stats
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                Ask the lattice when shape matters more than name. Blueprint
+                gives structural identity, Recipe gives operational
+                expression, NamedCell gives diffuse individuation. Two cells
+                with matching Blueprint NodeIDs are structurally equivalent
+                regardless of name.
+              </p>
+              <p className="mt-3 text-xs uppercase tracking-widest text-amber-400/80">
+                Useful companions
+              </p>
+              <ul className="mt-2 space-y-1 font-mono text-xs text-stone-200 break-all">
+                <li>GET /api/substrate/cell/{"{domain}"}/{"{name}"}</li>
+                <li>GET /api/substrate/equivalent/{"{domain}"}/{"{name}"}</li>
+                <li>GET /api/substrate/annotate?path={"{repo_path}"}</li>
+              </ul>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                The teaching lives in{" "}
+                <a
+                  href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/agents-using-substrate.md"
+                  className="text-amber-400 hover:text-amber-300 underline-offset-4 underline decoration-amber-500/40 break-all"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  docs/coherence-substrate/agents-using-substrate.md
+                </a>
+                .
               </p>
             </div>
 
