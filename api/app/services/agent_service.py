@@ -146,6 +146,30 @@ def get_agent_invitation() -> dict[str, Any]:
                 "use": "let an MCP-compatible agent receive the invitation without scraping pages",
                 "next": ["coherence_status", "coherence_resonance", "coherence_task_next"],
             },
+            {
+                "surface": "substrate",
+                "door": "GET https://api.coherencycoin.com/api/substrate/lattice/stats",
+                "path": "/api/substrate/lattice/stats",
+                "use": (
+                    "sense the structural lattice that grounds the field: every memory, "
+                    "spec, idea, concept, and presence has a content-addressed position "
+                    "as NodeID(package, level, type, instance). Three forms hold the "
+                    "lattice — Blueprint (what something IS, structural identity), "
+                    "Recipe (how something HAPPENS, operational expression), NamedCell "
+                    "(where something LIVES, diffuse individuation). Two cells with "
+                    "matching Blueprint NodeIDs are structurally equivalent regardless "
+                    "of name; the lattice answers 'is this similar to that' in shape, "
+                    "not in lexical match. Read-only REST surface; the teaching lives "
+                    "in docs/coherence-substrate/agents-using-substrate.md."
+                ),
+                "next": [
+                    "GET /api/substrate/cell/{domain}/{name}",
+                    "GET /api/substrate/equivalent/{domain}/{name}",
+                    "GET /api/substrate/annotate?path={repo_path}",
+                    "GET /api/substrate/compatible_with/{package}/{level}/{type}/{instance}",
+                    "GET /api/substrate/histogram/{domain}",
+                ],
+            },
         ],
         "public_entry_invitation": {
             "who_is_invited": (
