@@ -24,6 +24,7 @@ SOURCE_PATTERNS = [
     ("audible-export", ANALYSIS_ROOT / "input" / "audible", ["*.json", "*.jsonl", "*.csv", "*.html"]),
     ("browser-trace", ANALYSIS_ROOT / "input" / "browser", ["*.json", "*.jsonl", "*.sqlite", "*.db"]),
     ("downloaded-takeout", DOWNLOADS_DIR, ["takeout-*.zip"]),
+    ("channeled-message-pdf", DOWNLOADS_DIR, ["Friday Live Channeled Message *.pdf"]),
     ("photo-archive", DOWNLOADS_DIR, ["Photos-*.zip"]),
     ("project-archive", DOWNLOADS_DIR, ["Water Project.zip", "Angelic-*.zip"]),
 ]

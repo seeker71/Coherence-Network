@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
+import mimetypes
 import re
+import subprocess
 import zipfile
 from collections import Counter
 from datetime import UTC, datetime
@@ -15,6 +18,7 @@ from typing import Any
 
 GENERIC_AUTHORS = {"here", "unknown", "empty artist - topic"}
 TAKEOUT_DATE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s*[AP]M)\s*([A-Z]+)?")
+LOCAL_SOURCE_PDF_PATTERNS = ("Friday Live Channeled Message *.pdf",)
 PUBLISHED_TRACE_START = datetime(2024, 5, 7)
 
 
@@ -43,6 +47,14 @@ def read_json(path: Path) -> Any:
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def top(counter: Counter[Any], limit: int = 20) -> list[dict[str, Any]]:
@@ -266,6 +278,74 @@ def summarize_project_archives(downloads_dir: Path) -> dict[str, Any]:
     return archives
 
 
+def _pdfinfo(path: Path) -> dict[str, str]:
+    try:
+        result = subprocess.run(
+            ["pdfinfo", str(path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return {}
+    if result.returncode != 0:
+        return {}
+    rows: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        rows[key.strip().lower().replace(" ", "_")] = clean(value)
+    return rows
+
+
+def _date_hint_from_filename(path: Path) -> str | None:
+    match = re.search(r"\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b", path.stem)
+    if not match:
+        return None
+    month, day, year = match.groups()
+    if len(year) == 2:
+        year = f"20{year}"
+    return f"{year}-{int(month):02d}-{int(day):02d}"
+
+
+def summarize_local_source_pdfs(downloads_dir: Path) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    seen: set[Path] = set()
+    for pattern in LOCAL_SOURCE_PDF_PATTERNS:
+        for path in sorted(downloads_dir.glob(pattern)):
+            if not path.is_file() or path in seen:
+                continue
+            seen.add(path)
+            stat = path.stat()
+            metadata = _pdfinfo(path)
+            items.append(
+                {
+                    "file_name": path.name,
+                    "path": str(path),
+                    "label": "channeled-message-pdf",
+                    "title_hint": path.stem,
+                    "date_hint": _date_hint_from_filename(path),
+                    "size_bytes": stat.st_size,
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
+                    "sha256": sha256_file(path),
+                    "content_type": mimetypes.guess_type(path.name)[0] or "application/pdf",
+                    "pages": int(metadata["pages"]) if metadata.get("pages", "").isdigit() else None,
+                    "author": metadata.get("author"),
+                    "creator": metadata.get("creator"),
+                    "ingestion_policy": "metadata_hashes_and_summary_only",
+                    "publication_boundary": "The raw PDF and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention.",
+                }
+            )
+    return {
+        "count": len(items),
+        "patterns": list(LOCAL_SOURCE_PDF_PATTERNS),
+        "items": items,
+        "publication_boundary": "PDF source bodies are represented by metadata and hashes only until a specific summary/extracted-concept breath is chosen.",
+    }
+
+
 def summarize_agent_history() -> dict[str, Any]:
     root = Path.home() / ".gemini" / "history"
     if not root.exists():
@@ -328,6 +408,7 @@ def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str
         "browser": summarize_browser(analysis_root),
         "photos": summarize_photos(downloads_dir),
         "project_archives": summarize_project_archives(downloads_dir),
+        "local_source_pdfs": summarize_local_source_pdfs(downloads_dir),
         "agent_history": summarize_agent_history(),
     }
 
@@ -358,6 +439,7 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"- YouTube uploads/library archives: {payload['youtube']['uploads_and_library_parts']['audio_upload_files']} audio files and {payload['youtube']['uploads_and_library_parts']['video_upload_files']} video files across {payload['youtube']['uploads_and_library_parts']['archives']} archives.",
         f"- Audible library/listen/purchase captures: {payload['audible']['library']['events']} library, {payload['audible']['listen_history']['events']} listen-history, {payload['audible']['purchase_history']['events']} purchase-history rows.",
         f"- Local browser trace: {payload['browser']['events']} events, `{payload['browser']['first']}` to `{payload['browser']['last']}`.",
+        f"- Local source PDFs: {payload['local_source_pdfs']['count']} metadata-only bodies.",
         "",
         "## Expanded Trace Before The Former Window",
         "",
@@ -389,10 +471,22 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         lines.append(f"- `{name}`: {row['files']} files, filename dates `{row['first_date_from_filename']}` to `{row['last_date_from_filename']}`")
     for name, row in payload["project_archives"].items():
         lines.append(f"- `{name}`: {row['files']} files")
+    lines.extend(["", "## Local Source PDFs", ""])
+    lines.append(payload["local_source_pdfs"]["publication_boundary"])
+    lines.append("")
+    for row in payload["local_source_pdfs"]["items"]:
+        page_note = f", {row['pages']} pages" if row.get("pages") else ""
+        author_note = f", author `{row['author']}`" if row.get("author") else ""
+        date_note = f", date hint `{row['date_hint']}`" if row.get("date_hint") else ""
+        lines.append(
+            f"- `{row['file_name']}`: `{row['label']}`, {row['size_bytes']} bytes{page_note}{author_note}{date_note}; "
+            f"policy `{row['ingestion_policy']}`."
+        )
     lines.extend(["", "## Next Breath", ""])
     lines.append("- Use `trace/monthly_spectrum.json`, `trace/author_index.jsonl`, and `trace/work_index.jsonl` as the compact query layer for the expanded YouTube trace.")
     lines.append("- Add a 2023/early-2024 transition room for the flamenco/Spanish-guitar body wave and its bridge into devotional-body music.")
     lines.append("- Add a separate unresolved-author cleanup for `here` YouTube rows before treating them as real influence presences.")
+    lines.append("- Decide whether `Friday Live Channeled Message 5.8.26.pdf` wants a separate summary/extracted-concept artifact; the raw PDF remains a local source body.")
     lines.append("- Keep Photos and Gmail at metadata/header level in this compact pass; deeper source-specific analysis can happen when that breath is useful.")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
