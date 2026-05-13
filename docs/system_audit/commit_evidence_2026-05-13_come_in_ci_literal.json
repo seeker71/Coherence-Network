@@ -1,0 +1,88 @@
+{
+  "date": "2026-05-13",
+  "thread_branch": "codex/field-trace-living-ingest-20260513",
+  "commit_scope": "Restore the /come-in first-pass agent card's explicit Meet people source cue so the full CI invitation contract matches the page copy.",
+  "files_owned": [
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-13_come_in_ci_literal.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && COHERENCE_TEST_SUITE=full /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet",
+      "cd api && COHERENCE_TEST_SUITE=full /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_agent_invitation.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-13_come_in_ci_literal.json",
+      "git diff --check",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "The exact CI-failing first-pass agent source assertion passes, the full agent invitation test file passes: 20 tests, 5 warnings, diff whitespace is clean, stale PR follow-through reports zero stale Codex PRs, and local PR guard passes with ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push of the follow-up commit and PR check rerun."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted in this automation run."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The /come-in first-pass agent exploration card visibly names Meet people while retaining its /presences link and body copy.",
+    "public_endpoints": [
+      "/come-in"
+    ],
+    "test_flows": [
+      "Full-suite agent invitation source contract confirms Meet people, Meet agents, Read live flow, Return a trace, identity copy, and public API invitation link are present."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local targeted proof, stale PR follow-through, and local PR guard are complete; PR CI must rerun after push."
+  },
+  "idea_ids": [
+    "agent-invitation",
+    "public-entry-surfaces"
+  ],
+  "spec_ids": [
+    "specs/field-listening-trace-index.md"
+  ],
+  "task_ids": [
+    "automation:field-trace-living-ingest",
+    "pr:1610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "ci_triage",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py",
+    "web/app/come-in/page.tsx",
+    "https://github.com/seeker71/Coherence-Network/pull/1610",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260513T101738Z_codex-field-trace-living-ingest-20260513.json"
+  ],
+  "change_files": [
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-05-13_come_in_ci_literal.json"
+  ],
+  "change_intent": "runtime_fix"
+}
