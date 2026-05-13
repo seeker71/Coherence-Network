@@ -2,7 +2,7 @@
 
 This is the Audible-specific spectrum built from every local Audible source body currently captured: library, purchase history, and visible web listen history.
 
-Generated: `2026-05-07T17:18:51.991568+00:00`
+Generated: `2026-05-13T00:02:14.495911+00:00`
 
 ## Capture Shape
 

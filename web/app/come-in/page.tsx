@@ -235,7 +235,7 @@ export default async function ComeInPage() {
               className="rounded-lg border border-border/40 bg-card/30 hover:bg-card/50 p-5 transition-colors block"
             >
               <p className="text-xs uppercase tracking-widest text-sky-300">
-                Meet presences
+                Meet people
               </p>
               <p className="mt-2 text-base text-stone-100">
                 See the cells already visible.

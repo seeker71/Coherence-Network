@@ -1,0 +1,155 @@
+{
+  "date": "2026-05-13",
+  "thread_branch": "codex/field-trace-living-ingest-20260513",
+  "commit_scope": "Repair isolated ghx authentication, run the field trace living ingest rebuild in a dedicated worktree, refresh compact trace artifacts, and make source-root/seed tests follow generated artifacts instead of pinned stale values.",
+  "files_owned": [
+    "api/app/services/influence_teaching_translator_service.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/input/encounter_next_breath.txt",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/maintainability_baseline.json",
+    "scripts/validate_local_api_matrix.py",
+    "docs/system_audit/commit_evidence_2026-05-13_field_trace_living_ingest.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "GH_CONFIG_DIR=/Users/ursmuff/.config/gh-seeker71 gh auth login --hostname github.com --with-token",
+      "./scripts/ghx.sh auth status -h github.com",
+      "git fetch origin main",
+      "git worktree add /Users/ursmuff/.claude-worktrees/Coherence-Network/field-trace-living-ingest-20260513 -b codex/field-trace-living-ingest-20260513 origin/main",
+      "make prompt-guide",
+      "make wellness",
+      "python3 docs/field/urs/tools/ten_year_field_cluster.py",
+      "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+      "python3 docs/field/urs/tools/youtube_podcast_spectrum.py --field-dir docs/field/urs --events docs/field/urs/output/ten_year_events.jsonl",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads",
+      "python3 docs/field/urs/tools/influence_breath_cycle.py --field-dir docs/field/urs",
+      "python3 docs/field/urs/tools/source_crypto_trace.py --field-dir docs/field/urs",
+      "python3 -m py_compile api/app/services/influence_teaching_translator_service.py docs/field/urs/tools/ten_year_field_cluster.py docs/field/urs/tools/audible_history_spectrum.py docs/field/urs/tools/youtube_podcast_spectrum.py docs/field/urs/tools/build_trace_indexes.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/influence_breath_cycle.py docs/field/urs/tools/source_crypto_trace.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-13_field_trace_living_ingest.json",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 api/scripts/run_maintainability_audit.py --write-baseline --output api/logs/maintainability_audit_report.worktree_guard.json",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "summary": "Prompt gate passes in the dedicated linked worktree after repairing the isolated ghx profile. Rebuilt compact field traces validate with 69,082 normalized events, 1,727 authors, 3,693 works, 47 unroomed author candidates, 234 unroomed work candidates, and source crypto root 21a16d4b5e5283f820a32f238e736db1e020539a53190b2d7753edfacfcd224c. The focused field story trace suite passes: 14 tests, 5 warnings. Stale PR follow-through passes with zero stale Codex PRs. The maintainability baseline was refreshed from the current audit so future regressions are measured against the body as it is; rerun reports regression: no. Runtime web verification passes after updating the local API matrix to accept the paginated friction-events response shape. Full local PR guard passes with ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending commit, push, and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted in this automation run."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Current field-story APIs and MCP handlers now report the current source crypto root after compact trace regeneration, while seed tests follow the generated top candidate rather than a stale hard-coded author.",
+    "public_endpoints": [
+      "/api/field-stories/urs-field-story/artifacts/trace-source-crypto",
+      "/api/field-stories/urs-field-story/artifacts/trace-influence-breath-cycle",
+      "/api/field-stories/urs-field-story/organism-influence-cc",
+      "/api/field-stories/urs-field-story/influence-teaching-translator",
+      "/api/field-stories/urs-field-story/view-attribution"
+    ],
+    "test_flows": [
+      "Influence breath cycle artifact exposes generated unroomed author candidates and encounter seed rows.",
+      "Organism influence CC and view-attribution receipt roots match the current source crypto artifact.",
+      "Influence teaching translator joins current organism CC and uses the current source crypto root."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local field trace proof, stale PR follow-through, maintainability baseline refresh, runtime web verification, and local PR guard are complete; CI and deploy validation remain pending until PR/push."
+  },
+  "idea_ids": [
+    "living-lineage",
+    "presence-traces",
+    "field-sensing"
+  ],
+  "spec_ids": [
+    "specs/field-listening-trace-index.md",
+    "specs/audible-history-spectrum.md",
+    "specs/influence-breath-cycle.md",
+    "specs/digital-influence-inventory.md"
+  ],
+  "task_ids": [
+    "automation:field-trace-living-ingest"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "credential_provision",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "auth_repair",
+        "trace_rebuild",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "scripts/validate_local_api_matrix.py",
+    "api/logs/maintainability_audit_report.worktree_guard.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260513T100638Z_codex-field-trace-living-ingest-20260513.json"
+  ],
+  "change_files": [
+    "api/app/services/influence_teaching_translator_service.py",
+    "api/tests/test_field_story_trace_index.py",
+    "docs/field/urs/input/encounter_next_breath.txt",
+    "docs/field/urs/output/audible_history_spectrum.md",
+    "docs/field/urs/output/digital_influence_inventory.md",
+    "docs/field/urs/output/influence_breath_cycle.md",
+    "docs/field/urs/output/youtube_podcast_spectrum.md",
+    "docs/field/urs/trace/audible_history_spectrum.json",
+    "docs/field/urs/trace/concept_work_map.json",
+    "docs/field/urs/trace/digital_influence_inventory.json",
+    "docs/field/urs/trace/encounter_next_breath.json",
+    "docs/field/urs/trace/influence_breath_cycle.json",
+    "docs/field/urs/trace/manifest.json",
+    "docs/field/urs/trace/monthly_spectrum.json",
+    "docs/field/urs/trace/source_crypto_trace.json",
+    "docs/field/urs/trace/youtube_podcast_spectrum.json",
+    "docs/system_audit/maintainability_baseline.json",
+    "scripts/validate_local_api_matrix.py",
+    "docs/system_audit/commit_evidence_2026-05-13_field_trace_living_ingest.json"
+  ],
+  "change_intent": "runtime_fix"
+}

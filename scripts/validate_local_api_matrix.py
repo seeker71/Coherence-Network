@@ -57,7 +57,7 @@ API_CONTRACTS: list[EndpointContract] = [
     EndpointContract("automation_usage", "/api/automation/usage?force_refresh=true", lambda body: _has_keys(body, "providers", "tracked_providers"), "automation usage"),
     EndpointContract("automation_readiness", "/api/automation/usage/readiness?force_refresh=true", lambda body: _has_keys(body, "providers", "all_required_ready", "blocking_issues"), "automation readiness"),
     EndpointContract("friction_report", "/api/friction/report?window_days=7", lambda body: _has_keys(body, "total_events", "open_events", "top_block_types"), "friction report"),
-    EndpointContract("friction_events", "/api/friction/events?limit=20", lambda body: isinstance(body, list), "friction events"),
+    EndpointContract("friction_events", "/api/friction/events?limit=20", lambda body: _is_list_payload(body, "items"), "friction events"),
     EndpointContract("friction_entry_points", "/api/friction/entry-points?window_days=7&limit=25", lambda body: _has_keys(body, "entry_points", "total_entry_points", "open_entry_points"), "friction entry points"),
     EndpointContract("identity_providers", "/api/identity/providers", lambda body: _has_keys(body, "categories"), "identity providers"),
     EndpointContract("onboarding_roi", "/api/onboarding/roi", lambda body: _has_keys(body, "handle_registrations"), "onboarding ROI"),
