@@ -3,17 +3,17 @@ idea_id: developer-experience
 status: done
 source:
   - file: scripts/external_proof_demo.py
-    symbols: [_idea_create_payload, run_idea_lifecycle, record_contribution, check_coherence_score]
+    symbols: [ProofRunner, create_idea, advance_stage, record_contribution, check_coherence_score, archive_idea, run]
   - file: api/tests/test_external_proof_demo.py
     symbols: [test_external_proof_idea_payload_matches_public_contract]
   - file: api/app/routers/ideas.py
-    symbols: [create_idea, get_idea, update_idea_stage, list_ideas]
+    symbols: [create_idea, get_idea, advance_idea_stage, set_idea_stage, list_ideas]
   - file: api/app/routers/contributions.py
-    symbols: [record_contribution, list_contributions]
+    symbols: [create_contribution, record_open_contribution, list_contributions, get_contribution]
   - file: api/app/routers/coherence.py
-    symbols: [get_coherence_score]
+    symbols: [get_coherence_score, CoherenceScoreResponse]
   - file: api/app/routers/health.py
-    symbols: [health_check]
+    symbols: [health, ready, ping, HealthResponse]
   - file: docs/EXTERNAL_ENABLEMENT_TRACKING.md
     symbols: []
 requirements:
