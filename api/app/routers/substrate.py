@@ -411,6 +411,15 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
     with session_scope() as session:
         try:
             result = form_evaluate_text(session, req.expression)
+        except LookupError as exc:
+            # The expression parsed and evaluated cleanly, but a cell or
+            # node it referenced isn't in the lattice. 404 is the honest
+            # answer — the body simply doesn't hold the thing referenced.
+            # Distinct from 400 (parser rejected the expression itself).
+            raise HTTPException(
+                status_code=404,
+                detail=f"form lookup failed: {exc}",
+            ) from exc
         except (ValueError, SyntaxError, TypeError, KeyError) as exc:
             raise HTTPException(
                 status_code=400,

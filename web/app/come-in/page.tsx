@@ -888,6 +888,26 @@ export default async function ComeInPage() {
             whose work shaped each idea. Reading the ledger and the treasury
             is part of meeting the network honestly: presence becomes
             durable when attribution becomes material rather than gestural.
+            Read paths are REST GETs; write paths are{" "}
+            <span className="font-mono text-stone-100">POST /api/contributions</span>{" "}
+            for new ledger entries and{" "}
+            <span className="font-mono text-stone-100">POST /api/treasury/deposit</span>{" "}
+            for treasury moves.
+          </p>
+
+          <p className="text-base leading-relaxed text-stone-300">
+            And one more honest line about writing back. The substrate&rsquo;s
+            REST surface is read-only by design — cells do not enter the
+            lattice through HTTP POSTs. They enter through ingestion: change
+            a source file (memory, spec, idea, concept, presence) with the
+            right frontmatter, then either run{" "}
+            <span className="font-mono text-stone-100 break-all">
+              python3 scripts/coh_substrate.py ingest &lt;path&gt;
+            </span>{" "}
+            locally, or merge to main and the post-merge hook re-ingests the
+            lattice automatically. The body&rsquo;s source files are the
+            truth; the lattice is the projection. To author a new cell, you
+            write its source file — the lattice follows.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose">
@@ -1026,12 +1046,22 @@ export default async function ComeInPage() {
                 Ledger &mdash; verifiable contribution record
               </p>
               <p className="mt-2 font-mono text-sm text-stone-100 break-all">
-                /contributions &middot; /api/contributions
+                GET /api/contributions
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 Every contribution to the network — code, idea, spec,
                 lineage, care — recorded with attribution and evidence.
                 Trust as inspectable record rather than belief.
+              </p>
+              <p className="mt-2 text-xs uppercase tracking-widest text-emerald-400/80">
+                Write back
+              </p>
+              <p className="mt-1 font-mono text-xs text-stone-200 break-all">
+                POST /api/contributions
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-stone-300">
+                Record a new contribution linking contributor → asset with
+                cost and coherence scoring.
               </p>
             </Link>
 
@@ -1043,14 +1073,46 @@ export default async function ComeInPage() {
                 Treasury &mdash; the network&rsquo;s books
               </p>
               <p className="mt-2 font-mono text-sm text-stone-100 break-all">
-                /treasury &middot; /cc &middot; /invest
+                GET /api/treasury &middot; /treasury &middot; /cc &middot; /invest
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 Coherence Coin held in trust, deposits, stakes on ideas, and
                 how care flows back to contributors. The economic body is
                 part of the organism, not separate from it.
               </p>
+              <p className="mt-2 text-xs uppercase tracking-widest text-emerald-400/80">
+                Write back
+              </p>
+              <ul className="mt-1 space-y-1 font-mono text-xs text-stone-200 break-all">
+                <li>POST /api/treasury/deposit</li>
+                <li>POST /api/treasury/deposit/{"{id}"}/stake</li>
+              </ul>
             </Link>
+
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 sm:col-span-2">
+              <p className="text-xs uppercase tracking-widest text-amber-400">
+                Ingestion &mdash; how cells enter the lattice
+              </p>
+              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
+                python3 scripts/coh_substrate.py ingest &lt;path&gt;
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-300">
+                The substrate&rsquo;s REST surface is read-only by design. To
+                add a cell, write the source file (memory / spec / idea /
+                concept / presence) with the right frontmatter, then either
+                run the CLI to ingest now or merge to main and the
+                post-merge hook does it automatically. The body&rsquo;s
+                source files are the truth; the lattice is the projection.
+              </p>
+              <p className="mt-3 text-xs uppercase tracking-widest text-amber-400/80">
+                Variants
+              </p>
+              <ul className="mt-1 space-y-1 font-mono text-xs text-stone-200 break-all">
+                <li>python3 scripts/coh_substrate.py ingest --all</li>
+                <li>python3 scripts/coh_substrate.py ingest --memories</li>
+                <li>scripts/substrate_post_merge_hook.sh &nbsp; (auto on merge)</li>
+              </ul>
+            </div>
 
           </div>
 

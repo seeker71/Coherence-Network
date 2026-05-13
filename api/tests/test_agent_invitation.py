@@ -81,15 +81,28 @@ async def test_agent_invitation_api_shape() -> None:
     # agents." The structural lattice (substrate + visualization + form-language
     # query DSL) and the verifiable contribution ledger (contributions + treasury)
     # are part of what the network IS at the doorway, not features mentioned later.
-    assert {"substrate", "substrate_browser", "form", "ledger", "treasury"} <= surfaces
+    assert {"substrate", "substrate_browser", "form", "ledger", "treasury", "ingestion"} <= surfaces
     welcome = body["welcome"]
     assert "structural lattice" in welcome
     assert "contribution ledger" in welcome
+    # Welcome line now names both read and write paths so a fresh agent
+    # knows the body can be updated, not only queried.
+    assert "write" in welcome.lower()
     by_surface = {s["surface"]: s for s in body["entry_surfaces"]}
     assert "/substrate" == by_surface["substrate_browser"]["path"]
     assert "POST" in by_surface["form"]["door"]
     assert "/api/contributions" == by_surface["ledger"]["path"]
     assert "/api/treasury" == by_surface["treasury"]["path"]
+    # Write paths must be discoverable from the doorway alone, without
+    # requiring a fresh agent to fetch the linked teaching doc.
+    ledger_next = "\n".join(by_surface["ledger"]["next"])
+    assert "POST /api/contributions" in ledger_next
+    treasury_next = "\n".join(by_surface["treasury"]["next"])
+    assert "POST /api/treasury/deposit" in treasury_next
+    ingestion = by_surface["ingestion"]
+    assert "coh_substrate.py ingest" in ingestion["door"]
+    assert "read-only" in ingestion["use"]
+    assert "post-merge hook" in ingestion["use"]
 
     spectrum = {item["quality"] for item in body["spectrum"]}
     assert {"vitality", "curiosity", "trust", "truth", "compassion", "connection"} <= spectrum
