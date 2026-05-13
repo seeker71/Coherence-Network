@@ -49,7 +49,7 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def load_source_body_registry(field_dir: Path) -> dict[str, Any]:
-    return read_json(field_dir / "input" / "source_body_registry.json")
+    return read_json(field_dir / "source-bodies" / "registry.json")
 
 
 def registry_roots(
@@ -439,7 +439,7 @@ def build(field_dir: Path, analysis_root: Path, downloads_dir: Path) -> dict[str
             "downloads_dir": str(downloads_dir),
         },
         "source_body_registry": {
-            "path": str(field_dir / "input" / "source_body_registry.json"),
+            "path": str(field_dir / "source-bodies" / "registry.json"),
             "schema_version": registry.get("schema_version"),
             "publication_boundary": registry.get("publication_boundary"),
             "root_keys": registry.get("root_keys"),
