@@ -6,7 +6,7 @@
     "month_trace_api": "/api/field-stories/urs-field-story/trace/month/{YYYY-MM}",
     "work_trace_api": "/api/field-stories/urs-field-story/trace/work/{work_id}"
   },
-  "generated_at": "2026-05-08T03:49:14.915862+00:00",
+  "generated_at": "2026-05-13T00:02:48.625458+00:00",
   "hash_algorithm": "sha256",
   "normalized_event_trace": {
     "event_leaf_hash_algorithm": "sha256('event:' + canonical_json(row))",
@@ -52,29 +52,29 @@
       "artifact_relpath": "trace/manifest.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/manifest.json",
-      "sha256": "5e21067d2fc59f63271251a0bfd7dedd74b778144cf0df065deef944fcca2011",
-      "size_bytes": 1260
+      "sha256": "ef778bb49e287119a86d6c874f01aa28e0ff9d6d288b513c3557a40a7b8cd70c",
+      "size_bytes": 1881
     },
     {
       "artifact_relpath": "trace/monthly_spectrum.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/monthly_spectrum.json",
-      "sha256": "3b9c1678e992d4ef4b67e6fd164782b3a193236bfc2b867ecb3777045038737c",
-      "size_bytes": 533446
+      "sha256": "ab8394c3488bde3d9b116864dd5e8d43410a0b4f3404745ff381f2428507a078",
+      "size_bytes": 1927467
     },
     {
       "artifact_relpath": "trace/author_index.jsonl",
       "content_type": "application/octet-stream",
       "path": "docs/field/urs/trace/author_index.jsonl",
-      "sha256": "57958ac6db5f58e4c61acc397b48005d436d0d31024dcd2a42b22e6673f50d61",
-      "size_bytes": 2289945
+      "sha256": "7b0cbb2783c50b29d98bbb3fe1ce4eb0eb39f6d29d9d1431e0c447bc3f8eb589",
+      "size_bytes": 11370419
     },
     {
       "artifact_relpath": "trace/work_index.jsonl",
       "content_type": "application/octet-stream",
       "path": "docs/field/urs/trace/work_index.jsonl",
-      "sha256": "a2162621cd756cd7803b9407f2ced43e3322ba251c8df948b8fcb343168af2f2",
-      "size_bytes": 2700110
+      "sha256": "3a4585408daaca70e1bb47e35a07a8b04aaae5657cc9a3dd136a8d425f70d1f4",
+      "size_bytes": 20985822
     },
     {
       "artifact_relpath": "trace/significant_work_index.jsonl",
@@ -87,35 +87,35 @@
       "artifact_relpath": "trace/concept_work_map.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/concept_work_map.json",
-      "sha256": "9947c48baf1b3a731b7aff0193debcccbf48d38472ec7e7d1b88189b9db67ac5",
+      "sha256": "bc0d5cb5bff0a5d38b940d48c8f9342b9f139c66496c35baf385e805b29992df",
       "size_bytes": 28660
     },
     {
       "artifact_relpath": "trace/youtube_podcast_spectrum.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/youtube_podcast_spectrum.json",
-      "sha256": "2977f03e16a2cce4d38c35c37ceae49cb5ad6234c8681b89ffb8f1a71b3e6a1f",
+      "sha256": "87f94a612bb8f9553027bbf06ee1a6a475bdcb2fd45b3487d0c39da229693881",
       "size_bytes": 2260143
     },
     {
       "artifact_relpath": "trace/digital_influence_inventory.json",
       "content_type": "application/json",
       "path": "docs/field/urs/trace/digital_influence_inventory.json",
-      "sha256": "6a594a7b4e5de15af27e8856438e145c714366adb9f6e0493ac1e8602908b0c8",
+      "sha256": "e8447bf5b62db7642303f93ef4d604bf27c57e9b81b73b31d6033efad536d96b",
       "size_bytes": 104002
     },
     {
       "artifact_relpath": "output/chronological_story_with_frequency.md",
       "content_type": "text/markdown",
       "path": "docs/field/urs/output/chronological_story_with_frequency.md",
-      "sha256": "8adcfb7d06b9ee3f09be926561aa11f74c508f08c224f42fb71b7154ae854a9e",
-      "size_bytes": 40115
+      "sha256": "2ecb75eb974f8982b7ae1fea380ad22cba418ae237b00166084f955ba35c8df1",
+      "size_bytes": 43025
     }
   ],
   "roots": {
-    "combined_trace_root": "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7",
+    "combined_trace_root": "21a16d4b5e5283f820a32f238e736db1e020539a53190b2d7753edfacfcd224c",
     "normalized_event_merkle_root": "d623a7b9940f55b6430015ad87ee009fe8ed728b6b5ed8b2d07c2c8e53955444",
-    "repo_artifact_merkle_root": "19dca4a0c0ef5c2a4ce4659927ce15cf82fe450e58e6fb48582ae6c16c5e048e",
+    "repo_artifact_merkle_root": "e8582e36ae46e1ac948de16629f7b7f42377ff4af863c4cbc9ee798238a69a7e",
     "source_body_merkle_root": "f913a1e53db49ad868bb49def9e78108a1146a2e5d23368b9c3ce6addcafbe3e"
   },
   "schema_version": "field-source-crypto-trace/v1",

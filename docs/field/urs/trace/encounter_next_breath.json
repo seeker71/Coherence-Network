@@ -1,344 +1,344 @@
 {
   "command": "python3 scripts/encounter.py --contributor contributor:seeker71 --file docs/field/urs/input/encounter_next_breath.txt",
   "contributor_hint": "contributor:seeker71",
-  "generated_at": "2026-05-07T15:43:53.778164+00:00",
+  "generated_at": "2026-05-13T00:02:32.671584+00:00",
   "publication_boundary": "Generated from derived trace indexes only; raw archives, cookies, sessions, pixels, and paid text remain source bodies until their shape belongs directly in repo.",
   "rows": [
     {
-      "events": 217,
-      "frequency": "consciousness-threshold",
-      "input": "Mei-lan",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic; events=217; frequency=consciousness-threshold; peaks=[['2025-01', 29], ['2025-03', 28], ['2025-04', 23], ['2024-10', 19]]; works=Song For A Pure Heart, Bring Me Back To Love, Freedom (feat. Ali Pervez Mehdi)",
-      "peak_months": [
-        [
-          "2025-01",
-          29
-        ],
-        [
-          "2025-03",
-          28
-        ],
-        [
-          "2025-04",
-          23
-        ],
-        [
-          "2024-10",
-          19
-        ]
-      ],
-      "top_works": [
-        {
-          "events": 29,
-          "id": "work:song-for-a-pure-heart-f40ddecc",
-          "title": "Song For A Pure Heart"
-        },
-        {
-          "events": 23,
-          "id": "work:bring-me-back-to-love-99bdf56a",
-          "title": "Bring Me Back To Love"
-        },
-        {
-          "events": 22,
-          "id": "work:freedom-feat-ali-pervez-mehdi-20acb8e3",
-          "title": "Freedom (feat. Ali Pervez Mehdi)"
-        }
-      ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Mei-lan%20-%20Topic"
-    },
-    {
-      "events": 267,
-      "frequency": "devotional-body",
-      "input": "Danit",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic; events=267; frequency=devotional-body; peaks=[['2024-10', 28], ['2024-07', 21], ['2025-04', 19], ['2024-06', 18]]; works=Naturaleza (Mose Edit), Cuatro Vientos (Rey & Kjavik Remix), Cuatro Vientos",
-      "peak_months": [
-        [
-          "2024-10",
-          28
-        ],
-        [
-          "2024-07",
-          21
-        ],
-        [
-          "2025-04",
-          19
-        ],
-        [
-          "2024-06",
-          18
-        ]
-      ],
-      "top_works": [
-        {
-          "events": 71,
-          "id": "work:naturaleza-mose-edit-8119cff0",
-          "title": "Naturaleza (Mose Edit)"
-        },
-        {
-          "events": 56,
-          "id": "work:cuatro-vientos-rey-kjavik-remix-b335c7f4",
-          "title": "Cuatro Vientos (Rey & Kjavik Remix)"
-        },
-        {
-          "events": 36,
-          "id": "work:cuatro-vientos-963012d6",
-          "title": "Cuatro Vientos"
-        }
-      ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Danit%20-%20Topic"
-    },
-    {
-      "events": 225,
+      "events": 2311,
       "frequency": "roots-resilience",
-      "input": "Yatao",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic; events=225; frequency=roots-resilience; peaks=[['2024-06', 22], ['2024-08', 19], ['2025-04', 19], ['2024-10', 18]]; works=Phoenix, Listen to the Mountains, Follow The Moon",
+      "input": "Al Marconi",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Al%20Marconi%20-%20Topic; events=2311; frequency=roots-resilience; peaks=[['2022-02', 348], ['2022-03', 341], ['2022-04', 279], ['2022-12', 203]]; works=Redemption, Rougé, Omega Requiem",
       "peak_months": [
         [
-          "2024-06",
-          22
+          "2022-02",
+          348
         ],
         [
-          "2024-08",
-          19
+          "2022-03",
+          341
         ],
         [
-          "2025-04",
-          19
+          "2022-04",
+          279
         ],
         [
-          "2024-10",
-          18
+          "2022-12",
+          203
         ]
       ],
       "top_works": [
         {
-          "events": 43,
-          "id": "work:phoenix-2bc12938",
-          "title": "Phoenix"
+          "events": 136,
+          "id": "work:redemption-2c5002a3",
+          "title": "Redemption"
         },
         {
-          "events": 30,
-          "id": "work:listen-to-the-mountains-349fa04c",
-          "title": "Listen to the Mountains"
+          "events": 133,
+          "id": "work:roug-8a680ea9",
+          "title": "Rougé"
         },
         {
-          "events": 21,
-          "id": "work:follow-the-moon-23175301",
-          "title": "Follow The Moon"
+          "events": 98,
+          "id": "work:omega-requiem-d40f2ebd",
+          "title": "Omega Requiem"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Yatao%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Al%20Marconi%20-%20Topic"
     },
     {
-      "events": 181,
-      "frequency": "devotional-body",
-      "input": "Chantress Seba",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic; events=181; frequency=devotional-body; peaks=[['2025-03', 25], ['2025-11', 20], ['2026-02', 15], ['2024-10', 12]]; works=Rising Into Light, Find Peace, Dream Prayer",
+      "events": 1494,
+      "frequency": "shadow-power",
+      "input": "Ottmar Liebert",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Ottmar%20Liebert%20-%20Topic; events=1494; frequency=shadow-power; peaks=[['2023-06', 261], ['2022-11', 108], ['2023-05', 92], ['2022-10', 85]]; works=Up Close: Embrace, Snakecharmer (Album Version), Heart Still/Beating (4 Berlin)",
       "peak_months": [
         [
-          "2025-03",
-          25
+          "2023-06",
+          261
         ],
         [
-          "2025-11",
-          20
+          "2022-11",
+          108
         ],
         [
-          "2026-02",
-          15
+          "2023-05",
+          92
         ],
         [
-          "2024-10",
-          12
+          "2022-10",
+          85
         ]
       ],
       "top_works": [
         {
-          "events": 12,
-          "id": "work:rising-into-light-e1d5f749",
-          "title": "Rising Into Light"
+          "events": 69,
+          "id": "work:up-close-embrace-316ddd7a",
+          "title": "Up Close: Embrace"
         },
         {
-          "events": 12,
-          "id": "work:find-peace-b17ccbd5",
-          "title": "Find Peace"
+          "events": 58,
+          "id": "work:snakecharmer-album-version-f51cb1ab",
+          "title": "Snakecharmer (Album Version)"
         },
         {
-          "events": 11,
-          "id": "work:dream-prayer-8389fe40",
-          "title": "Dream Prayer"
+          "events": 53,
+          "id": "work:heart-still-beating-4-berlin-dc44902e",
+          "title": "Heart Still/Beating (4 Berlin)"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Chantress%20Seba%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Ottmar%20Liebert%20-%20Topic"
     },
     {
-      "events": 234,
-      "frequency": "unclassified",
-      "input": "Nessi Gomes",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic; events=234; frequency=unclassified; peaks=[['2024-07', 26], ['2024-10', 24], ['2025-09', 19], ['2024-08', 17]]; works=As You Will [Shye Ben Tzur Cover], All Related, These Walls",
+      "events": 1344,
+      "frequency": "consciousness-threshold",
+      "input": "Guitarra Azul",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Guitarra%20Azul%20-%20Topic; events=1344; frequency=consciousness-threshold; peaks=[['2023-02', 99], ['2022-08', 89], ['2023-01', 76], ['2022-11', 73]]; works=Ojos Gitanos, Esperanza, Alma",
       "peak_months": [
         [
-          "2024-07",
-          26
+          "2023-02",
+          99
         ],
         [
-          "2024-10",
-          24
+          "2022-08",
+          89
         ],
         [
-          "2025-09",
-          19
+          "2023-01",
+          76
         ],
         [
-          "2024-08",
-          17
+          "2022-11",
+          73
         ]
       ],
       "top_works": [
         {
-          "events": 32,
-          "id": "work:as-you-will-shye-ben-tzur-cover-ae2b6dbc",
-          "title": "As You Will [Shye Ben Tzur Cover]"
+          "events": 110,
+          "id": "work:ojos-gitanos-83c0d495",
+          "title": "Ojos Gitanos"
         },
         {
-          "events": 30,
-          "id": "work:all-related-dd3e07ec",
-          "title": "All Related"
+          "events": 100,
+          "id": "work:esperanza-8e8bd63e",
+          "title": "Esperanza"
         },
         {
-          "events": 28,
-          "id": "work:these-walls-11c47b2d",
-          "title": "These Walls"
+          "events": 77,
+          "id": "work:alma-b43ddba6",
+          "title": "Alma"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Nessi%20Gomes%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Guitarra%20Azul%20-%20Topic"
     },
     {
-      "events": 202,
-      "frequency": "devotional-body",
-      "input": "Sam Garrett",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic; events=202; frequency=devotional-body; peaks=[['2024-10', 19], ['2025-04', 18], ['2025-02', 16], ['2025-01', 12]]; works=Asatoma, Mama, Higher Than The Mountains",
+      "events": 1295,
+      "frequency": "consciousness-threshold",
+      "input": "Johannes Linstead",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Johannes%20Linstead%20-%20Topic; events=1295; frequency=consciousness-threshold; peaks=[['2022-11', 209], ['2022-10', 126], ['2022-08', 123], ['2022-07', 102]]; works=Between Tears, Suave, Tides of Eden",
       "peak_months": [
         [
-          "2024-10",
-          19
+          "2022-11",
+          209
         ],
         [
-          "2025-04",
-          18
+          "2022-10",
+          126
         ],
         [
-          "2025-02",
-          16
+          "2022-08",
+          123
         ],
         [
-          "2025-01",
-          12
+          "2022-07",
+          102
         ]
       ],
       "top_works": [
         {
-          "events": 25,
-          "id": "work:asatoma-2e0ceedf",
-          "title": "Asatoma"
+          "events": 104,
+          "id": "work:between-tears-4adf4a0d",
+          "title": "Between Tears"
         },
         {
-          "events": 22,
-          "id": "work:mama-937b9de4",
-          "title": "Mama"
+          "events": 61,
+          "id": "work:suave-9c4e0b10",
+          "title": "Suave"
         },
         {
-          "events": 22,
-          "id": "work:higher-than-the-mountains-f11c88cb",
-          "title": "Higher Than The Mountains"
+          "events": 58,
+          "id": "work:tides-of-eden-ee403ac7",
+          "title": "Tides of Eden"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Sam%20Garrett%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Johannes%20Linstead%20-%20Topic"
     },
     {
-      "events": 177,
-      "frequency": "devotional-body",
-      "input": "Deya Dova",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic; events=177; frequency=devotional-body; peaks=[['2025-07', 17], ['2024-09', 16], ['2025-01', 16], ['2024-10', 15]]; works=Valley of the Ancients (Mose Remix), Footsteps In The Stars, Grandmother Tree & The Feathered Serpent",
+      "events": 1076,
+      "frequency": "fictional-systems",
+      "input": "Armik",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Armik%20-%20Topic; events=1076; frequency=fictional-systems; peaks=[['2022-10', 144], ['2022-08', 103], ['2022-09', 71], ['2022-11', 61]]; works=Pure Paradise, Fantasia, Tango Flamenco",
       "peak_months": [
         [
-          "2025-07",
-          17
+          "2022-10",
+          144
         ],
         [
-          "2024-09",
-          16
+          "2022-08",
+          103
         ],
         [
-          "2025-01",
-          16
+          "2022-09",
+          71
         ],
         [
-          "2024-10",
-          15
+          "2022-11",
+          61
         ]
       ],
       "top_works": [
         {
-          "events": 37,
-          "id": "work:valley-of-the-ancients-mose-remix-4f87f1a2",
-          "title": "Valley of the Ancients (Mose Remix)"
+          "events": 90,
+          "id": "work:pure-paradise-a342497d",
+          "title": "Pure Paradise"
         },
         {
-          "events": 24,
-          "id": "work:footsteps-in-the-stars-6c51384b",
-          "title": "Footsteps In The Stars"
+          "events": 41,
+          "id": "work:fantasia-93ca9400",
+          "title": "Fantasia"
         },
         {
-          "events": 23,
-          "id": "work:grandmother-tree-the-feathered-serpent-3b5e3646",
-          "title": "Grandmother Tree & The Feathered Serpent"
+          "events": 41,
+          "id": "work:tango-flamenco-fba58479",
+          "title": "Tango Flamenco"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Deya%20Dova%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Armik%20-%20Topic"
     },
     {
-      "events": 188,
-      "frequency": "unclassified",
-      "input": "Tetouze",
-      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic; events=188; frequency=unclassified; peaks=[['2024-11', 47], ['2025-04', 22], ['2025-01', 17], ['2026-01', 17]]; works=Dune caravan, Asian yantra, Dasan (feat. Anello Capuano)",
+      "events": 923,
+      "frequency": "roots-resilience",
+      "input": "Oscar Lopez",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Oscar%20Lopez%20-%20Topic; events=923; frequency=roots-resilience; peaks=[['2022-11', 129], ['2022-12', 71], ['2022-10', 67], ['2022-08', 56]]; works=Gentle Seduction, The Flavor, Corrientes",
       "peak_months": [
         [
-          "2024-11",
-          47
+          "2022-11",
+          129
         ],
         [
-          "2025-04",
-          22
+          "2022-12",
+          71
         ],
         [
-          "2025-01",
-          17
+          "2022-10",
+          67
         ],
         [
-          "2026-01",
-          17
+          "2022-08",
+          56
         ]
       ],
       "top_works": [
         {
-          "events": 13,
-          "id": "work:dune-caravan-599c03d7",
-          "title": "Dune caravan"
+          "events": 107,
+          "id": "work:gentle-seduction-16b2e80c",
+          "title": "Gentle Seduction"
         },
         {
-          "events": 13,
-          "id": "work:asian-yantra-da47da7b",
-          "title": "Asian yantra"
+          "events": 68,
+          "id": "work:the-flavor-5c94f61f",
+          "title": "The Flavor"
         },
         {
-          "events": 11,
-          "id": "work:dasan-feat-anello-capuano-c7506ac8",
-          "title": "Dasan (feat. Anello Capuano)"
+          "events": 64,
+          "id": "work:corrientes-f424c939",
+          "title": "Corrientes"
         }
       ],
-      "trace": "/api/field-stories/urs-field-story/trace/author/Tetouze%20-%20Topic"
+      "trace": "/api/field-stories/urs-field-story/trace/author/Oscar%20Lopez%20-%20Topic"
+    },
+    {
+      "events": 759,
+      "frequency": "roots-resilience",
+      "input": "Strunz & Farah",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Strunz%20%26%20Farah%20-%20Topic; events=759; frequency=roots-resilience; peaks=[['2023-02', 88], ['2022-10', 69], ['2022-05', 65], ['2022-08', 63]]; works=Illusion, Recuerdo, Heat of the Sun",
+      "peak_months": [
+        [
+          "2023-02",
+          88
+        ],
+        [
+          "2022-10",
+          69
+        ],
+        [
+          "2022-05",
+          65
+        ],
+        [
+          "2022-08",
+          63
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 90,
+          "id": "work:illusion-7601d57d",
+          "title": "Illusion"
+        },
+        {
+          "events": 72,
+          "id": "work:recuerdo-d4a45974",
+          "title": "Recuerdo"
+        },
+        {
+          "events": 52,
+          "id": "work:heat-of-the-sun-2b3de846",
+          "title": "Heat of the Sun"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Strunz%20%26%20Farah%20-%20Topic"
+    },
+    {
+      "events": 822,
+      "frequency": "roots-resilience",
+      "input": "Kevin Laliberté",
+      "note": "source=trace-influence-breath-cycle; trace=/api/field-stories/urs-field-story/trace/author/Kevin%20Lalibert%C3%A9%20-%20Topic; events=822; frequency=roots-resilience; peaks=[['2022-12', 85], ['2022-11', 75], ['2023-02', 60], ['2023-01', 52]]; works=Siesta, El Ritmo de Amor, Cafe by the Sea",
+      "peak_months": [
+        [
+          "2022-12",
+          85
+        ],
+        [
+          "2022-11",
+          75
+        ],
+        [
+          "2023-02",
+          60
+        ],
+        [
+          "2023-01",
+          52
+        ]
+      ],
+      "top_works": [
+        {
+          "events": 158,
+          "id": "work:siesta-8e6a376d",
+          "title": "Siesta"
+        },
+        {
+          "events": 83,
+          "id": "work:el-ritmo-de-amor-b7910629",
+          "title": "El Ritmo de Amor"
+        },
+        {
+          "events": 77,
+          "id": "work:cafe-by-the-sea-ba481b58",
+          "title": "Cafe by the Sea"
+        }
+      ],
+      "trace": "/api/field-stories/urs-field-story/trace/author/Kevin%20Lalibert%C3%A9%20-%20Topic"
     }
   ],
   "schema_version": "encounter-next-breath/v1",

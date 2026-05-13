@@ -43,7 +43,7 @@ def get_influence_teaching_translator(slug: str, *, limit: int = 40) -> dict[str
         "policy_id": artifact.get("policy_id", "influence-teaching-translator:v1"),
         "story_slug": slug,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source_crypto_root": artifact.get("source_crypto_root", ""),
+        "source_crypto_root": cc.get("source_crypto_root") or artifact.get("source_crypto_root", ""),
         "coverage_boundary": artifact.get("coverage_boundary", ""),
         "row_shape": artifact.get("row_shape", ""),
         "totals": {

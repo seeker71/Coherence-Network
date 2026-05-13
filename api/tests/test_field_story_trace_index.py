@@ -24,6 +24,12 @@ def _load_encounter_script():
     return module
 
 
+def _source_crypto_root() -> str:
+    trace_path = REPO_ROOT / "docs" / "field" / "urs" / "trace" / "source_crypto_trace.json"
+    trace = json.loads(trace_path.read_text(encoding="utf-8"))
+    return trace["roots"]["combined_trace_root"]
+
+
 def test_trace_index_artifacts_are_registered_and_queryable():
     story = field_story_service.get_field_story("urs-field-story", include_story=False)
     artifact_ids = {artifact["artifact_id"] for artifact in story["artifacts"]}
@@ -144,27 +150,28 @@ def test_influence_breath_cycle_registers_youtube_discovery_loop():
     report = report_response.json()["content"]
     assert "## Unroomed Author Candidates" in report
     assert "youtube-takeout" in report
-    assert "Mei-lan" in report
 
     summary_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-influence-breath-cycle")
     assert summary_response.status_code == 200, summary_response.text
     summary = json.loads(summary_response.json()["content"])
     assert summary["source_counts"]["sources"]["youtube-takeout"] > 20000
     assert summary["counts"]["unroomed_author_candidates"] >= 10
+    expected_seed = summary["breaths"][2]["result"]["candidates"][0]
+    assert expected_seed["plain_name"] in report
 
     seed_response = client.get("/api/field-stories/urs-field-story/artifacts/trace-encounter-next-breath")
     assert seed_response.status_code == 200, seed_response.text
     seed = json.loads(seed_response.json()["content"])
     assert seed["schema_version"] == "encounter-next-breath/v1"
     assert len(seed["rows"]) == 8
-    assert seed["rows"][0]["input"] == "Mei-lan"
+    assert seed["rows"][0]["input"] == expected_seed["plain_name"]
     assert seed["rows"][0]["trace"].startswith("/api/field-stories/urs-field-story/trace/author/")
 
     seed_file = REPO_ROOT / "docs" / "field" / "urs" / "input" / "encounter_next_breath.txt"
     encounters = _load_encounter_script()._encounters_from_file(seed_file)
     assert len(encounters) == 8
-    assert encounters[0][0] == "Mei-lan"
-    assert "trace=/api/field-stories/urs-field-story/trace/author/Mei-lan" in encounters[0][1]
+    assert encounters[0][0] == expected_seed["plain_name"]
+    assert f"trace={expected_seed['trace']}" in encounters[0][1]
 
     trace_paths = sorted(
         {
@@ -223,7 +230,7 @@ def test_organism_influence_cc_computes_top_influencers_from_trace_and_agent_tim
 
     assert body["schema_version"] == "organism-influence-cc/v1"
     assert body["policy_id"] == "organism-influence-cc:v1"
-    assert body["source_crypto_root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert body["source_crypto_root"] == _source_crypto_root()
     assert body["totals"]["total_cc_pool"] == 1000
     assert body["totals"]["distributed_cc"] == 1000
     assert body["truth_boundary"].startswith("Computed sensing allocation")
@@ -256,7 +263,7 @@ def test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc()
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["schema_version"] == "influence-teaching-translator/v1"
-    assert body["source_crypto_root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert body["source_crypto_root"] == _source_crypto_root()
     assert body["totals"]["joined_cc_rows"] >= 25
     assert {
         "physical_book_reading",
@@ -338,7 +345,7 @@ def test_field_story_view_attribution_records_compact_receipt_and_cc_flow():
     assert receipt["presence"] == "concept:lc-network"
     assert receipt["target_id"] == "significant-work:spellmonger-universe-45f3b507"
     assert receipt["creator"] == "creator:Terry Mancour"
-    assert receipt["root"] == "52cefaba3a20682f2937e125fa406e1f8b4857ac8f573e78e7505de2769647d7"
+    assert receipt["root"] == _source_crypto_root()
     assert body["storage_shape"]["receipt_bytes"] < 900
     assert body["storage_shape"]["flow_rows"] == 6
     assert sum(row["amount_cc"] for row in body["flows"]) == 1.0
