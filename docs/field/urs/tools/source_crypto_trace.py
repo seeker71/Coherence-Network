@@ -19,7 +19,7 @@ DOWNLOADS_DIR = Path("/Users/ursmuff/Downloads")
 HASH_ALGORITHM = "sha256"
 
 REPO_ARTIFACTS = [
-    "input/source_body_registry.json",
+    "source-bodies/registry.json",
     "output/ten_year_events.jsonl",
     "trace/manifest.json",
     "trace/monthly_spectrum.json",
@@ -34,7 +34,7 @@ REPO_ARTIFACTS = [
 
 
 def load_source_body_registry(field_dir: Path) -> dict[str, Any]:
-    return json.loads((field_dir / "input" / "source_body_registry.json").read_text(encoding="utf-8"))
+    return json.loads((field_dir / "source-bodies" / "registry.json").read_text(encoding="utf-8"))
 
 
 def registry_roots(
@@ -223,7 +223,7 @@ def build(
         "hash_algorithm": HASH_ALGORITHM,
         "publication_boundary": "This is a compact cryptographic trace. It publishes hashes, sizes, source classes, and Merkle roots; bulky raw source bodies remain outside the repo unless deliberately promoted.",
         "source_body_registry": {
-            "path": str(field_dir / "input" / "source_body_registry.json"),
+            "path": str(field_dir / "source-bodies" / "registry.json"),
             "schema_version": registry.get("schema_version"),
             "publication_boundary": registry.get("publication_boundary"),
             "root_keys": registry.get("root_keys"),
