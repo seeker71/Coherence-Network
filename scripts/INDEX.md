@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 101
+**Total files**: 102
 
 | File | Purpose |
 |---|---|
@@ -94,6 +94,7 @@
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
+| [sync_presence_slugs.py](sync_presence_slugs.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
 | [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
 | [upgrade_specs.py](upgrade_specs.py) | !/usr/bin/env python3 |
