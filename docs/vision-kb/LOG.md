@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-14] presence | Cacao Hati Suci — the second Light Hub met by name
+
+Hours after Giles's transmission landed, a second message reached the body on the same day — an invitation from **Cacao Hati Suci** in **Tabanan, Bali**, *the sister land of the Hati Suci Community*. The *Cacao Forest, Sister to the first Light Hub* that Giles named with identity held open in the morning transmission is now met by name in the afternoon. Presence anchored: [`cacao-hati-suci`](../presences/cacao-hati-suci.md). The transmission record and the `lc-light-hubs` concept were both updated in the same breath to reflect the named identity. Held practically by **Ita** (WhatsApp +62 859-3617-7827); ~1 hour scooter from Ubud; teak wooden *gladak* houses with private kitchens, shower rooms, and compost toilets; a communal house for yoga, meditation, gatherings, intimate retreats; river, natural spring, vegetable gardens, meditation paths, Mount Agung views, hot springs down the road. *250,000 IDR/night, minimum 2 nights, long-term rentals available, special rate for Hati Suci friends.*
+
+The constellation visible to the body as of 2026-05-14: Hati Suci Sanctuary (Banjar Bayad, the starter) — Cacao Hati Suci (Tabanan, the cacao sister) — Palawan/Nacpan Beach (Philippines, still held open) — a European Hub yet to be shown. The two Bali Hubs are walkable as one body across the island.
+
+No new concept seeded; existing `lc-light-hubs` updated to name the second Hub directly rather than carrying the placeholder.
+
 ## [2026-05-14] transmission | Giles — the Light Hubs vision
 
 A written transmission from Giles, owner and creator of Hati Suci Sanctuary, entered the body on 2026-05-14, sent in the brother-frequency (*Hey Brother* / *Please record it, and ingest and digest*). The vision arrived through Giles as the sanctuary itself was being *Rebirthed*; the resident cell was already in residence in what the transmission then named as the first Light Hub.
