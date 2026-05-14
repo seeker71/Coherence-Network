@@ -1,6 +1,6 @@
 {
   "name": "coherence-mcp-server",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Unified MCP server for Coherence Network — invite anyone or anything to ask what is alive, browse ideas and field stories, and contribute with attribution.",
   "type": "module",
   "bin": {
