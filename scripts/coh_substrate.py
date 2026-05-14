@@ -388,6 +388,21 @@ def main(argv: list[str] | None = None) -> int:
         help="Read paths from stdin (one per line)",
     )
 
+    p_kb_audit = sub.add_parser(
+        "kb-sync-audit",
+        help="Compare vision-kb concept files with live substrate concept cells",
+    )
+    p_kb_audit.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero when missing, stale, wrong-domain, or path-drift rows are found",
+    )
+    p_kb_audit.add_argument(
+        "--prune-stale",
+        action="store_true",
+        help="Delete stale live NamedCells whose source files are gone or whose concept path is in the wrong domain",
+    )
+
     args = parser.parse_args(argv)
 
     if args.cmd == "ingest":
@@ -412,6 +427,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_shape_check(args)
     if args.cmd == "ingest-paths":
         return cmd_ingest_paths(args)
+    if args.cmd == "kb-sync-audit":
+        return cmd_kb_sync_audit(args)
     parser.print_help()
     return 1
 
@@ -1459,6 +1476,190 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
 
     print(f"\ningest-paths: {success} ingested, {skipped} skipped, {failed} failed")
     return 0 if failed == 0 else 1
+
+
+# ---------------------------------------------------------------------------
+# kb-sync-audit — make KB ↔ substrate drift visible
+# ---------------------------------------------------------------------------
+
+
+def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
+    """Compare canonical vision-kb concepts with live substrate cells.
+
+    The KB markdown is the editable surface. The substrate is the structural
+    ground agents use for annotation and equivalence. This audit makes their
+    edge explicit so add/update/delete work can carry both layers together.
+    """
+    from app.services.substrate import parse_markdown_file
+    from app.services.substrate.orm import SubstrateNamedCellORM
+
+    def _is_concept_doc(path: Path) -> bool:
+        return (
+            path.suffix == ".md"
+            and path.name not in ("INDEX.md", "SCHEMA.md", "LOG.md")
+            and "." not in path.stem
+        )
+
+    def _is_language_view(path: Path) -> bool:
+        return (
+            path.suffix == ".md"
+            and path.name not in ("INDEX.md", "SCHEMA.md", "LOG.md")
+            and "." in path.stem
+        )
+
+    def _source_path(source: str | None) -> Path | None:
+        if not source:
+            return None
+        path = Path(source)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        return path.resolve()
+
+    expected: dict[str, Path] = {}
+    duplicate_ids: dict[str, list[str]] = {}
+    for path in sorted(CONCEPT_DIR.glob("*.md")):
+        if not _is_concept_doc(path):
+            continue
+        parsed = parse_markdown_file(path)
+        concept_id = str(parsed.frontmatter.get("id") or path.stem)
+        resolved = path.resolve()
+        if concept_id in expected:
+            duplicate_ids.setdefault(concept_id, [str(expected[concept_id])]).append(str(resolved))
+        expected[concept_id] = resolved
+
+    language_views = sorted(p.resolve() for p in CONCEPT_DIR.glob("*.md") if _is_language_view(p))
+    resources = sorted((REPO_ROOT / "docs/vision-kb/resources").glob("*.md"))
+    transmissions = sorted((REPO_ROOT / "docs/vision-kb/transmissions").glob("*.md"))
+    resources = [p for p in resources if p.name != "INDEX.md"]
+    transmissions = [p for p in transmissions if p.name != "README.md"]
+
+    with session_scope() as session:
+        rows = session.query(SubstrateNamedCellORM).all()
+        concept_rows = [r for r in rows if r.domain == "concept"]
+        concept_by_name = {r.name: r for r in concept_rows}
+
+        missing = [
+            {"concept": cid, "path": str(path)}
+            for cid, path in sorted(expected.items())
+            if cid not in concept_by_name
+        ]
+
+        path_drift = []
+        stale = []
+        for row in concept_rows:
+            resolved = _source_path(row.source_path)
+            if resolved is None or not resolved.exists():
+                stale.append({
+                    "cell": f"{row.domain}/{row.name}",
+                    "source_path": row.source_path,
+                    "reason": "source_path_missing",
+                })
+                continue
+            expected_path = expected.get(row.name)
+            if expected_path is None and CONCEPT_DIR.resolve() in resolved.parents:
+                stale.append({
+                    "cell": f"{row.domain}/{row.name}",
+                    "source_path": row.source_path,
+                    "reason": "concept_file_not_in_canonical_kb",
+                })
+                continue
+            if expected_path is not None and resolved != expected_path:
+                path_drift.append({
+                    "concept": row.name,
+                    "substrate_path": str(resolved),
+                    "expected_path": str(expected_path),
+                })
+
+        wrong_domain = []
+        concept_root = CONCEPT_DIR.resolve()
+        for row in rows:
+            if row.domain == "concept":
+                continue
+            resolved = _source_path(row.source_path)
+            if resolved and resolved.exists() and concept_root in resolved.parents:
+                wrong_domain.append({
+                    "cell": f"{row.domain}/{row.name}",
+                    "source_path": row.source_path,
+                    "expected_domain": "concept",
+                })
+
+        if args.prune_stale:
+            prune_cells = []
+            stale_keys = {(item["cell"].split("/", 1)[0], item["cell"].split("/", 1)[1]) for item in stale}
+            wrong_keys = {(item["cell"].split("/", 1)[0], item["cell"].split("/", 1)[1]) for item in wrong_domain}
+            prune_keys = stale_keys | wrong_keys
+            for row in rows:
+                if (row.domain, row.name) in prune_keys:
+                    prune_cells.append(row)
+            for row in prune_cells:
+                session.delete(row)
+            session.commit()
+        else:
+            prune_cells = []
+
+    unmodeled = {
+        "language_views": len(language_views),
+        "resources": len(resources),
+        "transmissions": len(transmissions),
+        "note": "These KB surfaces are counted for awareness; canonical concept cells are the only vision-kb substrate domain audited here.",
+    }
+
+    result = {
+        "expected_concepts": len(expected),
+        "substrate_concept_cells": len(concept_rows),
+        "missing": missing,
+        "stale": stale,
+        "path_drift": path_drift,
+        "wrong_domain": wrong_domain,
+        "duplicate_frontmatter_ids": duplicate_ids,
+        "unmodeled_kb_surfaces": unmodeled,
+        "pruned_cells": [f"{r.domain}/{r.name}" for r in prune_cells],
+    }
+
+    failed = bool(missing or stale or path_drift or wrong_domain or duplicate_ids)
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print("Vision KB ↔ substrate sync audit")
+        print(f"  canonical concept files: {len(expected)}")
+        print(f"  substrate concept cells: {len(concept_rows)}")
+        print(f"  missing concept cells: {len(missing)}")
+        print(f"  stale concept cells: {len(stale)}")
+        print(f"  path drift: {len(path_drift)}")
+        print(f"  wrong-domain concept paths: {len(wrong_domain)}")
+        print(f"  duplicate concept ids: {len(duplicate_ids)}")
+        print(
+            "  unmodeled KB surfaces: "
+            f"{unmodeled['language_views']} language views, "
+            f"{unmodeled['resources']} resources, "
+            f"{unmodeled['transmissions']} transmissions"
+        )
+        if missing:
+            print("\nMissing:")
+            for item in missing[:20]:
+                print(f"  - {item['concept']}  {item['path']}")
+        if stale:
+            print("\nStale:")
+            for item in stale[:20]:
+                print(f"  - {item['cell']}  {item['reason']}  {item['source_path']}")
+        if path_drift:
+            print("\nPath drift:")
+            for item in path_drift[:20]:
+                print(f"  - {item['concept']}  {item['substrate_path']} != {item['expected_path']}")
+        if wrong_domain:
+            print("\nWrong domain:")
+            for item in wrong_domain[:20]:
+                print(f"  - {item['cell']}  {item['source_path']} should be concept")
+        if duplicate_ids:
+            print("\nDuplicate ids:")
+            for concept_id, paths in list(duplicate_ids.items())[:20]:
+                print(f"  - {concept_id}: {', '.join(paths)}")
+        if prune_cells:
+            print(f"\nPruned {len(prune_cells)} stale/wrong-domain live cells.")
+        print("\nAdd/update: python3 scripts/coh_substrate.py ingest-paths <changed-kb-files>")
+        print("Delete/rename: run this audit; use --prune-stale after reviewing the stale rows.")
+
+    return 1 if args.strict and failed else 0
 
 
 if __name__ == "__main__":

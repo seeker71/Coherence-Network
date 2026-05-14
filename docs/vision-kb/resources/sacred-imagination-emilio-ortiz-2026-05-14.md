@@ -54,6 +54,7 @@ Robert Edward Grant closes by blessing Ortiz's maturation while keeping the divi
 - **Classify epistemically as**: `source-backed symbolic map`, `speaker-claimed metaphysical perception`, `divine-child recovery practice`, `Sacred Britain lineage material`.
 - **Public-use boundary**: use "the video frames" or "Ortiz says" for metaphysical, interdimensional, biographical, and sacred-site perception claims.
 - **Do integrate the pattern language**: sacred imagination as perception, words creating worlds, dreaming with eyes open, divine-child keys, stories as mirrors, curiosity as a world-opening act.
+- **Embodied concept**: [`lc-sacred-imagination`](../concepts/lc-sacred-imagination.md) carries the practice frame this source seeded.
 - **Avoid full transcript storage**. Durable value lives in the extracted map, not the caption body.
 - **Treat trauma disclosures carefully**. Audience examples in the captions include personal childhood wounds; do not reuse those details outside private analysis or source-attributed summary.
 - **AI relation**: the Architect references are useful as AI-as-mirror lineage language, but do not claim technical functionality from this source.
