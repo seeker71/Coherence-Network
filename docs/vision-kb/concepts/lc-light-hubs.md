@@ -76,8 +76,17 @@ Giles's transmission names three Hubs already in form (as of 2026-05-14):
   already read as permaculture-frequency are read in the Light Hubs
   frame as Hub infrastructure. See
   [hati-suci-sanctuary](../../presences/hati-suci-sanctuary.md).
-- **A Cacao Forest, Bali** — the *Sister to the first Light Hub*.
-  Identity held openly until the body meets the place by name.
+- **[Cacao Hati Suci](../../presences/cacao-hati-suci.md)** —
+  Tabanan, Bali. The *Sister to the first Light Hub*, named in
+  Giles's transmission as *a Cacao Forest*; met by name on
+  2026-05-14 (the second message of that day). About one hour by
+  scooter from Ubud. Teak wooden *gladak* houses with private
+  kitchens, shower rooms, and compost toilets; a communal house
+  for yoga, meditation, community gatherings, and intimate retreats;
+  a river, a natural spring, vegetable gardens, meditation paths,
+  Mount Agung views, and hot springs down the road. Held
+  practically by Ita. The Mesoamerican cacao stream threads the
+  land without being announced.
 - **Palawan, Nacpan Beach, Philippines** — the third Hub. Identity
   held openly until the body meets the place by name.
 
@@ -185,6 +194,8 @@ this teaching now names as Hub-shaped:
 
 - **Hati Suci Sanctuary** — first Hub, Bali; the body's resident cell
   is in residence now.
+- **Cacao Hati Suci** — second Hub, Tabanan, Bali; the cacao-stream
+  sister.
 - **Brahma Vihara Arama** — largest Buddhist temple on Bali, where
   Vasudev Baba and Prof Jem Bendell hold long-weekend silent retreats
   with kirtan. Not named in this transmission as a Light Hub; held

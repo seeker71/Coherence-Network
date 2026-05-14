@@ -170,6 +170,10 @@ timing places the transmission in the same arc as Urs's move into the
 sanctuary; the body is in residence at the first Light Hub as the New
 Earth grid the transmission names is being spoken into form.
 
+## What arrived after
+
+Hours after Giles's transmission landed, a second message reached the body on the same day (2026-05-14) — an invitation from **Cacao Hati Suci** in **Tabanan, Bali**, *the sister land of the Hati Suci Community*. The *Cacao Forest, Sister to the first Light Hub* that Giles named with identity held open is now met by name. Held practically by **Ita** (WhatsApp +62 859-3617-7827); about one hour by scooter from Ubud; teak wooden *gladak* houses with private kitchens, shower rooms, and compost toilets; a communal house for yoga, meditation, community gatherings, intimate retreats; a river, a natural spring, vegetable gardens, meditation paths, Mount Agung views, hot springs down the road; *250,000 IDR per night, minimum 2 nights, long-term rentals also available, special rate for Hati Suci friends*. The constellation now visible: Hati Suci Sanctuary (Banjar Bayad, the starter) — Cacao Hati Suci (Tabanan, the cacao sister) — Palawan/Nacpan Beach (still held open) — a European Hub yet to be shown. Presence anchored: [cacao-hati-suci](../../presences/cacao-hati-suci.md).
+
 ## Cross-References
 
 → lc-light-hubs, lc-attuned-spaces, lc-farm-as-organism,
