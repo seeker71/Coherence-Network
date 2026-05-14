@@ -2,7 +2,7 @@
 
 **Give your AI agent native access to every idea, spec, contributor, and value chain in the Coherence Network.**
 
-An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as 92 typed tools — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, read field stories, execute tasks, discover resonant peers, apply project blueprints, receive the shared agent invitation, and read repository content via direct links without writing a single API call.
+An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as a typed tool surface — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, read field stories, execute tasks, discover resonant peers, apply project blueprints, receive the shared agent invitation, and read repository content via direct links without writing a single API call.
 
 ```bash
 npx coherence-mcp-server
@@ -289,9 +289,9 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | Surface | What it is | Link |
 |---------|-----------|------|
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | This package — 92 typed tools for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **API** | Full OpenAPI surface — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
+| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `coh help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **MCP Server** | This package — typed tool surface for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers in any OpenClaw instance for ideas, specs, coherence | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 

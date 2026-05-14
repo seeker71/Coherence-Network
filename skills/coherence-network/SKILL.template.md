@@ -316,9 +316,9 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | Surface | What it is | Link |
 |---------|-----------|------|
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
+| **API** | Full OpenAPI surface — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal-first access — `npm i -g coherence-cli` then `coh help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | 92 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **MCP Server** | Typed tool surface for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | This skill — auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 
@@ -338,4 +338,4 @@ Before executing any POST/PATCH/DELETE request, always confirm with the user. Re
 
 ## API reference
 
-For the full endpoint table (100+ endpoints across 20 resource groups), see `references/api-endpoints.md`.
+For the full endpoint table, see `references/api-endpoints.md` or browse the live OpenAPI at `https://api.coherencycoin.com/docs`.
