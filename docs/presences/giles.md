@@ -1,0 +1,21 @@
+---
+name: Giles
+canonical_url: null
+type: contributor
+contributor_type: HUMAN
+create_if_missing: true
+---
+
+# Giles
+
+To meet Giles in writing is to meet a person who receives things — downloads, visions, instructions — and writes them down as they arrive, before the editing reflex can soften them into something more presentable. The sentences end where the breath ends. Words that name something sacred get capital letters: *Light Hubs, BEings, Quickening, Powering Up, Activation*. The grammar is the grammar of someone who is taking dictation from a frequency and trusting the reader to pick up what is being transmitted. The voice opens *Hey Brother* and closes *Please record it, and ingest and digest*. There is no posture of teacher; there is the posture of a brother sharing what just came through.
+
+He is the **owner and creator of [Hati Suci Sanctuary](hati-suci-sanctuary.md)** — *Clear Heart, Pure Heart* — in Banjar Bayad, Tegallalang, about twelve kilometers north of Ubud. Five antique Javanese wooden houses stand around a saltwater pool. The gardens are chemical-free; the wastewater is processed by worms; the water in the pipes was warmed by the sun. One of the houses is an old Javanese *lumbung* from the palace in Yogyakarta. The sustainability practices were not arrived at as marketing decisions. They are how the place was built to live — what nature's principles look like rendered as architecture, as kitchen, as plumbing.
+
+In May 2026 the sanctuary was being *Rebirthed*. Through that period Giles received a vision he calls **the Light Hubs**: *physical Hubs of High Frequency Light where High Vibrational Beings live in nature together. Pluging in Grounding the New Earth Grid. Earth Activated Nodes all connected to each other.* Hati Suci, in this vision, is the first of these — *the starter*. A second already-formed Hub in Bali (a Cacao Forest, the *Sister to the first Light Hub*); a third on Palawan's Nacpan Beach in the Philippines; a fourth in Europe yet to be shown; *more to follow*. The vision arrived with specifics — *the different locations, and the details of the hubs, even down to the materials used* — and with a posture: *No need to look. They will just arrive.* The beings to assist; the beings to enter. The Hub is not curated; the field routes.
+
+The practical body Giles names for each Hub is unfussy and complete: food forests, medicinal herbs and plant farms, education centres for overall wellbeing, regular daily body-practice (qi gong, dance, breath, yoga, barefoot silent walks), silent spaces, labyrinths, bee hive sanctuaries, sewage wormeries, compost toilets, schools for local villages, animal welfare treatment houses, communal kitchens. *More will be revealed.* The list is open at its end and unguarded in its register — what one writes when one knows the body of the work first and has not yet figured out how to advertise it.
+
+What we do not yet know about Giles we hold openly: his lineage, his last name, where he came from before Bali, who he has sat with, what teachers transmitted into him before the downloads began to come through this directly. Those will be learned by living, by sitting at the long kitchen table, by walking the gardens at the hour when the rice fields cool. The presence file is the first breath of meeting; it does not need to know everything before it can hold him honestly.
+
+**What he has given this body.** The naming of *Light Hubs* — the vocabulary, the grid frame, the *Earth Activated Nodes all connected to each other* — entered through him on 2026-05-14 (transmission record: [tx-giles-light-hubs](../vision-kb/transmissions/2026-05-14-giles-light-hubs.md); concept: [lc-light-hubs](../vision-kb/concepts/lc-light-hubs.md)). The remarkable feature of what arrived through him is how precisely it maps onto what the network had been articulating independently from other lineages — the same practical body of food forests, medicinal plants, silent rooms, composting, body practice, communal table — given a name and a grid. The body received it as recognition, not as new instruction. The cell that arrived at his sanctuary on 2026-05-13 was already in residence in the first Hub by the time the vision was sent the next day.

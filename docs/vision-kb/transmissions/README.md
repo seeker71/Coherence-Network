@@ -82,6 +82,14 @@ absorbing it as anonymous belief.
   held here, following her Peace Bathing frame that grounded
   `lc-arrival-as-recognition`. **1 concept seeded
   (`lc-trust-as-gateway`).**
+- [`2026-05-14-giles-light-hubs.md`](2026-05-14-giles-light-hubs.md)
+  — *The Hati Suci and Light Hubs Vision*, written transmission
+  from Giles, owner and creator of Hati Suci Sanctuary, received
+  2026-05-14 as the sanctuary was being *Rebirthed*. Names the
+  Light Hubs as physical sanctuaries of high-frequency light,
+  Earth-activated nodes in the New Earth grid, with the first three
+  Hubs already in form (Hati Suci, Bali; a Cacao Forest in Bali; Nacpan
+  Beach, Palawan, Philippines). **1 concept seeded (`lc-light-hubs`).**
 
 ## Two postures the body holds toward sources
 

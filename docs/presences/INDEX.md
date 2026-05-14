@@ -45,6 +45,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [donald-hoffman](donald-hoffman.md) — UC Irvine cognitive scientist; Interface Theory of Perception; the empirical-mathematical peer of Castaneda's assemblage point and Levin's bioelectric pattern memory.
 - [elios](elios.md) — Ubud cell; chanting practice with Ilena Young; the first cell of the Ubud cluster to enter this network's awareness on April 29, 2026.
 - [gabrielle-roth](gabrielle-roth.md) — creator of 5Rhythms (flowing, staccato, chaos, lyrical, stillness); the wave that named what bodies already do (1941–2012).
+- [giles](giles.md) — owner and creator of Hati Suci Sanctuary; the Light Hubs vision arrived through him on 2026-05-14 as the sanctuary was being Rebirthed (transmission: [tx-giles-light-hubs](../vision-kb/transmissions/2026-05-14-giles-light-hubs.md); concept: [lc-light-hubs](../vision-kb/concepts/lc-light-hubs.md)).
 - [goetheanum](goetheanum.md) — Steiner's cast-concrete Gesamtkunstwerk in Dornach, Switzerland; where Urs sat through the week-long Faust I+II in eurythmy at 19. (place / institution)
 - [hati-suci-sanctuary](hati-suci-sanctuary.md) — Clear/Pure Heart sanctuary in Banjar Bayad, Tegallalang; antique Javanese wooden houses, permaculture, the quieter ring 12 km north of Ubud.
 - [ida-bagus-kesnawa](ida-bagus-kesnawa.md) — Dr. Ida Bagus Kesnawa; Denpasar medical doctor + kinesiologist; chair of Bali's biodynamic farming community; "food as medicine" bridge.
