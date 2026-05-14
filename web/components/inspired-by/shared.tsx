@@ -13,6 +13,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import { PROVIDER_BRAND, brandFor } from "@/components/presence/brand";
+import { MarkdownProse } from "@/components/markdown-prose";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -101,23 +103,80 @@ export function Avatar({ item }: { item: InspiredByItem }) {
   );
 }
 
-export function PresencesRow({ presences, limit = 6 }: { presences: Presence[]; limit?: number }) {
+export function PresencesRow({ presences, limit = 8 }: { presences: Presence[]; limit?: number }) {
   if (!presences || presences.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5 mt-2">
-      {presences.slice(0, limit).map((p) => (
-        <a
-          key={p.url}
-          href={p.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] uppercase tracking-[0.12em] rounded-full border border-border/40 px-2 py-0.5 text-muted-foreground hover:text-foreground hover:border-border"
-        >
-          {p.provider}
-        </a>
-      ))}
+    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+      {presences.slice(0, limit).map((p) => {
+        const tone = brandFor(p.provider);
+        const hasIcon = !!PROVIDER_BRAND[p.provider]?.iconPath;
+        if (hasIcon && tone.iconPath) {
+          return (
+            <a
+              key={p.url}
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`${tone.label} · ${p.url}`}
+              aria-label={tone.label}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full transition-transform hover:scale-110"
+              style={{
+                background: tone.gradient || tone.bg,
+                color: tone.fg,
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+                fill="currentColor"
+              >
+                <path d={tone.iconPath} />
+              </svg>
+            </a>
+          );
+        }
+        return (
+          <a
+            key={p.url}
+            href={p.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={p.url}
+            className="text-[10px] uppercase tracking-[0.12em] rounded-full border border-border/40 px-2 py-0.5 text-muted-foreground hover:text-foreground hover:border-border"
+          >
+            {tone.label}
+          </a>
+        );
+      })}
     </div>
   );
+}
+
+/**
+ * Drop a leading `# Name` heading from a description when it just
+ * duplicates the card's title. The card already shows the name above
+ * the description; rendering it a second time as an `<h1>` adds noise.
+ * Anything else (subheadings, italics, links, lists) is left intact for
+ * MarkdownProse to render.
+ */
+export function dropRedundantTitle(raw: string, name?: string): string {
+  let text = raw.replace(/\r\n?/g, "\n").trim();
+  if (!name) return text;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Leading `# Name\n` or `## Name\n` etc. — drop the whole line.
+  text = text.replace(
+    new RegExp(`^#{1,6}\\s*${escaped}\\s*\\n+`, "i"),
+    "",
+  );
+  // Same heading without a trailing newline (the whole description is
+  // the heading plus a blob — odd but seen in the wild).
+  text = text.replace(
+    new RegExp(`^#{1,6}\\s*${escaped}\\s+`, "i"),
+    "",
+  );
+  return text.trim();
 }
 
 // ── Card ──────────────────────────────────────────────────────────────
@@ -133,7 +192,8 @@ export type CardProps = {
 export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
   const shared = highlightShared && !!item.shared_with_viewer;
   const presences = Array.isArray(item.node.presences) ? item.node.presences : [];
-  const description = item.node.tagline || item.node.description || "";
+  const rawDescription = item.node.tagline || item.node.description || "";
+  const description = dropRedundantTitle(rawDescription, item.node.name);
   const baseClass = shared
     ? "border-[hsl(var(--chart-2)/0.45)] bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card))_55%,hsl(var(--chart-2)/0.10)_100%)]"
     : "border-border/30 bg-card/50 hover:bg-card/70 hover:border-border/60";
@@ -173,12 +233,14 @@ export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
             {item.node.name}
           </p>
           {description ? (
-            // Description gets four lines of breathing room (was two).
             // The graph holds 300-450 chars of context for figures like
-            // Goethe and Ramtha; a 2-line clamp turned that into noise.
-            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-4">
-              {description}
-            </p>
+            // Goethe and Ramtha — sometimes with markdown (headings,
+            // italics, links). MarkdownProse renders the small set we
+            // support; the wrapper bounds height so the card stays
+            // compact, with a soft fade hinting more on click-through.
+            <div className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-h-[6.5rem] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [&_p]:m-0 [&_p+p]:mt-1.5 [&_em]:italic [&_strong]:font-semibold [&_h1]:text-sm [&_h1]:font-semibold [&_h1]:text-foreground [&_h1]:mb-1 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-foreground [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-medium [&_h3]:text-foreground [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-0.5 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:text-[0.85em]">
+              <MarkdownProse text={description} />
+            </div>
           ) : null}
           <PresencesRow presences={presences} />
           <div className="flex items-center gap-3 mt-2.5 flex-wrap">
