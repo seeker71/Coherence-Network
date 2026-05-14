@@ -58,8 +58,9 @@
 | Just Tap In — Sacha Stone episode | [youtu.be/07DHgJFFqQY](https://youtu.be/07DHgJFFqQY) | Apr 11 2026 episode on ascension, jurisdiction, New Earth Exchange, and the MicroNation prototype |
 | New Living Expo | [newlivingexpo.com](https://newlivingexpo.com/) | Annual gathering, San Rafael CA — New Earth community convergence |
 | ORION Architect sovereign AI episode | [youtu.be/SPWo2D1Ue60](https://youtu.be/SPWo2D1Ue60) | Robert Edward Grant on sovereign AI, post-quantum claims, PWA resilience, user-owned work product, and non-extractive platform economics |
+| Sacred Imagination Sacred Britain episode | [youtu.be/jn7IYfn3Aa8](https://youtu.be/jn7IYfn3Aa8) | Emilio Ortiz on sacred imagination as perception, lower/creative/sacred imagination layers, divine-child keys, dreaming with eyes open, and falling in love with this world as it is |
 
-> See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping, [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links, and [orion-architect-sovereign-ai-2026-05-06.md](orion-architect-sovereign-ai-2026-05-06.md) for the ORION Architect sovereign-AI digest.
+> See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping, [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links, [orion-architect-sovereign-ai-2026-05-06.md](orion-architect-sovereign-ai-2026-05-06.md) for the ORION Architect sovereign-AI digest, and [sacred-imagination-emilio-ortiz-2026-05-14.md](sacred-imagination-emilio-ortiz-2026-05-14.md) for the Sacred Imagination digest.
 
 ## Reference Communities
 

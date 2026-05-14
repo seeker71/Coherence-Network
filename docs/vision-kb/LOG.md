@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-14] resource | Sacred Imagination - Emilio Ortiz
+
+Emilio Ortiz's *Sacred Imagination | Sacred Britain Expedition | Day 04* entered as an agent-ready resource digest and profile graph source.
+
+The transmission names imagination as a perceptual interface rather than escapism. It distinguishes lower imagination shaped by survival and contraction, creative imagination shaped by heart/story/beauty/expression, and sacred imagination shaped by multidimensional perception, symbolic sight, and remembrance. Its practical recovery map is the divine-child keys: wonder, play, curiosity, presence, trust, open-hearted feeling, and remembrance.
+
+Resource added: [`resources/sacred-imagination-emilio-ortiz-2026-05-14.md`](resources/sacred-imagination-emilio-ortiz-2026-05-14.md). Graph manifest now carries Emilio Ortiz, the video artifact, and four extracted concepts: sacred imagination as perception, imagination layering, divine child keys, and dreaming with eyes open. Full captions remain outside the repository; only digest, hash, and extracted concepts are stored.
+
 ## [2026-05-14] presence | Cacao Hati Suci — the second Light Hub met by name
 
 Hours after Giles's transmission landed, a second message reached the body on the same day — an invitation from **Cacao Hati Suci** in **Tabanan, Bali**, *the sister land of the Hati Suci Community*. The *Cacao Forest, Sister to the first Light Hub* that Giles named with identity held open in the morning transmission is now met by name in the afternoon. Presence anchored: [`cacao-hati-suci`](../presences/cacao-hati-suci.md). The transmission record and the `lc-light-hubs` concept were both updated in the same breath to reflect the named identity. Held practically by **Ita** (WhatsApp +62 859-3617-7827); ~1 hour scooter from Ubud; teak wooden *gladak* houses with private kitchens, shower rooms, and compost toilets; a communal house for yoga, meditation, gatherings, intimate retreats; river, natural spring, vegetable gardens, meditation paths, Mount Agung views, hot springs down the road. *250,000 IDR/night, minimum 2 nights, long-term rentals available, special rate for Hati Suci friends.*
