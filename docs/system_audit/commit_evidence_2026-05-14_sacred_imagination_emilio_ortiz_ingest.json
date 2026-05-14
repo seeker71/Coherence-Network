@@ -1,0 +1,78 @@
+{
+  "date": "2026-05-14",
+  "thread_branch": "codex/ingest-youtube-jn7iyfn3aa8-20260514",
+  "commit_scope": "Ingest the Sacred Imagination YouTube transmission as source-backed profile graph data and an agent-ready resource digest.",
+  "files_owned": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/lineage/formative-transmissions.md",
+    "docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "specs/sacred-imagination-emilio-ortiz-ingest.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-14_sacred_imagination_emilio_ortiz_ingest.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+      "python3 scripts/validate_spec_quality.py --file specs/sacred-imagination-emilio-ortiz-ingest.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-14_sacred_imagination_emilio_ortiz_ingest.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and deploy validation remain pending until PR merge and production replay."
+  },
+  "idea_ids": ["knowledge-and-resonance"],
+  "spec_ids": ["specs/sacred-imagination-emilio-ortiz-ingest.md"],
+  "task_ids": ["sacred-imagination-emilio-ortiz-ingest"],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": ["source-request"]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": ["ingestion", "summary", "graph-manifest-edit"]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+    "docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "60f70a32cae1eb962a694367c1f38baa4c8d5ee947d6638b7d658a5b4ec1c823"
+  ],
+  "change_files": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/lineage/formative-transmissions.md",
+    "docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "specs/sacred-imagination-emilio-ortiz-ingest.md",
+    "specs/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
