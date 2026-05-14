@@ -3,9 +3,9 @@
 
 name: coherence-mcp-server
 description: >
-  MCP server for the Coherence Network — 92 typed tools for AI agents to browse
-  ideas, trace value chains, link identities, record contributions, read field
-  stories, and explore the Living Codex ontology.
+  MCP server for the Coherence Network — typed tool surface for AI agents to
+  browse ideas, trace value chains, link identities, record contributions, read
+  field stories, and explore the Living Codex ontology.
 
 homepage: https://coherencycoin.com
 repository: https://github.com/seeker71/Coherence-Network
