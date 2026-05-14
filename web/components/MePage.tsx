@@ -145,6 +145,7 @@ export function MePage() {
   const [footprint, setFootprint] = useState<Footprint>(emptyFootprint());
   const [trail, setTrail] = useState<Trail | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [presenceSlug, setPresenceSlug] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   // Cross-device sign-in state — a visitor landing here from a new
@@ -162,7 +163,10 @@ export function MePage() {
           return;
         }
         const base = getApiBase();
-        const [feedRes, trailRes, meetingsRes] = await Promise.all([
+        const nodeId = ident.contributorId.startsWith("contributor:")
+          ? ident.contributorId
+          : `contributor:${ident.contributorId}`;
+        const [feedRes, trailRes, meetingsRes, nodeRes] = await Promise.all([
           fetch(
             `${base}/api/feed/personal?contributor_id=${encodeURIComponent(
               ident.contributorId,
@@ -173,6 +177,9 @@ export function MePage() {
           ).catch(() => null),
           fetch(
             `${base}/api/contributors/${encodeURIComponent(ident.contributorId)}/met-at`,
+          ).catch(() => null),
+          fetch(
+            `${base}/api/graph/nodes/${encodeURIComponent(nodeId)}`,
           ).catch(() => null),
         ]);
         if (!feedRes.ok) {
@@ -196,6 +203,13 @@ export function MePage() {
           setMeetings(
             Array.isArray(meetingsData.meetings) ? meetingsData.meetings : [],
           );
+        }
+        if (nodeRes && nodeRes.ok) {
+          const nodeData = await nodeRes.json();
+          const slug = typeof nodeData?.presence_slug === "string"
+            ? nodeData.presence_slug.trim()
+            : "";
+          if (slug) setPresenceSlug(slug);
         }
         setLoading(false);
       } catch (e) {
@@ -300,6 +314,14 @@ export function MePage() {
                 className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
               >
                 {t("me.surfaceProfile")}
+              </a>
+            )}
+            {presenceSlug && (
+              <a
+                href={`/people/${encodeURIComponent(presenceSlug)}`}
+                className="rounded-lg border border-border/40 px-3 py-2 text-sm text-foreground hover:bg-accent/40 hover:border-border transition-colors"
+              >
+                {t("me.surfacePresence")}
               </a>
             )}
             {hasContributor && identity?.contributorId && (
