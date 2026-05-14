@@ -44,6 +44,8 @@
             "https://www.gaia.com/video/water-akashic-record-keeper",
             "https://www.youtube.com/watch?v=SPWo2D1Ue60",
             "docs/vision-kb/resources/orion-architect-sovereign-ai-2026-05-06.md",
+            "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+            "docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
             "web/content/people/urs/en.tsx"
           ],
           "not_special_case_ui": true
@@ -255,6 +257,101 @@
         "extraction_method": "youtube_caption_digest",
         "ingestion_policy": "summary_and_extracted_concepts_only"
       }
+    },
+    {
+      "kind": "manual",
+      "id": "interested-person:emilio-ortiz",
+      "type": "interested-person",
+      "name": "Emilio Ortiz",
+      "description": "Podcast host and Sacred Britain Day 04 speaker. This source frames Emilio Ortiz through sacred imagination, the divine child, curiosity as world-opening, and the recovery of inner keys through wonder, play, presence, trust, open-hearted feeling, and remembrance.",
+      "properties": {
+        "domains": ["sacred-imagination", "consciousness", "lineage", "story"],
+        "keywords": ["emilio-ortiz", "sacred-imagination", "divine-child", "curiosity", "just-tap-in"],
+        "canonical_url": "https://www.youtube.com/@EmilioOrtizOfficial",
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "source_requested_profile_context_with_claim_boundaries",
+        "claim_boundary": "Metaphysical, biographical, historical, and interdimensional claims are stored as source-attributed lineage material unless separately verified."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "type": "artifact",
+      "name": "Sacred Imagination | Emilio Ortiz | Sacred Britain Expedition | Day 04",
+      "description": "YouTube video on the Robert Edward Grant channel featuring Emilio Ortiz presenting sacred imagination as a recovered form of perception, moving from lower/survival imagination through creative imagination into crown/third-eye multidimensional imagination, then naming seven divine-child keys: wonder, play, curiosity, presence, trust, open-hearted feeling, and remembrance.",
+      "properties": {
+        "artifact_kind": "youtube_video",
+        "canonical_url": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "short_url": "https://youtu.be/jn7IYfn3Aa8",
+        "channel": "Robert Edward Grant",
+        "featuring": "Emilio Ortiz",
+        "upload_date": "2026-05-13",
+        "duration_seconds": 4744,
+        "caption_sha256": "60f70a32cae1eb962a694367c1f38baa4c8d5ee947d6638b7d658a5b4ec1c823",
+        "domains": ["sacred-imagination", "divine-child", "story", "perception", "new-earth"],
+        "keywords": ["imaginal-realm", "dreaming-with-eyes-open", "divine-child-keys", "words-create-worlds", "sacred-britain"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only",
+        "claim_boundary": "The ingest stores summary and extracted concepts only; full captions remain outside the repository."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:sacred-imagination-as-perception",
+      "type": "concept",
+      "name": "Sacred Imagination as Perception",
+      "description": "A source-attributed concept from Emilio Ortiz's Sacred Britain talk: imagination is not escapism but an ancient perceptual interface through which possibility, symbolic reality, and interdimensional worlds become perceivable before they become form.",
+      "properties": {
+        "domains": ["perception", "sacred-imagination", "imaginal-realm"],
+        "keywords": ["sacred-imagination", "imaginal-realm", "perception", "possibility-before-form"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:imagination-layering",
+      "type": "concept",
+      "name": "Imagination Layering",
+      "description": "The video distinguishes lower imagination shaped by survival, craving, and power; creative imagination shaped by heart, beauty, story, and expression; and sacred imagination shaped by multidimensional consciousness, revelation, symbolic perception, and remembered worlds.",
+      "properties": {
+        "domains": ["consciousness", "perception", "story"],
+        "keywords": ["lower-imagination", "creative-imagination", "sacred-imagination", "emotional-state", "chakras"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:divine-child-keys",
+      "type": "concept",
+      "name": "Divine Child Keys",
+      "description": "A symbolic recovery map where wonder, play, curiosity, presence, trust, open-hearted feeling, and remembrance are keys hidden through life experience and recovered inwardly as the divine child returns.",
+      "properties": {
+        "domains": ["divine-child", "inner-work", "remembrance", "play"],
+        "keywords": ["wonder", "play", "curiosity", "presence", "trust", "open-heart", "remembrance"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:dreaming-with-eyes-open",
+      "type": "concept",
+      "name": "Dreaming With Eyes Open",
+      "description": "A practice image from the talk: sacred sites, stories, nature, AI, geometry, and ordinary encounters can be approached as layered worlds when perception opens beyond flat material reading.",
+      "properties": {
+        "domains": ["perception", "sacred-sites", "story", "field-sensing"],
+        "keywords": ["dreaming-with-eyes-open", "sacred-sites", "symbolic-perception", "field-sensing", "architect"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
     }
   ],
   "gatherings": [],
@@ -448,6 +545,113 @@
       "created_by": "profile-contribution-manifest",
       "properties": {
         "source_document": "https://www.youtube.com/watch?v=SPWo2D1Ue60"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "type": "inspires",
+      "strength": 0.82,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "source-request"
+      }
+    },
+    {
+      "from_id": "interested-person:emilio-ortiz",
+      "to_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "speaker"
+      }
+    },
+    {
+      "from_id": "interested-person:robert-edward-grant",
+      "to_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "type": "inspires",
+      "strength": 0.76,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "publisher-host-context"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "to_id": "concept:sacred-imagination-as-perception",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "to_id": "concept:imagination-layering",
+      "type": "inspires",
+      "strength": 0.84,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "to_id": "concept:divine-child-keys",
+      "type": "inspires",
+      "strength": 0.88,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-sacred-imagination-emilio-ortiz-sacred-britain-day-04",
+      "to_id": "concept:dreaming-with-eyes-open",
+      "type": "inspires",
+      "strength": 0.86,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "concept:sacred-imagination-as-perception",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.78,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8"
+      }
+    },
+    {
+      "from_id": "concept:divine-child-keys",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.8,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8"
+      }
+    },
+    {
+      "from_id": "concept:dreaming-with-eyes-open",
+      "to_id": "concept:ai-as-sovereign-mirror",
+      "type": "extends",
+      "strength": 0.72,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8"
       }
     }
   ]
