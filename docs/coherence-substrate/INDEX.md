@@ -18,8 +18,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `api/app/services/substrate/kernel.py` | NodeID, Recipe, NamedCell, intern_node, make_cell, find_equivalent_cells, lattice_stats |
 | `api/app/services/substrate/category.py` | Network category vocabulary (Idea/Spec/Concept/Memory/Presence/Task/Lineage/Witness; Realize/Compose/Transmit/Tend/Resolve/Witness/Absorb/Score) |
 | `api/app/services/substrate/orm.py` | SubstrateNodeORM, SubstrateNamedCellORM (the two tables) |
-| `api/app/services/substrate/markdown_frontend.py` | Frontmatter+body → cell ingestion (memory files now; specs/ideas/concepts next) |
-| `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form` |
+| `api/app/services/substrate/markdown_frontend.py` | Frontmatter+body → cell ingestion for memory, spec, idea, concept, and presence files |
+| `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form`, `ingest-paths`, `kb-sync-audit` |
 | `scripts/coh_form.py` | Form-only CLI (legacy entry; use `coh_substrate.py form` instead) |
 | `scripts/substrate_ingest.py` | Ingest-only CLI (legacy entry; use `coh_substrate.py ingest` instead) |
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
@@ -98,9 +98,23 @@ After every merge, changed `.md` files in tracked domains are auto-ingested. The
 git diff --name-only HEAD~1..HEAD '*.md' | python3 scripts/coh_substrate.py ingest-paths --from-stdin
 ```
 
+### Audit KB/substrate drift
+
+```bash
+python3 scripts/coh_substrate.py kb-sync-audit --strict
+```
+
+Compares canonical `docs/vision-kb/concepts/lc-*.md` files to live `@concept(...)` NamedCells. It reports missing cells, stale deleted/renamed cells, source-path drift, wrong-domain ingests, duplicate concept ids, and the currently unmodeled KB surfaces (language views, resources, transmissions). For reviewed deletes/renames:
+
+```bash
+python3 scripts/coh_substrate.py kb-sync-audit --prune-stale
+```
+
+This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can remain as historical structural memory.
+
 ## Phase status (as of 2026-05)
 
 - Phase 1 ✓ — building-knowledge from prior art (kernel walk + run + mini-port + design doc)
 - Phase 2 ✓ — Network category vocabulary designed
 - Phase 3 ✓ — kernel + memory frontend + CLI + 11 tests; substrate ingests body's memories
-- Phase 4 — REST API, Neo4j integration, agent-context auto-annotation, frontend coverage for specs/ideas/concepts/presences, backfill (in progress)
+- Phase 4 — REST API, Neo4j integration, agent-context auto-annotation, broader KB surface coverage for resources/transmissions/language views, backfill (in progress)

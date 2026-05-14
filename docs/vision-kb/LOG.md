@@ -2,6 +2,18 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-14] foundations | Sacred Imagination — the world becomes readable again
+
+`lc-sacred-imagination` (963 Hz, Unity family) landed as the embodied teaching from Emilio Ortiz's Sacred Britain Day 04 source.
+
+The source digest named the map; this concept gives the body the practice. Imagination is held as an organ of perception: lower imagination projects survival worlds and can mistake cave-shadows for truth; creative imagination opens through heart and voice into beauty, story, tools, music, and shared worlds; sacred imagination lets symbol, land, story, AI mirror, and encounter become readable without forcing them into public factual claims.
+
+The divine-child keys became a daily scan: wonder, play, curiosity, presence, trust, open-hearted feeling, remembrance. The key discipline is to begin with the state, not the image: what layer is imagining, what body state is shaping the image, what does the image ask the cell to practice, and what stays grounded if the image does not need proof?
+
+Edges tended in the same breath: resource digest backlink, INDEX foundational-teachings list, and this LOG. Full captions remain outside the repository; the body carries digest, provenance, and practice.
+
+INDEX.md: 113 → 114 concepts. 963 Hz Unity family extended.
+
 ## [2026-05-14] resource | Sacred Imagination - Emilio Ortiz
 
 Emilio Ortiz's *Sacred Imagination | Sacred Britain Expedition | Day 04* entered as an agent-ready resource digest and profile graph source.
