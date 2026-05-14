@@ -1,8 +1,11 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 import { FrequencySpectrum } from "./_components/FrequencySpectrum";
+import { PresenceGallery } from "./_components/PresenceGallery";
 import { PresenceStory } from "./_components/PresenceStory";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +112,28 @@ async function fetchFrequencyProfile(contributorId: string): Promise<FrequencyPr
     return res.json();
   } catch {
     return null;
+  }
+}
+
+/**
+ * Probe web/public/people/{slug}/ at request time for photo files.
+ *
+ * Returns sorted absolute paths under /people/{slug}/. Any presence
+ * with photos in that directory gets a gallery; no manifest, no
+ * config — just drop image files in the folder and they appear.
+ */
+async function fetchPresencePhotos(contributorId: string): Promise<string[]> {
+  // Only allow alphanumeric+dash slugs to keep the readdir safe.
+  if (!/^[a-z0-9-]+$/.test(contributorId)) return [];
+  const dir = path.join(process.cwd(), "public", "people", contributorId);
+  try {
+    const entries = await readdir(dir);
+    return entries
+      .filter((name) => /\.(jpe?g|png|webp|avif)$/i.test(name) && name !== "hero.jpg")
+      .sort()
+      .map((name) => `/people/${contributorId}/${name}`);
+  } catch {
+    return [];
   }
 }
 
@@ -238,11 +263,12 @@ export default async function ContributorProfilePage({
   // front, so every downstream fetch and comparison sees the real id.
   const contributorId = decodeURIComponent(rawContributorId);
 
-  const [contributor, publicKeyData, profile, assets] = await Promise.all([
+  const [contributor, publicKeyData, profile, assets, photos] = await Promise.all([
     fetchContributorNode(contributorId),
     fetchPublicKey(contributorId),
     fetchFrequencyProfile(contributorId),
     fetchAssets(contributorId),
+    fetchPresencePhotos(contributorId),
   ]);
 
   // Resolve each top dimension to a human label + href. Node-id dims
@@ -334,6 +360,9 @@ export default async function ContributorProfilePage({
         content={contributor?.description as string | undefined}
         displayName={displayName}
       />
+
+      {/* ── Photographs — present only if /people/{slug}/*.jpg exists ── */}
+      <PresenceGallery srcs={photos} alt={displayName} />
 
       {/* ── Living Frequency Spectrum — shaped by attention ──── */}
       <FrequencySpectrum contributorId={contributorId} />
