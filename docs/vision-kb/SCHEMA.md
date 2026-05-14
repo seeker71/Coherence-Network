@@ -133,6 +133,7 @@ After deepening a concept, take a moment to sense whether everything is in order
 - Do the rendering patterns look right? (arrows, visuals, headings)
 - Do the cross-refs point to real concepts?
 - Has the content reached the DB? (`sync_kb_to_db.py` + `sync_crossrefs_to_db.py`)
+- Has the content reached the substrate? (`python3 scripts/coh_substrate.py ingest-paths docs/vision-kb/concepts/{id}.md` + `python3 scripts/coh_substrate.py kb-sync-audit --strict`)
 - Are INDEX.md and LOG.md current?
 
 ## Deepening a Concept
@@ -145,7 +146,8 @@ When a concept is ready to expand:
 4. Sense the frequency: read it back, notice where the language goes institutional
 5. Check the weight: if the file has grown past ~4,000 tokens, let the story stay and move the practical detail to a guide
 6. Sync: content reaches visitors only through the DB
-7. Leave a trace: INDEX.md status, LOG.md entry
+7. Ground: content reaches agents through the substrate, so re-ingest the concept path and run the KB/substrate audit
+8. Leave a trace: INDEX.md status, LOG.md entry
 
 ## How This Vision Speaks
 

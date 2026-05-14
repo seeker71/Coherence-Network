@@ -24,7 +24,20 @@ If any of the three feels skipped because *it's faster to defer*, that is the fe
 - If frontmatter `source:` points at a `transmissions/{date}-{slug}.md`, write that record too with `seeded_concepts: [lc-{id}]`
 - Sync content to DB: `python3 scripts/sync_kb_to_db.py lc-{id} --api-key $API_KEY`
 - Sync hierarchy edges if INDEX hierarchy changed: `python3 scripts/sync_crossrefs_to_db.py`
+- Sync the substrate cell: `python3 scripts/coh_substrate.py ingest-paths docs/vision-kb/concepts/lc-{id}.md`
+- Verify KB/substrate drift: `python3 scripts/coh_substrate.py kb-sync-audit --strict`
 - Verify the rendered page: `curl -s -m 10 https://coherencycoin.com/vision/lc-{id}` returns 200 with content present
+
+#### Add/update/delete with the substrate
+
+The KB markdown and graph DB are not the whole body. Every canonical concept also needs a live substrate `@concept(...)` cell so agents can annotate the file, compare its Blueprint, and see its structural family.
+
+- **Add** a concept: create `docs/vision-kb/concepts/lc-{id}.md`, update INDEX/LOG, run `sync_kb_to_db.py`, then run `python3 scripts/coh_substrate.py ingest-paths docs/vision-kb/concepts/lc-{id}.md`.
+- **Update** a concept: after editing the file, rerun the same DB sync and `ingest-paths` command so the substrate refreshes `blueprint`, `access`, `ctor`, and `source_path`.
+- **Delete or rename** a concept: remove or move the file, run `python3 scripts/coh_substrate.py kb-sync-audit --strict` to see the stale cell, then run `python3 scripts/coh_substrate.py kb-sync-audit --prune-stale` after reviewing the stale row. Pruning removes the live NamedCell from the registry; interned Blueprint/Recipe nodes may remain as historical structural memory.
+- **Session proof**: include `kb-sync-audit --strict` in the spec/evidence command list whenever a KB concept is added, renamed, deleted, or materially changed.
+
+Current boundary: `kb-sync-audit` audits canonical concept files. It also counts language views, resources, and transmissions as unmodeled KB surfaces so the gap stays visible, but those surfaces are not yet first-class substrate domains.
 
 ### Spec (`specs/{slug}.md`)
 
