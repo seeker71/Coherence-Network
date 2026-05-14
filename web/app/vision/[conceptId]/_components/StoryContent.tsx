@@ -7,6 +7,31 @@ import {
 } from "@/lib/vision-utils";
 
 /**
+ * Fold continuation lines into list items.
+ *
+ * Markdown convention: a list item can span multiple lines; the
+ * continuation lines are indented and don't start with "- ". Without
+ * this fold, the renderer drops continuation lines and any markdown
+ * emphasis (**bold**, *italic*) that spans them becomes unpaired and
+ * renders as raw asterisks.
+ */
+function foldListItems(lines: string[]): string[] {
+  const items: string[] = [];
+  let current: string | null = null;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.startsWith("- ")) {
+      if (current !== null) items.push(current);
+      current = line.slice(2).trim();
+    } else if (line && current !== null) {
+      current += " " + line;
+    }
+  }
+  if (current !== null) items.push(current);
+  return items;
+}
+
+/**
  * Renders story_content markdown into JSX blocks.
  *
  * Handles: ## headings, ### subheadings, > blockquotes,
@@ -60,7 +85,7 @@ export function StoryContent({
           }
 
           // Heading with attached list items (e.g. ## Resources\n- item1\n- item2)
-          const listItems = rest.split("\n").filter((l: string) => l.trim().startsWith("- "));
+          const listItems = foldListItems(rest.split("\n"));
           return (
             <div key={i}>
               {isH3
@@ -71,7 +96,7 @@ export function StoryContent({
                 <ul className="space-y-2 pl-4">
                   {listItems.map((item: string, j: number) => (
                     <li key={j} className="text-sm text-stone-400 leading-relaxed list-disc"
-                      dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item.slice(2).trim()) }}
+                      dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item) }}
                     />
                   ))}
                 </ul>
@@ -84,12 +109,16 @@ export function StoryContent({
             </div>
           );
         }
-        // > Blockquote
+        // > Blockquote (join wrapped lines, run inline markdown for emphasis + links)
         if (trimmed.startsWith("> ")) {
+          const quoteText = trimmed
+            .split("\n")
+            .map((l: string) => l.replace(/^>\s?/, ""))
+            .join(" ");
           return (
-            <blockquote key={i} className="border-l-2 border-amber-500/30 pl-4 text-stone-400 italic leading-relaxed">
-              {trimmed.slice(2)}
-            </blockquote>
+            <blockquote key={i} className="border-l-2 border-amber-500/30 pl-4 text-stone-400 italic leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(quoteText) }}
+            />
           );
         }
         // ![caption](visuals:prompt) — inline story visual (static file)
@@ -116,12 +145,12 @@ export function StoryContent({
         }
         // - List items
         if (trimmed.startsWith("- ")) {
-          const items = trimmed.split("\n").filter((l: string) => l.trim().startsWith("- "));
+          const items = foldListItems(trimmed.split("\n"));
           return (
             <ul key={i} className="space-y-2 pl-4">
               {items.map((item: string, j: number) => (
                 <li key={j} className="text-sm text-stone-400 leading-relaxed list-disc"
-                  dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item.slice(2).trim()) }}
+                  dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item) }}
                 />
               ))}
             </ul>
@@ -147,7 +176,7 @@ export function StoryContent({
         const firstListIdx = blockLines.findIndex((l: string) => l.trim().startsWith("- "));
         if (firstListIdx > 0) {
           const proseLines = blockLines.slice(0, firstListIdx).join("\n").trim();
-          const listItems = blockLines.slice(firstListIdx).filter((l: string) => l.trim().startsWith("- "));
+          const listItems = foldListItems(blockLines.slice(firstListIdx));
           return (
             <div key={i}>
               {proseLines && (
@@ -158,7 +187,7 @@ export function StoryContent({
               <ul className="space-y-2 pl-4">
                 {listItems.map((item: string, j: number) => (
                   <li key={j} className="text-sm text-stone-400 leading-relaxed list-disc"
-                    dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item.trim().slice(2).trim()) }}
+                    dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item) }}
                   />
                 ))}
               </ul>
