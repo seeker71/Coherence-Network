@@ -56,6 +56,8 @@ export function frequencyColor(hz: number): string {
  * Safe for use with dangerouslySetInnerHTML because input is sanitized.
  */
 export function inlineMarkdownToHtml(text: string): string {
+  const linkClass =
+    "text-amber-400/70 hover:text-amber-300 border-b border-amber-500/20 hover:border-amber-500/40 transition-colors";
   return text
     // First: escape any raw HTML to prevent XSS
     .replace(/&/g, "&amp;")
@@ -64,10 +66,34 @@ export function inlineMarkdownToHtml(text: string): string {
     // Then: apply markdown formatting
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-stone-300">$1</strong>')
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    // External links: [text](https://...)
     .replace(
       /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-amber-400/70 hover:text-amber-300 border-b border-amber-500/20 hover:border-amber-500/40 transition-colors">$1</a>'
-    );
+      `<a href="$2" target="_blank" rel="noopener noreferrer" class="${linkClass}">$1</a>`
+    )
+    // Internal absolute paths: [text](/vision/...), [text](/profile/...), etc.
+    .replace(
+      /\[([^\]]+)\]\((\/[^)]+)\)/g,
+      `<a href="$2" class="${linkClass}">$1</a>`
+    )
+    // Relative presence paths: [text]((../)*presences/{slug}.md) → /profile/{slug}
+    .replace(
+      /\[([^\]]+)\]\((?:\.\.\/)*presences\/([a-z0-9-]+)\.md\)/g,
+      `<a href="/profile/$2" class="${linkClass}">$1</a>`
+    )
+    // Relative concept paths: [text]((../)*(vision-kb/)?(concepts/)?lc-xxx.md) → /vision/lc-xxx
+    .replace(
+      /\[([^\]]+)\]\((?:\.\.\/)*(?:vision-kb\/)?(?:concepts\/)?(lc-[a-z0-9-]+)\.md\)/g,
+      `<a href="/vision/$2" class="${linkClass}">$1</a>`
+    )
+    // Bare slug (no path, no lc- prefix): [text](some-slug.md) → /profile/{slug}
+    // Presence-to-presence cross-refs in docs/presences/ are written as bare filenames.
+    .replace(
+      /\[([^\]]+)\]\(([a-z][a-z0-9-]*)\.md\)/g,
+      `<a href="/profile/$2" class="${linkClass}">$1</a>`
+    )
+    // Any remaining [text](unresolved-relative-path) — strip URL, keep text (graceful degrade)
+    .replace(/\[([^\]]+)\]\([^)\s]*\.(?:md|json)\)/g, "$1");
 }
 
 /* ── Static image path resolution ─────────────────────────────────────── */
