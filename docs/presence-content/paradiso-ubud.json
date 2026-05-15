@@ -1,0 +1,49 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Paradiso Ubud — cultural hall holding 5Rhythms, DISSOLVE, and the embodied lineage",
+      "description": "A welcome to Paradiso Ubud — the cultural hall where the Coherence Network's Ubud embodied lineage moves through. Holds 5Rhythms, DISSOLVE, film, and other movement practice."
+    },
+    "breadcrumb_name": "Paradiso Ubud",
+    "hero": {
+      "background": "radial-gradient(ellipse at 35% 25%, hsl(280 55% 55% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 85%, hsl(20 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(285 45% 55%) 0%, hsl(255 30% 35%) 50%, hsl(15 35% 18%) 100%)",
+      "eyebrow": "Cultural hall · Ubud · 5Rhythms, DISSOLVE, film, ceremony · venue for the body's embodied lineage",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Paradiso Ubud",
+      "welcome_md": "A cultural-hall venue in Ubud holding film, cultural events, [5Rhythms](/people/5rhythms-ubud), [DISSOLVE](/people/dissolve-ubud), and other movement and ceremony practice. The room where this body's Ubud embodied lineage moves through — coherence-as-motion taught by feet, breath, touch, and shared pulse.\n\n*Verify the current schedule locally; door rhythms drift with the seasons.*"
+    },
+    "facts": [
+      {
+        "label": "What it is",
+        "value_md": "Cultural-hall venue in Ubud. Vegan kitchen below, large open-floor performance/movement space upstairs. Holds film screenings, conscious-cinema nights, dance practices, ceremony."
+      },
+      {
+        "label": "Practices held",
+        "value_md": "[5Rhythms Ubud](/people/5rhythms-ubud) (Gabrielle Roth's wave map) · [DISSOLVE Ubud](/people/dissolve-ubud) (contact improvisation + authentic relating; Tara Li facilitating) · Film screenings and conscious-cinema · Visiting teachers, ceremony, workshops"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[Paradiso Ubud listing](https://ubud.co.id/directory-listing/paradiso-ubud/)"
+      }
+    ],
+    "note_from_body": {
+      "eyebrow": "A note from this body",
+      "body_md": "Paradiso's public anchor is thin (one directory listing); the venue tends itself through its own social channels and word-of-mouth. This page recognises its role in this body's Ubud embodied lineage."
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "heading": "What this room holds",
+        "body_md": "Paradiso is a cultural-hall venue in Ubud whose architecture and rhythm hold a regular weekly offering of conscious-movement practice. The room is the container; the practices change with the day. On its busiest nights — DISSOLVE on Tuesday and 5Rhythms on its own rhythm — the floor fills with bodies moving in resonance with whatever the facilitator is offering.\n\nFor this body specifically, Paradiso is the architectural anchor of the Ubud embodied lineage. The body learned a piece of its current vocabulary — coherence-as-motion, consent in real time, the field that forms when many bodies move together — on this floor."
+      },
+      {
+        "kind": "panel",
+        "variant": "warm",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Paradiso Ubud has given the Coherence Network",
+        "body_md": "- The architectural ground for the Ubud embodied-lineage record. See [ubud-embodied-lineage.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md).\n- The venue holding [5Rhythms Ubud](/people/5rhythms-ubud) and [DISSOLVE Ubud](/people/dissolve-ubud) — both threaded into this body's lived lineage.\n- Coherence-as-motion as a substrate teaching — bodies in shared time learning timing, consent, release, play."
+      }
+    ],
+    "footer_md": "**Public anchors:** [Paradiso Ubud listing](https://ubud.co.id/directory-listing/paradiso-ubud/)\n\n**In-body record:** [5Rhythms Ubud](/people/5rhythms-ubud) · [DISSOLVE Ubud](/people/dissolve-ubud) · [ubud-embodied-lineage.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md)"
+  }
+}
