@@ -206,9 +206,21 @@ export function MePage() {
         }
         if (nodeRes && nodeRes.ok) {
           const nodeData = await nodeRes.json();
-          const slug = typeof nodeData?.presence_slug === "string"
+          // Every contributor reaches /people/{slug} through the dynamic
+          // [id] route — no static page required. `presence_slug` wins
+          // when set (the rare case where a curated static directory
+          // sits at a different URL than the contributor's own slug,
+          // e.g. /people/urs ↔ slug=urs-muff). Otherwise the contributor's
+          // own `slug` carries the tile, so the surface scales to every
+          // contributor the body has graduated, not only the ones whose
+          // presence pages were hand-authored.
+          const override = typeof nodeData?.presence_slug === "string"
             ? nodeData.presence_slug.trim()
             : "";
+          const ownSlug = typeof nodeData?.slug === "string"
+            ? nodeData.slug.trim()
+            : "";
+          const slug = override || ownSlug;
           if (slug) setPresenceSlug(slug);
         }
         setLoading(false);

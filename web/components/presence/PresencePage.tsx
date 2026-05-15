@@ -110,6 +110,15 @@ export type PresenceIdentity = {
   // characters of beautiful description that was previously hidden
   // because the renderer never surfaced this slot.
   description?: string;
+  // The body's authored story for this presence — markdown the cell
+  // itself owns, distinct from `description` (which is often a scraped
+  // og:description) and from `note` (which carries event-shape history).
+  // When present, `presence_story` is the lead voice on the page. This
+  // is the field that lets curated presence content live in the graph
+  // rather than as hand-authored TSX files under web/content/people/,
+  // so any contributor can have a rich presence page without a route
+  // file needing to exist for them.
+  presence_story?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -740,7 +749,10 @@ export function PresencePage({
       <div className="mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,340px)] gap-10 lg:gap-14">
         {/* Main column */}
         <div className="space-y-10 lg:space-y-12 min-w-0">
-          {identity.note && (
+          {identity.presence_story && (
+            <DescriptionBlock raw={identity.presence_story} />
+          )}
+          {identity.note && !identity.presence_story && (
             <section>
               <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
                 {t("presence.gatheringHeld")}
@@ -750,7 +762,7 @@ export function PresencePage({
               </p>
             </section>
           )}
-          {identity.description && !identity.note && (
+          {identity.description && !identity.note && !identity.presence_story && (
             <DescriptionBlock raw={identity.description} />
           )}
           <UpcomingGatherings
