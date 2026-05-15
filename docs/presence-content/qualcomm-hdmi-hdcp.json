@@ -1,0 +1,74 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Qualcomm Linux Kernel HDMI / HDCP — hardware-encrypted display output",
+      "description": "While at Qualcomm, contributed a Linux kernel module supporting HDMI output with hardware HDCP encryption for MSM-family SoCs. The HDCP key ladder, the cipher engine, the cable-state machinery, and the DRM/KMS plumbing — all driven from a kernel module that surfaced the secure display path to userspace cleanly. References live upstream in the Linux kernel git history."
+    },
+    "breadcrumb_name": "Qualcomm · Linux HDMI/HDCP",
+    "hero": {
+      "background": "linear-gradient(135deg, hsl(220 30% 8%), hsl(40 30% 14%) 50%, hsl(280 30% 16%))",
+      "overlay_class": "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30",
+      "eyebrow": "Work · Qualcomm · Boulder · within Oct 2009 – Jan 2022 · Linux kernel contributor",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Qualcomm — Linux HDMI / HDCP kernel module",
+      "welcome_md": "While at Qualcomm, contributed a Linux kernel module supporting **HDMI output with hardware encryption** for MSM-family SoCs. HDMI carries the visible signal; [HDCP](https://en.wikipedia.org/wiki/High-bandwidth_Digital_Content_Protection) — High-bandwidth Digital Content Protection — encrypts it in hardware so a downstream display can prove it is licensed to receive it. The driver glues the chip's cipher engine, key ladder, cable-state machine, and the upstream DRM/KMS surface into one kernel module that exposes the secure display path to userspace cleanly. References live upstream in the Linux kernel git history with the contributor's name on them."
+    },
+    "facts": [
+      {
+        "label": "Era",
+        "value_md": "Within Qualcomm tenure · October 2009 – January 2022 · Senior Staff Engineer · Boulder"
+      },
+      {
+        "label": "Substrate",
+        "value_md": "Linux kernel · C · in-kernel DRM/KMS subsystem · MSM display hardware · MDSS (Mobile Display Subsystem)"
+      },
+      {
+        "label": "Display protocol",
+        "value_md": "[HDMI](https://en.wikipedia.org/wiki/HDMI) — High-Definition Multimedia Interface · TMDS lanes · E-DDC for sink discovery · CEC for control"
+      },
+      {
+        "label": "Encryption layer",
+        "value_md": "[HDCP](https://en.wikipedia.org/wiki/High-bandwidth_Digital_Content_Protection) — hardware key ladder · authentication-with-revocation · link-integrity verification · cipher engine driving the TMDS lanes"
+      },
+      {
+        "label": "Upstream",
+        "value_md": "References in the Linux kernel git history with the contributor's name. Find them by searching the kernel tree for `git log --author=\"Urs Muff\"` — see the [mainline tree](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/) and the [kernel mailing-list archive](https://lore.kernel.org/)."
+      },
+      {
+        "label": "Lineage forward",
+        "value_md": "The Linux kernel's discipline — every commit signed off, every patch reviewed publicly, every change addressable by a hash — is the same discipline now expressed in the [Coherence Network](/people/coherence-network) 's commit verbs (`tend` / `attune` / `compost` / `release`). Different naming, same posture."
+      }
+    ],
+    "note_from_body": {
+      "body_md": "The kernel work is the only piece in the body of evidence with a *public, attributed, immutable* trace. Quark and MindTouch and Trimble source code lives behind corporate walls; the BML thesis archive is local to this repo. But Linux kernel commits are signed-off by author, reviewed in public on the kernel mailing list, and merged into a tree that is mirrored across thousands of machines worldwide. A contribution to that tree carries the engineer's name into a corner of the commons that won't be edited away.",
+      "eyebrow": "Why this work matters in the body of evidence"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "HDMI looks simple from a userspace perspective: plug in a cable, the screen lights up. From the kernel's perspective, the path from a frame in memory to pixels on a remote display crosses **five separate hardware blocks**, each with its own clock domain, its own register set, and its own failure mode. The driver is what coordinates them.\n\n<figure class=\"my-6 rounded-xl border border-border/40 bg-card/30 p-5\">\n            <svg viewBox=\"0 0 720 320\" class=\"w-full h-auto\" role=\"img\" aria-labelledby=\"qc-hdmi-arch-title\">\n              <title id=\"qc-hdmi-arch-title\">Qualcomm MSM HDMI/HDCP driver architecture</title>\n              <g font-family=\"ui-sans-serif,system-ui\" font-size=\"12\">\n                \n                <rect x=\"60\" y=\"20\" width=\"600\" height=\"40\" rx=\"8\" fill=\"hsl(220 25% 18%)\" stroke=\"hsl(195 60% 60%)\" />\n                <text x=\"80\" y=\"42\" fill=\"hsl(195 80% 80%)\" font-size=\"13\">Userspace · DRM/KMS clients</text>\n                <text x=\"80\" y=\"56\" fill=\"hsl(195 50% 70%)\" font-size=\"10\">SurfaceFlinger · Wayland · X11 · libdrm</text>\n\n                <line x1=\"360\" y1=\"60\" x2=\"360\" y2=\"76\" stroke=\"hsl(220 30% 60%)\" stroke-width=\"1.2\" />\n\n                \n                <rect x=\"60\" y=\"76\" width=\"600\" height=\"32\" rx=\"6\" fill=\"hsl(220 25% 16%)\" stroke=\"hsl(280 60% 65%)\" />\n                <text x=\"80\" y=\"96\" fill=\"hsl(280 80% 82%)\" font-size=\"12\">Linux DRM/KMS core · connector / encoder / CRTC objects</text>\n\n                <line x1=\"360\" y1=\"108\" x2=\"360\" y2=\"124\" stroke=\"hsl(220 30% 60%)\" stroke-width=\"1.2\" />\n\n                \n                <rect x=\"60\" y=\"124\" width=\"600\" height=\"100\" rx=\"10\" fill=\"hsl(40 35% 16%)\" stroke=\"hsl(40 80% 60%)\" stroke-width=\"2\" />\n                <text x=\"80\" y=\"148\" fill=\"hsl(40 90% 85%)\" font-size=\"14\" font-weight=\"500\">Qualcomm MSM HDMI driver · the kernel module</text>\n                <text x=\"80\" y=\"166\" fill=\"hsl(40 60% 75%)\" font-size=\"10\">connector — hotplug · EDID parse · mode list · cable state</text>\n                <text x=\"80\" y=\"180\" fill=\"hsl(40 60% 75%)\" font-size=\"10\">encoder — TMDS encoding · audio / InfoFrame insertion</text>\n                <text x=\"80\" y=\"194\" fill=\"hsl(40 60% 75%)\" font-size=\"10\">HDCP state machine — auth · key ladder · link-integrity poll</text>\n                <text x=\"80\" y=\"208\" fill=\"hsl(40 60% 75%)\" font-size=\"10\">PHY config · TMDS clocks · power / clock domain transitions</text>\n\n                <line x1=\"180\" y1=\"224\" x2=\"180\" y2=\"244\" stroke=\"hsl(220 30% 60%)\" stroke-width=\"1.2\" />\n                <line x1=\"360\" y1=\"224\" x2=\"360\" y2=\"244\" stroke=\"hsl(220 30% 60%)\" stroke-width=\"1.2\" />\n                <line x1=\"540\" y1=\"224\" x2=\"540\" y2=\"244\" stroke=\"hsl(220 30% 60%)\" stroke-width=\"1.2\" />\n\n                \n                <g>\n                  <rect x=\"60\" y=\"244\" width=\"180\" height=\"56\" rx=\"8\" fill=\"hsl(220 25% 14%)\" stroke=\"hsl(140 60% 55%)\" />\n                  <text x=\"150\" y=\"266\" text-anchor=\"middle\" fill=\"hsl(140 80% 80%)\" font-size=\"11\">HDMI controller</text>\n                  <text x=\"150\" y=\"282\" text-anchor=\"middle\" fill=\"hsl(140 50% 70%)\" font-size=\"9\">TMDS encoder · audio</text>\n                  <text x=\"150\" y=\"294\" text-anchor=\"middle\" fill=\"hsl(140 50% 70%)\" font-size=\"9\">CEC · DDC bus</text>\n                </g>\n                <g>\n                  <rect x=\"270\" y=\"244\" width=\"180\" height=\"56\" rx=\"8\" fill=\"hsl(220 25% 14%)\" stroke=\"hsl(0 60% 60%)\" />\n                  <text x=\"360\" y=\"266\" text-anchor=\"middle\" fill=\"hsl(0 70% 80%)\" font-size=\"11\">HDCP cipher engine</text>\n                  <text x=\"360\" y=\"282\" text-anchor=\"middle\" fill=\"hsl(0 50% 70%)\" font-size=\"9\">key ladder · auth</text>\n                  <text x=\"360\" y=\"294\" text-anchor=\"middle\" fill=\"hsl(0 50% 70%)\" font-size=\"9\">in-line scrambling</text>\n                </g>\n                <g>\n                  <rect x=\"480\" y=\"244\" width=\"180\" height=\"56\" rx=\"8\" fill=\"hsl(220 25% 14%)\" stroke=\"hsl(195 55% 60%)\" />\n                  <text x=\"570\" y=\"266\" text-anchor=\"middle\" fill=\"hsl(195 80% 82%)\" font-size=\"11\">PHY / clocks</text>\n                  <text x=\"570\" y=\"282\" text-anchor=\"middle\" fill=\"hsl(195 50% 75%)\" font-size=\"9\">PLL · TMDS lanes</text>\n                  <text x=\"570\" y=\"294\" text-anchor=\"middle\" fill=\"hsl(195 50% 75%)\" font-size=\"9\">power domain</text>\n                </g>\n              </g>\n            </svg>\n            <figcaption class=\"text-xs text-muted-foreground mt-3 text-center\">\n              Five layers from userspace to pins. The kernel module\n              is the load-bearing middle — it presents a clean\n              DRM/KMS surface upward and coordinates the HDMI\n              controller, the HDCP cipher engine, and the PHY/clock\n              domains downward.\n            </figcaption>\n          </figure>",
+        "heading": "What HDMI + HDCP actually requires from a kernel driver"
+      },
+      {
+        "kind": "panel",
+        "body_md": "[HDCP](https://en.wikipedia.org/wiki/High-bandwidth_Digital_Content_Protection) is a key-ladder authentication protocol with in-line stream encryption. The first second of the link is spent in *authentication*: source and sink exchange public values, derive a shared session key from a key ladder rooted in device-specific secrets, and prove to each other that neither has been revoked. Once authenticated, the cipher engine in hardware uses the session key to scramble every TMDS pixel before it goes on the cable. The sink unscrambles in hardware on the other end. From the application's perspective the picture looks identical; what changed is that an unauthorised recorder on the cable can't reconstruct the frames.\n\nThe driver's job in this is delicate. The cipher engine is fast but the link-integrity verification — the periodic check that the same key is still in effect at both ends — has to fire at very specific points in the video frame. A late check kills the picture (the sink falls back to a blank screen with \"encryption error\"); a missed check opens an audit hole. The kernel module times these actions against the video clock, kicks the hardware, collects the verification result, and either continues silently or tears the link down and re-authenticates. All without dropping frames userspace can see.",
+        "heading": "Hardware encryption on a moving link",
+        "eyebrow": "What HDCP actually does",
+        "variant": "warm"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "Most of this body's work lives behind corporate walls. QuarkXPress source is internal. MindTouch source is internal. Trimble source is internal. The Qualcomm test harness ran on internal infrastructure. Even the BML thesis archive lives on a personal machine. None of that work has a public, attributed, immutable record outside the company that owned it.\n\nThe Linux kernel is different. Every commit is `Signed-off-by:` its author. Every change is reviewed publicly on the kernel mailing list, archived at [lore.kernel.org](https://lore.kernel.org/), and merged into a tree mirrored to every machine that runs Linux. A contribution to that tree is forever- attributed to its author in a way no corporate codebase can match. To find this body's contributions, run `git log --author=\"Urs Muff\"` in any Linux kernel checkout — the patches surface with their full description, their date, their hash, and the file paths they touched.\n\nThat's why this page lives differently than the others. The lived memory and architectural shape are here as framing; the *truth* is in the kernel git log, available to anyone. This network's curated text is a doorway; the kernel's own history is the source.",
+        "heading": "Why this is the only public-attribution work"
+      },
+      {
+        "kind": "panel",
+        "body_md": "The driver's architecture — userspace → DRM/KMS core → kernel module → HDMI / HDCP / PHY hardware — is the same five-layer pattern this body first internalised in the [Commodore 64 MIDI work (age 13)](/people/c64-midi-interface) (BASIC → ring buffer → assembly ISR → CIA chip → wire), ratified in the [Schindler 7-layer ISO/OSI work](/people/schindler-hc11-protocol), re-applied at the Trimble [client/server glue layer](/people/trimble-glue-layer), and now expressed at network scale in the [Coherence Network](/people/coherence-network) 's five-tier architecture. Each layer authoring against its own job; each layer addressable; clean contracts in between. Forty years; one shape.",
+        "heading": "Same posture as Schindler · Trimble · Coherence",
+        "eyebrow": "The five-layer thinking surfaces again",
+        "variant": "cool"
+      }
+    ],
+    "footer_md": "Public attribution lives in the Linux kernel git history. To surface this body's commits, clone the kernel tree ( [torvalds/linux.git](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/) ) and run `git log --author=\"Urs Muff\"`, or search the kernel mailing-list archive at [lore.kernel.org](https://lore.kernel.org/). If you have specific commit hashes or patch URLs to anchor this page, refine through the Refine doorway below."
+  }
+}

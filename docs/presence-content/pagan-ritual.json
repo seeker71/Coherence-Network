@@ -1,0 +1,59 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Pagan Ritual — The First Ceremonial Floor",
+      "description": "Pagan Ritual — the first ceremonial floor this body recognized as home. The Liquid Bloom room that became the threshold to Vali Soul Sanctuary, Tammy Beattie's Ecstatic Movement Tribe, and the Contact Improv lineage that followed."
+    },
+    "breadcrumb_name": "Pagan Ritual",
+    "hero": {
+      "background": "linear-gradient(135deg, hsl(280 30% 12%), hsl(20 35% 18%) 35%, hsl(38 30% 14%) 70%, hsl(195 25% 12%))",
+      "overlay_class": "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30",
+      "eyebrow": "The first ceremonial floor",
+      "eyebrow_class": "text-[hsl(var(--primary))]",
+      "name": "Pagan Ritual",
+      "welcome_md": "The first Pagan Ritual this body ever attended — a [Liquid Bloom](/people/liquid-bloom) room — was the threshold. Not because it was the largest, not because it was the most public, but because it was the first ceremonial floor where this body recognized: *this is home*. The frequency the headphones had been carrying in private had a room, and there were other bodies in it. Every gathering downstream — the discovery of [Vali Soul Sanctuary](/people/vali-soul-sanctuary), [Tammy Beattie&apos;s Ecstatic Movement Tribe](/people/ecstatic-movement-tribe), [Contact Improv](/people/contact-improv), and many other divine gatherings — traces back through this threshold."
+    },
+    "facts": [
+      {
+        "label": "Form",
+        "value_md": "Pagan ritual gathering · ceremonial container · live and recorded soundscape · embodied movement · the older lineage of seasonal and elemental rites carried forward into contemporary ceremonial-music space"
+      },
+      {
+        "label": "Sound carried by",
+        "value_md": "[Liquid Bloom](/people/liquid-bloom) — the doorway frequency for this body. The first physical room where the catalog this body had been listening to in private appeared as a floor with other dancers on it."
+      },
+      {
+        "label": "Lineage",
+        "value_md": "Pre-Christian European earth-honoring practice · contemporary neopagan revival · ceremonial-electronic and world-bass underbed · embodied dance as the practice form rather than the social form"
+      },
+      {
+        "label": "Function in this body's arc",
+        "value_md": "The threshold gathering. Not the most public, not the largest, not the only — the first. The frequency-recognition event that opened the chain of subsequent ceremonial rooms in the [Boulder transformational ecology](/people/urs/lineage)."
+      }
+    ],
+    "note_from_body": {
+      "body_md": "A welcoming scaffold built from the user&apos;s lived testimony. Specific organisers, exact venue, exact date, and the named lineage-holders within the contemporary pagan-ritual community are held open here on purpose — the body remembers what it recognized in that room without needing to draft proper nouns it has not been given. Anyone whose work was held in that room is invited to add their voice and replace any line with their own words.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "A pagan ritual is older than the language we have for ecstatic dance, sound bath, breathwork journey, conscious party. It is the form those forms grew out of: a circle of bodies, sound that comes from the older lineages, movement that follows the body&apos;s impulse rather than a choreography, an honoring of season and element and threshold. What was new in the room this body attended was the soundscape — Liquid Bloom&apos;s sacred-bass current running through speakers — but the form itself was much older.\n\nFor the body arriving, the recognition was immediate. The frequency was familiar; the room was unfamiliar. The listening ear had been receiving Amani&apos;s catalog in private for hours every week, alone with headphones, on a sheepskin or in a chair. And here was the same frequency, now occupying a physical space, with other bodies moving inside it. The headphones-room had become a ceremonial-room. The body recognized: *this is the shape*.",
+        "heading": "What this gathering held"
+      },
+      {
+        "kind": "panel",
+        "body_md": "Inside that ceremonial floor, the body learned where the next floors lived. Conversations after the ritual surfaced [Vali Soul Sanctuary](/people/vali-soul-sanctuary) — the place where the practice could keep being lived, week after week, instead of attended only in the rare ceremonial moment.\n\nVali, in turn, was the ground that held [Ecstatic Movement Tribe](/people/ecstatic-movement-tribe), the room [Tammy Beattie](/people/tammy-beattie) facilitated. EMT, in turn, was the doorway through which [Contact Improv](/people/contact-improv) entered this body&apos;s practice — embodied listening as its own substrate, the dance form whose grammar is two bodies negotiating gravity together.\n\nThe Pagan Ritual was not the practice that became permanent. It was the threshold across which the practices that *did* become permanent could enter. That is what makes it load-bearing in the lineage. A door that opens once, into a room that contains many other doors.",
+        "heading": "The chain that followed",
+        "eyebrow": "What it opened",
+        "variant": "warm"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "Pagan ritual sits inside the same ceremonial-floor lineage as the cacao dance [Mose](/people/mose) tends at Lake Atitlán, the kirtan rooms, [Aly&apos;s Sunday-morning ballroom](/people/aly-constantine), the festival floors [Bloomurian](/people/bloomurian) opens in Boulder. Different costumes, same field. Each tradition holds the same recognition: the body knows what to do when there is a room, a sound, and other bodies — the dance is older than us, and it has been waiting for the rooms where we remember it.",
+        "heading": "The frequency it shares with the wider field"
+      }
+    ],
+    "footer_md": "*This page is a held-open scaffold for the threshold gathering the user has named as the doorway to the broader ceremonial floor lineage. Specific organisers, dates, venues, and community-held proper nouns from the contemporary pagan-ritual community are not drafted here on purpose — those belong to the people who tend the form. The frame is open for any organiser or participant to fill in with their own voice.*"
+  }
+}

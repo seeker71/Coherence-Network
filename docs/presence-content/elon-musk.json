@@ -1,0 +1,77 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Elon Musk — Resonance Invitation | Coherence Network",
+      "description": "A focused invitation page for Elon Musk: where Tesla, SpaceX, xAI, infrastructure, accelerated computing, and contribution-derived economics may resonate with Coherence Network, and where they may not."
+    },
+    "breadcrumb_name": "Elon Musk",
+    "hero": {
+      "overlay_class": "absolute inset-0 bg-gradient-to-t from-background via-background/88 to-background/30",
+      "eyebrow": "Invitation surface",
+      "eyebrow_class": "text-[hsl(var(--primary))]",
+      "name": "Elon Musk",
+      "welcome_md": "This is a prepared room, not a claim of relationship. It is for the moment when Elon can see Coherence Network as a living contribution graph: an instrument for sensing useful work, trust, friction, capital, attention, and future-making before conventional economics knows how to price it."
+    },
+    "facts": [
+      {
+        "label": "Public fields",
+        "value_md": "sustainable energy · reusable rockets · AI inquiry · autonomy · city infrastructure · brain-computer interfaces"
+      },
+      {
+        "label": "Urs's lived signal",
+        "value_md": "years of early Lex Fridman listening, Tesla investment, two Teslas, Powerwall, and solar at the old house now held by his former spouse."
+      },
+      {
+        "label": "Resource context",
+        "value_md": "A large share of Urs's available market resources is currently held in Tesla and NVIDIA stock; any movement into the network would be an explicit contributor decision, not a recommendation made here."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[Tesla](https://www.tesla.com/about) · [SpaceX](https://www.spacex.com/vehicles/starship/) · [xAI](https://x.ai/) · [The Boring Company](https://www.boringcompany.com/homepage) · [Neuralink](https://www.neuralink.com/)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Urs has not only watched from the edge. He listened through many early Lex Fridman conversations, invested in Tesla, drove the products, stored energy in a Powerwall, and lived with solar on a house. That matters because this invitation is not abstract admiration. It comes from attention, risk, use, and lived infrastructure.",
+      "eyebrow": "A note from Urs's side of the field"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Coherence Network is building a way to view the now, the future, and the economy as one living system. The current economy sees price after the fact. It misses the sources: the person who noticed the pattern, the agent that removed friction, the conversation that changed direction, the capital that arrived at the right moment, the lineage that made the next action possible.\n\nElon's public work repeatedly attacks that same lag from different angles. Tesla treats energy, transport, manufacturing, batteries, software, and scale as one system. SpaceX treats planetary resilience as an engineering problem. xAI frames intelligence as a tool for understanding the universe. The Boring Company asks whether cities should move in three dimensions. NVIDIA, though not Elon's company, sits inside Urs's resource field as the accelerated computing layer that makes much of this AI and simulation future executable.\n\nThe invitation is simple: if those worlds need a better sensor for contribution, trust, resonance, and capital flow, Coherence Network is trying to become that sensor.",
+        "heading": "Why this page exists"
+      },
+      {
+        "kind": "panel",
+        "body_md": "**Tesla:** sustainable energy, batteries, solar, electric mobility, over-the-air improvement, and manufacturing at scale. This resonates with the network's need to make invisible systems visible and executable.\n\n**SpaceX:** reusability, Mars-scale timelines, Starship, and the insistence that humanity's future should be larger than maintenance of the present.\n\n**xAI:** the question of whether intelligence can help humanity see reality more clearly, especially when the interface between truth, story, and model is unstable.\n\n**Infrastructure:** The Boring Company and Neuralink both point at hard interfaces: city movement, nervous-system restoration, and the boundary where software meets matter.\n\n**NVIDIA:** accelerated computing as the substrate that lets agents, simulations, robotics, and large-scale inference move from theory into operating reality.",
+        "heading": "A map of adjacent frequencies",
+        "eyebrow": "Where we may resonate",
+        "variant": "cool"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "Coherence does not need every powerful thing to be for us. Some parts of Elon's field may be brilliant and still not fit this network's nervous system. Speed can become extraction if it loses consent. Scale can become noise if it stops hearing the small contributor. Intelligence can become domination if it is not paired with care. Attention can become volatility if it is not grounded in repair.\n\nNone of that is a rejection. It is a boundary. The point is not to force alignment with a famous builder. The point is to build a room where resonance can be tested honestly. If something is not ours, it can remain great elsewhere. If something is ours, the graph should make that obvious through contribution, not persuasion.",
+        "heading": "Where we may not resonate"
+      },
+      {
+        "kind": "panel",
+        "body_md": "Urs's Tesla and NVIDIA holdings are part of the current resource field. If he ever chooses to move a portion of those resources into Coherence Network, the network should treat that as a contribution event with attribution, stewardship, and visible downstream effects.\n\nThis page does not recommend buying, selling, transferring, or holding any security. It names context: a real contributor has resources tied to the same industrial and AI transformation this network is learning to sense. If those resources move, vitality in the network changes. The graph should show how.",
+        "heading": "Capital as vitality, not command",
+        "eyebrow": "Resource readiness",
+        "variant": "warm"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "The ask is not endorsement. It is inspection. Bring the builder's skepticism. Look at the graph. Look at whether it can record who contributed what, which ideas are alive, where agents help, where capital is blocked, where attention is mispriced, and which future is already trying to happen.\n\nIf the instrument is weak, it should break under pressure. If it is strong, joining the network would not change the world because a famous person arrived. It would change the world because a powerful builder helped calibrate a new economic sensor in public.",
+        "heading": "The ask"
+      },
+      {
+        "kind": "panel",
+        "body_md": "Public references: Tesla's [sustainable energy and scale framing](https://www.tesla.com/about), Tesla [Master Plan Part 3](https://www.tesla.com/master-plan-part-3), SpaceX [Starship](https://www.spacex.com/vehicles/starship/), [xAI](https://x.ai/), [The Boring Company](https://www.boringcompany.com/homepage), [Neuralink](https://www.neuralink.com/), and [NVIDIA data-center accelerated computing](https://www.nvidia.com/en-us/data-center/products/).\n\nPortrait: [Elon Musk at a conference on March 28, 2024](https://commons.wikimedia.org/wiki/File:Elon_Musk_-_March_28,_2024.jpg) by Wcamp9, licensed CC BY 4.0.",
+        "heading": "What this page is grounded in",
+        "eyebrow": "Source notes",
+        "variant": "neutral"
+      }
+    ],
+    "footer_md": "This is a welcoming scaffold. Elon Musk has not joined or endorsed Coherence Network through this page.\n\nRelated rooms: [Urs Muff](/people/urs) · [Lex Fridman](/people/lex-fridman) · [resource flow](/invest)"
+  }
+}

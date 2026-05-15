@@ -148,10 +148,60 @@ export function renderInlineMarkdown(text: string): ReactNode {
 export function renderBlockMarkdown(text: string): ReactNode {
   if (!text) return null;
   const normalized = text.replace(/\r\n/g, "\n").trim();
-  const blocks = normalized.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  // Pre-pass: extract `<svg>...</svg>` and `<figure>...</figure>` and
+  // fenced code blocks (``` ... ```) as atomic units. These blocks may
+  // span multiple paragraph-breaks internally, so splitting by `\n\n`
+  // first would shred them. Replace each with a placeholder token, split,
+  // then restore.
+  const atomic: { kind: "svg" | "figure" | "pre"; html: string }[] = [];
+  const placeholderRe = /\x00ATOMIC_(\d+)\x00/;
+  const stash = (s: string) => {
+    return s
+      .replace(/<figure[\s\S]*?<\/figure>/g, (m) => {
+        atomic.push({ kind: "figure", html: m });
+        return `\x00ATOMIC_${atomic.length - 1}\x00`;
+      })
+      .replace(/<svg[\s\S]*?<\/svg>/g, (m) => {
+        atomic.push({ kind: "svg", html: m });
+        return `\x00ATOMIC_${atomic.length - 1}\x00`;
+      })
+      .replace(/```([\s\S]*?)```/g, (_m, body) => {
+        atomic.push({ kind: "pre", html: body.replace(/^\n+|\n+$/g, "") });
+        return `\x00ATOMIC_${atomic.length - 1}\x00`;
+      });
+  };
+  const stashed = stash(normalized);
+  const blocks = stashed.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
   return (
     <>
       {blocks.map((block, i) => {
+        // Atomic restore: a placeholder is the whole block
+        const m = block.match(placeholderRe);
+        if (m && block === m[0]) {
+          const a = atomic[Number(m[1])];
+          if (a.kind === "pre") {
+            return (
+              <pre
+                key={i}
+                className="text-[11px] leading-5 bg-background/60 border border-border/40 rounded-lg p-4 overflow-x-auto font-mono whitespace-pre"
+              >
+                {a.html}
+              </pre>
+            );
+          }
+          // svg + figure: rendered as raw HTML. Content is authored in
+          // docs/presence-content/*.json files committed to the repo —
+          // there is no untrusted user input path here; XSS surface is
+          // the repository, which is reviewed.
+          return (
+            <div
+              key={i}
+              className="my-6"
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{ __html: a.html }}
+            />
+          );
+        }
         if (/^-{3,}$/.test(block)) {
           return <hr key={i} className="border-border/40 my-4" aria-hidden="true" />;
         }
