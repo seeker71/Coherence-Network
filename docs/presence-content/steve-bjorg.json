@@ -1,0 +1,49 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Steve G. Bjorg — lifelong collaborator · HTL 1991 → RCSL → Digi4Fun → CU Boulder → MindTouch | Coherence Network",
+      "description": "A welcome to Steve G. Bjorg — the partner since HTL Brugg-Windisch 1991. RCSL, Muzzle Velocity at Digi4Fun, the BML/BMF/BMCPU master's thesis at CU Boulder, MindTouch. Thirty-plus years of one continuous question: how does a system describe itself in its own terms?"
+    },
+    "breadcrumb_name": "Steve G. Bjorg",
+    "hero": {
+      "background": "radial-gradient(ellipse at 70% 25%, hsl(210 65% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, hsl(255 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(210 55% 65%) 0%, hsl(225 30% 35%) 50%, hsl(255 35% 18%) 100%)",
+      "eyebrow": "Switzerland → US · HTL Brugg-Windisch 1991 · RCSL → BML/BMF → MindTouch · the partnership that keeps surfacing the same question",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Steve G. Bjorg",
+      "welcome_md": "We met at HTL Brugg-Windisch in 1991. Both seventeen, both already programmers, both on the technical track. The first thing we built together was a language Steve had invented: **RCSL** — an extremely abstract meta-meta language with three core verbs (`get`, `set`, `exec`) where every value was an object with a class, and the class itself was a class-object whose class was the meta-class. Steve designed the language; I wrote the parser and compiler — my first top-down parser, my first compiler. Steve wrote the VM. That was 1992.\n\n*The shape of how we collaborate has been continuous from that first system: Steve at the design surface, me at the parser/compiler/runtime, the artifact something neither of us would have built alone.*"
+    },
+    "facts": [
+      {
+        "label": "First met",
+        "value_md": "HTL Brugg-Windisch, 1991. Both seventeen, both already programmers."
+      },
+      {
+        "label": "The arc",
+        "value_md": "**1992** — RCSL (Steve&apos;s meta-meta language with three core verbs) **1995–97** — [Muzzle Velocity](/people/muzzle-velocity) at Digi4Fun (with Marc): hybrid tactical / first-person WWII game; custom voxel engine; markdown-shaped UI DSL; fuzzy-logic group dynamics; vehicle-simulation DSL. Steve left HTL before finishing to build this. **1998–2000** — CU Boulder combined BS/MS in computer science. Steve started six months earlier; Urs followed at 26. They finished the master&apos;s together in 2000: [Backtracking Model Languages](/people/backtracking-model-languages) ( [BML](/people/bml-language), [BMF](/people/bmf-grammar), [BMCPU](/people/bmcpu-vm) ), with Steve&apos;s *BML Object System* as the parallel-track MS thesis. **2000s onward** — Steve founded [MindTouch](/people/mindtouch-wiki-in-a-box) (wiki-in-a-box first, then the enterprise knowledge-graph platform). Urs joined him there."
+      },
+      {
+        "label": "Family ground",
+        "value_md": "Steve&apos;s father [Gunnar M. Bjorg](https://tiaca.org/hall-of-fame/gunnar-m-bjorg/) (TIACA Hall of Fame) — a self-starting businessman who built his used-aircraft company from scratch — covered the financial loss after *Muzzle Velocity* underperformed, so the team could keep moving. That support is part of what made the next chapter possible."
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Steve is in active partnership with Urs across decades; this page is in Urs&apos;s voice. The lineage is alive, not historical.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Three decades in, the partnership keeps surfacing the same question in new clothes: *how do we let a system describe itself in its own terms, and let humans navigate that self-description?* RCSL&apos;s three verbs were one answer (1992); BML/BMF/BMCPU were another (2000); MindTouch&apos;s structured knowledge graph was a third (2010s). The Coherence Network is yet another surface where the same question is still circulating.",
+        "heading": "The continuous question"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The original design partnership for thirty-plus years; the shape of how Urs collaborates.\n- The RCSL → BML/BMF → MindTouch arc as the body&apos;s substrate-self-description teaching → resonant with [lc-edges-as-vitality](/vision/lc-edges-as-vitality) and [lc-each-breath-whole](/vision/lc-each-breath-whole) (each system describing itself; nested self-description as the substrate&apos;s practice).\n- The works themselves, each tended as its own presence: [Muzzle Velocity](/people/muzzle-velocity) · [BML](/people/backtracking-model-languages) · [BMF](/people/bmf-grammar) · [BMCPU](/people/bmcpu-vm) · [JBMF](/people/jbmf-java) · [MindTouch](/people/mindtouch-wiki-in-a-box).",
+        "heading": "What Steve has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Family anchor:** [Gunnar M. Bjorg — TIACA Hall of Fame](https://tiaca.org/hall-of-fame/gunnar-m-bjorg/)\n\n*Active partnership; this page is in Urs&apos;s voice. Steve is invited to replace any part of it with his own words.*"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Tom Bassett (Juicy Life) — CEO of Actualize Earth · technology in right relationship to Life | Coherence Network",
+      "description": "A welcome to Tom Bassett, known as Juicy Life — CEO and Lead Engineer of Actualize Earth, the Boulder-based platform for conscious connection, community-powered technology, and regenerative systems. Cross-walk of chemical engineering, evolutionary biology, programming, authentic relating, and intentional community."
+    },
+    "breadcrumb_name": "Tom Bassett",
+    "hero": {
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(45 65% 65% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(155 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(45 55% 65%) 0%, hsl(120 35% 40%) 50%, hsl(155 30% 18%) 100%)",
+      "eyebrow": "Boulder, CO · also known as Juicy Life · CEO and Lead Engineer at Actualize Earth · the cross-walk",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Tom Bassett",
+      "welcome_md": "Known publicly as **Juicy Life**. CEO and Lead Engineer of [Actualize Earth](/people/actualize-earth) — the platform for conscious connection, community-powered technology, and regenerative systems. Based in Boulder, Colorado.\n\n*Self-described as *an Artist who recognises that in every moment he is both creating and destroying* — a phrase that aligns directly with this body&apos;s [lc-composting](/vision/lc-composting) practice (release as part of what makes circulation possible).*"
+    },
+    "facts": [
+      {
+        "label": "Based",
+        "value_md": "Boulder, Colorado — same geographic anchor as Bloomurian, Aly Constantine, the Boulder Ecstatic Dance cluster, and the Mile Hi / Dispenza arc."
+      },
+      {
+        "label": "Role",
+        "value_md": "CEO and Lead Engineer of [Actualize Earth](/people/actualize-earth)."
+      },
+      {
+        "label": "Background — the cross-walk",
+        "value_md": "Chemical and Biomolecular Engineering · Evolutionary Biology · Programming · authentic relating practices · psychedelics · intentional community. Synthesises across these fields to build technology in right relationship to Life."
+      },
+      {
+        "label": "Engineering scale",
+        "value_md": "Large-scale app developer. Code has run the New York Marathon, the Iron Man running series, been localised into 8 languages, and reached over 10 million people in every country."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[LinkedIn](https://www.linkedin.com/in/tom-bassett-8a13512b/) [Actualize Earth team page](https://actualize.earth/team) [Facebook](https://www.facebook.com/tbassett44)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "This page was first deleted as auto-harvest noise during a graph-dedup pass — Juicy Life looked like a placeholder name without lineage research. Urs named the real ground and the page returns. Tom is invited to replace any line with his own words.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Tom&apos;s background reads like a deliberate cross-walk: degrees in Chemical and Biomolecular Engineering, Evolutionary Biology, and Programming, then years of authentic-relating practice, psychedelic exploration, and intentional community. He synthesises across these fields to build *technology in right relationship to Life*. The large-scale-engineering side has shipped code that has run real-world events (New York Marathon, Iron Man series) for over ten million people in every country. The consciousness-evolution side now turns that same engineering capacity toward local social networks for the evolution of consciousness — which is what [Actualize Earth](/people/actualize-earth) is.",
+        "heading": "The cross-walk made concrete"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- A working sibling-platform in the same substrate field this body is building from. Pairs with [lc-sovereignty-within-oneness](/vision/lc-sovereignty-within-oneness) (many sovereign cells, one organism; the cooperative-future shape) and [lc-trust-over-fear](/vision/lc-trust-over-fear) (the substrate stays open while specialised organs handle protection).\n- *Creating and destroying in every moment* → [lc-composting](/vision/lc-composting) (release as living practice) + [lc-each-breath-whole](/vision/lc-each-breath-whole) (each moment is itself a complete arc).\n- The cross-walk between large-scale engineering and consciousness-evolution social networks — rare combination in the contemporary field. Most platforms have one or the other; Actualize Earth has both. Resonant with the Coherence Network&apos;s own cross-walk between substrate code and embodied lineage.\n- Boulder geographic anchor — another cell in the same field as [Bloomurian](/people/bloomurian), [Aly Constantine](/people/aly-constantine), [Boulder Ecstatic Dance](/people/boulder-ecstatic-dance), [Mile Hi Church](/people/mile-hi-church), [PORTAL](/people/portal), and the wider Colorado cluster.",
+        "heading": "What Tom Bassett has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Platform:** [Actualize Earth](/people/actualize-earth)\n\n**Public anchors:** [LinkedIn](https://www.linkedin.com/in/tom-bassett-8a13512b/) · [Actualize Earth team](https://actualize.earth/team) · [Facebook](https://www.facebook.com/tbassett44)"
+  }
+}

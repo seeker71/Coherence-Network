@@ -1,0 +1,53 @@
+{
+  "en": {
+    "metadata": {
+      "title": "YAIMA — Masaru Higasa + Pepper Proud · ten-year elemental arc of albums | Coherence Network",
+      "description": "A welcome to YAIMA — the duo of Masaru Higasa and Pepper Proud, formed in Seattle 2014. Their music as a finely tuned container — handpan, vocals, flutes, world-percussion. The Pellucidity / OvO / Antidote / Earth Trilogy / CEREMONIA / Moongate arc."
+    },
+    "breadcrumb_name": "YAIMA",
+    "hero": {
+      "background": "radial-gradient(ellipse at 65% 25%, hsl(180 55% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, hsl(155 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(180 50% 70%) 0%, hsl(160 40% 45%) 50%, hsl(155 30% 20%) 100%)",
+      "eyebrow": "Seattle 2014 → · handpan, vocals, flutes, world-percussion · the elements as albums",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "YAIMA",
+      "welcome_md": "There is a quality to YAIMA&apos;s music that arrives before you can name it — a feeling of walking into a room where the air is already holding something. Handpan bells thread through layered vocals. A low drum settles your spine. Flutes from somewhere you can&apos;t quite place enter and leave like breath. The duo describes what they make as a **finely tuned container for their audience**, and that is what it feels like: sound built as a vessel, not a performance.\n\n*YAIMA emerges from two sources — one from the Mapudungun language meaning *that which water runs through*, and the other from the culturally preserved Yaeyama District of Okinawa, Japan. Two lineages naming water and place; two people making one sound.*"
+    },
+    "facts": [
+      {
+        "label": "Who",
+        "value_md": "**Masaru Higasa** — producer and multi-instrumentalist (guitar, flutes, handpan, bombo, didjeridoo); deep-listening sensibility. **Pepper Proud** — vocalist and lyricist, guitar in hand; writes words that reach for reverence without performing it. Formed in Seattle, 2014."
+      },
+      {
+        "label": "Discography",
+        "value_md": "*Pellucidity* (2014) — given to **water** *OvO* (2016) — concept album for **wind** *Antidote* (2018) — given to **fire** *CEREMONIA* (2020) — fully acoustic, with bassist Jared May and percussionist John De Kadt; recorded at London Bridge Studios *Earth Trilogy* — *One* & *Two* (2021), *Three* (2022) — for **earth** *Moongate* (2024) — ten-year anniversary album; thirteen songs for the thirteen moons; fusion of the four elements"
+      },
+      {
+        "label": "Stated intention",
+        "value_md": "*To create a bridge between Nature and Humankind, an expansive experience that encourages growth and graceful passage for the hearts and minds of their listeners.*"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[yaimamusic.com](https://www.yaimamusic.com) [Bandcamp](https://yaima.bandcamp.com/) [Spotify](https://open.spotify.com/artist/4tT8h7sUKmKcXgFnHnIxa3)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "YAIMA&apos;s archive is at yaimamusic.com, with the full discography on Bandcamp and Spotify. This page recognises their role in this body&apos;s conscious-music lineage.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Their practice has moved through the elements like a long prayer spoken in parts. *Pellucidity* for water — created for *the peaceful being inside of us all*. *OvO* for wind — a concept album following a seed through the turning of a year. *Antidote* for fire — *the dance of passion and renewal, the deep inner work of intention and the cultivated patience of devotion*. The *Earth Trilogy* followed in three chapters — matter, human life finding collective purpose, and the Earth herself as one body. Woven between, *CEREMONIA* — their first fully acoustic offering, recorded at London Bridge Studios. In 2024 they released *Moongate*, the ten-year anniversary: thirteen songs for the thirteen moons of an Earth cycle, each one re-worked, re-recorded, re-mixed, re-mastered — **re-visioned**. A full turn of the wheel coming back around to itself.",
+        "heading": "The elemental arc as practice"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- Sustained, patient devotion to craft and earth as living practice → pairs with [lc-tending-over-producing](/vision/lc-tending-over-producing) (ten years of one project at one wheel).\n- Sound built as a vessel, not a performance → [lc-frequency-routes-reception](/vision/lc-frequency-routes-reception) (build at the actual tone; trust the routing).\n- Two-lineage naming (Mapudungun + Yaeyama) → resonant with the body&apos;s practice of holding plural sources without flattening them. Pairs with [lc-voice-over-intentions](/vision/lc-voice-over-intentions).\n- Elemental arc as practice → resonant with [lc-each-breath-whole](/vision/lc-each-breath-whole) (each album whole at its scale; the arc emerges from the sequence).",
+        "heading": "What YAIMA has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Public anchors:** [yaimamusic.com](https://www.yaimamusic.com) · [Bandcamp](https://yaima.bandcamp.com/) · [Spotify](https://open.spotify.com/artist/4tT8h7sUKmKcXgFnHnIxa3)"
+  }
+}
