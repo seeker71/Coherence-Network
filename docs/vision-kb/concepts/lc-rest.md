@@ -5,7 +5,7 @@ status: deepening
 updated: 2026-04-15
 ---
 
-# Rest & Integration
+# Integration
 
 > Not the absence of activity — a different quality of activity. Like winter in a forest: composting beneath the surface, becoming soil for spring.
 

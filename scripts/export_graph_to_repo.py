@@ -43,6 +43,7 @@ from urllib.error import HTTPError, URLError
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PRESENCE_CONTENT_DIR = REPO_ROOT / "docs" / "presence-content"
+CONCEPTS_DIR = REPO_ROOT / "docs" / "vision-kb" / "concepts"
 DEFAULT_API = "https://api.coherencycoin.com"
 
 
@@ -188,6 +189,111 @@ def export_presence_content(
     return written, removed
 
 
+def list_concepts_with_story(api_url: str) -> list[dict]:
+    """Walk concept nodes that carry `story_content`.
+
+    Concept stories live on the graph as the `story_content` field
+    after `sync_kb_to_db.py` projects them in. Edits via
+    `PATCH /api/concepts/{id}/story` from the /vision/{id}/edit web
+    surface land on the same field, so the same field is what we
+    export back to the repo.
+    """
+    items: list[dict] = []
+    offset = 0
+    page_size = 500
+    while True:
+        url = (
+            f"{api_url.rstrip('/')}/api/graph/nodes"
+            f"?type=concept&limit={page_size}&offset={offset}"
+        )
+        page = _fetch_json(url, timeout=60)
+        if not page or not page.get("items"):
+            break
+        for n in page["items"]:
+            if n.get("story_content"):
+                items.append(n)
+        if len(page["items"]) < page_size:
+            break
+        offset += page_size
+    return items
+
+
+def _split_frontmatter(text: str) -> tuple[str, str]:
+    """Return (frontmatter_block, body). Empty frontmatter is "".
+
+    The block is the YAML between the leading `---` lines (without
+    the dashes); the body is everything after the closing `---\n`.
+    When no frontmatter is present, returns ("", text).
+    """
+    if not text.startswith("---\n"):
+        return "", text
+    rest = text[4:]
+    end = rest.find("\n---\n")
+    if end < 0:
+        return "", text
+    return rest[:end], rest[end + 5:]
+
+
+def export_concept_stories(
+    nodes: list[dict],
+    *,
+    write: bool,
+) -> list[Path]:
+    """Project concept story bodies back to docs/vision-kb/concepts/.
+
+    Preserves the existing frontmatter (so hand-curated `hz`, `status`,
+    `updated`, `domains`, `axes` fields aren't lost) and only replaces
+    the markdown body when graph `story_content` differs. For nodes
+    without an existing file (rare — would mean a concept was minted
+    via the API without ever being authored in the repo), writes a
+    minimal frontmatter derived from graph properties.
+
+    Returns list of files written.
+    """
+    if not CONCEPTS_DIR.is_dir():
+        return []
+    written: list[Path] = []
+    for node in nodes:
+        concept_id = node.get("id", "")
+        if not concept_id:
+            continue
+        dest = CONCEPTS_DIR / f"{concept_id}.md"
+        # sync_kb_to_db.py strips the leading `# Title` from the file
+        # before storing in `story_content`. Re-prepend it on export
+        # so the round-tripped file matches the repo's canonical shape.
+        story = (node.get("story_content") or "").strip()
+        title = (node.get("name") or "").strip()
+        new_body = f"# {title}\n\n{story}\n" if title else story + "\n"
+
+        existing_text = dest.read_text(encoding="utf-8") if dest.exists() else ""
+        existing_fm, existing_body = _split_frontmatter(existing_text)
+
+        if existing_text:
+            # Preserve existing frontmatter — humans curate it
+            new_text = f"---\n{existing_fm}\n---\n\n{new_body.lstrip()}"
+            # Re-normalize: if existing body matches semantically, skip
+            if existing_body.strip() == new_body.strip():
+                continue
+        else:
+            # Minimal frontmatter derived from graph
+            from datetime import datetime
+            hz = node.get("sacred_frequency")
+            status = node.get("lifecycle_state") or "seed"
+            today = datetime.utcnow().strftime("%Y-%m-%d")
+            fm_lines = [f"id: {concept_id}"]
+            if hz:
+                fm_lines.append(f"hz: {hz}")
+            fm_lines.append(f"status: {status}")
+            fm_lines.append(f"updated: {today}")
+            new_text = "---\n" + "\n".join(fm_lines) + "\n---\n\n" + new_body.lstrip()
+
+        if write:
+            dest.write_text(new_text, encoding="utf-8")
+        written.append(dest)
+        print(f"  {'wrote' if write else 'would write'} {dest.relative_to(REPO_ROOT)}")
+    return written
+
+
 def git_commit_and_push(written: list[Path], removed: list[Path]) -> bool:
     """Stage the writes/removals, commit if there's a diff, push.
 
@@ -197,9 +303,11 @@ def git_commit_and_push(written: list[Path], removed: list[Path]) -> bool:
     if not written and not removed:
         return False
 
-    # Stage everything in docs/presence-content/
+    # Stage everything in the content directories we touch
     subprocess.check_call(
-        ["git", "add", str(PRESENCE_CONTENT_DIR.relative_to(REPO_ROOT))],
+        ["git", "add",
+         str(PRESENCE_CONTENT_DIR.relative_to(REPO_ROOT)),
+         str(CONCEPTS_DIR.relative_to(REPO_ROOT))],
         cwd=REPO_ROOT,
     )
 
@@ -262,20 +370,32 @@ def main() -> int:
         return 2
 
     print(f"Walking graph at {args.api_url}…")
-    nodes = list_nodes_with_presence_content(args.api_url)
-    print(f"Found {len(nodes)} nodes carrying presence_content")
 
-    written, removed = export_presence_content(nodes, write=args.write)
-    if not written and not removed:
+    presence_nodes = list_nodes_with_presence_content(args.api_url)
+    print(f"  found {len(presence_nodes)} nodes carrying presence_content")
+    pc_written, pc_removed = export_presence_content(presence_nodes, write=args.write)
+
+    concept_nodes = list_concepts_with_story(args.api_url)
+    print(f"  found {len(concept_nodes)} concepts carrying story_content")
+    concept_written = export_concept_stories(concept_nodes, write=args.write)
+
+    total_written = pc_written + concept_written
+    if not total_written and not pc_removed:
         print("repo already matches graph — nothing to export")
         return 0
 
     if args.commit:
-        git_commit_and_push(written, removed)
+        git_commit_and_push(total_written, pc_removed)
     elif args.write:
-        print(f"wrote {len(written)}, removed {len(removed)} — repo updated, no commit (--commit to push)")
+        print(
+            f"wrote {len(total_written)} files, removed {len(pc_removed)} — "
+            f"repo updated, no commit (--commit to push)"
+        )
     else:
-        print(f"would write {len(written)}, remove {len(removed)} (re-run with --write)")
+        print(
+            f"would write {len(total_written)} files, remove {len(pc_removed)} "
+            "(re-run with --write)"
+        )
     return 0
 
 
