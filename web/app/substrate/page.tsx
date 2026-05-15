@@ -109,15 +109,21 @@ export default async function SubstratePage() {
           and presence in the body lives here as a cell with a Blueprint NodeID.
           Two structurally-identical cells share the same Blueprint — automatically.
         </p>
-        <p className="mt-3 text-sm">
+        <p className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <Link
             href="/substrate/form"
             className="inline-flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-amber-300/90 hover:bg-amber-500/20 transition-colors"
           >
             Form playground →
           </Link>
-          <span className="ml-3 text-muted-foreground">
-            Ask the lattice structural questions in its own language.
+          <Link
+            href="/substrate/ingest"
+            className="inline-flex items-center gap-2 rounded border border-stone-800/40 px-3 py-1.5 text-stone-300 hover:border-amber-500/30 hover:text-amber-300/90 transition-colors"
+          >
+            Ingest content →
+          </Link>
+          <span className="text-muted-foreground">
+            Ask the lattice structural questions, or place new content into it.
           </span>
         </p>
       </header>
