@@ -52,29 +52,34 @@ End-to-end verified on prod 2026-05-15: a PATCH to
 `presence_content` showed up at `/people/joshua-golden` within 3
 seconds, then reverted cleanly with another PATCH.
 
-## Where inside/outside parity still has a gap
+## How outside edits flow back to the repo
 
-Outside edits **do not yet flow back** to `docs/presence-content/*.json`
-or `docs/presences/*.md`. The graph carries the live state; the repo
-carries the last-synced state. If both sides are edited between syncs,
-the graph wins at runtime but the inside commit history is incomplete.
+The body now closes the loop in two places:
 
-This is acceptable while outside-editing is rare; it becomes a real
-problem when outside contributors are doing meaningful authoring. Two
-shapes for closing the gap:
+1. **DB revision history** — every successful `PATCH /api/graph/nodes/{id}`
+   and `create_node` writes a row to the `graph_node_revisions` table
+   capturing the full node snapshot, the fields changed, the source
+   (`api`/`sync`/`web`/`seed`), and the author. Callers attribute
+   their edit via `X-Edit-Source` and `X-Edit-Author` request headers.
+   `GET /api/graph/nodes/{id}/revisions` reads the audit log,
+   most-recent first. Snapshots are full — re-PATCHing a past
+   snapshot is the rollback substrate.
 
-1. **Sync-back script** — a periodic job that walks the graph nodes
-   carrying `presence_content`, compares to the JSON files in
-   `docs/presence-content/`, and opens a PR for divergences. The repo
-   stays the canonical history; outside edits flow back as commits.
-2. **PR-on-edit** — the web edit UI submits a PR through GitHub's API
-   rather than PATCHing directly. The outside contributor's edit
-   becomes a commit they can see in the body's git history.
+2. **Scheduled graph→repo export** — [`scripts/export_graph_to_repo.py`](../../scripts/export_graph_to_repo.py)
+   walks every node carrying authored content (`presence_content` on
+   contributors/assets/places, `story_content` on concepts) and
+   projects the current state back into the repo as canonical files.
+   Idempotent semantic diff (parses JSON / extracts markdown bodies
+   so re-runs only touch real divergences). [`.github/workflows/export-graph-to-repo.yml`](../../.github/workflows/export-graph-to-repo.yml)
+   runs it nightly at 04:00 UTC and on workflow_dispatch. The diff
+   lands as a `tend(content): scheduled export of graph content to
+   repo` commit by `coherence-export[bot]`.
 
-Either shape preserves the asymmetry's good half (low-friction outside
-contribution) while restoring the missing half (git as full history).
-Not building either now — naming as the next breath when outside-edit
-volume grows.
+Together: outside edits land on the graph in seconds. Inside edits
+land via sync scripts. Either way, every change is captured in the
+revision table immediately, then projected to a repo commit nightly.
+The repo becomes the body's autobiography — every edit, from
+either side, eventually inscribed as a commit with its source noted.
 
 Another web-side gap: the existing `/people/[id]/edit` UI lets a
 contributor refine the bare data (name, tagline, description,
@@ -120,6 +125,7 @@ moves from TSX to graph.
 | `sync_presence_content.py` | Walks `docs/presence-content/*.json`, PATCHes graph nodes' `presence_content`. Creates held-open contributor scaffolds (`claimed: False`) when a node doesn't exist yet |
 | `sync_presence_slugs.py` | Stopgap from earlier — was for static-dir-name ≠ slug mapping. Now mostly dormant since no static directories remain |
 | `sync_presences_to_db.py` | The older sibling that syncs markdown bodies from `docs/presences/{slug}.md` to the node's `description` (PresencePage path) |
+| `export_graph_to_repo.py` | Reverse direction: walks the graph and projects every node carrying `presence_content` or `story_content` back into the repo. Runs nightly via `.github/workflows/export-graph-to-repo.yml`; idempotent; `--commit` writes + commits + pushes |
 
 ## Related
 
