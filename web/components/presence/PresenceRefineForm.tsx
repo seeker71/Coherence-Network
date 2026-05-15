@@ -23,6 +23,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import { readIdentity } from "@/lib/identity";
 import {
   EDGE_FAMILIES,
   EDGE_TYPE_TO_FAMILY,
@@ -41,7 +42,54 @@ type GraphNode = {
   tagline?: string | null;
   image_url?: string | null;
   presences?: { provider: string; url: string }[];
+  presence_content?: PresenceContentEnvelope | null;
 };
+
+/* ── presence_content shape (mirrors web/lib/presence-content.tsx) ── */
+
+type PresenceFact = { label: string; value_md: string };
+type PresenceArticle = {
+  kind: "narrative" | "panel";
+  variant?: "warm" | "cool" | "neutral" | "empty";
+  eyebrow?: string;
+  heading?: string;
+  body_md: string;
+};
+type PresenceContent = {
+  hero?: {
+    eyebrow?: string;
+    welcome_md?: string;
+  };
+  facts?: PresenceFact[];
+  note_from_body?: { eyebrow?: string; body_md: string } | null;
+  articles?: PresenceArticle[];
+  footer_md?: string;
+};
+type PresenceContentEnvelope = {
+  en?: PresenceContent;
+  [locale: string]: PresenceContent | undefined;
+};
+
+/**
+ * Attribution headers for every PATCH this form makes. The audit log
+ * uses these to distinguish web edits from sync-script writes from
+ * raw API calls; the visitor's contributor id (when known) lands as
+ * the author so revision history reads who-did-what.
+ */
+function attributedHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Edit-Source": "web",
+  };
+  try {
+    const { contributorId, name } = readIdentity();
+    if (contributorId) headers["X-Edit-Author"] = contributorId;
+    else if (name) headers["X-Edit-Author"] = name;
+  } catch {
+    // identity unavailable — anonymous edit, audit log records empty author
+  }
+  return headers;
+}
 
 type Edge = {
   id: string;
@@ -62,6 +110,7 @@ export function PresenceRefineForm({ node }: { node: GraphNode }) {
   return (
     <div className="space-y-10">
       <IdentitySection node={node} />
+      <ContentSection node={node} />
       <PresencesSection node={node} />
       <InfluencesSection node={node} />
       <footer className="pt-6 border-t border-border/30">
@@ -92,7 +141,7 @@ function IdentitySection({ node }: { node: GraphNode }) {
       `${getApiBase()}/api/graph/nodes/${encodeURIComponent(node.id)}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: attributedHeaders(),
         body: JSON.stringify({
           name,
           description,
@@ -173,6 +222,278 @@ function IdentitySection({ node }: { node: GraphNode }) {
   );
 }
 
+// ── 1b. Page content (presence_content) ─────────────────────────────
+
+/**
+ * The structured `presence_content` is what `PersonProfileTemplate`
+ * renders into the page chrome (hero eyebrow + welcome, facts grid,
+ * note-from-body, articles, footer). Until this section existed, the
+ * fields lived only in `docs/presence-content/{slug}.json` or on the
+ * graph — outside contributors had to PATCH the API by hand to refine
+ * them. This is the web-side form that closes that gap.
+ *
+ * Only renders when the node already carries presence_content. The
+ * page chrome (hero background gradient, overlay class, extra_image)
+ * is left out of the editor on purpose — those are styling chrome,
+ * not the visitor's own voice; the renderer's defaults carry them.
+ */
+function ContentSection({ node }: { node: GraphNode }) {
+  const envelope = (node.presence_content as PresenceContentEnvelope | undefined) || {};
+  const initial: PresenceContent = envelope.en || envelope[Object.keys(envelope)[0] || ""] || {};
+  const [eyebrow, setEyebrow] = useState(initial.hero?.eyebrow || "");
+  const [welcomeMd, setWelcomeMd] = useState(initial.hero?.welcome_md || "");
+  const [facts, setFacts] = useState<PresenceFact[]>(initial.facts || []);
+  const [noteEyebrow, setNoteEyebrow] = useState(initial.note_from_body?.eyebrow || "");
+  const [noteBody, setNoteBody] = useState(initial.note_from_body?.body_md || "");
+  const [articles, setArticles] = useState<PresenceArticle[]>(initial.articles || []);
+  const [footerMd, setFooterMd] = useState(initial.footer_md || "");
+  const [status, setStatus] = useState<SaveStatus>("idle");
+
+  // When the node arrives without presence_content yet, render nothing —
+  // a blank editor isn't useful and the API surface to mint a fresh
+  // envelope from scratch belongs in a different flow (sync script or
+  // the original page authoring).
+  if (!node.presence_content) return null;
+
+  async function save() {
+    setStatus("saving");
+    const nextContent: PresenceContent = {
+      hero: {
+        ...(initial.hero || {}),
+        eyebrow: eyebrow || undefined,
+        welcome_md: welcomeMd || "",
+      },
+      facts: facts.filter((f) => f.label.trim() || f.value_md.trim()),
+      note_from_body: noteBody.trim()
+        ? { eyebrow: noteEyebrow || undefined, body_md: noteBody }
+        : null,
+      articles: articles.filter((a) => a.body_md.trim()),
+      footer_md: footerMd || undefined,
+    };
+    const nextEnvelope: PresenceContentEnvelope = { ...envelope, en: nextContent };
+    const res = await fetch(
+      `${getApiBase()}/api/graph/nodes/${encodeURIComponent(node.id)}`,
+      {
+        method: "PATCH",
+        headers: attributedHeaders(),
+        body: JSON.stringify({
+          properties: { presence_content: nextEnvelope },
+        }),
+      },
+    );
+    setStatus(res.ok ? "saved" : "error");
+    if (res.ok) setTimeout(() => setStatus("idle"), 2400);
+  }
+
+  return (
+    <Section
+      title="Page content"
+      hint="The eyebrow, welcome, facts grid, note from this body, articles, and footer that render on the public page. Use `**bold**`, `*italic*`, `[label](/path)` for internal links and `[label](https://…)` for external, `## Heading` for section breaks in article bodies."
+    >
+      <Field label="Hero eyebrow">
+        <input
+          type="text"
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          placeholder="The teacher who held the room"
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Welcome paragraph(s)" hint="Lands directly under the name in the hero. Multiple paragraphs separated by blank lines.">
+        <textarea
+          value={welcomeMd}
+          onChange={(e) => setWelcomeMd(e.target.value)}
+          rows={5}
+          className={`${inputClass} font-mono text-xs leading-relaxed`}
+        />
+      </Field>
+
+      <div className="space-y-2 pt-2">
+        <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">
+          Facts grid
+        </p>
+        <ul className="space-y-2">
+          {facts.map((f, i) => (
+            <li key={i} className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={f.label}
+                  onChange={(e) => {
+                    const next = facts.slice();
+                    next[i] = { ...next[i], label: e.target.value };
+                    setFacts(next);
+                  }}
+                  placeholder="Label"
+                  className={`${inputClass} max-w-[14rem]`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setFacts(facts.filter((_, j) => j !== i))}
+                  className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5"
+                >
+                  remove
+                </button>
+              </div>
+              <textarea
+                value={f.value_md}
+                onChange={(e) => {
+                  const next = facts.slice();
+                  next[i] = { ...next[i], value_md: e.target.value };
+                  setFacts(next);
+                }}
+                rows={2}
+                placeholder="Value (markdown allowed)"
+                className={`${inputClass} font-mono text-xs`}
+              />
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => setFacts([...facts, { label: "", value_md: "" }])}
+          className="text-sm text-[hsl(var(--primary))] hover:opacity-80"
+        >
+          + add a fact
+        </button>
+      </div>
+
+      <div className="space-y-2 pt-4 border-t border-border/30">
+        <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">
+          Note from this body
+        </p>
+        <Field label="Eyebrow (optional)">
+          <input
+            type="text"
+            value={noteEyebrow}
+            onChange={(e) => setNoteEyebrow(e.target.value)}
+            placeholder="A note from this body"
+            className={inputClass}
+          />
+        </Field>
+        <Field label="Body" hint="Leave empty to remove the note entirely.">
+          <textarea
+            value={noteBody}
+            onChange={(e) => setNoteBody(e.target.value)}
+            rows={4}
+            className={`${inputClass} font-mono text-xs leading-relaxed`}
+          />
+        </Field>
+      </div>
+
+      <div className="space-y-3 pt-4 border-t border-border/30">
+        <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">
+          Articles
+        </p>
+        <ul className="space-y-4">
+          {articles.map((a, i) => (
+            <li key={i} className="space-y-2 rounded-lg border border-border/40 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={a.kind}
+                  onChange={(e) => {
+                    const next = articles.slice();
+                    next[i] = { ...next[i], kind: e.target.value as PresenceArticle["kind"] };
+                    setArticles(next);
+                  }}
+                  className={`${inputClass} max-w-[10rem]`}
+                >
+                  <option value="narrative">narrative</option>
+                  <option value="panel">panel</option>
+                </select>
+                {a.kind === "panel" && (
+                  <select
+                    value={a.variant || "neutral"}
+                    onChange={(e) => {
+                      const next = articles.slice();
+                      next[i] = {
+                        ...next[i],
+                        variant: e.target.value as PresenceArticle["variant"],
+                      };
+                      setArticles(next);
+                    }}
+                    className={`${inputClass} max-w-[8rem]`}
+                  >
+                    <option value="warm">warm</option>
+                    <option value="cool">cool</option>
+                    <option value="neutral">neutral</option>
+                    <option value="empty">empty</option>
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setArticles(articles.filter((_, j) => j !== i))}
+                  className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1.5"
+                >
+                  remove
+                </button>
+              </div>
+              {a.kind === "panel" && (
+                <input
+                  type="text"
+                  value={a.eyebrow || ""}
+                  onChange={(e) => {
+                    const next = articles.slice();
+                    next[i] = { ...next[i], eyebrow: e.target.value };
+                    setArticles(next);
+                  }}
+                  placeholder="Eyebrow (panel only)"
+                  className={inputClass}
+                />
+              )}
+              <input
+                type="text"
+                value={a.heading || ""}
+                onChange={(e) => {
+                  const next = articles.slice();
+                  next[i] = { ...next[i], heading: e.target.value };
+                  setArticles(next);
+                }}
+                placeholder="Heading"
+                className={inputClass}
+              />
+              <textarea
+                value={a.body_md}
+                onChange={(e) => {
+                  const next = articles.slice();
+                  next[i] = { ...next[i], body_md: e.target.value };
+                  setArticles(next);
+                }}
+                rows={6}
+                placeholder="Body (markdown). Blank lines separate paragraphs."
+                className={`${inputClass} font-mono text-xs leading-relaxed`}
+              />
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() =>
+            setArticles([
+              ...articles,
+              { kind: "narrative", heading: "", body_md: "" },
+            ])
+          }
+          className="text-sm text-[hsl(var(--primary))] hover:opacity-80"
+        >
+          + add an article
+        </button>
+      </div>
+
+      <Field label="Footer" hint="The closing block under the influence web. Markdown allowed.">
+        <textarea
+          value={footerMd}
+          onChange={(e) => setFooterMd(e.target.value)}
+          rows={3}
+          className={`${inputClass} font-mono text-xs leading-relaxed`}
+        />
+      </Field>
+
+      <SaveBar status={status} onSave={save} label="Save page content" />
+    </Section>
+  );
+}
+
 // ── 2. Public presences ─────────────────────────────────────────────
 
 function PresencesSection({ node }: { node: GraphNode }) {
@@ -187,7 +508,7 @@ function PresencesSection({ node }: { node: GraphNode }) {
       `${getApiBase()}/api/graph/nodes/${encodeURIComponent(node.id)}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: attributedHeaders(),
         body: JSON.stringify({ properties: { presences: items } }),
       },
     );
@@ -305,7 +626,7 @@ function InfluencesSection({ node }: { node: GraphNode }) {
   async function addEdge(toId: string, edgeType: string) {
     const res = await fetch(`${getApiBase()}/api/edges`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: attributedHeaders(),
       body: JSON.stringify({
         from_id: node.id,
         to_id: toId,
