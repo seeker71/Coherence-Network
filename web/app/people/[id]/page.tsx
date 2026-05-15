@@ -17,6 +17,13 @@ import {
   type Presence,
   type PresenceIdentity,
 } from "@/components/presence/PresencePage";
+import { PersonProfileTemplate } from "@/components/people/PersonProfileTemplate";
+import {
+  pickLocaleContent,
+  toPersonProfileContent,
+  type PresenceContent,
+  type PresenceContentByLocale,
+} from "@/lib/presence-content";
 
 /**
  * /people/[id] — a warm public garden view of a contributor.
@@ -161,6 +168,41 @@ type FeedResponse = {
   count: number;
   locale: string;
 };
+
+/**
+ * Pull the `presence_content` property off the graph node and return
+ * the locale-appropriate slice, if any. Returns null when:
+ *   · the node has no `presence_content` property
+ *   · the property isn't a JSON object
+ *   · no locale (including `en`) has authored content
+ *
+ * Accepts either a per-locale envelope (`{en: {...}, de: {...}}`) or
+ * a single PresenceContent (which is treated as the `en` variant).
+ */
+function pickPresenceContent(
+  node: Record<string, unknown> | null,
+  lang: string,
+): PresenceContent | null {
+  if (!node) return null;
+  const raw = (node as Record<string, unknown>).presence_content;
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  // Envelope shape: presence of any known locale key signals the
+  // per-locale layout. A bare PresenceContent has `hero` at the top
+  // level instead.
+  const looksLikeEnvelope =
+    typeof obj.en === "object" ||
+    typeof obj.de === "object" ||
+    typeof obj.es === "object" ||
+    typeof obj.id === "object";
+  if (looksLikeEnvelope) {
+    return pickLocaleContent(obj as PresenceContentByLocale, lang);
+  }
+  if (typeof obj.hero === "object" && obj.hero) {
+    return obj as unknown as PresenceContent;
+  }
+  return null;
+}
 
 async function fetchContributor(id: string): Promise<ContributorNode | null> {
   const base = getApiBase();
@@ -594,11 +636,32 @@ export default async function PersonPage({
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
+  const graphNode = await fetchGraphNode(id);
+
+  // First dispatch: the graph node carries a structured `presence_content`
+  // JSON — the body's authored content for this cell, in the same shape
+  // a static `web/content/people/{slug}/{locale}.tsx` would carry. Render
+  // it through the same template the static directories use, so the
+  // visual identity is identical regardless of whether content lives on
+  // disk or in the graph. This is the path a composted static cell
+  // moves onto.
+  const presenceContent = pickPresenceContent(graphNode, lang);
+  if (graphNode && presenceContent) {
+    const nodeId = (graphNode.id as string) || id;
+    const slug = typeof graphNode.slug === "string" ? graphNode.slug : null;
+    return (
+      <PersonProfileTemplate
+        content={toPersonProfileContent(presenceContent)}
+        lang={lang}
+        graphSlug={slug || nodeId}
+      />
+    );
+  }
+
   // When the graph node carries a canonical_url, this identity has an
   // outward-facing presence. Render the polished presence page —
   // hero, platforms, creations, lineage — before calling contributor
   // endpoints that only apply to local human profiles.
-  const graphNode = await fetchGraphNode(id);
   if (graphNode && typeof graphNode.canonical_url === "string" && graphNode.canonical_url) {
     const nodeId = (graphNode.id as string) || id;
     const [creations, inspiredBy] = await Promise.all([
