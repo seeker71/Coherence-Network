@@ -471,18 +471,53 @@ function PresenceOverview({
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-              {t("presence.works")}
-            </dt>
-            <dd className="mt-1 text-white/90">{identity.creations.length}</dd>
-          </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
-              {t("presence.lineage")}
-            </dt>
-            <dd className="mt-1 text-white/90">{inspiredCount}</dd>
-          </div>
+          {/* Each stat is a doorway, not a number. Works anchors down
+              to the creations grid on this same page; Lineage opens the
+              chronological walk at /people/{slug}/lineage where the
+              influences group by source. A bare count would let visitors
+              read "281" and never realize 281 things are one click away. */}
+          {identity.creations.length > 0 ? (
+            <Link
+              href="#works"
+              className="block rounded-lg -mx-2 px-2 py-1 hover:bg-white/[0.04] transition-colors"
+            >
+              <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+                {t("presence.works")}
+              </dt>
+              <dd className="mt-1 text-white/90 flex items-baseline gap-1.5">
+                <span>{identity.creations.length}</span>
+                <span className="text-xs text-white/40" aria-hidden="true">→</span>
+              </dd>
+            </Link>
+          ) : (
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+                {t("presence.works")}
+              </dt>
+              <dd className="mt-1 text-white/90">{identity.creations.length}</dd>
+            </div>
+          )}
+          {inspiredCount > 0 ? (
+            <Link
+              href={`/people/${encodeURIComponent(identity.slug || identity.id)}/lineage`}
+              className="block rounded-lg -mx-2 px-2 py-1 hover:bg-white/[0.04] transition-colors"
+            >
+              <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+                {t("presence.lineage")}
+              </dt>
+              <dd className="mt-1 text-white/90 flex items-baseline gap-1.5">
+                <span>{inspiredCount}</span>
+                <span className="text-xs text-white/40" aria-hidden="true">→</span>
+              </dd>
+            </Link>
+          ) : (
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.14em] text-white/40">
+                {t("presence.lineage")}
+              </dt>
+              <dd className="mt-1 text-white/90">{inspiredCount}</dd>
+            </div>
+          )}
         </div>
       </dl>
 
@@ -585,7 +620,7 @@ function CreationsGrid({
     return a.name.localeCompare(b.name);
   });
   return (
-    <section>
+    <section id="works" className="scroll-mt-24">
       <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
         {t("presence.works")}
       </p>
