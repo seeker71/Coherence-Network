@@ -195,7 +195,17 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
       </div>
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Spec {specId}</h1>
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-2xl font-bold">Spec {specId}</h1>
+          {registryItem && (
+            <Link
+              href={`/specs/${encodeURIComponent(specId)}/edit`}
+              className="text-sm text-muted-foreground hover:text-amber-400/80 transition-colors"
+            >
+              Edit
+            </Link>
+          )}
+        </div>
         <p className="text-muted-foreground">{registryItem?.title || inventoryItem?.title || "(title not yet registered)"}</p>
       </div>
 
