@@ -15,6 +15,9 @@ from typing import Any
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 
+from app.models.graph import (  # noqa: F401 — NodeRevision imported for table creation
+    NodeRevision,
+)
 from app.models.graph import (
     Edge, Node,
     CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET, NODE_TYPE_SET,
@@ -118,6 +121,42 @@ def get_lifecycle_default(node_type: str) -> str:
 # ── Node CRUD ────────────────────────────────────────────────────────
 
 
+def _record_revision(
+    s,
+    node: Node,
+    *,
+    source: str,
+    author: str,
+    fields_changed: list[str],
+) -> None:
+    """Append a NodeRevision row for the current node state.
+
+    Best-effort: a failure here logs and continues — losing an audit
+    row is preferable to refusing the write. The revision_number is
+    the next per-node sequence value computed inside the same session
+    as the write, so commits stay atomic.
+    """
+    try:
+        last_rev = (
+            s.query(func.max(NodeRevision.revision_number))
+            .filter(NodeRevision.node_id == node.id)
+            .scalar()
+        )
+        next_rev = (last_rev or 0) + 1
+        revision = NodeRevision(
+            id=str(uuid.uuid4()),
+            node_id=node.id,
+            revision_number=next_rev,
+            source=source or "api",
+            author=author or "",
+            fields_changed=list(fields_changed or []),
+            snapshot=node.to_dict(),
+        )
+        s.add(revision)
+    except Exception:
+        log.exception("Failed to record NodeRevision for %s", node.id)
+
+
 def create_node(
     *,
     id: str | None = None,
@@ -127,6 +166,8 @@ def create_node(
     properties: dict[str, Any] | None = None,
     phase: str | None = None,
     strict: bool = False,
+    source: str = "api",
+    author: str = "",
 ) -> dict[str, Any]:
     """Create a node. Returns the node dict.
 
@@ -162,6 +203,14 @@ def create_node(
         )
         s.add(node)
         try:
+            s.flush()  # populate id/timestamps so the revision snapshot is real
+            _record_revision(
+                s,
+                node,
+                source=source,
+                author=author,
+                fields_changed=["__create__"],
+            )
             s.commit()
             s.refresh(node)
             return node.to_dict()
@@ -211,7 +260,13 @@ _RETYPEABLE_TYPES = frozenset({
 })
 
 
-def update_node(node_id: str, **updates: Any) -> dict[str, Any] | None:
+def update_node(
+    node_id: str,
+    *,
+    _source: str = "api",
+    _author: str = "",
+    **updates: Any,
+) -> dict[str, Any] | None:
     """Update a node. Supports name, description, phase, properties,
     and — within the presence bucket — type.
 
@@ -219,14 +274,24 @@ def update_node(node_id: str, **updates: Any) -> dict[str, Any] | None:
     from the default contributor bucket (where the resolver first
     dropped it) into `scene` where it belongs. Cross-bucket moves
     (contributor → concept, or scene → system) are refused so a
-    rogue PATCH can't reshape an identity."""
+    rogue PATCH can't reshape an identity.
+
+    `_source` and `_author` flow into the NodeRevision row that's
+    appended after the write — `api` for direct PATCH, `sync` for the
+    sync scripts that import repo files, `web` for the edit UI when
+    we know it, `seed` for one-time data loads. Both are optional;
+    when omitted, defaults attribute the edit to anonymous API."""
     with session() as s:
         node = s.get(Node, node_id)
         if not node:
             return None
 
+        fields_changed: list[str] = []
+
         for key in ("name", "description", "phase"):
             if key in updates and updates[key] is not None:
+                if getattr(node, key) != updates[key]:
+                    fields_changed.append(key)
                 setattr(node, key, updates[key])
 
         # Type change — only within the presence bucket, and only if
@@ -236,18 +301,62 @@ def update_node(node_id: str, **updates: Any) -> dict[str, Any] | None:
         new_type = updates.get("type")
         if new_type is not None and new_type != node.type:
             if node.type in _RETYPEABLE_TYPES and new_type in _RETYPEABLE_TYPES:
+                fields_changed.append("type")
                 node.type = new_type
 
         if "properties" in updates and isinstance(updates["properties"], dict):
-            # Merge properties (don't replace — merge new keys into existing)
+            # Merge properties (don't replace — merge new keys into existing).
+            # Record which property keys actually changed (not just every key
+            # the PATCH carried) so the revision row stays meaningful.
+            current = dict(node.properties or {})
+            for k, v in updates["properties"].items():
+                if current.get(k) != v:
+                    fields_changed.append(f"properties.{k}")
             merged = dict(node.properties or {})
             merged.update(updates["properties"])
             node.properties = merged
 
         node.updated_at = datetime.now(timezone.utc)
+        if fields_changed:
+            _record_revision(
+                s,
+                node,
+                source=_source,
+                author=_author,
+                fields_changed=fields_changed,
+            )
         s.commit()
         s.refresh(node)
         return node.to_dict()
+
+
+def list_node_revisions(
+    node_id: str,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Return the audit log for one node — most-recent revision first.
+
+    Each row is the NodeRevision dict (revision_number, captured_at,
+    source, author, fields_changed, snapshot). The snapshot is the
+    full node state at that revision, which makes rollback a matter
+    of re-PATCHing the historical values.
+    """
+    with session() as s:
+        q = (
+            s.query(NodeRevision)
+            .filter(NodeRevision.node_id == node_id)
+            .order_by(NodeRevision.revision_number.desc())
+        )
+        total = q.count()
+        rows = q.offset(offset).limit(limit).all()
+        return {
+            "items": [r.to_dict() for r in rows],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
 
 
 def delete_node(node_id: str) -> bool:

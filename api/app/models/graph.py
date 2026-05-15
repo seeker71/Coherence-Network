@@ -29,8 +29,10 @@ from sqlalchemy import (
     DateTime,
     Float,
     Index,
+    Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy import JSON as _JSON
@@ -303,3 +305,61 @@ class Edge(Base):
         if self.properties:
             d.update({"properties": self.properties})
         return d
+
+
+class NodeRevision(Base):
+    """Per-edit history of every graph node — the DB-layer audit log.
+
+    Every time `update_node` or `create_node` writes to the graph, one
+    row lands here capturing the full state of the node at that moment
+    (the snapshot), the names of fields that changed (so callers can
+    diff cheaply), the source that produced the edit (`api`, `sync`,
+    `web`, `seed`), and the actor when known.
+
+    Why a snapshot rather than just a diff: a snapshot makes rollback
+    trivial (just re-apply revision N) and lets the export-to-git job
+    serialize "the node as it was at time T" without replaying history.
+    Storage cost is fine for node-shaped content (a few KB per revision
+    × tens of thousands of revisions = single-digit GB at worst).
+
+    The revision_number is per-node, monotonically increasing, used by
+    the API to refer to a specific historical state without exposing
+    UUIDs to callers.
+    """
+    __tablename__ = "graph_node_revisions"
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    node_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="api")
+    author: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    fields_changed: Mapped[list] = mapped_column(
+        _PortableJSON, nullable=False, default=list,
+    )
+    snapshot: Mapped[dict] = mapped_column(
+        _PortableJSON, nullable=False, default=dict,
+    )
+
+    __table_args__ = (
+        Index("ix_node_revisions_node", "node_id"),
+        Index("ix_node_revisions_node_rev", "node_id", "revision_number"),
+        Index("ix_node_revisions_captured", "captured_at"),
+        UniqueConstraint("node_id", "revision_number", name="uq_node_revisions_node_rev"),
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "node_id": self.node_id,
+            "revision_number": self.revision_number,
+            "captured_at": self.captured_at.isoformat() if self.captured_at else None,
+            "source": self.source,
+            "author": self.author or None,
+            "fields_changed": list(self.fields_changed or []),
+            "snapshot": dict(self.snapshot or {}),
+        }

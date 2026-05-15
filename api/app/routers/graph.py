@@ -231,16 +231,26 @@ async def get_node(node_id: str, request: Request, lang: str | None = Query(None
 
 
 @router.patch("/graph/nodes/{node_id}", summary="Update a node")
-async def update_node(node_id: str, body: NodeUpdate):
+async def update_node(node_id: str, body: NodeUpdate, request: Request):
     """Update a node.
 
     When a presence-type node's name or description changes, the
     resonance service automatically re-runs so the concept edges
     stay aligned with the current text. The graph keeps itself
     attuned without anyone having to trigger a manual refresh.
+
+    Every successful update appends a NodeRevision row capturing the
+    new node state, the fields that changed, and where the edit came
+    from. Callers can pass `X-Edit-Source` (`api` / `sync` / `web` /
+    `seed`) and `X-Edit-Author` (an opaque identifier) headers to
+    attribute the revision; both default to `api` / empty when absent.
     """
     updates = body.model_dump(exclude_none=True)
-    result = graph_service.update_node(node_id, **updates)
+    source = request.headers.get("x-edit-source") or "api"
+    author = request.headers.get("x-edit-author") or ""
+    result = graph_service.update_node(
+        node_id, _source=source, _author=author, **updates,
+    )
     if not result:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
 
@@ -267,6 +277,29 @@ async def update_node(node_id: str, body: NodeUpdate):
             )
 
     return result
+
+
+@router.get(
+    "/graph/nodes/{node_id}/revisions",
+    summary="List the audit-log revisions for a node — most recent first",
+)
+async def get_node_revisions(
+    node_id: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Return the per-node audit log produced by every successful PATCH
+    and create. Each row carries the full node snapshot at that
+    revision, the fields that changed, the source (`api`/`sync`/`web`),
+    and the author when known. Combined with the snapshot, this is the
+    rollback substrate: re-PATCH a node's properties with any past
+    revision's snapshot to restore that state."""
+    # Existence check so 404 is honest for a node that was never created
+    # (vs 200 with an empty list, which conflates "no edits yet" with
+    # "no such node"). Cheap — single primary-key lookup.
+    if not graph_service.get_node(node_id):
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    return graph_service.list_node_revisions(node_id, limit=limit, offset=offset)
 
 
 @router.delete("/graph/nodes/{node_id}", summary="Delete a node and all its edges")

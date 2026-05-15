@@ -80,7 +80,29 @@ export type PresenceContentByLocale = {
  * Internal links (starting with `/`) become Next.js `<Link>`; external
  * links open in a new tab with rel=noopener.
  */
-export function renderInlineMarkdown(text: string): ReactNode {
+/**
+ * HTML-decode the common named entities and numeric references. Web-side
+ * edit forms (and some linters) round-trip strings through innerHTML or
+ * a JSON-pretty step that encodes `'` → `&apos;`, `"` → `&quot;`,
+ * `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`. React renders strings
+ * verbatim, so without this decode the literal entity would surface on
+ * the page. Keep the decode narrow — only the entities web editors
+ * actually produce — so the function stays predictable.
+ */
+function decodeEntities(text: string): string {
+  if (!text || text.indexOf("&") === -1) return text;
+  return text
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&amp;/g, "&");
+}
+
+export function renderInlineMarkdown(rawText: string): ReactNode {
+  const text = decodeEntities(rawText);
   if (!text) return null;
   const parts: ReactNode[] = [];
   const re =
