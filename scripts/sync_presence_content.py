@@ -60,6 +60,44 @@ def find_node(api_url: str, slug: str) -> dict | None:
     return None
 
 
+def create_node(api_url: str, slug: str, name: str) -> dict | None:
+    """Create a contributor node with the given slug.
+
+    The node is minted as a held-open placeholder (`claimed: False`) —
+    the page becomes addressable, but the contributor record stays
+    open for the real person to walk in and claim it.
+    """
+    url = f"{api_url.rstrip('/')}/api/graph/nodes"
+    body = json.dumps({
+        "id": f"contributor:{slug}",
+        "type": "contributor",
+        "name": name,
+        "description": "",
+        "phase": "water",
+        "properties": {
+            "slug": slug,
+            "claimed": False,
+            "contributor_type": "HUMAN",
+        },
+    }).encode("utf-8")
+    req = urlrequest.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "coherence-sync/1.0",
+        },
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as e:
+        sys.stderr.write(f"POST node {slug} failed: {e.code} {e.reason}\n")
+        return None
+
+
 def patch_presence_content(
     api_url: str, node_id: str, presence_content: dict
 ) -> bool:
@@ -130,9 +168,27 @@ def main() -> int:
 
         node = find_node(args.api_url, slug)
         if not node:
-            print(f"  ✗ {slug}: no contributor node found for slug")
-            failed += 1
-            continue
+            # Pull display name from the payload's en.hero.name or
+            # breadcrumb_name; fall back to a titlecased slug.
+            display = slug.replace("-", " ").title()
+            if isinstance(payload, dict):
+                en = payload.get("en") or next(iter(payload.values()), None)
+                if isinstance(en, dict):
+                    display = (
+                        (en.get("hero") or {}).get("name")
+                        or en.get("breadcrumb_name")
+                        or display
+                    )
+            if args.dry_run:
+                print(f"  · would create contributor:{slug} (name={display!r}) then sync")
+                succeeded += 1
+                continue
+            node = create_node(args.api_url, slug, display)
+            if not node:
+                print(f"  ✗ {slug}: could not create contributor node")
+                failed += 1
+                continue
+            print(f"  + {slug}: created contributor:{slug} as held-open scaffold")
 
         node_id = node.get("id", f"contributor:{slug}")
         if args.dry_run:
