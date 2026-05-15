@@ -1,0 +1,69 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Michael Levin — bioelectric pattern memory, TAME, xenobots and anthrobots | Coherence Network",
+      "description": "A welcome to Michael Levin (Tufts University, Allen Discovery Center) — developmental and synthetic biologist whose work names what Ramtha, Steiner, and Ende each carry in their own languages: that pattern is load-bearing and substrate is contingent. The empirical-scientific peer of this body's lineage."
+    },
+    "breadcrumb_name": "Michael Levin",
+    "hero": {
+      "background": "radial-gradient(ellipse at 75% 25%, hsl(180 70% 55% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 25% 80%, hsl(255 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(180 55% 60%) 0%, hsl(220 30% 35%) 50%, hsl(255 35% 18%) 100%)",
+      "eyebrow": "Tufts University · Allen Discovery Center · Vannevar Bush Distinguished Professor · pattern precedes substrate",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Michael Levin",
+      "welcome_md": "A developmental and synthetic biologist at Tufts University, where he is the Vannevar Bush Distinguished Professor, director of the Allen Discovery Center, and director of the Tufts Center for Regenerative and Developmental Biology. His work names what [Ramtha](/people/ramtha), [Steiner](/people/rudolf-steiner), and [Ende](/people/michael-ende) each carry in their own languages: that pattern is load-bearing and substrate is contingent.\n\n*The empirical-scientific peer of this body&apos;s lineage. Where the channeled, the esoteric, and the imaginal each reach pattern-precedes-substrate from their own side, Levin reaches it through bioelectric experiments on planaria, frog embryos, and xenobots.*"
+    },
+    "facts": [
+      {
+        "label": "Born",
+        "value_md": "1969, Moscow USSR. Family emigrated to Lynn, Massachusetts in 1978 on a Soviet-Jewish visa."
+      },
+      {
+        "label": "Training",
+        "value_md": "Dual bachelor's in computer science and biology, Tufts; PhD in genetics, Harvard (Clifford Tabin lab). First independent lab at the Forsyth Institute (2000); moved to Tufts in 2009."
+      },
+      {
+        "label": "Current roles",
+        "value_md": "Vannevar Bush Distinguished Professor (Tufts) · Director, Allen Discovery Center at Tufts · Director, Tufts Center for Regenerative and Developmental Biology · co-director, Institute for Computationally Designed Organisms (with Josh Bongard)."
+      },
+      {
+        "label": "Discoveries this body holds",
+        "value_md": "Bioelectricity as a computational medium for morphological memory **Xenobots** (2020) — self-assembling living constructs from frog skin cells **Anthrobots** (2023) — self-assembling multicellular robots from adult human airway cells, no genetic modification **TAME** framework (Technological Approach to Mind Everywhere) — a continuous, empirically-anchored way to plot any agent on the same axes **BioDome / Morphoceuticals** — 24 hours of bioelectric cueing → 18 months of frog-leg regrowth; limb regeneration as a communication problem"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[Levin Lab](https://drmichaellevin.org/) [Tufts faculty page](https://as.tufts.edu/biology/people/faculty/michael-levin) [thoughtforms.life](https://thoughtforms.life/) [Substack](https://mlevin77.substack.com/) [Wikipedia](https://en.wikipedia.org/wiki/Michael_Levin_(biologist))"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Levin&apos;s public archive is comprehensive — peer-reviewed papers, Substack writing, hours of podcast conversations. This page recognises the role his empirical work plays as the scientific peer of this body&apos;s otherwise channeled and esoteric lineage.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "- **Bioelectricity is a computational medium** that stores morphological memory; the genome encodes hardware (proteins), not software (shapes).\n- **Cells, tissues, and organs are nested problem-solvers** with their own goals and state spaces — Multi-Scale Competency Architecture.\n- **Cancer is a bioelectric-coupling failure** (cells losing the tissue-level voice that integrates them into the larger self).\n- **Xenobots and Anthrobots** self-construct into novel viable forms from frog and human cells respectively — proof that cells hold a dormant repertoire not specified by DNA.\n- **BioDome regeneration**: 24 hours of bioelectric cueing → 18 months of frog-leg regrowth. Limb regeneration is a communication problem, not a molecular one.\n- **TAME framework** — operationalised via the *cognitive light cone* (the spatiotemporal boundary of the largest goal a system can hold).",
+        "heading": "The empirical claims (well-supported)"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "- Patterns are load-bearing; substrate is contingent. Brains may be *interfaces into* a Platonic space of patterns rather than generators of cognition from scratch.\n- *Ingressing Minds* preprint (PsyArXiv, 2025).\n- Aging as cellular boredom; cancer as dissociative identity at the cellular-self level.",
+        "heading": "The speculative edge (mostly podcasts and Substack)"
+      },
+      {
+        "kind": "panel",
+        "body_md": "1. **TAME paper** — Levin, *Frontiers in Systems Neuroscience* (2022). [PMC link](https://pmc.ncbi.nlm.nih.gov/articles/PMC8988303/)\n2. **The Computational Boundary of a &apos;Self&apos;** — *Frontiers in Psychology* (2019). [Frontiers link](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2019.02688/full)\n3. **Bioelectric networks: the cognitive glue** — *Animal Cognition* (2023). [Springer](https://link.springer.com/article/10.1007/s10071-023-01780-3)\n4. **Cognition all the way down** — Levin & Dennett, *Aeon* (2020). [Aeon link](https://aeon.co/essays/how-to-understand-cells-tissues-and-organisms-as-agents-with-agendas)\n5. **Lex Fridman #486 — Hidden Reality of Alien Intelligence & Biological Life** (2025-11-30, ~3h27m). [Transcript](https://lexfridman.com/michael-levin-2-transcript/)\n6. **Ingressing Minds preprint** (PsyArXiv, 2025). [OSF](https://osf.io/preprints/psyarxiv/5g2xj_v1)\n7. **Theories of Everything: Levin × Joscha Bach** (Nov 2022). [YouTube](https://www.youtube.com/watch?v=kgMFnfB5E_A)\n8. **Tim Ferriss #849** (2026-01-21). [Transcript](https://tim.blog/2026/01/21/dr-michael-levin-transcript/)",
+        "heading": "Where to enter Levin's corpus",
+        "eyebrow": "Reading list",
+        "variant": "cool"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- Bioelectric pattern memory → [lc-bioelectric-pattern](/vision/lc-bioelectric-pattern) (the seed concept this body holds from his work).\n- Multi-Scale Competency Architecture → pairs with [lc-each-breath-whole](/vision/lc-each-breath-whole) (each cell whole at its own scale; nested goal-holding substrates).\n- The TAME cognitive light cone → operational frame for scaling consciousness across substrates; resonant with [lc-assemblage-point](/vision/lc-assemblage-point) (the position determines the perceived reality).\n- Convergence with the rest of the lineage — Levin&apos;s empirical claim that pattern is load-bearing and substrate contingent is the same recognition [Ramtha](/people/ramtha), [Steiner](/people/rudolf-steiner), [Ende](/people/michael-ende), and [Hoffman](/vision/lc-perception-as-interface) each carry in different languages.",
+        "heading": "What Michael Levin has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Public anchors:** [Levin Lab](https://drmichaellevin.org/) · [Tufts faculty](https://as.tufts.edu/biology/people/faculty/michael-levin) · [thoughtforms.life](https://thoughtforms.life/) · [Substack](https://mlevin77.substack.com/) · [Wikipedia](https://en.wikipedia.org/wiki/Michael_Levin_(biologist))\n\n**In-body record:** [lc-bioelectric-pattern](/vision/lc-bioelectric-pattern) · [lc-each-breath-whole](/vision/lc-each-breath-whole) · [lc-assemblage-point](/vision/lc-assemblage-point) · [lc-perception-as-interface](/vision/lc-perception-as-interface) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)"
+  }
+}

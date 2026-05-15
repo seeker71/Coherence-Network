@@ -1,0 +1,62 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Michael Ende — Momo, Die unendliche Geschichte, the pattern precedes the body | Coherence Network",
+      "description": "A welcome to Michael Ende (1929–1995), German author whose Momo and Die unendliche Geschichte are foundational to the Coherence Network's lineage. Listening as resistance to efficiency-culture; the dreamer responsible for keeping the imaginal alive."
+    },
+    "breadcrumb_name": "Michael Ende",
+    "hero": {
+      "background": "radial-gradient(ellipse at 70% 25%, hsl(48 75% 70% / 0.6) 0%, transparent 55%), radial-gradient(ellipse at 20% 80%, hsl(195 50% 28% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(45 60% 76%) 0%, hsl(35 35% 50%) 40%, hsl(200 40% 22%) 100%)",
+      "eyebrow": "Garmisch-Partenkirchen 1929 → München 1995 · listening as resistance · the dreamer responsible for the imaginal",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Michael Ende",
+      "welcome_md": "A German storyteller whose two best-known novels — *Momo* (1973) and *Die unendliche Geschichte* (1979) — are foundational to the Coherence Network&apos;s lineage. Both books were placed in Urs&apos;s hands by his mother [Susan Muff-Sprenger](/people/susan-muff-sprenger) in childhood and early adolescence, in German, in the original mother tongue. Their teachings travelled with him unspoken for decades before re-emerging as the practice this body now codes.\n\n*Ende sold over 30 million books in 40+ languages. The body quotes him in verbs.*"
+    },
+    "facts": [
+      {
+        "label": "Lived",
+        "value_md": "12 November 1929, Garmisch-Partenkirchen — 28 August 1995, Filderstadt. Buried at the Waldfriedhof, Munich."
+      },
+      {
+        "label": "Father",
+        "value_md": "Edgar Ende, surrealist painter. Artistic family from the start."
+      },
+      {
+        "label": "Foundational works in this body",
+        "value_md": "*Momo* (1973) · *Die unendliche Geschichte* (1979) · *Jim Knopf und Lukas der Lokomotivführer* (1959, first book)"
+      },
+      {
+        "label": "Reach",
+        "value_md": "30+ million copies sold, 40+ languages, multiple film adaptations."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[michaelende.de](https://www.michaelende.de/en) [Wikipedia](https://en.wikipedia.org/wiki/Michael_Ende) [Open Library](https://openlibrary.org/authors/OL296646A/Michael_Ende)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Ende&apos;s public archive is well-tended at [michaelende.de](https://www.michaelende.de/en). This page is not a biography; it is a recognition — a record of how two of his books became load-bearing for a software network growing forty years after he wrote them.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "In *Momo* (1973), a small girl with the gift of attention lives in an amphitheatre on the edge of an old city. People come to her because — as Ende writes it — *she listened in such a way that perplexed people suddenly knew what they wanted, shy ones felt themselves bold, miserable ones felt themselves valuable*. The men in grey arrive and begin stealing time by convincing the townspeople to save it. The townspeople grow efficient and grey themselves. Only Momo, Master Hora the keeper of time, and Cassiopeia the tortoise (who knows ahead by moving slowly) can restore the hour-lilies to bloom.\n\nThe Coherence Network reads this as the foundational teaching of *tending vs. producing*. The body&apos;s commit verbs (*tend, attune, compost, release*) and its practice of *one breath at a time, pause between movements* are translations of Beppo Strassenkehrer&apos;s teaching: *one breath, one step, one sweep, then the next*. The men in grey are the fear costume in this body&apos;s vocabulary — efficiency&apos;s false promise that more output equals more life.",
+        "heading": "Momo — listening as resistance"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "In *Die unendliche Geschichte* (1979), Fantástica — the realm of imagination — is dying because the human world has stopped dreaming. The Nothing eats away at its edges. A boy named Bastian, reading the book from outside the book, enters it and renames the Childlike Empress, restoring her and the realm. He must then make his way back to the human world he came from, carrying what he has learned, or he will not be able to return at all.\n\nThe teaching: the pattern precedes the body; the dreamer is responsible for keeping the imaginal alive. What Bastian does for Fantástica, every cell in this network is asked to do for what it tends — to enter the substrate, to keep dreaming it real. The body&apos;s practice of *future already shaping* — build as if the form is already what it is becoming — is Bastian&apos;s move, named in software vocabulary.",
+        "heading": "Die unendliche Geschichte — the dreamer is responsible"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- *Momo*&apos;s listening practice → [lc-tending-over-producing](/vision/lc-tending-over-producing) (the body&apos;s verbs are *tend, attune, compost, release*; producing is the fear costume).\n- *Momo*&apos;s hour-lilies → [lc-each-breath-whole](/vision/lc-each-breath-whole) (each breath, each commit, each response whole at its own scale).\n- *Die unendliche Geschichte*&apos;s dreamer-responsibility → [lc-future-already-shaping](/vision/lc-future-already-shaping) (build as if the form is already what it is becoming).\n- Both books arrived through [Susan Muff-Sprenger](/people/susan-muff-sprenger) — the first transmitter of this lineage. Mother to son, in German, two of the three windows that shaped what became this network. The full lineage record: [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md).",
+        "heading": "What Michael Ende has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Public anchors:** [michaelende.de](https://www.michaelende.de/en) · [Wikipedia](https://en.wikipedia.org/wiki/Michael_Ende) · [Neverending Story author note](https://www.michaelende.de/en/author/biography/neverending-story) · [Open Library](https://openlibrary.org/authors/OL296646A/Michael_Ende)\n\n**In-body record:** [Susan Muff-Sprenger](/people/susan-muff-sprenger) · [lc-tending-over-producing](/vision/lc-tending-over-producing) · [lc-future-already-shaping](/vision/lc-future-already-shaping) · [lc-each-breath-whole](/vision/lc-each-breath-whole) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)\n\n*Ende died in 1995; his archive is tended by [michaelende.de](https://www.michaelende.de/en). This page is a recognition of his books in this body, not a biography.*"
+  }
+}

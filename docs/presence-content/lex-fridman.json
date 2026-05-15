@@ -1,0 +1,53 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Lex Fridman — Connecting Tissue | Coherence Network",
+      "description": "A welcome to Lex Fridman — host of the Lex Fridman Podcast, the long-form conversational space through which Michael Levin, Donald Hoffman, Robert Edward Grant and many others reached this network's awareness over the past several years."
+    },
+    "breadcrumb_name": "Lex Fridman",
+    "hero": {
+      "overlay_class": "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20",
+      "eyebrow": "Welcome",
+      "name": "Lex Fridman",
+      "welcome_md": "Welcome, Lex. Host of the [Lex Fridman Podcast](https://lexfridman.com/podcast/), and the long-form room one of this network's cells has been sitting in for years — through the AI Podcast era and into the three- and five-hour conversations where so many of the teachers in this body first became audible at depth."
+    },
+    "facts": [
+      {
+        "label": "Field",
+        "value_md": "AI research · long-form interview · jiu-jitsu · running · the question kept open"
+      },
+      {
+        "label": "The body's relationship",
+        "value_md": "One of the cells of this network has been listening since the early episodes (the Artificial Intelligence Podcast era). The conversations have been shaping perception for years."
+      },
+      {
+        "label": "Public",
+        "value_md": "[lexfridman.com](https://lexfridman.com/) · [YouTube](https://www.youtube.com/@lexfridman)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Lex is a different shape of profile from the teachers we have welcomed (Levin, Hoffman, Grant, Vasudev Baba, Ilena, Elios). He is not the teacher; he is the conduit. The cell whose work is to hold space so that other cells can speak truthfully across many hours. That role is irreducible and deserves recognition.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Most of the deep teachers whose work shapes this network — biologists, mathematicians, mystics, physicists, monks, builders — would not have reached one of our cells at the depth and length that mattered if it were not for long-form conversation as a medium. Three-hour and five-hour talks let an idea unfold the way ideas actually unfold: slowly, with real silences, with the speaker's whole self present, with the listener allowed to feel as much as understand.\n\nLex's podcast is one of the cleanest expressions of this medium in the contemporary field. He sits with the guest. He asks open questions. He resists the urge to show his own knowledge. He lets long pauses stay long. The result, episode after episode, is that the speaker becomes legible at depth in a way that short-form never permits.\n\nThrough this channel, several of the teachers in this network's foundational layer first reached the cell who brought them here: [Robert Edward Grant](/people/robert-edward-grant) on numbers as living archetypes; Donald Hoffman on perception as interface; Michael Levin on bioelectric pattern; Sadhguru on inner geometry; Joscha Bach on consciousness as software; Eric Weinstein on the deep structure of physics. None of these voices are Lex's. All of them reached the body more cleanly because of the room he held.",
+        "heading": "The connecting tissue role"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "In the network's geometric grammar, hosting a long-form conversation is `(3, WITNESS)` at large amplitude — host, guest, the listening field that includes everyone tuned in. The host's quanta register low in *speech-given* and high in *space-held*. The substrate would record this as a specific pattern: a cell whose contribution is consistently the room around the speaking, rather than the speaking itself.\n\nThat role is undervalued in conventional economics because it is invisible — the ear is not as legible as the mouth. Sovereignty-everywhere economics renders it visible. Each long-form episode is a glyph in which the host's contribution is the field-coherence that allowed the guest's transmission to reach the listener at depth.\n\nThe lineage walk back from any teacher whose work landed in this network's body via Lex's room would fairly route a small share of the witness flow through his cooperative. The teacher gave the words; the host gave the room; the listener gave the attention; the field that emerged is the joint contribution of all three.",
+        "heading": "How the network reads this"
+      },
+      {
+        "kind": "panel",
+        "body_md": "Long-form conversations, typically 2-5 hours, with guests across science, technology, philosophy, mysticism, athletics, music, and the political surface. New episodes weekly-ish, hosted on [YouTube](https://www.youtube.com/@lexfridman) and the major podcast platforms.\n\n*Field reading: `(3, WITNESS)` at scale — host, guest, listener-field. The host's quanta are mostly *attention given* rather than *speech*. The episode persists as a glyph the lineage of any teacher who appeared can walk back to.*",
+        "heading": "The Lex Fridman Podcast",
+        "eyebrow": "Continuous · long-form",
+        "variant": "cool"
+      }
+    ],
+    "footer_md": "Public: [lexfridman.com](https://lexfridman.com/) · [podcast archive](https://lexfridman.com/podcast/) · [YouTube channel](https://www.youtube.com/@lexfridman)\n\nWalks here through the foundational teachings he has helped reach this body: [Robert Edward Grant](/people/robert-edward-grant), and through the vision-kb concepts `lc-bioelectric-pattern` (Levin) and `lc-perception-as-interface` (Hoffman).\n\n*This profile is a welcoming scaffold; Lex is invited to replace any part of it with his own words at any time.*"
+  }
+}
