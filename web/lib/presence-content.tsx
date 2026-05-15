@@ -229,7 +229,7 @@ export function renderBlockMarkdown(text: string): ReactNode {
         }
         if (block.startsWith("### ")) {
           return (
-            <h3 key={i} className="text-base font-semibold mt-4 mb-2">
+            <h3 key={i} className="text-base font-medium text-foreground/90 mt-6">
               {renderInlineMarkdown(block.slice(4))}
             </h3>
           );
@@ -317,18 +317,22 @@ export function toPersonProfileContent(
 
   const articles: PersonProfileArticle[] = (content.articles ?? []).map((a) => {
     const body = renderBlockMarkdown(a.body_md);
+    // Headings carry inline markdown so a panel/narrative heading can hold
+    // a Link or em/strong without the migration losing JSX richness.
+    // Example: "Walk the full lineage of works and influences → [/people/urs/lineage](/people/urs/lineage)".
+    const heading = a.heading ? renderInlineMarkdown(a.heading) : undefined;
     if (a.kind === "panel") {
       return {
         kind: "panel",
         variant: a.variant,
         eyebrow: a.eyebrow ?? undefined,
-        heading: a.heading ?? undefined,
+        heading,
         body,
       };
     }
     return {
       kind: "narrative",
-      heading: a.heading,
+      heading,
       body,
     };
   });
