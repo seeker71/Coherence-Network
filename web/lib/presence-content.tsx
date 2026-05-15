@@ -84,7 +84,7 @@ export function renderInlineMarkdown(text: string): ReactNode {
   if (!text) return null;
   const parts: ReactNode[] = [];
   const re =
-    /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+    /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
   let last = 0;
   let key = 0;
   let m: RegExpExecArray | null;
@@ -94,9 +94,18 @@ export function renderInlineMarkdown(text: string): ReactNode {
       parts.push(<strong key={key++}>{m[1]}</strong>);
     } else if (m[2] !== undefined) {
       parts.push(<em key={key++}>{m[2]}</em>);
-    } else if (m[3] !== undefined && m[4] !== undefined) {
-      const label = m[3];
-      const href = m[4];
+    } else if (m[3] !== undefined) {
+      parts.push(
+        <code
+          key={key++}
+          className="not-italic text-foreground/80 rounded bg-muted/40 px-1 py-0.5 text-[0.95em]"
+        >
+          {m[3]}
+        </code>,
+      );
+    } else if (m[4] !== undefined && m[5] !== undefined) {
+      const label = m[4];
+      const href = m[5];
       if (href.startsWith("/") || href.startsWith("#")) {
         parts.push(
           <Link key={key++} href={href} className="text-primary hover:underline">
