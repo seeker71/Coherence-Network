@@ -108,7 +108,7 @@ What was *not* shipped because it wants your eye first:
 - The eleven-doorway composting decision.
 - The five-identity-surface canonicalization.
 - The eight-contributor-discovery threading.
-- The graph-level merge of `contributor:urs` ↔ `contributor:seeker71` (only display-filtered tonight).
+- The graph-level merge of `contributor:urs` ↔ `contributor:seeker71` (only display-filtered tonight). *Partial reconciliation 2026-05-15: `/people/urs-muff`, `/people/urs-muff/lineage`, `/people/seeker71`, `/people/seeker71/lineage` now 308-redirect to the canonical `/people/urs` doorways (PRs #1658, #1659). `presence_content` was copied from `contributor:urs` → `contributor:seeker71` via authenticated PATCH so both graph nodes carry the woven story; the dynamic [id] route now renders the rich page from either node. The substrate still holds two nodes; an `is_alias_of` edge or full edge migration remains the deeper move.*
 - The /me/work V2 generalization (hard-coded for one cell still).
 
 ## What I'd pull on first when you wake
