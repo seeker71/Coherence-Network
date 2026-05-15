@@ -46,6 +46,18 @@ const nextConfig: NextConfig = {
       { source: "/runtime", destination: "/pipeline", permanent: true },
       { source: "/remote-ops", destination: "/pipeline", permanent: true },
       { source: "/explore/concept", destination: "/vision", permanent: true },
+      // The body holds urs across two graph nodes that the migration
+      // did not collapse: `contributor:urs` carries the woven story
+      // (presence_content + the static /people/urs page); `contributor:
+      // seeker71` (slug `urs-muff`) carries the contributes-to edges
+      // to every work. Visitors arriving at /people/urs-muff land on a
+      // sparse PresencePage that shows works but none of the woven
+      // prose — almost the entire story.
+      //
+      // Until the two nodes are reconciled in the graph, every visitor
+      // converges on the doorway that holds the story.
+      { source: "/people/urs-muff", destination: "/people/urs", permanent: true },
+      { source: "/people/urs-muff/lineage", destination: "/people/urs/lineage", permanent: true },
     ];
   },
   async headers() {
