@@ -1,0 +1,50 @@
+name: Export Graph Content to Repo
+
+# Closes the inside/outside parity loop: outside edits land on the
+# graph in seconds; this job mirrors the graph state back into
+# docs/presence-content/*.json (and other content directories as the
+# export script learns them) as a daily commit.
+#
+# The graph is the runtime source of truth. This workflow turns the
+# repo into a readable projection of it — git history records the
+# body's autobiography even when contributions arrive via the web /
+# API path rather than commits.
+
+on:
+  schedule:
+    # 04:00 UTC daily — quiet hours for both Boulder (22:00) and Bali
+    # (12:00). Adjusts to a moment when no active editing is likely.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "API base URL to walk"
+        required: false
+        default: "https://api.coherencycoin.com"
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Configure git committer
+        run: |
+          git config user.name "coherence-export[bot]"
+          git config user.email "noreply@coherencycoin.com"
+
+      - name: Walk graph and project to repo
+        env:
+          API_URL: ${{ inputs.api_url || 'https://api.coherencycoin.com' }}
+        run: |
+          python3 scripts/export_graph_to_repo.py --api-url "$API_URL" --commit

@@ -5,7 +5,7 @@ status: deepening
 updated: 2026-04-16
 ---
 
-# Field Sensing
+# Field Intelligence
 
 > Collective intelligence, harmonic rebalancing, learning. Octopus intelligence in every arm — distributed, parallel. At sufficient frequency, opposition reveals as complementary harmonics.
 
