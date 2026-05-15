@@ -39,6 +39,27 @@ pipeline (`translation_cache_service`), not from per-locale TSX files.
 Every contributor reaches a working presence page through this route
 on day one. **No route file needs to exist for them.**
 
+## The visual gap (named honestly)
+
+The two templates are **not visually equivalent** today.
+`PresencePage` (dynamic) is a dark-themed, two-column presence card
+with a sidebar ("At a glance" / "Presence map" / "Refine this
+presence" / "Held open"). `PersonProfileTemplate` (static) is a
+site-themed, single-column long-form with a full-bleed hero,
+breadcrumb, "Welcome" eyebrow, `<dl>` facts grid, and Panel-shaped
+articles with `warm`/`cool`/`neutral` variants.
+
+Composting a static cell to the dynamic route preserves the **text**
+but trades the visual identity for the presence-card chrome. That
+trade is not free. The portal cell was composted on 2026-05-15 and
+reverted the same day because the visual change was substantial —
+named here so future composting moves don't repeat the mistake.
+
+**Pre-condition for composting any static cell:** either the dynamic
+renderer first learns the visual primitives the static one carries
+(welcome hero, breadcrumb, facts grid, panel articles, custom
+gradients), OR the cell's organizers have accepted the trade.
+
 ## Where the body is moving
 
 The dynamic path is the truer baseline; the static directories are
