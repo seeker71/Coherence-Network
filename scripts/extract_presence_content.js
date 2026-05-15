@@ -294,6 +294,51 @@ function blockFromElement(el) {
     case "pre":
       // Multiline code; preserve text content verbatim
       return "```\n" + el.children.map((c) => (ts.isJsxText(c) ? c.text : c.getText(sourceFile))).join("") + "\n```";
+    case "svg":
+    case "figure": {
+      // Preserve raw element text. The renderer's renderBlockMarkdown
+      // recognises `<svg>...</svg>` and `<figure>...</figure>` blocks as
+      // atomic dangerouslySetInnerHTML units. Convert JSX-only attribute
+      // names to their HTML equivalents so the browser actually applies
+      // them after dangerouslySetInnerHTML hands them over.
+      let raw = el.getText(sourceFile);
+      // Strip JSX comments {/* ... */}
+      raw = raw.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+      // className → class
+      raw = raw.replace(/\bclassName=/g, "class=");
+      // camelCase SVG attributes → kebab-case HTML attributes
+      const attrMap = {
+        fontFamily: "font-family",
+        fontSize: "font-size",
+        fontStyle: "font-style",
+        fontWeight: "font-weight",
+        textAnchor: "text-anchor",
+        strokeWidth: "stroke-width",
+        strokeLinecap: "stroke-linecap",
+        strokeLinejoin: "stroke-linejoin",
+        strokeDasharray: "stroke-dasharray",
+        strokeMiterlimit: "stroke-miterlimit",
+        fillOpacity: "fill-opacity",
+        strokeOpacity: "stroke-opacity",
+        clipPath: "clip-path",
+        clipRule: "clip-rule",
+        markerEnd: "marker-end",
+        markerStart: "marker-start",
+        markerMid: "marker-mid",
+        dominantBaseline: "dominant-baseline",
+        alignmentBaseline: "alignment-baseline",
+        letterSpacing: "letter-spacing",
+        wordSpacing: "word-spacing",
+        xmlnsXlink: "xmlns:xlink",
+        xlinkHref: "xlink:href",
+        ariaLabelledby: "aria-labelledby",
+        ariaLabel: "aria-label",
+      };
+      for (const [jsx, html] of Object.entries(attrMap)) {
+        raw = raw.replace(new RegExp(`\\b${jsx}=`, "g"), `${html}=`);
+      }
+      return raw;
+    }
     default:
       // Fallback: treat as paragraph-shaped inline
       return inlineFromChildren(el.children).replace(/\s+/g, " ").trim();
