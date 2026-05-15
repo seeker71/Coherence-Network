@@ -282,9 +282,7 @@ function DescriptionBlock({ raw }: { raw: string }) {
     <section>
       <div className="space-y-5 text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
         {blocks.map((block, i) => {
-          // `---` on its own renders as a horizontal rule — useful at
-          // the foot of a presence story to separate the body's
-          // welcoming-scaffold note from the rest.
+          // `---` on its own renders as a horizontal rule.
           if (/^-{3,}$/.test(block)) {
             return (
               <hr
@@ -294,11 +292,10 @@ function DescriptionBlock({ raw }: { raw: string }) {
               />
             );
           }
-          // `## Heading` → h2; `### Subheading` → h3. The body uses
-          // these to structure presence stories into named sections
-          // (e.g. "A note from this body", "What X holds"). Rendering
-          // them as plain prose flattened the visual rhythm of the
-          // composted static pages.
+          // `## Heading` → h2; `### Subheading` → h3. Presences whose
+          // body is authored in `docs/presences/{slug}.md` use these
+          // to name sections ("A note from this body", etc.). Rendering
+          // them as plain prose flattens the visual rhythm.
           if (block.startsWith("### ")) {
             return (
               <h3
