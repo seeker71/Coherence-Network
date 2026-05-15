@@ -56,8 +56,15 @@ const nextConfig: NextConfig = {
       //
       // Until the two nodes are reconciled in the graph, every visitor
       // converges on the doorway that holds the story.
+      // Also funnel the legacy seeker71 handle — the github username Urs
+      // built behind before the wrapper went public — into the same
+      // doorway. seeker71 is the slug-less id that contributor:seeker71
+      // still answers to. The graph-id URL forms (contributor:*) already
+      // resolve to the right node via the dynamic [id] route.
       { source: "/people/urs-muff", destination: "/people/urs", permanent: true },
       { source: "/people/urs-muff/lineage", destination: "/people/urs/lineage", permanent: true },
+      { source: "/people/seeker71", destination: "/people/urs", permanent: true },
+      { source: "/people/seeker71/lineage", destination: "/people/urs/lineage", permanent: true },
     ];
   },
   async headers() {
