@@ -25,6 +25,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
 | `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
 | `docs/coherence-substrate/agents-using-substrate.md` | Agent guide — when and how to ground reasoning |
+| `docs/coherence-substrate/agents-tending-presence-pages.md` | Composting static `/people/{slug}` directories into graph-rendered presence pages |
 
 ## The trinity
 

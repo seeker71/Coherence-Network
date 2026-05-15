@@ -365,6 +365,14 @@ function nodeToPresenceIdentity(
     !isEvent && descriptionIsSubstantive && rawDescription !== (tagline || "")
       ? rawDescription
       : undefined;
+  // The body's authored markdown for this presence, when the cell has
+  // moved off a static page. Lives on the contributor node as
+  // `presence_story` and takes precedence over note/description in
+  // PresencePage rendering.
+  const presence_story: string | undefined =
+    typeof node.presence_story === "string" && (node.presence_story as string).trim()
+      ? (node.presence_story as string).trim()
+      : undefined;
   const when_text =
     typeof node.when === "string" && node.when.trim()
       ? (node.when as string)
@@ -390,6 +398,7 @@ function nodeToPresenceIdentity(
     where_text,
     note,
     description,
+    presence_story,
   };
 }
 

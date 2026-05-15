@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """Sync `/people/{slug}` presence pages back onto contributor nodes.
 
-Each presence page at `web/app/people/{slug}/page.tsx` declares a
-`graphSlug="..."` that resolves to a graph node. This script walks
-every presence page, resolves the node, and — when the node is a
-contributor — writes `presence_slug = {slug}` onto the contributor
-node so MePage can render a "Your presence page" tile.
+Stopgap. The body is moving from 90 hand-authored static `/people/{slug}/`
+directories to a single dynamic `[id]` route that renders any contributor
+from graph node properties. See
+`docs/coherence-substrate/agents-tending-presence-pages.md` for the move
+and how to migrate a cell.
 
-Why this lives in a script: the mapping is currently encoded only in
-the per-page TSX files. Pulling it onto the contributor node is the
-edge-completion move — the body knows the link from both sides, so
-no consumer has to recompute it at request time.
+While both paths coexist, `presence_slug` carries the override for the
+rare case where a static directory sits at a different URL than the
+contributor's own `slug` (e.g. `/people/urs` ↔ `slug=urs-muff`). The
+/me tile uses `presence_slug` when set, the contributor's own `slug`
+otherwise — so every contributor reaches a presence page regardless of
+whether a static directory was authored for them.
 
-Idempotent. Safe to re-run after adding new presence pages.
+When a static directory is composted, re-run this script and the
+override clears: the contributor's own slug carries the tile, the
+dynamic route renders the page from graph properties.
+
+Idempotent. Safe to re-run after adding or composting presence pages.
 
 Usage:
     python3 scripts/sync_presence_slugs.py                # against prod
