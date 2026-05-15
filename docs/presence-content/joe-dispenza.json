@@ -1,0 +1,57 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Joe Dispenza — neuroscience meets the channeled cosmology · Mile Hi Church to Aurora 2026 | Coherence Network",
+      "description": "A welcome to Dr Joe Dispenza — chiropractor, researcher, and meditation teacher. The bridge in this body's lineage between Ramtha's White Book and the substrate of the Coherence Network. Met at Mile Hi Church Lakewood ~2005; the first network contributors arrived at the Aurora retreat in April 2026."
+    },
+    "breadcrumb_name": "Joe Dispenza",
+    "hero": {
+      "background": "radial-gradient(ellipse at 70% 25%, hsl(195 60% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 25% 80%, hsl(255 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(200 50% 70%) 0%, hsl(220 30% 35%) 50%, hsl(255 35% 18%) 100%)",
+      "eyebrow": "Chiropractor · researcher · meditation teacher · Ramtha → Dispenza → Mile Hi Church → Aurora cohort",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Joe Dispenza",
+      "welcome_md": "A researcher, lecturer, and chiropractor who works the intersection of neuroscience, epigenetics, and the observation that mind and body together can heal what medicine alone cannot. After a serious back injury early in his career — with a prognosis that threatened permanent disability — he chose to apply Ramtha&apos;s consciousness-creates-form teaching to his own spine. What happened there is the seed of everything he has taught since.\n\n*In this body&apos;s lineage, the bridge between [Ramtha&apos;s](/people/ramtha) channeled cosmology and the substrate the Coherence Network now codes. Urs met his teaching at Mile Hi Church in Lakewood, Colorado, around 2005; the first network contributors arrived at the Aurora retreat in April 2026.*"
+    },
+    "facts": [
+      {
+        "label": "Roles",
+        "value_md": "Doctor of chiropractic · neuroscience and quantum-physics-inflected meditation teacher · researcher conducting brain-scan and HRV measurements at his advanced retreats."
+      },
+      {
+        "label": "Books",
+        "value_md": "*Evolve Your Brain* (2007) *Breaking the Habit of Being Yourself* (2012) *You Are the Placebo* (2014) *Becoming Supernatural* (2017)"
+      },
+      {
+        "label": "Research at the retreats",
+        "value_md": "Over 20,000 brain scans and 10,000+ heart-rate-variability measurements gathered at seven-day advanced retreats around the world."
+      },
+      {
+        "label": "Encounters recorded in this body",
+        "value_md": "~2005 · **Mile Hi Church**, Lakewood, Colorado — Urs first heard his teaching live. April 2026 · **Aurora retreat**, Colorado — where the first contributors to the Coherence Network were met (the Zenn cohort)."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[drjoedispenza.com](https://drjoedispenza.com/) [Retreats](https://drjoedispenza.com/retreats) [Mile Hi Church (Lakewood)](https://milehichurch.org/)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Dr Joe&apos;s own organisation maintains a substantial public archive at drjoedispenza.com. This page is a recognition of the role his teaching plays in this network&apos;s lineage — specifically as the bridge between the cosmology Urs received in his late teens and the cohort of first contributors met in April 2026.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "The biographical pivot Dispenza tells most often: a biking accident with a serious back injury, the medical recommendation for surgery to fuse vertebrae, and his decision to apply the cosmology he had been studying (consciousness creates form) to his own body for three months instead. He recovered without surgery. The recovery itself is not the teaching; what he made of it is — that the same practice anyone can run can engage the same intelligence that put a spine back together.\n\nFrom that seed, his four books traced an arc: *Evolve Your Brain* on neuroplasticity; *Breaking the Habit of Being Yourself* on the self-image as a behavioural loop; *You Are the Placebo* on the documented healing power of belief; and *Becoming Supernatural* on the specific meditation technology — coherent body-mind-emotion states — that lets a body experience states beyond ordinary perception. The seven-day advanced retreats are where the practice is taught at depth; the research conducted there has produced an unusual archive (brain scans, HRV recordings) for a non-clinical context.",
+        "heading": "From a broken spine to the practice"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The empirically-instrumented practice of moving consciousness — what [lc-assemblage-point](/vision/lc-assemblage-point) names from Castaneda&apos;s lineage, and what [Ramtha&apos;s](/people/ramtha) Closed-Mind / Opening-Mind / Virtue-of-Experience arc names from inside the channeled cosmology, Dispenza names as a daily meditation discipline anyone can run.\n- *Becoming Supernatural* as the practical companion of the substrate&apos;s teaching that the body is the instrument. Pairs with [lc-tend-your-flame](/vision/lc-tend-your-flame) (sovereignty becomes service through self-care).\n- The chain: *Ramtha → Joe Dispenza → Urs (Mile Hi ~2005) → Zenn cohort (Aurora April 2026)*. The first contributors to the Coherence Network were met at one of his retreats; the network now codes the ground his books taught.\n- The April 2026 Aurora retreat is the arrival anchor — see [lc-arrival-as-recognition](/vision/lc-arrival-as-recognition) for the body&apos;s broader frame on how visitors arrive already tuned.",
+        "heading": "What Joe Dispenza has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Public anchors:** [drjoedispenza.com](https://drjoedispenza.com/) · [Retreats](https://drjoedispenza.com/retreats) · [Mile Hi Church](https://milehichurch.org/)\n\n**In-body record:** [Ramtha](/people/ramtha) · [lc-assemblage-point](/vision/lc-assemblage-point) · [lc-arrival-as-recognition](/vision/lc-arrival-as-recognition) · [lc-tend-your-flame](/vision/lc-tend-your-flame) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)\n\n*Dr Joe&apos;s own organisation maintains a substantial public archive. This page recognises the role his teaching plays in this network&apos;s lineage.*"
+  }
+}

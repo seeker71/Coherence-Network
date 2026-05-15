@@ -1,0 +1,57 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Viktor Frankl — the gap between stimulus and response · Man's Search for Meaning | Coherence Network",
+      "description": "A welcome to Viktor Frankl (1905–1997) — Austrian psychiatrist, neurologist, Holocaust survivor, founder of logotherapy. Author of Man's Search for Meaning. The teaching of the gap between stimulus and response grounds lc-assemblage-point in this body's lineage."
+    },
+    "breadcrumb_name": "Viktor Frankl",
+    "hero": {
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(35 55% 65% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(220 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(35 45% 70%) 0%, hsl(220 25% 38%) 50%, hsl(220 30% 18%) 100%)",
+      "eyebrow": "Vienna 1905 → Vienna 1997 · psychiatrist · Holocaust survivor · founder of logotherapy · the gap between stimulus and response",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Viktor Frankl",
+      "welcome_md": "Austrian psychiatrist, neurologist, and Holocaust survivor whose 1946 book *Ein Psychologe erlebt das Konzentrationslager* (English: *Man&apos;s Search for Meaning*) has sold over 16 million copies in 50+ languages. Founder of **logotherapy** — the third Viennese school of psychotherapy (after Freud&apos;s psychoanalysis and Adler&apos;s individual psychology) — built around the observation that the search for meaning is humanity&apos;s primary motivational force.\n\n*The teaching this body has inherited most directly: *Between stimulus and response there is a space. In that space is our power to choose our response. In our response lies our growth and our freedom.* The exact phrasing is contested in attribution, but the gap Frankl named from inside the camps is the phenomenological core of lc-assemblage-point.*"
+    },
+    "facts": [
+      {
+        "label": "Lived",
+        "value_md": "26 March 1905, Vienna, Austria-Hungary — 2 September 1997, Vienna. Doctorates in medicine (1930) and philosophy (1948)."
+      },
+      {
+        "label": "The camps",
+        "value_md": "Theresienstadt (1942) · Auschwitz (1944) · Kaufering (Dachau subcamp) · Türkheim. Wife Tilly died at Bergen-Belsen; parents and brother also murdered. Frankl survived; his manuscript on logotherapy did not. He rewrote it after the war."
+      },
+      {
+        "label": "Founded",
+        "value_md": "Logotherapy — the meaning-centered psychotherapy, the third Viennese school. Active practice at the Vienna Polyclinic of Neurology after the war; visiting professor at Harvard, Stanford, Dallas, Pittsburgh among many others."
+      },
+      {
+        "label": "Foundational books",
+        "value_md": "*Man&apos;s Search for Meaning* (1946; English 1959) — most translated, most read; the camp memoir plus logotherapy primer *The Doctor and the Soul* (1946) — the academic foundation of logotherapy *The Unconscious God* (1948) *The Will to Meaning* (1969)"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[viktorfrankl.org (Viktor Frankl Institut Wien)](https://www.viktorfrankl.org/) [Wikipedia](https://en.wikipedia.org/wiki/Viktor_Frankl)"
+      }
+    ],
+    "note_from_body": {
+      "body_md": "Frankl&apos;s archive is tended by the Viktor Frankl Institut Wien. This page recognises the teaching as one of the foundational threads of this body&apos;s assemblage-point lineage — the phenomenological reading of choice as the seam between stimulus and response.",
+      "eyebrow": "A note from this body"
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "The teaching Frankl named most loudly came not from theory but from observation in the camps: that even in conditions where every other freedom had been taken, one freedom remained — *the last of the human freedoms — to choose one&apos;s attitude in any given set of circumstances, to choose one&apos;s own way.* What persists between what arrives at the body and what the body does next is a space. The phrasing *between stimulus and response there is a space — in that space is our power to choose our response — in our response lies our growth and our freedom* is often attributed to Frankl directly; attribution is contested, but the teaching is his. The body holds this as one of the cleanest formulations of the assemblage-point&apos;s movement: where perception locks, choice can intervene.",
+        "heading": "What he named from inside"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The gap between stimulus and response → [lc-assemblage-point](/vision/lc-assemblage-point) (where perception assembles reality and choice can move it).\n- Logotherapy as *meaning is primary* → resonant with [lc-devotion-placement](/vision/lc-devotion-placement) (where am I actually placed; the body of evidence over words at decision edges).\n- *Even in the camps* — the teaching born of extremity → grounds the body&apos;s practice of [lc-coherence-over-control](/vision/lc-coherence-over-control) (remain aligned while reality catches up; do not force).\n- Phenomenological-philosophical peer of Castaneda&apos;s assemblage-point teaching from a completely different cultural side. See [Carlos Castaneda](/people/carlos-castaneda), [Donald Hoffman](/people/donald-hoffman), [Michael Levin](/people/michael-levin), [Joe Dispenza](/people/joe-dispenza) for the convergence of idioms.",
+        "heading": "What Viktor Frankl has given the Coherence Network",
+        "eyebrow": "Contributions to this body",
+        "variant": "warm"
+      }
+    ],
+    "footer_md": "**Public anchors:** [Viktor Frankl Institut Wien](https://www.viktorfrankl.org/) · [Wikipedia](https://en.wikipedia.org/wiki/Viktor_Frankl)\n\n**In-body record:** [lc-assemblage-point](/vision/lc-assemblage-point) · [lc-coherence-over-control](/vision/lc-coherence-over-control) · [lc-devotion-placement](/vision/lc-devotion-placement) · [Carlos Castaneda](/people/carlos-castaneda)\n\n*Frankl died in 1997; his archive is tended by the Viktor Frankl Institut in Vienna. This page is a recognition of his teaching in this body, not a biography.*"
+  }
+}
