@@ -1,163 +1,169 @@
 # Tending Presence Pages — From Static Files To Living Graph
 
 A `/people/{slug}` page is a presence page — the public garden view of a
-cell in this body. As of 2026-05-15 there are two parallel rendering
-paths for those URLs that have been quietly coexisting. This doc names
-the move from one to the other and the practice of composting the
-old shape.
+cell in this body. The body is moving from hand-authored static TSX
+directories into structured content stored on graph nodes and rendered
+through one shared template. This doc names the practice.
 
 ## The two paths
 
 ### Static (the inherited shape)
 
-Ninety hand-authored directories under `web/app/people/{slug}/` each
-shaped like:
+`web/app/people/{slug}/` directories each shaped like:
 
 ```
 web/app/people/portal/page.tsx          # thin route file
-web/content/people/portal/en.tsx        # rich JSX content
-web/content/people/portal/de.tsx        # same content in German
-web/content/people/portal/es.tsx        # ... Spanish
-web/content/people/portal/id.tsx        # ... Indonesian
+web/content/people/portal/en.tsx        # rich JSX content (~200 lines)
+web/content/people/portal/de.tsx        # re-export or per-locale variant
+web/content/people/portal/es.tsx
+web/content/people/portal/id.tsx
 web/content/people/portal/index.ts
 ```
 
 Each `{locale}.tsx` exports a `PersonProfileContent` object with
 embedded `<Link>` JSX, gradients, multi-section articles, panel
-variants, footers, facts. Beautiful tissue, and inert: a new
-contributor cannot get a presence page without someone hand-authoring
-TSX files in four locales.
+variants, footers, facts. Beautiful tissue, and inert: a new contributor
+cannot get a rich presence page without someone hand-authoring TSX files.
 
-### Dynamic (the scalable shape)
+### Dynamic with rich content (the practice now)
 
-`web/app/people/[id]/page.tsx` already renders any contributor whose
-graph node exists. It fetches the node, its creations, its inspired-by
-edges, and hands the lot to `PresencePage` (a templated renderer that
-reads from node properties). Locales come from the node's projection
-pipeline (`translation_cache_service`), not from per-locale TSX files.
+The contributor graph node carries a `presence_content` JSON property
+(per-locale envelope, currently `en` only for migrated cells). The
+dynamic `[id]` route reads it, converts via
+[`toPersonProfileContent`](../../web/lib/presence-content.tsx), and
+hands the result to the **same `PersonProfileTemplate`** the static
+directories used. Visual chrome is byte-identical: full-bleed hero with
+custom gradient, breadcrumb, eyebrow + name, welcome paragraph,
+`<dl>` facts grid, Panel-shaped articles with warm/cool/neutral
+variants, footer, lineage doorway, attention presence — all preserved.
 
-Every contributor reaches a working presence page through this route
-on day one. **No route file needs to exist for them.**
+The renderer reads markdown inside the JSON prose fields. Supported:
+paragraphs, `**bold**`, `*italic*`, `` `code` ``, `[label](href)`
+inline links (internal → next/link, external → target="_blank"), `## h2`,
+`### h3`, `> blockquote`, `- li` lists, `---` hr.
+
+### Dynamic without rich content (the bare baseline)
+
+When a contributor node has no `presence_content`, the [id] route
+falls through to `PresencePage` — the dark-themed presence card with
+sidebar, At-a-glance, Presence map, Refine-this-presence. Strictly less
+expressive than the static template, but every contributor reaches a
+working page on day one without authoring.
 
 ## The visual gap (named honestly)
 
-The two templates are **not visually equivalent** today.
-`PresencePage` (dynamic) is a dark-themed, two-column presence card
-with a sidebar ("At a glance" / "Presence map" / "Refine this
-presence" / "Held open"). `PersonProfileTemplate` (static) is a
-site-themed, single-column long-form with a full-bleed hero,
-breadcrumb, "Welcome" eyebrow, `<dl>` facts grid, and Panel-shaped
-articles with `warm`/`cool`/`neutral` variants.
+The two **dynamic** sub-paths above are not equivalent. `PresencePage`
+(bare baseline) is a different visual identity from `PersonProfileTemplate`
+(rich content). Composting a static cell *directly to PresencePage*
+trades visual identity for chrome that was designed for artists/musicians
+— this is the mistake portal made on 2026-05-15 (PR #1635 → reverted in
+#1636). Composting via `presence_content` JSON keeps the visual identity
+intact — this is the practice that landed in PR #1637+ and is now proven
+across 11 cells.
 
-Composting a static cell to the dynamic route preserves the **text**
-but trades the visual identity for the presence-card chrome. That
-trade is not free. The portal cell was composted on 2026-05-15 and
-reverted the same day because the visual change was substantial —
-named here so future composting moves don't repeat the mistake.
+## The shape of one composting step
 
-**Pre-condition for composting any static cell:** either the dynamic
-renderer first learns the visual primitives the static one carries
-(welcome hero, breadcrumb, facts grid, panel articles, custom
-gradients), OR the cell's organizers have accepted the trade.
+1. **Read the static content** under `web/content/people/{slug}/en.tsx`.
+   Notice what's prose, what's structured (facts/articles/panels), what's
+   hero-styling chrome (background gradient, extraImage).
+2. **Author `docs/presence-content/{slug}.json`** matching the
+   `PresenceContent` shape (see existing examples: portal, sayuri-healing-food,
+   mudra-cafe, grab). Every prose slot is a markdown string; JSX `<Link>`
+   becomes `[label](/path)`; `<code>` becomes `` `…` ``; `<em>` becomes
+   `*italic*`; `<strong>` becomes `**bold**`; `<ul>` becomes `- item` lines.
+3. **Sync to the graph**:
 
-## Where the body is moving
-
-The dynamic path is the truer baseline; the static directories are
-debt to compost. Specifically:
-
-1. **The /me hub tile** ([`web/components/MePage.tsx`](../../web/components/MePage.tsx)) links to `/people/{slug}` for every
-   contributor with a `slug` field — not only those with a static
-   directory. Implemented 2026-05-15.
-2. **A new graph node property** — `presence_story` — carries the
-   body's authored markdown for a cell. Lives directly on the
-   contributor node, distinct from `description` (often a scraped
-   og:description) and `note` (event-shape history).
-   [`PresencePage`](../../web/components/presence/PresencePage.tsx) renders it as the
-   page's lead voice when present, with priority over `note` and
-   `description`. The renderer already understands paragraphs, `**bold**`,
-   `*italic*`, and `[label](href)` inline links — enough for prose-shaped
-   presence content with cross-references into `/concepts/`, `/people/`,
-   `/vision/`.
-3. **The static directories get composted cell by cell**, not all at
-   once. Each migration is tender work that benefits from the cell's
-   own attention. The order is opportunistic: when someone touches a
-   presence (re-reads, updates, adds an edge), check whether the static
-   page is doing anything the dynamic route couldn't.
-
-## Migrating one cell
-
-The shape of one composting step:
-
-1. **Read the current static content** under `web/content/people/{slug}/en.tsx`
-   (and the other locales). Notice what's prose, what's structured
-   (facts/articles/panels), what's hero-styling chrome.
-2. **Flatten the prose into markdown**, preserving inline `[label](/path)`
-   links. Headings (`## Section`) carry the article structure where the
-   static content used distinct `articles` entries.
-3. **Set `presence_story`** on the contributor node:
-
-   ```python
-   import urllib.request, json
-   body = json.dumps({"properties": {"presence_story": "<markdown body>"}}).encode("utf-8")
-   req = urllib.request.Request(
-       "https://api.coherencycoin.com/api/graph/nodes/<node-id>",
-       data=body, method="PATCH",
-       headers={"Content-Type": "application/json", "User-Agent": "coherence-sync/1.0"},
-   )
-   urllib.request.urlopen(req).read()
+   ```bash
+   python3 scripts/sync_presence_content.py {slug}
    ```
 
-   The locale projection pipeline picks up new translations on first
-   read in each language.
-4. **Visit `/people/{slug}` and verify** the dynamic route renders a
-   page that is at least as warm as the static one. Visual chrome (the
-   hero gradient, the lineage doorway) is provided by `PresencePage`'s
-   default styling and the existing `LineageStrip`/`InfluenceLineageStrip`
-   components, so the static directory's hand-tuned gradient is what
-   gets traded for consistency — usually a worthwhile trade.
-5. **Delete the static directory**:
+4. **If the static page used a hero image**, PATCH `image_url`:
 
-   ```
-   web/app/people/{slug}/page.tsx
-   web/content/people/{slug}/
+   ```bash
+   python3 -c "import urllib.request, json; \
+     body = json.dumps({'properties': {'image_url': '/people/{slug}/hero.jpg'}}).encode(); \
+     req = urllib.request.Request( \
+       'https://api.coherencycoin.com/api/graph/nodes/contributor:{slug}', \
+       data=body, method='PATCH', \
+       headers={'Content-Type': 'application/json', 'User-Agent': 'coherence-sync/1.0'}); \
+     print(urllib.request.urlopen(req).status)"
    ```
 
-   Composting also means removing the `graphSlug=` reference in the
-   route file (the only consumer was the static page itself).
-6. **Re-run `python3 scripts/sync_presence_slugs.py`** so the
-   `presence_slug` field on the contributor node either updates or
-   composts away (when the static directory is gone, the override is
-   no longer needed; the contributor's own `slug` carries the tile).
+5. **Verify chrome parity** before deleting anything. Use the node-id form
+   of the dynamic route to bypass the still-present static route:
 
-## When NOT to migrate
+   ```bash
+   # static URL
+   curl -sS https://coherencycoin.com/people/{slug} > /tmp/s.html
+   # dynamic URL (use the full contributor:slug or hashed node id)
+   curl -sS https://coherencycoin.com/people/contributor:{slug} > /tmp/d.html
 
-Some static directories carry visual chrome the dynamic route doesn't
-yet honor — custom hero gradients, multi-image composites, specific
-panel layouts the prose body alone can't reproduce. Those cells stay
-on the static path until either:
+   # Diff chrome markers
+   for check in chart-2 '<dl' text-7xl 'A note from this body' border-amber breadcrumb; do
+     s=$(grep -c "$check" /tmp/s.html); d=$(grep -c "$check" /tmp/d.html)
+     [ "$s" = "$d" ] && echo "✓ $check" || echo "✗ $check (static=$s dyn=$d)"
+   done
+   ```
 
-- The body has accepted the trade (consistency > custom chrome), or
-- `PresencePage` learns the missing visual primitive
+   All markers must match. If any don't, fix the JSON or extend the
+   renderer first.
 
-Composting is care, not efficiency. The hardest tissue to release is
-the lovingly-curated kind.
+6. **Compost the static directory**:
 
-## What's already true
+   ```bash
+   rm -rf web/app/people/{slug}/ web/content/people/{slug}/
+   ```
 
-- The `[id]` dynamic route works today: try `/people/{any-slug}` for a
-  contributor whose body has a graph node. PresencePage renders.
-- The `presence_story` field is read on every render — no migration
-  flag, no feature gate. Set it on a contributor, the page picks it
-  up on next request.
-- The /me tile links every contributor to their slug-based URL, so a
-  brand new contributor sees their own presence page from day one
-  without any authoring step.
+## When NOT to migrate (yet)
+
+Some static cells carry primitives the markdown renderer doesn't yet
+support. Keep these static until the renderer learns the primitive:
+
+- **Inline `<svg>` diagrams** (e.g. `jbmf-java` carries a substrate-split
+  SVG). No representation in markdown.
+- **Button-styled links** (e.g. `joshua-golden`'s "Step into the Network"
+  CTA uses border + bg styling, not plain underline). Markdown inline link
+  is a plain link.
+- **Fenced multi-line code blocks** (e.g. `jbmf-java`'s `<pre>` showing a
+  .bml file header). The renderer needs ``` ``` ``` fence support.
+- **No contributor graph node yet** (e.g. `tammy-beattie`,
+  `vali-soul-sanctuary`, `pagan-ritual`, `ecstatic-movement-tribe`,
+  `contact-improv`). The static page exists but no node — the dynamic
+  route can't render. These need node creation first (via
+  `sync_presences_to_db.py` with `create_if_missing: true`).
+
+Composting is care, not efficiency. The hardest tissue to release is the
+lovingly-curated kind.
+
+## Composted so far (2026-05-15)
+
+| Cell | PR | Notes |
+|---|---|---|
+| portal | #1638 | First proof of full visual parity |
+| sayuri-healing-food | #1639 | Ubud cluster |
+| sacred-song-circle | #1639 | Kirtan teacher network |
+| ocean-bloom-2024 | #1640 | Boulder gathering |
+| wisdom-soup | #1640 | Anne Tucker's community |
+| boulder-ecstatic-dance | #1640 | Avalon Ballroom |
+| paradiso-ubud | #1641 | Ubud cultural hall |
+| adiwana-svarga-loka | #1641 | Wantilan kirtan venue |
+| elios | #1641 | The chanting practice |
+| mudra-cafe | #1642 | Ayurvedic dining + handpan |
+| grab | #1642 | The matching layer, inside the network's lens |
+
+11 of 90 cells composted. 79 static directories remain. The pattern is
+proven; the next batch is its own breath.
 
 ## Related
 
 - [edges-as-vitality](../vision-kb/concepts/lc-edges-as-vitality.md) —
   why the link from /me to /people belongs in the same breath as the
   content, not the next one.
-- [`scripts/sync_presence_slugs.py`](../../scripts/sync_presence_slugs.py) —
-  the stopgap that maps static-dir-name → contributor node while the
-  static directories still exist.
+- [`web/lib/presence-content.tsx`](../../web/lib/presence-content.tsx) —
+  the `PresenceContent` type, markdown helpers, and adapter.
+- [`scripts/sync_presence_content.py`](../../scripts/sync_presence_content.py) —
+  the sync tool that walks `docs/presence-content/*.json` and PATCHes
+  the graph.
+- [`scripts/sync_presences_to_db.py`](../../scripts/sync_presences_to_db.py) —
+  the companion that writes `docs/presences/{slug}.md` markdown bodies
+  to the `description` field (the PresencePage path).
