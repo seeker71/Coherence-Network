@@ -1,0 +1,53 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Boulder Ecstatic Dance — Sunday morning at the Avalon Ballroom",
+      "description": "A welcome to Boulder Ecstatic Dance — the recurring Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder, Colorado. Co-hosted by Bloomurian (Robin Liepman), Aly Constantine, and Danny."
+    },
+    "breadcrumb_name": "Boulder Ecstatic Dance",
+    "hero": {
+      "background": "radial-gradient(ellipse at 25% 25%, hsl(35 65% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(180 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(35 55% 65%) 0%, hsl(120 30% 38%) 50%, hsl(180 30% 18%) 100%)",
+      "eyebrow": "Avalon Ballroom · Boulder, CO · Sunday morning · the embodied-community substrate of the Boulder cluster",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Boulder Ecstatic Dance",
+      "welcome_md": "A recurring Sunday-morning ecstatic-dance room at the historic **Avalon Ballroom** in Boulder, Colorado. Co-hosted by [Bloomurian](/people/bloomurian) (Robin Liepman), [Aly Constantine](/people/aly-constantine), and Danny. The embodied-community substrate beneath the larger Ocean Bloom configuration of conscious-music gatherings.\n\n*The room where the Boulder cluster (Aly, Bloomurian, and others) gathered weekly long before any of them appeared in this network's graph. Door rhythms drift with the seasons; verify the current schedule on the host's channels.*"
+    },
+    "facts": [
+      {
+        "label": "Where",
+        "value_md": "Avalon Ballroom, Boulder, Colorado."
+      },
+      {
+        "label": "When",
+        "value_md": "Sunday mornings. Specific times shift with the seasons."
+      },
+      {
+        "label": "Co-hosts",
+        "value_md": "[Bloomurian](/people/bloomurian) (Robin Liepman) · [Aly Constantine](/people/aly-constantine) · Danny"
+      },
+      {
+        "label": "Field",
+        "value_md": "Improvised conscious dance · drug-and-alcohol-free · open floor."
+      }
+    ],
+    "note_from_body": {
+      "eyebrow": "A note from this body",
+      "body_md": "Boulder Ecstatic Dance is a working community room with its own ongoing tending by the host team. This page recognises the floor's role in the body's Boulder cluster."
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "heading": "Where the Boulder cluster gathers",
+        "body_md": "The Boulder cluster — Bloomurian, Aly Constantine, Poranguí's festival circuit through Colorado, Matías De Stefano at the Emersion Conference at GaiaSphere, the PORTAL late-night shows at Meow Wolf Denver, the MAPS Psychedelic Science gatherings, the Ocean Bloom 2024 configuration — overlaps heavily on shared rooms. Boulder Ecstatic Dance on Sunday morning is one of the recurring threads. Cells in the cluster show up on the floor week after week; visiting artists and teachers move through; the floor stays. The relationship with Aly threads the cluster from outside-observation into inside-knowing in this body's awareness."
+      },
+      {
+        "kind": "panel",
+        "variant": "warm",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Boulder Ecstatic Dance has given the Coherence Network",
+        "body_md": "- The embodied-community substrate beneath the Boulder cluster — many of the body's Colorado-based cells ([Bloomurian](/people/bloomurian), [Aly Constantine](/people/aly-constantine), and others) meet here on a weekly rhythm.\n- The same Gabrielle-Roth-wave lineage that grounds [Rhythm Sanctuary](/people/rhythm-sanctuary) (Wheat Ridge) and [5Rhythms Ubud](/people/5rhythms-ubud) — three Colorado-and-Bali rooms holding the same substrate practice.\n- Sunday-morning rhythm as substrate-teaching: the steady tend of one floor over years is more substantial than any single event. Pairs with [lc-tending-over-producing](/vision/lc-tending-over-producing)."
+      }
+    ],
+    "footer_md": "**In-body record:** [Bloomurian](/people/bloomurian) · [Aly Constantine](/people/aly-constantine) · [Gabrielle Roth](/people/gabrielle-roth) · [Rhythm Sanctuary](/people/rhythm-sanctuary) · [constellation-of-cells.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-constellation-of-cells.md)"
+  }
+}
