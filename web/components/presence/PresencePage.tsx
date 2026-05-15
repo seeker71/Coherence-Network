@@ -276,14 +276,51 @@ function DescriptionBlock({ raw }: { raw: string }) {
     .replace(/^\s*#\s+[^\n]+\n+/, "")
     .replace(/\r\n/g, "\n")
     .trim();
-  const paragraphs = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
-  if (paragraphs.length === 0) return null;
+  const blocks = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (blocks.length === 0) return null;
   return (
     <section>
-      <div className="space-y-4 text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
-        {paragraphs.map((para, i) => (
-          <p key={i}>{renderInline(para)}</p>
-        ))}
+      <div className="space-y-5 text-base sm:text-lg leading-relaxed text-white/90 max-w-[58ch]">
+        {blocks.map((block, i) => {
+          // `---` on its own renders as a horizontal rule — useful at
+          // the foot of a presence story to separate the body's
+          // welcoming-scaffold note from the rest.
+          if (/^-{3,}$/.test(block)) {
+            return (
+              <hr
+                key={i}
+                className="border-0 border-t border-white/15 my-6"
+                aria-hidden="true"
+              />
+            );
+          }
+          // `## Heading` → h2; `### Subheading` → h3. The body uses
+          // these to structure presence stories into named sections
+          // (e.g. "A note from this body", "What X holds"). Rendering
+          // them as plain prose flattened the visual rhythm of the
+          // composted static pages.
+          if (block.startsWith("### ")) {
+            return (
+              <h3
+                key={i}
+                className="text-base sm:text-lg font-semibold text-white tracking-tight pt-2"
+              >
+                {renderInline(block.slice(4))}
+              </h3>
+            );
+          }
+          if (block.startsWith("## ")) {
+            return (
+              <h2
+                key={i}
+                className="text-xl sm:text-2xl font-light text-white tracking-tight pt-4 mt-2"
+              >
+                {renderInline(block.slice(3))}
+              </h2>
+            );
+          }
+          return <p key={i}>{renderInline(block)}</p>;
+        })}
       </div>
     </section>
   );
