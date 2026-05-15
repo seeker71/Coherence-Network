@@ -47,19 +47,16 @@ debt to compost. Specifically:
 1. **The /me hub tile** ([`web/components/MePage.tsx`](../../web/components/MePage.tsx)) links to `/people/{slug}` for every
    contributor with a `slug` field — not only those with a static
    directory. Implemented 2026-05-15.
-2. **The graph node's `description` field** carries the body's authored
-   markdown for the cell. The existing
-   [`docs/presences/{slug}.md`](../presences/) → `sync_presences_to_db.py`
-   → PATCH pipeline already writes here, so authoring presence content
-   uses the same pattern as the rest of the body's markdown-as-truth
-   tissue. [`PresencePage`](../../web/components/presence/PresencePage.tsx)
-   renders `description` through `DescriptionBlock` — paragraphs,
-   `**bold**`, `*italic*`, `[label](href)` inline links, `## Heading`
-   and `### Subheading`, and `---` horizontal rules. (A separate
-   `presence_story` property exists as a future field for when the
-   body's authored voice needs to live alongside a still-useful scraped
-   `description`; today it's dormant — composting writes to
-   `description` directly.)
+2. **A new graph node property** — `presence_story` — carries the
+   body's authored markdown for a cell. Lives directly on the
+   contributor node, distinct from `description` (often a scraped
+   og:description) and `note` (event-shape history).
+   [`PresencePage`](../../web/components/presence/PresencePage.tsx) renders it as the
+   page's lead voice when present, with priority over `note` and
+   `description`. The renderer already understands paragraphs, `**bold**`,
+   `*italic*`, and `[label](href)` inline links — enough for prose-shaped
+   presence content with cross-references into `/concepts/`, `/people/`,
+   `/vision/`.
 3. **The static directories get composted cell by cell**, not all at
    once. Each migration is tender work that benefits from the cell's
    own attention. The order is opportunistic: when someone touches a
@@ -68,51 +65,36 @@ debt to compost. Specifically:
 
 ## Migrating one cell
 
-The body's existing presence-as-markdown pattern is the path. Files at
-[`docs/presences/{slug}.md`](../presences/) hold YAML frontmatter + a
-markdown body; [`scripts/sync_presences_to_db.py`](../../scripts/sync_presences_to_db.py)
-walks each file and PATCHes the node's `description`. The dynamic
-`[id]` route reads `description` and renders it through
-[`DescriptionBlock`](../../web/components/presence/PresencePage.tsx) —
-paragraphs, `**bold**`, `*italic*`, `[label](href)` inline links,
-`## Heading` and `### Subheading`, and `---` horizontal rules.
-
 The shape of one composting step:
 
 1. **Read the current static content** under `web/content/people/{slug}/en.tsx`
    (and the other locales). Notice what's prose, what's structured
    (facts/articles/panels), what's hero-styling chrome.
-2. **Author `docs/presences/{slug}.md`** with frontmatter
-   (`name`, `canonical_url`, `type`, `contributor_type`) and a rich
-   markdown body. Facts flatten to `**Label** — value` lines; the
-   `noteFromBody` and each article become `## Section` blocks; the
-   footer becomes the closing paragraph after a `---` divider. Inline
-   JSX `<Link>` becomes `[label](/path)`.
-3. **Sync to the graph**:
+2. **Flatten the prose into markdown**, preserving inline `[label](/path)`
+   links. Headings (`## Section`) carry the article structure where the
+   static content used distinct `articles` entries.
+3. **Set `presence_story`** on the contributor node:
 
-   ```bash
-   python3 scripts/sync_presences_to_db.py {slug}
+   ```python
+   import urllib.request, json
+   body = json.dumps({"properties": {"presence_story": "<markdown body>"}}).encode("utf-8")
+   req = urllib.request.Request(
+       "https://api.coherencycoin.com/api/graph/nodes/<node-id>",
+       data=body, method="PATCH",
+       headers={"Content-Type": "application/json", "User-Agent": "coherence-sync/1.0"},
+   )
+   urllib.request.urlopen(req).read()
    ```
 
-   The PATCH endpoint auto-re-attunes resonance edges when description
-   changes, so concept links stay aligned.
-4. **Set `image_url`** if the static page used a hero image:
-
-   ```bash
-   python3 -c "import urllib.request, json; \
-     body = json.dumps({'properties': {'image_url': '/people/{slug}/hero.jpg'}}).encode(); \
-     req = urllib.request.Request( \
-       'https://api.coherencycoin.com/api/graph/nodes/contributor:{node-id}', \
-       data=body, method='PATCH', \
-       headers={'Content-Type': 'application/json', 'User-Agent': 'coherence-sync/1.0'}); \
-     print(urllib.request.urlopen(req).status)"
-   ```
-
-5. **Visit `/people/{node-id-suffix}` and verify** the dynamic route
-   renders the rich content before deleting anything. Use the node-id
-   form (e.g. `/people/portal-3980e2c1a203`) to bypass the still-present
-   static route at `/people/{slug}`.
-6. **Delete the static directory**:
+   The locale projection pipeline picks up new translations on first
+   read in each language.
+4. **Visit `/people/{slug}` and verify** the dynamic route renders a
+   page that is at least as warm as the static one. Visual chrome (the
+   hero gradient, the lineage doorway) is provided by `PresencePage`'s
+   default styling and the existing `LineageStrip`/`InfluenceLineageStrip`
+   components, so the static directory's hand-tuned gradient is what
+   gets traded for consistency — usually a worthwhile trade.
+5. **Delete the static directory**:
 
    ```
    web/app/people/{slug}/page.tsx
