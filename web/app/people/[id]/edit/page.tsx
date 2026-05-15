@@ -31,6 +31,10 @@ type GraphNode = {
   tagline?: string | null;
   image_url?: string | null;
   presences?: { provider: string; url: string }[];
+  // The structured page content the visitor reads — hero, facts,
+  // articles, note, footer. Editable via PresenceRefineForm's
+  // ContentSection when present.
+  presence_content?: Record<string, unknown> | null;
 };
 
 async function fetchNode(id: string): Promise<GraphNode | null> {
@@ -92,7 +96,7 @@ export default async function PresenceEditPage({
         </p>
       </header>
 
-      <PresenceRefineForm node={node} />
+      <PresenceRefineForm node={node as unknown as Parameters<typeof PresenceRefineForm>[0]["node"]} />
     </main>
   );
 }
