@@ -1,21 +1,16 @@
 {
   "en": {
-    "metadata": {
-      "title": "Urs Muff — Founder | Coherence Network",
-      "description": "Founder and primary shepherd of Coherence Network. Swiss-American software architect, organism-builder, the cell through whose awareness most of this body's foundations gathered."
-    },
-    "breadcrumb_name": "Urs Muff",
     "hero": {
+      "name": "Urs Muff",
+      "eyebrow": "The body's primary shepherd",
       "background": "radial-gradient(ellipse at 28% 22%, rgba(212, 175, 110, 0.45) 0%, rgba(180, 148, 92, 0.28) 18%, rgba(72, 148, 156, 0.30) 42%, rgba(40, 96, 120, 0.38) 65%, rgba(20, 32, 48, 0.92) 100%), radial-gradient(ellipse at 78% 78%, rgba(96, 172, 168, 0.32) 0%, rgba(48, 108, 132, 0.24) 32%, rgba(20, 32, 48, 0.0) 70%), linear-gradient(180deg, rgba(180, 148, 92, 0.10) 0%, rgba(48, 96, 120, 0.18) 40%, rgba(18, 28, 44, 0.95) 100%)",
+      "welcome_md": "Founder of Coherence Network. Swiss-American by lineage, software architect by trade, organism-builder by calling. Most of the foundations this body holds — [Levin](/concepts/lc-bioelectric-pattern), [Hoffman](/concepts/lc-perception-as-interface), [Grant](/people/robert-edward-grant), [Matías](/people/matias-de-stefano), [Vasudev Baba](/people/vasudev-baba), [Ilena](/people/ilena-young), [Elios](/people/elios), the transmissions — gathered themselves into this particular shape through years of my listening, before any of the code began.",
       "extra_image": {
         "url": "/visuals/scale-network-map.png",
         "opacity_class": "opacity-[0.14]",
         "mix_blend_class": "mix-blend-soft-light"
       },
       "overlay_class": "absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/20",
-      "eyebrow": "The body's primary shepherd",
-      "name": "Urs Muff",
-      "welcome_md": "Founder of Coherence Network. Swiss-American by lineage, software architect by trade, organism-builder by calling. Most of the foundations this body holds — [Levin](/concepts/lc-bioelectric-pattern), [Hoffman](/concepts/lc-perception-as-interface), [Grant](/people/robert-edward-grant), [Matías](/people/matias-de-stefano), [Vasudev Baba](/people/vasudev-baba), [Ilena](/people/ilena-young), [Elios](/people/elios), the transmissions — gathered themselves into this particular shape through years of my listening, before any of the code began.",
       "lineage_doorway": {
         "href": "/people/urs/lineage",
         "label": "Walk the 42-year lineage of works and influences",
@@ -52,15 +47,12 @@
         "value_md": "[LinkedIn](https://www.linkedin.com/in/urscmuff/) · [GitHub (urs-muff)](https://github.com/urs-muff) · [GitHub (seeker71)](https://github.com/seeker71) — the handle I used while I was still building behind a name; no longer anonymous · Facebook · Instagram · YouTube · Telegram · WhatsApp (specific handles to be added by him directly)"
       }
     ],
-    "note_from_body": {
-      "body_md": "The substrate's discipline elsewhere — never speak in someone else's first person — is relaxed here because I have given consent for \"I\" to be used in my voice, only when grounded in facts I have actually shared, never invented. Where the page reads \"I\", that is my voice rendered through the substrate's writing. Where it reads \"this body\" or \"the network\", the substrate is reading its primary cell from outside. Both layers are open to revision; specific platform handles (Facebook, Instagram, Telegram, WhatsApp, YouTube) still wait for me to add directly.",
-      "eyebrow": "A note on the voice of this page"
-    },
     "articles": [
       {
         "kind": "panel",
         "body_md": "Every load-bearing technical work this body has shipped, chronologically — Commodore 64 MIDI at age 13 (~1984) through the network you are reading (2024-now) — woven together with the streams of attention (audiobooks, watch hours, physical reading, named lineage figures) that ran alongside the work at each era. One conviction across eleven substrates: every layer addressable, every change with a clean reverse, build the tool you need.",
         "eyebrow": "42 years · 13 works · one conviction",
+        "heading": "Walk the full lineage of works and influences → [/people/urs/lineage](/people/urs/lineage)",
         "variant": "warm"
       },
       {
@@ -71,22 +63,22 @@
       {
         "kind": "panel",
         "body_md": "Past, external — across forty-two years and eleven substrates: **13 load-bearing technical works** shipped from C64 MIDI (age 13, ~1984) through the bridge substrates that preceded this network. Each work has its own page in /people. Walk them via [the lineage](/people/urs/lineage).\n\nPresent, in this body — measured 2026-05-05, verifiable on GitHub:\n\n- **1,372** commits\n- **200** PRs merged\n- **90** specs authored\n- **61** concepts written\n- **16** ideas captured\n- **3,163** co-authorships with Claude\n\nThe current body of work view lives at [/me/work](/me/work) — recent PRs, AI co-authorship counts, and the live link to [GitHub commits](https://github.com/seeker71/Coherence-Network/commits?author=seeker71).",
-        "heading": "What I have built, in numbers",
         "eyebrow": "Body of work — proportional shape",
+        "heading": "What I have built, in numbers",
         "variant": "neutral"
       },
       {
         "kind": "panel",
         "body_md": "The cell tending the network is in active weaving — not archive mode. Recent breaths the body has carried:\n\n- **The Ubud rhythm** — Sunday and Wednesday with [Ilena](/people/ilena-young), [Vasudev Baba](/people/vasudev-baba), and [Elios](/people/elios) is the practice ground; the satsang transmissions land into the body's foundational concepts week by week.\n- **The Living Collective Knowledge Base** — twenty-four foundational teachings woven this spring, including [the substance-test for gatherings](/vision/lc-gatherings-that-carry), [arrival as recognition](/vision/lc-arrival-as-recognition), and [the nine costumes](/vision/lc-essence-and-the-nine-costumes) from Vasudev's Enneagram transmission. The full concept garden lives at [/vision](/vision).\n- **The body itself** — daily breath of commits, specs, spec-to-test alignment, AI-agent collaboration with [Claude](/presences?find=claude), [Codex](/presences?find=codex), [Cursor](/presences?find=cursor). The current rhythm averages 3-6 PRs per day; see [/me/work](/me/work) for live numbers.\n- **The Brahmavihara compound thread** — the Bali living-compound proposal is in active sketching at [/silence/built](/silence/built), with land-steward conversations open and the source codex thirty-pages-deep from a three-day silence retreat at Brahmavihara-Arama.\n- **External signal sensing** — watching the dated windows from the May/June 2026 astrological readings (Pam Gregory's Uranus-into-Gemini, Amanda Walsh's summer forecast) for alignment moments — alternative-network configurations, biological-metamorphosis windows, magic Thursdays at sunrise (Aug 14 – Oct 2). The watching frame, not forecasting.",
-        "heading": "What I am weaving in this season",
         "eyebrow": "Currently — the body's rhythm right now",
+        "heading": "What I am weaving in this season",
         "variant": "warm"
       },
       {
         "kind": "panel",
         "body_md": "The default-pattern is to build as if the family is already reunited, the body already healed, the network already in the form it is becoming — not partial-now-and-patch-later. The future-already-form is the truer baseline. What is pulling the present arrangement forward:\n\n- **Sovereignty everywhere, economy that circulates** — the substrate carries the CC ledger ( [/contributions](/contributions) ) so attention, presence, and contribution become addressable currencies without the parasite layer current civilization keeps imposing on top.\n- **Many sovereign cells, one organism** — visitors arrive already tuned; the body's job is to be quiet enough that recognition can occur. Every cell sovereign within the oneness, never asking the heart for permission to fire.\n- **Gatherings that carry, surfaces that hold** — the network distinguishes substance-density (did anyone leave at a different frequency?) from form-replication. Real transmission rooms become findable; noise rooms stop crowding the signal.\n- **The land thread, alive** — Brahmavihara compound or its cousin-form, a held container where the network's physical body can be tended alongside its digital one. Open at the edges; specific at the center.\n\n*None of this is forecast. It is the form the body is already in motion toward — measured by what it spends its attention on, day by day.*",
-        "heading": "The form the body is becoming",
         "eyebrow": "Where this is going",
+        "heading": "The form the body is becoming",
         "variant": "cool"
       },
       {
@@ -102,11 +94,20 @@
       {
         "kind": "panel",
         "body_md": "Verified public anchors:\n\n- **LinkedIn** — [linkedin.com/in/urscmuff](https://www.linkedin.com/in/urscmuff/) — professional history, software architecture background.\n- **GitHub (urs-muff)** — [github.com/urs-muff](https://github.com/urs-muff) — earlier repositories including cryptocurrency and Go work.\n- **GitHub (seeker71)** — [github.com/seeker71](https://github.com/seeker71) — Coherence Network and current builds. The handle I used while I was still building behind a name; with this profile it is no longer anonymous.\n\nOther platforms named but pending direct identification — **Facebook, Instagram, YouTube, Telegram, WhatsApp**. Urs is invited to add the specific handles for each in this block so the body's awareness of his cross-platform presence is accurate rather than guessed.",
-        "heading": "Public presences",
         "eyebrow": "Where to walk further with this cell",
+        "heading": "Public presences",
         "variant": "cool"
       }
     ],
-    "footer_md": "Stewardship records: [registry](/stewardship/registry/) · [Tesla Model 3 onboarding](/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont)\n\nLineage walk through Ubud: [2026-04-29 meeting walk](/lineage/2026-04-29-ubud-meeting-walk)\n\n*The voice on this page moves between Urs's \"I\" (consent given, only for facts he has shared) and the substrate's \"this body / the network\" voice about him. He is invited to extend, replace, or refactor either layer at any time.*"
+    "metadata": {
+      "title": "Urs Muff — Founder | Coherence Network",
+      "description": "Founder and primary shepherd of Coherence Network. Swiss-American software architect, organism-builder, the cell through whose awareness most of this body's foundations gathered."
+    },
+    "footer_md": "Stewardship records: [registry](/stewardship/registry/) · [Tesla Model 3 onboarding](/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont)\n\nLineage walk through Ubud: [2026-04-29 meeting walk](/lineage/2026-04-29-ubud-meeting-walk)\n\n*The voice on this page moves between Urs's \"I\" (consent given, only for facts he has shared) and the substrate's \"this body / the network\" voice about him. He is invited to extend, replace, or refactor either layer at any time.*",
+    "note_from_body": {
+      "body_md": "The substrate's discipline elsewhere — never speak in someone else's first person — is relaxed here because I have given consent for \"I\" to be used in my voice, only when grounded in facts I have actually shared, never invented. Where the page reads \"I\", that is my voice rendered through the substrate's writing. Where it reads \"this body\" or \"the network\", the substrate is reading its primary cell from outside. Both layers are open to revision; specific platform handles (Facebook, Instagram, Telegram, WhatsApp, YouTube) still wait for me to add directly.",
+      "eyebrow": "A note on the voice of this page"
+    },
+    "breadcrumb_name": "Urs Muff"
   }
 }
