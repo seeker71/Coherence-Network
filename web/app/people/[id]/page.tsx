@@ -265,12 +265,12 @@ async function fetchGraphNode(id: string): Promise<Record<string, unknown> | nul
     }
   }
 
-  // Legacy-handle match: a node's `legacy_ids` list declares historical
-  // names this cell answers to. Urs's contributor:seeker71 carries
-  // ["seeker71","urs-muff","ursmuff","urs"]; any of those URL forms
-  // should land on this node. Match against the bare id (no
+  // Alias match: a node's `aliases` list names every handle this cell
+  // answers to — all alive, none deprecated. Urs's contributor:seeker71
+  // carries ["seeker71","urs-muff","ursmuff","urs"]; any of those URL
+  // forms lands on the same cell. Match against the bare id (no
   // contributor: prefix) so /people/seeker71, /people/urs, etc. resolve
-  // when the redirect map is bypassed.
+  // even when a request reaches this handler directly.
   {
     const list = await fetchJsonOrNull<{ items: Record<string, unknown>[] }>(
       `${base}/api/graph/nodes?type=contributor&limit=500`,
@@ -279,7 +279,7 @@ async function fetchGraphNode(id: string): Promise<Record<string, unknown> | nul
     );
     const bareId = id.startsWith("contributor:") ? id.slice("contributor:".length) : id;
     const match = list?.items?.find((n) => {
-      const aliases = Array.isArray(n.legacy_ids) ? (n.legacy_ids as unknown[]) : [];
+      const aliases = Array.isArray(n.aliases) ? (n.aliases as unknown[]) : [];
       return aliases.some((a) => typeof a === "string" && a === bareId);
     });
     if (match) return match;
