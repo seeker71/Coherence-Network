@@ -13,32 +13,30 @@ import {
 } from "@/lib/presence-content";
 
 /**
- * /people/urs — the central cell, rendered from the graph.
+ * /people/urs — the central cell, rendered from one canonical graph node.
  *
- * Content lives in the graph node `contributor:urs` as `presence_content`
- * (synced 2026-05-15 from the previously-static en.tsx). The route file
- * is the binding layer that pins the URL to this graph node and tells
- * the template to walk `contributor:seeker71`'s edges (works, lineage,
- * inspired-by) — the two-node bifurcation lives in the substrate, and
- * naming both ids here is honest about it.
+ * `contributor:seeker71` is the canonical node: it carries every
+ * `contributes-to` / `inspired-by` / `resonates-with` edge (315 in
+ * total), its slug is `urs-muff` (the canonical handle), and its
+ * `legacy_ids` declare `urs` / `urs-muff` / `seeker71` / `ursmuff` as
+ * valid aliases. After today's reconcile, this is THE node for the
+ * urs cell — `contributor:urs` survives only as a temporary stub for
+ * a handful of code references that still name it literally.
  *
- * The dynamic `/people/[id]` route would also resolve /people/urs to
- * the same node, but this static route file lets us specify the edge-
- * walking node explicitly without baking a special-case into the
- * generic dispatcher.
+ * Both content and edges now load from the same node. One source of
+ * truth — the URL is just the public doorway.
  */
 
 export const dynamic = "force-dynamic";
 
-const STORY_NODE_ID = "contributor:urs";
-const EDGES_NODE_ID = "contributor:seeker71";
+const CANONICAL_NODE_ID = "contributor:seeker71";
 
 async function fetchPresenceContent(
   lang: string,
 ): Promise<PresenceContent | null> {
   const base = getApiBase();
   const node = await fetchJsonOrNull<Record<string, unknown>>(
-    `${base}/api/graph/nodes/${encodeURIComponent(STORY_NODE_ID)}`,
+    `${base}/api/graph/nodes/${encodeURIComponent(CANONICAL_NODE_ID)}`,
     {},
     5000,
   );
@@ -85,7 +83,7 @@ export default async function UrsProfilePage() {
     <PersonProfileTemplate
       content={toPersonProfileContent(presence)}
       lang={lang}
-      graphSlug={EDGES_NODE_ID}
+      graphSlug={CANONICAL_NODE_ID}
     />
   );
 }
