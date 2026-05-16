@@ -265,6 +265,26 @@ async function fetchGraphNode(id: string): Promise<Record<string, unknown> | nul
     }
   }
 
+  // Legacy-handle match: a node's `legacy_ids` list declares historical
+  // names this cell answers to. Urs's contributor:seeker71 carries
+  // ["seeker71","urs-muff","ursmuff","urs"]; any of those URL forms
+  // should land on this node. Match against the bare id (no
+  // contributor: prefix) so /people/seeker71, /people/urs, etc. resolve
+  // when the redirect map is bypassed.
+  {
+    const list = await fetchJsonOrNull<{ items: Record<string, unknown>[] }>(
+      `${base}/api/graph/nodes?type=contributor&limit=500`,
+      {},
+      5000,
+    );
+    const bareId = id.startsWith("contributor:") ? id.slice("contributor:".length) : id;
+    const match = list?.items?.find((n) => {
+      const aliases = Array.isArray(n.legacy_ids) ? (n.legacy_ids as unknown[]) : [];
+      return aliases.some((a) => typeof a === "string" && a === bareId);
+    });
+    if (match) return match;
+  }
+
   return null;
 }
 
