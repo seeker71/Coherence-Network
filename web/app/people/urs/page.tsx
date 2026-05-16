@@ -18,10 +18,11 @@ import {
  * `contributor:seeker71` is the canonical node: it carries every
  * `contributes-to` / `inspired-by` / `resonates-with` edge (315 in
  * total), its slug is `urs-muff` (the canonical handle), and its
- * `legacy_ids` declare `urs` / `urs-muff` / `seeker71` / `ursmuff` as
- * valid aliases. After today's reconcile, this is THE node for the
- * urs cell — `contributor:urs` survives only as a temporary stub for
- * a handful of code references that still name it literally.
+ * `aliases` list names `urs` / `urs-muff` / `seeker71` / `ursmuff` —
+ * every handle this cell answers to, all alive. After today's
+ * reconcile, this is THE node for the urs cell; `contributor:urs`
+ * remains a placeholder for a handful of code references that still
+ * name it directly, waiting for retuning in a separate breath.
  *
  * Both content and edges now load from the same node. One source of
  * truth — the URL is just the public doorway.
