@@ -402,7 +402,15 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
 
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">{idea.name}</h1>
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{idea.name}</h1>
+          <Link
+            href={`/ideas/${encodeURIComponent(idea.id)}/edit`}
+            className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors"
+          >
+            Edit
+          </Link>
+        </div>
         <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
         <IdeaContentMarkdown content={idea.content_markdown} />
         <p className="text-sm text-muted-foreground">

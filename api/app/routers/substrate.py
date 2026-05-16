@@ -1,8 +1,10 @@
 """Coherence-substrate REST API.
 
-Read-only endpoints for agent reasoning. The substrate is built by the
-ingestion frontends (markdown_frontend, etc.) and consumed via these
-endpoints + the Form notation parser (now exposed via POST /form).
+Read endpoints for agent reasoning + one write endpoint (POST /ingest)
+so a visiting body can place markdown content into the lattice without
+a repo clone. The substrate is also built by the ingestion frontends
+(markdown_frontend, etc.) running on disk content; the consumed surfaces
+include these endpoints + the Form notation parser (POST /form).
 
 See docs/coherence-substrate/ for usage; see api/app/services/substrate/
 for the implementation.
@@ -23,6 +25,7 @@ from app.services.substrate import (
     find_cells_compatible_with,
     find_equivalent_cells,
     form_evaluate_text,
+    ingest_markdown_text,
     lattice_stats,
     lookup_cell,
     lookup_node,
@@ -448,4 +451,83 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
         raise HTTPException(
             status_code=500,
             detail=f"unknown FormResult.kind: {result.kind}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Ingest — let a visiting body place markdown content into the lattice
+# ---------------------------------------------------------------------------
+
+
+_INGEST_DOMAINS = {"memory", "spec", "idea", "concept", "presence"}
+_MAX_INGEST_CHARS = 64 * 1024  # 64KB — generous for memory/spec/idea/concept content
+
+
+class IngestRequest(BaseModel):
+    domain: str = Field(
+        ...,
+        description=(
+            "Domain blueprint to ingest under. One of: memory, spec, idea, "
+            "concept, presence."
+        ),
+    )
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=_MAX_INGEST_CHARS,
+        description=(
+            "Raw markdown content. If a frontmatter block is present, the "
+            "domain's expected name field (e.g. 'name' for memory, 'id' for "
+            "concept) is preferred; otherwise the body is hashed for identity."
+        ),
+    )
+    source_label: str | None = Field(
+        default=None,
+        max_length=512,
+        description=(
+            "Provenance hint stored on the cell. Honest description of where "
+            "this content came from (e.g. 'web:contributor:abc123')."
+        ),
+    )
+
+
+class IngestResponse(BaseModel):
+    cell: CellOut
+    blueprint: NodeIDOut
+    ctor: NodeIDOut | None = None
+
+
+@router.post("/ingest", response_model=IngestResponse, tags=["substrate"])
+def ingest_content(req: IngestRequest) -> IngestResponse:
+    """Place markdown content into the lattice from outside the repo.
+
+    The body-reads-itself practice still holds: this endpoint creates or
+    updates a NamedCell keyed by the frontmatter name field (or body hash
+    when no name is present). Cross-references in the content do *not*
+    auto-bind to existing cells — equivalence in the substrate is
+    structural, not lexical. Two ingested cells with the same shape
+    converge automatically; two with different shapes stay distinct.
+    """
+    if req.domain not in _INGEST_DOMAINS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"unknown domain '{req.domain}'; expected one of "
+                f"{sorted(_INGEST_DOMAINS)}"
+            ),
+        )
+    with session_scope() as session:
+        try:
+            cell, blueprint_id, ctor_id = ingest_markdown_text(
+                session,
+                req.domain,
+                req.content,
+                source_label=req.source_label,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return IngestResponse(
+            cell=CellOut.from_cell(cell),
+            blueprint=NodeIDOut.from_node_id(blueprint_id),
+            ctor=NodeIDOut.from_node_id(ctor_id) if ctor_id else None,
         )

@@ -311,6 +311,47 @@ def ingest_presence_file(session: Session, path: Path) -> Tuple[Any, NodeID, Nod
     return _ingest_markdown_file(session, path, "presence", BID_presence())
 
 
+def ingest_markdown_text(
+    session: Session,
+    domain: str,
+    content: str,
+    name_field: Optional[str] = None,
+    source_label: Optional[str] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest markdown content arriving without a file — e.g. from a web POST.
+
+    Same path as `_ingest_markdown_file` but parses text directly. `domain`
+    selects the domain blueprint; `source_label` is recorded on the cell so
+    visitors can see provenance even when the content never touched disk.
+    """
+    domain_blueprint_map = {
+        "memory": BID_memory(),
+        "spec": BID_spec(),
+        "idea": BID_idea(),
+        "concept": BID_concept(),
+        "presence": BID_presence(),
+    }
+    if domain not in domain_blueprint_map:
+        raise ValueError(
+            f"unknown domain '{domain}'; expected one of {sorted(domain_blueprint_map)}"
+        )
+    default_name_field = {
+        "memory": "name",
+        "idea": "idea_id",
+        "concept": "id",
+    }
+    if name_field is None:
+        name_field = default_name_field.get(domain)
+    return _ingest_markdown_payload(
+        session,
+        parse_markdown(content),
+        domain=domain,
+        domain_blueprint=domain_blueprint_map[domain],
+        name_field=name_field,
+        source_path=source_label,
+    )
+
+
 def _ingest_markdown_file(
     session: Session,
     path: Path,
@@ -319,12 +360,38 @@ def _ingest_markdown_file(
     name_field: Optional[str] = None,
 ) -> Tuple[Any, NodeID, NodeID]:
     """Generic ingestion path — domain + domain blueprint + optional name field."""
-    parsed = parse_markdown_file(path)
+    return _ingest_markdown_payload(
+        session,
+        parse_markdown_file(path),
+        domain=domain,
+        domain_blueprint=domain_blueprint,
+        name_field=name_field,
+        source_path=str(path),
+    )
+
+
+def _ingest_markdown_payload(
+    session: Session,
+    parsed: "ParsedMarkdown",
+    domain: str,
+    domain_blueprint: NodeID,
+    name_field: Optional[str] = None,
+    source_path: Optional[str] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Shared ingest core — operates on already-parsed markdown."""
     name = None
     if name_field:
         name = parsed.frontmatter.get(name_field)
     if not name:
-        name = parsed.frontmatter.get("name") or parsed.frontmatter.get("title") or path.stem
+        name = parsed.frontmatter.get("name") or parsed.frontmatter.get("title")
+    if not name and source_path:
+        name = Path(source_path).stem
+    if not name:
+        # Last-resort identity: hash a chunk of the body so re-submitting the
+        # same content collapses to the same cell rather than fanning out.
+        import hashlib
+        digest = hashlib.sha256(parsed.body.encode("utf-8")).hexdigest()[:12]
+        name = f"unnamed-{digest}"
 
     # Build the Blueprint from the frontmatter shape.
     blueprint_id = frontmatter_to_blueprint(session, parsed.frontmatter, domain_blueprint)
@@ -369,6 +436,6 @@ def _ingest_markdown_file(
         blueprint=blueprint_id,
         access=access_id,
         ctor=ctor_id,
-        source_path=str(path),
+        source_path=source_path,
     )
     return cell, blueprint_id, ctor_id
