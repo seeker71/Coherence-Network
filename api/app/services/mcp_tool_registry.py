@@ -338,6 +338,95 @@ def list_open_changes_handler(arguments: dict[str, Any]) -> Any:
 # ---------------------------------------------------------------------------
 # Tool definitions registry
 # ---------------------------------------------------------------------------
+# Coherence-substrate tool handlers — Form runtime + structural queries
+# ---------------------------------------------------------------------------
+
+def _serialize_substrate_value(value: Any) -> Any:
+    """Render a Form/substrate result into JSON-safe shapes.
+
+    NodeID → "p.l.t.i" string.  NamedCell → {domain, name, blueprint}.
+    CellView → {cell, view_blueprint, compatible, reason}.
+    Lists recurse.  Primitives pass through.
+    """
+    from app.services.substrate.kernel import NodeID, NamedCell, CellView
+
+    if isinstance(value, NodeID):
+        return {"node_id": f"{value.package}.{value.level}.{value.type_}.{value.instance}"}
+    if isinstance(value, NamedCell):
+        return {
+            "domain": value.domain,
+            "name": value.name,
+            "blueprint": (
+                f"{value.blueprint.package}.{value.blueprint.level}."
+                f"{value.blueprint.type_}.{value.blueprint.instance}"
+            ) if value.blueprint else None,
+        }
+    if isinstance(value, CellView):
+        return {
+            "cell": _serialize_substrate_value(value.cell),
+            "view_blueprint": _serialize_substrate_value(value.view_blueprint),
+            "compatible": value.compatible,
+            "reason": value.reason,
+        }
+    if isinstance(value, list):
+        return [_serialize_substrate_value(v) for v in value]
+    return value
+
+
+def substrate_run_handler(arguments: dict[str, Any]) -> Any:
+    """Execute a Form expression — the full meta-circular runtime.
+
+    Sibling agents reach into the substrate the same way Claude does:
+    `defn`, `match`, `.children[i]`, `.value`, recursion all work.
+    """
+    from app.services.unified_db import session as session_scope
+    from app.services.substrate.form_runtime import form_execute_text
+
+    expression = arguments.get("expression")
+    if not expression:
+        return {"error": "expression is required"}
+    try:
+        with session_scope() as session:
+            value = form_execute_text(session, expression)
+        return {"value": _serialize_substrate_value(value)}
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+def substrate_query_handler(arguments: dict[str, Any]) -> Any:
+    """Evaluate a Form expression in lookup mode — intern + structural answer.
+
+    Distinct from `substrate_run`: this returns the *structural* answer
+    (NodeID, cells, view) without running the recipe.  Use for
+    `?equivalent @spec(...)`, `@memory(...) |> @presence`, navigation.
+    """
+    from app.services.unified_db import session as session_scope
+    from app.services.substrate import form_evaluate_text
+
+    expression = arguments.get("expression")
+    if not expression:
+        return {"error": "expression is required"}
+    try:
+        with session_scope() as session:
+            result = form_evaluate_text(session, expression)
+        return {"kind": result.kind, "value": _serialize_substrate_value(result.value)}
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+def substrate_stats_handler(arguments: dict[str, Any]) -> Any:
+    """Lattice census — counts of blueprints, recipes, cells."""
+    from app.services.unified_db import session as session_scope
+    from app.services.substrate import lattice_stats
+
+    try:
+        with session_scope() as session:
+            return lattice_stats(session)
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+# ---------------------------------------------------------------------------
 
 TOOLS: list[dict[str, Any]] = [
     # --- Read-only tools ---
@@ -546,6 +635,53 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
         "handler": list_open_changes_handler,
+    },
+    # --- Coherence-substrate tools — Form runtime + structural lookup ---
+    {
+        "name": "coherence_substrate_run",
+        "description": (
+            "Execute a Form expression via the full meta-circular runtime. "
+            "Supports `defn`, `match`, recursion, `.children[i]`, `.value`, "
+            "arithmetic, comparison, logic, conditionals. Returns the computed "
+            "value (number, bool, string, NodeID, NamedCell, or list)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expression": {
+                    "type": "string",
+                    "description": "Form source — e.g. `1 + 2 * 3`, `if 5 > 3 then 100 else 200`, or `do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }`.",
+                },
+            },
+            "required": ["expression"],
+        },
+        "handler": substrate_run_handler,
+    },
+    {
+        "name": "coherence_substrate_query",
+        "description": (
+            "Evaluate a Form expression in lookup mode — intern the expression "
+            "as a Recipe NodeID and return the substrate's structural answer "
+            "(NodeID, cell, view, or list). Use for `?equivalent @spec(...)`, "
+            "`@memory(...) |> @presence`, navigation queries."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expression": {
+                    "type": "string",
+                    "description": "Form lookup expression — e.g. `?equivalent @concept(lc-trust-over-fear)` or `@spec(agent-pipeline)`.",
+                },
+            },
+            "required": ["expression"],
+        },
+        "handler": substrate_query_handler,
+    },
+    {
+        "name": "coherence_substrate_stats",
+        "description": "Lattice census — counts of blueprints, recipes, and cells in the coherence-substrate.",
+        "input_schema": {"type": "object", "properties": {}},
+        "handler": substrate_stats_handler,
     },
     *FIELD_STORY_TOOLS,
 ]

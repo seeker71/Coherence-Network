@@ -219,7 +219,7 @@ All paths converge: **idea → specs → source files**
 
 ## MCP Tools
 
-60 tools. Key operations:
+63 tools. Key operations:
 
 | Verb | MCP tool | CLI equivalent |
 |------|----------|---------------|
@@ -228,6 +228,9 @@ All paths converge: **idea → specs → source files**
 | Spec CRUD | `coherence_create_spec`, `coherence_update_spec` | `coh rest POST /api/spec-registry` |
 | Task flow | `coherence_task_seed` → `coherence_task_report` | `coh task seed {idea}` → `coh task report` |
 | Select work | `coherence_select_idea` | `coh idea select` |
+| Substrate run | `coherence_substrate_run` (full Form runtime: defn, match, recursion, .children, .value) | `coh substrate run "<expr>"` |
+| Substrate query | `coherence_substrate_query` (lookup: `?equivalent`, `\|>`, cell-by-name) | `coh substrate form "<expr>"` |
+| Substrate stats | `coherence_substrate_stats` | `coh substrate stats` |
 
 ## Context Budget
 
