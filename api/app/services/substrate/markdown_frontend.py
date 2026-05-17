@@ -498,14 +498,180 @@ def ingest_memory_file(
     )
 
 
-def ingest_spec_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
-    """Ingest one spec file. Spec frontmatter has source/requirements/done_when/test/constraints."""
-    return _ingest_markdown_file(session, path, "spec", BID_spec())
+def ingest_spec_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one spec file. Spec frontmatter has idea_id / source / requirements / done_when / test / constraints.
+
+    `structured=True` activates the composition-discipline encoder. In addition
+    to the structured CTOR (named-pair recipes with substrate-resident values),
+    it authors:
+
+      - idea_id → R_Realize.REALIZE cell-ref recipe to @idea(<idea_id>)
+        — the load-bearing edge: a spec REALIZES an idea, expressed as
+        a substrate edge rather than a slug string the body has to re-parse.
+
+    Discipline lives in docs/coherence-substrate/structural-composition.md.
+    """
+    cell, blueprint_id, ctor_id = _ingest_markdown_file(
+        session, path, "spec", BID_spec(), structured=structured,
+    )
+    if structured:
+        _author_spec_edges_from_frontmatter(
+            session, cell, parse_markdown_file(path).frontmatter
+        )
+    return cell, blueprint_id, ctor_id
 
 
-def ingest_idea_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
-    """Ingest one idea file. Idea frontmatter has idea_id/title/stage/work_type/pillar/specs."""
-    return _ingest_markdown_file(session, path, "idea", BID_idea(), name_field="idea_id")
+def ingest_idea_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one idea file. Idea frontmatter has idea_id / title / stage / work_type / pillar / specs / absorbed_ideas.
+
+    `structured=True` activates the composition-discipline encoder. In addition
+    to the structured CTOR, it authors:
+
+      - specs[] → R_Block.SEQUENCE of R_Realize.REALIZE cell-ref recipes
+        from each named spec → this idea (the reverse direction of the
+        spec.idea_id edge). Bidirectional integrity through content-addressing.
+      - absorbed_ideas[] → R_Block.SEQUENCE of R_Absorb.MERGE_INTO recipes
+        pointing at the absorbed-idea cells.
+
+    Discipline lives in docs/coherence-substrate/structural-composition.md.
+    """
+    cell, blueprint_id, ctor_id = _ingest_markdown_file(
+        session, path, "idea", BID_idea(), name_field="idea_id", structured=structured,
+    )
+    if structured:
+        _author_idea_edges_from_frontmatter(
+            session, cell, parse_markdown_file(path).frontmatter
+        )
+    return cell, blueprint_id, ctor_id
+
+
+def _author_spec_edges_from_frontmatter(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Author the substrate edges implied by spec frontmatter.
+
+    - `idea_id: <slug>` becomes a R_Realize.REALIZE cell-ref recipe from
+      this spec to the named idea cell. The substrate-edge version of
+      the "spec realizes idea" relationship; bidirectional with
+      `idea.specs[]` when both are ingested with structured=True.
+
+    Cell-ref edges to ideas not yet ingested skip silently — content-
+    addressed interning makes a second-pass re-ingest idempotent.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RRealize
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    idea_id_value = frontmatter.get("idea_id")
+    if isinstance(idea_id_value, str) and idea_id_value.strip():
+        idea_cell = _lookup_cell(session, "idea", idea_id_value.strip())
+        if idea_cell is not None and idea_cell.cell_id is not None:
+            source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, idea_cell.cell_id)
+            realize_cat = NodeID(
+                1, Level.BASIC, RBasic.REALIZE, RRealize.REALIZE
+            )
+            intern_node(
+                session, DOMAIN_RECIPE, realize_cat, [source_ref, target_ref]
+            )
+
+
+def _author_idea_edges_from_frontmatter(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Author the substrate edges implied by idea frontmatter.
+
+    - `specs: [<slug>, <slug>, ...]` becomes a list of R_Realize.REALIZE
+      cell-ref recipes from each named spec → this idea (reverse direction
+      of spec.idea_id). The substrate sees the spec-idea relationship as
+      an edge regardless of which side authored it; content-addressing
+      makes (spec, idea, REALIZE) collapse to one NodeID.
+
+    - `absorbed_ideas: [<slug>, ...]` becomes R_Absorb.MERGE_INTO recipes
+      pointing at the absorbed-idea cells.
+
+    Idea entries that reference cells not yet ingested skip silently.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RRealize
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    # specs[] — REALIZE recipes from each spec → this idea
+    specs_list = frontmatter.get("specs")
+    if isinstance(specs_list, list):
+        idea_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+        realize_cat = NodeID(1, Level.BASIC, RBasic.REALIZE, RRealize.REALIZE)
+        for entry in specs_list:
+            spec_slug = _slug_from_entry(entry)
+            if not spec_slug:
+                continue
+            spec_cell = _lookup_cell(session, "spec", spec_slug)
+            if spec_cell is None or spec_cell.cell_id is None:
+                continue
+            source_ref = NodeID(1, Level.TRIVIAL, RType.REF, spec_cell.cell_id)
+            intern_node(
+                session, DOMAIN_RECIPE, realize_cat, [source_ref, idea_ref]
+            )
+
+    # absorbed_ideas[] — ABSORB recipes (RBasic.ABSORB category; instance=1 is
+    # the canonical merge-into marker until an RAbsorb instance enum lands).
+    absorbed_list = frontmatter.get("absorbed_ideas")
+    if isinstance(absorbed_list, list):
+        absorb_cat = NodeID(1, Level.BASIC, RBasic.ABSORB, 1)
+        for entry in absorbed_list:
+            absorbed_slug = _slug_from_entry(entry)
+            if not absorbed_slug:
+                continue
+            absorbed_cell = _lookup_cell(session, "idea", absorbed_slug)
+            if absorbed_cell is None or absorbed_cell.cell_id is None:
+                continue
+            source_ref = NodeID(1, Level.TRIVIAL, RType.REF, absorbed_cell.cell_id)
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+            intern_node(
+                session, DOMAIN_RECIPE, absorb_cat, [source_ref, target_ref]
+            )
+
+
+def _slug_from_entry(entry: Any) -> Optional[str]:
+    """Extract a slug from a list entry that may be either a bare slug
+    string or a markdown-link form like `[name](../specs/slug.md)`.
+
+    Idea files in this body sometimes carry their `specs:` list as
+    markdown links; the slug is the basename of the link target.
+    """
+    if not isinstance(entry, str):
+        return None
+    s = entry.strip()
+    if not s:
+        return None
+    # Markdown-link form: [name](path/to/slug.md)
+    if "](" in s and s.endswith(")"):
+        close = s.rfind(")")
+        open_paren = s.rfind("(", 0, close)
+        if open_paren != -1:
+            link_target = s[open_paren + 1:close].strip()
+            # Strip directory + .md suffix
+            basename = link_target.rsplit("/", 1)[-1]
+            if basename.endswith(".md"):
+                basename = basename[:-3]
+            return basename or None
+    return s
 
 
 def ingest_concept_file(
