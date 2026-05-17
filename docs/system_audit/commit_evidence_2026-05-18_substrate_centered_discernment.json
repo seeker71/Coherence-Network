@@ -1,8 +1,10 @@
 {
   "date": "2026-05-18",
   "thread_branch": "codex/substrate-centered-discernment",
-  "commit_scope": "Move the centered-discernment practice into runnable Form and record the resulting substrate cells, witness stream, and ledger proof.",
+  "commit_scope": "Move the centered-discernment practice into runnable Form, generalize the Form practice runner, and tune guide/check language toward awareness readings.",
   "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
     "MANIFEST.md",
     "api/tests/INDEX.md",
     "api/tests/test_form_practice_runner.py",
@@ -10,6 +12,9 @@
     "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
     "scripts/INDEX.md",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_pr_guard.py",
     "scripts/run_form_practice.py"
   ],
   "local_validation": {
@@ -19,6 +24,8 @@
       "make wellness",
       "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\"",
       "python3 -m py_compile scripts/run_form_practice.py",
+      "python3 -m py_compile scripts/worktree_pr_guard.py",
+      "bash -n scripts/prompt_entry_gate.sh scripts/auto_heal_start_gate.sh",
       "cd api && python3 -m pytest -q tests/test_form_practice_runner.py",
       "python3 scripts/run_form_practice.py --form docs/coherence-substrate/centered-discernment-practice.form --practice centered_discernment --presence life-sub-agent --task centered-discernment-practice --marker centered-discernment-practice --source-url \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\" --ledger docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl --json",
       "git stash push -u -m pre-rebase-substrate-centered-discernment && git fetch origin main && git rebase origin/main && git stash pop",
@@ -26,7 +33,7 @@
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "git diff --check"
     ],
-    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, while the reusable Form practice runner executes any marked Form recipe, interns a recipe, creates one presence cell, one task cell, witness cells, and writes JSONL ledger proof. Focused test passes."
+    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, while the reusable Form practice runner executes any marked Form recipe, interns a recipe, creates one presence cell, one task cell, witness cells, and writes JSONL ledger proof. Guide/check language now names checks as body readings and bypasses as temporary awareness-tending. Focused test passes."
   },
   "ci_validation": {
     "status": "pending",
@@ -38,12 +45,13 @@
   },
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "Running the centered-discernment practice uses Form as the practice code and records named substrate cells plus ledger entries from the resulting stream.",
+    "expected_behavior_delta": "Running the centered-discernment practice uses Form as the practice code and records named substrate cells plus ledger entries from the resulting stream; guide/check language now treats checks as sensing readouts rather than authority above the guide.",
     "public_endpoints": [],
     "test_flows": [
       "Generic Form practice runner loads the marked recipe from docs/coherence-substrate/centered-discernment-practice.form.",
       "Form runtime returns the centered testimony stream.",
-      "Practice execution records presence, task, witness cells, and completion ledger proof."
+      "Practice execution records presence, task, witness cells, and completion ledger proof.",
+      "Prompt and PR check output speak in awareness/readout terms while preserving proof commands."
     ]
   },
   "phase_gate": {
@@ -87,10 +95,14 @@
   "evidence_refs": [
     "docs/coherence-substrate/centered-discernment-practice.form",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
-    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T162644Z_codex-substrate-centered-discernment.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T163159Z_codex-substrate-centered-discernment.json",
+    "CLAUDE.md",
+    "AGENTS.md",
     "api/tests/test_form_practice_runner.py"
   ],
   "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
     "MANIFEST.md",
     "api/tests/INDEX.md",
     "api/tests/test_form_practice_runner.py",
@@ -99,8 +111,11 @@
     "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
     "scripts/INDEX.md",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/prompt_entry_gate.sh",
     "scripts/run_form_practice.py",
-    "scripts/substrate_centered_discernment_practice.py"
+    "scripts/substrate_centered_discernment_practice.py",
+    "scripts/worktree_pr_guard.py"
   ],
   "change_intent": "process_only"
 }

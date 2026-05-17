@@ -64,7 +64,7 @@ fi
 
 if ! ./scripts/check_ghx_auth.sh; then
   echo "prompt-entry-guide: ghx auth smoke check failed."
-  echo "Temporary override (not recommended): GHX_SKIP_AUTH_CHECK=1 make prompt-guide"
+  echo "Temporary bypass while tending auth awareness: GHX_SKIP_AUTH_CHECK=1 make prompt-guide"
   exit 1
 fi
 
@@ -93,11 +93,11 @@ if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
     echo "prompt-entry-guide: sibling worktree continuity risk detected."
     echo "Dirty siblings are guidance; detached or unpushed-ahead siblings can strand history."
     echo "Continue from that worktree, attach/push it, or merge/cherry-pick its branch before starting new work."
-    echo "Temporary override (not recommended): PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
+    echo "Temporary bypass while tending continuity awareness: PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
     exit 1
   fi
 else
-  echo "prompt-entry-guide: continuity guide skipped via PROMPT_GATE_SKIP_CONTINUITY=1."
+  echo "prompt-entry-guide: continuity reading skipped via PROMPT_GATE_SKIP_CONTINUITY=1."
 fi
 
 if [[ "$force_full" == "1" ]]; then
@@ -115,7 +115,7 @@ else
   echo "prompt-entry-guide: dirty worktree detected; cheap continuation entry complete."
 fi
 
-echo "prompt-entry-guide: shortest proof path when commit/push is ready:"
+echo "prompt-entry-guide: shortest proof reading when commit/push is ready:"
 echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"

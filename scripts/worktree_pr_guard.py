@@ -1168,9 +1168,9 @@ def main() -> int:
 
     report["ready_for_push"] = not blocking
     report["summary"] = (
-        "All selected checks passed."
+        "All selected readings are clear."
         if not blocking
-        else "Blocking failures detected; see local_preflight/remote_pr_checks details."
+        else "Attention requested; see local_preflight/remote_pr_checks details."
     )
     _record_external_tool_usage(
         tool_name="worktree-pr-guard",
@@ -1195,7 +1195,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
-        print(f"PR guard report: {output_path}")
+        print(f"PR reading report: {output_path}")
         print(f"ready_for_push={report['ready_for_push']}")
         print(report["summary"])
         local = report["local_preflight"]
