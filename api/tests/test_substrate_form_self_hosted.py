@@ -170,6 +170,49 @@ def test_engine_nested(session):
     ) == 50
 
 
+def test_engine_string_trivial(session):
+    """The engine now flows STRING trivials through `.value` — proving
+    the leaf decoder grew without touching the dispatch table."""
+    assert _form_eval(session, '"hello"') == "hello"
+    assert _form_eval(session, '"a longer phrase"') == "a longer phrase"
+
+
+# ---------------------------------------------------------------------------
+# .value as a substrate-level accessor — direct unit coverage
+# ---------------------------------------------------------------------------
+
+
+def test_value_accessor_integer(session):
+    nid = form_evaluate_text(session, "42").value
+    assert form_execute_text(session, f"@{nid}.value") == 42
+
+
+def test_value_accessor_zero(session):
+    nid = form_evaluate_text(session, "0").value
+    assert form_execute_text(session, f"@{nid}.value") == 0
+
+
+def test_value_accessor_bool(session):
+    nid_t = form_evaluate_text(session, "true").value
+    nid_f = form_evaluate_text(session, "false").value
+    assert form_execute_text(session, f"@{nid_t}.value") is True
+    assert form_execute_text(session, f"@{nid_f}.value") is False
+
+
+def test_value_accessor_string(session):
+    nid = form_evaluate_text(session, '"hello"').value
+    assert form_execute_text(session, f"@{nid}.value") == "hello"
+
+
+def test_value_accessor_refuses_composite(session):
+    """Composites carry no atomic value — the accessor refuses, the
+    engine respects the refusal."""
+    nid = form_evaluate_text(session, "1 + 2").value
+    with pytest.raises(Exception) as exc_info:
+        form_execute_text(session, f"@{nid}.value")
+    assert "trivial" in str(exc_info.value).lower() or "composite" in str(exc_info.value).lower()
+
+
 # ---------------------------------------------------------------------------
 # Drift sentinel — every literal in the engine block names a real enum
 # ---------------------------------------------------------------------------
