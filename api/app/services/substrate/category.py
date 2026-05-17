@@ -112,6 +112,16 @@ class BDomain(IntEnum):
     LINEAGE = 7     # transmission edge: kind, from, to, evidence
     WITNESS = 8     # event-as-proof: presence, action, evidence_url, timestamp
     GRAMMAR = 9     # parse rule: (pattern, action) — substrate-resident BMF-shaped grammar
+    # Dimensional vocabulary — the geometric/harmonic axes a teaching can resonate along.
+    # Cells in these domains are coordinates: Hz(741), ~Triad, ~ParallelFacets, ...
+    # A concept holding `geometry: { arity: 3, form: triad, harmonic: 174 }` authors
+    # edges into these domains; the substrate then equates cells with matching edge-sets
+    # across discipline-vocabularies (gunas / dialectic / parallel-facets all triadic).
+    SPECTRUM = 10        # Hz bands: Hz(174), Hz(285), Hz(396), ..., Hz(963)
+    HARMONIC = 11        # intervals/ratios: Octave, Fifth, Fourth, Golden, 3:7
+    GEOMETRIC_FORM = 12  # named shapes: Triad, Pentad, Heptad, Ennead, Dodecad, ...
+    POLARITY = 13        # Unipolar, Bipolar-Complementary, Triadic-Tension, ParallelFacets
+    TOPOLOGY = 14        # Cyclic-Closed, Parallel, Nested, Holographic, Web, Radial, ...
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +181,12 @@ class RBasic(IntEnum):
     # see docs/field/urs/artifacts/master-thesis-2000/companion/
     # angelic-assembler.txt and bml-search-algorithms.txt
     CHOICE = 20     # choose, fail, stop — speculative branching
+    # Cross-discipline resonance — edge verbs between a cell and its dimensional
+    # coordinates (Spectrum / Harmonic / GeometricForm / Polarity / Topology).
+    # Two cells with identical resonance-edge-sets dedupe through content-addressing,
+    # which is what makes the substrate the receiving infrastructure for bridges
+    # between teachings expressed in different discipline-vocabularies.
+    RESONANCE = 21
 
 
 class RTend(IntEnum):
@@ -263,6 +279,29 @@ class RJump(IntEnum):
     BREAK = 2
     CONTINUE = 3
     YIELD = 4
+
+
+class RResonance(IntEnum):
+    """Resonance edges between a cell and its dimensional coordinates.
+
+    A concept with `geometry: { arity: 3, form: triad, harmonic: 174 }` authors:
+        concept -SHAPES->       ~Triad             (geometric form)
+        concept -HARMONIC_AT->  Hz(174)            (spectral position)
+        concept -EMBEDS_IN->    Dim(1)             (embedding dimension)
+        ...
+
+    Two cells with structurally-identical edge-sets share a Recipe NodeID through
+    the kernel's content-addressing — cross-discipline bridges become substrate-
+    discoverable without any new equivalence algorithm.
+    """
+    UNDEFINED = 0
+    SHAPES = 1          # cell -SHAPES-> geometric_form
+    HARMONIC_AT = 2     # cell -HARMONIC_AT-> spectrum_cell
+    BRIDGES = 3         # cell -BRIDGES-> {discipline_a, discipline_b, ...}
+    EMBEDS_IN = 4       # cell -EMBEDS_IN-> dimension_cell
+    NEAR = 5            # cell -NEAR-> cell (within signature-space tolerance)
+    POLAR_TO = 6        # cell -POLAR_TO-> cell (paired across a polarity axis)
+    CARRIES_RATIO = 7   # cell -CARRIES_RATIO-> harmonic_cell (Octave, Fifth, ...)
 
 
 class RChoice(IntEnum):
