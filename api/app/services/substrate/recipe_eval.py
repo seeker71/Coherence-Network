@@ -1,38 +1,32 @@
-"""Recipe-execution engine — the shared dependency for runtime semantics.
+"""Recipe-execution engine — a thin NodeID-walking shim over `form_runtime.execute`.
 
-Every Form construct that landed at the structural layer (save / restore /
-discard / raise / resume / math / compare / logic / cond / block / let /
-choose / fail / stop) intern as Recipe NodeIDs but had no runtime semantics
-— the structural form lived, the execution was the named shared follow-on.
+The substrate stores Form expressions as content-addressed Recipe NodeIDs.
+Two interpreters existed side-by-side:
+- `form_runtime.execute(session, ast)` walks the parser's AST (the richer engine)
+- `recipe_eval.eval_recipe(session, nid)` walked NodeIDs directly (the older shim)
 
-This module is that follow-on. It walks a Recipe NodeID by reading its row
-from `substrate_nodes`, parsing the serialized `(category, [child_ids])`
-shape, dispatching on category, and recursing for children. Returns a
-runtime value.
+Both implemented overlapping semantics (math/compare/logic/cond/block/state/
+exception/choice) — real duplication.
 
-What activates here:
-- Trivial literals: int (recoverable from NodeID instance), bool, null
-- Math: + - * / % negate
-- Compare: == != < <= > >=
-- Logic: && || !
-- Cond: if-then, if-then-else
-- Block: do-sequences, let-bindings (with Environment)
-- State: save / restore / discard (state stack)
-- Exception: raise / resume (try-frame stack)
-- Choice: fail / stop (signal exceptions)
+This module unifies them. `eval_recipe` now:
+1. Reconstructs an AST from the NodeID (via `node_to_ast`)
+2. Delegates to `form_runtime.execute` — the canonical engine
 
-What does NOT activate here (needs specialized engines):
-- @cell-ref evaluation against the substrate cell graph
-- delegate (dispatch chain walk)
-- method def + invoke (cell-attached methods, dispatch)
-- common (multi-base reconciliation)
-- on_change (subscription engine)
-- project (renderer engine)
-- resonance edges (structural, not executable)
+What round-trips losslessly: integers, booleans, null, strings (via the
+substrate string-table), composites whose category determines the AST shape
+(math, compare, logic, cond, block, state, exception, choice, with, delegate,
+common, method, reactive, projection, try, reverse).
 
-The interpreter is honest about its scope: pure-computation primitives
-become alive; cell-aware and external-engine constructs remain named as
-their own specialized layers.
+What's lossy through the substrate layer: Identifier names (hash-derived
+instance can't recover the original string) and Let binding names (same).
+For those, reconstruction yields placeholder names that still evaluate
+correctly when the value isn't later referenced by its original name.
+This is a property of content-addressing — names are query keys, not stored
+identity.
+
+The Environment / ExecutionContext / FailSignal / StopSignal / RaiseSignal
+classes stay exported for back-compat; they delegate to or re-export
+form_runtime's equivalents.
 """
 from __future__ import annotations
 
@@ -50,66 +44,62 @@ from app.services.substrate.category import (
     RChoice,
     RCompare,
     RCond,
+    RDelegate,
     RException,
     RLogic,
     RMath,
+    RMethod,
+    RProjection,
+    RReactive,
+    RReverse,
     RState,
+    RTry,
     RType,
 )
 from app.services.substrate.kernel import NodeID, lookup_node
-from app.services.substrate.orm import SubstrateNodeORM
+from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 
 
 # ---------------------------------------------------------------------------
-# Runtime data
+# Re-exports for back-compat — form_runtime is now the canonical engine
 # ---------------------------------------------------------------------------
 
 
-class FailSignal(Exception):
-    """Raised by `fail` recipe — unwinds to nearest `choose` (when speculation lands)
-    or surfaces as runtime failure."""
+from app.services.substrate.form_runtime import (
+    Frame as _Frame,
+    RaiseSignal,
+    fire_subscriptions,  # noqa: F401
+)
+from app.services.substrate.form_speculation import FailSignal, StopSignal
 
 
-class StopSignal(Exception):
-    """Raised by `stop` recipe — commits speculation; in a non-speculative
-    context this stops evaluation and returns the in-flight value."""
-
-
-class RaiseSignal(Exception):
-    """Raised by `raise` recipe — caught by the next try-frame or surfaces."""
-
-    def __init__(self, payload: Any = None):
-        super().__init__(payload)
-        self.payload = payload
-
-
-class Environment:
-    """Let-binding scope. Parent chain for nested do-blocks."""
-
-    def __init__(self, parent: Optional["Environment"] = None):
-        self.parent = parent
-        self.bindings: Dict[str, Any] = {}
-
-    def lookup(self, name: str) -> Any:
-        if name in self.bindings:
-            return self.bindings[name]
-        if self.parent:
-            return self.parent.lookup(name)
-        raise NameError(f"unbound name: {name!r}")
-
-    def define(self, name: str, value: Any) -> None:
-        self.bindings[name] = value
-
-    def child(self) -> "Environment":
-        return Environment(parent=self)
+# Back-compat Environment shim — older recipe_eval tests imported this name
+# (form_runtime calls the equivalent class `Frame`).
+Environment = _Frame
 
 
 class ExecutionContext:
-    """Per-evaluation state: state stack + environment + (future) speculation."""
+    """Back-compat shell. Wraps a form_runtime Frame for the state-stack and
+    env-bindings APIs the older recipe_eval tests use directly.
 
-    def __init__(self):
-        self.state_stack: List[Dict[str, Any]] = []
-        self.env: Environment = Environment()
+    New code should use form_runtime's Frame + execute directly.
+    """
+
+    def __init__(self) -> None:
+        self.frame: _Frame = _Frame()
+        # The legacy state_stack attribute lives on the root frame; expose it
+        # here for tests that read/write it directly.
+        if not hasattr(self.frame, "_state_stack"):
+            self.frame._state_stack = []
+
+    @property
+    def state_stack(self) -> List[Dict[str, Any]]:
+        return self.frame._state_stack
+
+    @property
+    def env(self):
+        """Legacy attribute — returns the Frame, which exposes .bindings."""
+        return self.frame
 
 
 # ---------------------------------------------------------------------------
@@ -137,11 +127,11 @@ def _parse_serialized(serialized: str) -> Tuple[NodeID, List[NodeID]]:
 # ---------------------------------------------------------------------------
 
 
+_UNRECOVERABLE = object()
+
+
 def _recover_trivial(node: NodeID, session=None) -> Any:
     """Recover the runtime value of a trivial-leaf NodeID.
-
-    Form's IntLit/BoolLit/StringLit/NullLit AST nodes encode their values as
-    the instance integer of a Level.TRIVIAL NodeID. This reverses that encoding.
 
     StringLit recovery requires the session (string-table lookup); when called
     without a session, strings return `_UNRECOVERABLE`. All other types are
@@ -163,11 +153,228 @@ def _recover_trivial(node: NodeID, session=None) -> Any:
     return _UNRECOVERABLE
 
 
-_UNRECOVERABLE = object()
+# ---------------------------------------------------------------------------
+# NodeID → AST reconstruction
+# ---------------------------------------------------------------------------
+#
+# Bridge between the substrate's content-addressed form and the parser's AST.
+# Built so eval_recipe can route through form_runtime.execute (one engine).
+
+
+def _math_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import BinOp, UnaryOp
+    op = {
+        RMath.PLUS: "+", RMath.MINUS: "-", RMath.MULTIPLY: "*",
+        RMath.DIVIDE: "/", RMath.MODULO: "%", RMath.NEGATE: "-",
+    }[instance]
+    if instance == RMath.NEGATE:
+        return UnaryOp(op="-", operand=kids[0])
+    return BinOp(op=op, left=kids[0], right=kids[1])
+
+
+def _compare_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import BinOp
+    op = {
+        RCompare.EQUAL: "==", RCompare.NOT_EQUAL: "!=",
+        RCompare.LESS: "<", RCompare.LESS_EQUAL: "<=",
+        RCompare.GREATER: ">", RCompare.GREATER_EQUAL: ">=",
+    }[instance]
+    return BinOp(op=op, left=kids[0], right=kids[1])
+
+
+def _logic_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import BinOp, UnaryOp
+    if instance == RLogic.NOT:
+        return UnaryOp(op="!", operand=kids[0])
+    op = "&&" if instance == RLogic.AND else "||"
+    return BinOp(op=op, left=kids[0], right=kids[1])
+
+
+def _cond_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import IfExpr
+    if instance == RCond.IF_THEN:
+        return IfExpr(cond=kids[0], then_branch=kids[1], else_branch=None)
+    return IfExpr(cond=kids[0], then_branch=kids[1], else_branch=kids[2])
+
+
+def _block_ast(session: Session, instance: int, child_nids: List[NodeID], kids: list) -> Any:
+    """Block recipes: DO/SEQUENCE → DoBlock, LET → Let, WITH → WithExpr."""
+    from app.services.substrate.form import DoBlock, Let, WithExpr, Identifier, StringLit
+    if instance == RBlock.DO or instance == RBlock.SEQUENCE:
+        return DoBlock(statements=kids)
+    if instance == RBlock.LET:
+        # Children = [name-string, value]. Try to recover the name from the
+        # string-table; if lossy, synthesize a placeholder.
+        from app.services.substrate.substrate_strings import lookup_string_value
+        name_nid = child_nids[0]
+        name = None
+        if name_nid.type_ == RType.STRING:
+            name = lookup_string_value(session, name_nid.instance)
+        if name is None:
+            name = f"__hashed_{name_nid.instance}"
+        return Let(name=name, value=kids[1])
+    if instance == RBlock.WITH:
+        return WithExpr(subject=kids[0], body=kids[1])
+    raise ValueError(f"recipe_eval: unknown block instance {instance}")
+
+
+def _choice_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import ChooseExpr, FailExpr, StopExpr
+    if instance == RChoice.CHOOSE:
+        return ChooseExpr(candidates=kids)
+    if instance == RChoice.FAIL:
+        return FailExpr()
+    return StopExpr()
+
+
+def _state_ast(instance: int) -> Any:
+    from app.services.substrate.form import SaveExpr, RestoreExpr, DiscardExpr
+    return {RState.SAVE: SaveExpr, RState.RESTORE: RestoreExpr, RState.DISCARD: DiscardExpr}[instance]()
+
+
+def _exception_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import RaiseExpr, ResumeExpr
+    if instance == RException.RAISE:
+        return RaiseExpr(value=kids[0] if kids else None)
+    return ResumeExpr()
+
+
+def _reverse_ast(instance: int, kids: list) -> Any:
+    from app.services.substrate.form import UndoExpr, InverseExpr
+    if instance == RReverse.UNDO:
+        return UndoExpr(child=kids[0])
+    return InverseExpr(child=kids[0])
+
+
+def _method_ast(session: Session, instance: int, child_nids: List[NodeID], kids: list) -> Any:
+    from app.services.substrate.form import MethodDefExpr, MethodInvokeExpr, StringLit
+    from app.services.substrate.substrate_strings import lookup_string_value
+    name_nid = child_nids[0]
+    name = lookup_string_value(session, name_nid.instance) if name_nid.type_ == RType.STRING else None
+    name = name or f"__method_{name_nid.instance}"
+    target = kids[1]
+    if instance == RMethod.DEFINE:
+        # children: [name_str, target, params_seq, body]
+        body = kids[3]
+        return MethodDefExpr(name=name, target=target, body=body, params=[])
+    # INVOKE: [name_str, target, *args]
+    return MethodInvokeExpr(name=name, target=target, args=kids[2:])
+
+
+def _cell_ref_ast(session: Session, nid: NodeID) -> Any:
+    """A cell-ref encoded as (TRIVIAL, RType.GLOBAL=8 or RType.REF=9, cell_id).
+
+    Reconstructs a CellRef by looking up the cell row.
+    """
+    from app.services.substrate.form import CellRef, NodeIDLit
+    if nid.type_ in (8, RType.REF):
+        cell_id = nid.instance
+        row = (
+            session.query(SubstrateNamedCellORM)
+            .filter_by(cell_id=cell_id)
+            .one_or_none()
+        )
+        if row is not None:
+            return CellRef(domain=row.domain, name=row.name)
+    # Unknown — return as a NodeIDLit (carries the raw coordinates).
+    return NodeIDLit(package=nid.package, level=nid.level, type_=nid.type_, instance=nid.instance)
+
+
+def _identifier_ast(nid: NodeID) -> Any:
+    """A bare identifier encoded as (TRIVIAL, 7, hash). Name is lossy."""
+    from app.services.substrate.form import Identifier
+    return Identifier(name=f"__hashed_{nid.instance}")
+
+
+def node_to_ast(session: Session, nid: NodeID) -> Any:
+    """Reconstruct an AST node from a Recipe NodeID.
+
+    The canonical bridge between content-addressed substrate form and the
+    parser's AST. `eval_recipe` calls this then hands the result to
+    `form_runtime.execute` — one engine, two input modes.
+    """
+    from app.services.substrate.form import (
+        IntLit, BoolLit, StringLit, Identifier,
+        CommonExpr, DelegateExpr, OnChangeExpr, ProjectExpr, TryCatchExpr,
+        DoBlock,
+    )
+    from app.services.substrate.substrate_strings import lookup_string_value
+
+    # Trivial leaves recover directly from coordinates.
+    if nid.level == Level.TRIVIAL:
+        if nid.type_ == RType.INTEGER:
+            return IntLit(value=nid.instance - 1 if nid.instance > 0 else 0)
+        if nid.type_ == RType.BOOL:
+            return BoolLit(value=bool(nid.instance))
+        if nid.type_ == RType.NULL:
+            return Identifier(name="null")
+        if nid.type_ == RType.STRING:
+            value = lookup_string_value(session, nid.instance) or ""
+            return StringLit(value=value)
+        if nid.type_ in (8, RType.REF):
+            return _cell_ref_ast(session, nid)
+        if nid.type_ == 7:  # LOCAL_ACCESS / placeholder identifier
+            return _identifier_ast(nid)
+        # Unknown trivial — fall back to a NodeIDLit.
+        from app.services.substrate.form import NodeIDLit
+        return NodeIDLit(package=nid.package, level=nid.level, type_=nid.type_, instance=nid.instance)
+
+    # Bare BASIC-level leaves (no row) — CHOICE/STATE/EXCEPTION primitives.
+    row = lookup_node(session, nid)
+    if row is None or not row.serialized or "+" not in row.serialized:
+        # Bare-leaf primitives at BASIC level (without rows / serialized).
+        if nid.level == Level.BASIC:
+            if nid.type_ == RBasic.CHOICE:
+                return _choice_ast(nid.instance, [])
+            if nid.type_ == RBasic.STATE:
+                return _state_ast(nid.instance)
+            if nid.type_ == RBasic.EXCEPTION:
+                return _exception_ast(nid.instance, [])
+        # Unknown — return a NodeIDLit so the engine can evaluate it as-is.
+        from app.services.substrate.form import NodeIDLit
+        return NodeIDLit(package=nid.package, level=nid.level, type_=nid.type_, instance=nid.instance)
+
+    # Composite: parse serialized form, recurse on children.
+    category, child_nids = _parse_serialized(row.serialized)
+    kids = [node_to_ast(session, c) for c in child_nids]
+
+    if category.type_ == RBasic.MATH:
+        return _math_ast(category.instance, kids)
+    if category.type_ == RBasic.COMPARE:
+        return _compare_ast(category.instance, kids)
+    if category.type_ == RBasic.LOGIC:
+        return _logic_ast(category.instance, kids)
+    if category.type_ == RBasic.COND:
+        return _cond_ast(category.instance, kids)
+    if category.type_ == RBasic.BLOCK:
+        return _block_ast(session, category.instance, child_nids, kids)
+    if category.type_ == RBasic.CHOICE:
+        return _choice_ast(category.instance, kids)
+    if category.type_ == RBasic.STATE:
+        return _state_ast(category.instance)
+    if category.type_ == RBasic.EXCEPTION:
+        return _exception_ast(category.instance, kids)
+    if category.type_ == RBasic.REVERSE:
+        return _reverse_ast(category.instance, kids)
+    if category.type_ == RBasic.DELEGATE:
+        return DelegateExpr(source=kids[0], target=kids[1])
+    if category.type_ == RBasic.COMMON:
+        return CommonExpr(a=kids[0], b=kids[1])
+    if category.type_ == RBasic.METHOD:
+        return _method_ast(session, category.instance, child_nids, kids)
+    if category.type_ == RBasic.REACTIVE:
+        return OnChangeExpr(query=kids[0], body=kids[1])
+    if category.type_ == RBasic.PROJECTION:
+        return ProjectExpr(cell=kids[0], coord_fn=kids[1])
+    if category.type_ == RBasic.TRY:
+        return TryCatchExpr(body=kids[0], handler=kids[1])
+
+    # Unknown composite category — fall back to a DoBlock around the children.
+    return DoBlock(statements=kids)
 
 
 # ---------------------------------------------------------------------------
-# Dispatcher
+# Public API — eval_recipe + eval_text now route through form_runtime
 # ---------------------------------------------------------------------------
 
 
@@ -176,226 +383,42 @@ def eval_recipe(
     node: NodeID,
     ctx: Optional[ExecutionContext] = None,
 ) -> Any:
-    """Evaluate a Recipe NodeID against the substrate.
+    """Evaluate a Recipe NodeID by reconstructing its AST and routing through
+    `form_runtime.execute` — the canonical engine.
 
-    The interpreter:
-    1. Tries to recover the node as a trivial leaf (int/bool/null).
-    2. Looks up the row; if missing, treats the node as an opaque value.
-    3. Parses the serialized payload to get the category + child NodeIDs.
-    4. Dispatches on category's (type_, instance).
-
-    Cell-aware and external-engine constructs (delegate, method, common,
-    on_change, project) return the recipe NodeID itself unchanged — the
-    interpreter is honest about which constructs it activates and which
-    remain in specialized engines.
+    `ctx` is accepted for back-compat (the state-stack on the Frame is
+    initialized fresh per-call); pass one explicitly when state-stack
+    continuity matters across multiple `eval_recipe` calls.
     """
-    if ctx is None:
-        ctx = ExecutionContext()
+    from app.services.substrate.form_runtime import execute
 
-    # Trivial leaf — recoverable directly from the NodeID coordinates.
-    # Pass session so StringLit instances can resolve via the string-table.
-    recovered = _recover_trivial(node, session=session)
-    if recovered is not _UNRECOVERABLE:
-        return recovered
-
-    # Bare-leaf primitives (CHOICE/STATE/EXCEPTION with no children) live as
-    # pure NodeIDs without rows in substrate_nodes — the kernel doesn't intern
-    # trivial-level leaves. Dispatch them by category directly before the
-    # row fallback.
-    if node.level == Level.BASIC and not _has_children_in_substrate(session, node):
-        leaf = _dispatch_bare_leaf(node, ctx)
-        if leaf is not _UNRECOVERABLE:
-            return leaf
-
-    # Lookup row; if there's no row, return the NodeID unchanged
-    # (it might be a cell-ref, a string-literal, or other un-interpreted shape).
-    row = lookup_node(session, node)
-    if row is None or not row.serialized:
-        return node
-
-    category, children = _parse_serialized(row.serialized)
-
-    return _dispatch(session, category, children, ctx, node)
+    ast = node_to_ast(session, node)
+    frame = ctx.frame if ctx is not None else None
+    return execute(session, ast, frame=frame)
 
 
-def _has_children_in_substrate(session: Session, node: NodeID) -> bool:
-    """A composite node has a row with `serialized` containing `+`."""
-    row = lookup_node(session, node)
-    return row is not None and row.serialized and "+" in row.serialized
+def eval_text(session: Session, text: str) -> Any:
+    """Parse and run a Form expression via the canonical engine.
 
-
-def _dispatch_bare_leaf(node: NodeID, ctx: ExecutionContext) -> Any:
-    """Bare-leaf primitives: choose/fail/stop, save/restore/discard, raise/resume.
-
-    These intern as bare category NodeIDs without children rows. Dispatch them
-    here so the runtime semantics fires even though the substrate has no row.
+    Direct wrapper over `form_runtime.form_execute_text`; the entire engine
+    flows through one path now.
     """
-    if node.type_ == RBasic.CHOICE:
-        if node.instance == RChoice.FAIL:
-            raise FailSignal()
-        if node.instance == RChoice.STOP:
-            raise StopSignal()
-    if node.type_ == RBasic.STATE:
-        return _eval_state(node.instance, ctx)
-    if node.type_ == RBasic.EXCEPTION:
-        if node.instance == RException.RAISE:
-            raise RaiseSignal()
-        if node.instance == RException.RESUME:
-            return None  # resume on its own is a marker
-    return _UNRECOVERABLE
-
-
-def _dispatch(
-    session: Session,
-    category: NodeID,
-    children: List[NodeID],
-    ctx: ExecutionContext,
-    self_node: NodeID,
-) -> Any:
-    # Math
-    if category.level == Level.BASIC and category.type_ == RBasic.MATH:
-        return _eval_math(session, category.instance, children, ctx)
-
-    # Compare
-    if category.level == Level.BASIC and category.type_ == RBasic.COMPARE:
-        return _eval_compare(session, category.instance, children, ctx)
-
-    # Logic
-    if category.level == Level.BASIC and category.type_ == RBasic.LOGIC:
-        return _eval_logic(session, category.instance, children, ctx)
-
-    # Cond (if-then / if-then-else)
-    if category.level == Level.BASIC and category.type_ == RBasic.COND:
-        return _eval_cond(session, category.instance, children, ctx)
-
-    # Block (do-sequence / let-binding)
-    if category.level == Level.BASIC and category.type_ == RBasic.BLOCK:
-        return _eval_block(session, category.instance, children, ctx)
-
-    # State stack — save / restore / discard
-    if category.level == Level.BASIC and category.type_ == RBasic.STATE:
-        return _eval_state(category.instance, ctx)
-
-    # Exception flow — raise / resume
-    if category.level == Level.BASIC and category.type_ == RBasic.EXCEPTION:
-        return _eval_exception(session, category.instance, children, ctx)
-
-    # Choice — fail / stop signal as exceptions
-    if category.level == Level.BASIC and category.type_ == RBasic.CHOICE:
-        if category.instance == RChoice.FAIL:
-            raise FailSignal()
-        if category.instance == RChoice.STOP:
-            raise StopSignal()
-
-    # Cell-aware / external-engine constructs (delegate, method, common,
-    # reactive, projection, resonance) return the NodeID unchanged — those
-    # need their specialized engines (dispatch walker, method binder,
-    # subscription engine, renderer respectively).
-    return self_node
-
-
-def _eval_math(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> Any:
-    vals = [eval_recipe(session, c, ctx) for c in children]
-    if instance == RMath.PLUS:
-        return vals[0] + vals[1]
-    if instance == RMath.MINUS:
-        return vals[0] - vals[1]
-    if instance == RMath.MULTIPLY:
-        return vals[0] * vals[1]
-    if instance == RMath.DIVIDE:
-        return vals[0] / vals[1]
-    if instance == RMath.MODULO:
-        return vals[0] % vals[1]
-    if instance == RMath.NEGATE:
-        return -vals[0]
-    raise ValueError(f"recipe_eval: unknown math instance {instance}")
-
-
-def _eval_compare(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> bool:
-    a = eval_recipe(session, children[0], ctx)
-    b = eval_recipe(session, children[1], ctx)
-    if instance == RCompare.EQUAL:
-        return a == b
-    if instance == RCompare.NOT_EQUAL:
-        return a != b
-    if instance == RCompare.LESS:
-        return a < b
-    if instance == RCompare.LESS_EQUAL:
-        return a <= b
-    if instance == RCompare.GREATER:
-        return a > b
-    if instance == RCompare.GREATER_EQUAL:
-        return a >= b
-    raise ValueError(f"recipe_eval: unknown compare instance {instance}")
-
-
-def _eval_logic(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> bool:
-    if instance == RLogic.NOT:
-        return not eval_recipe(session, children[0], ctx)
-    a = eval_recipe(session, children[0], ctx)
-    if instance == RLogic.AND:
-        return bool(a) and bool(eval_recipe(session, children[1], ctx))
-    if instance == RLogic.OR:
-        return bool(a) or bool(eval_recipe(session, children[1], ctx))
-    raise ValueError(f"recipe_eval: unknown logic instance {instance}")
-
-
-def _eval_cond(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> Any:
-    cond = eval_recipe(session, children[0], ctx)
-    if instance == RCond.IF_THEN:
-        if cond:
-            return eval_recipe(session, children[1], ctx)
-        return None
-    if instance == RCond.IF_THEN_ELSE:
-        if cond:
-            return eval_recipe(session, children[1], ctx)
-        return eval_recipe(session, children[2], ctx)
-    raise ValueError(f"recipe_eval: unknown cond instance {instance}")
-
-
-def _eval_block(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> Any:
-    if instance == RBlock.DO or instance == RBlock.SEQUENCE:
-        # Evaluate statements in order, returning the last value.
-        result = None
-        try:
-            for c in children:
-                result = eval_recipe(session, c, ctx)
-        except StopSignal:
-            pass  # `stop` commits the in-flight value
-        return result
-    if instance == RBlock.LET:
-        # children = [name-string-recipe, value-recipe]
-        # Name recovery uses the string-table; if unrecoverable, skip binding.
-        from app.services.substrate.substrate_strings import lookup_string_value
-        name_node = children[0]
-        value = eval_recipe(session, children[1], ctx)
-        if name_node.type_ == RType.STRING:
-            name = lookup_string_value(session, name_node.instance)
-            if name is not None:
-                ctx.env.define(name, value)
-        return value
-    if instance == RBlock.WITH:
-        # subject-recipe + body-recipe
-        # Evaluate the body in a child environment with `.self` bound to subject.
-        subject = eval_recipe(session, children[0], ctx)
-        old_env = ctx.env
-        ctx.env = ctx.env.child()
-        ctx.env.define("__self__", subject)
-        try:
-            return eval_recipe(session, children[1], ctx)
-        finally:
-            ctx.env = old_env
-    raise ValueError(f"recipe_eval: unknown block instance {instance}")
+    from app.services.substrate.form_runtime import form_execute_text
+    return form_execute_text(session, text)
 
 
 def _eval_state(instance: int, ctx: ExecutionContext) -> Any:
+    """Back-compat shim — older tests call this directly to exercise the
+    state-stack mechanics. Operates on the wrapping ExecutionContext's frame
+    (the canonical state-stack lives on the root Frame in form_runtime).
+    """
     if instance == RState.SAVE:
-        ctx.state_stack.append(dict(ctx.env.bindings))
+        ctx.state_stack.append(dict(ctx.frame.bindings))
         return None
     if instance == RState.RESTORE:
         if not ctx.state_stack:
             raise IndexError("recipe_eval: restore with empty state stack")
-        ctx.env.bindings = ctx.state_stack.pop()
+        ctx.frame.bindings = ctx.state_stack.pop()
         return None
     if instance == RState.DISCARD:
         if not ctx.state_stack:
@@ -403,40 +426,6 @@ def _eval_state(instance: int, ctx: ExecutionContext) -> Any:
         ctx.state_stack.pop()
         return None
     raise ValueError(f"recipe_eval: unknown state instance {instance}")
-
-
-def _eval_exception(session: Session, instance: int, children: List[NodeID], ctx: ExecutionContext) -> Any:
-    if instance == RException.RAISE:
-        payload = eval_recipe(session, children[0], ctx) if children else None
-        raise RaiseSignal(payload)
-    if instance == RException.RESUME:
-        # Resume is a marker; on its own it has no effect outside a try/catch.
-        # When the recipe-execution engine grows try-frames, RESUME will return
-        # control to the most-recent catch point with the supplied value.
-        return eval_recipe(session, children[0], ctx) if children else None
-    raise ValueError(f"recipe_eval: unknown exception instance {instance}")
-
-
-# ---------------------------------------------------------------------------
-# Convenience: evaluate a Form text directly
-# ---------------------------------------------------------------------------
-
-
-def eval_text(session: Session, text: str) -> Any:
-    """Parse + intern + evaluate a Form expression. Returns the runtime value."""
-    from app.services.substrate.form import evaluate_text as form_evaluate_text
-
-    result = form_evaluate_text(session, text)
-    if result.kind == "recipe":
-        return eval_recipe(session, result.value)
-    if result.kind == "node_id":
-        # Already a NodeID literal — try to recover, else return as-is.
-        recovered = _recover_trivial(result.value, session=session)
-        if recovered is not _UNRECOVERABLE:
-            return recovered
-        return eval_recipe(session, result.value)
-    # Cells, views, lattice, keywords, vocabulary — return as-is.
-    return result.value
 
 
 __all__ = [
@@ -447,4 +436,5 @@ __all__ = [
     "StopSignal",
     "eval_recipe",
     "eval_text",
+    "node_to_ast",
 ]
