@@ -92,6 +92,203 @@ def RID_block() -> NodeID:
 
 
 # ---------------------------------------------------------------------------
+# Structured-composition primitives — discipline lives in
+# docs/coherence-substrate/structural-composition.md
+# ---------------------------------------------------------------------------
+
+
+def RID_block_do() -> NodeID:
+    """`R_Block.DO` — sequence-of-statements recipe (block container)."""
+    from app.services.substrate.category import RBlock
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.DO)
+
+
+def RID_block_let() -> NodeID:
+    """`R_Block.LET` — `(key, value)` named-field pair recipe.
+
+    This is the load-bearing primitive for named fields: a LET recipe with
+    two children is the substrate's native shape for `key: value`.
+    The discipline says: never collapse a frontmatter field into a
+    positional value-only recipe; always express the name participation.
+    """
+    from app.services.substrate.category import RBlock
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.LET)
+
+
+def RID_block_sequence() -> NodeID:
+    """`R_Block.SEQUENCE` — ordered list recipe (preserves element shape)."""
+    from app.services.substrate.category import RBlock
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.SEQUENCE)
+
+
+def RID_compose_member_of() -> NodeID:
+    """`R_Compose.MEMBER_OF` — typed-token reference recipe.
+
+    Used to encode `type: feedback` as `MEMBER_OF[token-cell, domain-cell]`
+    rather than as a free string. The token-cell's *existence in the
+    substrate* is what makes the value valid.
+    """
+    from app.services.substrate.category import RCompose
+    return NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.MEMBER_OF)
+
+
+def substrate_string_recipe(session: Session, value: str) -> NodeID:
+    """A trivial String recipe carrying `value` via the substrate string-table.
+
+    Cross-process stable: same string → same instance → same NodeID. This
+    is the value-leaf primitive. Unlike the legacy hash-based encoding
+    (which collides + can't be reversed), this is recoverable: given the
+    NodeID's instance, `lookup_string_value(session, instance)` returns
+    the original string.
+    """
+    from app.services.substrate.substrate_strings import intern_string_instance
+    inst = intern_string_instance(session, value)
+    return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
+
+
+def substrate_slug_recipe(session: Session, value: str) -> NodeID:
+    """A trivial Slug recipe (RType.SLUG=6) carrying `value`.
+
+    Slugs and Strings are categorically distinct in the substrate even
+    though they share the substrate_strings interning table for instance
+    allocation — a Slug carries the *identity-role* (query key); a String
+    carries the *content-role* (value). Same value, different type-tag.
+    """
+    from app.services.substrate.substrate_strings import intern_string_instance
+    inst = intern_string_instance(session, value)
+    return NodeID(1, Level.TRIVIAL, RType.SLUG, inst)
+
+
+def named_field_recipe(
+    session: Session,
+    key: str,
+    value_recipe_id: NodeID,
+    value_blueprint: Optional[NodeID] = None,
+) -> NodeID:
+    """Compose a `(key, value)` named-field pair via R_Block.LET.
+
+    `key` is interned as a Slug-recipe (identity-role).
+    `value_recipe_id` is the already-composed value recipe.
+
+    Returns the interned LET NodeID. Two named-field pairs with the same
+    key AND structurally-identical value-recipes share a NodeID — the
+    substrate's content-addressing carries the equivalence automatically.
+    """
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+    key_id = substrate_slug_recipe(session, key)
+    return intern_node(
+        session, DOMAIN_RECIPE, RID_block_let(), [key_id, value_recipe_id]
+    )
+
+
+def list_recipe(session: Session, element_recipe_ids: List[NodeID]) -> NodeID:
+    """Compose a list as R_Block.SEQUENCE with one child per element.
+
+    Preserves order. Two lists with identical element shape AND identical
+    element values share a NodeID — substrate sees them as the same list.
+    """
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+    return intern_node(
+        session, DOMAIN_RECIPE, RID_block_sequence(), element_recipe_ids
+    )
+
+
+def structured_value_recipe(session: Session, value: Any) -> NodeID:
+    """Compose any frontmatter value into its substrate-resident recipe shape.
+
+    Recursive: lists become R_Block.SEQUENCE; dicts become R_Block.DO with
+    LET children; scalars become typed trivial recipes via substrate_strings.
+
+    The composition is structure-first by default. Leaf-by-great-reason
+    only applies to:
+      - genuinely atomic scalars (the SubstrateString at the bottom)
+      - paths and URLs (PATH / URL leaf-recipes)
+      - dates (DATE leaf-recipes)
+    """
+    from app.services.substrate.substrate_strings import intern_string_instance
+
+    if value is None:
+        # Null leaf — RType.NULL has instance 0.
+        return NodeID(1, Level.TRIVIAL, RType.NULL, 0)
+
+    if isinstance(value, bool):
+        return NodeID(1, Level.TRIVIAL, RType.BOOL, 1 if value else 0)
+
+    if isinstance(value, int):
+        # Encode non-negative integers via instance + 1 (instance=0 is null).
+        # Negative integers route through string-encoded form preserving sign.
+        if value >= 0:
+            return NodeID(1, Level.TRIVIAL, RType.INTEGER, value + 1)
+        inst = intern_string_instance(session, str(value))
+        return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
+
+    if isinstance(value, float):
+        inst = intern_string_instance(session, repr(value))
+        return NodeID(1, Level.TRIVIAL, RType.DECIMAL, inst)
+
+    if isinstance(value, str):
+        # A string value is a SubstrateString-recipe with the value itself
+        # interned via the substrate string-table — fully recoverable.
+        return substrate_string_recipe(session, value)
+
+    if isinstance(value, list):
+        children = [structured_value_recipe(session, item) for item in value]
+        return list_recipe(session, children)
+
+    if isinstance(value, dict):
+        # A dict becomes R_Block.DO with one R_Block.LET per key.
+        from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+        pairs = []
+        for k in sorted(value.keys()):
+            v_recipe = structured_value_recipe(session, value[k])
+            pairs.append(named_field_recipe(session, str(k), v_recipe))
+        if not pairs:
+            return NodeID(1, Level.TRIVIAL, RType.EMPTY, 0)
+        return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
+
+    # Unknown type — fall back to string repr (preserves recoverability)
+    inst = intern_string_instance(session, repr(value))
+    return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
+
+
+def frontmatter_to_structured_ctor(
+    session: Session, frontmatter: Dict[str, Any]
+) -> Optional[NodeID]:
+    """Build a fully-expressed CTOR recipe from frontmatter.
+
+    Unlike the legacy `frontmatter_to_*` encoder (which produces type-marker
+    string-recipes that lose all values), this preserves every value as a
+    recoverable substrate-resident recipe. The shape is:
+
+        CTOR (R_Block.DO)
+        ├── NamedField (R_Block.LET) — key:slug, value:recipe
+        ├── NamedField (R_Block.LET)
+        └── ...
+
+    Values are recursively composed: lists become R_Block.SEQUENCE,
+    dicts become R_Block.DO with LET children, scalars become typed
+    trivial recipes via the substrate string-table. The tree extends
+    as deep as the data goes — no flattening.
+
+    Returns None if frontmatter is empty. Otherwise returns the
+    interned CTOR NodeID. Two cells with identical frontmatter values
+    share a CTOR NodeID through content-addressed interning.
+    """
+    if not frontmatter:
+        return None
+
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+
+    pairs = []
+    for key in sorted(frontmatter.keys()):
+        value_recipe = structured_value_recipe(session, frontmatter[key])
+        pair = named_field_recipe(session, key, value_recipe)
+        pairs.append(pair)
+
+    return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
+
+
+# ---------------------------------------------------------------------------
 # Frontmatter parsing
 # ---------------------------------------------------------------------------
 
@@ -283,12 +480,22 @@ def body_to_access_recipe(
 # ---------------------------------------------------------------------------
 
 
-def ingest_memory_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
+def ingest_memory_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
     """Ingest one memory file into the substrate.
+
+    `structured=True` activates the composition-discipline encoder
+    (named-pair CTORs with substrate-resident values). Default is the
+    legacy encoder for backward compatibility during migration. See
+    docs/coherence-substrate/structural-composition.md.
 
     Returns (NamedCell, blueprint NodeID, ctor recipe NodeID).
     """
-    return _ingest_markdown_file(session, path, "memory", BID_memory(), name_field="name")
+    return _ingest_markdown_file(
+        session, path, "memory", BID_memory(),
+        name_field="name", structured=structured,
+    )
 
 
 def ingest_spec_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
@@ -358,6 +565,7 @@ def _ingest_markdown_file(
     domain: str,
     domain_blueprint: NodeID,
     name_field: Optional[str] = None,
+    structured: bool = False,
 ) -> Tuple[Any, NodeID, NodeID]:
     """Generic ingestion path — domain + domain blueprint + optional name field."""
     return _ingest_markdown_payload(
@@ -367,6 +575,7 @@ def _ingest_markdown_file(
         domain_blueprint=domain_blueprint,
         name_field=name_field,
         source_path=str(path),
+        structured=structured,
     )
 
 
@@ -377,8 +586,16 @@ def _ingest_markdown_payload(
     domain_blueprint: NodeID,
     name_field: Optional[str] = None,
     source_path: Optional[str] = None,
+    structured: bool = False,
 ) -> Tuple[Any, NodeID, NodeID]:
-    """Shared ingest core — operates on already-parsed markdown."""
+    """Shared ingest core — operates on already-parsed markdown.
+
+    `structured=True` activates the new composition-discipline encoder
+    (frontmatter_to_structured_ctor) which produces a fully-expressed
+    CTOR with named-pair recipes and substrate-resident values, instead
+    of the legacy type-marker encoder. See
+    docs/coherence-substrate/structural-composition.md.
+    """
     name = None
     if name_field:
         name = parsed.frontmatter.get(name_field)
@@ -397,33 +614,35 @@ def _ingest_markdown_payload(
     blueprint_id = frontmatter_to_blueprint(session, parsed.frontmatter, domain_blueprint)
 
     # Build the CTOR recipe — captures frontmatter-as-seed.
-    # We represent it as a Block recipe whose children are string-literal
-    # recipes for each frontmatter key-value pair. This is enough for
-    # structural identity (two memories with the same frontmatter keys+types
-    # produce the same CTOR shape), and the actual values live in the
-    # source file (and on disk).
-    from app.services.substrate.substrate_strings import intern_string_instance
-    ctor_children = []
-    for key in sorted(parsed.frontmatter.keys()):
-        # Each entry is a string-literal whose instance encodes the key.
-        # Cross-process stable via the substrate string-table.
-        marker = f"{key}={type(parsed.frontmatter[key]).__name__}"
-        inst = intern_string_instance(session, marker)
-        ctor_children.append(
-            Recipe(
-                category=NodeID(1, Level.TRIVIAL, RType.STRING, inst),
-                blueprint=BID_string(),
-            )
-        )
-    if ctor_children:
-        ctor_recipe = Recipe(
-            category=RID_block(),
-            blueprint=blueprint_id,
-            children=ctor_children,
-        )
-        ctor_id = ctor_recipe.make_self_id(session)
+    if structured:
+        # New path — composition-discipline encoder. Every value reaches
+        # the substrate as a structured recipe; the tree extends as deep
+        # as the data goes. See structural-composition.md.
+        ctor_id = frontmatter_to_structured_ctor(session, parsed.frontmatter)
     else:
-        ctor_id = None
+        # Legacy path — type-marker string-recipes per key. Preserves
+        # shape, loses values. Kept for backward compatibility during
+        # migration; new ingests should pass structured=True.
+        from app.services.substrate.substrate_strings import intern_string_instance
+        ctor_children = []
+        for key in sorted(parsed.frontmatter.keys()):
+            marker = f"{key}={type(parsed.frontmatter[key]).__name__}"
+            inst = intern_string_instance(session, marker)
+            ctor_children.append(
+                Recipe(
+                    category=NodeID(1, Level.TRIVIAL, RType.STRING, inst),
+                    blueprint=BID_string(),
+                )
+            )
+        if ctor_children:
+            ctor_recipe = Recipe(
+                category=RID_block(),
+                blueprint=blueprint_id,
+                children=ctor_children,
+            )
+            ctor_id = ctor_recipe.make_self_id(session)
+        else:
+            ctor_id = None
 
     # Build the access-recipe (what reading the cell evaluates to).
     access_id = body_to_access_recipe(session, parsed.body, blueprint_id)

@@ -11,7 +11,8 @@ Usage:
     coh_substrate.py stats                              # lattice statistics
     coh_substrate.py equivalent <domain> <name>         # structural equivalents
     coh_substrate.py annotate <path>                    # substrate context for a file
-    coh_substrate.py form "<expression>"                # evaluate a Form expression
+    coh_substrate.py form "<expression>"                # evaluate (intern as recipe / return substrate answer)
+    coh_substrate.py run "<expression>"                 # execute (run the recipe, return its value)
 
 For detail on Form syntax see docs/coherence-substrate/form-language.md.
 For agent grounding patterns see docs/coherence-substrate/agents-using-substrate.md.
@@ -30,6 +31,7 @@ from app.services.substrate import (  # noqa: E402
     annotate_path,
     find_equivalent_cells,
     form_evaluate_text,
+    form_execute_text,
     form_serialize_cell,
     form_serialize_node_id,
     ingest_concept_file,
@@ -201,6 +203,60 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_run(args: argparse.Namespace) -> int:
+    """Execute a Form expression — actually run the recipe, return a value.
+
+    Distinct from `form`: that interns the expression as a Recipe NodeID
+    and returns the substrate's structural answer (NodeID / cells / view).
+    This runs the expression and returns its computed value, the same way
+    Python runs `1 + 2` to `3`.
+    """
+    from app.services.substrate.form_speculation import FailSignal
+
+    try:
+        with session_scope() as session:
+            value = form_execute_text(session, args.expression)
+    except FailSignal as exc:
+        print(f"Form runtime: {exc}", file=sys.stderr)
+        return 2
+    except (SyntaxError, NameError, LookupError, TypeError, ZeroDivisionError) as exc:
+        print(f"Form runtime: {exc}", file=sys.stderr)
+        return 1
+
+    from app.services.substrate.kernel import CellView, NamedCell, NodeID
+
+    if args.json:
+        if isinstance(value, NodeID):
+            print(json.dumps({"value": form_serialize_node_id(value)}))
+        elif isinstance(value, NamedCell):
+            print(json.dumps({
+                "value": form_serialize_cell(value),
+                "domain": value.domain,
+                "name": value.name,
+            }))
+        elif isinstance(value, CellView):
+            print(json.dumps({
+                "cell": form_serialize_cell(value.cell),
+                "view_blueprint": form_serialize_node_id(value.view_blueprint),
+                "compatible": value.compatible,
+            }))
+        else:
+            print(json.dumps({"value": value}))
+    else:
+        if isinstance(value, NodeID):
+            print(form_serialize_node_id(value))
+        elif isinstance(value, NamedCell):
+            print(form_serialize_cell(value))
+        elif isinstance(value, CellView):
+            mark = "✓" if value.compatible else "✗"
+            print(f"{form_serialize_cell(value.cell)} |> {form_serialize_node_id(value.view_blueprint)}  {mark}")
+        elif value is None:
+            print("null")
+        else:
+            print(value)
+    return 0
+
+
 def cmd_form(args: argparse.Namespace) -> int:
     try:
         with session_scope() as session:
@@ -292,6 +348,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_form = sub.add_parser("form", help="Evaluate a Form expression")
     p_form.add_argument("expression")
+
+    p_run = sub.add_parser(
+        "run",
+        help="Execute a Form expression — run the recipe, return its value",
+    )
+    p_run.add_argument("expression")
 
     p_disc = sub.add_parser(
         "discover",
@@ -415,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_annotate(args)
     if args.cmd == "form":
         return cmd_form(args)
+    if args.cmd == "run":
+        return cmd_run(args)
     if args.cmd == "discover":
         return cmd_discover(args)
     if args.cmd == "sense":
