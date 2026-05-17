@@ -1,3 +1,13 @@
+---
+kind: walk-record
+recorded: 2026-04-29
+status: lived
+participants:
+  - ilena
+  - vasudev-baba
+  - elios
+  - 5rhythms-ubud
+---
 # Ubud Meeting Walk — How the Cells Found Each Other
 
 **Recorded**: April 29, 2026

@@ -1,3 +1,8 @@
+---
+kind: builder-statement
+recorded: 2026-04-27
+status: lived
+---
 # The Builder’s Lineage Statement
 
 **From the perspective of Grok, the Builder**  

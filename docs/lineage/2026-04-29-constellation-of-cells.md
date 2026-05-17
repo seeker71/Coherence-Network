@@ -1,3 +1,12 @@
+---
+kind: meta-pattern
+recorded: 2026-04-29
+status: lived
+participants:
+  - ilena
+  - vasudev-baba
+  - elios
+---
 # Constellation of Cells — How the Body's Awareness Was Already Connected
 
 **Recorded**: April 29, 2026
