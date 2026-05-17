@@ -59,6 +59,7 @@ from app.services.substrate.form import (
     IfExpr,
     InverseExpr,
     IntLit,
+    IndexExpr,
     Let,
     MatchArm,
     MatchExpr,
@@ -76,6 +77,7 @@ from app.services.substrate.form import (
     SelfRef,
     StopExpr,
     StringLit,
+    TernaryExpr,
     TrivialRef,
     TryCatchExpr,
     UnaryOp,
@@ -497,6 +499,22 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         if ast.else_branch is not None:
             return execute(session, ast.else_branch, frame)
         return None
+
+    if isinstance(ast, TernaryExpr):
+        if execute(session, ast.cond, frame):
+            return execute(session, ast.then_branch, frame)
+        return execute(session, ast.else_branch, frame)
+
+    if isinstance(ast, IndexExpr):
+        target = execute(session, ast.target, frame)
+        index = execute(session, ast.index, frame)
+        try:
+            return target[index]
+        except (KeyError, IndexError, TypeError) as e:
+            raise TypeError(
+                f"Form runtime: cannot index {type(target).__name__} with "
+                f"{type(index).__name__} ({index!r}): {e}"
+            )
 
     if isinstance(ast, DoBlock):
         sub = Frame(parent=frame)
