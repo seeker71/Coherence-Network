@@ -1,3 +1,16 @@
+---
+kind: lived-lineage
+recorded: 2026-04-26
+status: lived
+participants:
+  - 5rhythms-ubud
+  - paradiso-ubud
+  - mudra-cafe
+  - sayuri-healing-food
+  - adiwana-svarga-loka
+  - agada-holistic
+  - ida-bagus-kesnawa
+---
 # Ubud Embodied Lineage
 
 **Recorded**: April 26, 2026  

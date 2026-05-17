@@ -1,3 +1,8 @@
+---
+kind: repository-lineage
+recorded: 2026-04-26
+status: lived
+---
 # Lineage of the Three Attempts
 
 **Created by**: seeker71  
