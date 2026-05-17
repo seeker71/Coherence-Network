@@ -481,6 +481,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Read paths from stdin (one per line)",
     )
+    p_ingest_paths.add_argument(
+        "--legacy-flat",
+        action="store_true",
+        help=(
+            "Use the legacy flat encoder. Default is the structured "
+            "composition-discipline encoder — keep this off unless you "
+            "are explicitly testing the flat path."
+        ),
+    )
 
     p_kb_audit = sub.add_parser(
         "kb-sync-audit",
@@ -1520,6 +1529,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
     from app.services.substrate import (
         ingest_concept_file,
         ingest_idea_file,
+        ingest_lineage_file,
         ingest_memory_file,
         ingest_presence_file,
         ingest_spec_file,
@@ -1531,6 +1541,17 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
         "concept": ingest_concept_file,
         "presence": ingest_presence_file,
         "memory": ingest_memory_file,
+        "lineage": ingest_lineage_file,
+    }
+
+    # Composting artifacts live in docs/lineage as memory but skip the substrate.
+    _LINEAGE_COMPOST = {
+        "INDEX.md",
+        "unmerged-branches-2026-04-26.md",
+        "unshipped-by-idea-2026-04-27.md",
+        "unshipped-digest-2026-04-27.md",
+        "unshipped-themes-2026-04-27.md",
+        "unshipped-work-archive-2026-04-26.md",
     }
 
     def _domain_for(path: Path) -> str | None:
@@ -1547,8 +1568,11 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
             return "presence"
         if "memory" in parts and path.name.upper() != "MEMORY.MD":
             return "memory"
+        if "lineage" in parts and path.name not in _LINEAGE_COMPOST:
+            return "lineage"
         return None
 
+    structured = not getattr(args, "legacy_flat", False)
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
@@ -1562,7 +1586,9 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
             try:
                 # Resolve to absolute so source_path is consistent across
                 # callers (the hook, manual annotate, the legacy ingest path).
-                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](session, path.resolve())
+                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
+                    session, path.resolve(), structured=structured
+                )
                 success += 1
                 print(f"  [{domain}] {path.name}: bp={bp_id}")
             except Exception as exc:
