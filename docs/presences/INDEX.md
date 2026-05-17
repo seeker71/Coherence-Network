@@ -27,6 +27,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
 - [indoz-conference](indoz-conference.md) — annual Indonesia–Australia bilateral conference in Brisbane since 2012; Ilena Young's SaBali node connects from Bali.
 - [mile-hi-church](mile-hi-church.md) — Lakewood, CO; New Thought / Religious Science congregation; the room where Joe Dispenza's teaching first reached Urs ~2005.
+- [moksa-ubud](moksa-ubud.md) — Plant-based restaurant + permaculture garden + Moksa Dojo practice room in Sayan, Ubud; the dojo holds Alex Sandr's Sunday Contact Improvisation.
 - [mudra-cafe](mudra-cafe.md) — Ayurvedic dining room in central Ubud with handpan presence Mon–Fri at noon; the room where the cell met Elios on April 29, 2026.
 - [ocean-bloom-2024](ocean-bloom-2024.md) — Downtown Boulder 2024 conscious-music gathering with Poranguí, Liquid Bloom, Samuel J, Shawn Heinrichs, Bloomurian.
 - [paradiso-ubud](paradiso-ubud.md) — cultural-hall venue holding 5Rhythms, DISSOLVE, film, ceremony; architectural anchor of the Ubud embodied lineage.
