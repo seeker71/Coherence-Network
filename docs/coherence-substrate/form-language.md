@@ -806,7 +806,26 @@ invoke greet on @concept(lc-a)
 ?project @geometric_form(triad) @concept(radial-coord-fn)
 ```
 
-Each interns as its own Recipe NodeID under its `RBasic` category. The shared dependency that activates runtime semantics for ALL of these is the **recipe-execution engine** — one named follow-on rather than eight per-construct gaps. Today the form carries the intent; when the engine lands, each construct's behavior activates from the same recipe-walking interpreter.
+Each interns as its own Recipe NodeID under its `RBasic` category.
+
+## Recipe-execution engine — ✓ landed for the pure-computation core
+
+[`api/app/services/substrate/recipe_eval.py`](../../api/app/services/substrate/recipe_eval.py) is the shared dependency named above. It walks a Recipe NodeID, reads the row, parses the serialized `(category, [child_ids])` shape, dispatches on category, recurses. Pure-computation primitives become alive at runtime:
+
+```python
+from app.services.substrate import recipe_eval_text
+
+recipe_eval_text(s, "1 + 2 * 3")                  # → 7
+recipe_eval_text(s, "if 5 > 3 then 100 else 200") # → 100
+recipe_eval_text(s, "do { 1 + 1; 2 + 2; 3 + 3 }") # → 6
+recipe_eval_text(s, "fail")                       # → raises FailSignal
+recipe_eval_text(s, "do { 1 + 2; stop; 99 }")     # → 3  (stop commits in-flight)
+recipe_eval_text(s, "raise")                      # → raises RaiseSignal
+```
+
+**Activated at runtime:** math, compare, logic, cond (if-then/if-then-else), block (do/let/with), state (save/restore/discard via `ExecutionContext.state_stack`), exception (raise/resume), choice signals (fail/stop). Bare-leaf primitives (which don't get rows in `substrate_nodes`) dispatch via `_dispatch_bare_leaf` so the runtime semantics fire from the NodeID coordinates directly.
+
+**Specialized engines remain named honestly, scoped to their own layers:** `@cell-ref` resolution against the cell graph, `delegate` dispatch chain walking, `method NAME on @X { body }` invocation, `common @X @Y` multi-base reconciliation, `?on_change` subscription firing, `?project` rendering. The interpreter returns the recipe NodeID unchanged for these — the form layer carries the intent; the specialized engine fires the behavior when that layer ships.
 
 ```form
 save                 # → recipe @1.2.22.1   (RBasic.STATE=22, RState.SAVE=1)
