@@ -92,12 +92,12 @@ defn ev(n) = match n.category {
     # RBasic.COND (11) — conditional
     @1.2.11.1 => if ev(n.children[0]) then ev(n.children[1]) else null,
     @1.2.11.2 => if ev(n.children[0]) then ev(n.children[1]) else ev(n.children[2]),
-    # Trivial leaves — decode by category-instance under RType
-    _ => if n.category.level == 1 then
-            (if n.category.type_ == 3 then n.instance - 1                # INTEGER
-             else if n.category.type_ == 2 then (if n.instance == 1 then true else false)  # BOOL
-             else 0)
-         else 0
+    # Trivial leaf — delegate to substrate's own decoder.
+    # `.value` is the single source of truth for the leaf encoding
+    # (NULL / BOOL / INTEGER / STRING).  Raises on composites — which
+    # is the right shape: a composite without an explicit arm above is
+    # an unknown verb the engine should refuse to silently fake.
+    _ => n.value
 }
 # >>> END engine
 
@@ -114,6 +114,10 @@ defn ev(n) = match n.category {
 #   n.instance   — trivial leaf payload (raw int from the NodeID 4-tuple)
 #   n.level      — 1=TRIVIAL, 2=BASIC, 3+=COMPLEX_k
 #   n.type_      — RBasic / RType slot index
+#   n.value      — decoded Python value for trivials (NULL / BOOL /
+#                  INTEGER / STRING).  Raises on composites; the
+#                  single source of truth for the leaf encoding so the
+#                  Python engine and the Form engine read it once.
 #
 # Match-on-NodeID works today because NodeID's frozen-dataclass __eq__
 # is what `match` compares; `@p.l.t.i` literals are first-class values.

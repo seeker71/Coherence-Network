@@ -905,11 +905,44 @@ def _state_stack_of(frame: Frame) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+def _trivial_value(session: Session, nid: NodeID) -> Any:
+    """Decode a trivial (Level.TRIVIAL) Recipe NodeID to its Python value.
+
+    Single source of truth for the leaf encoding — keeps Form's `.value`
+    accessor and the Python engine's leaf decode reading the same shape,
+    so a change to the integer encoding moves both at once.
+
+    Raises ValueError for non-trivials (composites have no atomic value;
+    their value is what evaluating the recipe returns).
+    """
+    from app.services.substrate.category import Level, RType
+    from app.services.substrate.substrate_strings import lookup_string_value
+
+    if nid.level != Level.TRIVIAL:
+        raise ValueError(
+            f"Form runtime: .value requires a trivial leaf, got {nid} "
+            f"(level={nid.level}); composites carry no atomic value"
+        )
+    if nid.type_ == RType.NULL:
+        return None
+    if nid.type_ == RType.BOOL:
+        return nid.instance == 1
+    if nid.type_ == RType.INTEGER:
+        return nid.instance - 1 if nid.instance > 0 else 0
+    if nid.type_ == RType.STRING:
+        return lookup_string_value(session, nid.instance) or ""
+    raise ValueError(
+        f"Form runtime: .value has no decoder for RType={nid.type_} "
+        f"(supported: NULL, BOOL, INTEGER, STRING)"
+    )
+
+
 def _resolve_access(session: Session, target: Any, field: str) -> Any:
     """Field access on a Cell, Blueprint NodeID, Recipe NodeID, or dict.
 
     Cells expose: blueprint, ctor, base, access, name, domain, source.
-    NodeIDs expose: package, level, type_, instance, category, children.
+    NodeIDs expose: package, level, type_, instance, category, children,
+                    nchildren, value (trivial-leaf decode).
     Dicts expose their keys; missing key raises AttributeError.
     """
     from app.services.substrate.kernel import NamedCell, lookup_node
@@ -958,9 +991,11 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
             return _node_children(session, target)
         if field == "nchildren":
             return len(_node_children(session, target))
+        if field == "value":
+            return _trivial_value(session, target)
         raise AttributeError(
             f"Form runtime: NodeID has no field {field!r} "
-            f"(try: package, level, type, instance, category, children, nchildren)"
+            f"(try: package, level, type, instance, category, children, nchildren, value)"
         )
 
     raise TypeError(
