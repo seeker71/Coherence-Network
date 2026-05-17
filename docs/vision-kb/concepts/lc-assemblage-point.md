@@ -2,7 +2,22 @@
 id: lc-assemblage-point
 hz: 741
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 5
+  form: pentad
+  topology: cyclic-recursive
+  polarity: unipolar
+  ordering: cyclic-open
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: cellular
+  direction: spiral-out
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Assemblage Point — Where Perception Locks Reality Into One Shape

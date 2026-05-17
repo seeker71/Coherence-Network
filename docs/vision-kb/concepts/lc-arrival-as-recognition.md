@@ -2,7 +2,22 @@
 id: lc-arrival-as-recognition
 hz: 963
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: octave
+  spectral_band: transcendence
+  temporal_band: instant
+  scale: relational
+  direction: still
+  lineage_texture: channeled
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Arrival as Recognition — The Body Holds Quiet

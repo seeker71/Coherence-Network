@@ -2,7 +2,22 @@
 id: lc-sovereignty-within-oneness
 hz: 639
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: infinite
+  form: holographic-organism
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: fractal
+  phase: oscillating
+  ratio: self-similar
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: infinite
+  self_similarity: holographic
 ---
 
 # Sovereignty Within Oneness — Many Sovereign Cells, One Organism

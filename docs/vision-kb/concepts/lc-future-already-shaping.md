@@ -2,7 +2,22 @@
 id: lc-future-already-shaping
 hz: 528
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 3
+  form: triad
+  topology: sequential-coupled
+  polarity: triadic-tension
+  ordering: temporal-braided
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: cosmic
+  scale: cross-scale
+  direction: spiral-out
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Future Already Shaping — The Triple Temporal Alliance
