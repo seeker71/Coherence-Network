@@ -308,6 +308,92 @@ _BUILTIN_IDENTIFIERS: Dict[str, Any] = {
 }
 
 
+# Built-in functions — invokable from FnCall when the name isn't bound to a Closure.
+# Each value is a Python callable receiving the evaluated positional args.
+def _builtin_map(fn, xs):
+    if not isinstance(xs, list):
+        raise TypeError("Form runtime: map expects a list as second argument")
+    if isinstance(fn, Closure):
+        return [_invoke_closure(fn, [x]) for x in xs]
+    if callable(fn):
+        return [fn(x) for x in xs]
+    raise TypeError("Form runtime: map expects a callable as first argument")
+
+
+def _builtin_filter(pred, xs):
+    if not isinstance(xs, list):
+        raise TypeError("Form runtime: filter expects a list as second argument")
+    if isinstance(pred, Closure):
+        return [x for x in xs if _invoke_closure(pred, [x])]
+    if callable(pred):
+        return [x for x in xs if pred(x)]
+    raise TypeError("Form runtime: filter expects a callable as first argument")
+
+
+def _builtin_fold(fn, init, xs):
+    if not isinstance(xs, list):
+        raise TypeError("Form runtime: fold expects a list as third argument")
+    acc = init
+    if isinstance(fn, Closure):
+        for x in xs:
+            acc = _invoke_closure(fn, [acc, x])
+        return acc
+    if callable(fn):
+        for x in xs:
+            acc = fn(acc, x)
+        return acc
+    raise TypeError("Form runtime: fold expects a callable as first argument")
+
+
+def _invoke_closure(closure: "Closure", args: list) -> Any:
+    """Helper: invoke a Form Closure (with proper frame chaining) from a built-in.
+
+    Pulls the active session out via a module-level slot the execute() loop
+    populates before each call. This keeps the built-in API session-agnostic
+    while still allowing closures (which need the session for substrate ops)
+    to execute correctly.
+    """
+    if len(args) != len(closure.params):
+        raise TypeError(
+            f"Form runtime: closure `{closure.name}` takes {len(closure.params)} arg(s), "
+            f"got {len(args)}"
+        )
+    call_frame = Frame(parent=closure.defining_frame)
+    for name, value in zip(closure.params, args):
+        call_frame.bindings[name] = value
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: no active session for closure invocation")
+    return execute(sess, closure.body, call_frame)
+
+
+# Per-call session slot for built-ins that invoke closures.
+_CURRENT_SESSION: list = [None]
+
+
+_BUILTIN_FUNCTIONS: Dict[str, Any] = {
+    # List ops
+    "len": lambda x: len(x),
+    "head": lambda xs: xs[0] if xs else None,
+    "tail": lambda xs: xs[1:] if xs else [],
+    "reverse": lambda xs: list(reversed(xs)) if isinstance(xs, list) else xs[::-1],
+    "concat": lambda a, b: a + b,
+    "map": _builtin_map,
+    "filter": _builtin_filter,
+    "fold": _builtin_fold,
+    "range": lambda *args: list(range(*args)),
+    # Type coercion
+    "str": lambda x: str(x),
+    "int": lambda x: int(x),
+    "bool": lambda x: bool(x),
+    # Numeric
+    "min": lambda *xs: min(*xs) if len(xs) > 1 else min(xs[0]),
+    "max": lambda *xs: max(*xs) if len(xs) > 1 else max(xs[0]),
+    "sum": lambda xs: sum(xs),
+    "abs": lambda x: abs(x),
+}
+
+
 # ---------------------------------------------------------------------------
 # execute — walk the AST
 # ---------------------------------------------------------------------------
@@ -476,6 +562,15 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         return closure
 
     if isinstance(ast, FnCall):
+        # Built-in first, then frame lookup, so the body can override
+        # `len`/`map`/etc. with a user defn if it chooses.
+        if ast.name in _BUILTIN_FUNCTIONS and not frame.has(ast.name):
+            evaluated = [execute(session, a, frame) for a in ast.args]
+            _CURRENT_SESSION[0] = session
+            try:
+                return _BUILTIN_FUNCTIONS[ast.name](*evaluated)
+            finally:
+                _CURRENT_SESSION[0] = None
         callable_value = frame.lookup(ast.name)
         if not isinstance(callable_value, Closure):
             raise TypeError(
