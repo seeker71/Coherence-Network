@@ -232,7 +232,7 @@ After each domain's encoder ships:
 - ✓ Great-reason criterion explicit
 - ✓ Memory encoder shipped — [`ingest_memory_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py). Named-pair LET children with substrate-resident, recoverable values.
 - ✓ Concept encoder shipped — [`ingest_concept_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py). In addition to structured CTOR: authors `parent` as a `R_Compose.PARENT_OF` cell-ref recipe, each `cross_refs` entry as a `R_Compose.CROSS_REF` recipe, and routes `hz` + `geometry.*` through `author_geometry_signature` (HARMONIC_AT / SHAPES / EMBEDS_IN / CARRIES_RATIO resonance edges). Idempotent via content-addressing; cell-ref edges to not-yet-ingested concepts skip silently (a second-pass closes the loop).
-- ☐ Spec + Idea encoders
+- ✓ Spec + Idea encoders shipped (paired) — [`ingest_spec_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py) authors `idea_id` as `R_Realize.REALIZE` recipe (spec → idea). [`ingest_idea_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py) authors `specs[]` as the reverse `R_Realize.REALIZE` recipes (same direction, same NodeID when both sides ingest — content-addressing makes the integrity automatic) and `absorbed_ideas[]` as `R_Basic.ABSORB` recipes. Markdown-link list entries (`[name](path/slug.md)`) normalize to the basename slug. Edges to not-yet-ingested cells skip silently.
 - ☐ Presence + Lineage encoders
 - ☐ Witness + Task encoders
 - ☐ Re-ingest pass for the 44 memory cells + 128 specs + 17 ideas + 114 concepts already in the substrate
