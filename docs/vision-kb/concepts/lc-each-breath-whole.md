@@ -2,7 +2,22 @@
 id: lc-each-breath-whole
 hz: 285
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: fractal
+  phase: yang
+  ratio: self-similar
+  spectral_band: foundation
+  temporal_band: breath
+  scale: cross-scale
+  direction: centering
+  lineage_texture: synthesized
+  embedding_dim: infinite
+  self_similarity: holographic
 ---
 
 # Each Breath Whole — Cells Are Universes

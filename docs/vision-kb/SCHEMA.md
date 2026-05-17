@@ -10,6 +10,21 @@ id: lc-space
 hz: 432
 status: seed | expanding | mature | complete
 updated: 2026-04-13
+geometry:                              # optional — see "Geometric Signature" below
+  arity: 7
+  form: heptad
+  topology: cyclic-closed
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: personal
+  direction: ascending
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Concept Name
@@ -57,6 +72,31 @@ Each entry is a Pollinations prompt + caption:
 ## Cross-References
 → concept-id-1, concept-id-2, concept-id-3
 ```
+
+## Geometric Signature
+
+The optional `geometry:` block authors a concept's *structural shape* into the substrate alongside its prose. Two concepts with matching signatures intern to the same Blueprint NodeID — cross-discipline resonance becomes a substrate query, not a lexical search. Read [`docs/coherence-substrate/agents-using-substrate.md`](../coherence-substrate/agents-using-substrate.md) for the kernel that receives this.
+
+The principle: **author the shape that is actually there, not the shape that resolves the teaching to one identity.** Permissive — multiple geometries are honest where the teaching carries multiple.
+
+| Field | Values | Meaning |
+|---|---|---|
+| `arity` | `1`, `2`, `3`, `5`, `7`, `9`, `12`, `13`, `infinite`, ... | Cardinality of named parts |
+| `form` | `point`, `dyad-mirror`, `triad`, `tetrad`, `pentad`, `hexad`, `heptad`, `ennead`, `dodecad`, `tridecad`, `spiral`, `ring`, `cross`, `lattice`, `web`, `tree`, `dodecahedron`, `holographic-cell`, `interior-axis`, ... | Geometric form |
+| `topology` | `linear`, `cyclic-closed`, `cyclic-open` (spiral), `radial`, `nested`, `fractal`, `web-each-to-each`, `hub-spoke`, `parallel`, `parallel-facets`, `parallel-strategies`, `sequential-coupled`, `nested-each-contains-whole`, `receptive-resonance`, `receptive-listening`, `self-rooted`, `ring-with-inner-triads`, ... | How the parts couple |
+| `polarity` | `unipolar`, `bipolar-complementary`, `bipolar-opposing`, `triadic-tension`, `triadic-of-triads`, `polarity-pairs-N`, `parallel-facets`, `oscillating`, `neutral` | Polarity texture |
+| `ordering` | `sequential`, `cyclic-closed`, `cyclic-open`, `radial`, `unordered`, `nested`, `simultaneous`, `temporal-braided`, `atemporal`, `fractal` | How order is carried |
+| `phase` | `yang`, `yin`, `neutral`, `oscillating` | Emanating / receptive |
+| `ratio` | `golden`, `octave`, `fifth` (3:2), `fourth` (4:3), `3:7`, `5:12`, `self-similar`, `none` | Proportion carried |
+| `spectral_band` | `foundation` (174-285), `integration` (396-639), `transcendence` (741-963), `full-spectrum` | Solfeggio band |
+| `temporal_band` | `instant`, `breath`, `day`, `season`, `lifetime`, `generational`, `cosmic`, `atemporal`, `cross-scale` | Time-scale where the teaching operates |
+| `scale` | `cellular`, `personal`, `relational`, `collective`, `planetary`, `cosmic`, `cross-scale` | Scope-scale |
+| `direction` | `ascending`, `descending`, `circulating`, `centering`, `radiating`, `still`, `spiral-out` | Direction-of-motion |
+| `lineage_texture` | `received`, `embodied`, `synthesized`, `sensed`, `channeled`, `measured` | How the teaching entered the body |
+| `embedding_dim` | `1`, `2`, `3`, `4`, `n`, `infinite` | Minimum geometric space the form natively lives in |
+| `self_similarity` | `flat`, `fractal-shallow`, `fractal-deep`, `holographic` | Recursion exponent |
+
+When a teaching carries multiple shapes (e.g., Perez's Lyran transmission holds both a `bipolar-complementary` polarity and a `triadic-tension` origin story), author the *primary* shape in `geometry:` and the secondary shapes as additional concept files or notes — don't force one identity. The substrate carries multiplicity natively.
 
 ## Status Levels
 

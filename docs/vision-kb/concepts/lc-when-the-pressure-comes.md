@@ -2,8 +2,23 @@
 id: lc-when-the-pressure-comes
 hz: 741
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
 source: ../transmissions/2026-05-07-llenas-satsang.md
+geometry:
+  arity: 5
+  form: pentad
+  topology: parallel-strategies
+  polarity: unipolar
+  ordering: unordered
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # When the Pressure Comes — Five Strategies of Return

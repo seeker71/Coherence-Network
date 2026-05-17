@@ -2,7 +2,22 @@
 id: lc-permission-is-interior
 hz: 639
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 1
+  form: interior-axis
+  topology: self-rooted
+  polarity: unipolar
+  ordering: atemporal
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: cellular
+  direction: centering
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Permission Is Interior — Move With Your Own Sensing of What's Healthy
