@@ -1,0 +1,19 @@
+# centered-discernment-practice.form — centered discernment as runnable Form.
+#
+# The practice lives between the markers so tests and runners load the exact
+# Form source from disk, intern it as a Recipe NodeID, execute it through the
+# Form runtime, and then record the resulting cells and witness ledger.
+
+# >>> BEGIN centered-discernment-practice
+do {
+    let source = "youtube_testimony_stream_received";
+    let center = "centered_felt_sense_has_precedence";
+    let testimony = "testimony_carries_most_valuable_evidence";
+    let perception = "direct_perception_leads_the_summary";
+    let companion = "context_enters_as_companion";
+    let heart = "curiosity_opens_shared_worlds";
+    let practice = "form_transmutes_stream_into_cells";
+
+    source + " -> " + center + " -> " + testimony + " -> " + perception + " -> " + companion + " -> " + heart + " -> " + practice
+}
+# >>> END centered-discernment-practice

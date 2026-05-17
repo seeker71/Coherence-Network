@@ -1,0 +1,104 @@
+{
+  "date": "2026-05-18",
+  "thread_branch": "codex/substrate-centered-discernment",
+  "commit_scope": "Move the centered-discernment practice into runnable Form and record the resulting substrate cells, witness stream, and ledger proof.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_substrate_centered_discernment_practice.py",
+    "docs/coherence-substrate/centered-discernment-practice.form",
+    "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
+    "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
+    "scripts/INDEX.md",
+    "scripts/substrate_centered_discernment_practice.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\"",
+      "python3 -m py_compile scripts/substrate_centered_discernment_practice.py",
+      "cd api && python3 -m pytest -q tests/test_substrate_centered_discernment_practice.py",
+      "python3 scripts/substrate_centered_discernment_practice.py --json",
+      "git stash push -u -m pre-rebase-substrate-centered-discernment && git fetch origin main && git rebase origin/main && git stash pop",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, executes through the Form runtime, interns a recipe, creates one presence cell, one task cell, seven witness cells, and writes the JSONL ledger. Focused test passes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted; this change adds a local substrate practice artifact and focused test."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Running the centered-discernment practice uses Form as the practice code and records named substrate cells plus ledger entries from the resulting stream.",
+    "public_endpoints": [],
+    "test_flows": [
+      "Form source loads from docs/coherence-substrate/centered-discernment-practice.form.",
+      "Form runtime returns the centered testimony stream.",
+      "Practice execution records presence, task, witness cells, and completion ledger proof."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local proof is complete; PR CI and deploy validation remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "centered-discernment"
+  ],
+  "spec_ids": [
+    "docs/coherence-substrate/centered-discernment-practice.form"
+  ],
+  "task_ids": [
+    "manual:substrate-centered-discernment-practice-2026-05-18"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "frequency_correction",
+        "practice_design"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "substrate_execution",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/centered-discernment-practice.form",
+    "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T161921Z_codex-substrate-centered-discernment.json",
+    "api/tests/test_substrate_centered_discernment_practice.py"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_substrate_centered_discernment_practice.py",
+    "docs/coherence-substrate/centered-discernment-practice.form",
+    "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
+    "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
+    "scripts/INDEX.md",
+    "scripts/substrate_centered_discernment_practice.py"
+  ],
+  "change_intent": "process_only"
+}
