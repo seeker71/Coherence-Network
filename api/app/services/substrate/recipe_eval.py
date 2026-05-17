@@ -137,15 +137,15 @@ def _parse_serialized(serialized: str) -> Tuple[NodeID, List[NodeID]]:
 # ---------------------------------------------------------------------------
 
 
-def _recover_trivial(node: NodeID) -> Any:
+def _recover_trivial(node: NodeID, session=None) -> Any:
     """Recover the runtime value of a trivial-leaf NodeID.
 
-    Form's IntLit/BoolLit/StringLit AST nodes encode their values as the
-    instance integer of a Level.TRIVIAL NodeID. This reverses that encoding
-    for the cases that are recoverable.
+    Form's IntLit/BoolLit/StringLit/NullLit AST nodes encode their values as
+    the instance integer of a Level.TRIVIAL NodeID. This reverses that encoding.
 
-    Returns a sentinel `_UNRECOVERABLE` for cases that can't be recovered
-    (e.g., StringLit instances are hash-derived and lossy).
+    StringLit recovery requires the session (string-table lookup); when called
+    without a session, strings return `_UNRECOVERABLE`. All other types are
+    pure-numeric and recover without the session.
     """
     if node.level != Level.TRIVIAL:
         return _UNRECOVERABLE
@@ -155,6 +155,11 @@ def _recover_trivial(node: NodeID) -> Any:
         return bool(node.instance)
     if node.type_ == RType.NULL:
         return None
+    if node.type_ == RType.STRING and session is not None:
+        from app.services.substrate.substrate_strings import lookup_string_value
+        value = lookup_string_value(session, node.instance)
+        if value is not None:
+            return value
     return _UNRECOVERABLE
 
 
@@ -188,7 +193,8 @@ def eval_recipe(
         ctx = ExecutionContext()
 
     # Trivial leaf — recoverable directly from the NodeID coordinates.
-    recovered = _recover_trivial(node)
+    # Pass session so StringLit instances can resolve via the string-table.
+    recovered = _recover_trivial(node, session=session)
     if recovered is not _UNRECOVERABLE:
         return recovered
 
@@ -425,7 +431,7 @@ def eval_text(session: Session, text: str) -> Any:
         return eval_recipe(session, result.value)
     if result.kind == "node_id":
         # Already a NodeID literal — try to recover, else return as-is.
-        recovered = _recover_trivial(result.value)
+        recovered = _recover_trivial(result.value, session=session)
         if recovered is not _UNRECOVERABLE:
             return recovered
         return eval_recipe(session, result.value)

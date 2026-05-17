@@ -1345,8 +1345,13 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
     if isinstance(ast, BoolLit):
         return NodeID(1, Level.TRIVIAL, 2, 1 if ast.value else 0)  # RType.BOOL = 2
     if isinstance(ast, StringLit):
-        # Map literal string to an instance — same hash trick used elsewhere
-        inst = abs(hash(ast.value)) % (10**9) + 1
+        # Intern via the substrate string-table so `recipe_eval` can recover
+        # the value at runtime. The previous hash-derived encoding was lossy:
+        # `recipe_eval_text(s, '"hello"')` returned a NodeID instead of "hello".
+        # `intern_string_instance` allocates a sequential, cross-process-stable
+        # instance that `lookup_string_value` reverses.
+        from app.services.substrate.substrate_strings import intern_string_instance
+        inst = intern_string_instance(session, ast.value)
         return NodeID(1, Level.TRIVIAL, 5, inst)  # RType.STRING = 5
     if isinstance(ast, Identifier):
         # Bare name — encode as a placeholder LOCAL_ACCESS instance.
