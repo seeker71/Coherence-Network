@@ -56,6 +56,7 @@ from app.services.substrate.form import (
     FnCall,
     FnDef,
     Identifier,
+    DictExpr,
     IfExpr,
     InverseExpr,
     IntLit,
@@ -505,6 +506,9 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
             return execute(session, ast.then_branch, frame)
         return execute(session, ast.else_branch, frame)
 
+    if isinstance(ast, DictExpr):
+        return {key: execute(session, value, frame) for key, value in ast.pairs}
+
     if isinstance(ast, IndexExpr):
         target = execute(session, ast.target, frame)
         index = execute(session, ast.index, frame)
@@ -845,12 +849,22 @@ def _state_stack_of(frame: Frame) -> List[Dict[str, Any]]:
 
 
 def _resolve_access(session: Session, target: Any, field: str) -> Any:
-    """Field access on a Cell, Blueprint NodeID, or Recipe NodeID.
+    """Field access on a Cell, Blueprint NodeID, Recipe NodeID, or dict.
 
     Cells expose: blueprint, ctor, base, access, name, domain, source.
     NodeIDs expose: package, level, type_, instance, category, children.
+    Dicts expose their keys; missing key raises AttributeError.
     """
     from app.services.substrate.kernel import NamedCell, lookup_node
+
+    # Dict literal access — `{a: 1, b: 2}.a` → 1.
+    if isinstance(target, dict):
+        if field in target:
+            return target[field]
+        raise AttributeError(
+            f"Form runtime: dict has no field {field!r} "
+            f"(keys: {sorted(target.keys())})"
+        )
 
     if isinstance(target, NamedCell):
         if field == "blueprint":

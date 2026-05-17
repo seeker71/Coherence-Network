@@ -541,6 +541,18 @@ class TernaryExpr:
 
 
 @dataclass
+class DictExpr:
+    """`{a: 1, b: 2}` — composed record. Honors the structural composition
+    discipline (CLAUDE.md): keys participate in identity; positions don't.
+
+    Interns as `R_Block.SEQUENCE` with one `R_Block.LET` child per (key, value)
+    pair — the same shape frontmatter fields take. At runtime, evaluates to
+    a Python dict for ergonomics; field access `d.a` resolves via `_resolve_access`.
+    """
+    pairs: List[Any]  # list of (key_str, value_ast) tuples
+
+
+@dataclass
 class Access:
     """`target.field` — fractal-tree navigation.
 
@@ -777,6 +789,8 @@ class Parser:
             return inner
         if t.kind == "LBRACK":
             return self.parse_list_literal()
+        if t.kind == "LBRACE":
+            return self.parse_dict_literal()
         if t.kind == "IDENT":
             return self.parse_keyword_or_ident()
         if t.kind == "DOT":
@@ -1142,6 +1156,32 @@ class Parser:
                 self.consume("COMMA")
         self.consume("RBRACK")
         return items
+
+    def parse_dict_literal(self) -> "DictExpr":
+        """`{key: value, key: value, ...}` — key is an IDENT or STRING."""
+        self.consume("LBRACE")
+        pairs: List[tuple] = []
+        while self.peek().kind != "RBRACE":
+            key_tok = self.peek()
+            if key_tok.kind == "IDENT":
+                self.consume("IDENT")
+                key = key_tok.value
+            elif key_tok.kind == "STRING":
+                self.consume("STRING")
+                key = _unquote(key_tok.value)
+            else:
+                raise SyntaxError(
+                    f"Form: dict key must be IDENT or STRING at pos {key_tok.pos}"
+                )
+            if self.peek().kind != "COLON":
+                raise SyntaxError("Form: expected ':' after dict key")
+            self.consume("COLON")
+            value = self.parse_expr()
+            pairs.append((key, value))
+            if self.peek().kind == "COMMA":
+                self.consume("COMMA")
+        self.consume("RBRACE")
+        return DictExpr(pairs=pairs)
 
     # ----- Backwards-compat wrapper for query-style atoms -----------------
 
