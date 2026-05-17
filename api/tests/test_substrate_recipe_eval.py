@@ -222,9 +222,11 @@ def test_state_restore_with_empty_stack_raises(session):
 # ---------------------------------------------------------------------------
 
 
-def test_delegate_returns_nodeid_not_value(session):
-    """Delegate dispatch needs a specialized engine; eval returns the recipe
-    NodeID for now — the form layer carries the intent."""
+def test_delegate_activates_via_unified_engine(session):
+    """Delegate now executes via the unified engine — returns the registered
+    (source-key, target-key) pair, not the recipe NodeID. Previous behavior
+    (returning the NodeID unchanged) is composted: the dispatch engine
+    landed in form_runtime, so eval_text routes through it."""
     from app.services.substrate import BID_concept, make_cell
 
     make_cell(session, name="lc-a", domain="concept", blueprint=BID_concept())
@@ -232,18 +234,19 @@ def test_delegate_returns_nodeid_not_value(session):
     session.commit()
 
     v = eval_text(session, "delegate @concept(lc-a) to @concept(lc-b)")
-    # eval_recipe returns the NodeID for cell-aware constructs — they need
-    # their own specialized engine (dispatch walker).
-    from app.services.substrate.kernel import NodeID
-    assert isinstance(v, NodeID)
+    # The runtime registers the chain link and returns the pair.
+    assert v == (("concept", "lc-a"), ("concept", "lc-b"))
 
 
-def test_on_change_returns_nodeid_not_value(session):
-    """Reactive lens needs subscription engine; eval returns the recipe NodeID."""
+def test_on_change_activates_via_unified_engine(session):
+    """Reactive lens now executes via the unified engine — registers the
+    subscription and returns the initial watched-recipe value (a cell, here)."""
     from app.services.substrate import BID_concept, make_cell
+    from app.services.substrate.kernel import NamedCell
     make_cell(session, name="lc-a", domain="concept", blueprint=BID_concept())
     session.commit()
 
     v = eval_text(session, "?on_change @concept(lc-a) { 1 + 2 }")
-    from app.services.substrate.kernel import NodeID
-    assert isinstance(v, NodeID)
+    # Initial value of the watched recipe — the NamedCell @concept(lc-a) itself.
+    assert isinstance(v, NamedCell)
+    assert v.name == "lc-a"
