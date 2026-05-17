@@ -76,6 +76,7 @@
 | [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | !/usr/bin/env python3 |
+| [run_form_practice.py](run_form_practice.py) | !/usr/bin/env python3 |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
 | [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
@@ -90,7 +91,6 @@
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
-| [substrate_centered_discernment_practice.py](substrate_centered_discernment_practice.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |

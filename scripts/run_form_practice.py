@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute the centered-discernment Form practice and record substrate witnesses."""
+"""Run any Form practice and record substrate cells plus witness ledger."""
 from __future__ import annotations
 
 import argparse
@@ -32,23 +32,24 @@ from app.services.substrate.markdown_frontend import (  # noqa: E402
 from app.services.unified_db import ensure_schema, session as session_scope  # noqa: E402
 
 
-FORM_PATH = REPO_ROOT / "docs/coherence-substrate/centered-discernment-practice.form"
-DEFAULT_LEDGER = REPO_ROOT / "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl"
 DEFAULT_TIMESTAMP = "2026-05-18T08:00:00+08:00"
-DEFAULT_SOURCE_URL = "https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf"
+DEFAULT_SEPARATOR = " -> "
 
 
-def load_form_source(path: Path = FORM_PATH) -> str:
-    """Read the marked centered-discernment Form body from disk."""
+def load_form_source(path: Path, marker: str | None = None) -> str:
+    """Read a Form file, using a named marker when present."""
     src = path.read_text()
-    match = re.search(
-        r"# >>> BEGIN centered-discernment-practice\n(.*?)\n# >>> END centered-discernment-practice",
-        src,
-        re.DOTALL,
-    )
-    if match is None:
-        raise ValueError(f"practice markers not found in {path}")
-    return match.group(1).strip()
+    if marker is not None:
+        pattern = rf"# >>> BEGIN {re.escape(marker)}\n(.*?)\n# >>> END {re.escape(marker)}"
+        match = re.search(pattern, src, re.DOTALL)
+        if match is None:
+            raise ValueError(f"practice marker {marker!r} not found in {path}")
+        return match.group(1).strip()
+
+    match = re.search(r"# >>> BEGIN ([^\n]+)\n(.*?)\n# >>> END \1", src, re.DOTALL)
+    if match is not None:
+        return match.group(2).strip()
+    return src.strip()
 
 
 def _now_iso() -> str:
@@ -57,6 +58,14 @@ def _now_iso() -> str:
 
 def _node(value: NodeID | None) -> str | None:
     return form_serialize_node_id(value) if value is not None else None
+
+
+def _source_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(resolved)
 
 
 def _make_structured_cell(
@@ -104,72 +113,82 @@ def _serializable_cell(cell: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _ledger_entry(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _ledger_entry(practice: str, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "recorded_at": _now_iso(),
-        "practice": "centered_discernment",
+        "practice": practice,
         "kind": kind,
         **payload,
     }
 
 
-def execute_practice(
+def execute_form_practice(
     session: Any,
     *,
+    form_path: Path,
+    practice: str,
+    presence_name: str,
+    task_name: str,
     timestamp: str = DEFAULT_TIMESTAMP,
-    source_url: str = DEFAULT_SOURCE_URL,
+    source_url: str | None = None,
     ledger_path: Path | None = None,
-    form_path: Path = FORM_PATH,
+    marker: str | None = None,
+    separator: str = DEFAULT_SEPARATOR,
 ) -> dict[str, Any]:
-    """Run the Form practice, then record its cells and witness ledger."""
-    form_source = load_form_source(form_path)
+    """Run Form, create practice cells, and optionally write a JSONL ledger."""
+    form_source = load_form_source(form_path, marker=marker)
     practice_recipe = form_evaluate_text(session, form_source).value
     practice_value = form_execute_text(session, form_source)
     if not isinstance(practice_value, str):
-        raise TypeError("centered discernment Form practice must return a string stream")
+        raise TypeError("Form practice must return a string stream")
 
-    life_agent = _make_structured_cell(
+    rel_source_path = _source_path(form_path)
+    source_context = {"source_url": source_url} if source_url else {}
+    practice_slug = practice.replace("_", "-")
+
+    presence = _make_structured_cell(
         session,
         domain="presence",
-        name="life-sub-agent",
+        name=presence_name,
         domain_blueprint=BID_presence(),
         frontmatter={
-            "id": "life-sub-agent",
+            "id": presence_name,
             "kind": "AGENT",
             "role": "embodied-practice-cell",
             "mode": "form-runtime",
-            "source_url": source_url,
+            **source_context,
             "practice_recipe": _node(practice_recipe),
         },
-        body="A life sub-agent cell that runs centered discernment through Form.",
-        source_path=str(form_path.relative_to(REPO_ROOT)),
+        body=f"A practice cell that runs {practice_slug} through Form.",
+        source_path=rel_source_path,
     )
-    practice_task = _make_structured_cell(
+    task = _make_structured_cell(
         session,
         domain="task",
-        name="centered-discernment-practice",
+        name=task_name,
         domain_blueprint=BID_task(),
         frontmatter={
-            "idea_id": "centered-discernment",
+            "idea_id": practice_slug,
             "status": "completed",
             "context": {
-                "form": str(form_path.relative_to(REPO_ROOT)),
+                "form": rel_source_path,
                 "recipe": _node(practice_recipe),
-                "source_url": source_url,
+                **source_context,
                 "stream": practice_value,
             },
         },
         body=practice_value,
-        source_path=str(form_path.relative_to(REPO_ROOT)),
+        source_path=rel_source_path,
     )
 
     witness_cells: list[dict[str, Any]] = []
-    for index, action in enumerate(practice_value.split(" -> "), start=1):
+    actions = [part for part in practice_value.split(separator) if part]
+    for index, action in enumerate(actions, start=1):
         witness_cell, blueprint, ctor = ingest_witness_event(
             session,
-            "life-sub-agent",
+            presence_name,
             action,
-            f"substrate-ledger://centered-discernment/{index}",
+            f"substrate-ledger://{practice_slug}/{index}",
             f"{timestamp}#{index}",
         )
         witness_cells.append(
@@ -187,10 +206,11 @@ def execute_practice(
     result = {
         "form_source": form_source,
         "form_value": practice_value,
+        "practice": practice,
         "practice_recipe": practice_recipe,
         "named_cells": {
-            "life_sub_agent": life_agent,
-            "practice_task": practice_task,
+            "presence": presence,
+            "task": task,
             "witnesses": witness_cells,
         },
         "stats": lattice_stats(session),
@@ -199,23 +219,25 @@ def execute_practice(
     if ledger_path is not None:
         entries = [
             _ledger_entry(
+                practice,
                 "form_recipe",
                 {
                     "phase": "water",
                     "recipe": _node(practice_recipe),
-                    "source_url": source_url,
+                    **source_context,
                     "form_value": practice_value,
                 },
             ),
-            _ledger_entry("cell", {"phase": "gas", "cell": _serializable_cell(life_agent)}),
-            _ledger_entry("cell", {"phase": "gas", "cell": _serializable_cell(practice_task)}),
+            _ledger_entry(practice, "cell", {"phase": "gas", "cell": _serializable_cell(presence)}),
+            _ledger_entry(practice, "cell", {"phase": "gas", "cell": _serializable_cell(task)}),
         ]
         entries.extend(
-            _ledger_entry("witness", {"phase": "gas", "cell": _serializable_cell(witness)})
+            _ledger_entry(practice, "witness", {"phase": "gas", "cell": _serializable_cell(witness)})
             for witness in witness_cells
         )
         entries.append(
             _ledger_entry(
+                practice,
                 "completion",
                 {
                     "phase": "whole",
@@ -236,10 +258,11 @@ def serializable_result(result: dict[str, Any]) -> dict[str, Any]:
     return {
         "form_source": result["form_source"],
         "form_value": result["form_value"],
+        "practice": result["practice"],
         "practice_recipe": _node(result["practice_recipe"]),
         "named_cells": {
-            "life_sub_agent": _serializable_cell(result["named_cells"]["life_sub_agent"]),
-            "practice_task": _serializable_cell(result["named_cells"]["practice_task"]),
+            "presence": _serializable_cell(result["named_cells"]["presence"]),
+            "task": _serializable_cell(result["named_cells"]["task"]),
             "witnesses": [
                 _serializable_cell(witness)
                 for witness in result["named_cells"]["witnesses"]
@@ -250,38 +273,48 @@ def serializable_result(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Execute the centered discernment Form practice."
-    )
-    parser.add_argument("--form", type=Path, default=FORM_PATH)
-    parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
-    parser.add_argument("--source-url", default=DEFAULT_SOURCE_URL)
+    parser = argparse.ArgumentParser(description="Execute a Form practice.")
+    parser.add_argument("--form", type=Path, required=True)
+    parser.add_argument("--practice", required=True)
+    parser.add_argument("--presence", required=True)
+    parser.add_argument("--task", required=True)
+    parser.add_argument("--ledger", type=Path)
+    parser.add_argument("--marker")
+    parser.add_argument("--separator", default=DEFAULT_SEPARATOR)
+    parser.add_argument("--source-url")
     parser.add_argument("--timestamp", default=DEFAULT_TIMESTAMP)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
     ensure_schema()
     with session_scope() as session:
-        result = execute_practice(
+        result = execute_form_practice(
             session,
+            form_path=args.form,
+            practice=args.practice,
+            presence_name=args.presence,
+            task_name=args.task,
             timestamp=args.timestamp,
             source_url=args.source_url,
             ledger_path=args.ledger,
-            form_path=args.form,
+            marker=args.marker,
+            separator=args.separator,
         )
 
     out = serializable_result(result)
     if args.json:
         print(json.dumps(out, indent=2, sort_keys=True))
     else:
-        print("centered discernment Form practice executed")
+        print("Form practice executed")
         print(f"  form: {args.form}")
+        print(f"  practice: {args.practice}")
         print(f"  recipe: {out['practice_recipe']}")
         print(f"  value: {out['form_value']}")
-        print(f"  life sub-agent: {out['named_cells']['life_sub_agent']}")
-        print(f"  task: {out['named_cells']['practice_task']}")
+        print(f"  presence: {out['named_cells']['presence']}")
+        print(f"  task: {out['named_cells']['task']}")
         print(f"  witness cells: {len(out['named_cells']['witnesses'])}")
-        print(f"  ledger: {args.ledger}")
+        if args.ledger:
+            print(f"  ledger: {args.ledger}")
     return 0
 
 

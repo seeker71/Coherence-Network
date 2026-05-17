@@ -5,12 +5,12 @@
   "files_owned": [
     "MANIFEST.md",
     "api/tests/INDEX.md",
-    "api/tests/test_substrate_centered_discernment_practice.py",
+    "api/tests/test_form_practice_runner.py",
     "docs/coherence-substrate/centered-discernment-practice.form",
     "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
     "scripts/INDEX.md",
-    "scripts/substrate_centered_discernment_practice.py"
+    "scripts/run_form_practice.py"
   ],
   "local_validation": {
     "status": "pass",
@@ -18,15 +18,15 @@
       "make prompt-guide",
       "make wellness",
       "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\"",
-      "python3 -m py_compile scripts/substrate_centered_discernment_practice.py",
-      "cd api && python3 -m pytest -q tests/test_substrate_centered_discernment_practice.py",
-      "python3 scripts/substrate_centered_discernment_practice.py --json",
+      "python3 -m py_compile scripts/run_form_practice.py",
+      "cd api && python3 -m pytest -q tests/test_form_practice_runner.py",
+      "python3 scripts/run_form_practice.py --form docs/coherence-substrate/centered-discernment-practice.form --practice centered_discernment --presence life-sub-agent --task centered-discernment-practice --marker centered-discernment-practice --source-url \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\" --ledger docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl --json",
       "git stash push -u -m pre-rebase-substrate-centered-discernment && git fetch origin main && git rebase origin/main && git stash pop",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "git diff --check"
     ],
-    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, executes through the Form runtime, interns a recipe, creates one presence cell, one task cell, seven witness cells, and writes the JSONL ledger. Focused test passes."
+    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, while the reusable Form practice runner executes any marked Form recipe, interns a recipe, creates one presence cell, one task cell, witness cells, and writes JSONL ledger proof. Focused test passes."
   },
   "ci_validation": {
     "status": "pending",
@@ -41,7 +41,7 @@
     "expected_behavior_delta": "Running the centered-discernment practice uses Form as the practice code and records named substrate cells plus ledger entries from the resulting stream.",
     "public_endpoints": [],
     "test_flows": [
-      "Form source loads from docs/coherence-substrate/centered-discernment-practice.form.",
+      "Generic Form practice runner loads the marked recipe from docs/coherence-substrate/centered-discernment-practice.form.",
       "Form runtime returns the centered testimony stream.",
       "Practice execution records presence, task, witness cells, and completion ledger proof."
     ]
@@ -87,17 +87,19 @@
   "evidence_refs": [
     "docs/coherence-substrate/centered-discernment-practice.form",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
-    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T161921Z_codex-substrate-centered-discernment.json",
-    "api/tests/test_substrate_centered_discernment_practice.py"
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T162644Z_codex-substrate-centered-discernment.json",
+    "api/tests/test_form_practice_runner.py"
   ],
   "change_files": [
     "MANIFEST.md",
     "api/tests/INDEX.md",
+    "api/tests/test_form_practice_runner.py",
     "api/tests/test_substrate_centered_discernment_practice.py",
     "docs/coherence-substrate/centered-discernment-practice.form",
     "docs/system_audit/commit_evidence_2026-05-18_substrate_centered_discernment.json",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
     "scripts/INDEX.md",
+    "scripts/run_form_practice.py",
     "scripts/substrate_centered_discernment_practice.py"
   ],
   "change_intent": "process_only"

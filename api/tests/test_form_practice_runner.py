@@ -1,4 +1,4 @@
-"""Centered discernment Form practice creates cells, recipes, and ledger entries."""
+"""Generic Form practice runner creates cells, recipes, and ledger entries."""
 from __future__ import annotations
 
 import importlib.util
@@ -15,10 +15,12 @@ from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.substrate.substrate_strings import SubstrateStringORM
 
 
-SCRIPT_PATH = (
+SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "run_form_practice.py"
+FORM_PATH = (
     Path(__file__).resolve().parents[2]
-    / "scripts"
-    / "substrate_centered_discernment_practice.py"
+    / "docs"
+    / "coherence-substrate"
+    / "centered-discernment-practice.form"
 )
 
 
@@ -42,8 +44,8 @@ def session():
         s.close()
 
 
-def _load_practice_module():
-    spec = importlib.util.spec_from_file_location("centered_practice", SCRIPT_PATH)
+def _load_runner_module():
+    spec = importlib.util.spec_from_file_location("form_practice_runner", SCRIPT_PATH)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -51,14 +53,20 @@ def _load_practice_module():
     return module
 
 
-def test_centered_discernment_practice_records_substrate_lifecycle(session, tmp_path):
-    module = _load_practice_module()
+def test_form_practice_runner_records_centered_discernment_lifecycle(session, tmp_path):
+    module = _load_runner_module()
     ledger = tmp_path / "ledger.jsonl"
 
-    result = module.execute_practice(
+    result = module.execute_form_practice(
         session,
+        form_path=FORM_PATH,
+        practice="centered_discernment",
+        presence_name="life-sub-agent",
+        task_name="centered-discernment-practice",
         timestamp="2026-05-18T08:00:00+08:00",
+        source_url="https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf",
         ledger_path=ledger,
+        marker="centered-discernment-practice",
     )
 
     assert result["form_source"].startswith("do {")
@@ -73,12 +81,12 @@ def test_centered_discernment_practice_records_substrate_lifecycle(session, tmp_
     )
     assert result["practice_recipe"].level >= 3
 
-    life_agent = lookup_cell(session, "presence", "life-sub-agent")
+    presence = lookup_cell(session, "presence", "life-sub-agent")
     task = lookup_cell(session, "task", "centered-discernment-practice")
-    assert life_agent is not None
+    assert presence is not None
     assert task is not None
-    assert life_agent.blueprint == result["named_cells"]["life_sub_agent"]["blueprint"]
-    assert task.ctor == result["named_cells"]["practice_task"]["ctor"]
+    assert presence.blueprint == result["named_cells"]["presence"]["blueprint"]
+    assert task.ctor == result["named_cells"]["task"]["ctor"]
 
     witnesses = result["named_cells"]["witnesses"]
     assert len(witnesses) == 7
@@ -102,6 +110,6 @@ def test_centered_discernment_practice_records_substrate_lifecycle(session, tmp_
         "completion",
     ]
     assert entries[0]["recipe"].startswith("@")
-    assert entries[-1]["practice_recipe"].startswith("@")
     assert entries[0]["source_url"].startswith("https://youtu.be/KFaU6qR_iPg")
+    assert entries[-1]["practice_recipe"].startswith("@")
     assert entries[-1]["named_cell_count"] == 9

@@ -82,6 +82,7 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
+| [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
 | [test_governance_change_flow.py](test_governance_change_flow.py) | Contributor onboarding + governed change flow (spec: |
@@ -130,7 +131,6 @@
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |
 | [test_substrate.py](test_substrate.py) | Flow-centric tests for the coherence-substrate. |
-| [test_substrate_centered_discernment_practice.py](test_substrate_centered_discernment_practice.py) | Centered discernment Form practice creates cells, recipes, and ledger entries. |
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
 | [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
 | [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
