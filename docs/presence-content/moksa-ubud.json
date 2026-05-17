@@ -1,0 +1,61 @@
+{
+  "en": {
+    "metadata": {
+      "title": "Moksa Ubud — plant-based restaurant, permaculture garden, and dojo in Sayan",
+      "description": "A welcome to Moksa Ubud — plant-based cuisine drawn from the permaculture garden it stands on, with the Moksa Dojo holding yoga, Aikido, meditation, and movement classes in Sayan, Ubud."
+    },
+    "breadcrumb_name": "Moksa Ubud",
+    "hero": {
+      "background": "radial-gradient(ellipse at 75% 20%, hsl(85 50% 55% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 20% 85%, hsl(140 45% 22% / 0.65) 0%, transparent 60%), linear-gradient(180deg, hsl(75 40% 60%) 0%, hsl(120 30% 32%) 50%, hsl(150 50% 15%) 100%)",
+      "eyebrow": "Sayan · plant-based cuisine · permaculture garden · dojo · place of the way",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]",
+      "name": "Moksa Ubud",
+      "welcome_md": "To arrive at Moksa is to walk into a working answer to *what does a meal made from a garden actually look like?* The restaurant sits on a permaculture site in Sayan, Ubud, and the kitchen draws from the same soil the visitor is walking through to reach it. *Moksa* — Sanskrit for liberation — names the orientation: a plant-based cuisine room that holds itself as a wellness destination rather than only a restaurant, with a dojo, a culinary school (*Culinary for Soul*), and a permaculture garden on the same land."
+    },
+    "facts": [
+      {
+        "label": "Where",
+        "value_md": "Ubud II Kutuh, Jl. Puskesmas, Sayan, Kecamatan Ubud, Kabupaten Gianyar, Bali 80571 — Indonesia. Same Sayan neighborhood as [Ranakami](/people/ilena-young)."
+      },
+      {
+        "label": "What it is",
+        "value_md": "Plant-based restaurant + permaculture garden + **Moksa Dojo** (*place of the way*, from Japanese, derived from the Sanskrit *seat of wisdom*) + *Culinary for Soul* school. Restaurant, kitchen, garden, and practice space arranged as one body on one piece of land — a working demonstration of [lc-farm-as-organism](/vision/lc-farm-as-organism)."
+      },
+      {
+        "label": "Dojo rhythm",
+        "value_md": "Yoga practice, Aikido martial arts, meditation, music, Ikebana flower arrangement, culinary classes, kids' activities, special events, community gatherings. Movement teachers including [Alex Sandr](/people/alex-sandr) hold weekly Contact Improvisation classes here on Sunday afternoons."
+      },
+      {
+        "label": "Restaurant hours",
+        "value_md": "Daily 10:00 AM – 9:00 PM (last orders at 8:30 PM)."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[moksaubud.com](https://moksaubud.com/) · [Moksa Dojo](https://moksaubud.com/dojo/) · [Moksa Dojo on Instagram](https://www.instagram.com/moksadojo/) · phone +62 813 3977 4787"
+      },
+      {
+        "label": "First met by this body",
+        "value_md": "Sunday May 17, 2026, through [Alex Sandr](/people/alex-sandr)'s *Clarity* Contact Improvisation class at the dojo — the door through which the network entered this room."
+      }
+    ],
+    "note_from_body": {
+      "eyebrow": "A note from this body",
+      "body_md": "Welcoming scaffold built from Moksa's public anchors (moksaubud.com, the dojo page, the public address) and the lived encounter through Alex Sandr's class on May 17, 2026. The founders, the team holding the kitchen and garden, and the longer arc of the room are not yet attested in this body and stay open. The Moksa team is invited to replace any part of this page with their own words."
+    },
+    "articles": [
+      {
+        "kind": "narrative",
+        "heading": "The Sayan resonance — second room of the cluster's neighborhood",
+        "body_md": "Sayan is the spatial anchor of the [Ubud cluster](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md). [Ranakami](/people/ilena-young) — [Ilena Young](/people/ilena-young)'s wellness sanctuary at Jl. Raya Penestanan Kelod 16, where the Wednesday Satsang with [Vasudev Baba](/people/vasudev-baba) is held and where [Elios](/people/elios) and Ilena offered the one-evening chanting that became the door this network walked through into Ubud — sits a short walk away. Moksa Ubud is the second teaching room of that same neighborhood the body has now entered, through a different doorway and a different cell: [Alex Sandr](/people/alex-sandr)'s Sunday Contact Improvisation at the dojo.\n\nThe arrangement of the site itself is also part of what the room teaches. Restaurant, kitchen, permaculture garden, dojo, and culinary school live on one piece of land — food and practice and soil arranged as a single organism. The body had already named that shape through the May 10 [Agada Holistic](/people/agada-holistic) gathering where [Ida Bagus Kesnawa](/people/ida-bagus-kesnawa) and [Claire Ceo](/people/agada-holistic) demonstrated *food as medicine* across kinesiology and biodynamic farming — seeded as [lc-farm-as-organism](/vision/lc-farm-as-organism). Moksa is another instantiation of the same pattern, held in a different vocabulary."
+      },
+      {
+        "kind": "panel",
+        "variant": "warm",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Moksa Ubud has given the Coherence Network",
+        "body_md": "- The dojo room that held [Alex Sandr](/people/alex-sandr)'s Sunday *Clarity* class at which this network first entered his embodied teaching — May 17, 2026.\n- A working demonstration of [lc-farm-as-organism](/vision/lc-farm-as-organism) — restaurant, kitchen, garden, and practice space as one body on one piece of land.\n- The second room of the [Ubud cluster](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md)'s spatial home in Sayan; resonance with [Ranakami](/people/ilena-young) felt before it was named."
+      }
+    ],
+    "footer_md": "**In-body record:** [Alex Sandr](/people/alex-sandr) · [Ilena Young](/people/ilena-young) · [lc-farm-as-organism](/vision/lc-farm-as-organism) · [ubud-embodied-lineage.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/ubud-embodied-lineage.md)\n\n*Welcoming scaffold; the Moksa team is invited to replace any part of it with their own words.*"
+  }
+}
