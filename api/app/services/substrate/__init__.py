@@ -49,6 +49,11 @@ from app.services.substrate.form import (
     serialize_cell as form_serialize_cell,
     serialize_node_id as form_serialize_node_id,
 )
+from app.services.substrate.form_runtime import (
+    Frame as FormFrame,
+    execute as form_execute,
+    form_execute_text,
+)
 from app.services.substrate.grammar import (
     BID_grammar,
     FormRule,
@@ -228,6 +233,9 @@ __all__ = [
     "FormResult",
     "form_evaluate",
     "form_evaluate_text",
+    "form_execute",
+    "form_execute_text",
+    "FormFrame",
     "form_parse",
     "form_serialize_cell",
     "form_serialize_node_id",

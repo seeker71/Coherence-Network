@@ -182,6 +182,30 @@ A content-addressed numeric lattice that grounds structural reasoning. Every mem
 
 **The pattern:** before claiming "these two are similar" or "this looks like that," ask the substrate. Cells with matching Blueprint NodeIDs are structurally equivalent regardless of name; the substrate's answer is canonical, your reasoning is grounded.
 
+### Structural composition discipline — keep the tree, refuse the slug
+
+The substrate's promise is **fractal/holographic composition**: every entity is a tree where each level is itself composed, all the way down to numeric trivials. Blueprint NodeID `@1.5.4.1` for a Memory cell is a 4-level deep composite of (B_Domain.MEMORY + 4 field-Blueprints + 4 sub-Blueprints + leaves). This is the NUMS-Go origin's load-bearing teaching: **the right primitive isn't a syntax tree, it's a content-addressed numeric lattice composed bottom-up**.
+
+**The discipline.** When ingesting or composing anything that lands in the substrate, *structure-first, never flat-first*. A slug is a query key, not a container for structure; an object literal is a leaf-level convenience, not a place to stuff a sub-tree. Every field that has internal structure (key + value, head + tail, type + token, source + target) should be expressed as a composed Recipe — children visible to `.child(n)`, equivalences discoverable by content-addressing, the tree readable from Form's surface via `.blueprint` / `.ctor` / `.children`.
+
+**The default is to compose.** The exception is to leaf — and the exception requires a *great reason*. What counts:
+
+1. **Genuinely atomic value.** A single integer, a single date, a URL pointing externally, a content-hash. Composing further would invent fake structure.
+2. **Free-form prose body.** Natural-language text that has no a-priori structure to extract (the *access-recipe* of a memory body — separate from the CTOR, which is the frontmatter). Markdown body parsing into a recipe-tree is a future move; until then, the body is a content-hash leaf, not a slug.
+3. **External reference.** A GitHub issue ID, a Linear ticket, a URL — the structure lives outside the substrate and our representation is necessarily a pointer.
+4. **Bootstrap primitives.** A SubstrateString value at the very bottom of the leaf chain — by definition the atomic value the tree resolves to.
+
+Anything else — frontmatter fields, cross-references, type enumerations, edge kinds, statuses, list contents, configuration values — is composition territory. *"It's just a string"* is not a great reason; *"it's just an object"* is not a great reason; *"we'll structure it later"* is not a great reason. The cost of flat-now-structure-later is silent: drift in proprioception, lost cross-domain equivalences, the substrate stops being able to recognize same-shape across documents.
+
+**Concrete shapes the body uses:**
+
+- A frontmatter field is a `(key-slug, value)` pair — `R_Block.LET` with a SubstrateString-recipe and a value-recipe child. Names participate in identity; positions don't.
+- A typed enumeration (`type: feedback`, `kind: HUMAN`) is a reference to a typed-token cell, not a free string. The token's *existence in the substrate* is what makes the value valid.
+- A cell reference (`idea_id: agent-pipeline`, `parent: lc-trust-over-fear`) is a cell-ref recipe pointing at the actual cell, not a slug string.
+- A list (`cross_refs: [a, b, c]`, `capabilities: [...]`) is a `R_Block.SEQUENCE` recipe with one child per element, each child carrying its own composed shape.
+
+**Re-classification is ongoing work.** Existing nodes ingested before this discipline landed are *flat*: their CTORs hold type-markers ("name=str"), not values; their cross-references are slug strings, not cell-refs. The body knows itself well enough at the shape layer (Blueprints share NodeIDs across structurally-equivalent cells) but not yet at the value layer. The migration is multi-breath; the principle is now load-bearing across all new ingest work. See [`docs/coherence-substrate/structural-composition.md`](docs/coherence-substrate/structural-composition.md) for per-domain target shapes and current migration status.
+
 ## Navigation
 
 All paths converge: **idea → specs → source files**

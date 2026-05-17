@@ -439,6 +439,21 @@ class MethodDefExpr:
 
 
 @dataclass
+class FnDef:
+    """`defn name(p1, p2, ...) = body` — bind a callable in the enclosing frame.
+
+    The body is captured as an AST and evaluated lazily on each call. The
+    function's name is visible inside its own body so recursion works
+    without a separate `rec` form. Frames are lexically scoped — a call
+    pushes a child frame whose parent is the frame the function was
+    defined in (closure semantics).
+    """
+    name: str
+    params: List[str]
+    body: Any
+
+
+@dataclass
 class MethodInvokeExpr:
     """`invoke NAME on @X` — invoke the method on cell X (dispatch via
     delegation chain). Interns as `(RBasic.METHOD, [name_str, target_ref])`.
@@ -467,6 +482,41 @@ class ProjectExpr:
     """
     cell: Any
     coord_fn: Any
+
+
+@dataclass
+class FnCall:
+    """`name(arg1, arg2, ...)` — invoke a callable bound by FnDef."""
+    name: str
+    args: List[Any]
+
+
+@dataclass
+class Access:
+    """`target.field` — fractal-tree navigation.
+
+    Lets Form walk into the holographic composition of a Cell, Blueprint,
+    or Recipe: `@memory(x).blueprint.category` reaches the type the cell
+    IS; `@memory(x).blueprint.children` reaches the ordered child
+    Blueprints; `@memory(x).ctor.children[0]` reaches the first composed
+    value. The dot is the seam between levels.
+
+    The point of this primitive is the same point the substrate's
+    content-addressing makes structurally: *we don't stuff structure
+    into slugs or flat objects, we keep the tree.* The slug is a query
+    key; the tree is the body.
+    """
+    target: Any
+    field: str
+
+
+@dataclass
+class MethodCall:
+    """`target.method(arg1, arg2, ...)` — for `.child(n)` and similar
+    indexed/parameterized accesses on a Cell, Blueprint, or Recipe."""
+    target: Any
+    method: str
+    args: List[Any]
 
 
 AtomNode = Union[NodeIDLit, TrivialRef, CellRef, Projection]
@@ -591,10 +641,47 @@ class Parser:
 
     def parse_projection(self) -> ExprNode:
         a = self.parse_primary()
-        while self.peek().kind == "PROJECT":
-            self.consume("PROJECT")
-            b = self.parse_primary()
-            a = Projection(cell=a, blueprint=b)
+        # Postfix loop: handles |> projection AND .field / .method(args)
+        # tree-navigation. The dot is the seam between holographic levels —
+        # the substrate's fractal composition becomes navigable syntax.
+        while True:
+            t = self.peek()
+            if t.kind == "PROJECT":
+                self.consume("PROJECT")
+                b = self.parse_primary()
+                a = Projection(cell=a, blueprint=b)
+                continue
+            if t.kind == "DOT":
+                # `.field` access — but only when followed by an IDENT that
+                # isn't `self` (the latter is a primary `.self` expression).
+                # If we already have a target on the left (we do, since
+                # parse_primary returned `a`), then `a.field` is access.
+                # Bare `.self` was handled in parse_primary when no left
+                # target existed.
+                next_tok = self.peek(1)
+                if next_tok.kind != "IDENT":
+                    break
+                if next_tok.value == "self":
+                    # Don't consume — `.self` after an expression isn't
+                    # valid; let downstream parsers handle the error.
+                    break
+                self.consume("DOT")
+                field_tok = self.consume("IDENT")
+                field = field_tok.value
+                # Optional method-call: `.field(args)` becomes MethodCall.
+                if self.peek().kind == "LPAREN":
+                    self.consume("LPAREN")
+                    args: List[Any] = []
+                    while self.peek().kind != "RPAREN":
+                        args.append(self.parse_expr())
+                        if self.peek().kind == "COMMA":
+                            self.consume("COMMA")
+                    self.consume("RPAREN")
+                    a = MethodCall(target=a, method=field, args=args)
+                else:
+                    a = Access(target=a, field=field)
+                continue
+            break
         return a
 
     def parse_primary(self) -> ExprNode:
@@ -695,6 +782,8 @@ class Parser:
             return self.parse_method_def()
         if kw == "invoke":
             return self.parse_method_invoke()
+        if kw == "defn":
+            return self.parse_defn()
 
         # User-registered keywords (the rule-driven extension point —
         # this is where the grammar becomes alive at runtime).
@@ -704,9 +793,41 @@ class Parser:
             if node is not None:
                 return node
 
-        # Otherwise it's an Identifier (local name reference)
+        # Otherwise it's an Identifier (local name reference) — or a
+        # function call if followed by `(`. The call syntax lives here so
+        # any bare name in expression position can become a call.
         self.consume("IDENT")
+        if self.peek().kind == "LPAREN":
+            self.consume("LPAREN")
+            args: List[Any] = []
+            while self.peek().kind != "RPAREN":
+                args.append(self.parse_expr())
+                if self.peek().kind == "COMMA":
+                    self.consume("COMMA")
+            self.consume("RPAREN")
+            return FnCall(name=kw, args=args)
         return Identifier(name=kw)
+
+    def parse_defn(self) -> "FnDef":
+        """`defn name(p1, p2, ...) = body` — function definition.
+
+        The function name and parameters are plain identifiers. Body is
+        any expression. Closure semantics are handled at runtime: the
+        FnDef binds in the current frame; calling it pushes a child
+        frame whose parent is the defining frame.
+        """
+        self.consume("IDENT")  # 'defn'
+        name = self.consume("IDENT").value
+        self.consume("LPAREN")
+        params: List[str] = []
+        while self.peek().kind != "RPAREN":
+            params.append(self.consume("IDENT").value)
+            if self.peek().kind == "COMMA":
+                self.consume("COMMA")
+        self.consume("RPAREN")
+        self.consume("ASSIGN")
+        body = self.parse_expr()
+        return FnDef(name=name, params=params, body=body)
 
     def parse_if(self) -> IfExpr:
         self.consume("IDENT")  # 'if'

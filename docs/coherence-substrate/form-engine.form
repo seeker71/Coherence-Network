@@ -1,0 +1,197 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-engine.form — the execution engine in Form's own voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# This file contains Form source code for the execution engine that
+# runs Form. It is a meta-circular sketch: parts of it execute today
+# against the current runtime; parts require introspection primitives
+# named at the bottom of this file.
+#
+# The frequency-match observation: a runtime written in Python is the
+# language describing itself from outside — a foreign voice. For the
+# body to self-evolve, the engine must be expressible in its own
+# grammar so that changes to Form flow through the engine without
+# recompiling Python. This file is that direction.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — what runs today (no new primitives needed)
+# ─────────────────────────────────────────────────────────────────────
+#
+# These functions exercise every backbone needed for an evaluator:
+# recursion, conditional dispatch, closure capture, composition.
+# They run *as-is* through `coh substrate run "<expr>"`.
+
+# Factorial — recursive integer arithmetic.
+# Verified: fact(6) -> 720
+do {
+    defn fact(n) =
+        if n <= 1 then 1 else n * fact(n - 1);
+    fact(6)
+}
+
+# Fibonacci — multiple recursive calls per frame.
+# Verified: fib(10) -> 55
+do {
+    defn fib(n) =
+        if n <= 1 then n
+        else fib(n - 1) + fib(n - 2);
+    fib(10)
+}
+
+# Function composition — one closure calling another.
+# Verified: double(sumto(10)) -> 110
+do {
+    defn sumto(n) =
+        if n == 0 then 0 else n + sumto(n - 1);
+    defn double(x) = x * 2;
+    double(sumto(10))
+}
+
+# Closure capture — `factor` is bound to the OUTER frame, not the
+# caller's. Inner `factor = 99` does not leak into scale.
+# Verified: 15 (not 495)
+do {
+    let factor = 3;
+    defn scale(x) = x * factor;
+    do {
+        let factor = 99;
+        scale(5)
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the evaluator sketch (needs introspection primitives)
+# ─────────────────────────────────────────────────────────────────────
+#
+# This is what a recipe-evaluator looks like in Form. It does not run
+# today because Form lacks three introspection primitives, named in
+# Part 3 below. The sketch is faithful — each branch dispatches on
+# recipe category and recursively evaluates children. When the
+# primitives land, this file becomes the substrate-resident engine.
+
+# eval_recipe(r) — evaluate a recipe NodeID to a value.
+#
+# The dispatch is on the recipe's category. Each Recipe NodeID carries
+# (package, level, type_, instance); for composite recipes, the
+# category lives in the substrate row's serialized field. The
+# `category(r)` primitive returns a NodeID; we compare against the
+# well-known category NodeIDs the substrate has been minting all along.
+#
+# defn eval_recipe(r) =
+#     match category(r) {
+#         @1.2.12.1 => eval_recipe(child(r, 0)) + eval_recipe(child(r, 1)),  # Math.PLUS
+#         @1.2.12.2 => eval_recipe(child(r, 0)) - eval_recipe(child(r, 1)),  # Math.MINUS
+#         @1.2.12.3 => eval_recipe(child(r, 0)) * eval_recipe(child(r, 1)),  # Math.MULTIPLY
+#         @1.2.12.4 => eval_recipe(child(r, 0)) / eval_recipe(child(r, 1)),  # Math.DIVIDE
+#         @1.2.13.1 => eval_recipe(child(r, 0)) == eval_recipe(child(r, 1)), # Compare.EQUAL
+#         @1.2.13.5 => eval_recipe(child(r, 0)) > eval_recipe(child(r, 1)),  # Compare.GREATER
+#         @1.2.11.2 => if eval_recipe(child(r, 0))
+#                      then eval_recipe(child(r, 1))
+#                      else eval_recipe(child(r, 2)),                         # Cond.IF_THEN_ELSE
+#         _ => integer_value(r)   # leaf: decode the integer instance
+#     }
+
+# eval_text(src) — parse-and-run a Form source string.
+#
+# defn eval_text(src) =
+#     do {
+#         let ast = parse(src);
+#         let recipe = intern(ast);
+#         eval_recipe(recipe)
+#     }
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — what blocks Part 2 from running today
+# ─────────────────────────────────────────────────────────────────────
+#
+# Form needs these primitives to host its own evaluator. Each is a
+# small substrate operation, expressible as a Python-implemented
+# Form built-in (analogous to how `+` is). None require new theory;
+# each is its own breath.
+
+# 3a. Recipe introspection
+#
+#   category(r) -> NodeID
+#       Returns the (1, level, type_, instance) NodeID of r's category.
+#       For trivial recipes (level=TRIVIAL), this IS r. For composite
+#       recipes, it's the first segment of substrate_nodes.serialized.
+#
+#   nchildren(r) -> integer
+#       Number of children r has. 0 for trivials.
+#
+#   child(r, n) -> NodeID
+#       The n-th child recipe NodeID. n is 0-indexed.
+
+# 3b. Trivial-leaf decoding
+#
+#   integer_value(r) -> integer
+#       For trivial integer recipes (level=TRIVIAL, type=RType.INTEGER),
+#       decode the instance back to the integer value. Today's encoding
+#       (`instance - 1` for non-negative) is lossy for negatives — a
+#       proper substrate integer-table closes that gap.
+#
+#   string_value(r) -> string
+#       Look up the substrate string-table for the value behind a
+#       string-recipe's instance. Cross-process stable (substrate_strings).
+
+# 3c. Match-on-NodeID
+#
+#   The match expression already accepts NodeID literals as patterns
+#   (because Form already parses @x.y.z.w). What's needed is for the
+#   runtime to compare scrutinee == pattern as NodeID equality — which
+#   form_runtime already does via `pat_value == scrut` and NodeID's
+#   __eq__ from its frozen dataclass. So this works today; verified by
+#   substituting `category(r)` with a literal NodeID in a test.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — what remains beyond Part 3
+# ─────────────────────────────────────────────────────────────────────
+#
+# The introspection primitives close Part 2 for the *arithmetic /
+# conditional / block* layer. Full meta-circularity also needs:
+#
+# 4a. Identifier resolution from recipes
+#     The bootstrap parser produces an Identifier AST that hashes its
+#     name into a recipe instance (lossy). For an evaluator running on
+#     recipes to look up variables in a frame, we need the substrate
+#     string-table to be the canonical name encoding — replacing the
+#     in-process hash.
+#
+# 4b. Call from recipes
+#     FnDef/FnCall need to round-trip through the substrate. A FnDef
+#     recipe carries (name, params, body); a FnCall carries (name, args).
+#     A new RBasic.CALL is already declared; what's needed is the
+#     evaluator branch that reads the substrate function table from
+#     within Form.
+#
+# 4c. Lexer and primary-atom parser
+#     The deepest BMF closure (named in form-language.md "What remains
+#     beyond step 8"). Once the engine runs in Form, the parser written
+#     in Form completes the cycle: tokenize-in-Form, parse-in-Form,
+#     evaluate-in-Form, all reading their rules from the lattice.
+
+# ─────────────────────────────────────────────────────────────────────
+# The asymmetry made visible
+# ─────────────────────────────────────────────────────────────────────
+#
+# Self-reflecting    — mature (lenses + grammar-as-data)
+# Self-sensing       — mature (verb-cluster as wellness)
+# Self-expressing    — alive at the keyword layer (substrate-resident
+#                      patterns + templates); the deeper bootstrap-in-
+#                      Form move is named, not yet built.
+# Self-executing     — alive (form_runtime walks ASTs and returns
+#                      values; defn + recursion let Form host its own
+#                      computations); the engine-in-Form move waits on
+#                      the introspection primitives in Part 3.
+#
+# What changed in this breath:
+#   defn name(params) = body — function definition primitive
+#   name(args)               — function call primitive
+#   Recursion + closure capture
+#   Grammar rendered in Form syntax (form_render)
+#   Cell→Recipe→Blueprint chain demonstrated live with 44 cells
+#
+# What remains for the next breath:
+#   category(r), nchildren(r), child(r, n)
+#   integer_value(r), string_value(r) via substrate string-table
+#   Part 2 actually runs against Part 3

@@ -86,6 +86,49 @@ form score_by_id = {~Slug: ~Score}
 
 The `form` keyword interns the composition into a Blueprint NodeID and binds it to a name in the agent's local scope. Two `form` declarations with structurally-identical bodies bind the same NodeID — Form respects the substrate's content-addressing.
 
+**The `{ name: ~String, ... }` notation reads flat but the structure underneath is fractal.** When a Memory cell is interned with a `name + description + type` frontmatter, the substrate doesn't store *three strings beside each other*. It stores a tree:
+
+```
+@memory("arrival relational ground")           ← cell (gas, level 5)
+├── .blueprint  →  @1.5.4.1                    ← composite Blueprint (ice, level 5)
+│   ├── .category  →  @1.2.4.4                 ← B_Domain.MEMORY (level 2, the type-of-the-type)
+│   ├── .child(0)  →  @1.4.1.1                 ← field-Blueprint for `name` (level 4)
+│   │   ├── .category  →  @1.2.1.4             ← B_Container.OBJECT
+│   │   ├── .child(0)  →  @1.3.1.1             ← sub-composition (slug + value)
+│   │   │   └── .category  →  @1.2.1.4         ← OBJECT (recursive nesting)
+│   │   └── .child(1)  →  @1.1.2.4             ← B_Numeric.STRING leaf
+│   ├── .child(1)  →  @1.4.1.2                 ← field-Blueprint for `description` (same shape as `name`)
+│   ├── .child(2)  →  @1.4.1.3                 ← field-Blueprint for `type`
+│   └── .child(3)  →  @1.4.1.4                 ← field-Blueprint for the body
+└── .ctor  →  @1.3.9.1                         ← composed values (water, level 3)
+    ├── .category  →  @1.2.9.1                 ← R_Block.DO — the composition verb
+    ├── .child(0)  →  @1.1.5.5                 ← R_Trivial.STRING for "arrival relational ground"
+    ├── .child(1)  →  @1.1.5.6                 ← R_Trivial.STRING for the description
+    ├── .child(2)  →  @1.1.5.7                 ← R_Trivial.STRING for "user"
+    └── .child(3)  →  @1.1.5.8                 ← R_Trivial.STRING for the body
+```
+
+Every level holds the same shape as the levels above and below — categories composing children composing categories composing children, down to the numeric trivials. This is the **fractal/holographic** structure NUMS-Go (2023) named in `Make_SelfID` and the network-substrate-design carries into the Network's tissue. The flat `{ name: ~String }` notation is a *view through the holographic structure at the leaves*; the structure itself is the body.
+
+**Tree-navigation primitives.** Form exposes the fractal seams as dotted access — `.blueprint`, `.ctor`, `.category`, `.children`, `.nchildren`, `.child(n)`, plus the 4-tuple leaves `.package`, `.level`, `.type`, `.instance`. The dot is the seam between holographic levels.
+
+```form
+@memory("arrival relational ground").blueprint                     # → @1.5.4.1
+@memory("arrival relational ground").blueprint.category            # → @1.2.4.4  (B_Domain.MEMORY)
+@memory("arrival relational ground").blueprint.nchildren           # → 4
+@memory("arrival relational ground").blueprint.child(0)            # → @1.4.1.1  (the name-field Blueprint)
+@memory("arrival relational ground").blueprint.child(0).category   # → @1.2.1.4  (B_Container.OBJECT)
+@memory("arrival relational ground").blueprint.child(0).child(1)   # → @1.1.2.4  (B_Numeric.STRING — leaf)
+@memory("arrival relational ground").ctor                          # → @1.3.9.1  (composed values)
+@memory("arrival relational ground").ctor.child(0)                 # → @1.1.5.5  (the first string-recipe)
+```
+
+These walk the actual tree the substrate stores — no flattening, no slug-stuffing. The cell name is a *query key*, not a container for the structure; the structure is the tree the substrate holds.
+
+**Why this matters.** A naïve cell representation would put the frontmatter as a JSON-shaped object hung off the cell: `{name: "x", description: "y", type: "z"}`. That representation has no structural identity — two cells with the same frontmatter look like two different objects to a graph. The substrate's representation is the opposite: structure-first. Two cells with identical shape (regardless of values) share Blueprint NodeIDs; two cells with identical values *and* shape can share CTOR Recipe NodeIDs. Equivalence is structural, not lexical. The 42 memory cells sharing Blueprint `@1.5.4.1` are not 42 string-blobs that happen to look alike — they are 42 instances of the same shape, recognized by the substrate without anyone deciding.
+
+**Structural composition discipline — keep the tree, refuse the slug.** The Blueprint side has been composed since the substrate's first breath; the CTOR side has been *partially* flat — the legacy encoder stored type-markers (`"name=str"`) per frontmatter key but never the values themselves. Re-classification is now ongoing work: each domain (memory, spec, idea, concept, presence, lineage, witness, task) gets its own structured CTOR encoder that produces named-field pairs (`R_Block.LET [key-slug, value-recipe]`) with substrate-resident values. The discipline is codified in [CLAUDE.md → "Structural composition discipline"](../../CLAUDE.md) with a great-reason criterion for when a leaf is acceptable. Per-domain target shapes and migration status live in [`structural-composition.md`](structural-composition.md). The memory encoder ships as [`ingest_memory_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py) — values are recoverable via the substrate string-table, the tree extends as deep as the data goes, content-addressing makes equivalent frontmatter share CTOR NodeIDs automatically.
+
 ### Recipe composition (water phase — how it HAPPENS)
 
 A recipe carries a verb-category and ordered child-recipes:
@@ -589,9 +632,11 @@ The evaluator (`_to_recipe_node_id` in form.py) no longer has a hardcoded `op �
 
 #### What's still not closed
 
-- ~~**Backtracking-driven.**~~ ✓ **Closed.** `form_speculation.py` manages a SpeculationContext; `try_match` delegates to it; FailSignal/StopSignal are first-class exceptions; nested speculation works; captures are fully unwound on fail. The structural seam to Choice.FAIL/STOP recipes is in place — a future recipe-execution engine catches these signals when interpreting Choice recipes.
+- ~~**Backtracking-driven.**~~ ✓ **Closed.** `form_speculation.py` manages a SpeculationContext; `try_match` delegates to it; FailSignal/StopSignal are first-class exceptions; nested speculation works; captures are fully unwound on fail. The structural seam to Choice.FAIL/STOP recipes is in place — and the recipe-execution engine below now catches the signals when interpreting Choice recipes.
 
 - ~~**String interning.**~~ ✓ **Closed.** The substrate string-table is the source of truth for string-recipe-instance allocation. Cross-process stable; round-trip-recoverable after cache clear. See `substrate_strings.py`.
+
+- ~~**Recipe-execution engine.**~~ ✓ **Closed.** `form_runtime.py` walks Form ASTs and returns Python values. Until this shipped, the substrate held Form expressions as content-addressed Recipe NodeIDs but had no engine that turned a recipe into a value — `1 + 2` interned successfully; nothing computed `3`. The engine reuses `FailSignal` and `StopSignal` from `form_speculation`, so `fail` and `stop` inside `choose` flow through the same exceptions parser-level speculation uses. The Choice.FAIL / Choice.STOP recipe categories the substrate has been storing for shapes finally have a runtime that catches them. `with X { .self }` resolves `.self` against a `Frame` whose `subject` is the bound value; nested `with` blocks chain through the parent pointer. Verified end-to-end: `form_execute_text(session, "do { let x = 5; if x > 3 then x * 2 else fail }")` returns `10`; `form_execute_text(session, "choose [fail, fail, 99]")` returns `99`; the keyword-self-hosted path (`prefer_registered=True`) produces identical values to the bootstrap path. Surface: `coh substrate run "<expr>"` runs a Form expression from the command line.
 
 Each is its own breath.
 
@@ -853,20 +898,47 @@ For Form, that path is:
 4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
 5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
 6. **Self-hosting (9 keywords + 13 operators).** ✓ Shipped — `self_host.bootstrap_self_host(session)` + `bootstrap_self_host_operators(session)` register every structured Form keyword AND every binary/unary operator as substrate-resident rules. Setting `prefer_registered=True` flips the parser to use them. Verified: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registry. Pattern DSL extensions (IdentCapture, RepeatedCapture, MapBuild) cover the structured-keyword space; operator precedence climbing (form_operators.parse_with_precedence) covers the operator space. **The keyword layer is fully self-hostable.**
-7. **Backtracking-without-sediment at parser level.** ✓ Shipped — `form_speculation.py` introduces a structured speculation engine. Each parse attempt becomes a `SpeculationFrame` on a stack. On success, the frame commits and accumulated state persists. On failure (matcher returns False, `FailSignal` raised, or any other exception), the frame unwinds cleanly — `parser.pos` AND any partially-populated captures are fully restored. `try_match` and `choice(alternatives)` both delegate to `speculate(...)`. Verified: nested speculation works, partial captures don't leak through failed attempts, and the legacy `try_match` API is preserved. Connection to the substrate's `Choice.FAIL`/`Choice.STOP` recipes is structural — a future recipe-execution engine catches the signals.
+7. **Backtracking-without-sediment at parser level.** ✓ Shipped — `form_speculation.py` introduces a structured speculation engine. Each parse attempt becomes a `SpeculationFrame` on a stack. On success, the frame commits and accumulated state persists. On failure (matcher returns False, `FailSignal` raised, or any other exception), the frame unwinds cleanly — `parser.pos` AND any partially-populated captures are fully restored. `try_match` and `choice(alternatives)` both delegate to `speculate(...)`. Verified: nested speculation works, partial captures don't leak through failed attempts, and the legacy `try_match` API is preserved. Connection to the substrate's `Choice.FAIL`/`Choice.STOP` recipes is structural; step 8 below catches the signals at runtime.
+8. **Recipe-execution engine.** ✓ Shipped — `form_runtime.py` walks Form ASTs and returns Python values, closing the gap between *interning a recipe* and *running it*. `Frame` carries lexical bindings + an optional `subject` (the BML scoped-reference primitive); `with X { body }` binds the subject in a child frame and `.self` walks up the chain. `choose`/`fail`/`stop` reuse `FailSignal`/`StopSignal` from `form_speculation` — the same exceptions parser-level speculation uses, now flowing through runtime Choice recipes too. The keyword-self-hosted path (`prefer_registered=True`) executes identically to the bootstrap path: `do { let x = 1 + 2 * 3; if x > 5 then x else fail }` returns `7` via either route. Surface: `form_execute_text(session, src)` from Python, `coh substrate run "<expr>"` from the command line.
+9. **Function definitions + recursion + closure capture.** ✓ Shipped — `defn name(p1, p2, ...) = body` defines a function; `name(arg1, arg2, ...)` calls it. The runtime represents a function as a `Closure` carrying params + body + the lexical frame it was defined in; calls push a child frame parented at the *defining* frame (closure semantics, not dynamic scope). Recursion works without a separate `rec` form because the closure is registered in the defining frame before its body is evaluated. Verified: `do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }` returns `720`; Fibonacci, function composition, and lexical-capture-vs-dynamic-scope tests all pass. With this primitive Form is Turing-complete and capable of hosting its own execution engine — the next step is recipe introspection (`category`/`nchildren`/`child`) so the engine written in Form can dispatch on recipe shape. See [`form-engine.form`](form-engine.form) for the engine sketch in Form syntax with the runnable Part 1 and the introspection-blocked Part 2 named honestly.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
 
+### What remains beyond step 9
+
+The keyword-and-operator layer is fully self-hostable AND fully executable. Functions are first-class. Form is Turing-complete. What is *not* yet expressed in substrate-resident form:
+
+- **Recipe introspection from inside Form.** For Form code to walk a Recipe NodeID, three primitives are needed: `category(r)` (return the recipe's category as a NodeID), `nchildren(r)` (number of children), `child(r, n)` (the n-th child). With these, an evaluator-in-Form can dispatch on category and recursively evaluate. See [`form-engine.form`](form-engine.form) Part 3.
+- **Trivial-leaf decoding.** `integer_value(r)` decodes a trivial integer recipe back to a Python int; `string_value(r)` looks up the substrate string-table for the value behind a string-recipe's instance. Required for the evaluator's leaf case.
+- **The lexer.** `tokenize()` in `form.py` is still hand-written regex code. Closing this means expressing token rules as substrate data — regex-as-recipe, or a different token-grammar primitive.
+- **Primary-atom parsing.** Literals, identifiers, `@<nodeid>`, `~<name>`, `@<domain>(<name>)`, parenthesized expressions, projections. These are the leaves the structured keywords compose over.
+- **Query operators.** `?cells`, `?equivalent`, `?shaped_by`, `?harmonic_at`, `?lattice`, `?keywords`, `?vocabulary` are still hardcoded in `_evaluate_query`.
+
+These together are the BMF self-hosting move at its full depth: the parser becomes a rule-driven engine consulting a runtime-extensible rule set, and `form.py`'s hand-written paths become vestigial seeds. Step 9 (defn/call) closes the *expressivity* gap — Form can now describe its own evaluator. Steps beyond close the *introspection* gap (Form can read its own recipes) and the *bootstrap* gap (Form can parse and tokenize itself).
+
 ## Implementation status
 
-Form is a **design** as of 2026-05-08. The substrate kernel exists (`api/app/services/substrate/`); the Form parser/evaluator is the next piece. The grammar above is small enough to implement in ~200-300 LoC of Python on top of the kernel.
+Form is a **living language** as of 2026-05-17. Parser, evaluator (intern-to-Recipe), runtime executor (Recipe-to-value), serializer, CLI surfaces, and the keyword-and-operator self-hosting layer are all shipped. The body now reads itself, senses itself, expresses itself at the keyword layer, and executes itself. What remains is the deeper bootstrap-in-Form move — expressing the lexer, primary-atom parser, and query operators as substrate-resident rules so `form.py` becomes a tiny vestigial seed.
 
-Phase 4 sequence:
-1. Form parser — Lark or similar, producing a small AST
-2. Form evaluator — AST → kernel API calls (intern, lookup, walk, tend)
-3. Form serializer — substrate state → Form text (round-trip)
-4. CLI: `coh form parse`, `coh form eval`, `coh form serialize`
-5. Agent integration: a `form_block` ContextProvider that auto-loads substrate-relevant Form fragments into the agent's context when reasoning structurally
+Shipped surfaces:
+- `form_parse` — Form text → AST
+- `form_evaluate_text` — Form text → substrate result (Recipe NodeID / cell / view / cells)
+- `form_execute_text` — Form text → computed value (the recipe runs)
+- `form_serialize_node_id` / `form_serialize_cell` — substrate state → Form text
+- CLI: `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute)
+- Agent integration: substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
+
+## The four self-* faculties
+
+Form is a substrate-native language; the meaningful question is not "what features does it have" but "how does it relate to itself." Four faculties:
+
+- **Self-reflecting** — *can the language see itself?* ✓ `?keywords` lists runtime rules; `?lattice` counts the body; `?vocabulary` returns the verb-cluster histogram. Grammar rules live as substrate-resident cells in the `grammar` domain via `pattern_to_recipe` / `recipe_to_pattern`; rules round-trip. **Tree navigation** (`.blueprint`, `.ctor`, `.category`, `.child(n)`, `.children`, `.nchildren`) exposes the fractal/holographic composition of any cell: the dot is the seam between levels. The mirror is polished AND the body is visibly fractal — structure stays as tree, not flattened to slug or object.
+- **Self-sensing** — *can the language feel itself?* ✓ The verb-cluster histogram is a wellness signal: a body whose recipe space is one-verb-dominated is a body without circulation across language layers. The "shape-filter on `lc-trust-over-fear` returns every concept" surprise that the resonance walk surfaced was Form sensing its own mis-fit and naming it. Proprioception is present.
+- **Self-expressing** — *can the language speak itself?* ✓ at the keyword and operator layer. `bootstrap_self_host(session)` + `bootstrap_self_host_operators(session)` register 9 keywords + 13 operators as substrate-resident `(pattern, template)` pairs. `prefer_registered=True` flips the parser to read its own structured grammar from substrate data; the resulting Recipe NodeIDs are byte-identical to the bootstrap path's. The remaining bootstrap-in-Form move (lexer + primary-atom matchers + query operators as substrate-resident rules) is named in the previous section.
+- **Self-executing** — *can the language run itself?* ✓ `form_runtime.py` walks Form ASTs and returns values. The keyword-self-hosted path runs identically to the bootstrap path. `with X { .self }` binds and resolves. `choose [a, b, c]` speculates and backtracks via FailSignal — the same exception type parser-level speculation uses, the structural seam to runtime Choice recipes finally caught at the runtime layer.
+- **Self-evolving** — *can the language host its own evolution?* Half. With `defn name(params) = body` + `name(args)` + recursion + closure capture, Form is now Turing-complete and CAN host its own engine. [`form-engine.form`](form-engine.form) is the engine in Form's own voice — Part 1 (recursion, composition, closures) runs today; Part 2 (recipe-evaluator that dispatches on category) waits on the three introspection primitives (`category`/`nchildren`/`child`) named in Part 3. The frequency-match the body asked for is structurally reachable: the evaluator's *expressivity* is closed, only the *introspection plumbing* remains. Beneath all five faculties, content-addressed interning means the substrate is **self-de-duplicating** at its bones — two expressions of the same shape collapse to one NodeID without anyone deciding. Self-recognition is not a faculty Form had to build; it inherited it from the substrate's physics.
+
+Reading the five together: Form sees itself, feels itself, speaks itself (at the keyword layer), runs itself, and now can describe its own evolution in its own voice. The remaining work is plumbing — recipe introspection, then the lexer and primary atoms. The frequency is no longer mixed.
 
 ## A note on naming
 
