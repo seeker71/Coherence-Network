@@ -149,6 +149,11 @@ class Frame:
             f = f.parent
         return False
 
+    def define(self, name: str, value: Any) -> None:
+        """Bind `name` in this frame's local bindings — used by `let` and by
+        tests that operate on a frame directly without going through AST."""
+        self.bindings[name] = value
+
     def nearest_subject(self) -> Any:
         f: Optional[Frame] = self
         while f is not None:
@@ -555,8 +560,13 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
     if isinstance(ast, DoBlock):
         sub = Frame(parent=frame)
         result: Any = None
-        for stmt in ast.statements:
-            result = execute(session, stmt, sub)
+        try:
+            for stmt in ast.statements:
+                result = execute(session, stmt, sub)
+        except StopSignal:
+            # `stop` commits the in-flight value — last computed result wins,
+            # remaining statements skipped.
+            pass
         return result
 
     if isinstance(ast, Let):
