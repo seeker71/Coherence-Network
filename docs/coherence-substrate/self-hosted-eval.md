@@ -4,26 +4,29 @@ Form is a substrate-native DSL. The honest question — *"can the parser, interp
 
 ## What's self-hosted today
 
-### The interpreter for arithmetic/comparison/conditional core
+### The interpreter for arithmetic/comparison/logic/conditional core
 
-`api/tests/test_substrate_form_self_hosted.py` ships a working demonstration: a Form `defn ev(node)` that reads a Recipe NodeID through the substrate's `.category.type_`, `.category.instance`, `.children[i]`, `.instance` accessors, dispatches on category, and recurses. No Python in the dispatch — only the bootstrap engine's leaf operations carry it through.
+The engine source lives in [`docs/coherence-substrate/form-engine.form`](form-engine.form) between `# >>> BEGIN engine` / `# >>> END engine` markers. `api/tests/test_substrate_form_self_hosted.py` loads it from disk and runs it — the substrate holds its own interpreter as an on-disk artifact, not as a Python string. Drift is fenced three ways:
+
+1. **Flat NodeID-literal dispatch.** Each arm is `@1.2.12.1 => ...` (Level=BASIC, RBasic.MATH, RMath.PLUS) rather than a magic int. Walking a recipe whose category moved silently produces the wrong answer; the parity tests catch it.
+2. **Drift sentinel.** `test_form_engine_literals_match_python_enums` parses every `@l.t.i` literal in the engine block and asserts each one points at a known `(RBasic.<verb>, instance)` pair. Rename `RBasic.MATH` or add an unknown literal — the test fails immediately.
+3. **Property-based parity.** Random arithmetic / comparison / conditional expressions get evaluated by both engines and asserted equal (40 + 20 per run, fixed seed).
 
 ```form
-defn ev(node) = do {
-  let ct = node.category.type_;
-  if ct == 12 then ev_math(node)         -- MATH
-  else if ct == 13 then ev_cmp(node)     -- COMPARE
-  else if ct == 11 then ev_cond(node)    -- COND
-  else if ct == 3  then node.instance - 1  -- INTEGER trivial
-  else if ct == 2  then (if node.instance == 1 then true else false)  -- BOOL
-  else 0
-};
-ev(@<recipe-nid>)
+defn ev(n) = match n.category {
+  @1.2.12.1 => ev(n.children[0]) + ev(n.children[1]),     # MATH.PLUS
+  @1.2.12.2 => ev(n.children[0]) - ev(n.children[1]),     # MATH.MINUS
+  @1.2.13.5 => ev(n.children[0]) > ev(n.children[1]),     # COMPARE.GREATER
+  @1.2.14.1 => ev(n.children[0]) && ev(n.children[1]),    # LOGIC.AND
+  @1.2.11.2 => if ev(n.children[0]) then ev(n.children[1]) else ev(n.children[2]),
+  ...
+  _ => if n.category.level == 1 then (...trivial decode...) else 0
+}
 ```
 
-It produces identical answers to the Python engine for `1+2`, `5*3-2`, `if 1==1 then 42 else 0`, etc. The strong proof: two engines, identical answer, same substrate.
+It produces identical answers to the Python engine across MATH (×5), COMPARE (×6), LOGIC (×3), COND (×2), and trivial INTEGER / BOOL decode. Two engines, identical answer, same substrate.
 
-This is the smallest concrete demonstration that **Form is expressive enough to be its own interpreter** for the recipe categories it can read. Extending to STATE, CHOICE, METHOD, etc. is adding `if ct == N then …` branches — mechanical, not conceptual.
+Extending to STATE, CHOICE, METHOD, etc. is adding one arm here and one expected literal to `_EXPECTED_LITERALS` — mechanical, not conceptual.
 
 ### The keyword grammar
 
@@ -53,7 +56,7 @@ Arithmetic, comparison, conditional dispatch at the leaves — `a + b`, `a == b`
 
 | Layer | Today | Path to full self-hosting |
 |-------|-------|---------------------------|
-| **Interpreter** (recipe-walking) | Form (this PR — arithmetic/compare/cond proven; other categories mechanical) | Add `if ct == N` branches per category |
+| **Interpreter** (recipe-walking) | Form (on-disk `form-engine.form`; MATH / COMPARE / LOGIC / COND / trivial decode proven; drift-sentinel keeps literals in sync) | Add one match arm per new category, one entry in `_EXPECTED_LITERALS` |
 | **Keyword grammar** | Form (substrate-resident via `register_form_keyword`) | Already there |
 | **Pattern/builder templates** | Form (substrate-resident) | Already there |
 | **Bootstrap parser** | Python (`tokenize` + recursive descent) | Form-level parser needs string primitives + Token cell shape |
@@ -72,4 +75,4 @@ The bootstrap parser staying Python isn't a confession — it's a deliberate flo
 cd api && python -m pytest tests/test_substrate_form_self_hosted.py -v
 ```
 
-Eleven tests, all green. Each one runs a Form expression through Python's parser to produce a Recipe NodeID, then evaluates that NodeID through a *Form-level* interpreter, then checks the answer matches what the Python engine would produce. Two engines, identical answer, same substrate — that's the proof.
+Twenty tests, all green: smoke tests per dispatch arm, a drift sentinel that asserts every NodeID literal in `form-engine.form` matches a known Python enum, and property-based parity that runs random expressions through both engines. Two engines, identical answer, same substrate — that's the proof, and it's now armored against silent rename drift.
