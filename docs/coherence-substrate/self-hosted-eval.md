@@ -20,11 +20,13 @@ defn ev(n) = match n.category {
   @1.2.14.1 => ev(n.children[0]) && ev(n.children[1]),    # LOGIC.AND
   @1.2.11.2 => if ev(n.children[0]) then ev(n.children[1]) else ev(n.children[2]),
   ...
-  _ => if n.category.level == 1 then (...trivial decode...) else 0
+  _ => n.value   # substrate's own trivial decoder (NULL / BOOL / INTEGER / STRING)
 }
 ```
 
-It produces identical answers to the Python engine across MATH (×5), COMPARE (×6), LOGIC (×3), COND (×2), and trivial INTEGER / BOOL decode. Two engines, identical answer, same substrate.
+The `_` arm reads through `.value` — the substrate's single source of truth for trivial-leaf encoding (`api/app/services/substrate/form_runtime.py` `_trivial_value`). Form and Python read the same decoder; a change to integer encoding moves both engines at once. Composites have no atomic value, so `.value` on a composite raises — the engine refuses to silently fake an answer for an unknown verb.
+
+It produces identical answers to the Python engine across MATH (×5), COMPARE (×6), LOGIC (×3), COND (×2), and trivial INTEGER / BOOL / STRING decode. Two engines, identical answer, same substrate.
 
 Extending to STATE, CHOICE, METHOD, etc. is adding one arm here and one expected literal to `_EXPECTED_LITERALS` — mechanical, not conceptual.
 
