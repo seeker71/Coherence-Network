@@ -164,7 +164,7 @@ sync_field_docs
 # Runs AFTER wait_for_running api so the DB connection is stable.
 sync_substrate_content() {
   log "substrate: syncing content + scripts into api container"
-  docker compose exec -T api sh -lc 'rm -rf /app/specs /app/ideas /app/scripts /app/docs/vision-kb /app/docs/presences' \
+  docker compose exec -T api sh -lc 'rm -rf /app/specs /app/ideas /app/scripts /app/docs/vision-kb /app/docs/presences /app/docs/lineage' \
     2>&1 | tee -a "$LOG_FILE" || true
   docker compose cp "$REPO_DIR/scripts" api:/app/scripts 2>&1 | tee -a "$LOG_FILE"
   docker compose cp "$REPO_DIR/specs" api:/app/specs 2>&1 | tee -a "$LOG_FILE"
@@ -175,12 +175,15 @@ sync_substrate_content() {
   if [[ -d "$REPO_DIR/docs/presences" ]]; then
     docker compose cp "$REPO_DIR/docs/presences" api:/app/docs/presences 2>&1 | tee -a "$LOG_FILE"
   fi
+  if [[ -d "$REPO_DIR/docs/lineage" ]]; then
+    docker compose cp "$REPO_DIR/docs/lineage" api:/app/docs/lineage 2>&1 | tee -a "$LOG_FILE"
+  fi
 }
 
 run_substrate_ingest() {
-  log "substrate: running coh_substrate.py ingest --all"
+  log "substrate: running coh_substrate.py ingest --all --structured"
   set +e
-  docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all' \
+  docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
     2>&1 | tee -a "$LOG_FILE"
   local rc=$?
   set -e
