@@ -187,6 +187,14 @@ class RBasic(IntEnum):
     # which is what makes the substrate the receiving infrastructure for bridges
     # between teachings expressed in different discipline-vocabularies.
     RESONANCE = 21
+    # BML state-stack primitives (lineage: angelic-assembler.txt — save/restore/
+    # discard).  The substrate interns these as Recipe NodeIDs; runtime execution
+    # semantics lands with the recipe-execution engine.  Closes one of the BML
+    # gaps named in form-language.md.
+    STATE = 22
+    # BML exception-flow (lineage: angelic-assembler.txt — raise/resume).  Same
+    # structural shape: interns as recipe today, executes when the engine lands.
+    EXCEPTION = 23
 
 
 class RTend(IntEnum):
@@ -321,3 +329,33 @@ class RChoice(IntEnum):
     CHOOSE = 1
     FAIL = 2
     STOP = 3
+
+
+class RState(IntEnum):
+    """BML state-stack primitives — from angelic-assembler.txt:
+
+    - save:    push current state onto the stack
+    - restore: pop state from the stack
+    - discard: drop the top of the stack without restoring
+
+    Interns as Recipe NodeIDs; runtime execution semantics lands with the
+    recipe-execution engine. Same structural-first pattern as RChoice.
+    """
+    UNDEFINED = 0
+    SAVE = 1
+    RESTORE = 2
+    DISCARD = 3
+
+
+class RException(IntEnum):
+    """BML exception-flow — from angelic-assembler.txt:
+
+    - raise:  raise an exception (distinct from speculation fail)
+    - resume: resume from a raised exception
+
+    Interns as Recipe NodeIDs; runtime execution semantics lands with the
+    recipe-execution engine.
+    """
+    UNDEFINED = 0
+    RAISE = 1
+    RESUME = 2

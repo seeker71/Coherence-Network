@@ -769,16 +769,30 @@ Convenience wrappers: `bridges_symmetric`, `near_symmetric`, `polar_to_symmetric
 
 Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) names constructs Form does not yet carry:
 
-| BML construct | Why it would matter for us |
-|---|---|
-| **Delegation inheritance** — object delegates dispatch to another | Resonance edges are a delegation shape; a first-class delegation primitive would make `.shape -> ~Triad` a Form expression rather than only an edge |
-| **Reverse semantics on every instruction (DO + UNDO)** | True backtracking at runtime, not just at parser level; would let `choose` actually evaluate with rollback |
-| **`save` / `restore` / `discard`** state stack | Substrate transactions as a first-class language primitive |
-| **`raise` / `resume`** — exception flow distinct from speculation | A failed resonance lookup could `raise` rather than `choose [...] fail` |
-| **Common Objects** — multiple-bases-as-shared-tissue | Two cells sharing a base (a geometric form cell, say) without each carrying it; partially addressed by `\|>` views but not at the data level |
-| **Method definitions inside objects** | Resonance verbs as methods on the dimensional cells — `@geometric_form(triad).shapes_of(@spectrum(Hz-174))` |
+| BML construct | Status | Notes |
+|---|---|---|
+| **`save` / `restore` / `discard`** state stack | ✓ closed (form layer) | Interns as `RBasic.STATE`; recipe-execution engine remains future. |
+| **`raise` / `resume`** — exception flow distinct from speculation | ✓ closed (form layer) | Interns as `RBasic.EXCEPTION`; same engine dependency as above. |
+| **Delegation inheritance** — object delegates dispatch to another | open | Resonance edges are a delegation shape; a first-class delegation primitive would make `.shape -> ~Triad` a Form expression rather than only an edge. |
+| **Reverse semantics on every instruction (DO + UNDO)** | open | True backtracking at runtime, not just at parser level; would let `choose` actually evaluate with rollback. |
+| **Common Objects** — multiple-bases-as-shared-tissue | open | Two cells sharing a base (a geometric form cell, say) without each carrying it; partially addressed by `\|>` views but not at the data level. |
+| **Method definitions inside objects** | open | Resonance verbs as methods on the dimensional cells — `@geometric_form(triad).shapes_of(@spectrum(Hz-174))`. |
 
-Each of these is a future breath; named here so the gap is visible and chooseable, not hidden. The constructs that shipped (`with`/`.self`, shape-filter, `?shaped_by`, `?harmonic_at`) are the load-bearing minimum for the resonance work to be reasonable about in Form — and they land *with* the vocabulary, not after.
+The closed rows landed at the same structural-first pattern as `choose`/`fail`/`stop`: the recipe interns today, the execution semantics waits for the recipe-execution engine (a real future breath, named in its own row above). The open rows stay visible so any cell can pick one up.
+
+```form
+save                 # → recipe @1.2.22.1   (RBasic.STATE=22, RState.SAVE=1)
+restore              # → recipe @1.2.22.2
+discard              # → recipe @1.2.22.3
+raise                # → recipe @1.2.23.1   (RBasic.EXCEPTION=23, RException.RAISE=1)
+resume               # → recipe @1.2.23.2
+
+do { save; 1 + 2; restore }         # composes inside do-blocks
+choose [save, raise]                # composes inside choose
+with @1.2.4.3 { save; discard }     # composes inside with
+```
+
+**Implementation honesty:** leaf primitives (`save`, `raise` alone) return bare category NodeIDs without persisting to `substrate_nodes` — the kernel's `intern_node` skips re-interning trivial leaves with no children. So `?vocabulary` only sees them once they're embedded in a composite recipe (the composite's stored row carries them as serialized children). This mirrors how `fail`/`stop` work; not a bug, an architectural property.
 
 ## The path from bootstrap to self-hosting
 
