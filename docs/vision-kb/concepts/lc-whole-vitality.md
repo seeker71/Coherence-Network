@@ -2,7 +2,22 @@
 id: lc-whole-vitality
 hz: 741
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 3
+  form: triad
+  topology: parallel
+  polarity: parallel-facets
+  ordering: unordered
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: centering
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Whole Vitality — Three Forms of Sensing, the Asking, the Outside Witness

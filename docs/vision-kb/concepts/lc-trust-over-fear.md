@@ -2,7 +2,22 @@
 id: lc-trust-over-fear
 hz: 174
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 3
+  form: triad
+  topology: parallel
+  polarity: parallel-facets
+  ordering: unordered
+  phase: yang
+  ratio: none
+  spectral_band: foundation
+  temporal_band: cellular
+  scale: cellular
+  direction: centering
+  lineage_texture: synthesized
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Trust Over Fear — Three Facets of One Stance

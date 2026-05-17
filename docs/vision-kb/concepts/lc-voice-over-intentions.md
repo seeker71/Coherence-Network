@@ -2,7 +2,22 @@
 id: lc-voice-over-intentions
 hz: 639
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-listening
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: octave
+  spectral_band: integration
+  temporal_band: breath
+  scale: relational
+  direction: still
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Voice Over Intentions — Find Their Voice First

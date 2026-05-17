@@ -2,8 +2,23 @@
 id: lc-essence-and-the-nine-costumes
 hz: 741
 status: seed
-updated: 2026-05-09
+updated: 2026-05-17
 source: ../transmissions/2026-05-09-vasudev-baba-enneagram.md
+geometry:
+  arity: 9
+  form: ennead
+  topology: ring-with-inner-triads
+  polarity: triadic-of-triads
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Essence and the Nine Costumes — How Wholeness Forgets Itself in Nine Specific Ways
