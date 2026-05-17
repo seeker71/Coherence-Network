@@ -163,8 +163,20 @@ def test_match_wildcard(session):
     assert form_execute_text(session, src) == "other"
 
 
-def test_match_no_arm_matches(session):
+def test_match_no_arm_raises(session):
+    """No arm matched and no `_` wildcard — the engine refuses to coerce
+    to null. The expressive shape is `_ => ...` to name the fallback;
+    silent null was the old behavior, and it hid the gap."""
     src = 'match 99 { 1 => "one", 2 => "two" }'
+    with pytest.raises(LookupError) as exc_info:
+        form_execute_text(session, src)
+    assert "exhausted" in str(exc_info.value).lower()
+    assert "scrutinee" in str(exc_info.value).lower()
+
+
+def test_match_no_arm_with_explicit_wildcard_returns_null(session):
+    """Explicit `_ => null` says what you mean; engine honors it."""
+    src = 'match 99 { 1 => "one", 2 => "two", _ => null }'
     assert form_execute_text(session, src) is None
 
 

@@ -597,7 +597,16 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
             pat_value = execute(session, arm.pattern, frame)
             if pat_value == scrut:
                 return execute(session, arm.body, frame)
-        return None
+        # No arm matched and no `_` wildcard — refuse to silently coerce
+        # to null. The honest answer is that the engine doesn't know what
+        # the value of this expression should be. Add an explicit `_ => ...`
+        # arm to say what to do in the unmatched case (it can be `null` if
+        # that's what you want — but say it).
+        raise LookupError(
+            f"Form runtime: `match` exhausted without a matching arm "
+            f"(scrutinee={scrut!r}). Add an explicit `_ => ...` arm to "
+            f"name the fallback — silent null is a coercion the engine refuses."
+        )
 
     # --- Speculation ---------------------------------------------------------
 
