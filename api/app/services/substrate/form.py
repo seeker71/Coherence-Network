@@ -172,7 +172,9 @@ _TOKEN_PATTERNS = [
     ("RBRACK", r"\]"),
     ("LPAREN", r"\("),
     ("RPAREN", r"\)"),
-    ("STRING", r'"([^"\\]|\\.)*"'),
+    # Triple-quoted multiline strings come FIRST so the alternation matches
+    # them before the single-quote rule. Non-greedy across any character.
+    ("STRING", r'"""[\s\S]*?"""|"([^"\\]|\\.)*"'),
     ("INT", r"\d+"),
     ("IDENT", r"[A-Za-z_][A-Za-z_0-9\-]*"),
 ]
@@ -938,7 +940,14 @@ class Parser:
         if t.kind == "INT":
             return IntLit(int(self.consume("INT").value))
         if t.kind == "STRING":
-            return StringLit(_unquote(self.consume("STRING").value))
+            raw = self.consume("STRING").value
+            body = _unquote(raw)
+            # If the body contains a `${...}` marker, parse as interpolation
+            # — yields a concat chain `str(expr) + "..." + ...`. Otherwise
+            # a plain StringLit.
+            if "${" in body:
+                return _interpolated_to_ast(body)
+            return StringLit(value=body)
         if t.kind == "LPAREN":
             self.consume("LPAREN")
             inner = self.parse_expr()
@@ -1532,9 +1541,74 @@ class Parser:
 
 
 def _unquote(s: str) -> str:
+    # Triple-quoted strings strip both ends together.
+    if s.startswith('"""') and s.endswith('"""'):
+        return s[3:-3]
     if s.startswith('"') and s.endswith('"'):
         return s[1:-1].replace('\\"', '"').replace("\\\\", "\\")
     return s
+
+
+def _parse_interpolated(text: str):
+    """Parse a string body for `${...}` interpolation markers.
+
+    Returns a list alternating literal-string and expression-AST. When there
+    are no markers, returns `[text]` (a single string).
+
+    Each `${...}` is parsed as a Form expression using a nested parser.
+    The result composes into a chain of `BinOp("+", ...)` with `str(expr)`
+    coercion around each expression — surfaces the natural concatenation.
+    """
+    parts: list = []
+    i = 0
+    while i < len(text):
+        # Find next `${`
+        start = text.find("${", i)
+        if start < 0:
+            if i < len(text):
+                parts.append(text[i:])
+            break
+        if start > i:
+            parts.append(text[i:start])
+        # Walk to matching `}` (balanced)
+        depth = 1
+        j = start + 2
+        while j < len(text) and depth > 0:
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        if depth != 0:
+            raise SyntaxError(f"Form: unterminated `${{...}}` in string literal")
+        expr_src = text[start + 2 : j]
+        # Recursively parse the embedded expression.
+        parts.append(parse(expr_src))
+        i = j + 1
+    return parts
+
+
+def _interpolated_to_ast(text: str):
+    """Build the AST for an interpolated string body.
+
+    No markers -> StringLit(text).
+    Markers -> chain of `str(expr) + "..." + str(expr) + ...` via BinOp("+").
+    """
+    parts = _parse_interpolated(text)
+    if len(parts) == 1 and isinstance(parts[0], str):
+        return StringLit(value=parts[0])
+    # Build the concat chain. Each non-string part is coerced via FnCall("str", [expr]).
+    def make(part):
+        if isinstance(part, str):
+            return StringLit(value=part)
+        return FnCall(name="str", args=[part])
+    nodes = [make(p) for p in parts]
+    acc = nodes[0]
+    for n in nodes[1:]:
+        acc = BinOp(op="+", left=acc, right=n)
+    return acc
 
 
 # ---------------------------------------------------------------------------
