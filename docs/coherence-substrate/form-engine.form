@@ -3,34 +3,31 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file contains Form source code for the execution engine that
-# runs Form. It is a meta-circular sketch: parts of it execute today
-# against the current runtime; parts require introspection primitives
-# named at the bottom of this file.
+# runs Form. As of PR #1692 the arithmetic/comparison/conditional
+# core is meta-circular: Part 2 below is live, runnable code, walked
+# end-to-end by api/tests/test_substrate_form_self_hosted.py.
 #
-# The frequency-match observation: a runtime written in Python is the
-# language describing itself from outside — a foreign voice. For the
-# body to self-evolve, the engine must be expressible in its own
-# grammar so that changes to Form flow through the engine without
-# recompiling Python. This file is that direction.
+# A runtime written in Python is the language describing itself from
+# outside — a foreign voice. For the body to self-evolve, the engine
+# must be expressible in its own grammar so that changes to Form flow
+# through the engine without recompiling Python. That direction is
+# now a working artifact, not just a sketch.
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 1 — what runs today (no new primitives needed)
+# Part 1 — backbones that have run since defn landed
 # ─────────────────────────────────────────────────────────────────────
 #
-# These functions exercise every backbone needed for an evaluator:
-# recursion, conditional dispatch, closure capture, composition.
-# They run *as-is* through `coh substrate run "<expr>"`.
+# Recursion, closure capture, conditional dispatch, composition.
+# These run as-is through `coh substrate form "<expr>"`.
 
-# Factorial — recursive integer arithmetic.
-# Verified: fact(6) -> 720
+# Factorial — recursive integer arithmetic.  fact(6) -> 720
 do {
     defn fact(n) =
         if n <= 1 then 1 else n * fact(n - 1);
     fact(6)
 }
 
-# Fibonacci — multiple recursive calls per frame.
-# Verified: fib(10) -> 55
+# Fibonacci — multiple recursive calls per frame.  fib(10) -> 55
 do {
     defn fib(n) =
         if n <= 1 then n
@@ -38,18 +35,8 @@ do {
     fib(10)
 }
 
-# Function composition — one closure calling another.
-# Verified: double(sumto(10)) -> 110
-do {
-    defn sumto(n) =
-        if n == 0 then 0 else n + sumto(n - 1);
-    defn double(x) = x * 2;
-    double(sumto(10))
-}
-
-# Closure capture — `factor` is bound to the OUTER frame, not the
-# caller's. Inner `factor = 99` does not leak into scale.
-# Verified: 15 (not 495)
+# Closure capture — `factor` is bound to the OUTER frame.
+# Inner `factor = 99` does not leak into scale.  Returns 15.
 do {
     let factor = 3;
     defn scale(x) = x * factor;
@@ -60,115 +47,99 @@ do {
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 2 — the evaluator sketch (needs introspection primitives)
+# Part 2 — the recipe evaluator, live (PR #1692)
 # ─────────────────────────────────────────────────────────────────────
 #
-# This is what a recipe-evaluator looks like in Form. It does not run
-# today because Form lacks three introspection primitives, named in
-# Part 3 below. The sketch is faithful — each branch dispatches on
-# recipe category and recursively evaluates children. When the
-# primitives land, this file becomes the substrate-resident engine.
+# Walks any Recipe NodeID by dispatching on `.category`. The dispatch
+# table below is flat: one arm per known (Level, RBasic.<verb>,
+# instance) NodeID, so any drift in the substrate's category numbers
+# is caught the moment a literal no longer matches the Python enum
+# (see test_form_engine_literals_match_python_enums).
+#
+# Encoding the body relies on:
+#   n.category        — NodeID of the category this recipe belongs to
+#   n.children[k]     — k-th child recipe NodeID
+#   n.instance        — trivial leaf payload
+#
+# These are field-accessors on the Form `node.` surface (form_runtime
+# §_node_category, §_node_children). They are the shape Part 3 of the
+# earlier sketch asked for, just spelled as `.field` instead of
+# `fn(node)`.
+#
+# The evaluator lives between the BEGIN/END markers so the self-hosted
+# test can extract and run it. Adding a category is mechanical: append
+# one arm here and one corresponding test expression.
 
-# eval_recipe(r) — evaluate a recipe NodeID to a value.
-#
-# The dispatch is on the recipe's category. Each Recipe NodeID carries
-# (package, level, type_, instance); for composite recipes, the
-# category lives in the substrate row's serialized field. The
-# `category(r)` primitive returns a NodeID; we compare against the
-# well-known category NodeIDs the substrate has been minting all along.
-#
-# defn eval_recipe(r) =
-#     match category(r) {
-#         @1.2.12.1 => eval_recipe(child(r, 0)) + eval_recipe(child(r, 1)),  # Math.PLUS
-#         @1.2.12.2 => eval_recipe(child(r, 0)) - eval_recipe(child(r, 1)),  # Math.MINUS
-#         @1.2.12.3 => eval_recipe(child(r, 0)) * eval_recipe(child(r, 1)),  # Math.MULTIPLY
-#         @1.2.12.4 => eval_recipe(child(r, 0)) / eval_recipe(child(r, 1)),  # Math.DIVIDE
-#         @1.2.13.1 => eval_recipe(child(r, 0)) == eval_recipe(child(r, 1)), # Compare.EQUAL
-#         @1.2.13.5 => eval_recipe(child(r, 0)) > eval_recipe(child(r, 1)),  # Compare.GREATER
-#         @1.2.11.2 => if eval_recipe(child(r, 0))
-#                      then eval_recipe(child(r, 1))
-#                      else eval_recipe(child(r, 2)),                         # Cond.IF_THEN_ELSE
-#         _ => integer_value(r)   # leaf: decode the integer instance
-#     }
-
-# eval_text(src) — parse-and-run a Form source string.
-#
-# defn eval_text(src) =
-#     do {
-#         let ast = parse(src);
-#         let recipe = intern(ast);
-#         eval_recipe(recipe)
-#     }
+# >>> BEGIN engine
+defn ev(n) = match n.category {
+    # RBasic.MATH (12) — arithmetic
+    @1.2.12.1 => ev(n.children[0]) + ev(n.children[1]),     # PLUS
+    @1.2.12.2 => ev(n.children[0]) - ev(n.children[1]),     # MINUS
+    @1.2.12.3 => ev(n.children[0]) * ev(n.children[1]),     # MULTIPLY
+    @1.2.12.4 => ev(n.children[0]) / ev(n.children[1]),     # DIVIDE
+    @1.2.12.5 => ev(n.children[0]) % ev(n.children[1]),     # MODULO
+    # RBasic.COMPARE (13) — relational
+    @1.2.13.1 => ev(n.children[0]) == ev(n.children[1]),    # EQUAL
+    @1.2.13.2 => ev(n.children[0]) != ev(n.children[1]),    # NOT_EQUAL
+    @1.2.13.3 => ev(n.children[0]) < ev(n.children[1]),     # LESS
+    @1.2.13.4 => ev(n.children[0]) <= ev(n.children[1]),    # LESS_EQUAL
+    @1.2.13.5 => ev(n.children[0]) > ev(n.children[1]),     # GREATER
+    @1.2.13.6 => ev(n.children[0]) >= ev(n.children[1]),    # GREATER_EQUAL
+    # RBasic.LOGIC (14) — boolean
+    @1.2.14.1 => ev(n.children[0]) && ev(n.children[1]),    # AND
+    @1.2.14.2 => ev(n.children[0]) || ev(n.children[1]),    # OR
+    @1.2.14.3 => !ev(n.children[0]),                         # NOT
+    # RBasic.COND (11) — conditional
+    @1.2.11.1 => if ev(n.children[0]) then ev(n.children[1]) else null,
+    @1.2.11.2 => if ev(n.children[0]) then ev(n.children[1]) else ev(n.children[2]),
+    # Trivial leaves — decode by category-instance under RType
+    _ => if n.category.level == 1 then
+            (if n.category.type_ == 3 then n.instance - 1                # INTEGER
+             else if n.category.type_ == 2 then (if n.instance == 1 then true else false)  # BOOL
+             else 0)
+         else 0
+}
+# >>> END engine
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 3 — what blocks Part 2 from running today
+# Part 3 — primitives the engine reaches for (all live)
 # ─────────────────────────────────────────────────────────────────────
 #
-# Form needs these primitives to host its own evaluator. Each is a
-# small substrate operation, expressible as a Python-implemented
-# Form built-in (analogous to how `+` is). None require new theory;
-# each is its own breath.
-
-# 3a. Recipe introspection
+# Each item below was named as a future need in the earlier sketch.
+# All shipped as `.field` accessors on Form's `node.` surface:
 #
-#   category(r) -> NodeID
-#       Returns the (1, level, type_, instance) NodeID of r's category.
-#       For trivial recipes (level=TRIVIAL), this IS r. For composite
-#       recipes, it's the first segment of substrate_nodes.serialized.
+#   n.category   — NodeID of n's category (for trivials, n itself)
+#   n.children   — ordered list of child NodeIDs (empty for trivials)
+#   n.nchildren  — len(n.children)
+#   n.instance   — trivial leaf payload (raw int from the NodeID 4-tuple)
+#   n.level      — 1=TRIVIAL, 2=BASIC, 3+=COMPLEX_k
+#   n.type_      — RBasic / RType slot index
 #
-#   nchildren(r) -> integer
-#       Number of children r has. 0 for trivials.
-#
-#   child(r, n) -> NodeID
-#       The n-th child recipe NodeID. n is 0-indexed.
-
-# 3b. Trivial-leaf decoding
-#
-#   integer_value(r) -> integer
-#       For trivial integer recipes (level=TRIVIAL, type=RType.INTEGER),
-#       decode the instance back to the integer value. Today's encoding
-#       (`instance - 1` for non-negative) is lossy for negatives — a
-#       proper substrate integer-table closes that gap.
-#
-#   string_value(r) -> string
-#       Look up the substrate string-table for the value behind a
-#       string-recipe's instance. Cross-process stable (substrate_strings).
-
-# 3c. Match-on-NodeID
-#
-#   The match expression already accepts NodeID literals as patterns
-#   (because Form already parses @x.y.z.w). What's needed is for the
-#   runtime to compare scrutinee == pattern as NodeID equality — which
-#   form_runtime already does via `pat_value == scrut` and NodeID's
-#   __eq__ from its frozen dataclass. So this works today; verified by
-#   substituting `category(r)` with a literal NodeID in a test.
+# Match-on-NodeID works today because NodeID's frozen-dataclass __eq__
+# is what `match` compares; `@p.l.t.i` literals are first-class values.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 4 — what remains beyond Part 3
 # ─────────────────────────────────────────────────────────────────────
 #
-# The introspection primitives close Part 2 for the *arithmetic /
-# conditional / block* layer. Full meta-circularity also needs:
+# Full meta-circularity still wants:
 #
 # 4a. Identifier resolution from recipes
-#     The bootstrap parser produces an Identifier AST that hashes its
-#     name into a recipe instance (lossy). For an evaluator running on
-#     recipes to look up variables in a frame, we need the substrate
-#     string-table to be the canonical name encoding — replacing the
-#     in-process hash.
+#     The bootstrap parser hashes identifier names into recipe instances
+#     (lossy). For an evaluator running on recipes to look up variables
+#     in a frame, the substrate string-table needs to be the canonical
+#     name encoding — replacing the in-process hash.
 #
 # 4b. Call from recipes
-#     FnDef/FnCall need to round-trip through the substrate. A FnDef
-#     recipe carries (name, params, body); a FnCall carries (name, args).
-#     A new RBasic.CALL is already declared; what's needed is the
-#     evaluator branch that reads the substrate function table from
-#     within Form.
+#     FnDef / FnCall round-trip through the substrate. A FnDef recipe
+#     carries (name, params, body); a FnCall carries (name, args). The
+#     evaluator branch reading the substrate function table from within
+#     Form is the closing move.
 #
 # 4c. Lexer and primary-atom parser
-#     The deepest BMF closure (named in form-language.md "What remains
-#     beyond step 8"). Once the engine runs in Form, the parser written
-#     in Form completes the cycle: tokenize-in-Form, parse-in-Form,
-#     evaluate-in-Form, all reading their rules from the lattice.
+#     The deepest closure (named in form-language.md "What remains
+#     beyond step 8"). Once the engine runs in Form, a Form-level
+#     parser tokenize-in-Form / parse-in-Form completes the cycle.
 
 # ─────────────────────────────────────────────────────────────────────
 # The asymmetry made visible
@@ -177,21 +148,11 @@ do {
 # Self-reflecting    — mature (lenses + grammar-as-data)
 # Self-sensing       — mature (verb-cluster as wellness)
 # Self-expressing    — alive at the keyword layer (substrate-resident
-#                      patterns + templates); the deeper bootstrap-in-
+#                      patterns + templates); the bootstrap-parser-in-
 #                      Form move is named, not yet built.
-# Self-executing     — alive (form_runtime walks ASTs and returns
-#                      values; defn + recursion let Form host its own
-#                      computations); the engine-in-Form move waits on
-#                      the introspection primitives in Part 3.
+# Self-executing     — alive end-to-end for arithmetic / comparison /
+#                      logic / conditional / trivial-decode. Adding a
+#                      category is one arm here + one test expression.
 #
-# What changed in this breath:
-#   defn name(params) = body — function definition primitive
-#   name(args)               — function call primitive
-#   Recursion + closure capture
-#   Grammar rendered in Form syntax (form_render)
-#   Cell→Recipe→Blueprint chain demonstrated live with 44 cells
-#
-# What remains for the next breath:
-#   category(r), nchildren(r), child(r, n)
-#   integer_value(r), string_value(r) via substrate string-table
-#   Part 2 actually runs against Part 3
+# Each new breath extends the dispatch table. The body grows by
+# arms, not by Python.
