@@ -53,14 +53,20 @@ from app.services.substrate.category import (
     RBasic,
     RBlock,
     RChoice,
-    RException,
-    RState,
+    RCommon,
     RCompare,
     RCond,
+    RDelegate,
+    RException,
     RJump,
     RLogic,
     RMatch,
     RMath,
+    RMethod,
+    RProjection,
+    RReactive,
+    RReverse,
+    RState,
 )
 from app.services.substrate.kernel import (
     NamedCell,
@@ -378,6 +384,91 @@ class ResumeExpr:
     """`resume` — resume from a raised exception."""
 
 
+@dataclass
+class DelegateExpr:
+    """`delegate @X to @Y` — BML delegation inheritance.
+
+    Dispatch against the source cell falls through to the target cell when the
+    source doesn't carry the requested method. Interns as Recipe
+    `(RBasic.DELEGATE, [source_ref, target_ref])`.
+    """
+    source: Any  # an atom-ref expression (CellRef / NodeIDLit)
+    target: Any
+
+
+@dataclass
+class UndoExpr:
+    """`undo <recipe>` — execute the inverse of the wrapped recipe.
+
+    The recipe-execution engine pairs each recipe with its reverse; `undo`
+    invokes the reverse pass. Interns as `(RBasic.REVERSE, [child_recipe])`.
+    """
+    child: Any
+
+
+@dataclass
+class InverseExpr:
+    """`inverse(<recipe>)` — yield the inverse-recipe NodeID without running it.
+
+    Interns as `(RBasic.REVERSE, [child_recipe])` distinguished by instance
+    from `undo` (UNDO=1, INVERSE=2).
+    """
+    child: Any
+
+
+@dataclass
+class CommonExpr:
+    """`common @X @Y` — BML Common Objects: X and Y share a base.
+
+    Data-level shared-tissue declaration (different from `|>` view projection).
+    Interns as `(RBasic.COMMON, [x_ref, y_ref])`.
+    """
+    a: Any
+    b: Any
+
+
+@dataclass
+class MethodDefExpr:
+    """`method NAME on @X { body }` — define a method on a cell.
+
+    Interns as `(RBasic.METHOD, [name_str_recipe, target_ref, body_recipe])`.
+    """
+    name: str
+    target: Any
+    body: Any
+
+
+@dataclass
+class MethodInvokeExpr:
+    """`invoke NAME on @X` — invoke the method on cell X (dispatch via
+    delegation chain). Interns as `(RBasic.METHOD, [name_str, target_ref])`.
+    """
+    name: str
+    target: Any
+
+
+@dataclass
+class OnChangeExpr:
+    """`?on_change <query> { body }` — reactive lens: fire body on result change.
+
+    Interns as `(RBasic.REACTIVE, [query_recipe, body_recipe])`. The
+    subscription engine (when it lands) wires the query result to the body.
+    """
+    query: Any
+    body: Any
+
+
+@dataclass
+class ProjectExpr:
+    """`?project @cell @coord_fn` — spatial-projection lens: render through coords.
+
+    Interns as `(RBasic.PROJECTION, [cell_ref, coord_fn_ref])`. The renderer
+    (GPU-visualizer, memory-framebuffer) consumes the recipe and emits a frame.
+    """
+    cell: Any
+    coord_fn: Any
+
+
 AtomNode = Union[NodeIDLit, TrivialRef, CellRef, Projection]
 ExprNode = Any  # any AST node — too many to enumerate
 
@@ -592,6 +683,18 @@ class Parser:
         if kw == "resume":
             self.consume("IDENT")
             return ResumeExpr()
+        if kw == "delegate":
+            return self.parse_delegate()
+        if kw == "undo":
+            return self.parse_undo()
+        if kw == "inverse":
+            return self.parse_inverse()
+        if kw == "common":
+            return self.parse_common()
+        if kw == "method":
+            return self.parse_method_def()
+        if kw == "invoke":
+            return self.parse_method_invoke()
 
         # User-registered keywords (the rule-driven extension point —
         # this is where the grammar becomes alive at runtime).
@@ -689,6 +792,87 @@ class Parser:
         self.consume("RBRACK")
         return ChooseExpr(candidates=candidates)
 
+    def parse_delegate(self) -> DelegateExpr:
+        """`delegate @X to @Y`"""
+        self.consume("IDENT")  # 'delegate'
+        source = self.parse_expr()
+        if self.peek().kind != "IDENT" or self.peek().value != "to":
+            raise SyntaxError("Form: expected 'to' after delegate source")
+        self.consume("IDENT")  # 'to'
+        target = self.parse_expr()
+        return DelegateExpr(source=source, target=target)
+
+    def parse_undo(self) -> UndoExpr:
+        """`undo <expr>`"""
+        self.consume("IDENT")  # 'undo'
+        child = self.parse_expr()
+        return UndoExpr(child=child)
+
+    def parse_inverse(self) -> InverseExpr:
+        """`inverse(<expr>)`"""
+        self.consume("IDENT")  # 'inverse'
+        self.consume("LPAREN")
+        child = self.parse_expr()
+        self.consume("RPAREN")
+        return InverseExpr(child=child)
+
+    def parse_common(self) -> CommonExpr:
+        """`common @X @Y`"""
+        self.consume("IDENT")  # 'common'
+        a = self.parse_expr()
+        b = self.parse_expr()
+        return CommonExpr(a=a, b=b)
+
+    def parse_method_def(self) -> MethodDefExpr:
+        """`method NAME on @X { body }`"""
+        self.consume("IDENT")  # 'method'
+        name = self.consume("IDENT").value
+        if self.peek().kind != "IDENT" or self.peek().value != "on":
+            raise SyntaxError("Form: expected 'on' after method name")
+        self.consume("IDENT")  # 'on'
+        target = self.parse_expr()
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        body = DoBlock(statements=stmts)
+        return MethodDefExpr(name=name, target=target, body=body)
+
+    def parse_method_invoke(self) -> MethodInvokeExpr:
+        """`invoke NAME on @X`"""
+        self.consume("IDENT")  # 'invoke'
+        name = self.consume("IDENT").value
+        if self.peek().kind != "IDENT" or self.peek().value != "on":
+            raise SyntaxError("Form: expected 'on' after invoke name")
+        self.consume("IDENT")  # 'on'
+        target = self.parse_expr()
+        return MethodInvokeExpr(name=name, target=target)
+
+    def parse_on_change(self) -> OnChangeExpr:
+        """`?on_change <query> { body }` — entered via parse_query branch."""
+        query = self.parse_expr()
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        return OnChangeExpr(query=query, body=DoBlock(statements=stmts))
+
+    def parse_project(self) -> ProjectExpr:
+        """`?project @cell @coord_fn` — entered via parse_query branch."""
+        cell = self.parse_expr()
+        coord_fn = self.parse_expr()
+        return ProjectExpr(cell=cell, coord_fn=coord_fn)
+
     def parse_list_literal(self) -> List[ExprNode]:
         self.consume("LBRACK")
         items = []
@@ -738,6 +922,16 @@ class Parser:
             # circulation occupies. A body with only one verb's count > 0 is a
             # body without circulation across language layers.
             return Query(kind="vocabulary")
+        if kw == "on_change":
+            # `?on_change <query> { body }` — reactive lens (form layer).
+            # Interns the subscription intent; subscription engine fires the
+            # body when query result changes.
+            return Query(kind="on_change", arg=self.parse_on_change())
+        if kw == "project":
+            # `?project @cell @coord_fn` — spatial-projection lens (form layer).
+            # Interns the render intent; renderer (GPU-visualizer, memory-
+            # framebuffer) consumes when it lands.
+            return Query(kind="project", arg=self.parse_project())
         if kw == "cells":
             arg = None
             if self.peek().kind == "PROJECT":
@@ -917,6 +1111,32 @@ def _exception_id(kind: str) -> NodeID:
     return NodeID(1, Level.BASIC, RBasic.EXCEPTION, instance)
 
 
+def _delegate_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.DELEGATE, RDelegate.DELEGATE_TO)
+
+
+def _reverse_id(kind: str) -> NodeID:
+    instance = {"undo": RReverse.UNDO, "inverse": RReverse.INVERSE}[kind]
+    return NodeID(1, Level.BASIC, RBasic.REVERSE, instance)
+
+
+def _common_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.COMMON, RCommon.SHARED_BASE)
+
+
+def _method_id(kind: str) -> NodeID:
+    instance = {"define": RMethod.DEFINE, "invoke": RMethod.INVOKE}[kind]
+    return NodeID(1, Level.BASIC, RBasic.METHOD, instance)
+
+
+def _reactive_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.REACTIVE, RReactive.ON_CHANGE)
+
+
+def _projection_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.PROJECTION, RProjection.PROJECT)
+
+
 def _intern_recipe(session: Session, category: NodeID, children: List[NodeID]) -> NodeID:
     """Intern a Recipe shape and return its NodeID."""
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
@@ -1016,6 +1236,37 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
         return _exception_id("raise")
     if isinstance(ast, ResumeExpr):
         return _exception_id("resume")
+    if isinstance(ast, DelegateExpr):
+        src = _to_recipe_node_id(session, ast.source)
+        tgt = _to_recipe_node_id(session, ast.target)
+        return _intern_recipe(session, _delegate_id(), [src, tgt])
+    if isinstance(ast, UndoExpr):
+        child = _to_recipe_node_id(session, ast.child)
+        return _intern_recipe(session, _reverse_id("undo"), [child])
+    if isinstance(ast, InverseExpr):
+        child = _to_recipe_node_id(session, ast.child)
+        return _intern_recipe(session, _reverse_id("inverse"), [child])
+    if isinstance(ast, CommonExpr):
+        a = _to_recipe_node_id(session, ast.a)
+        b = _to_recipe_node_id(session, ast.b)
+        return _intern_recipe(session, _common_id(), [a, b])
+    if isinstance(ast, MethodDefExpr):
+        name_id = _to_recipe_node_id(session, StringLit(ast.name))
+        target_id = _to_recipe_node_id(session, ast.target)
+        body_id = _to_recipe_node_id(session, ast.body)
+        return _intern_recipe(session, _method_id("define"), [name_id, target_id, body_id])
+    if isinstance(ast, MethodInvokeExpr):
+        name_id = _to_recipe_node_id(session, StringLit(ast.name))
+        target_id = _to_recipe_node_id(session, ast.target)
+        return _intern_recipe(session, _method_id("invoke"), [name_id, target_id])
+    if isinstance(ast, OnChangeExpr):
+        q_id = _to_recipe_node_id(session, ast.query)
+        b_id = _to_recipe_node_id(session, ast.body)
+        return _intern_recipe(session, _reactive_id(), [q_id, b_id])
+    if isinstance(ast, ProjectExpr):
+        c_id = _to_recipe_node_id(session, ast.cell)
+        f_id = _to_recipe_node_id(session, ast.coord_fn)
+        return _intern_recipe(session, _projection_id(), [c_id, f_id])
     if isinstance(ast, Projection):
         # In Recipe context, projection is a "view-as" recipe with two children.
         cell_id = _to_recipe_node_id(session, ast.cell)
@@ -1074,6 +1325,9 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         MatchExpr, ChooseExpr, FailExpr, StopExpr,
         SaveExpr, RestoreExpr, DiscardExpr, RaiseExpr, ResumeExpr,
         WithExpr, SelfRef,
+        DelegateExpr, UndoExpr, InverseExpr, CommonExpr,
+        MethodDefExpr, MethodInvokeExpr,
+        OnChangeExpr, ProjectExpr,
     )):
         rid = _to_recipe_node_id(session, ast)
         return FormResult("recipe", rid)
@@ -1113,6 +1367,13 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
         # Verb-cluster lens — histogram of recipe/blueprint types currently interned.
         from app.services.substrate.kernel import vocabulary_histogram
         return FormResult("vocabulary", vocabulary_histogram(session))
+
+    if q.kind in ("on_change", "project"):
+        # Reactive / spatial-projection lenses (form layer).  The subscription
+        # engine and the renderer activate the recipes at runtime; here we
+        # just compile the AST to its Recipe NodeID so the intent persists.
+        rid = _to_recipe_node_id(session, q.arg)
+        return FormResult("recipe", rid)
 
     if q.kind in ("shaped_by", "harmonic_at"):
         # Resonance-walk query: given a target cell, return cells whose

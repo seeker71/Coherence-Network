@@ -195,6 +195,30 @@ class RBasic(IntEnum):
     # BML exception-flow (lineage: angelic-assembler.txt — raise/resume).  Same
     # structural shape: interns as recipe today, executes when the engine lands.
     EXCEPTION = 23
+    # BML delegation inheritance — `delegate @X to @Y` declares dispatch
+    # against X falls through to Y. Interns as a recipe; the dispatch engine
+    # walks the chain. sgb-bml-objects.txt §5.3.
+    DELEGATE = 24
+    # BML reverse semantics — `undo <recipe>` and `inverse(<recipe>)`. Marks
+    # the language-level intent for DO+UNDO; the execution engine pairs each
+    # recipe with its reverse at runtime. angelic-assembler.txt + thesis README.
+    REVERSE = 25
+    # BML Common Objects — `common @X @Y` declares two cells share a base.
+    # Different from `|>` projection: common is a data-level shared-tissue
+    # declaration. sgb-bml-objects.txt §5.5 + §4.3.
+    COMMON = 26
+    # BML method-on-object — `method NAME on @X { body }`. Methods attach to
+    # cells / cell-blueprints; dispatch fires the body when invoked.
+    # sgb-bml-objects.txt §3.6-3.8.
+    METHOD = 27
+    # Reactive lens — `?on_change @recipe { body }`. Names "fire body when
+    # query result changes." Subscription engine consumes; form layer carries
+    # the structural intent.
+    REACTIVE = 28
+    # Spatial-projection lens — `?project @cell @coord_fn`. Names "render
+    # the cell through the coordinate function." The renderer consumes
+    # (GPU-visualizer, memory-framebuffer); form layer carries the intent.
+    PROJECTION = 29
 
 
 class RTend(IntEnum):
@@ -359,3 +383,62 @@ class RException(IntEnum):
     UNDEFINED = 0
     RAISE = 1
     RESUME = 2
+
+
+class RDelegate(IntEnum):
+    """BML delegation inheritance — sgb-bml-objects.txt §5.3.
+
+    - delegate: `delegate @X to @Y` declares dispatch on X falls through to Y.
+    """
+    UNDEFINED = 0
+    DELEGATE_TO = 1
+
+
+class RReverse(IntEnum):
+    """BML reverse semantics — angelic-assembler.txt + thesis README.
+
+    - undo: `undo <recipe>` — execute the inverse of recipe
+    - inverse: `inverse(<recipe>)` — yield the inverse recipe NodeID
+    """
+    UNDEFINED = 0
+    UNDO = 1
+    INVERSE = 2
+
+
+class RCommon(IntEnum):
+    """BML Common Objects — sgb-bml-objects.txt §5.5 + §4.3.
+
+    - common: `common @X @Y` declares two cells share a base.
+    """
+    UNDEFINED = 0
+    SHARED_BASE = 1
+
+
+class RMethod(IntEnum):
+    """BML method-on-object — sgb-bml-objects.txt §3.6-3.8.
+
+    - method: `method NAME on @X { body }` defines a method on cell X.
+    - invoke: `invoke NAME on @X` invokes the method (dispatch via delegation chain).
+    """
+    UNDEFINED = 0
+    DEFINE = 1
+    INVOKE = 2
+
+
+class RReactive(IntEnum):
+    """Reactive lens — fires body when a query result changes.
+
+    - on_change: `?on_change @recipe { body }` subscribes the body to the
+                 query, firing whenever the result changes.
+    """
+    UNDEFINED = 0
+    ON_CHANGE = 1
+
+
+class RProjection(IntEnum):
+    """Spatial-projection lens — renders cells through a coordinate function.
+
+    - project: `?project @cell @coord_fn` names the render intent.
+    """
+    UNDEFINED = 0
+    PROJECT = 1
