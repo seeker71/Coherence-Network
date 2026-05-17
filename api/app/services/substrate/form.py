@@ -517,6 +517,30 @@ class FnCall:
 
 
 @dataclass
+class IndexExpr:
+    """`xs[i]` — index into a list, string, or dict.
+
+    Runtime returns `xs[i]` for the target value and resolved index. Chains
+    via the postfix loop in `parse_primary`: `xs[0][1]` becomes nested
+    IndexExprs.
+    """
+    target: Any
+    index: Any
+
+
+@dataclass
+class TernaryExpr:
+    """`cond ? then : else` — three-arm conditional in expression position.
+
+    Lower-precedence form of `if cond then a else b`; lives at the top
+    of the precedence ladder.
+    """
+    cond: Any
+    then_branch: Any
+    else_branch: Any
+
+
+@dataclass
 class Access:
     """`target.field` — fractal-tree navigation.
 
@@ -592,8 +616,25 @@ class Parser:
             from app.services.substrate.form_operators import _BINARY_OPERATORS
             if _BINARY_OPERATORS:
                 from app.services.substrate.form_operators import parse_with_precedence
-                return parse_with_precedence(self, 0)
-        return self.parse_or()
+                base = parse_with_precedence(self, 0)
+                return self._maybe_ternary(base)
+        base = self.parse_or()
+        return self._maybe_ternary(base)
+
+    def _maybe_ternary(self, cond: ExprNode) -> ExprNode:
+        """If a `?` follows, consume `then ? else`. Otherwise return cond as-is."""
+        if self.peek().kind == "QMARK":
+            # Only treat as ternary when `?` is followed by an expression — the
+            # query form `?cells` etc. parses inside parse_primary, never here.
+            # By the time we see a QMARK at expression-end position, it's a ternary.
+            self.consume("QMARK")
+            then_branch = self.parse_or()
+            if self.peek().kind != "COLON":
+                raise SyntaxError("Form: expected ':' after ternary `?` branch")
+            self.consume("COLON")
+            else_branch = self.parse_or()
+            return TernaryExpr(cond=cond, then_branch=then_branch, else_branch=else_branch)
+        return cond
 
     def parse_or(self) -> ExprNode:
         left = self.parse_and()
@@ -705,6 +746,16 @@ class Parser:
                     a = MethodCall(target=a, method=field, args=args)
                 else:
                     a = Access(target=a, field=field)
+                continue
+            if t.kind == "LBRACK":
+                # Postfix indexing: `target[index]`. Distinguish from a list
+                # literal in atom position by checking the LEFT context: at
+                # this point in parse_projection's postfix loop we always have
+                # a target on the left, so `[` must be indexing.
+                self.consume("LBRACK")
+                index = self.parse_expr()
+                self.consume("RBRACK")
+                a = IndexExpr(target=a, index=index)
                 continue
             break
         return a
