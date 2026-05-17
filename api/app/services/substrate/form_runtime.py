@@ -48,24 +48,37 @@ from app.services.substrate.form import (
     BoolLit,
     CellRef,
     ChooseExpr,
+    CommonExpr,
+    DelegateExpr,
+    DiscardExpr,
     DoBlock,
     FailExpr,
     FnCall,
     FnDef,
     Identifier,
     IfExpr,
+    InverseExpr,
     IntLit,
     Let,
     MatchArm,
     MatchExpr,
     MethodCall,
+    MethodDefExpr,
+    MethodInvokeExpr,
     NodeIDLit,
+    OnChangeExpr,
+    ProjectExpr,
     Projection,
+    RaiseExpr,
+    RestoreExpr,
+    ResumeExpr,
+    SaveExpr,
     SelfRef,
     StopExpr,
     StringLit,
     TrivialRef,
     UnaryOp,
+    UndoExpr,
     BinOp,
     TRIVIAL_REFS,
     DOMAIN_TO_REF,
@@ -144,6 +157,107 @@ def _root_frame() -> Frame:
 
 
 # ---------------------------------------------------------------------------
+# Runtime registries — specialized engines for cell-aware constructs
+# ---------------------------------------------------------------------------
+#
+# Each registry maps a structural key (cell-pair, method-on-cell, watched
+# recipe) to its runtime behavior. The form-layer constructs (delegate,
+# method def/invoke, common, on_change, project) read/write these registries
+# at execute-time. Module-level for simplicity; session-scoped would isolate
+# multi-tenant work but isn't load-bearing yet.
+
+
+class RaiseSignal(Exception):
+    """`raise` evaluates here — caught by the next try-frame or surfaces."""
+
+    def __init__(self, payload: Any = None):
+        super().__init__(payload)
+        self.payload = payload
+
+
+# Method definitions: (cell_domain, cell_name, method_name) -> body AST
+_METHOD_REGISTRY: Dict[tuple, Any] = {}
+
+# Delegation: (cell_domain, cell_name) -> (target_domain, target_name)
+_DELEGATE_REGISTRY: Dict[tuple, tuple] = {}
+
+# Common bases: list of frozensets representing equivalence classes of cells.
+_COMMON_GROUPS: List[frozenset] = []
+
+# Reactive subscriptions: list of (watched_value_snapshot, body_ast, frame).
+# fire_subscriptions() re-evaluates each watched recipe and fires bodies
+# whose value changed.
+_SUBSCRIPTIONS: List[Dict[str, Any]] = []
+
+# Coordinate functions for spatial-projection rendering.
+# Registered by `register_coord_fn(name, callable)`; looked up by ProjectExpr.
+_COORD_FNS: Dict[str, Any] = {}
+
+
+def register_coord_fn(name: str, fn: Any) -> None:
+    """Register a coordinate function for `?project @cell @<name>` rendering."""
+    _COORD_FNS[name] = fn
+
+
+def fire_subscriptions(session: Session) -> List[Any]:
+    """Re-evaluate every watched recipe; fire bodies whose value changed.
+
+    Returns the list of fired-body results. Subscription engine entry point —
+    call this after substrate mutations to push reactive bodies.
+    """
+    results = []
+    for sub in _SUBSCRIPTIONS:
+        new_value = execute(session, sub["query"], sub["frame"])
+        if new_value != sub["last"]:
+            sub["last"] = new_value
+            results.append(execute(session, sub["body"], sub["frame"]))
+    return results
+
+
+def reset_runtime_registries() -> None:
+    """Test-helper: clear method/delegate/common/subscription/coord-fn state."""
+    _METHOD_REGISTRY.clear()
+    _DELEGATE_REGISTRY.clear()
+    _COMMON_GROUPS.clear()
+    _SUBSCRIPTIONS.clear()
+    _COORD_FNS.clear()
+
+
+def _cell_key(cell: Any) -> Optional[tuple]:
+    """`(domain, name)` key for a NamedCell (or any object exposing those attrs)."""
+    if hasattr(cell, "domain") and hasattr(cell, "name"):
+        return (cell.domain, cell.name)
+    return None
+
+
+def _delegate_chain(start_key: tuple) -> List[tuple]:
+    """Walk the delegation chain starting at `start_key`.
+
+    Yields (domain, name) pairs in order: start, target, target-of-target, ...
+    Stops on cycle or when no further delegate is registered.
+    """
+    chain = [start_key]
+    seen = {start_key}
+    current = start_key
+    while current in _DELEGATE_REGISTRY:
+        target = _DELEGATE_REGISTRY[current]
+        if target in seen:
+            break
+        chain.append(target)
+        seen.add(target)
+        current = target
+    return chain
+
+
+def _common_peers(key: tuple) -> set:
+    """All cells sharing a common-base group with `key`."""
+    for group in _COMMON_GROUPS:
+        if key in group:
+            return set(group) - {key}
+    return set()
+
+
+# ---------------------------------------------------------------------------
 # Built-in identifier resolution
 # ---------------------------------------------------------------------------
 
@@ -187,6 +301,18 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
 
     if isinstance(ast, NodeIDLit):
         return NodeID(ast.package, ast.level, ast.type_, ast.instance)
+
+    # Query wrapper (parser-emitted for ?on_change / ?project). Unwrap to the
+    # inner AST and execute. For purely-reading queries (?cells, ?equivalent,
+    # ?lattice, ?keywords, ?shaped_by, ?harmonic_at, ?vocabulary), delegate
+    # to form.evaluate which has the substrate-aware implementations.
+    from app.services.substrate.form import Query
+    if isinstance(ast, Query):
+        if ast.kind in ("on_change", "project"):
+            return execute(session, ast.arg, frame)
+        from app.services.substrate.form import _evaluate_query
+        result = _evaluate_query(session, ast)
+        return result.value
 
     if isinstance(ast, TrivialRef):
         nid = TRIVIAL_REFS.get(ast.name)
@@ -356,7 +482,167 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         evaluated_args = [execute(session, a, frame) for a in ast.args]
         return _resolve_method(session, target, ast.method, evaluated_args)
 
+    # --- BML state-stack — save / restore / discard --------------------------
+    #
+    # save snapshots the current frame's bindings dict; restore pops + applies;
+    # discard pops without applying. The stack lives on the root frame (walked
+    # via the parent chain) so siblings share the same stack within a session.
+
+    if isinstance(ast, SaveExpr):
+        _state_stack_of(frame).append(dict(frame.bindings))
+        return None
+
+    if isinstance(ast, RestoreExpr):
+        stack = _state_stack_of(frame)
+        if not stack:
+            raise IndexError("Form runtime: `restore` with empty state stack")
+        frame.bindings = stack.pop()
+        return None
+
+    if isinstance(ast, DiscardExpr):
+        stack = _state_stack_of(frame)
+        if not stack:
+            raise IndexError("Form runtime: `discard` with empty state stack")
+        stack.pop()
+        return None
+
+    # --- BML exception-flow — raise / resume --------------------------------
+
+    if isinstance(ast, RaiseExpr):
+        raise RaiseSignal()
+
+    if isinstance(ast, ResumeExpr):
+        # `resume` on its own is a marker; in a try-frame it returns control
+        # to the handler. Until try-frames land at the runtime layer, resume
+        # outside an exception context yields None.
+        return None
+
+    # --- BML reverse semantics — undo / inverse -----------------------------
+
+    if isinstance(ast, UndoExpr):
+        # Undo wraps a recipe; semantically it executes the inverse pass.
+        # For pure-computation expressions (the only ones we can invert today)
+        # we re-evaluate the inner expression — the substrate's content-
+        # addressing makes the inverse the same Recipe NodeID. For richer
+        # constructs the inverse pass needs paired DO/UNDO instruction-level
+        # semantics; that pairs with the per-instruction reverse work named
+        # at the VM layer.
+        return execute(session, ast.child, frame)
+
+    if isinstance(ast, InverseExpr):
+        # `inverse(<recipe>)` yields the inverse-recipe NodeID without
+        # running it. Until paired DO/UNDO lands, we return the structural
+        # Recipe NodeID of the child expression (the inverse shape lives at
+        # `(RBasic.REVERSE, RReverse.INVERSE, [child])` which already interns).
+        from app.services.substrate.form import _to_recipe_node_id
+        return _to_recipe_node_id(session, ast.child)
+
+    # --- BML Common Objects — common @X @Y ----------------------------------
+
+    if isinstance(ast, CommonExpr):
+        a = execute(session, ast.a, frame)
+        b = execute(session, ast.b, frame)
+        a_key = _cell_key(a)
+        b_key = _cell_key(b)
+        if a_key is None or b_key is None:
+            raise TypeError("Form runtime: `common` requires two cells")
+        # Merge into an existing group containing either, or create new.
+        merged: set = {a_key, b_key}
+        remaining: List[frozenset] = []
+        for group in _COMMON_GROUPS:
+            if a_key in group or b_key in group:
+                merged |= set(group)
+            else:
+                remaining.append(group)
+        remaining.append(frozenset(merged))
+        _COMMON_GROUPS.clear()
+        _COMMON_GROUPS.extend(remaining)
+        return frozenset(merged)
+
+    # --- BML method-on-object — method NAME on @X { body } -----------------
+
+    if isinstance(ast, MethodDefExpr):
+        target = execute(session, ast.target, frame)
+        key = _cell_key(target)
+        if key is None:
+            raise TypeError("Form runtime: `method` requires a cell target")
+        _METHOD_REGISTRY[(key[0], key[1], ast.name)] = ast.body
+        return ast.body
+
+    if isinstance(ast, MethodInvokeExpr):
+        target = execute(session, ast.target, frame)
+        key = _cell_key(target)
+        if key is None:
+            raise TypeError("Form runtime: `invoke` requires a cell target")
+        # Walk delegation chain looking up the method.
+        for chain_key in _delegate_chain(key):
+            body = _METHOD_REGISTRY.get((chain_key[0], chain_key[1], ast.name))
+            if body is not None:
+                # Execute the body with .self bound to the original target.
+                sub = Frame(parent=frame, subject=target, has_subject=True)
+                return execute(session, body, sub)
+        # Try common-base peers as a last resort.
+        for peer in _common_peers(key):
+            body = _METHOD_REGISTRY.get((peer[0], peer[1], ast.name))
+            if body is not None:
+                sub = Frame(parent=frame, subject=target, has_subject=True)
+                return execute(session, body, sub)
+        raise AttributeError(
+            f"Form runtime: no method `{ast.name}` on @{key[0]}({key[1]}) "
+            f"(delegate chain: {_delegate_chain(key)})"
+        )
+
+    # --- Delegation declaration --------------------------------------------
+
+    if isinstance(ast, DelegateExpr):
+        source = execute(session, ast.source, frame)
+        target = execute(session, ast.target, frame)
+        s_key = _cell_key(source)
+        t_key = _cell_key(target)
+        if s_key is None or t_key is None:
+            raise TypeError("Form runtime: `delegate` requires two cells")
+        _DELEGATE_REGISTRY[s_key] = t_key
+        return (s_key, t_key)
+
+    # --- Reactive lens — ?on_change <recipe> { body } ----------------------
+
+    if isinstance(ast, OnChangeExpr):
+        # Snapshot the watched value now; register the (query, body, frame)
+        # for future `fire_subscriptions(session)` calls.
+        initial = execute(session, ast.query, frame)
+        _SUBSCRIPTIONS.append({
+            "query": ast.query,
+            "body": ast.body,
+            "frame": frame,
+            "last": initial,
+        })
+        return initial
+
+    # --- Spatial-projection lens — ?project @cell @coord_fn -----------------
+
+    if isinstance(ast, ProjectExpr):
+        cell = execute(session, ast.cell, frame)
+        coord_fn_ref = execute(session, ast.coord_fn, frame)
+        # The coord_fn ref is a cell whose name keys into _COORD_FNS.
+        name = coord_fn_ref.name if hasattr(coord_fn_ref, "name") else None
+        if name is None or name not in _COORD_FNS:
+            # Honest passthrough: return the (cell, coord_fn_ref) tuple so the
+            # caller knows what was projected even when no renderer is registered.
+            return (cell, coord_fn_ref)
+        return _COORD_FNS[name](cell)
+
     raise TypeError(f"Form runtime: cannot execute {type(ast).__name__}")
+
+
+def _state_stack_of(frame: Frame) -> List[Dict[str, Any]]:
+    """The state stack lives on the root of the frame chain so save/restore/
+    discard work across nested do-blocks."""
+    root = frame
+    while root.parent is not None:
+        root = root.parent
+    if not hasattr(root, "_state_stack"):
+        root._state_stack = []
+    return root._state_stack
 
 
 # ---------------------------------------------------------------------------
