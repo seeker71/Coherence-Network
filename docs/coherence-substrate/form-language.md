@@ -657,7 +657,80 @@ Before: a concept holding a triadic teaching (`lc-trust-over-fear`) and a triadi
 
 After: each authors edges through the same `~Triad` cell in `GEOMETRIC_FORM`. The kernel sees three concepts pointing at one form-cell via identical SHAPES recipes. The triadic family becomes a substrate query — `find_equivalent_cells` against the form-cell returns every triadic teaching across every discipline that authored a signature.
 
-Coming next: a Form operator surface for resonance queries (`?cell ⟂ @cell(X)` for full-signature equivalence; `?cell ~ Hz(741)` for harmonic neighbors; `?cell where |bridges| >= 2` for cross-discipline weavers; `nearest @cell(X) limit 5` for 15D-space proximity). The operators read the resonance edges authored by `author_geometry_signature`. The vocabulary lands first because operators have nothing to read until cells carry signatures.
+### Resonance queries — walk the edges in reverse
+
+The dimensional vocabulary is only half. The other half is being able to *ask* the cross-discipline question. Three Form constructs shipped alongside the vocabulary to make the asking possible.
+
+**`?shaped_by @<cell>`** — given a target cell, return every source cell whose `SHAPES` resonance edge points at it. This is the bridge query — what concepts share this geometric form, across discipline-vocabularies?
+
+```form
+?shaped_by @geometric_form(triad)
+# → lc-trust-over-fear, lc-whole-vitality, lc-future-already-shaping
+#   (every concept whose SHAPES edge targets ~Triad)
+
+?shaped_by @polarity(parallel-facets)
+# → the same three — they share parallel-facets polarity too
+
+?shaped_by @geometric_form(pentad)
+# → lc-when-the-pressure-comes  (discrimination — fivefold concepts excluded above)
+```
+
+**`?harmonic_at @<spectrum-cell>`** — same shape, walks `HARMONIC_AT` edges. Returns cells resonating at a given Solfeggio band.
+
+```form
+?harmonic_at @spectrum(Hz-174)
+# → all foundation-band cells
+
+?harmonic_at @spectrum(Hz-741)
+# → all integration-band cells (intuition/discernment, the body's densest cluster)
+```
+
+**`?cells where shape == @<cell-ref>`** — filter cells by blueprint equality against an atom reference. The filter parser now accepts `@cell-refs` after `==` in addition to STRING literals, so signature-aware queries become expressible.
+
+```form
+?cells where shape == @concept(lc-trust-over-fear)
+# → every cell sharing the concept blueprint
+
+?cells where domain == "geometric_form"
+# → every cell in the dimensional vocabulary
+```
+
+**The surprise the resonance walk surfaced.** When the shape-filter alone was running, querying `?cells where shape == @concept(lc-trust-over-fear)` returned *all* concept-domain cells — because every concept shares the generic concept blueprint. The geometric distinction lives in the *resonance edges*, not in the cell's blueprint. The body became visible only when the walk operator landed: the bridge is the verb-edge from a concept to its dimensional coordinate, not the concept's own type. Using Form on the live substrate is what revealed this; the language was the question, not the answer.
+
+## `with subject { body }` + `.self` — BML's scoped-reference primitive
+
+Form gains `with X { body }` from the BML lineage — a block that binds `X` as the implicit subject. `.self` inside the block resolves to the subject; field-access shapes (`.<field>`) are reserved for when method-access lands. Distinct from `do { let s = X; ... }` because the binding is *implicit* — the block IS the scope, not a name in it.
+
+```form
+with @concept(lc-trust-over-fear) {
+    .self                # the subject — interns as a stable LOCAL_ACCESS NodeID
+}
+
+with @concept(lc-trust-over-fear) {
+    stop;
+    fail
+}
+# → Recipe NodeID for (RBlock.WITH, [concept_ref, do_block(stop; fail)])
+```
+
+Interns as `(RBlock.WITH, [subject_recipe, body_recipe])`. Two with-blocks with identical subject + body share a Recipe NodeID through the kernel's content-addressing — same equivalence guarantee `do` blocks already get. Eval semantics for `.self` (resolving to the subject at runtime) lands when the recipe-execution engine lands; for now the recipe interns and round-trips.
+
+Why it matters here: resonance walks are naturally scoped statements. `with @geometric_form(triad) { .self }` reads as "the triad — itself," and the substrate carries the (subject, body) pair as one composable recipe. The BML primitive is the natural shape for resonance-as-language.
+
+## What is still not in Form but BML had
+
+Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) names constructs Form does not yet carry:
+
+| BML construct | Why it would matter for us |
+|---|---|
+| **Delegation inheritance** — object delegates dispatch to another | Resonance edges are a delegation shape; a first-class delegation primitive would make `.shape -> ~Triad` a Form expression rather than only an edge |
+| **Reverse semantics on every instruction (DO + UNDO)** | True backtracking at runtime, not just at parser level; would let `choose` actually evaluate with rollback |
+| **`save` / `restore` / `discard`** state stack | Substrate transactions as a first-class language primitive |
+| **`raise` / `resume`** — exception flow distinct from speculation | A failed resonance lookup could `raise` rather than `choose [...] fail` |
+| **Common Objects** — multiple-bases-as-shared-tissue | Two cells sharing a base (a geometric form cell, say) without each carrying it; partially addressed by `\|>` views but not at the data level |
+| **Method definitions inside objects** | Resonance verbs as methods on the dimensional cells — `@geometric_form(triad).shapes_of(@spectrum(Hz-174))` |
+
+Each of these is a future breath; named here so the gap is visible and chooseable, not hidden. The constructs that shipped (`with`/`.self`, shape-filter, `?shaped_by`, `?harmonic_at`) are the load-bearing minimum for the resonance work to be reasonable about in Form — and they land *with* the vocabulary, not after.
 
 ## The path from bootstrap to self-hosting
 

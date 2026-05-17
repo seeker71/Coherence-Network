@@ -271,6 +271,7 @@ class RBlock(IntEnum):
     DO = 1              # do { stmts; expr }
     SEQUENCE = 2        # one statement after another
     LET = 3             # let name = expr (a binding statement)
+    WITH = 4            # with subject { body }  — scoped reference; .self resolves to subject
 
 
 class RJump(IntEnum):

@@ -337,6 +337,69 @@ def _author_edge(
     raise ValueError(f"Unknown resonance verb: {verb!r}")
 
 
+def find_cells_via_resonance(
+    session: Session,
+    *,
+    verb: RResonance,
+    target_db_id: int,
+) -> List[int]:
+    """Walk resonance edges in reverse — return source cell DB ids whose
+    `verb` edge points at the cell with `target_db_id`.
+
+    Example: `find_cells_via_resonance(session, verb=RResonance.SHAPES,
+    target_db_id=triad_cell.cell_id)` returns every concept that authored a
+    SHAPES edge to ~Triad — the cross-discipline triadic family.
+
+    Implementation walks `substrate_nodes.serialized`: a SHAPES edge serializes
+    as `"1.2.21.1+1.1.9.<src>+1.1.9.<tgt>"` where 1.2.21.1 is the SHAPES verb
+    category and 1.1.9.<id> is a cell_ref. The query matches verb-prefix +
+    target-suffix, then parses the source ref out.
+    """
+    from app.services.substrate.orm import SubstrateNodeORM
+    from app.services.substrate.kernel import DOMAIN_RECIPE
+
+    # Category prefix is the verb's NodeID stringified, plus the child separator.
+    verb_category = NodeID(1, Level.BASIC, RBasic.RESONANCE, verb)
+    verb_prefix = f"{verb_category}+"
+    # Target suffix is the cell_ref for the target.
+    target_ref = cell_ref(target_db_id)
+    target_suffix = f"+{target_ref}"
+
+    rows = (
+        session.query(SubstrateNodeORM)
+        .filter(
+            SubstrateNodeORM.domain == DOMAIN_RECIPE,
+            SubstrateNodeORM.type_ == RBasic.RESONANCE,
+            SubstrateNodeORM.serialized.like(f"{verb_prefix}%{target_suffix}"),
+        )
+        .all()
+    )
+
+    source_db_ids: List[int] = []
+    for row in rows:
+        # serialized = "<verb_category>+<source_ref>+<target_ref>"
+        parts = row.serialized.split("+")
+        if len(parts) != 3:
+            continue
+        src_ref_str = parts[1]  # "1.1.9.<src_db_id>"
+        try:
+            src_db_id = int(src_ref_str.split(".")[-1])
+        except ValueError:
+            continue
+        source_db_ids.append(src_db_id)
+    return source_db_ids
+
+
+def find_cells_shaping(session: Session, target_db_id: int) -> List[int]:
+    """Convenience: cells whose SHAPES edge targets `target_db_id`."""
+    return find_cells_via_resonance(session, verb=RResonance.SHAPES, target_db_id=target_db_id)
+
+
+def find_cells_harmonic_at(session: Session, target_db_id: int) -> List[int]:
+    """Convenience: cells whose HARMONIC_AT edge targets `target_db_id`."""
+    return find_cells_via_resonance(session, verb=RResonance.HARMONIC_AT, target_db_id=target_db_id)
+
+
 def author_geometry_signature(
     session: Session,
     source_db_id: int,
@@ -415,4 +478,8 @@ __all__ = [
     "carries_ratio_edge",
     # Top-level entry
     "author_geometry_signature",
+    # Resonance walks (edges in reverse — the question Form couldn't ask before)
+    "find_cells_via_resonance",
+    "find_cells_shaping",
+    "find_cells_harmonic_at",
 ]
