@@ -77,6 +77,7 @@ from app.services.substrate.form import (
     StopExpr,
     StringLit,
     TrivialRef,
+    TryCatchExpr,
     UnaryOp,
     UndoExpr,
     BinOp,
@@ -566,7 +567,11 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         key = _cell_key(target)
         if key is None:
             raise TypeError("Form runtime: `method` requires a cell target")
-        _METHOD_REGISTRY[(key[0], key[1], ast.name)] = ast.body
+        # Store (params, body) so invocation can bind arg values to param names.
+        _METHOD_REGISTRY[(key[0], key[1], ast.name)] = {
+            "params": list(getattr(ast, "params", []) or []),
+            "body": ast.body,
+        }
         return ast.body
 
     if isinstance(ast, MethodInvokeExpr):
@@ -574,23 +579,47 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         key = _cell_key(target)
         if key is None:
             raise TypeError("Form runtime: `invoke` requires a cell target")
-        # Walk delegation chain looking up the method.
-        for chain_key in _delegate_chain(key):
-            body = _METHOD_REGISTRY.get((chain_key[0], chain_key[1], ast.name))
-            if body is not None:
-                # Execute the body with .self bound to the original target.
-                sub = Frame(parent=frame, subject=target, has_subject=True)
-                return execute(session, body, sub)
-        # Try common-base peers as a last resort.
-        for peer in _common_peers(key):
-            body = _METHOD_REGISTRY.get((peer[0], peer[1], ast.name))
-            if body is not None:
-                sub = Frame(parent=frame, subject=target, has_subject=True)
-                return execute(session, body, sub)
+        # Evaluate args in the caller's frame.
+        evaluated_args = [execute(session, a, frame) for a in getattr(ast, "args", []) or []]
+        # Walk delegation chain, then common-base peers, looking up the method.
+        candidates = list(_delegate_chain(key)) + list(_common_peers(key))
+        for cand_key in candidates:
+            entry = _METHOD_REGISTRY.get((cand_key[0], cand_key[1], ast.name))
+            if entry is None:
+                continue
+            # Support legacy registrations where the entry is just an AST body
+            # (no params) for back-compat with PR #1676.
+            if isinstance(entry, dict):
+                params = entry["params"]
+                body = entry["body"]
+            else:
+                params, body = [], entry
+            if len(params) != len(evaluated_args):
+                raise TypeError(
+                    f"Form runtime: method `{ast.name}` on @{cand_key[0]}({cand_key[1]}) "
+                    f"takes {len(params)} arg(s), got {len(evaluated_args)}"
+                )
+            # Execute the body with .self bound to the original target and
+            # params bound to the evaluated args. The sub-frame's parent is
+            # the call-time frame (lexical look-ups for names defined above).
+            sub = Frame(parent=frame, subject=target, has_subject=True)
+            for name, value in zip(params, evaluated_args):
+                sub.bindings[name] = value
+            return execute(session, body, sub)
         raise AttributeError(
             f"Form runtime: no method `{ast.name}` on @{key[0]}({key[1]}) "
-            f"(delegate chain: {_delegate_chain(key)})"
+            f"(delegate chain: {_delegate_chain(key)}; peers: {sorted(_common_peers(key))})"
         )
+
+    # --- BML try/catch — catching frame for raised exceptions --------------
+
+    if isinstance(ast, TryCatchExpr):
+        try:
+            sub = Frame(parent=frame)
+            return execute(session, ast.body, sub)
+        except RaiseSignal:
+            sub = Frame(parent=frame)
+            return execute(session, ast.handler, sub)
 
     # --- Delegation declaration --------------------------------------------
 
@@ -704,9 +733,11 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
 
 
 def _resolve_method(session: Session, target: Any, method: str, args: List[Any]) -> Any:
-    """Method-call on a Cell, Blueprint, or Recipe — currently `child(n)`.
+    """Method-call on a Cell, Blueprint, or Recipe.
 
-    `.child(n)` returns the n-th child NodeID. Out-of-range raises.
+    Built-in on NodeIDs: `.child(n)` returns the n-th child NodeID.
+    User-defined on Cells: `@concept(X).greet()` dispatches via the same
+    delegation/common-base chain `invoke greet on @concept(X)` uses.
     """
     if isinstance(target, NodeID):
         if method == "child":
@@ -720,6 +751,29 @@ def _resolve_method(session: Session, target: Any, method: str, args: List[Any])
                     f"(have {len(children)} children)"
                 )
             return children[n]
+
+    # User-defined method dispatch on a Cell — same chain as MethodInvokeExpr.
+    key = _cell_key(target)
+    if key is not None:
+        for cand_key in list(_delegate_chain(key)) + list(_common_peers(key)):
+            entry = _METHOD_REGISTRY.get((cand_key[0], cand_key[1], method))
+            if entry is None:
+                continue
+            if isinstance(entry, dict):
+                params = entry["params"]
+                body = entry["body"]
+            else:
+                params, body = [], entry
+            if len(params) != len(args):
+                raise TypeError(
+                    f"Form runtime: method `.{method}` on @{cand_key[0]}({cand_key[1]}) "
+                    f"takes {len(params)} arg(s), got {len(args)}"
+                )
+            sub = Frame(parent=Frame(), subject=target, has_subject=True)
+            for name, value in zip(params, args):
+                sub.bindings[name] = value
+            return execute(session, body, sub)
+
     raise TypeError(
         f"Form runtime: cannot call .{method}() on {type(target).__name__}"
     )
