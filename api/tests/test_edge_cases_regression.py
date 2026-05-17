@@ -655,6 +655,40 @@ def test_pr_guard_reading_surfaces_failed_step_attention() -> None:
     assert reading["what_can_compost"] == []
 
 
+def test_wellness_reading_projects_sections_into_shared_shape() -> None:
+    """Wellness readings use the same sensed/attention/compost shape."""
+    mod = _load_script_module("wellness_check")
+    sections = [
+        (
+            "Proprioception",
+            [
+                "  specs/INDEX.md — aligned (12 specs)",
+                "  ideas/INDEX.md — drift: INDEX claims 4, body has 5",
+            ],
+        ),
+        (
+            "Witness-trace",
+            ["  trace breathing within budget. no action needed."],
+        ),
+    ]
+
+    reading = mod.build_reading(sections)
+
+    assert reading["what_i_sensed"] == [
+        "Proprioception: specs/INDEX.md — aligned (12 specs)",
+        "Witness-trace: trace breathing within budget. no action needed.",
+    ]
+    assert reading["what_wants_attention"] == [
+        {
+            "surface": "Proprioception",
+            "reading": "ideas/INDEX.md — drift: INDEX claims 4, body has 5",
+            "next_action": "Tend this surface with the smallest focused proof.",
+        }
+    ]
+    assert "Proprioception: specs/INDEX.md" in reading["what_can_compost"][0]
+    assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
+
+
 def test_pr_guard_detached_head_blocked(monkeypatch) -> None:
     """Detached HEAD state is detected and blocked."""
     mod = _load_script_module("worktree_pr_guard")

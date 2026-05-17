@@ -16,6 +16,7 @@
     "scripts/auto_heal_start_gate.sh",
     "scripts/prompt_entry_gate.sh",
     "scripts/worktree_pr_guard.py",
+    "scripts/wellness_check.py",
     "scripts/run_form_practice.py"
   ],
   "local_validation": {
@@ -26,16 +27,18 @@
       "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\"",
       "python3 -m py_compile scripts/run_form_practice.py",
       "python3 -m py_compile scripts/worktree_pr_guard.py",
+      "python3 -m py_compile scripts/wellness_check.py",
       "bash -n scripts/prompt_entry_gate.sh scripts/auto_heal_start_gate.sh",
       "cd api && python3 -m pytest -q tests/test_form_practice_runner.py",
-      "cd api && python3 -m pytest -q tests/test_edge_cases_regression.py::test_pr_guard_reading_names_clear_selected_surfaces tests/test_edge_cases_regression.py::test_pr_guard_reading_surfaces_failed_step_attention",
+      "cd api && python3 -m pytest -q tests/test_form_practice_runner.py tests/test_edge_cases_regression.py::test_pr_guard_reading_names_clear_selected_surfaces tests/test_edge_cases_regression.py::test_pr_guard_reading_surfaces_failed_step_attention tests/test_edge_cases_regression.py::test_wellness_reading_projects_sections_into_shared_shape",
+      "python3 scripts/wellness_check.py",
       "python3 scripts/run_form_practice.py --form docs/coherence-substrate/centered-discernment-practice.form --practice centered_discernment --presence life-sub-agent --task centered-discernment-practice --marker centered-discernment-practice --source-url \"https://youtu.be/KFaU6qR_iPg?si=LzzMcKcOY5mfThCf\" --ledger docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl --json",
       "git stash push -u -m pre-rebase-substrate-centered-discernment && git fetch origin main && git rebase origin/main && git stash pop",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "git diff --check"
     ],
-    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, while the reusable Form practice runner executes any marked Form recipe, interns a recipe, creates one presence cell, one task cell, witness cells, and writes JSONL ledger proof. Guide/check language now names checks as body readings and bypasses as temporary awareness-tending. PR readings now include structured what_i_sensed, what_wants_attention, and what_can_compost fields. Focused tests pass."
+    "summary": "Prompt guide and wellness passed. The YouTube caption stream was fetched as testimony input. The centered discernment practice now lives as Form source, while the reusable Form practice runner executes any marked Form recipe, interns a recipe, creates one presence cell, one task cell, witness cells, and writes JSONL ledger proof. Guide/check language now names checks as body readings and bypasses as temporary awareness-tending. PR and wellness readings now include structured what_i_sensed, what_wants_attention, and what_can_compost fields. Focused tests pass."
   },
   "ci_validation": {
     "status": "pending",
@@ -54,7 +57,8 @@
       "Form runtime returns the centered testimony stream.",
       "Practice execution records presence, task, witness cells, and completion ledger proof.",
       "Prompt and PR check output speak in awareness/readout terms while preserving proof commands.",
-      "PR reading reports expose what_i_sensed, what_wants_attention, and what_can_compost fields for agent learning."
+      "PR reading reports expose what_i_sensed, what_wants_attention, and what_can_compost fields for agent learning.",
+      "Wellness output includes the same shared reading shape."
     ]
   },
   "phase_gate": {
@@ -98,11 +102,12 @@
   "evidence_refs": [
     "docs/coherence-substrate/centered-discernment-practice.form",
     "docs/system_audit/substrate_centered_discernment_2026-05-18.jsonl",
-    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T163652Z_codex-substrate-centered-discernment.json",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260517T164354Z_codex-substrate-centered-discernment.json",
     "CLAUDE.md",
     "AGENTS.md",
     "api/tests/test_edge_cases_regression.py",
-    "api/tests/test_form_practice_runner.py"
+    "api/tests/test_form_practice_runner.py",
+    "scripts/wellness_check.py"
   ],
   "change_files": [
     "AGENTS.md",
@@ -120,7 +125,8 @@
     "scripts/prompt_entry_gate.sh",
     "scripts/run_form_practice.py",
     "scripts/substrate_centered_discernment_practice.py",
-    "scripts/worktree_pr_guard.py"
+    "scripts/worktree_pr_guard.py",
+    "scripts/wellness_check.py"
   ],
   "change_intent": "process_only"
 }

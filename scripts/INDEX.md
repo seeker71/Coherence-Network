@@ -4,10 +4,11 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 103
+**Total files**: 117
 
 | File | Purpose |
 |---|---|
+| [active_recipe_trace_index.py](active_recipe_trace_index.py) | !/usr/bin/env python3 |
 | [add_concurrency_notes.py](add_concurrency_notes.py) | !/usr/bin/env python3 |
 | [add_crosslinks.py](add_crosslinks.py) | !/usr/bin/env python3 |
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | !/usr/bin/env python3 |
@@ -40,9 +41,12 @@
 | [encounter.py](encounter.py) | !/usr/bin/env python3 |
 | [ensure_worktree_start_clean.py](ensure_worktree_start_clean.py) | !/usr/bin/env python3 |
 | [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
+| [export_graph_to_repo.py](export_graph_to_repo.py) | !/usr/bin/env python3 |
 | [export_lineage.py](export_lineage.py) | !/usr/bin/env python3 |
 | [export_vision_image_prompts.py](export_vision_image_prompts.py) | !/usr/bin/env python3 |
 | [external_proof_demo.py](external_proof_demo.py) | !/usr/bin/env python3 |
+| [form_cli.py](form_cli.py) | !/usr/bin/env python3 |
+| [form_native_grammar_contract.py](form_native_grammar_contract.py) | !/usr/bin/env python3 |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [generate_curated_translations.py](generate_curated_translations.py) | !/usr/bin/env python3 |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | !/usr/bin/env python3 |
@@ -52,6 +56,9 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
 | [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
 | [generate_work_visuals.py](generate_work_visuals.py) | !/usr/bin/env python3 |
+| [git_artifact_perceptron.py](git_artifact_perceptron.py) | !/usr/bin/env python3 |
+| [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | !/usr/bin/env python3 |
+| [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
@@ -70,6 +77,7 @@
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | !/usr/bin/env python3 |
 | [poll_task_progress.py](poll_task_progress.py) | !/usr/bin/env python3 |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
+| [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | !/usr/bin/env python3 |
 | [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
 | [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
@@ -87,14 +95,18 @@
 | [seed_schema_to_db.py](seed_schema_to_db.py) | !/usr/bin/env python3 |
 | [seed_ucore_ideas.py](seed_ucore_ideas.py) | !/usr/bin/env python3 |
 | [sense_external_signals.py](sense_external_signals.py) | !/usr/bin/env python3 |
+| [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | !/usr/bin/env python3 |
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
+| [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
+| [sync_presence_content.py](sync_presence_content.py) | !/usr/bin/env python3 |
 | [sync_presence_slugs.py](sync_presence_slugs.py) | !/usr/bin/env python3 |
+| [sync_presences_from_render.py](sync_presences_from_render.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
 | [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
 | [upgrade_specs.py](upgrade_specs.py) | !/usr/bin/env python3 |
@@ -105,8 +117,11 @@
 | [validate_spec_quality.py](validate_spec_quality.py) | !/usr/bin/env python3 |
 | [validate_workflow_references.py](validate_workflow_references.py) | !/usr/bin/env python3 |
 | [verify_hashes.py](verify_hashes.py) | !/usr/bin/env python3 |
+| [verify_kernel_conformance.py](verify_kernel_conformance.py) | Verify substrate kernel conformance vectors against executable runtimes. |
+| [view_recipe_library.py](view_recipe_library.py) | !/usr/bin/env python3 |
 | [viewport_audit.py](viewport_audit.py) | !/usr/bin/env python3 |
 | [wander.py](wander.py) | !/usr/bin/env python3 |
 | [wellness_check.py](wellness_check.py) | !/usr/bin/env python3 |
+| [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | !/usr/bin/env python3 |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | !/usr/bin/env python3 |

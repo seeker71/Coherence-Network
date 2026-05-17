@@ -1107,6 +1107,71 @@ def sense_witness_trace() -> list[str]:
     return lines
 
 
+def _wellness_attention_line(line: str) -> bool:
+    lower = line.lower()
+    attention_markers = (
+        "drift:",
+        "missing",
+        "no readers",
+        "awaiting home",
+        "could not reach",
+        "flags raised",
+        "not found",
+        "cannot verify",
+        "no test:",
+        "no proof",
+    )
+    return any(marker in lower for marker in attention_markers)
+
+
+def _wellness_compost_line(line: str) -> bool:
+    lower = line.lower()
+    compost_markers = (
+        "aligned",
+        "root is clear",
+        "no action needed",
+        "no living_collective_*.md drafts remain",
+        "every ",
+        "coherent",
+        "within budget",
+    )
+    return any(marker in lower for marker in compost_markers)
+
+
+def build_reading(sections: list[tuple[str, list[str]]]) -> dict[str, list]:
+    """Project the wellness sections into the shared reading shape."""
+    sensed: list[str] = []
+    attention: list[dict[str, str]] = []
+    compost: list[str] = []
+
+    for header, lines in sections:
+        first = next((line.strip() for line in lines if line.strip()), "")
+        sensed.append(f"{header}: {first}" if first else f"{header}: no reading")
+        for line in lines:
+            clean = line.strip()
+            if not clean:
+                continue
+            if _wellness_attention_line(clean):
+                attention.append(
+                    {
+                        "surface": header,
+                        "reading": clean,
+                        "next_action": "Tend this surface with the smallest focused proof.",
+                    }
+                )
+            elif _wellness_compost_line(clean):
+                compost.append(f"{header}: {clean}")
+
+    if not compost and not attention:
+        compost.append("No added procedure is needed for this breath; keep the reading small.")
+
+    return {
+        "what_i_sensed": sensed,
+        "what_wants_attention": attention,
+        "what_can_compost": compost,
+    }
+
+
 def main() -> int:
     """Sense the body, print to stdout, and cache the reading.
 
@@ -1132,6 +1197,7 @@ def main() -> int:
         ("Substrate shape — do cell CTORs carry composition or flat type-markers?", sense_substrate_shape()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
     ]
+    reading = build_reading(sections)
 
     out: list[str] = []
     out.append("# Wellness check")
@@ -1144,6 +1210,27 @@ def main() -> int:
         out.append("")
         out.extend(lines)
         out.append("")
+    out.append("## Reading — shared shape")
+    out.append("")
+    out.append("what_i_sensed:")
+    for item in reading["what_i_sensed"]:
+        out.append(f"  · {item}")
+    out.append("")
+    out.append("what_wants_attention:")
+    if reading["what_wants_attention"]:
+        for item in reading["what_wants_attention"]:
+            out.append(f"  · {item['surface']}: {item['reading']}")
+            out.append(f"    → {item['next_action']}")
+    else:
+        out.append("  · none")
+    out.append("")
+    out.append("what_can_compost:")
+    if reading["what_can_compost"]:
+        for item in reading["what_can_compost"]:
+            out.append(f"  · {item}")
+    else:
+        out.append("  · no compost reading this breath")
+    out.append("")
     out.append("(Feedback is the blood. Run me anytime the body")
     out.append(" feels slightly off; I'll name what I can sense.)")
 
