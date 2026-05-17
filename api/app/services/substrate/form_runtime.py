@@ -57,7 +57,9 @@ from app.services.substrate.form import (
     FnDef,
     Identifier,
     DictExpr,
+    ForExpr,
     IfExpr,
+    SetExpr,
     InverseExpr,
     IntLit,
     IndexExpr,
@@ -86,6 +88,7 @@ from app.services.substrate.form import (
     BinOp,
     TRIVIAL_REFS,
     DOMAIN_TO_REF,
+    WhileExpr,
     WithExpr,
     parse as form_parse,
 )
@@ -509,6 +512,35 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
     if isinstance(ast, DictExpr):
         return {key: execute(session, value, frame) for key, value in ast.pairs}
 
+    if isinstance(ast, ForExpr):
+        iterable = execute(session, ast.iter, frame)
+        if not hasattr(iterable, "__iter__"):
+            raise TypeError(
+                f"Form runtime: `for` requires an iterable, got {type(iterable).__name__}"
+            )
+        results = []
+        for item in iterable:
+            sub = Frame(parent=frame)
+            sub.bindings[ast.var] = item
+            results.append(execute(session, ast.body, sub))
+        return results
+
+    if isinstance(ast, WhileExpr):
+        # Loop body shares the caller's frame so `let x = ...` updates
+        # persist across iterations (otherwise the loop variable never
+        # changes and the loop would be infinite or not progress).
+        result = None
+        guard = 0
+        max_iterations = 100_000
+        while execute(session, ast.cond, frame):
+            result = execute(session, ast.body, frame)
+            guard += 1
+            if guard > max_iterations:
+                raise RuntimeError(
+                    f"Form runtime: `while` loop exceeded {max_iterations} iterations"
+                )
+        return result
+
     if isinstance(ast, IndexExpr):
         target = execute(session, ast.target, frame)
         index = execute(session, ast.index, frame)
@@ -531,6 +563,21 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         value = execute(session, ast.value, frame)
         frame.bindings[ast.name] = value
         return value
+
+    if isinstance(ast, SetExpr):
+        # Walk the frame chain looking for the nearest binding of `name`.
+        # Update in-place where found. Raise if no enclosing frame has it.
+        value = execute(session, ast.value, frame)
+        f = frame
+        while f is not None:
+            if ast.name in f.bindings:
+                f.bindings[ast.name] = value
+                return value
+            f = f.parent
+        raise NameError(
+            f"Form runtime: `set {ast.name} = ...` — no binding for `{ast.name}` "
+            f"in enclosing scope (use `let` to introduce)"
+        )
 
     if isinstance(ast, MatchExpr):
         scrut = execute(session, ast.scrutinee, frame)

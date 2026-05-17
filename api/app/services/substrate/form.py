@@ -541,6 +541,35 @@ class TernaryExpr:
 
 
 @dataclass
+class SetExpr:
+    """`set name = value` — update an existing binding in the nearest enclosing
+    frame that holds it. Distinct from `let` which always introduces a new
+    binding in the current frame. Loops use `set` for accumulation.
+    """
+    name: str
+    value: Any
+
+
+@dataclass
+class ForExpr:
+    """`for x in xs { body }` — iterate xs, bind each to x in a sub-frame,
+    evaluate body. Returns the list of body-results (like map but imperative).
+    """
+    var: str
+    iter: Any
+    body: Any
+
+
+@dataclass
+class WhileExpr:
+    """`while cond { body }` — evaluate body while cond is truthy.
+    Returns the last body-result, or null if the loop never entered.
+    """
+    cond: Any
+    body: Any
+
+
+@dataclass
 class DictExpr:
     """`{a: 1, b: 2}` — composed record. Honors the structural composition
     discipline (CLAUDE.md): keys participate in identity; positions don't.
@@ -889,6 +918,12 @@ class Parser:
             return self.parse_method_invoke()
         if kw == "try":
             return self.parse_try_catch()
+        if kw == "for":
+            return self.parse_for()
+        if kw == "while":
+            return self.parse_while()
+        if kw == "set":
+            return self.parse_set()
         if kw == "defn":
             return self.parse_defn()
 
@@ -1126,6 +1161,51 @@ class Parser:
             body=DoBlock(statements=body_stmts),
             handler=DoBlock(statements=handler_stmts),
         )
+
+    def parse_for(self) -> "ForExpr":
+        """`for x in <iter> { body }` — iterate, bind, evaluate body."""
+        self.consume("IDENT")  # 'for'
+        var = self.consume("IDENT").value
+        if self.peek().kind != "IDENT" or self.peek().value != "in":
+            raise SyntaxError("Form: expected 'in' after for-variable")
+        self.consume("IDENT")  # 'in'
+        iter_expr = self.parse_expr()
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        return ForExpr(var=var, iter=iter_expr, body=DoBlock(statements=stmts))
+
+    def parse_while(self) -> "WhileExpr":
+        """`while <cond> { body }` — evaluate body while cond is truthy."""
+        self.consume("IDENT")  # 'while'
+        cond = self.parse_expr()
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        return WhileExpr(cond=cond, body=DoBlock(statements=stmts))
+
+    def parse_set(self) -> "SetExpr":
+        """`set name = value` — mutate an existing binding in the nearest
+        enclosing frame holding it."""
+        self.consume("IDENT")  # 'set'
+        name = self.consume("IDENT").value
+        if self.peek().kind != "ASSIGN":
+            raise SyntaxError("Form: expected '=' after `set` name")
+        self.consume("ASSIGN")
+        value = self.parse_expr()
+        return SetExpr(name=name, value=value)
 
     def parse_on_change(self) -> OnChangeExpr:
         """`?on_change <query> { body }` — entered via parse_query branch."""
