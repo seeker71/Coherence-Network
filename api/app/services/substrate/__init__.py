@@ -117,6 +117,17 @@ from app.services.substrate.form_rules import (
     register_form_keyword,
     unregister_form_keyword,
 )
+from app.services.substrate.recipe_eval import (
+    Environment as RecipeEnvironment,
+    ExecutionContext,
+    RaiseSignal,
+    eval_recipe,
+    eval_text as recipe_eval_text,
+)
+# Note: FailSignal/StopSignal are NOT re-exported from recipe_eval to avoid
+# collision with the parser-level versions already exported by form_speculation.
+# Import them directly from recipe_eval when needed at the runtime layer:
+#     from app.services.substrate.recipe_eval import FailSignal, StopSignal
 from app.services.substrate.resonance import (
     BID_geometric_form,
     BID_harmonic,
@@ -298,6 +309,12 @@ __all__ = [
     "carries_ratio_edge",
     "commutative_edge",
     "embeds_in_edge",
+    # Recipe-execution engine (runtime semantics for form-layer constructs)
+    "ExecutionContext",
+    "RaiseSignal",
+    "RecipeEnvironment",
+    "eval_recipe",
+    "recipe_eval_text",
     "find_cells_harmonic_at",
     "find_cells_shaping",
     "find_cells_via_resonance",
