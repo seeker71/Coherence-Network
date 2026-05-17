@@ -377,7 +377,12 @@ class DiscardExpr:
 
 @dataclass
 class RaiseExpr:
-    """`raise` — raise an exception (distinct from speculation `fail`)."""
+    """`raise` or `raise <value>` — raise an exception with an optional payload.
+
+    When the payload is provided, the catch handler sees it as `.self` —
+    the raised value becomes the implicit subject of the catch block.
+    """
+    value: Any = None
 
 
 @dataclass
@@ -791,6 +796,16 @@ class Parser:
             return DiscardExpr()
         if kw == "raise":
             self.consume("IDENT")
+            # Optional value after raise; if the next token starts an
+            # expression (atom, paren, ident, etc.) parse it as payload.
+            nxt = self.peek().kind
+            if nxt in ("INT", "STRING", "AT", "TILDE", "LPAREN", "LBRACK", "IDENT", "DOT"):
+                # Some IDENTs ARE statement terminators in catch/end context;
+                # be permissive and parse-attempt — fall back to no value on
+                # certain reserved follow-ups.
+                if nxt == "IDENT" and self.peek().value in ("catch", "then", "else", "end"):
+                    return RaiseExpr()
+                return RaiseExpr(value=self.parse_expr())
             return RaiseExpr()
         if kw == "resume":
             self.consume("IDENT")
