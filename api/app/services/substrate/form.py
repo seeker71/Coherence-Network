@@ -225,9 +225,9 @@ class ObjectComp:
 
 @dataclass
 class Filter:
-    field: str  # "domain" | "name"
+    field: str  # "domain" | "name" | "shape" | "harmonic" | ...
     op: str    # "==" | "matches"
-    value: str
+    value: Any  # str for literal compares; CellRef/NodeIDLit for atom-ref compares
 
 
 @dataclass
@@ -281,6 +281,36 @@ class IfExpr:
     cond: Any
     then_branch: Any
     else_branch: Optional[Any] = None  # None for if-without-else
+
+
+@dataclass
+class WithExpr:
+    """`with subject { body }` — BML's scoped-reference block.
+
+    Binds `subject` as the implicit receiver of the block. `.self` inside the
+    block resolves to the subject; `.field` (when method-access lands) resolves
+    against the subject too. Structurally distinct from `do { let s = X; ... }`
+    because the binding is implicit and the block IS the scope.
+
+    Recipe shape: `(RBlock.WITH, [subject_recipe, body_recipe])`. Two with-blocks
+    with identical (subject, body) interns share a Recipe NodeID through the
+    kernel's content-addressing — the same equivalence guarantee `do` blocks
+    already get.
+    """
+    subject: Any
+    body: Any
+
+
+@dataclass
+class SelfRef:
+    """`.self` — references the implicit subject of the enclosing `with` block.
+
+    Interns as a trivial Recipe (RType.LOCAL_ACCESS with the SELF sentinel
+    instance). Static analysis can later check that `.self` only appears inside
+    a `with` block; for now we intern the recipe regardless and let runtime
+    eval (when it lands) check scope.
+    """
+    pass
 
 
 @dataclass
@@ -468,6 +498,18 @@ class Parser:
             return self.parse_list_literal()
         if t.kind == "IDENT":
             return self.parse_keyword_or_ident()
+        if t.kind == "DOT":
+            # `.self` — references the implicit subject of an enclosing `with`.
+            # Other dot-access forms (`.field`, `.method`) aren't shipped yet.
+            self.consume("DOT")
+            ident = self.peek()
+            if ident.kind == "IDENT" and ident.value == "self":
+                self.consume("IDENT")
+                return SelfRef()
+            raise SyntaxError(
+                f"Form: only `.self` is supported in dot-prefix position at pos {t.pos} "
+                f"(got `.{ident.value}`)"
+            )
         raise SyntaxError(f"Form: unexpected {t.kind}({t.value!r}) at pos {t.pos}")
 
     def parse_keyword_or_ident(self) -> ExprNode:
@@ -494,6 +536,8 @@ class Parser:
             return self.parse_if()
         if kw == "do":
             return self.parse_do_block()
+        if kw == "with":
+            return self.parse_with()
         if kw == "let":
             return self.parse_let()
         if kw == "match":
@@ -547,6 +591,28 @@ class Parser:
                 pass
         self.consume("RBRACE")
         return DoBlock(statements=stmts)
+
+    def parse_with(self) -> WithExpr:
+        """`with subject { body }` — BML's scoped-reference block.
+
+        The subject can be any expression (atom-ref, identifier, recipe).
+        The body is a brace-delimited block of statements, like `do { ... }`.
+        """
+        self.consume("IDENT")  # 'with'
+        subject = self.parse_expr()
+        self.consume("LBRACE")
+        stmts = []
+        while self.peek().kind != "RBRACE":
+            stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        # Body is a do-block wrapper around the statements (gives us free
+        # sequence semantics + content-addressed equality).
+        body = DoBlock(statements=stmts)
+        return WithExpr(subject=subject, body=body)
 
     def parse_let(self) -> Let:
         self.consume("IDENT")  # 'let'
@@ -603,6 +669,16 @@ class Parser:
             self.consume("PROJECT")
             arg = self.parse_atom_or_view()
             return Query(kind="compatible", arg=arg)
+        if kw == "shaped_by":
+            # `?shaped_by @<cell>` — cells whose SHAPES resonance edge points at <cell>.
+            # The cross-discipline bridge query: gives back every cell sharing
+            # the target's geometric form, regardless of source domain.
+            arg = self.parse_atom_or_view()
+            return Query(kind="shaped_by", arg=arg)
+        if kw == "harmonic_at":
+            # `?harmonic_at @<cell>` — cells whose HARMONIC_AT edge points at <cell>.
+            arg = self.parse_atom_or_view()
+            return Query(kind="harmonic_at", arg=arg)
         if kw == "cells":
             arg = None
             if self.peek().kind == "PROJECT":
@@ -620,8 +696,18 @@ class Parser:
         op_tok = self.peek()
         if op_tok.kind == "EQ":
             self.consume("EQ")
-            val = self.consume("STRING").value
-            return Filter(field=field_tok.value, op="==", value=_unquote(val))
+            rhs_tok = self.peek()
+            # `==` accepts either a STRING literal (compare against a plain value)
+            # or an @atom-ref (compare against a cell/blueprint NodeID).
+            if rhs_tok.kind == "STRING":
+                val = self.consume("STRING").value
+                return Filter(field=field_tok.value, op="==", value=_unquote(val))
+            if rhs_tok.kind == "AT":
+                ref = self.parse_at()  # CellRef or NodeIDLit
+                return Filter(field=field_tok.value, op="==", value=ref)
+            raise SyntaxError(
+                f"Form: expected STRING or @atom-ref after '==' at pos {rhs_tok.pos}"
+            )
         if op_tok.kind == "IDENT" and op_tok.value == "matches":
             self.consume("IDENT")
             val = self.consume("STRING").value
@@ -737,8 +823,20 @@ def _cond_id(kind: str) -> NodeID:
 
 
 def _block_id(kind: str) -> NodeID:
-    instance = {"do": RBlock.DO, "let": RBlock.LET, "seq": RBlock.SEQUENCE}[kind]
+    instance = {
+        "do": RBlock.DO,
+        "let": RBlock.LET,
+        "seq": RBlock.SEQUENCE,
+        "with": RBlock.WITH,
+    }[kind]
     return NodeID(1, Level.BASIC, RBasic.BLOCK, instance)
+
+
+# Sentinel instance for `.self` — a LOCAL_ACCESS recipe that runtime eval (when
+# it lands) resolves against the enclosing `with` block's subject. Picked from
+# the high end of the instance space so it doesn't collide with hashed-name
+# placeholders that occupy the low ~10^9 range.
+_SELF_REF_INSTANCE = 999_999_999
 
 
 def _match_id() -> NodeID:
@@ -844,6 +942,13 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
         cell_id = _to_recipe_node_id(session, ast.cell)
         bp_id = _to_recipe_node_id(session, ast.blueprint)
         return _intern_recipe(session, _block_id("seq"), [cell_id, bp_id])
+    if isinstance(ast, WithExpr):
+        subject_id = _to_recipe_node_id(session, ast.subject)
+        body_id = _to_recipe_node_id(session, ast.body)
+        return _intern_recipe(session, _block_id("with"), [subject_id, body_id])
+    if isinstance(ast, SelfRef):
+        # Leaf — interns as a stable LOCAL_ACCESS NodeID with the SELF sentinel.
+        return NodeID(1, Level.TRIVIAL, 7, _SELF_REF_INSTANCE)
     raise TypeError(f"Form: cannot compile {type(ast).__name__} to Recipe")
 
 
@@ -888,6 +993,7 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         IntLit, BoolLit, StringLit, Identifier,
         BinOp, UnaryOp, IfExpr, DoBlock, Let,
         MatchExpr, ChooseExpr, FailExpr, StopExpr,
+        WithExpr, SelfRef,
     )):
         rid = _to_recipe_node_id(session, ast)
         return FormResult("recipe", rid)
@@ -913,6 +1019,41 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
         views = find_cells_compatible_with(session, bp_result.value)
         return FormResult("views", views)
 
+    if q.kind in ("shaped_by", "harmonic_at"):
+        # Resonance-walk query: given a target cell, return cells whose
+        # resonance edge of the named verb points at it.
+        from app.services.substrate.orm import SubstrateNamedCellORM
+        from app.services.substrate.kernel import _orm_to_cell
+        from app.services.substrate.resonance import (
+            find_cells_shaping,
+            find_cells_harmonic_at,
+        )
+
+        rhs = evaluate(session, q.arg)
+        if rhs.kind != "cell":
+            raise TypeError(
+                f"Form: ?{q.kind} expects a cell ref on the right, got {rhs.kind}"
+            )
+        target_db_id = rhs.value.cell_id
+        if target_db_id is None:
+            raise LookupError(f"Form: target cell has no db id (was it persisted?)")
+
+        if q.kind == "shaped_by":
+            source_db_ids = find_cells_shaping(session, target_db_id)
+        else:
+            source_db_ids = find_cells_harmonic_at(session, target_db_id)
+
+        cells = []
+        for sid in source_db_ids:
+            row = (
+                session.query(SubstrateNamedCellORM)
+                .filter_by(cell_id=sid)
+                .one_or_none()
+            )
+            if row:
+                cells.append(_orm_to_cell(session, row))
+        return FormResult("cells", cells)
+
     if q.kind == "cells":
         from app.services.substrate.orm import SubstrateNamedCellORM
         from app.services.substrate.kernel import _orm_to_cell
@@ -931,11 +1072,33 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
 
         # ?cells [where ...] — return raw cells
         rows = session.query(SubstrateNamedCellORM)
+        shape_filter_cell: Optional[NamedCell] = None
         for f in q.filters:
-            if f.field == "domain" and f.op == "==":
+            if f.field == "domain" and f.op == "==" and isinstance(f.value, str):
                 rows = rows.filter_by(domain=f.value)
-            elif f.field == "name" and f.op == "matches":
+            elif f.field == "name" and f.op == "matches" and isinstance(f.value, str):
                 rows = rows.filter(SubstrateNamedCellORM.name.like(f.value.replace("*", "%")))
+            elif f.field == "shape" and f.op == "==":
+                # `where shape == @<atom-ref>` — resolve the atom-ref, then filter by
+                # blueprint equality OR (when the rhs is itself a cell) by structural
+                # equivalence with that cell's blueprint.
+                rhs = evaluate(session, f.value)
+                if rhs.kind == "node_id":
+                    target_bp = rhs.value
+                elif rhs.kind == "cell":
+                    target_bp = rhs.value.blueprint
+                else:
+                    raise TypeError(
+                        f"Form: ?cells where shape == ... expects a NodeID or cell rhs, got {rhs.kind}"
+                    )
+                # Match cells whose blueprint NodeID equals the target.
+                from app.services.substrate.kernel import _node_to_db_id
+                target_bp_db = _node_to_db_id(session, target_bp)
+                rows = rows.filter(SubstrateNamedCellORM.blueprint_node_id == target_bp_db)
+            else:
+                raise SyntaxError(
+                    f"Form: unsupported filter ({f.field!r} {f.op!r} {type(f.value).__name__})"
+                )
         cells = [_orm_to_cell(session, r) for r in rows.all()]
         return FormResult("cells", cells)
 
