@@ -90,7 +90,6 @@
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
-| [substrate_ingest.py](substrate_ingest.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
