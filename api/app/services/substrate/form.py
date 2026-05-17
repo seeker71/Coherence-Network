@@ -689,6 +689,13 @@ class Parser:
             # runtime-registered Form keyword. Lets the grammar see itself; BMF
             # property — the parser knows its own rules.
             return Query(kind="keywords")
+        if kw == "vocabulary":
+            # `?vocabulary` — verb-cluster lens. Returns the histogram of recipe
+            # types (RBasic categories) and blueprint types currently interned.
+            # Reveals which regions of the numeric verb-space the body's
+            # circulation occupies. A body with only one verb's count > 0 is a
+            # body without circulation across language layers.
+            return Query(kind="vocabulary")
         if kw == "cells":
             arg = None
             if self.peek().kind == "PROJECT":
@@ -1038,6 +1045,11 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
         # Grammar-introspection lens — names of every runtime-registered keyword.
         from app.services.substrate.form_rules import list_registered_keywords
         return FormResult("keywords", list_registered_keywords())
+
+    if q.kind == "vocabulary":
+        # Verb-cluster lens — histogram of recipe/blueprint types currently interned.
+        from app.services.substrate.kernel import vocabulary_histogram
+        return FormResult("vocabulary", vocabulary_histogram(session))
 
     if q.kind in ("shaped_by", "harmonic_at"):
         # Resonance-walk query: given a target cell, return cells whose
