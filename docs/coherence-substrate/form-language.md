@@ -717,6 +717,26 @@ Interns as `(RBlock.WITH, [subject_recipe, body_recipe])`. Two with-blocks with 
 
 Why it matters here: resonance walks are naturally scoped statements. `with @geometric_form(triad) { .self }` reads as "the triad — itself," and the substrate carries the (subject, body) pair as one composable recipe. The BML primitive is the natural shape for resonance-as-language.
 
+## Lens operators — substrate as flowing medium, lenses as read-only views
+
+`?lattice` and `?keywords` are pure read-only lenses over the substrate. They name the pattern explicitly: the substrate is a flowing thing; many lenses can read it concurrently without disturbing the flow.
+
+```form
+?lattice
+# → {'blueprints_total': 5, 'recipes_total': 28, 'cells_total': 10}
+#   A substrate-snapshot lens — the framebuffer-analog at the count level.
+
+?keywords
+# → ['unless', 'whenever', ...]
+#   Grammar-introspection lens — the parser knows its own runtime rules.
+```
+
+Every Form query is structurally a lens already: `?cells`, `?equivalent`, `?shaped_by`, `?harmonic_at`, `?lattice`, `?keywords` all read the substrate, none mutate it. The two new ones make the *substrate's own shape* and *the grammar's own shape* observable — which is what the memory-as-framebuffer experiment (`experiments/memory-as-framebuffer-v0/`) does at the heap level: render runtime memory as a recordable video frame, multiple frames viewed without disturbing the run. Same pattern, different scale; the substrate is to a body what the heap is to a running program — a thing many observers can witness without changing.
+
+### What this is not yet
+
+The lenses today read aggregate state at the moment of the call (`?lattice` is a count, not a time-series). A *reactive* lens — one that fires when the substrate changes — needs a subscription primitive. A *spatial-projection* lens (the actual GPU-visualizer-style render) needs a renderer plus a projection algorithm. Both build on the same read-only pattern; named here so the shape is visible.
+
 ## What is still not in Form but BML had
 
 Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) names constructs Form does not yet carry:
