@@ -82,6 +82,21 @@ def BID_presence() -> NodeID:
     return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.PRESENCE)
 
 
+def BID_lineage() -> NodeID:
+    """Trivial Lineage blueprint — transmission/embodiment record cells."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.LINEAGE)
+
+
+def BID_witness() -> NodeID:
+    """Trivial Witness blueprint — event-as-proof cells."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.WITNESS)
+
+
+def BID_task() -> NodeID:
+    """Trivial Task blueprint — pipeline work-unit cells."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.TASK)
+
+
 def RID_string_lit(inst: int) -> NodeID:
     return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
 
@@ -870,6 +885,229 @@ def _author_presence_edges_from_frontmatter(
             )
 
 
+def ingest_lineage_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one lineage file (docs/lineage/*.md).
+
+    Lineage docs are prose-first — most carry a heterogeneous mix of
+    `Recorded`/`Status`/`Source` bold-prefix lines rather than rigid YAML
+    frontmatter. The encoder accepts whatever frontmatter is present
+    (including none) and authors substrate edges when the shape is there.
+
+    Recognized frontmatter fields when present:
+      kind:        lived-lineage | meta-pattern | walk-record |
+                   formative-transmission | repository-lineage |
+                   builder-statement | verification-register
+      recorded:    ISO date (or human date — kept as substrate-string)
+      status:      lived | drafted | composted
+      from:        cell-ref slug (single) — concept/presence/lineage
+      to:          cell-ref slug (single)
+      evidence:    path or URL (leaf-by-great-reason)
+      participants: [slug, slug, ...]  — list of concept/presence refs
+
+    When `from` + `to` are both present, authors a R_Transmit.TRANSMIT_TO
+    edge (the canonical lineage edge). Each `participants[]` entry
+    becomes a R_Compose.CROSS_REF recipe to the named cell. Edges to
+    not-yet-ingested cells skip silently — second-pass closes the loop.
+
+    Discipline lives in docs/coherence-substrate/structural-composition.md.
+    """
+    cell, blueprint_id, ctor_id = _ingest_markdown_file(
+        session, path, "lineage", BID_lineage(), structured=structured,
+    )
+    if structured:
+        _author_lineage_edges_from_frontmatter(
+            session, cell, parse_markdown_file(path).frontmatter
+        )
+    return cell, blueprint_id, ctor_id
+
+
+def _author_lineage_edges_from_frontmatter(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Author substrate edges implied by lineage frontmatter.
+
+    - `from` + `to` together → R_Transmit.TRANSMIT_TO recipe from source
+      cell to target cell (resolved across concept / presence / lineage)
+    - `participants[]` → R_Compose.CROSS_REF recipes (one per entry)
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RCompose, RTransmit
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    def _resolve_any(slug: str) -> Optional[Any]:
+        slug = slug.strip()
+        if not slug:
+            return None
+        for domain in ("concept", "presence", "lineage", "idea", "spec"):
+            target = _lookup_cell(session, domain, slug)
+            if target is not None and target.cell_id is not None:
+                return target
+        return None
+
+    from_value = frontmatter.get("from")
+    to_value = frontmatter.get("to")
+    if isinstance(from_value, str) and isinstance(to_value, str):
+        from_cell = _resolve_any(from_value)
+        to_cell = _resolve_any(to_value)
+        if from_cell is not None and to_cell is not None:
+            from_ref = NodeID(1, Level.TRIVIAL, RType.REF, from_cell.cell_id)
+            to_ref = NodeID(1, Level.TRIVIAL, RType.REF, to_cell.cell_id)
+            transmit_cat = NodeID(
+                1, Level.BASIC, RBasic.TRANSMIT, RTransmit.TRANSMIT_TO
+            )
+            intern_node(
+                session, DOMAIN_RECIPE, transmit_cat, [from_ref, to_ref]
+            )
+
+    participants = frontmatter.get("participants")
+    if isinstance(participants, list):
+        cross_ref_cat = NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF)
+        source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+        for entry in participants:
+            slug = _slug_from_entry(entry)
+            if not slug:
+                continue
+            target = _resolve_any(slug)
+            if target is None:
+                continue
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, target.cell_id)
+            intern_node(
+                session, DOMAIN_RECIPE, cross_ref_cat, [source_ref, target_ref]
+            )
+
+
+def ingest_witness_event(
+    session: Session,
+    presence: str,
+    action: str,
+    evidence_url: str,
+    timestamp: str,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one witness event as a structured cell.
+
+    Witness events are runtime records — `(presence, action, evidence_url,
+    timestamp)`. The presence slug resolves to a presence cell-ref; the
+    other three are leaf-by-great-reason (action as substrate-string,
+    URL as URL-leaf, timestamp as date-leaf).
+
+    Authors a R_Basic.WITNESS recipe edge from presence → evidence-URL
+    (witness sees the proof). The event's cell name is
+    `{presence}-{timestamp}` so re-ingesting the same event collapses to
+    the same cell via content-addressing.
+
+    Returns (cell, blueprint_id, ctor_id) like the file ingesters.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+
+    frontmatter: Dict[str, Any] = {
+        "presence": presence,
+        "action": action,
+        "evidence_url": evidence_url,
+        "timestamp": timestamp,
+    }
+    name = f"{presence}-{timestamp}"
+    blueprint_id = frontmatter_to_blueprint(session, frontmatter, BID_witness())
+    ctor_id = frontmatter_to_structured_ctor(session, frontmatter)
+    access_id = body_to_access_recipe(session, "", blueprint_id)
+    cell = make_cell(
+        session,
+        name=name,
+        domain="witness",
+        blueprint=blueprint_id,
+        access=access_id,
+        ctor=ctor_id,
+        source_path=None,
+    )
+
+    presence_cell = _lookup_cell(session, "presence", presence)
+    if presence_cell is not None and presence_cell.cell_id is not None:
+        presence_ref = NodeID(
+            1, Level.TRIVIAL, RType.REF, presence_cell.cell_id
+        )
+        evidence_ref = substrate_string_recipe(session, evidence_url)
+        # RBasic.WITNESS with instance=1 — canonical record-witness marker.
+        witness_cat = NodeID(1, Level.BASIC, RBasic.WITNESS, 1)
+        intern_node(
+            session, DOMAIN_RECIPE, witness_cat, [presence_ref, evidence_ref]
+        )
+
+    return cell, blueprint_id, ctor_id
+
+
+def ingest_task(
+    session: Session,
+    idea_id: str,
+    status: str,
+    context: Optional[Dict[str, Any]] = None,
+    task_id: Optional[str] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one pipeline task as a structured cell.
+
+    Tasks are workflow units — `(idea_id, status, context)`. `idea_id`
+    becomes a cell-ref to the idea cell; `status` is a substrate-resident
+    typed-token; `context` (when present) is composed recursively via
+    the generic structured-value encoder.
+
+    Authors a R_Realize.REALIZE recipe edge from task → idea (task
+    realizes idea). `task_id` becomes the cell name if provided, else
+    `{idea_id}-{status}` for deterministic re-ingest.
+
+    Returns (cell, blueprint_id, ctor_id) like the file ingesters.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RRealize
+
+    frontmatter: Dict[str, Any] = {
+        "idea_id": idea_id,
+        "status": status,
+    }
+    if context is not None:
+        frontmatter["context"] = context
+
+    name = task_id or f"{idea_id}-{status}"
+    blueprint_id = frontmatter_to_blueprint(session, frontmatter, BID_task())
+    ctor_id = frontmatter_to_structured_ctor(session, frontmatter)
+    access_id = body_to_access_recipe(session, "", blueprint_id)
+    cell = make_cell(
+        session,
+        name=name,
+        domain="task",
+        blueprint=blueprint_id,
+        access=access_id,
+        ctor=ctor_id,
+        source_path=None,
+    )
+
+    idea_cell = _lookup_cell(session, "idea", idea_id)
+    if idea_cell is not None and idea_cell.cell_id is not None:
+        task_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+        idea_ref = NodeID(1, Level.TRIVIAL, RType.REF, idea_cell.cell_id)
+        realize_cat = NodeID(
+            1, Level.BASIC, RBasic.REALIZE, RRealize.REALIZE
+        )
+        intern_node(
+            session, DOMAIN_RECIPE, realize_cat, [task_ref, idea_ref]
+        )
+
+    return cell, blueprint_id, ctor_id
+
+
 def ingest_markdown_text(
     session: Session,
     domain: str,
@@ -889,6 +1127,9 @@ def ingest_markdown_text(
         "idea": BID_idea(),
         "concept": BID_concept(),
         "presence": BID_presence(),
+        "lineage": BID_lineage(),
+        "witness": BID_witness(),
+        "task": BID_task(),
     }
     if domain not in domain_blueprint_map:
         raise ValueError(

@@ -1,3 +1,8 @@
+---
+kind: verification-register
+recorded: 2026-04-27
+status: lived
+---
 # Grok Verified Lineage and Event Register
 
 **Recorded**: April 27, 2026  

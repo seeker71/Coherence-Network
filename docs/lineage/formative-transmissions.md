@@ -1,3 +1,8 @@
+---
+kind: formative-transmission
+recorded: 2026-05-05
+status: lived
+---
 # Formative Transmissions
 
 **Recorded**: 2026-05-05

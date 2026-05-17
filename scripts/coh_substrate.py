@@ -36,6 +36,7 @@ from app.services.substrate import (  # noqa: E402
     form_serialize_node_id,
     ingest_concept_file,
     ingest_idea_file,
+    ingest_lineage_file,
     ingest_memory_file,
     ingest_presence_file,
     ingest_spec_file,
@@ -50,6 +51,18 @@ SPEC_DIR = REPO_ROOT / "specs"
 IDEA_DIR = REPO_ROOT / "ideas"
 CONCEPT_DIR = REPO_ROOT / "docs/vision-kb/concepts"
 PRESENCE_DIR = REPO_ROOT / "docs/presences"
+LINEAGE_DIR = REPO_ROOT / "docs/lineage"
+
+# Composting artifacts — historical sense-records that no longer carry live
+# lineage edges. They stay in the tree as memory but don't enter the substrate.
+_LINEAGE_COMPOST = {
+    "INDEX.md",
+    "unmerged-branches-2026-04-26.md",
+    "unshipped-by-idea-2026-04-27.md",
+    "unshipped-digest-2026-04-27.md",
+    "unshipped-themes-2026-04-27.md",
+    "unshipped-work-archive-2026-04-26.md",
+}
 
 _INGESTERS = {
     "memory": (MEMORY_DIR, ingest_memory_file, lambda p: p.name.upper() != "MEMORY.MD"),
@@ -57,6 +70,7 @@ _INGESTERS = {
     "idea": (IDEA_DIR, ingest_idea_file, lambda p: p.name not in ("INDEX.md", "TEMPLATE.md")),
     "concept": (CONCEPT_DIR, ingest_concept_file, lambda p: p.name not in ("INDEX.md", "SCHEMA.md", "LOG.md")),
     "presence": (PRESENCE_DIR, ingest_presence_file, lambda p: p.name not in ("INDEX.md", "README.md")),
+    "lineage": (LINEAGE_DIR, ingest_lineage_file, lambda p: p.name not in _LINEAGE_COMPOST),
 }
 
 
@@ -64,7 +78,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     structured = getattr(args, "structured", False)
     if args.all:
         rc = 0
-        for domain in ("memory", "spec", "idea", "concept", "presence"):
+        for domain in ("memory", "spec", "idea", "concept", "presence", "lineage"):
             rc |= _ingest_domain(domain, structured=structured)
         return rc
     if args.memories:
@@ -77,6 +91,8 @@ def cmd_ingest(args: argparse.Namespace) -> int:
         return _ingest_domain("concept", structured=structured)
     if args.presences:
         return _ingest_domain("presence", structured=structured)
+    if args.lineages:
+        return _ingest_domain("lineage", structured=structured)
     if args.paths:
         return _ingest_files([Path(p) for p in args.paths], structured=structured)
     print("ingest: no target specified (try --memories, --all, or paths)", file=sys.stderr)
@@ -341,6 +357,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--ideas", action="store_true")
     p_ingest.add_argument("--concepts", action="store_true")
     p_ingest.add_argument("--presences", action="store_true")
+    p_ingest.add_argument("--lineages", action="store_true")
     p_ingest.add_argument("--all", action="store_true", help="Backfill all five domains")
     p_ingest.add_argument(
         "--structured",
