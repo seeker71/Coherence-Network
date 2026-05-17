@@ -679,6 +679,16 @@ class Parser:
             # `?harmonic_at @<cell>` — cells whose HARMONIC_AT edge points at <cell>.
             arg = self.parse_atom_or_view()
             return Query(kind="harmonic_at", arg=arg)
+        if kw == "lattice":
+            # `?lattice` — substrate-snapshot lens. Returns counts of blueprints /
+            # recipes / cells without touching them. The framebuffer-analog: read
+            # the substrate's current shape as a single observation.
+            return Query(kind="lattice")
+        if kw == "keywords":
+            # `?keywords` — grammar-introspection lens. Returns the names of every
+            # runtime-registered Form keyword. Lets the grammar see itself; BMF
+            # property — the parser knows its own rules.
+            return Query(kind="keywords")
         if kw == "cells":
             arg = None
             if self.peek().kind == "PROJECT":
@@ -1018,6 +1028,16 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
             raise TypeError(f"Form: ?compatible |> expects a NodeID")
         views = find_cells_compatible_with(session, bp_result.value)
         return FormResult("views", views)
+
+    if q.kind == "lattice":
+        # Substrate-snapshot lens — read-only count of every interned thing.
+        from app.services.substrate.kernel import lattice_stats as _stats
+        return FormResult("lattice", _stats(session))
+
+    if q.kind == "keywords":
+        # Grammar-introspection lens — names of every runtime-registered keyword.
+        from app.services.substrate.form_rules import list_registered_keywords
+        return FormResult("keywords", list_registered_keywords())
 
     if q.kind in ("shaped_by", "harmonic_at"):
         # Resonance-walk query: given a target cell, return cells whose
