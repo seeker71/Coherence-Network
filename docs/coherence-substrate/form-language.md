@@ -737,6 +737,34 @@ Every Form query is structurally a lens already: `?cells`, `?equivalent`, `?shap
 
 The lenses today read aggregate state at the moment of the call (`?lattice` is a count, not a time-series). A *reactive* lens — one that fires when the substrate changes — needs a subscription primitive. A *spatial-projection* lens (the actual GPU-visualizer-style render) needs a renderer plus a projection algorithm. Both build on the same read-only pattern; named here so the shape is visible.
 
+### `?vocabulary` — verb-cluster lens
+
+```form
+?vocabulary
+# → {'recipes': {21: 6}, 'blueprints': {4: 3}}
+#   The body has 6 RESONANCE recipes (type 21) and 3 DOMAIN blueprints (type 4).
+#   No MATH (12), no COMPARE (13), no LOGIC (14) — the body has not yet
+#   computed; only authored. The verb-cluster IS the body's circulation
+#   signature.
+```
+
+A body whose recipe space is one-verb-dominated is a body without circulation across language layers. `?vocabulary` makes that visible directly. Running `1 + 2` in Form populates `{12: 1}`; the body grows a new region. The verb histogram is itself a wellness signal that surfaces from the numeric lens, not from labels.
+
+## Symmetric (commutative) resonance edges
+
+The substrate is non-commutative by default — `shapes_edge(s, a, b)` and `shapes_edge(s, b, a)` produce different Recipe NodeIDs because children are ordered. For relations that ARE symmetric (a BRIDGES between two disciplines has no direction; NEAR-in-signature-space has no direction; POLAR_TO across a polarity axis has no direction), that asymmetry is noise.
+
+`commutative_edge` canonicalizes the (a, b) pair before authoring so both orders intern as one NodeID:
+
+```python
+from app.services.substrate import bridges_symmetric, bridges_edge
+
+bridges_symmetric(s, a, b) == bridges_symmetric(s, b, a)   # True — symmetric
+bridges_edge(s, a, b)      == bridges_edge(s, b, a)        # False — directed
+```
+
+Convenience wrappers: `bridges_symmetric`, `near_symmetric`, `polar_to_symmetric`. Verbs that ARE directed (SHAPES, HARMONIC_AT, CARRIES_RATIO, EMBEDS_IN) keep using the directed constructors — the substrate's order-sensitivity stays in place where direction is meaningful. The body chooses per-verb whether a relation has direction; both shapes remain available.
+
 ## What is still not in Form but BML had
 
 Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) names constructs Form does not yet carry:

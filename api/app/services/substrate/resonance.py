@@ -254,6 +254,60 @@ def carries_ratio_edge(session: Session, source_db_id: int, harmonic_db_id: int)
 
 
 # ---------------------------------------------------------------------------
+# Symmetric (commutative) edges — same NodeID regardless of (a, b) order
+# ---------------------------------------------------------------------------
+
+
+def commutative_edge(
+    session: Session,
+    *,
+    verb: RResonance,
+    cell_a_db_id: int,
+    cell_b_db_id: int,
+) -> NodeID:
+    """Symmetric resonance edge — same Recipe NodeID regardless of (a, b) order.
+
+    The substrate is not commutative by default: `shapes_edge(s, a, b)` and
+    `shapes_edge(s, b, a)` produce different NodeIDs because children are
+    ordered. For relations that ARE symmetric (NEAR-in-signature-space,
+    BRIDGES between two disciplines, POLAR_TO across a polarity axis), that
+    asymmetry is noise — the relation has no direction.
+
+    `commutative_edge` canonicalizes by sorting cell ids before authoring,
+    so `(a, b)` and `(b, a)` intern to the same Recipe NodeID. Verbs that
+    are naturally symmetric (NEAR, BRIDGES, POLAR_TO) should use this; verbs
+    that ARE directed (SHAPES, HARMONIC_AT, CARRIES_RATIO, EMBEDS_IN) should
+    use the directed edge constructors.
+    """
+    lo, hi = sorted([cell_a_db_id, cell_b_db_id])
+    return _edge(session, verb, lo, hi)
+
+
+def bridges_symmetric(session: Session, cell_a_db_id: int, cell_b_db_id: int) -> NodeID:
+    """Convenience: symmetric BRIDGES edge (canonicalized)."""
+    return commutative_edge(
+        session, verb=RResonance.BRIDGES,
+        cell_a_db_id=cell_a_db_id, cell_b_db_id=cell_b_db_id,
+    )
+
+
+def near_symmetric(session: Session, cell_a_db_id: int, cell_b_db_id: int) -> NodeID:
+    """Convenience: symmetric NEAR edge (canonicalized)."""
+    return commutative_edge(
+        session, verb=RResonance.NEAR,
+        cell_a_db_id=cell_a_db_id, cell_b_db_id=cell_b_db_id,
+    )
+
+
+def polar_to_symmetric(session: Session, cell_a_db_id: int, cell_b_db_id: int) -> NodeID:
+    """Convenience: symmetric POLAR_TO edge (canonicalized)."""
+    return commutative_edge(
+        session, verb=RResonance.POLAR_TO,
+        cell_a_db_id=cell_a_db_id, cell_b_db_id=cell_b_db_id,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Top-level: walk a `geometry:` dict and author every resonance edge
 # ---------------------------------------------------------------------------
 
@@ -482,4 +536,9 @@ __all__ = [
     "find_cells_via_resonance",
     "find_cells_shaping",
     "find_cells_harmonic_at",
+    # Symmetric (commutative) edge constructors
+    "commutative_edge",
+    "bridges_symmetric",
+    "near_symmetric",
+    "polar_to_symmetric",
 ]

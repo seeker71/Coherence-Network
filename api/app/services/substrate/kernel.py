@@ -566,6 +566,31 @@ def lattice_stats(session: Session) -> dict:
     }
 
 
+def vocabulary_histogram(session: Session) -> dict:
+    """Verb-cluster lens: count of interned recipes grouped by `type_` (the
+    RBasic category). Reveals which regions of the numeric verb-space the
+    body's circulation occupies. A body with only one type_ count > 0 is a
+    body without circulation across the language layers.
+
+    Returns `{"recipes": {type_int: count, ...}, "blueprints": {type_int: count, ...}}`.
+    Use category.RBasic / category.BBasic to translate type_ ints to names
+    (e.g. RBasic.RESONANCE == 21, RBasic.MATH == 12).
+    """
+    from collections import Counter
+
+    recipe_types: Counter = Counter()
+    bp_types: Counter = Counter()
+    for row in session.query(SubstrateNodeORM).all():
+        if row.domain == DOMAIN_RECIPE:
+            recipe_types[row.type_] += 1
+        elif row.domain == DOMAIN_BLUEPRINT:
+            bp_types[row.type_] += 1
+    return {
+        "recipes": dict(recipe_types),
+        "blueprints": dict(bp_types),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
