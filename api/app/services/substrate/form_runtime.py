@@ -326,6 +326,11 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
 
     # --- Leaves with full value fidelity ------------------------------------
 
+    # List literal (`[1, 2, 3]`) — parser returns a Python list of ExprNodes;
+    # runtime evaluates each item and yields a Python list.
+    if isinstance(ast, list):
+        return [execute(session, item, frame) for item in ast]
+
     if isinstance(ast, IntLit):
         return ast.value
     if isinstance(ast, BoolLit):
@@ -548,7 +553,10 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
     # --- BML exception-flow — raise / resume --------------------------------
 
     if isinstance(ast, RaiseExpr):
-        raise RaiseSignal()
+        payload = None
+        if getattr(ast, "value", None) is not None:
+            payload = execute(session, ast.value, frame)
+        raise RaiseSignal(payload)
 
     if isinstance(ast, ResumeExpr):
         # `resume` on its own is a marker; in a try-frame it returns control
@@ -655,8 +663,14 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
         try:
             sub = Frame(parent=frame)
             return execute(session, ast.body, sub)
-        except RaiseSignal:
-            sub = Frame(parent=frame)
+        except RaiseSignal as sig:
+            # The raised payload (if any) is bound as the catch frame's
+            # subject so `.self` inside catch resolves to the raised value.
+            sub = Frame(
+                parent=frame,
+                subject=sig.payload,
+                has_subject=sig.payload is not None,
+            )
             return execute(session, ast.handler, sub)
 
     # --- Delegation declaration --------------------------------------------
