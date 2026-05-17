@@ -733,9 +733,19 @@ Why it matters here: resonance walks are naturally scoped statements. `with @geo
 
 Every Form query is structurally a lens already: `?cells`, `?equivalent`, `?shaped_by`, `?harmonic_at`, `?lattice`, `?keywords` all read the substrate, none mutate it. The two new ones make the *substrate's own shape* and *the grammar's own shape* observable — which is what the memory-as-framebuffer experiment (`experiments/memory-as-framebuffer-v0/`) does at the heap level: render runtime memory as a recordable video frame, multiple frames viewed without disturbing the run. Same pattern, different scale; the substrate is to a body what the heap is to a running program — a thing many observers can witness without changing.
 
-### What this is not yet
+### Reactive and spatial-projection lenses — form layer
 
-The lenses today read aggregate state at the moment of the call (`?lattice` is a count, not a time-series). A *reactive* lens — one that fires when the substrate changes — needs a subscription primitive. A *spatial-projection* lens (the actual GPU-visualizer-style render) needs a renderer plus a projection algorithm. Both build on the same read-only pattern; named here so the shape is visible.
+```form
+?on_change @concept(lc-trust-over-fear) { invoke notify on @presence(claude) }
+# → recipe @1.5.28.1 (RBasic.REACTIVE=28, RReactive.ON_CHANGE=1)
+# Reactive lens: fires the body when the watched recipe's value changes.
+
+?project @geometric_form(triad) @concept(coord-radial)
+# → recipe @1.3.29.1 (RBasic.PROJECTION=29, RProjection.PROJECT=1)
+# Spatial-projection lens: renders the cell through the coordinate function.
+```
+
+Both interned at the form layer. The subscription engine activates `?on_change` recipes when substrate state mutates; the renderer (GPU-visualizer, memory-framebuffer) consumes `?project` recipes and emits frames. Both engines are downstream of the single named shared dependency — the recipe-execution engine — that activates every form-layer construct's runtime semantics.
 
 ### `?vocabulary` — verb-cluster lens
 
@@ -765,20 +775,38 @@ bridges_edge(s, a, b)      == bridges_edge(s, b, a)        # False — directed
 
 Convenience wrappers: `bridges_symmetric`, `near_symmetric`, `polar_to_symmetric`. Verbs that ARE directed (SHAPES, HARMONIC_AT, CARRIES_RATIO, EMBEDS_IN) keep using the directed constructors — the substrate's order-sensitivity stays in place where direction is meaningful. The body chooses per-verb whether a relation has direction; both shapes remain available.
 
-## What is still not in Form but BML had
+## BML form-layer parity
 
-Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) names constructs Form does not yet carry:
+Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt`](../field/urs/artifacts/master-thesis-2000/companion/sgb-bml-objects.txt)) named six constructs Form didn't carry. All six now have form-layer constructs that intern as Recipe NodeIDs — same structural-first pattern as `choose`/`fail`/`stop`:
 
-| BML construct | Status | Notes |
+| BML construct | Status | Form construct |
 |---|---|---|
-| **`save` / `restore` / `discard`** state stack | ✓ closed (form layer) | Interns as `RBasic.STATE`; recipe-execution engine remains future. |
-| **`raise` / `resume`** — exception flow distinct from speculation | ✓ closed (form layer) | Interns as `RBasic.EXCEPTION`; same engine dependency as above. |
-| **Delegation inheritance** — object delegates dispatch to another | open | Resonance edges are a delegation shape; a first-class delegation primitive would make `.shape -> ~Triad` a Form expression rather than only an edge. |
-| **Reverse semantics on every instruction (DO + UNDO)** | open | True backtracking at runtime, not just at parser level; would let `choose` actually evaluate with rollback. |
-| **Common Objects** — multiple-bases-as-shared-tissue | open | Two cells sharing a base (a geometric form cell, say) without each carrying it; partially addressed by `\|>` views but not at the data level. |
-| **Method definitions inside objects** | open | Resonance verbs as methods on the dimensional cells — `@geometric_form(triad).shapes_of(@spectrum(Hz-174))`. |
+| `save` / `restore` / `discard` state stack | ✓ form layer | bare keywords (`RBasic.STATE`) |
+| `raise` / `resume` exception flow | ✓ form layer | bare keywords (`RBasic.EXCEPTION`) |
+| Delegation inheritance | ✓ form layer | `delegate @X to @Y` (`RBasic.DELEGATE`) |
+| Reverse semantics (DO + UNDO) | ✓ form layer | `undo <recipe>` / `inverse(<recipe>)` (`RBasic.REVERSE`) |
+| Common Objects (shared-base multi-inheritance) | ✓ form layer | `common @X @Y` (`RBasic.COMMON`) |
+| Method definitions inside objects | ✓ form layer | `method NAME on @X { body }` + `invoke NAME on @X` (`RBasic.METHOD`) |
 
-The closed rows landed at the same structural-first pattern as `choose`/`fail`/`stop`: the recipe interns today, the execution semantics waits for the recipe-execution engine (a real future breath, named in its own row above). The open rows stay visible so any cell can pick one up.
+Plus the two named lens openings from `?lattice` / `?keywords`:
+
+| Lens opening | Status | Form construct |
+|---|---|---|
+| Reactive lens (fire on substrate change) | ✓ form layer | `?on_change <recipe> { body }` (`RBasic.REACTIVE`) |
+| Spatial-projection lens (GPU-style render) | ✓ form layer | `?project @cell @coord_fn` (`RBasic.PROJECTION`) |
+
+```form
+delegate @concept(lc-trust-over-fear) to @concept(lc-permission-is-interior)
+undo (1 + 2)
+inverse(1 + 2)
+common @concept(lc-a) @concept(lc-b)
+method greet on @concept(lc-a) { save; 1 + 2; restore }
+invoke greet on @concept(lc-a)
+?on_change @concept(lc-a) { invoke notify on @presence(claude) }
+?project @geometric_form(triad) @concept(radial-coord-fn)
+```
+
+Each interns as its own Recipe NodeID under its `RBasic` category. The shared dependency that activates runtime semantics for ALL of these is the **recipe-execution engine** — one named follow-on rather than eight per-construct gaps. Today the form carries the intent; when the engine lands, each construct's behavior activates from the same recipe-walking interpreter.
 
 ```form
 save                 # → recipe @1.2.22.1   (RBasic.STATE=22, RState.SAVE=1)
