@@ -61,28 +61,29 @@ _INGESTERS = {
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
+    structured = getattr(args, "structured", False)
     if args.all:
         rc = 0
         for domain in ("memory", "spec", "idea", "concept", "presence"):
-            rc |= _ingest_domain(domain)
+            rc |= _ingest_domain(domain, structured=structured)
         return rc
     if args.memories:
-        return _ingest_domain("memory")
+        return _ingest_domain("memory", structured=structured)
     if args.specs:
-        return _ingest_domain("spec")
+        return _ingest_domain("spec", structured=structured)
     if args.ideas:
-        return _ingest_domain("idea")
+        return _ingest_domain("idea", structured=structured)
     if args.concepts:
-        return _ingest_domain("concept")
+        return _ingest_domain("concept", structured=structured)
     if args.presences:
-        return _ingest_domain("presence")
+        return _ingest_domain("presence", structured=structured)
     if args.paths:
-        return _ingest_files([Path(p) for p in args.paths])
+        return _ingest_files([Path(p) for p in args.paths], structured=structured)
     print("ingest: no target specified (try --memories, --all, or paths)", file=sys.stderr)
     return 1
 
 
-def _ingest_files(paths: list[Path]) -> int:
+def _ingest_files(paths: list[Path], *, structured: bool = False) -> int:
     with session_scope() as session:
         for path in paths:
             if not path.exists() or path.is_dir():
@@ -91,30 +92,35 @@ def _ingest_files(paths: list[Path]) -> int:
             if path.suffix != ".md":
                 print(f"  skip (not .md): {path}", file=sys.stderr)
                 continue
-            cell, bp_id, ctor_id = ingest_memory_file(session, path)
+            cell, bp_id, ctor_id = ingest_memory_file(session, path, structured=structured)
             print(f"  ingested {path.name}: cell_id={cell.cell_id} blueprint={bp_id}")
         session.commit()
     return 0
 
 
-def _ingest_domain(domain: str) -> int:
+def _ingest_domain(domain: str, *, structured: bool = False) -> int:
     if domain not in _INGESTERS:
         print(f"unknown domain: {domain}", file=sys.stderr)
         return 1
     base, ingester, filter_fn = _INGESTERS[domain]
     if not base.exists():
-        # Some domains live outside the repo (memory) and are absent in
-        # production / CI / fresh checkouts. Skipping is the right shape:
-        # `--all` should populate what it can find, not refuse the run.
         print(f"{domain}: dir not found ({base}) — skipped", file=sys.stderr)
         return 0
     md_files = sorted([p for p in base.glob("*.md") if filter_fn(p)])
-    print(f"Ingesting {len(md_files)} {domain} files from {base}")
+    mode = "structured" if structured else "legacy"
+    print(f"Ingesting {len(md_files)} {domain} files from {base} [{mode}]")
     success = fail = 0
     with session_scope() as session:
         for path in md_files:
             try:
-                cell, bp_id, ctor_id = ingester(session, path)
+                # Pass `structured` if the ingester supports it; older
+                # ingesters (lineage/witness/task placeholders) won't.
+                import inspect
+                sig = inspect.signature(ingester)
+                if "structured" in sig.parameters:
+                    cell, bp_id, ctor_id = ingester(session, path, structured=structured)
+                else:
+                    cell, bp_id, ctor_id = ingester(session, path)
                 success += 1
                 if success <= 3 or success % 25 == 0:
                     print(f"  [{success}] {path.name}: bp={bp_id}")
@@ -336,6 +342,15 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--concepts", action="store_true")
     p_ingest.add_argument("--presences", action="store_true")
     p_ingest.add_argument("--all", action="store_true", help="Backfill all five domains")
+    p_ingest.add_argument(
+        "--structured",
+        action="store_true",
+        help=(
+            "Use the composition-discipline structured encoders "
+            "(named-pair LET CTORs + cell-ref/resonance edges authored from "
+            "frontmatter). See docs/coherence-substrate/structural-composition.md."
+        ),
+    )
 
     sub.add_parser("stats", help="Print lattice statistics")
 
