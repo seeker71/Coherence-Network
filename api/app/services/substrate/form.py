@@ -53,6 +53,8 @@ from app.services.substrate.category import (
     RBasic,
     RBlock,
     RChoice,
+    RException,
+    RState,
     RCompare,
     RCond,
     RJump,
@@ -351,6 +353,31 @@ class StopExpr:
     """`stop` keyword — commits speculation, no more backtracking."""
 
 
+@dataclass
+class SaveExpr:
+    """`save` — push current state onto the BML state-stack."""
+
+
+@dataclass
+class RestoreExpr:
+    """`restore` — pop state from the BML state-stack."""
+
+
+@dataclass
+class DiscardExpr:
+    """`discard` — drop the top of the BML state-stack without restoring."""
+
+
+@dataclass
+class RaiseExpr:
+    """`raise` — raise an exception (distinct from speculation `fail`)."""
+
+
+@dataclass
+class ResumeExpr:
+    """`resume` — resume from a raised exception."""
+
+
 AtomNode = Union[NodeIDLit, TrivialRef, CellRef, Projection]
 ExprNode = Any  # any AST node — too many to enumerate
 
@@ -550,6 +577,21 @@ class Parser:
         if kw == "stop":
             self.consume("IDENT")
             return StopExpr()
+        if kw == "save":
+            self.consume("IDENT")
+            return SaveExpr()
+        if kw == "restore":
+            self.consume("IDENT")
+            return RestoreExpr()
+        if kw == "discard":
+            self.consume("IDENT")
+            return DiscardExpr()
+        if kw == "raise":
+            self.consume("IDENT")
+            return RaiseExpr()
+        if kw == "resume":
+            self.consume("IDENT")
+            return ResumeExpr()
 
         # User-registered keywords (the rule-driven extension point —
         # this is where the grammar becomes alive at runtime).
@@ -865,6 +907,16 @@ def _choice_id(kind: str) -> NodeID:
     return NodeID(1, Level.BASIC, RBasic.CHOICE, instance)
 
 
+def _state_id(kind: str) -> NodeID:
+    instance = {"save": RState.SAVE, "restore": RState.RESTORE, "discard": RState.DISCARD}[kind]
+    return NodeID(1, Level.BASIC, RBasic.STATE, instance)
+
+
+def _exception_id(kind: str) -> NodeID:
+    instance = {"raise": RException.RAISE, "resume": RException.RESUME}[kind]
+    return NodeID(1, Level.BASIC, RBasic.EXCEPTION, instance)
+
+
 def _intern_recipe(session: Session, category: NodeID, children: List[NodeID]) -> NodeID:
     """Intern a Recipe shape and return its NodeID."""
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
@@ -954,6 +1006,16 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
         return _choice_id("fail")  # leaf — no children
     if isinstance(ast, StopExpr):
         return _choice_id("stop")  # leaf — no children
+    if isinstance(ast, SaveExpr):
+        return _state_id("save")
+    if isinstance(ast, RestoreExpr):
+        return _state_id("restore")
+    if isinstance(ast, DiscardExpr):
+        return _state_id("discard")
+    if isinstance(ast, RaiseExpr):
+        return _exception_id("raise")
+    if isinstance(ast, ResumeExpr):
+        return _exception_id("resume")
     if isinstance(ast, Projection):
         # In Recipe context, projection is a "view-as" recipe with two children.
         cell_id = _to_recipe_node_id(session, ast.cell)
@@ -1010,6 +1072,7 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         IntLit, BoolLit, StringLit, Identifier,
         BinOp, UnaryOp, IfExpr, DoBlock, Let,
         MatchExpr, ChooseExpr, FailExpr, StopExpr,
+        SaveExpr, RestoreExpr, DiscardExpr, RaiseExpr, ResumeExpr,
         WithExpr, SelfRef,
     )):
         rid = _to_recipe_node_id(session, ast)
