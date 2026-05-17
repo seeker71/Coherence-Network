@@ -67,6 +67,7 @@ from app.services.substrate.category import (
     RReactive,
     RReverse,
     RState,
+    RTry,
 )
 from app.services.substrate.kernel import (
     NamedCell,
@@ -429,13 +430,16 @@ class CommonExpr:
 
 @dataclass
 class MethodDefExpr:
-    """`method NAME on @X { body }` — define a method on a cell.
+    """`method NAME(p1, p2, ...) on @X { body }` — define a method on a cell.
 
-    Interns as `(RBasic.METHOD, [name_str_recipe, target_ref, body_recipe])`.
+    Params bind in the call frame when `invoke NAME on @X with [a, b]` fires.
+    Empty params list when no parens are given (`method NAME on @X { body }`).
+    Interns as `(RBasic.METHOD/DEFINE, [name_str, target_ref, params_seq, body])`.
     """
     name: str
     target: Any
     body: Any
+    params: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -455,11 +459,27 @@ class FnDef:
 
 @dataclass
 class MethodInvokeExpr:
-    """`invoke NAME on @X` — invoke the method on cell X (dispatch via
-    delegation chain). Interns as `(RBasic.METHOD, [name_str, target_ref])`.
+    """`invoke NAME on @X` or `invoke NAME on @X with [a, b, c]`.
+
+    Dispatch walks the delegation chain. Args evaluate in the caller's frame,
+    then bind to the method's params in the call frame.
+    Interns as `(RBasic.METHOD/INVOKE, [name_str, target_ref, *arg_recipes])`.
     """
     name: str
     target: Any
+    args: List[Any] = field(default_factory=list)
+
+
+@dataclass
+class TryCatchExpr:
+    """`try { body } catch { handler }` — catching frame for raised exceptions.
+
+    The body runs in a sub-frame; if a RaiseSignal escapes, control falls to
+    the handler (also a sub-frame). Without a raise, handler is unreached.
+    Interns as `(RBasic.TRY/TRY_CATCH, [body_recipe, handler_recipe])`.
+    """
+    body: Any
+    handler: Any
 
 
 @dataclass
@@ -715,6 +735,11 @@ class Parser:
                 f"Form: only `.self` is supported in dot-prefix position at pos {t.pos} "
                 f"(got `.{ident.value}`)"
             )
+        if t.kind == "QMARK":
+            # `?<query>` in expression position — nested queries become composable
+            # (e.g. `?on_change ?cells { body }`). The Query AST node carries the
+            # full query structure; downstream eval/execute handles it.
+            return self.parse_query()
         raise SyntaxError(f"Form: unexpected {t.kind}({t.value!r}) at pos {t.pos}")
 
     def parse_keyword_or_ident(self) -> ExprNode:
@@ -782,6 +807,8 @@ class Parser:
             return self.parse_method_def()
         if kw == "invoke":
             return self.parse_method_invoke()
+        if kw == "try":
+            return self.parse_try_catch()
         if kw == "defn":
             return self.parse_defn()
 
@@ -945,9 +972,17 @@ class Parser:
         return CommonExpr(a=a, b=b)
 
     def parse_method_def(self) -> MethodDefExpr:
-        """`method NAME on @X { body }`"""
+        """`method NAME(p1, p2, ...) on @X { body }` — params optional."""
         self.consume("IDENT")  # 'method'
         name = self.consume("IDENT").value
+        params: List[str] = []
+        if self.peek().kind == "LPAREN":
+            self.consume("LPAREN")
+            while self.peek().kind != "RPAREN":
+                params.append(self.consume("IDENT").value)
+                if self.peek().kind == "COMMA":
+                    self.consume("COMMA")
+            self.consume("RPAREN")
         if self.peek().kind != "IDENT" or self.peek().value != "on":
             raise SyntaxError("Form: expected 'on' after method name")
         self.consume("IDENT")  # 'on'
@@ -962,17 +997,55 @@ class Parser:
                 break
         self.consume("RBRACE")
         body = DoBlock(statements=stmts)
-        return MethodDefExpr(name=name, target=target, body=body)
+        return MethodDefExpr(name=name, target=target, body=body, params=params)
 
     def parse_method_invoke(self) -> MethodInvokeExpr:
-        """`invoke NAME on @X`"""
+        """`invoke NAME on @X` or `invoke NAME on @X with [a, b]`."""
         self.consume("IDENT")  # 'invoke'
         name = self.consume("IDENT").value
         if self.peek().kind != "IDENT" or self.peek().value != "on":
             raise SyntaxError("Form: expected 'on' after invoke name")
         self.consume("IDENT")  # 'on'
         target = self.parse_expr()
-        return MethodInvokeExpr(name=name, target=target)
+        args: List[Any] = []
+        if self.peek().kind == "IDENT" and self.peek().value == "with":
+            self.consume("IDENT")  # 'with'
+            self.consume("LBRACK")
+            while self.peek().kind != "RBRACK":
+                args.append(self.parse_expr())
+                if self.peek().kind == "COMMA":
+                    self.consume("COMMA")
+            self.consume("RBRACK")
+        return MethodInvokeExpr(name=name, target=target, args=args)
+
+    def parse_try_catch(self) -> "TryCatchExpr":
+        """`try { body } catch { handler }`."""
+        self.consume("IDENT")  # 'try'
+        self.consume("LBRACE")
+        body_stmts = []
+        while self.peek().kind != "RBRACE":
+            body_stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        if self.peek().kind != "IDENT" or self.peek().value != "catch":
+            raise SyntaxError("Form: expected 'catch' after try-body")
+        self.consume("IDENT")  # 'catch'
+        self.consume("LBRACE")
+        handler_stmts = []
+        while self.peek().kind != "RBRACE":
+            handler_stmts.append(self.parse_expr())
+            if self.peek().kind == "SEMI":
+                self.consume("SEMI")
+            elif self.peek().kind == "RBRACE":
+                break
+        self.consume("RBRACE")
+        return TryCatchExpr(
+            body=DoBlock(statements=body_stmts),
+            handler=DoBlock(statements=handler_stmts),
+        )
 
     def parse_on_change(self) -> OnChangeExpr:
         """`?on_change <query> { body }` — entered via parse_query branch."""
@@ -1375,11 +1448,27 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
         name_id = _to_recipe_node_id(session, StringLit(ast.name))
         target_id = _to_recipe_node_id(session, ast.target)
         body_id = _to_recipe_node_id(session, ast.body)
-        return _intern_recipe(session, _method_id("define"), [name_id, target_id, body_id])
+        params_id = _to_recipe_node_id(
+            session, DoBlock(statements=[StringLit(p) for p in ast.params])
+        )
+        return _intern_recipe(
+            session, _method_id("define"), [name_id, target_id, params_id, body_id]
+        )
     if isinstance(ast, MethodInvokeExpr):
         name_id = _to_recipe_node_id(session, StringLit(ast.name))
         target_id = _to_recipe_node_id(session, ast.target)
-        return _intern_recipe(session, _method_id("invoke"), [name_id, target_id])
+        children = [name_id, target_id]
+        for arg in ast.args:
+            children.append(_to_recipe_node_id(session, arg))
+        return _intern_recipe(session, _method_id("invoke"), children)
+    if isinstance(ast, TryCatchExpr):
+        body_id = _to_recipe_node_id(session, ast.body)
+        handler_id = _to_recipe_node_id(session, ast.handler)
+        return _intern_recipe(
+            session,
+            NodeID(1, Level.BASIC, RBasic.TRY, RTry.TRY_CATCH),
+            [body_id, handler_id],
+        )
     if isinstance(ast, OnChangeExpr):
         q_id = _to_recipe_node_id(session, ast.query)
         b_id = _to_recipe_node_id(session, ast.body)
@@ -1449,6 +1538,7 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         DelegateExpr, UndoExpr, InverseExpr, CommonExpr,
         MethodDefExpr, MethodInvokeExpr,
         OnChangeExpr, ProjectExpr,
+        TryCatchExpr,
     )):
         rid = _to_recipe_node_id(session, ast)
         return FormResult("recipe", rid)
