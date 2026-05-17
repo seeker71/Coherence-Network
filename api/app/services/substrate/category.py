@@ -219,6 +219,11 @@ class RBasic(IntEnum):
     # the cell through the coordinate function." The renderer consumes
     # (GPU-visualizer, memory-framebuffer); form layer carries the intent.
     PROJECTION = 29
+    # BML try/catch — `try { body } catch { handler }` — runtime catches RaiseSignal
+    # raised by `raise` and routes control to the handler. Pairs with the
+    # already-shipped RBasic.EXCEPTION row but distinct: EXCEPTION is the
+    # raise/resume markers, TRY is the catching frame.
+    TRY = 30
 
 
 class RTend(IntEnum):
@@ -383,6 +388,15 @@ class RException(IntEnum):
     UNDEFINED = 0
     RAISE = 1
     RESUME = 2
+
+
+class RTry(IntEnum):
+    """`try { body } catch { handler }` — catching frame for raised exceptions.
+
+    - try_catch: the composite (body, handler) form.
+    """
+    UNDEFINED = 0
+    TRY_CATCH = 1
 
 
 class RDelegate(IntEnum):
