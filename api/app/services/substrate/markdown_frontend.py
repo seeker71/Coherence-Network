@@ -508,9 +508,101 @@ def ingest_idea_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]
     return _ingest_markdown_file(session, path, "idea", BID_idea(), name_field="idea_id")
 
 
-def ingest_concept_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
-    """Ingest one concept file (vision-kb concepts/lc-xxx.md)."""
-    return _ingest_markdown_file(session, path, "concept", BID_concept(), name_field="id")
+def ingest_concept_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one concept file (vision-kb concepts/lc-xxx.md).
+
+    `structured=True` activates the concept-aware composition-discipline
+    encoder. In addition to the structured CTOR (named-pair recipes with
+    substrate-resident values), it authors:
+
+      - parent → R_Compose.PARENT_OF cell-ref recipe to @concept(<parent>)
+      - cross_refs[] → R_Block.SEQUENCE of R_Compose.CROSS_REF cell-ref recipes
+      - hz / geometry.* → resonance edges via `author_geometry_signature`
+        (SHAPES, HARMONIC_AT, EMBEDS_IN, CARRIES_RATIO — discipline already
+        owned by the resonance module; this encoder just calls it during ingest).
+
+    The discipline lives in docs/coherence-substrate/structural-composition.md.
+    """
+    cell, blueprint_id, ctor_id = _ingest_markdown_file(
+        session, path, "concept", BID_concept(), name_field="id", structured=structured,
+    )
+    if structured:
+        _author_concept_edges_from_frontmatter(session, cell, parse_markdown_file(path).frontmatter)
+    return cell, blueprint_id, ctor_id
+
+
+def _author_concept_edges_from_frontmatter(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Author the substrate edges implied by concept frontmatter.
+
+    - `parent: <slug>` becomes a PARENT_OF compose-recipe to the named
+      concept cell (if it exists in the substrate).
+    - `cross_refs: [slug, slug, ...]` becomes CROSS_REF compose-recipes
+      to each referenced concept cell.
+    - `hz: <int>` + `geometry: {...}` route through
+      `resonance.author_geometry_signature` which authors the resonance
+      edges (SHAPES / HARMONIC_AT / EMBEDS_IN / CARRIES_RATIO).
+
+    Edges that reference concept cells which haven't been ingested yet are
+    silently skipped — the resonance module follows the same discipline.
+    A second-pass re-ingest after all concept cells exist closes the loop;
+    content-addressed interning makes this idempotent.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RCompose
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    # 1) parent — a single PARENT_OF cell-ref recipe.
+    parent_slug = frontmatter.get("parent")
+    if isinstance(parent_slug, str) and parent_slug.strip():
+        parent_cell = _lookup_cell(session, "concept", parent_slug.strip())
+        if parent_cell is not None and parent_cell.cell_id is not None:
+            # Recipe shape: (R_Compose.PARENT_OF, [source_ref, target_ref])
+            source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, parent_cell.cell_id)
+            parent_of_cat = NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.PARENT_OF)
+            intern_node(session, DOMAIN_RECIPE, parent_of_cat, [source_ref, target_ref])
+
+    # 2) cross_refs — a list of CROSS_REF recipes (one per reference).
+    cross_refs = frontmatter.get("cross_refs")
+    if isinstance(cross_refs, list):
+        cross_ref_cat = NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF)
+        for ref_slug in cross_refs:
+            if not isinstance(ref_slug, str) or not ref_slug.strip():
+                continue
+            ref_cell = _lookup_cell(session, "concept", ref_slug.strip())
+            if ref_cell is None or ref_cell.cell_id is None:
+                continue
+            source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, ref_cell.cell_id)
+            intern_node(
+                session, DOMAIN_RECIPE, cross_ref_cat, [source_ref, target_ref]
+            )
+
+    # 3) hz + geometry — route through the existing resonance authoring.
+    geometry = frontmatter.get("geometry")
+    hz_value = frontmatter.get("hz")
+    if isinstance(geometry, dict) or hz_value is not None:
+        try:
+            from app.services.substrate.resonance import author_geometry_signature
+            author_geometry_signature(
+                session,
+                source_db_id=cell.cell_id,
+                geometry=geometry if isinstance(geometry, dict) else {},
+                arity_hz=int(hz_value) if hz_value is not None else None,
+            )
+        except (TypeError, ValueError):
+            # Geometry block malformed — skip silently rather than abort ingest
+            pass
 
 
 def ingest_presence_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:

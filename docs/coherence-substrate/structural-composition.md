@@ -230,8 +230,8 @@ After each domain's encoder ships:
 - ✓ Principle codified in CLAUDE.md
 - ✓ Per-domain target shapes named (this document)
 - ✓ Great-reason criterion explicit
-- ◐ Memory encoder structured form designed; implementation ships in [`markdown_frontend.py → ingest_memory_file_structured`](../../api/app/services/substrate/markdown_frontend.py)
-- ☐ Concept encoder
+- ✓ Memory encoder shipped — [`ingest_memory_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py). Named-pair LET children with substrate-resident, recoverable values.
+- ✓ Concept encoder shipped — [`ingest_concept_file(..., structured=True)`](../../api/app/services/substrate/markdown_frontend.py). In addition to structured CTOR: authors `parent` as a `R_Compose.PARENT_OF` cell-ref recipe, each `cross_refs` entry as a `R_Compose.CROSS_REF` recipe, and routes `hz` + `geometry.*` through `author_geometry_signature` (HARMONIC_AT / SHAPES / EMBEDS_IN / CARRIES_RATIO resonance edges). Idempotent via content-addressing; cell-ref edges to not-yet-ingested concepts skip silently (a second-pass closes the loop).
 - ☐ Spec + Idea encoders
 - ☐ Presence + Lineage encoders
 - ☐ Witness + Task encoders
