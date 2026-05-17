@@ -826,19 +826,19 @@ Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/compa
 
 | BML construct | Status | Form construct |
 |---|---|---|
-| `save` / `restore` / `discard` state stack | ✓ form layer | bare keywords (`RBasic.STATE`) |
-| `raise` / `resume` exception flow | ✓ form layer | bare keywords (`RBasic.EXCEPTION`) |
-| Delegation inheritance | ✓ form layer | `delegate @X to @Y` (`RBasic.DELEGATE`) |
-| Reverse semantics (DO + UNDO) | ✓ form layer | `undo <recipe>` / `inverse(<recipe>)` (`RBasic.REVERSE`) |
-| Common Objects (shared-base multi-inheritance) | ✓ form layer | `common @X @Y` (`RBasic.COMMON`) |
-| Method definitions inside objects | ✓ form layer | `method NAME on @X { body }` + `invoke NAME on @X` (`RBasic.METHOD`) |
+| `save` / `restore` / `discard` state stack | ✓ form + runtime | bare keywords (`RBasic.STATE`); `form_runtime.execute` walks state stack on root frame |
+| `raise` / `resume` exception flow | ✓ form + runtime | bare keywords (`RBasic.EXCEPTION`); `RaiseSignal` raised at execute time |
+| Delegation inheritance | ✓ form + runtime | `delegate @X to @Y` registers `_DELEGATE_REGISTRY`; `invoke` walks the chain |
+| Reverse semantics (DO + UNDO) | ✓ form + runtime | `undo <recipe>` re-runs the inner expression; `inverse(<recipe>)` returns the inverse Recipe NodeID |
+| Common Objects (shared-base multi-inheritance) | ✓ form + runtime | `common @X @Y` merges equivalence groups in `_COMMON_GROUPS`; `invoke` falls back to peers |
+| Method definitions inside objects | ✓ form + runtime | `method NAME on @X { body }` registers in `_METHOD_REGISTRY`; `invoke NAME on @X` dispatches with `.self` bound to the original target across delegation walks |
 
 Plus the two named lens openings from `?lattice` / `?keywords`:
 
 | Lens opening | Status | Form construct |
 |---|---|---|
-| Reactive lens (fire on substrate change) | ✓ form layer | `?on_change <recipe> { body }` (`RBasic.REACTIVE`) |
-| Spatial-projection lens (GPU-style render) | ✓ form layer | `?project @cell @coord_fn` (`RBasic.PROJECTION`) |
+| Reactive lens (fire on substrate change) | ✓ form + runtime | `?on_change <recipe> { body }` registers in `_SUBSCRIPTIONS`; `fire_subscriptions(session)` re-evaluates each query and fires bodies whose value changed |
+| Spatial-projection lens (GPU-style render) | ✓ form + runtime | `?project @cell @coord_fn` looks up `coord_fn.name` in `_COORD_FNS` and applies; pass-through to `(cell, coord_fn)` when no renderer registered |
 
 ```form
 delegate @concept(lc-trust-over-fear) to @concept(lc-permission-is-interior)
@@ -870,7 +870,16 @@ recipe_eval_text(s, "raise")                      # → raises RaiseSignal
 
 **Activated at runtime:** math, compare, logic, cond (if-then/if-then-else), block (do/let/with), state (save/restore/discard via `ExecutionContext.state_stack`), exception (raise/resume), choice signals (fail/stop). Bare-leaf primitives (which don't get rows in `substrate_nodes`) dispatch via `_dispatch_bare_leaf` so the runtime semantics fire from the NodeID coordinates directly.
 
-**Specialized engines remain named honestly, scoped to their own layers:** `@cell-ref` resolution against the cell graph, `delegate` dispatch chain walking, `method NAME on @X { body }` invocation, `common @X @Y` multi-base reconciliation, `?on_change` subscription firing, `?project` rendering. The interpreter returns the recipe NodeID unchanged for these — the form layer carries the intent; the specialized engine fires the behavior when that layer ships.
+**Specialized engines have now landed in `form_runtime.execute`** alongside `recipe_eval.py`:
+
+- `@cell-ref` evaluates to the `NamedCell` via `lookup_cell`
+- `delegate` registers `_DELEGATE_REGISTRY`; `_delegate_chain` walks it during `invoke`
+- `method NAME on @X { body }` registers in `_METHOD_REGISTRY`; `invoke` dispatches with `.self` bound to the original target
+- `common @X @Y` merges into shared-base equivalence groups in `_COMMON_GROUPS`; `invoke` falls back to peers
+- `?on_change <recipe> { body }` registers in `_SUBSCRIPTIONS`; `fire_subscriptions(session)` fires bodies on change-detection
+- `?project @cell @coord_fn` looks up `coord_fn.name` in `_COORD_FNS` via `register_coord_fn(name, fn)`
+
+The two engines live alongside each other: `recipe_eval` walks Recipe NodeIDs by reading the substrate row, parsing serialized form, dispatching on category — fastest for pure-computation expressions where the AST has been discarded. `form_runtime.execute` walks the parser's AST directly — needed for cell-aware constructs whose runtime depends on names, methods, subscriptions that aren't fully recoverable from substrate rows alone. Both are real; both have their domain.
 
 ```form
 save                 # → recipe @1.2.22.1   (RBasic.STATE=22, RState.SAVE=1)
