@@ -203,16 +203,54 @@ def register_coord_fn(name: str, fn: Any) -> None:
 def fire_subscriptions(session: Session) -> List[Any]:
     """Re-evaluate every watched recipe; fire bodies whose value changed.
 
-    Returns the list of fired-body results. Subscription engine entry point —
-    call this after substrate mutations to push reactive bodies.
+    Returns the list of fired-body results. Auto-called after every substrate
+    mutation via kernel's mutation-callback registry (see `_auto_fire_callback`
+    below). Callable directly for manual fire.
     """
     results = []
-    for sub in _SUBSCRIPTIONS:
-        new_value = execute(session, sub["query"], sub["frame"])
+    # Snapshot in case fired bodies mutate the subscription list.
+    for sub in list(_SUBSCRIPTIONS):
+        try:
+            new_value = execute(session, sub["query"], sub["frame"])
+        except Exception:
+            # Subscription whose watched query errors stays subscribed but
+            # contributes nothing this round — keeps the reactive layer
+            # tolerant of transient eval failures.
+            continue
         if new_value != sub["last"]:
             sub["last"] = new_value
             results.append(execute(session, sub["body"], sub["frame"]))
     return results
+
+
+# Re-entry guard: mutation callbacks fire on every intern_node / make_cell.
+# When fire_subscriptions itself causes a mutation (e.g. a fired body interns
+# new recipes), we would re-enter recursively. The guard short-circuits to
+# break the loop.
+_FIRING = False
+
+
+def _auto_fire_callback(session: Session) -> None:
+    """Kernel mutation hook — re-fires subscriptions whose watched query changed.
+
+    Registered on module import so any `intern_node` or `make_cell` call
+    automatically pushes reactive bodies. The `_FIRING` guard prevents
+    recursive re-entry when fired bodies themselves intern recipes.
+    """
+    global _FIRING
+    if _FIRING or not _SUBSCRIPTIONS:
+        return
+    _FIRING = True
+    try:
+        fire_subscriptions(session)
+    finally:
+        _FIRING = False
+
+
+# Auto-register on module import so reactive lenses fire without callers
+# needing to wire up the callback explicitly.
+from app.services.substrate.kernel import register_mutation_callback as _register_mc
+_register_mc(_auto_fire_callback)
 
 
 def reset_runtime_registries() -> None:
