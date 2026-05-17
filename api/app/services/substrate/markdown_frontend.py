@@ -771,9 +771,103 @@ def _author_concept_edges_from_frontmatter(
             pass
 
 
-def ingest_presence_file(session: Session, path: Path) -> Tuple[Any, NodeID, NodeID]:
-    """Ingest one presence file (docs/presences/{slug}.md)."""
-    return _ingest_markdown_file(session, path, "presence", BID_presence())
+def ingest_presence_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one presence file (docs/presences/{slug}.md).
+
+    `structured=True` activates the composition-discipline encoder.
+    Current presence frontmatter (name / canonical_url / type /
+    contributor_type / create_if_missing) becomes a named-pair LET tree
+    via the generic structured encoder. When richer fields land in
+    presence files (the `edges: { transmits: [...], tends: [...] }`
+    target shape named in structural-composition.md), the
+    `_author_presence_edges_from_frontmatter` helper extends here.
+
+    Discipline lives in docs/coherence-substrate/structural-composition.md.
+    """
+    cell, blueprint_id, ctor_id = _ingest_markdown_file(
+        session, path, "presence", BID_presence(), structured=structured,
+    )
+    if structured:
+        _author_presence_edges_from_frontmatter(
+            session, cell, parse_markdown_file(path).frontmatter
+        )
+    return cell, blueprint_id, ctor_id
+
+
+def _author_presence_edges_from_frontmatter(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Author the substrate edges implied by presence frontmatter.
+
+    Current shape supports the `edges` block when present:
+
+      edges:
+        transmits:
+          - <concept-or-presence-slug>
+        tends:
+          - <slug>
+        witnesses:
+          - <slug>
+
+    Each entry becomes a recipe edge in the appropriate verb-category
+    (R_Transmit.TRANSMIT_TO, R_Tend.TEND, R_Witness.RECORD_WITNESS).
+    Resolution: target slugs are looked up first in the concept domain
+    (most edges target concepts), then in the presence domain. Targets
+    not found skip silently — content-addressing keeps a second-pass
+    re-ingest idempotent.
+
+    When a presence file does NOT carry an `edges` block (current state
+    for most presence files in the body), this function is a no-op —
+    the structured CTOR still ships the named-pair tree.
+    """
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RTend, RTransmit
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    edges_block = frontmatter.get("edges")
+    if not isinstance(edges_block, dict):
+        return
+
+    verb_map = {
+        "transmits": NodeID(
+            1, Level.BASIC, RBasic.TRANSMIT, RTransmit.TRANSMIT_TO
+        ),
+        "tends": NodeID(1, Level.BASIC, RBasic.TEND, RTend.TEND),
+        # RWitness instance enum not yet defined — use instance=1 as the
+        # canonical record-witness marker until it lands.
+        "witnesses": NodeID(1, Level.BASIC, RBasic.WITNESS, 1),
+    }
+    source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+
+    for edge_kind, targets in edges_block.items():
+        verb_cat = verb_map.get(edge_kind)
+        if verb_cat is None or not isinstance(targets, list):
+            continue
+        for entry in targets:
+            slug = _slug_from_entry(entry)
+            if not slug:
+                continue
+            # Try concept first, then presence
+            target_cell = (
+                _lookup_cell(session, "concept", slug)
+                or _lookup_cell(session, "presence", slug)
+            )
+            if target_cell is None or target_cell.cell_id is None:
+                continue
+            target_ref = NodeID(
+                1, Level.TRIVIAL, RType.REF, target_cell.cell_id
+            )
+            intern_node(
+                session, DOMAIN_RECIPE, verb_cat, [source_ref, target_ref]
+            )
 
 
 def ingest_markdown_text(
