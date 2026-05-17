@@ -529,6 +529,80 @@ def sense_chain() -> list[str]:
     return lines
 
 
+def sense_form_engine() -> list[str]:
+    """Does the meta-circular Form engine cover the Python dispatch?
+
+    The Form-level evaluator in docs/coherence-substrate/form-engine.form
+    walks Recipe NodeIDs via `match n.category { @l.t.i => ... }` arms.
+    The Python evaluator in api/app/services/substrate/recipe_eval.py
+    dispatches on `category.type_ == RBasic.<verb>`. Where Python has
+    a verb and Form does not, the meta-circular promise is asymmetric:
+    Python can run that recipe, the Form engine cannot.
+
+    Reports the asymmetry. Each missing Form arm is one `@1.2.<t>.<i>`
+    arm in form-engine.form away from symmetric — not a failure.
+    """
+    engine_path = ROOT / "docs" / "coherence-substrate" / "form-engine.form"
+    eval_path = ROOT / "api" / "app" / "services" / "substrate" / "recipe_eval.py"
+    cat_path = ROOT / "api" / "app" / "services" / "substrate" / "category.py"
+    if not (engine_path.is_file() and eval_path.is_file() and cat_path.is_file()):
+        return ["  (form-engine artifacts not present; skipping)"]
+
+    cat_src = cat_path.read_text()
+    rbasic_match = re.search(r"class RBasic\(IntEnum\):.*?(?=\nclass |\Z)", cat_src, re.DOTALL)
+    if not rbasic_match:
+        return ["  (could not parse RBasic from category.py)"]
+    int_to_name: dict[int, str] = {}
+    for name, val in re.findall(r"^\s+([A-Z_]+)\s*=\s*(\d+)", rbasic_match.group(0), re.MULTILINE):
+        if name != "UNDEFINED":
+            int_to_name[int(val)] = name
+    name_to_int = {v: k for k, v in int_to_name.items()}
+
+    form_src = engine_path.read_text()
+    block_match = re.search(r"# >>> BEGIN engine\n(.*?)\n# >>> END engine", form_src, re.DOTALL)
+    if not block_match:
+        return ["  (form-engine.form has no BEGIN/END engine markers)"]
+    engine_block = block_match.group(0)
+    form_arm_types: set[int] = set()
+    for _p, l, t, _i in re.findall(r"@(\d+)\.(\d+)\.(\d+)\.(\d+)", engine_block):
+        if int(l) == 2:
+            form_arm_types.add(int(t))
+
+    eval_src = eval_path.read_text()
+    python_branch_types: set[int] = set()
+    for name in re.findall(r"category\.type_\s*==\s*RBasic\.([A-Z_]+)", eval_src):
+        if name in name_to_int:
+            python_branch_types.add(name_to_int[name])
+
+    if not python_branch_types:
+        return ["  (recipe_eval.py exposes no RBasic dispatch — skipping)"]
+
+    covered = sorted(form_arm_types & python_branch_types)
+    missing = sorted(python_branch_types - form_arm_types)
+    extra = sorted(form_arm_types - python_branch_types)
+
+    lines: list[str] = []
+    lines.append(
+        f"  meta-circular engine — Form arms cover {len(covered)}/{len(python_branch_types)} "
+        f"Python dispatch branches"
+    )
+    if covered:
+        lines.append("    · in Form: " + ", ".join(int_to_name[t] for t in covered))
+    if missing:
+        lines.append(
+            "    · awaiting Form arms: " + ", ".join(int_to_name[t] for t in missing)
+        )
+    if extra:
+        lines.append(
+            "    · in Form but not Python: " + ", ".join(int_to_name[t] for t in extra)
+        )
+    lines.append(
+        "  (Each missing arm is one `@1.2.<t>.<i>` row in form-engine.form away"
+    )
+    lines.append("   from symmetric. Asymmetry is signal, not failure.)")
+    return lines
+
+
 def sense_contracts() -> list[str]:
     """How are the CI contracts breathing the last 7 days?
 
@@ -838,6 +912,7 @@ def main() -> int:
         ("Symbol resolution — do the named symbols still live in those files?", sense_spec_symbols()),
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
+        ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
