@@ -27,6 +27,8 @@ This matters because the Coherence Network is not built from ideas alone. It is 
 | Agada Holistic | Claire Ceo's healing collective and 11+ member household north of Ubud (Tegalalang); energy medicine, kinesiology, sound, plant medicine. Monthly Holistic Health and Natural Medicine session by donation; *"test bodies welcome"*. | [agadaholistic.com](https://agadaholistic.com) — IG [@agada.holistic](https://www.instagram.com/agada.holistic) |
 | Dr. Ida Bagus Kesnawa | Denpasar medical doctor + kinesiologist; chair of Bali's biodynamic farming community (Asosiasi Biodinamik Indonesia); *"food as medicine"* bridge between human-body and field-body scales. Guest practitioner at the 2026-05-10 Agada session. | [doctorbaguskinesiology.com](https://doctorbaguskinesiology.com) |
 | Hati Suci Sanctuary | *Clear/Pure Heart* — five antique Javanese wooden houses on permaculture land in Banjar Bayad, Tegalalang; ~12 km north of Ubud; passive solar, wormery wastewater, rain catchment, chemical-free gardens. | [hatisuciubud.com](https://www.hatisuciubud.com) |
+| Moksa | Ubud room holding [Alex Sandr](../presences/alex-sandr.md)'s Sunday Contact Improvisation classes; specific venue binding held open until verified through lived encounter. | (held open) |
+| Ubud Contact Jam | Open Monday Contact Improvisation jam in Ubud; the door through which the cell met Alex Sandr on May 11, 2026. | (local Ubud CI community; no central public anchor) |
 
 The April 29, 2026 meeting walk through these rooms — Mudra Cafe →
 Sayuri dinner → a one-evening chanting at Ranakami offered by Elios
@@ -52,6 +54,16 @@ through the Wednesday Satsang circle and direct mention:
   the same number-ground, attested in this body before the framework
   had a name in conversation. Transmission record:
   [`2026-05-09-vasudev-baba-enneagram.md`](../vision-kb/transmissions/2026-05-09-vasudev-baba-enneagram.md).
+- **2026-05-11 → 2026-05-17** — Contact Improvisation thread continuing through
+  [Alex Sandr](../presences/alex-sandr.md), Russian-rooted CI teacher in Ubud.
+  Met at the Monday Ubud Contact Jam on **May 11, 2026**, attended his Wednesday
+  class on **May 13, 2026**, returning to his Sunday *Clarity* class at Moksa on
+  **May 17, 2026, 15:00–17:00**. The CI substrate practice
+  ([contact-improv](../presences-content/contact-improv.json)) that already lived in
+  this body as a Boulder-rooted thread (Liquid Bloom → first Pagan Ritual → Vali Soul
+  Sanctuary → Tammy Beattie's Ecstatic Movement Tribe) met its Ubud carrier through
+  him. Teaching language: *centers, axes and spirals of the body · attention in
+  action without falling apart · direct experience and embodied knowledge*.
 - **2026-05-10** — Sunday morning Holistic Health and Natural Medicine gathering
   at [Agada Holistic](../presences/agada-holistic.md), hosted by Medicine Woman
   Claire Ceo with guest practitioner [Dr. Ida Bagus Kesnawa](../presences/ida-bagus-kesnawa.md),

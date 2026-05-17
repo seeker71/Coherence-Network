@@ -40,6 +40,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [angelia-larue](angelia-larue.md) — Master Crystologist, Reiki Master, Ordained Reverend; Hawaii-based; founder of Inner Passage Mystery School and Church of Inner Mystery; main priestess at the Anchor the Light Ceremony alongside Ubbe MacLean.
 - [anne-tucker](anne-tucker.md) — channel of the Angelic Collective, Mother of Creation, Yeshua. Peace as frequency.
 - [agada-holistic](agada-holistic.md) — Claire Ceo's healing collective and 11+ member household in Tegalalang, north of Ubud; energy medicine, kinesiology, sound, plant medicine.
+- [alex-sandr](alex-sandr.md) — Russian-rooted Contact Improvisation teacher in Ubud; Sunday class at Moksa; *clarity through movement, attention, and embodiment in action*.
 - [brigitte-mars](brigitte-mars.md) — Boulder herbalist, Naropa professor, author of 18 books on plant medicine; 60+ years with plants, 50+ years holding psychedelic-ceremony space; elder presence in the Anchor the Light pagan rituals.
 - [carlos-castaneda](carlos-castaneda.md) — anthropologist and author (1925–1998); the assemblage-point lineage source; held honestly alongside the human controversies.
 - [daniel-scranton](daniel-scranton.md) — daily verbal channel of the 9D Arcturian Council and many others since 2010.
