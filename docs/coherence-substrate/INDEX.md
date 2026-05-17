@@ -19,6 +19,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `api/app/services/substrate/category.py` | Network category vocabulary (Idea/Spec/Concept/Memory/Presence/Task/Lineage/Witness; Realize/Compose/Transmit/Tend/Resolve/Witness/Absorb/Score) |
 | `api/app/services/substrate/orm.py` | SubstrateNodeORM, SubstrateNamedCellORM (the two tables) |
 | `api/app/services/substrate/markdown_frontend.py` | Frontmatter+body → cell ingestion for memory, spec, idea, concept, and presence files |
+| `api/app/services/substrate/resonance.py` | Dimensional vocabulary (Spectrum / Harmonic / GeometricForm / Polarity / Topology) + `author_geometry_signature()` — receives the 15D `geometry:` blocks vision-kb concepts carry, authors resonance edges so the substrate sees cross-discipline shape equivalence |
 | `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form`, `ingest-paths`, `kb-sync-audit` |
 | `scripts/coh_form.py` | Form-only CLI (legacy entry; use `coh_substrate.py form` instead) |
 | `scripts/substrate_ingest.py` | Ingest-only CLI (legacy entry; use `coh_substrate.py ingest` instead) |
