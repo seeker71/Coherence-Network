@@ -19,11 +19,46 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from typing import Callable
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.services.substrate.category import Level
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+
+
+# ---------------------------------------------------------------------------
+# Mutation callbacks — for reactive subscriptions (?on_change) to auto-fire
+# ---------------------------------------------------------------------------
+#
+# Subscribers (form_runtime.fire_subscriptions, future GPU framebuffer
+# renderers, audit loggers) register callbacks here. Each mutation entry
+# point (intern_node, make_cell) fires them after the change commits.
+
+
+_MUTATION_CALLBACKS: List[Callable[[Session], None]] = []
+
+
+def register_mutation_callback(callback: Callable[[Session], None]) -> None:
+    """Register a callback fired after every substrate mutation (intern_node,
+    make_cell). The callback receives the active session and may re-query
+    state to detect what changed. Used by form_runtime to auto-fire
+    `?on_change` subscriptions reactively."""
+    if callback not in _MUTATION_CALLBACKS:
+        _MUTATION_CALLBACKS.append(callback)
+
+
+def unregister_mutation_callback(callback: Callable[[Session], None]) -> None:
+    """Remove a previously-registered callback."""
+    if callback in _MUTATION_CALLBACKS:
+        _MUTATION_CALLBACKS.remove(callback)
+
+
+def _fire_mutation_callbacks(session: Session) -> None:
+    """Internal: notify callbacks after a mutation commits."""
+    for cb in _MUTATION_CALLBACKS:
+        cb(session)
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +186,7 @@ def intern_node(
         )
         session.add(node)
         session.flush()
+        _fire_mutation_callbacks(session)
         return NodeID(package, level, category.type_, instance)
     except IntegrityError:
         # Race lost — another process inserted the same shape. Re-query.
@@ -320,6 +356,7 @@ def make_cell(
         session.flush()
         cell_id = cell_orm.cell_id
 
+    _fire_mutation_callbacks(session)
     return NamedCell(
         name=name,
         domain=domain,
