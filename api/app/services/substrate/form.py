@@ -182,6 +182,8 @@ _TOKEN_RE = re.compile(
 
 
 def tokenize(text: str) -> List[Token]:
+    """Eager tokenization — returns all tokens at once. Use `tokenize_iter` or
+    `tokenize_chunks` for lazy / streaming input."""
     tokens: List[Token] = []
     pos = 0
     while pos < len(text):
@@ -195,6 +197,92 @@ def tokenize(text: str) -> List[Token]:
         pos = m.end()
     tokens.append(Token("EOF", "", pos))
     return tokens
+
+
+def tokenize_iter(text: str):
+    """Lazy single-string tokenization — yields tokens one at a time.
+
+    Equivalent to `tokenize(text)` but doesn't materialize the whole list
+    upfront; useful when the parser only needs a few tokens of lookahead
+    and the source string is held entirely in memory but the parse is
+    short-lived.
+    """
+    pos = 0
+    while pos < len(text):
+        m = _TOKEN_RE.match(text, pos)
+        if not m:
+            raise SyntaxError(f"Form: unexpected char at pos {pos}: {text[pos]!r}")
+        kind = m.lastgroup or ""
+        value = m.group()
+        if kind not in ("WS", "COMMENT"):
+            yield Token(kind, value, pos)
+        pos = m.end()
+    yield Token("EOF", "", pos)
+
+
+def tokenize_chunks(chunks):
+    """Streaming tokenization from an iterator of text chunks.
+
+    `chunks` yields strings (any size). Output is a generator of Tokens
+    terminated with EOF. Handles tokens that span chunk boundaries by
+    holding a partial-buffer until a full match is confirmed.
+
+    A match is only emitted when either (a) it ends with at least one
+    character following (so we know we have the full extent), or (b) the
+    input stream has ended. The first STRING in the chunk-boundary case
+    is the canonical example: `"hello"` split as `["he`, `llo"]` parses
+    correctly because we wait for the closing quote before yielding.
+    """
+    buf = ""
+    pos = 0  # absolute position over the original stream (for error messages)
+    chunks_done = False
+    chunks_iter = iter(chunks)
+
+    def try_match():
+        """Return (token_or_None, advance_chars). None if can't safely match yet."""
+        if not buf:
+            return None, 0
+        m = _TOKEN_RE.match(buf, 0)
+        if not m:
+            # No match. If chunks may still arrive, the unmatched prefix
+            # might be the start of a multi-char token (e.g. opening quote
+            # of a string whose body lives in the next chunk). Wait.
+            if not chunks_done:
+                return None, 0
+            raise SyntaxError(
+                f"Form: unexpected char at pos {pos}: {buf[0]!r}"
+            )
+        # If match ends at end-of-buffer AND more chunks may be coming,
+        # the match might extend — wait for more input.
+        if m.end() == len(buf) and not chunks_done:
+            return None, 0
+        kind = m.lastgroup or ""
+        value = m.group()
+        token = None if kind in ("WS", "COMMENT") else Token(kind, value, pos)
+        return token, m.end()
+
+    while True:
+        # Try to emit a token from the current buffer.
+        token, advance = try_match()
+        while advance:
+            if token is not None:
+                yield token
+            buf = buf[advance:]
+            pos += advance
+            token, advance = try_match()
+
+        if chunks_done:
+            if buf:
+                # Should never happen — try_match would have raised or matched.
+                raise SyntaxError(f"Form: leftover buffer at pos {pos}: {buf!r}")
+            yield Token("EOF", "", pos)
+            return
+
+        # Need more input.
+        try:
+            buf += next(chunks_iter)
+        except StopIteration:
+            chunks_done = True
 
 
 # ---------------------------------------------------------------------------
@@ -619,8 +707,19 @@ ExprNode = Any  # any AST node — too many to enumerate
 
 
 class Parser:
-    def __init__(self, tokens: List[Token], *, prefer_registered: bool = False):
-        self.tokens = tokens
+    def __init__(self, tokens, *, prefer_registered: bool = False):
+        """Tokens may be:
+        - a List[Token] — eager, classic mode
+        - any iterator of Token — streaming mode, lazily extending `_buf`
+          as `peek(n)` reaches forward; speculation rewinds `pos` within
+          the buffered prefix so backtracking still works.
+        """
+        if isinstance(tokens, list):
+            self._buf: List[Token] = tokens
+            self._stream = None
+        else:
+            self._buf = []
+            self._stream = iter(tokens)
         self.pos = 0
         # When True, the parser consults the user-registered keyword
         # registry BEFORE falling through to bootstrap hardcoded handlers.
@@ -629,8 +728,37 @@ class Parser:
         # partial").
         self.prefer_registered = prefer_registered
 
+    # The legacy attribute name — kept so older code that reads
+    # `parser.tokens` directly still works (it returns the buffered prefix
+    # when streaming).
+    @property
+    def tokens(self) -> List[Token]:
+        return self._buf
+
+    def _ensure(self, n: int) -> None:
+        """Make sure `_buf` has at least `self.pos + n + 1` tokens.
+
+        Pulls from the lazy stream until the buffer reaches that depth or
+        the stream is exhausted (the final EOF token is naturally yielded
+        by tokenize_iter / tokenize_chunks, so the buffer terminates).
+        """
+        if self._stream is None:
+            return
+        needed = self.pos + n + 1
+        while len(self._buf) < needed:
+            try:
+                self._buf.append(next(self._stream))
+            except StopIteration:
+                self._stream = None
+                return
+
     def peek(self, n: int = 0) -> Token:
-        return self.tokens[self.pos + n]
+        self._ensure(n)
+        if self.pos + n >= len(self._buf):
+            # Past EOF (defensive — shouldn't normally happen because tokenize
+            # emits a trailing EOF). Return a synthetic EOF token.
+            return Token("EOF", "", self._buf[-1].pos if self._buf else 0)
+        return self._buf[self.pos + n]
 
     def consume(self, kind: Optional[str] = None) -> Token:
         t = self.peek()
@@ -1878,6 +2006,27 @@ def parse(text: str, *, prefer_registered: bool = False) -> Any:
     """
     tokens = tokenize(text.strip())
     parser = Parser(tokens, prefer_registered=prefer_registered)
+    result = parser.parse()
+    if parser.peek().kind != "EOF":
+        raise SyntaxError(
+            f"Form: trailing input at pos {parser.peek().pos}: {parser.peek().value!r}"
+        )
+    return result
+
+
+def parse_chunks(chunks, *, prefer_registered: bool = False) -> Any:
+    """Parse a single Form expression from a streaming iterator of text chunks.
+
+    Unlike `parse(text)`, this never materializes the whole input — the
+    tokenizer lazily consumes chunks, the parser lazily fills its buffer
+    from the tokenizer, and speculation rewinds within the already-buffered
+    prefix. Useful for sockets, stdin, log tails, or any other unbounded
+    source.
+
+    Example:
+        parse_chunks(["1 + ", "2 * ", "3"])  # parses "1 + 2 * 3"
+    """
+    parser = Parser(tokenize_chunks(chunks), prefer_registered=prefer_registered)
     result = parser.parse()
     if parser.peek().kind != "EOF":
         raise SyntaxError(
