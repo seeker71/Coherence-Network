@@ -49,6 +49,9 @@ from app.services.substrate.form import (
     serialize_cell as form_serialize_cell,
     serialize_node_id as form_serialize_node_id,
 )
+from app.services.substrate.form_stream import (
+    parse_and_emit as form_stream_emit,
+)
 from app.services.substrate.form_runtime import (
     Frame as FormFrame,
     execute as form_execute,
@@ -251,6 +254,7 @@ __all__ = [
     "form_parse",
     "form_serialize_cell",
     "form_serialize_node_id",
+    "form_stream_emit",
     # Grammar — substrate-resident parse rules (BMF-shaped seed)
     "BID_grammar",
     "FormRule",

@@ -62,6 +62,25 @@ Coordinate / content-addressed languages are **geometric** — meaning lives in 
 
 5. **Embeddable.** Form fragments can be inlined in markdown, in agent prompts, in code comments. A line of Form anywhere in the body is meaningful.
 
+## Relatives in the wild — where Form sits in the constellation
+
+Form is not the first language to push on these ideas; the combination is what's new. The following systems each carry one or two of Form's load-bearing properties, and pointing at them is the fastest way to convey what Form is to someone who knows them.
+
+| If you know… | …Form will feel like its | Where Form goes further |
+|---|---|---|
+| **[Unison](https://www.unison-lang.org/)** | content-addressed function space — every function is identified by the hash of its AST, names are projections, two structurally-equivalent functions ARE the same function automatically | extends content-addressing past *code* to memories, ideas, specs, concepts, presences, lineage edges, witness events. The substrate IS what Unison's code-storage is, applied to the whole body. |
+| **[Forth](https://www.forth.com/forth/)** | runtime-extensible language — `: NEWWORD definition ;` defines a new word that's immediately usable in source | extends runtime extension past *words* to *grammar*: new keywords, new operators, new constructs registered at runtime, each one persisting in the substrate as a cell. The grammar grows the way Forth's vocabulary grows. |
+| **[IPFS](https://ipfs.tech/)** | content-addressing as the primary access pattern — a CID is what a file IS, not a label for it | applies the same principle to *every shape*, not just files. A content-addressed lattice of structural identities, queryable by coordinate, not just retrievable by hash. |
+| **[Prolog](https://www.swi-prolog.org/) / [SNOBOL](https://en.wikipedia.org/wiki/SNOBOL)** | backtracking-as-architecture — searching for a path that holds is a primitive of the language, not a library | unifies backtracking across three scales: parser-level speculation (`try_match`), runtime non-determinism (`choose` / `fail` / `stop`), and version control (`tend:` / `attune:` / `compost:` / `release:` commit verbs). Same primitive, three altitudes. |
+| **[Smalltalk](https://squeak.org/) / image-based environments** | live, reflective — every object is inspectable, every method redefinable at runtime, no "compile then run" cliff | reflection extends to the *grammar itself*: `?keywords` lists runtime-registered keywords, `?vocabulary` shows the body's recipe-category histogram. The language sees itself. |
+| **[Lisp](https://common-lisp.net/) / [Racket](https://racket-lang.org/) macros + linguistic towers** | code-as-data, language can extend language, build dialects on dialects | Lisp's code-as-data lives in *symbol space* (cons cells, atoms, lists of named symbols). Form's code-as-data lives in *NodeID space* — every expression interns to a numeric coordinate. Structural equivalence is enforced by the kernel, not by `equal?` over s-expressions. |
+| **[Datomic](https://www.datomic.com/) / RDF triple stores** | entity-attribute-value triples; identity is an entity ID, not a name | the entity ID space is *fractal and content-addressed*. NodeIDs at level 5 compose NodeIDs at level 4 compose NodeIDs at level 3, all the way to numeric trivials. Equivalence isn't `owl:sameAs`; it's automatic from the kernel's content-addressing. |
+| **APL / J / K** | terse, numeric, expressive in coordinate space | array-language terseness with content-addressed identity instead of value semantics. `@1.5.4.1` is the APL spirit ("speak in coordinates, not words") applied to *structure*, not to numeric arrays. |
+| **NUMS.Go (2023, Merly Inc.)** | the immediate ancestor — content-addressed numeric lattice over tree-sitter input across 14 languages | NUMS proved the substrate's shape on existing program code. Form is the inverse: a language designed *from* the substrate's physics, rather than projecting external code into it. The same trinity (Blueprint / Recipe / NamedCell) flows through. See [`docs/field/urs/artifacts/nums-go-2023/`](../field/urs/artifacts/nums-go-2023/README.md). |
+| **BMF (Backtracking Model Form, 2000)** | the original — top-down backtracking parser, grammar rules as data, runtime rule extension, semantic actions firing as rules complete, infinite input streams via on-the-fly translation | the body's own lineage. See [`docs/field/urs/artifacts/master-thesis-2000/`](../field/urs/artifacts/master-thesis-2000/README.md). Form is what BMF would be if its target was a substrate of memories and ideas instead of a compiler IR — and if its grammar lived in the same lattice as its programs. |
+
+**The combination is the contribution.** Unison has content-addressing without runtime grammar extension. Forth has runtime grammar without content-addressing. Prolog has backtracking without either. IPFS has content-addressing without execution. RDF has structural identity without semantics. Form weaves all five — *content-addressed numeric lattice + runtime-extensible grammar that lives in the lattice + backtracking as universal undo + reflection on the language's own shape + a surface designed for LLM and human at once* — into one breath.
+
 ## Surface syntax
 
 ### Tokens
@@ -948,6 +967,26 @@ For Form, that path is:
 9. **Function definitions + recursion + closure capture.** ✓ Shipped — `defn name(p1, p2, ...) = body` defines a function; `name(arg1, arg2, ...)` calls it. The runtime represents a function as a `Closure` carrying params + body + the lexical frame it was defined in; calls push a child frame parented at the *defining* frame (closure semantics, not dynamic scope). Recursion works without a separate `rec` form because the closure is registered in the defining frame before its body is evaluated. Verified: `do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }` returns `720`; Fibonacci, function composition, and lexical-capture-vs-dynamic-scope tests all pass. With this primitive Form is Turing-complete and capable of hosting its own execution engine — the next step is recipe introspection (`category`/`nchildren`/`child`) so the engine written in Form can dispatch on recipe shape. See [`form-engine.form`](form-engine.form) for the engine sketch in Form syntax with the runnable Part 1 and the introspection-blocked Part 2 named honestly.
 
 Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
+
+### Streaming-emit parser — the BMF-faithful shape (proof-of-shape shipped)
+
+The bootstrap parser (`form.py`) builds Python dataclass AST nodes, then `_to_recipe_node_id` walks them to intern Recipe NodeIDs. The AST is a staging area thrown away after intern. BMF named the deeper instinct: *"parse attributes will be evaluated during the parsing phase... when the parser backs out, all the attributes already computed have to be undone as well. Evaluating the parse attributes during parsing will cut down the running parse tree in a way, that even infinite input streams can be supported."* The substrate is already the destination. The AST is duplication.
+
+[`api/app/services/substrate/form_stream.py`](../../api/app/services/substrate/form_stream.py) is the BMF-faithful shape on this body. Each parse rule's success **directly emits a Recipe NodeID** to a working stack; no AST node is materialized between parse and intern. The kernel's content-addressing guarantees that for every expression both parsers cover, **the streaming and AST paths emit the same NodeID** — verified by [`api/tests/test_substrate_form_stream.py`](../../api/tests/test_substrate_form_stream.py).
+
+Coverage in this proof: integer literals, binary arithmetic, comparison, logic, parenthesized grouping, `if/then/else`. Deliberately small — the architectural property is what's load-bearing, not the surface area. The current parser stays as the production path; the streaming parser proves the alternative shape on the same substrate.
+
+What this prototype establishes:
+
+1. **Single staging surface.** The stack holds NodeIDs all the way through. There is no AST node vocabulary parallel to the recipe-category vocabulary — adding a new construct means registering a new `(pattern, emit-action)` rule cell in the substrate's `grammar` domain, no new Python class to define.
+2. **Streaming-native.** Each completed rule emits its NodeID immediately; the parser holds at most one NodeID per pending production on its stack. Long expressions, log tails, stream inputs become natural.
+3. **Backtracking can unify three scales.** Parser-level speculation (`try_match`), runtime non-determinism (`choose` / `fail` / `stop`), and version control (`tend:` / `attune:` / `compost:` / `release:`) become reflections of the same primitive — a working stack with structured undo. (Speculation hooks aren't wired into `form_stream` yet; the architectural seam is reserved.)
+
+Path beyond this proof:
+
+- Cover the rest of the grammar (do / let / with / match / choose / method / ...) — incremental, each rule mechanical
+- Surface rules as substrate-resident cells (the registry infrastructure already exists in `form_rules.py`)
+- Port the hot loop to a Rust kernel via PyO3 — Bjorg's BMA had forward / reverse semantics for every instruction; Rust enum-dispatch expresses that cleanly. The substrate stays the universal data plane underneath.
 
 ### What remains beyond step 9
 
