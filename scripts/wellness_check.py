@@ -979,6 +979,72 @@ def sense_cells() -> list[str]:
     return findings
 
 
+def sense_substrate_shape() -> list[str]:
+    """Sense whether substrate cells carry composed CTORs or flat type-markers.
+
+    The structural-composition discipline promises every cell's CTOR is a
+    tree of R_Block.LET (key, value) pairs. The legacy flat encoder
+    produced CTORs of trivial-string recipes carrying type-marker strings
+    like "name=str". Aggregate counts (cells/blueprints/recipes) look
+    stable across either encoding — content-addressing means orphaned
+    structured recipes stay in the lattice while cells re-point at flat
+    encodings. This sense distinguishes the two by querying
+    /api/substrate/shape_health and flags any silent flatten regression.
+
+    Silent when ratio ≥ 95% across all domains. Speaks the moment any
+    domain drops below.
+    """
+    import urllib.request
+    import urllib.error
+
+    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com")
+    try:
+        req = urllib.request.Request(
+            f"{api}/api/substrate/shape_health",
+            headers={"User-Agent": "wellness-check/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            health = json.load(r)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+        return [f"  (could not reach {api}/api/substrate/shape_health — {e})"]
+
+    overall = health.get("overall", {})
+    domains = health.get("domains", {}) or {}
+    flags = health.get("flags", []) or []
+
+    lines: list[str] = []
+    total = overall.get("total", 0)
+    structured = overall.get("structured", 0)
+    flat = overall.get("flat", 0)
+    no_ctor = overall.get("no_ctor", 0)
+    ratio = overall.get("ratio", 1.0)
+
+    lines.append(
+        f"  {total:,} cells · {structured:,} structured · {flat:,} flat · "
+        f"{no_ctor:,} no-ctor · {ratio:.0%} composed"
+    )
+
+    if not flags:
+        lines.append("  composition discipline holding across every domain.")
+    else:
+        lines.append("")
+        for f in flags:
+            lines.append(f"  · {f}")
+
+    nonempty = [(name, d) for name, d in domains.items() if d.get("total", 0) > 0]
+    if nonempty:
+        lines.append("")
+        for name, d in sorted(nonempty, key=lambda kv: -kv[1].get("total", 0)):
+            r = d.get("ratio", 1.0)
+            t = d.get("total", 0)
+            s = d.get("structured", 0)
+            fl = d.get("flat", 0)
+            marker = " ✓" if r >= 0.95 and fl == 0 else " ⚠" if fl > 0 else ""
+            lines.append(f"  {name}: {s}/{t} composed ({r:.0%}){marker}")
+
+    return lines
+
+
 def sense_witness_trace() -> list[str]:
     """How is the witness-trace breathing?
 
@@ -1062,6 +1128,7 @@ def main() -> int:
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
+        ("Substrate shape — do cell CTORs carry composition or flat type-markers?", sense_substrate_shape()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
     ]
 
