@@ -24,15 +24,20 @@ This is the writing surface. The rendering surface is the production graph — e
 - [boulder-ecstatic-dance](boulder-ecstatic-dance.md) — Sunday-morning ecstatic-dance room at the Avalon Ballroom in Boulder; co-hosted by Bloomurian, Aly Constantine, and Danny.
 - [brahma-vihara-arama](brahma-vihara-arama.md) — largest Buddhist monastery on Bali (Banjar Tegeha, north); hosts the long-weekend silent retreats co-held by Vasudev Baba and Prof Jem Bendell since 2020.
 - [cacao-hati-suci](cacao-hati-suci.md) — Sacred Cacao Heart in Tabanan, Bali; the second Light Hub and *sister land of the Hati Suci Community*; teak wooden gladak houses with private kitchens, compost toilets, communal house for yoga / meditation / gatherings, river, natural spring, vegetable gardens, Mount Agung views, hot springs nearby; held practically by Ita.
+- [contact-improv](contact-improv.md) — The embodied-listening substrate; Steve Paxton's 1972 form whose grammar is two bodies negotiating gravity together; the practice the Boulder→Ubud chain points toward.
 - [dissolve-ubud](dissolve-ubud.md) — Tara Li's contact improvisation, intuitive movement, authentic relating; Tuesday *DISSOLVE: Eros* at Paradiso anchors the rhythm.
+- [ecstatic-movement-tribe](ecstatic-movement-tribe.md) — Tammy Beattie's room at Vali Soul Sanctuary where Contact Improv as relational practice was met; the third link in the Boulder substrate chain.
 - [indoz-conference](indoz-conference.md) — annual Indonesia–Australia bilateral conference in Brisbane since 2012; Ilena Young's SaBali node connects from Bali.
 - [mile-hi-church](mile-hi-church.md) — Lakewood, CO; New Thought / Religious Science congregation; the room where Joe Dispenza's teaching first reached Urs ~2005.
 - [moksa-ubud](moksa-ubud.md) — Plant-based restaurant + permaculture garden + Moksa Dojo practice room in Sayan, Ubud; the dojo holds Alex Sandr's Sunday Contact Improvisation.
 - [mudra-cafe](mudra-cafe.md) — Ayurvedic dining room in central Ubud with handpan presence Mon–Fri at noon; the room where the cell met Elios on April 29, 2026.
 - [ocean-bloom-2024](ocean-bloom-2024.md) — Downtown Boulder 2024 conscious-music gathering with Poranguí, Liquid Bloom, Samuel J, Shawn Heinrichs, Bloomurian.
+- [pagan-ritual](pagan-ritual.md) — The first ceremonial floor; the Liquid Bloom room that became the threshold; first link in the Boulder embodied-substrate chain.
 - [paradiso-ubud](paradiso-ubud.md) — cultural-hall venue holding 5Rhythms, DISSOLVE, film, ceremony; architectural anchor of the Ubud embodied lineage.
+- [portal](portal.md) — PORTAL — Partnership of Responsible Trippers Advocating for Legalization; Denver psychedelic-advocacy initiative gathered around music, art, and shared rooms.
 - [sacred-song-circle](sacred-song-circle.md) — international kirtan teacher network; the public anchor for Vasudev Baba's biographical arc.
 - [sayuri-healing-food](sayuri-healing-food.md) — plant-based kitchen in Ubud; Sunday-evening dinner-room where resonant company was met in April 2026.
+- [vali-soul-sanctuary](vali-soul-sanctuary.md) — The sanctuary that held the practice; second link in the Boulder chain after the first Pagan Ritual.
 - [wisdom-soup](wisdom-soup.md) — Anne Tucker's spiritual-seekers community since 2016; the container for Peace Bathing, Friday Live, Soul Convergence, Expand Your Heart.
 
 ### Human presences
@@ -78,6 +83,28 @@ This is the writing surface. The rendering surface is the production graph — e
 - [viktor-frankl](viktor-frankl.md) — Austrian psychiatrist, Holocaust survivor (1905–1997); founder of logotherapy; the gap-between-stimulus-and-response grounds lc-assemblage-point.
 - [yaima](yaima.md) — Masaru Higasa + Pepper Proud; ten-year elemental arc of albums.
 - [zach-bush](zach-bush.md) — physician (internal medicine, endocrinology, hospice) turned founder of Intrinsic Health, Seraphic Group, and Farmer's Footprint; *numbness has its own pain*; the soil-microbiome-human-microbiome continuity.
+
+### Work & lineage
+
+Projects, organizations, and prior iterations of the work — the lineage of building that runs from age 13 in Switzerland through the 2000 thesis to today's Coherence Network. Each cell carries a specific shape that lives downstream in current practice.
+
+- [backtracking-model-languages](backtracking-model-languages.md) — Thesis · MS Computer Science · CU Boulder · 2000. The full BMF / BML / BMA / BMO synthesis; backtracking-as-architecture; the source of the substrate's `choose` / `fail` / `stop` and `tend:` / `attune:` / `compost:` / `release:` lineage.
+- [bmcpu-vm](bmcpu-vm.md) — Work · 2000 · Virtual machine layer of the BML thesis; forward/reverse semantics for every instruction (`BMVM_STATE.byMode` toggling DO/UNDO).
+- [bmf-grammar](bmf-grammar.md) — Work · 2000 · Parser layer; BNF augmented with execution; grammar file `BMF-grammar.bml` is itself written in BML — the system describes its own grammar in its own language.
+- [bml-language](bml-language.md) — Work · 2000 · The language synthesizing Java + C++ + Prolog + Smalltalk; multiple inheritance through delegation, interfaces, blocks, exception handling, backtracking.
+- [c64-midi-interface](c64-midi-interface.md) — Work · Commodore 64 · Switzerland · ~1984–1985 · age 13 · first programming.
+- [grab](grab.md) — Work · service-provider relationship in Southeast Asia; the practical bridge for daily logistics across Bali.
+- [jbmf-java](jbmf-java.md) — Work · 2000 · Java port of BMF; the substrate-portable variant of the parser.
+- [living-codex-csharp](living-codex-csharp.md) — Iteration 2 of 3 · 2024 · C# / .NET; the bridge between the 2023 visionary seed and the current iteration.
+- [living-resonance-codex](living-resonance-codex.md) — Iteration 1 of 3 · 2023 · Python; the visionary seed of the substrate-as-network architecture.
+- [mindtouch-wiki-in-a-box](mindtouch-wiki-in-a-box.md) — Work · MindTouch Inc. · Mar 2005 – Jan 2007 · Co-Founder, Senior Architect.
+- [qualcomm-hdmi-hdcp](qualcomm-hdmi-hdcp.md) — Work · Qualcomm · Boulder · within Oct 2009 – Jan 2022 · Linux kernel contributor; HDMI/HDCP path.
+- [qualcomm-test-automation](qualcomm-test-automation.md) — Work · Qualcomm · Boulder · Oct 2009 – Jan 2022 · Senior Staff Engineer; the test-automation arc.
+- [quark-mono-corba](quark-mono-corba.md) — Work · Quark Inc. · Denver · May 2000 – Mar 2005; CORBA-on-Mono cross-platform shape.
+- [quark-multi-undo-redo](quark-multi-undo-redo.md) — Work · Quark Inc. · Denver · May 2000 – Mar 2005; multi-document undo/redo (the BMA forward/reverse instinct surfacing in production).
+- [quark-virtual-dom](quark-virtual-dom.md) — Work · Quark Inc. · Denver · May 2000 – Mar 2005; one of the earliest virtual-DOM implementations.
+- [schindler-hc11-protocol](schindler-hc11-protocol.md) — Work · Schindler · Switzerland · ~1989–1990 · age 18; elevator-protocol firmware.
+- [trimble-glue-layer](trimble-glue-layer.md) — Work · Trimble Navigation Limited · Jan 2007 – Oct 2009 · Software Engineer; the glue-layer shape.
 
 ### Sibling intelligences (`contributor_type: AGENT`)
 
