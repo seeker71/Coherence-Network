@@ -382,6 +382,115 @@ def _invoke_closure(closure: "Closure", args: list) -> Any:
 _CURRENT_SESSION: list = [None]
 
 
+def _builtin_category(nid: Any) -> Any:
+    """`category(r)` — return the category NodeID of a Recipe NodeID.
+
+    For composite recipes, returns the category-NodeID embedded in the
+    serialized row. For trivial leaves, the node IS its own category
+    (the coordinate carries the type/instance directly).
+
+    This is the load-bearing recipe-introspection primitive: with it,
+    Form code can dispatch on category and walk recipes recursively —
+    the meta-circular evaluator-in-Form (form-engine.form) can finally
+    express what the Python evaluator does."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: category() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: category() expects a NodeID, got {type(nid).__name__}"
+        )
+    return _node_category(sess, nid)
+
+
+def _builtin_nchildren(nid: Any) -> int:
+    """`nchildren(r)` — arity of a composite Recipe NodeID. Zero for trivials."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: nchildren() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: nchildren() expects a NodeID, got {type(nid).__name__}"
+        )
+    return len(_node_children(sess, nid))
+
+
+def _builtin_child(nid: Any, index: Any) -> NodeID:
+    """`child(r, n)` — n-th child Recipe NodeID of a composite."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: child() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: child() expects a NodeID as first arg, got {type(nid).__name__}"
+        )
+    if not isinstance(index, int):
+        raise TypeError(
+            f"Form runtime: child() expects an integer index, got {type(index).__name__}"
+        )
+    kids = _node_children(sess, nid)
+    if index < 0 or index >= len(kids):
+        raise IndexError(
+            f"Form runtime: child({nid}, {index}) — recipe has {len(kids)} child(ren)"
+        )
+    return kids[index]
+
+
+def _builtin_integer_value(nid: Any) -> int:
+    """`integer_value(r)` — decode a trivial INTEGER Recipe NodeID to its int.
+
+    The companion primitive to `category`/`nchildren`/`child`: once the
+    evaluator has descended to a leaf, this pulls the actual int value
+    out of the coordinate so arithmetic can happen."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: integer_value() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: integer_value() expects a NodeID, got {type(nid).__name__}"
+        )
+    v = _trivial_value(sess, nid)
+    if not isinstance(v, int) or isinstance(v, bool):
+        raise TypeError(
+            f"Form runtime: integer_value() expected an integer trivial, got {type(v).__name__}"
+        )
+    return v
+
+
+def _builtin_string_value(nid: Any) -> str:
+    """`string_value(r)` — decode a trivial STRING Recipe NodeID to its str."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: string_value() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: string_value() expects a NodeID, got {type(nid).__name__}"
+        )
+    v = _trivial_value(sess, nid)
+    if not isinstance(v, str):
+        raise TypeError(
+            f"Form runtime: string_value() expected a string trivial, got {type(v).__name__}"
+        )
+    return v
+
+
+def _builtin_bool_value(nid: Any) -> bool:
+    """`bool_value(r)` — decode a trivial BOOL Recipe NodeID to its bool."""
+    sess = _CURRENT_SESSION[0]
+    if sess is None:
+        raise RuntimeError("Form runtime: bool_value() requires an active session")
+    if not isinstance(nid, NodeID):
+        raise TypeError(
+            f"Form runtime: bool_value() expects a NodeID, got {type(nid).__name__}"
+        )
+    v = _trivial_value(sess, nid)
+    if not isinstance(v, bool):
+        raise TypeError(
+            f"Form runtime: bool_value() expected a bool trivial, got {type(v).__name__}"
+        )
+    return v
+
+
 _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     # List ops
     "len": lambda x: len(x),
@@ -402,6 +511,19 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     "max": lambda *xs: max(*xs) if len(xs) > 1 else max(xs[0]),
     "sum": lambda xs: sum(xs),
     "abs": lambda x: abs(x),
+    # Recipe introspection — the meta-circular primitives. With these
+    # three, Form code can walk Recipe NodeIDs from inside Form: dispatch
+    # on category, recurse on children, bottom-out at trivials. The
+    # evaluator-in-Form (form-engine.form Part 2) becomes expressible.
+    "category": _builtin_category,
+    "nchildren": _builtin_nchildren,
+    "child": _builtin_child,
+    # Trivial-leaf decoders — the bottom of the recursion. The evaluator
+    # descends to a leaf via category/child, then pulls the value via
+    # one of these.
+    "integer_value": _builtin_integer_value,
+    "string_value": _builtin_string_value,
+    "bool_value": _builtin_bool_value,
 }
 
 

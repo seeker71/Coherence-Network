@@ -92,6 +92,46 @@ defn ev(n) = match n.category {
     # RBasic.COND (11) — conditional
     @1.2.11.1 => if ev(n.children[0]) then ev(n.children[1]) else null,
     @1.2.11.2 => if ev(n.children[0]) then ev(n.children[1]) else ev(n.children[2]),
+    # RBasic.BLOCK (9) — composition. DO/SEQUENCE evaluate each child in
+    # order; the block's value is the last child. LET and WITH carry
+    # binding/subject semantics the stateless engine cannot fully express;
+    # those arms return the value-expression of the binding so the engine
+    # at least surfaces a meaningful result. The runtime catches the
+    # richer semantics (state stacks, subject frames).
+    @1.2.9.1 => ev(n.children[n.nchildren - 1]),                       # DO — last value
+    @1.2.9.2 => ev(n.children[n.nchildren - 1]),                       # SEQUENCE — last value
+    @1.2.9.3 => ev(n.children[1]),                                     # LET — value side
+    @1.2.9.4 => ev(n.children[1]),                                     # WITH — body
+    # RBasic.CHOICE (20) — angelic non-determinism. CHOOSE evaluates its
+    # first candidate; FAIL/STOP map to the runtime's signal primitives.
+    @1.2.20.1 => ev(n.children[0]),                                    # CHOOSE
+    @1.2.20.2 => fail,                                                  # FAIL
+    @1.2.20.3 => stop,                                                  # STOP
+    # RBasic.STATE (22) — BML state stack. Runtime owns the stack; the
+    # arms recognize the verb structurally.
+    @1.2.22.1 => save,                                                  # SAVE
+    @1.2.22.2 => restore,                                               # RESTORE
+    @1.2.22.3 => discard,                                               # DISCARD
+    # RBasic.EXCEPTION (23) — BML exception flow.
+    @1.2.23.1 => raise,                                                 # RAISE
+    @1.2.23.2 => resume,                                                # RESUME
+    # RBasic.TRY (30) — try { body } catch { handler }
+    @1.2.30.1 => ev(n.children[0]),                                    # TRY_CATCH — body
+    # RBasic.DELEGATE (24) — `delegate @X to @Y` is a side-effect at
+    # runtime; the arm names the verb so the engine recognizes it.
+    @1.2.24.1 => null,                                                  # DELEGATE_TO
+    # RBasic.REVERSE (25) — undo re-executes; inverse yields the child.
+    @1.2.25.1 => ev(n.children[0]),                                    # UNDO
+    @1.2.25.2 => n.children[0],                                        # INVERSE
+    # RBasic.COMMON (26) — common @X @Y declares shared-base. Side-effect.
+    @1.2.26.1 => null,                                                  # SHARED_BASE
+    # RBasic.METHOD (27) — define/invoke flow through runtime registries.
+    @1.2.27.1 => null,                                                  # DEFINE
+    @1.2.27.2 => null,                                                  # INVOKE
+    # RBasic.REACTIVE (28) — on_change subscription; side-effect.
+    @1.2.28.1 => null,                                                  # ON_CHANGE
+    # RBasic.PROJECTION (29) — spatial-projection lens.
+    @1.2.29.1 => n.children[0],                                        # PROJECT
     # Trivial leaf — delegate to substrate's own decoder.
     # `.value` is the single source of truth for the leaf encoding
     # (NULL / BOOL / INTEGER / STRING).  Raises on composites — which
