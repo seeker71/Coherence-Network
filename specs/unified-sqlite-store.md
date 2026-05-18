@@ -3,7 +3,7 @@ idea_id: data-infrastructure
 status: done
 source:
   - file: api/app/services/unified_db.py
-    symbols: [Base, engine_cache, schema init]
+    symbols: [database_url, engine, get_sessionmaker, session, ensure_schema]
 requirements:
   - All services use unified_db.session() for database access
   - Single COHERENCE_DATABASE_URL env var controls all persistence
@@ -24,7 +24,31 @@ done_when:
 **Idea**: `unified-persistence` (sub-idea of `coherence-signal-depth`)
 **Depends on**: All existing persistence services
 
-## Status: In Progress
+## Purpose
+
+Consolidate the system's persistence layer into a single SQLite store with one engine, one session pool, and one configuration env var. Before this work the system held 4 separate SQLite databases and 5 JSON file stores, each with its own engine, env vars, and caching — producing double-sourced data, configuration sprawl, no cross-query joins, inconsistent patterns across services, and complex test setup. After this work, every service imports from `app.services.unified_db`, a single `COHERENCE_DATABASE_URL` controls all persistence, and SQLite WAL mode handles the concurrency the existing services already assumed.
+
+## Requirements
+
+- [x] **R1**: All services use `unified_db.session()` for database access (no service-owned engines).
+- [x] **R2**: A single `COHERENCE_DATABASE_URL` env var (or `DATABASE_URL` fallback) controls all persistence.
+- [x] **R3**: JSON file stores migrated to SQLAlchemy tables (`value_lineage`, `prompt_ab_roi`).
+- [x] **R4**: Old per-service DB env vars still work as fallbacks during migration.
+- [x] **R5**: Tests configurable with one env var for an isolated test DB.
+- [x] **R6**: No data loss — existing data migrates cleanly into the unified schema.
+
+## Files to Create/Modify
+
+- `api/app/services/unified_db.py` — module exposing `database_url`, `engine`, `get_sessionmaker`, `session`, `ensure_schema`
+- `api/app/db/base.py` — shared SQLAlchemy declarative `Base`
+- `api/tests/test_unified_sqlite_store.py` — end-to-end persistence flow tests
+- `api/tests/test_schema_init_fastpath.py` — schema-init regression tests
+
+## Out of Scope
+
+- Postgres production sync (export SQLite → import Postgres) is handled by a separate spec.
+- Alembic-based versioned schema migrations are deferred; `ensure_schema()` covers idempotent creation for now.
+- Cross-process write contention beyond what SQLite WAL handles is not addressed; production scale-out belongs to the Postgres sync path.
 
 ## Problem
 
@@ -104,6 +128,8 @@ Each phase is independently deployable and backward compatible.
 5. Tests can configure one env var to use an isolated test DB
 6. No data loss — existing data migrates cleanly
 
+Verified by `api/tests/test_unified_sqlite_store.py` and `api/tests/test_schema_init_fastpath.py`.
+
 ## Risks and Assumptions
 
 - **Risk**: Migration could lose data if not careful. Mitigation: migration
@@ -115,9 +141,9 @@ Each phase is independently deployable and backward compatible.
 
 ## Known Gaps and Follow-up Tasks
 
-- [ ] Postgres sync mechanism (export SQLite → import Postgres)
-- [ ] Schema migration tooling (alembic or manual versioning)
-- [ ] Drop legacy env vars after transition period
+- [ ] **Postgres sync follow-up**: Build the export SQLite → import Postgres pipeline as a separate spec.
+- [ ] **Schema migration follow-up**: Choose and adopt schema migration tooling (alembic or manual versioning) once cross-environment schema-evolution becomes load-bearing.
+- [ ] **Env var cleanup follow-up**: Drop legacy per-service DB env vars after the transition period closes.
 
 ## Failure and Retry Behavior
 
@@ -129,7 +155,7 @@ Each phase is independently deployable and backward compatible.
 
 ## Acceptance Tests
 
-See `api/tests/test_unified_sqlite_store.py` for test cases covering this spec's requirements.
+See `api/tests/test_unified_sqlite_store.py` for test cases covering this spec's requirements. Also `api/tests/test_schema_init_fastpath.py` covers the schema-init contract.
 
 
 

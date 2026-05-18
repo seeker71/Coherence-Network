@@ -4,13 +4,13 @@ status: done
 priority: high
 source:
   - file: api/app/routers/assets.py
-    symbols: [register_asset(), get_asset(), get_asset_content(), get_asset_analytics()]
+    symbols: [register_asset, get_asset]
   - file: api/app/routers/renderers.py
-    symbols: [register_renderer(), list_renderers(), get_renderer_for_mime()]
+    symbols: [register_renderer, list_renderers, get_renderer_for_mime]
   - file: api/app/routers/render_events.py
-    symbols: [log_render_event()]
+    symbols: [log_render_event, get_asset_analytics]
   - file: api/app/models/asset.py
-    symbols: [AssetRegistration, AssetFull, AssetType]
+    symbols: [AssetRegistration, AssetType]
   - file: api/app/models/renderer.py
     symbols: [Renderer, RendererCreate, RenderEvent, RenderCCSplit]
   - file: api/app/services/render_attribution_service.py

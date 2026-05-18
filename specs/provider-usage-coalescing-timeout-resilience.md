@@ -3,9 +3,9 @@ idea_id: pipeline-optimization
 status: done
 source:
   - file: api/app/services/automation_usage_service.py
-    symbols: [ProviderUsageSnapshot, usage coalescing]
+    symbols: []
   - file: api/app/models/automation_usage.py
-    symbols: [UsageAlert, ProviderUsageOverview]
+    symbols: [UsageAlert, ProviderUsageOverview, ProviderUsageSnapshot]
 requirements:
   - "`GET /api/automation/usage` returns one row per provider family (`openai`, `claude`) instead of duplicate family variant"
   - "Provider snapshots set `usage_remaining` from the best quota-bearing summary metric when available, even if the primary "

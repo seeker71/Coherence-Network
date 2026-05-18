@@ -2,10 +2,8 @@
 idea_id: pipeline-reliability
 status: done
 source:
-  - file: api/app/services/smart_reap_service.py
-    symbols: [is_runner_alive(), can_extend(), partial output]
   - file: api/app/services/smart_reaper_service.py
-    symbols: [runner liveness, reap_diagnosis]
+    symbols: [is_runner_alive, can_extend, capture_partial_output, build_reap_diagnosis, smart_reap_task]
   - file: api/app/routers/agent_smart_reap_routes.py
     symbols: [smart reap endpoints]
 requirements:

@@ -3,9 +3,9 @@ idea_id: coherence-credit
 status: done
 source:
   - file: api/app/routers/ideas.py
-    symbols: [compute_governance_health()]
-  - file: api/app/services/idea_service.py
-    symbols: [compute_governance_health()]
+    symbols: []
+  - file: api/app/services/idea_governance_views.py
+    symbols: [compute_governance_health]
   - file: api/app/models/idea.py
     symbols: [GovernanceHealth]
 requirements:
