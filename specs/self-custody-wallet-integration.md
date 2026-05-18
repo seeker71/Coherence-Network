@@ -57,11 +57,30 @@ constraints:
 
 # Spec: Self-Custodial Wallet Integration
 
-## Summary
+## Purpose
 
 Contributors bring their own EVM wallet (MetaMask, Rainbow, WalletConnect, etc.) instead of a platform-managed address. The wallet address becomes the contributor's on-chain identity anchor. The platform stores only the address (and a verified flag); private keys never leave the visitor's wallet, and the platform never intermediates transactions. Send and receive happen in the visitor's own wallet UI.
 
 This spec delivers the **identity layer**. Settlement (x402, USDC), Story Protocol IP registration, and any platform-mediated payment flows are built on top of this in separate specs.
+
+## Files to Create/Modify
+
+- `api/app/routers/wallets.py` — wallet REST endpoints (connect, verify, list, lookup, disconnect)
+- `api/app/services/wallet_service.py` — wallet persistence and verification logic
+- `api/app/services/onboarding_service.py` — contributor record update hooks
+- `api/app/adapters/postgres_models.py` — `ContributorModel.wallet_address` column
+- `api/tests/test_views_and_wallets.py` — flow tests for wallet operations
+- `web/app/settings/wallet/page.tsx` — `/settings/wallet` page
+- `web/components/wallet/WalletConnect.tsx` — connect + verify UI
+- `web/components/wallet/WalletProvider.tsx` — SSR-safe wagmi + RainbowKit wrapper
+- `web/lib/wallet-config.ts` — supported chains and walletConfig
+- `docs/how-to-use-wallets.md` — visitor-facing usage guide
+
+## Verification
+
+```bash
+cd api && python3 -m pytest tests/test_views_and_wallets.py -q -k wallet
+```
 
 ## Requirements
 
@@ -218,7 +237,7 @@ The platform only knows the visitor's address (and a verified flag). All sending
 - **Assumption — contributor_id from localStorage is enough to authenticate the connect/verify flow for now.** When the platform adds session tokens, the wallet endpoints should require them. Today the fast-path is open by design (TOFU model).
 - **Assumption — chain is a free string.** Validation tightens when send/receive flows that depend on the specific chain (gas, decimals, contract addresses) land.
 
-## Known Gaps from Original Design
+## Known Gaps and Follow-up Tasks
 
 The first draft of this spec described a SIWE + Ed25519 + manual-entry + alembic-migration architecture. The implementation that shipped is simpler:
 
@@ -235,3 +254,9 @@ The first draft of this spec described a SIWE + Ed25519 + manual-entry + alembic
 | `web/components/WalletConnect.tsx` (flat) | `web/components/wallet/WalletConnect.tsx` (subdirectory) |
 
 This spec now describes what shipped. The pieces that didn't ship (SIWE, Ed25519, manual-as-separate-endpoint, alembic) are listed in *Out of Scope* with notes on what would re-introduce them.
+
+**Follow-up tasks:**
+
+- [ ] **SIWE follow-up**: Re-introduce SIWE challenge/verify endpoints if a stricter authn flow is needed for any downstream specs.
+- [ ] **Ed25519 follow-up**: Add Ed25519 keypair column on `OnboardingSession` if a sibling spec requires non-EVM signature material.
+- [ ] **Chain-validation follow-up**: Tighten the `chain` free-string field to an enum when send/receive flows that depend on it land.

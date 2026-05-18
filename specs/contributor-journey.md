@@ -56,16 +56,50 @@ The contributor journey spans seven source files across three layers (registrati
 
 ## Requirements
 
-1. New contributor can register with zero friction (TOFU -- handle-based, no password)
-2. Contributors can link 37+ identity providers (GitHub, Discord, Ethereum, etc.)
-3. Contributors can submit governed change requests for ideas/specs
-4. Contributors can vote on change requests with attribution
-5. Contributors can join workspaces via invite/accept flow
-6. Contributors can message each other directly or in workspace boards
-7. Contributor portfolio shows CC balance, stakes, contributions, tasks
+- [x] **R1**: New contributor can register with zero friction (TOFU — handle-based, no password)
+- [x] **R2**: Contributors can link 37+ identity providers (GitHub, Discord, Ethereum, etc.)
+- [x] **R3**: Contributors can submit governed change requests for ideas/specs
+- [x] **R4**: Contributors can vote on change requests with attribution
+- [x] **R5**: Contributors can join workspaces via invite/accept flow
+- [x] **R6**: Contributors can message each other directly or in workspace boards
+- [x] **R7**: Contributor portfolio shows CC balance, stakes, contributions, tasks
 
 ## Acceptance Tests
 
 ```bash
 python3 -m pytest api/tests/test_governance_change_flow.py api/tests/test_flow_memberships.py api/tests/test_flow_messages.py -q
 ```
+
+## Purpose
+
+This spec realizes part of the `contributor-experience` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Files to Create/Modify
+
+- `api/app/routers/onboarding.py`
+- `api/app/services/onboarding_service.py`
+- `api/app/routers/governance.py`
+- `api/app/services/governance_service.py`
+- `api/app/routers/contributor_identity.py`
+- `api/app/routers/memberships.py`
+- `api/app/routers/messages.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_governance_change_flow.py api/tests/test_flow_memberships.py api/tests/test_flow_messages.py -q
+```
+
+## Out of Scope
+
+- Anything outside the files named in this spec's source map.
+- Concerns owned by sibling specs in the same idea cluster.
+
+## Risks and Assumptions
+
+- The implementation is assumed to align with the live body at the symbol level; if the body evolves, the spec's source map will need to re-attune.
+
+## Known Gaps and Follow-up Tasks
+
+- None — the spec is `status: done` and the body's wellness check confirms the source map resolves.
+

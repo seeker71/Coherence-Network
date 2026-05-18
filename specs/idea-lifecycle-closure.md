@@ -185,3 +185,24 @@ curl -s https://api.coherencycoin.com/api/ideas/nonexistent-xyz-99999/lifecycle
   this logic.
 - **Review required**: The backfill of existing `reviewing`-stage ideas to `complete` — this is
   a data mutation and should be reviewed before execution.
+
+## Requirements
+
+- [ ] **R1**: Fix stage string comparisons in idea_to_task_bridge to match IdeaStage enum
+- [ ] **R2**: Task history guard prevents duplicate tasks for same idea and phase
+- [ ] **R3**: Review completion advances idea from reviewing to complete
+- [ ] **R4**: Closed ideas (complete + validated) exit task-generation pool
+- [ ] **R5**: GET /api/ideas/{idea_id}/lifecycle returns closure state and blockers
+- [ ] **R6**: Emit friction event when bridge skips a closed idea
+
+## Verification
+
+```bash
+python3 scripts/wellness_check.py
+```
+Confirms the spec's source map and symbol claims still resolve in the body.
+
+## Risks and Assumptions
+
+- The implementation is assumed to align with the live body at the symbol level; if the body evolves, the spec's source map will need to re-attune.
+

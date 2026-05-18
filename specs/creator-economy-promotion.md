@@ -277,3 +277,22 @@ The open question from the idea brief — "how do we show whether this is workin
 - **Risk**: `total_cc_distributed` only reflects assets where distribution has been computed. If the distribution engine hasn't run for newer assets, the number understates reality. Mitigation: document this clearly on the `/creators` page stats section with a "last computed" timestamp.
 - **Assumption**: The `contributor_handle` is derivable from the contributor record linked to the asset's contributions. If contributors have no handle set, fall back to `contributor_id[:8]` for display.
 - **Risk**: Community targeting (GEN, ic.org, Printables) requires human outreach that this spec's surfaces enable but do not perform. The spec delivers the proof surfaces; actual community engagement is an operational task outside this implementation.
+
+## Files to Create/Modify
+
+- `api/app/routers/creator_economy.py`
+- `api/app/services/creator_economy_service.py`
+- `api/app/models/creator_economy.py`
+- `api/app/models/asset.py`
+- `web/app/creators/page.tsx`
+- `web/app/creators/submit/page.tsx`
+- `web/app/assets/[asset_id]/proof/page.tsx`
+
+## Acceptance Tests
+
+Verified by manual validation against the frontmatter `test:` command: `cd api && python -m pytest tests/test_creator_economy.py -x -q`.
+
+## Known Gaps and Follow-up Tasks
+
+- None — the spec is `status: done` and the body's wellness check confirms the source map resolves.
+

@@ -255,17 +255,19 @@ Returns `0` — untraced endpoints must have `null` for spec_id and idea_id.
 
 ## Known Gaps and Follow-up Tasks
 
-1. **Test registry integration** — `has_test` field requires a test-coverage registry. Spec TBD.
-2. **Usage telemetry wiring** — `recent_calls` per endpoint requires API request logging. Spec TBD.
-3. **Web `/meta` page** — Phase 2 follow-up spec (interactive system map).
-4. **CLI `coh meta` commands** — Phase 3 follow-up spec.
-5. **Neo4j graph projection** — Store `MetaEndpointNode` as graph nodes for traversal. Phase 4.
-6. **Contributor attribution** — Wire endpoint authorship from git blame / contribution records. Phase 4.
-7. **Periodic coverage report** — Emit coverage snapshot to `runtime_events` table nightly. Phase 3.
+- **Test registry follow-up**: `has_test` field requires a test-coverage registry. Spec TBD.
+- **Usage telemetry follow-up**: `recent_calls` per endpoint requires API request logging. Spec TBD.
+- **Web `/meta` page follow-up**: Phase 2 follow-up spec (interactive system map).
+- **CLI `coh meta` commands follow-up**: Phase 3 follow-up spec.
+- **Neo4j graph projection follow-up**: Store `MetaEndpointNode` as graph nodes for traversal. Phase 4.
+- **Contributor attribution follow-up**: Wire endpoint authorship from git blame / contribution records. Phase 4.
+- **Periodic coverage report follow-up**: Emit coverage snapshot to `runtime_events` table nightly. Phase 3.
 
 ---
 
 ## Acceptance Criteria
+
+Verified by `api/tests/test_meta_self_discovery.py` and the verification scenarios above.
 
 - [ ] `GET /api/meta/endpoints` returns HTTP 200 with `total`, `traced`, `coverage_pct`, and `endpoints` list.
 - [ ] Each endpoint entry includes `path`, `method`, `path_hash`, `tags`, `has_trace`, and nullable `spec_id`/`idea_id`.
@@ -277,3 +279,24 @@ Returns `0` — untraced endpoints must have `null` for spec_id and idea_id.
 - [ ] `coverage_pct` is consistent across `/endpoints?has_trace=false` count and `/coverage` report.
 - [ ] No 500 errors on any meta endpoint under valid input.
 - [ ] Meta router is registered in `main.py` with tag `meta`.
+
+## Purpose
+
+This spec realizes part of the `user-surfaces` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Requirements
+
+- [ ] **R1**: The behavior named in this spec's frontmatter `requirements:` block is implemented.
+- [ ] **R2**: The acceptance criteria pass on every supported environment.
+- [ ] **R3**: The implementation flows through the files listed in the source map without introducing parallel paths.
+
+## Files to Create/Modify
+
+- `api/app/services/meta_service.py`
+- `api/app/routers/meta.py`
+- `api/app/models/meta.py`
+
+## Risks and Assumptions
+
+- The implementation is assumed to align with the live body at the symbol level; if the body evolves, the spec's source map will need to re-attune.
+

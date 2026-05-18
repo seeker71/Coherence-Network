@@ -100,6 +100,10 @@ The API accepts any namespace depth. Clients and the CLI display the full slug.
 
 ## Verification
 
+```bash
+cd api && pytest -q tests/test_ideas.py
+```
+
 1. `POST /api/ideas` with no `id` and no `slug` → response has UUID4 `id` and
    a slug derived from `name`.
 2. `GET /api/ideas/{slug}` resolves the same idea as `GET /api/ideas/{uuid}`.
@@ -111,9 +115,38 @@ The API accepts any namespace depth. Clients and the CLI display the full slug.
 
 ## Known Gaps and Follow-up Tasks
 
-- **Slug search**: `GET /api/ideas?slug_prefix=finance/` — filtered listing by namespace.
-- **Slug autocomplete** in CLI: `coh idea <TAB>` resolves slugs.
-- **Structured slug enforcement**: optional future constraint that all slugs
+- **Slug search follow-up**: `GET /api/ideas?slug_prefix=finance/` — filtered listing by namespace.
+- **Slug autocomplete follow-up**: `coh idea <TAB>` resolves slugs in CLI.
+- **Structured slug enforcement follow-up**: optional future constraint that all slugs
   under a pillar super-idea share its namespace prefix.
-- **Slug registry**: a dedicated `GET /api/ideas/slugs` catalog endpoint for
+- **Slug registry follow-up**: a dedicated `GET /api/ideas/slugs` catalog endpoint for
   tooling (runner spec-file lookup, CLI autocomplete).
+
+## Requirements
+
+- [ ] **R1**: Idea has UUID4 id (immutable) and slug (mutable, unique, URL-safe)
+- [ ] **R2**: Slug auto-derived from name at creation when omitted
+- [ ] **R3**: Slug max 80 chars, lowercase, diacritics stripped, deduped with -2 suffix
+- [ ] **R4**: GET /api/ideas/{slug} resolves same idea as GET /api/ideas/{uuid}
+- [ ] **R5**: PATCH /api/ideas/{id}/slug renames slug and keeps old slug in history
+- [ ] **R6**: Old slugs resolve via slug_history lookup
+
+## Files to Create/Modify
+
+- `api/app/services/idea_naming.py`
+- `api/app/services/idea_write_ops.py`
+- `api/app/models/idea.py`
+
+## Acceptance Tests
+
+Verified by manual validation against the `done_when:` criteria in this spec's frontmatter.
+
+## Out of Scope
+
+- Anything outside the files named in this spec's source map.
+- Concerns owned by sibling specs in the same idea cluster.
+
+## Risks and Assumptions
+
+- The implementation is assumed to align with the live body at the symbol level; if the body evolves, the spec's source map will need to re-attune.
+

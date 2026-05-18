@@ -448,3 +448,8 @@ python3 scripts/validate_spec_quality.py specs/public-verification-framework.md
 **Not yet wired** — R6 cross-chain verification against Story Protocol royalty records. Depends on `story-protocol-integration` spec's on-chain registration piece (currently partial — pure-logic core landed, SDK integration gated on partner decisions).
 
 Status moved from draft → done because R1–R5 are functionally complete and the core invariants the spec names (hash chain integrity, Merkle root correctness, non-repudiation through signed snapshots) are all tested and in production. R6 tracks with `story-protocol-integration` progress.
+
+**Follow-up tasks:**
+
+- [ ] **R6 follow-up**: Wire cross-chain verification against Story Protocol royalty records once `story-protocol-integration` SDK integration lands.
+- [ ] **Arweave follow-up**: Optionally add a parallel Arweave publisher alongside the current archive.org path if Story Protocol cross-referencing requires it.

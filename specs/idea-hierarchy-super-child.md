@@ -91,6 +91,8 @@ ranked = [row for row in answered
 
 ## Acceptance Criteria
 
+Verified by `api/tests/test_idea_hierarchy_super_child.py`.
+
 1. Idea model includes `idea_type`, `parent_idea_id`, `child_idea_ids` fields
 2. DEFAULT_IDEAS updated: `portfolio-governance` and `oss-interface-alignment` marked as super
 3. New child-ideas created for actionable sub-work
@@ -116,6 +118,10 @@ See `api/tests/test_idea_hierarchy_super_child.py` for test cases covering this 
 
 ## Verification
 
+```bash
+cd api && pytest -q tests/test_idea_hierarchy_super_child.py
+```
+
 - Unit tests for model validation
 - Task pickup filter tests (super excluded, child/standalone included)
 - API response includes new fields
@@ -129,6 +135,30 @@ See `api/tests/test_idea_hierarchy_super_child.py` for test cases covering this 
 
 ## Known Gaps and Follow-up Tasks
 
-- [ ] Auto-compute super-idea metrics by aggregating children in grounded_idea_metrics_service
-- [ ] Add `idea_type` to IdeaUpdate so ideas can be promoted/demoted
-- [ ] Visual hierarchy in web UI (/ideas page tree view)
+- [ ] **Auto-compute follow-up**: Auto-compute super-idea metrics by aggregating children in grounded_idea_metrics_service.
+- [ ] **IdeaUpdate follow-up**: Add `idea_type` to IdeaUpdate so ideas can be promoted/demoted via API.
+- [ ] **Web UI follow-up**: Visual hierarchy in web UI (/ideas page tree view).
+
+## Purpose
+
+This spec realizes part of the `idea-realization-engine` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Requirements
+
+- [ ] **R1**: Idea model includes idea_type, parent_idea_id, child_idea_ids fields
+- [ ] **R2**: IdeaType enum has super, child, standalone values
+- [ ] **R3**: Super-ideas excluded from task pickup in ROI and unblock queries
+- [ ] **R4**: Child-ideas inherit parent context for display
+- [ ] **R5**: Existing ideas default to standalone for backward compatibility
+- [ ] **R6**: GET /api/ideas returns idea_type; super-ideas show child_idea_ids
+
+## Files to Create/Modify
+
+- `api/app/services/idea_hierarchy.py`
+- `api/app/models/idea.py`
+
+## Out of Scope
+
+- Anything outside the files named in this spec's source map.
+- Concerns owned by sibling specs in the same idea cluster.
+

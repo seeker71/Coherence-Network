@@ -237,7 +237,7 @@ constraints:
 ```
 
 
-### Input Validation
+### Input Schema
 
 - All string fields: min_length=1, max_length=1000
 - Numeric fields: appropriate min/max bounds

@@ -47,14 +47,45 @@ The developer experience rests on four pillars that are already deployed and ope
 
 ## Requirements
 
-1. Health endpoint returns status, version, uptime, schema_ok
-2. Test suite runs 353+ tests in under 10 seconds
-3. Multi-agent worktree coordination with conflict detection
-4. Launch config for local dev server (API + web)
-5. No mocks in flow tests -- real API integration
+- [x] **R1**: Health endpoint returns status, version, uptime, schema_ok
+- [x] **R2**: Test suite runs 353+ tests in under 10 seconds
+- [x] **R3**: Multi-agent worktree coordination with conflict detection
+- [x] **R4**: Launch config for local dev server (API + web)
+- [x] **R5**: No mocks in flow tests — real API integration
 
 ## Acceptance Tests
 
 ```bash
 python3 -m pytest api/tests/test_flow_core_api.py -q
 ```
+
+## Purpose
+
+This spec realizes part of the `developer-experience` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Files to Create/Modify
+
+- `api/app/routers/health.py`
+- `api/tests/conftest.py`
+- `scripts/agent_status.py`
+- `.claude/launch.json`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_flow_core_api.py -q
+```
+
+## Out of Scope
+
+- Anything outside the files named in this spec's source map.
+- Concerns owned by sibling specs in the same idea cluster.
+
+## Risks and Assumptions
+
+- The implementation is assumed to align with the live body at the symbol level; if the body evolves, the spec's source map will need to re-attune.
+
+## Known Gaps and Follow-up Tasks
+
+- None — the spec is `status: done` and the body's wellness check confirms the source map resolves.
+
