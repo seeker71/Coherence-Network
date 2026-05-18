@@ -177,3 +177,144 @@ def test_different_whitespace_same_nodeid(session):
     b = parse_and_emit(session, "1 + 2 * 3")
     c = parse_and_emit(session, "  1   +  2  *  3  ")
     assert a == b == c
+
+
+# ---------------------------------------------------------------------------
+# Broad-grammar equivalence — the BML form-layer constructs
+# ---------------------------------------------------------------------------
+#
+# Each construct below must intern to the same NodeID via the streaming
+# path as via the AST path. The substrate guarantees equivalence; these
+# tests prove the streaming encoder lands at the right coordinates.
+
+
+@pytest.mark.parametrize("expr", [
+    # String literals
+    '"hello"',
+    '"with spaces"',
+    '""',
+    # NodeID literals
+    "@1.5.4.1",
+    "@2.3.4.5",
+    # Trivial refs
+    "~Memory",
+    "~Integer",
+    "~String",
+    # Bare identifiers
+    "x",
+    "some_name",
+    # Self-reference
+    ".self",
+    # Bare leaves — RChoice
+    "fail",
+    "stop",
+    # Bare leaves — RState
+    "save",
+    "restore",
+    "discard",
+    # Bare leaves — RException
+    "raise",
+    "resume",
+    # do-blocks with let
+    "do { let x = 5; x }",
+    "do { let x = 5; let y = x + 3; y * 2 }",
+    "do { 1 + 2 }",
+    "do { 1; 2; 3 }",
+    # with / .self
+    "with @1.5.4.1 { .self }",
+    "with @2.3.4.5 { 1 + 2 }",
+    # match
+    "match 3 { 1 => 100, 2 => 200, _ => 0 }",
+    'match "ready" { "ready" => 1, "blocked" => 2, _ => 0 }',
+    # choose
+    "choose [1, 2, 3]",
+    "choose [fail, stop, 42]",
+    # try / catch
+    "try { 1 + 2 } catch { raise }",
+    # delegate
+    "delegate @1.5.4.1 to @2.3.4.5",
+    # undo / inverse
+    "undo (1 + 2)",
+    "inverse(3 * 4)",
+    # common
+    "common @1.5.4.1 @2.3.4.5",
+    # method / invoke
+    "method greet on @1.5.4.1 { 1 + 2 }",
+    "method noop on @1.5.4.1 { save; restore }",
+    "invoke greet on @1.5.4.1",
+])
+def test_streaming_matches_ast_bml_form_layer(session, expr):
+    """Every BML form-layer construct interns to the same NodeID via both
+    paths. This is the broad-coverage proof — the streaming-emit pattern
+    extends to the entire recipe-producing grammar, not just arithmetic.
+
+    The wellness check named these as the asymmetric arms of the meta-
+    circular engine: BLOCK, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE,
+    COMMON, METHOD, TRY. All of them now have streaming-emit coverage,
+    proven by content-addressing equivalence."""
+    via_stream = parse_and_emit(session, expr)
+    via_ast = form_evaluate_text(session, expr).value
+    assert via_stream == via_ast, (
+        f"streaming and AST diverged for {expr!r}: "
+        f"stream={via_stream} ast={via_ast}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Composition — recipes-within-recipes via streaming
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("expr", [
+    # do-blocks nesting conditionals
+    "do { let x = 5; if x > 3 then x * 2 else fail }",
+    # match scrutinees that are expressions
+    "match 1 + 1 { 2 => 100, _ => 0 }",
+    # choose with mixed leaves and composites
+    "choose [fail, 1 + 2, stop]",
+    # with whose body is a block
+    "with @1.5.4.1 { let v = 1; v + 2 }",
+    # try whose body is a block
+    "try { let x = 1; x + 2 } catch { fail }",
+    # nested choose-within-do
+    "do { let result = choose [1, 2, 3]; result + 100 }",
+])
+def test_streaming_nested_compositions(session, expr):
+    """Deep compositions stress-test the stack discipline. Each rule pops
+    exactly the right arity; mistakes here would surface as wrong NodeIDs
+    or stack-underflow errors."""
+    via_stream = parse_and_emit(session, expr)
+    via_ast = form_evaluate_text(session, expr).value
+    assert via_stream == via_ast
+
+
+# ---------------------------------------------------------------------------
+# Cell references — substrate-resolved leaves
+# ---------------------------------------------------------------------------
+
+
+_MEMORY_TPL = """---
+name: {name}
+description: a description
+type: feedback
+---
+Body content here.
+"""
+
+
+def test_cell_ref_resolves_via_substrate(session, tmp_path):
+    """`@domain(name)` requires a substrate lookup. The streaming and AST
+    paths must hit the same cell and encode the same GLOBAL trivial.
+
+    Tested through a recipe context (`with` block) so both paths flow
+    through `_to_recipe_node_id` / `_parse_at_form` cell-encoding rather
+    than top-level cell-resolution."""
+    from app.services.substrate import ingest_memory_file
+
+    p = tmp_path / "example.md"
+    p.write_text(_MEMORY_TPL.format(name="example"))
+    ingest_memory_file(session, p)
+
+    via_stream = parse_and_emit(session, "with @memory(example) { .self }")
+    via_ast = form_evaluate_text(session, "with @memory(example) { .self }").value
+    assert via_stream == via_ast
