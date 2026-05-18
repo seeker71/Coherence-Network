@@ -3,11 +3,9 @@ idea_id: presence-invitation-surface
 status: active
 source:
   - file: api/app/services/presence_invitation_service.py
-    symbols: [invite_presence(), list_invited_presences(), get_invited_presence()]
+    symbols: [invite_presence, get_presence]
   - file: api/app/routers/presence.py
-    symbols: [invite_presence(), list_invited_presences(), get_invited_presence()]
-  - file: api/scripts/coherence.py
-    symbols: [cmd_presence()]
+    symbols: [invite_presence, list_invited_presences, get_invited_presence]
 requirements:
   - "A steward can invite a person, place, event, service, plant, animal, thing, project, need, offering, story, community, or practice into the graph as a Presence."
   - "Invited presences expose internal and external paths, visibility, steward, story, offerings, needs, and connection fields through API and CLI."

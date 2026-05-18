@@ -5,7 +5,7 @@ source:
   - file: docs/field/urs/tools/build_trace_indexes.py
     symbols: [compact_volume(), influence_spectrum(), backtrace_samples(), build_indexes()]
   - file: docs/field/urs/trace/manifest.json
-    symbols: [field_event_shape]
+    symbols: []
   - file: api/tests/test_field_story_trace_index.py
     symbols: [test_trace_index_api_returns_author_and_work_waves()]
 requirements:

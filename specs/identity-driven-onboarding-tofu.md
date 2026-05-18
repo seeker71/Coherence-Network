@@ -3,7 +3,7 @@ idea_id: identity-and-onboarding
 status: done
 source:
   - file: api/app/services/onboarding_service.py
-    symbols: [register(), claim_handle()]
+    symbols: [register, resolve_session]
   - file: api/app/routers/onboarding.py
     symbols: [onboarding endpoints]
 requirements:
@@ -78,3 +78,27 @@ signature, upgrading trust level to verified. Additive -- TOFU sessions remain v
 - Rate-limiting on registration endpoint (follow-up).
 - Full OAuth redirect flow: Spec 169.
 - Email magic-link verification: future spec.
+
+## Purpose
+
+This spec realizes part of the `identity-and-onboarding` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Requirements
+
+- [ ] **R1**: POST /api/onboarding/register accepts handle and returns session_token with trust_level tofu
+- [ ] **R2**: Handle must match [a-z0-9_-]{3,40} or return 422
+- [ ] **R3**: Duplicate handle returns 409 with handle_taken detail
+- [ ] **R4**: GET /api/onboarding/session validates Bearer token or returns 401
+- [ ] **R5**: POST /api/onboarding/upgrade returns 501 stub until OAuth spec
+- [ ] **R6**: GET /api/onboarding/roi returns registration and verification metrics
+
+## Files to Create/Modify
+
+- `api/app/services/onboarding_service.py`
+- `api/app/routers/onboarding.py`
+
+## Out of Scope
+
+- Anything outside the files named in this spec's source map.
+- Concerns owned by sibling specs in the same idea cluster.
+

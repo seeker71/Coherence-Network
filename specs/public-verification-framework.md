@@ -5,9 +5,9 @@ status: done
 priority: high
 source:
   - file: api/app/services/verification_service.py
-    symbols: [compute_daily_merkle, publish_snapshot, verify_chain]
+    symbols: [compute_daily_hashes, compute_merkle_root, get_chain]
   - file: api/app/routers/verification.py
-    symbols: [get_verification_chain, get_snapshot, recompute_and_verify]
+    symbols: [get_chain, get_snapshot, recompute_and_verify, publish_snapshot]
   - file: scripts/publish_snapshot.py
     symbols: [main]
 requirements:
@@ -448,3 +448,8 @@ python3 scripts/validate_spec_quality.py specs/public-verification-framework.md
 **Not yet wired** — R6 cross-chain verification against Story Protocol royalty records. Depends on `story-protocol-integration` spec's on-chain registration piece (currently partial — pure-logic core landed, SDK integration gated on partner decisions).
 
 Status moved from draft → done because R1–R5 are functionally complete and the core invariants the spec names (hash chain integrity, Merkle root correctness, non-repudiation through signed snapshots) are all tested and in production. R6 tracks with `story-protocol-integration` progress.
+
+**Follow-up tasks:**
+
+- [ ] **R6 follow-up**: Wire cross-chain verification against Story Protocol royalty records once `story-protocol-integration` SDK integration lands.
+- [ ] **Arweave follow-up**: Optionally add a parallel Arweave publisher alongside the current archive.org path if Story Protocol cross-referencing requires it.

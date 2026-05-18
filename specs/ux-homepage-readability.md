@@ -3,9 +3,9 @@ idea_id: user-surfaces
 status: done
 source:
   - file: web/app/page.tsx
-    symbols: [homepage]
+    symbols: [Home]
   - file: web/app/globals.css
-    symbols: [accessibility styling]
+    symbols: []
 done_when:
   - "Light mode activates on toggle click; persists across page reloads."
   - "System `prefers-color-scheme: light` is respected on first visit."
@@ -24,6 +24,35 @@ done_when:
 **Status**: approved
 **Created**: 2026-03-28
 **Decision**: Both — fix dark mode contrast AND add a light mode toggle
+
+## Purpose
+
+Bring the homepage to WCAG AA contrast in both colour modes and give visitors a real light-mode option alongside the existing dark mode. Before this work, secondary text in dark mode fell below the 4.5:1 contrast threshold, and the `:root.light` CSS block was a broken stub that assigned `color-scheme: dark`. Adding a real light-mode palette and a user-controlled `ThemeToggle` solves both problems in one breath — the audit required to define light-mode values surfaces dark-mode contrast gaps as a side effect, and visitors who need or prefer light backgrounds gain agency.
+
+## Requirements
+
+- [x] **R1**: Fix `globals.css` `:root.light` CSS block with a genuine warm-light palette (WCAG AA compliant).
+- [x] **R2**: Improve dark mode `--muted-foreground` and `--foreground` contrast ratios above 4.5:1.
+- [x] **R3**: Create `ThemeProvider` client component (React context + `localStorage` persistence).
+- [x] **R4**: Create `ThemeToggle` button component (sun/moon icon, accessible).
+- [x] **R5**: Integrate `ThemeProvider` into root `layout.tsx` and add `ThemeToggle` to `SiteHeader` (desktop + mobile).
+- [x] **R6**: Update `html` and `body::before` gradient rules to adapt to light mode.
+
+## Files to Create/Modify
+
+- `web/app/page.tsx` — homepage Server Component (rendered through `Home` default export)
+- `web/app/globals.css` — `:root` and `:root.light` CSS variable blocks
+- `web/app/layout.tsx` — wraps the tree with `ThemeProvider`
+- `web/components/theme/ThemeProvider.tsx` — context + localStorage persistence
+- `web/components/theme/ThemeToggle.tsx` — sun/moon toggle button
+- `web/components/SiteHeader.tsx` — integration point for `ThemeToggle`
+- `api/tests/test_homepage_contrast.py` — WCAG AA contrast regression suite
+
+## Out of Scope
+
+- Per-page `meta name="color-scheme"` declarations beyond the root scheme.
+- A full site-wide dark-mode contrast audit beyond the homepage; tracked separately.
+- `prefers-contrast: more` media-query support.
 
 ## Problem Statement
 
@@ -60,6 +89,8 @@ Fixing only dark mode contrast leaves the second problem unaddressed and is a pa
 - [ ] No hydration mismatch (SSR-safe: initial HTML class set via inline script).
 - [ ] Light mode background is warm, not stark white — consistent with brand tone.
 
+Verified by `api/tests/test_homepage_contrast.py` (14 WCAG AA contrast assertions).
+
 ## Colour Tokens — Light Mode
 
 ```
@@ -73,7 +104,15 @@ Fixing only dark mode contrast leaves the second problem unaddressed and is a pa
 --border:          36 20% 82%
 ```
 
+## Acceptance Tests
+
+See `api/tests/test_homepage_contrast.py` for the 14 WCAG AA contrast assertions covering both dark and light palettes.
+
 ## Verification
+
+```bash
+python3 -m pytest api/tests/test_homepage_contrast.py -x -v
+```
 
 - Toggle from dark → light → dark, reload — mode persists.
 - Open with `prefers-color-scheme: light` browser setting — auto-selects light.
@@ -87,9 +126,9 @@ Fixing only dark mode contrast leaves the second problem unaddressed and is a pa
 
 ## Known Gaps and Follow-up Tasks
 
-- Per-page meta `color-scheme` declarations not updated in this spec; deferred.
-- Dark mode baseline contrast audit (full page scan) deferred to Spec 166.
-- System-level `prefers-contrast: more` media query support deferred.
+- [ ] **Per-page meta follow-up**: Update per-page `color-scheme` meta declarations once a sibling spec calls for them.
+- [ ] **Site-wide contrast audit follow-up**: Run the full-site dark-mode contrast scan tracked in Spec 166.
+- [ ] **High-contrast follow-up**: Add `prefers-contrast: more` media-query support when accessibility feedback names it.
 
 ## ROI Signals
 

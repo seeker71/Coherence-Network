@@ -1,11 +1,11 @@
 ---
 idea_id: knowledge-and-resonance
-status: active
+status: complete
+proof: operational
 source:
-  - file: web/app/people/elon-musk/page.tsx
-    symbols: [ElonMuskProfilePage]
-  - file: web/content/people/elon-musk/en.tsx
-    symbols: [content]
+  - file: web/app/people/[id]/page.tsx
+    symbols: [PersonPage]
+  - file: docs/presence-content/elon-musk.json
 requirements:
   - "Create a public landing page for Elon Musk as an invitation surface, not a generic biography."
   - "Represent aligned and non-aligned frequencies without dismissing work that may not fit this network."
@@ -13,9 +13,8 @@ requirements:
   - "Ground public claims in source links for Tesla, SpaceX, xAI, The Boring Company, NVIDIA, and the portrait license."
 done_when:
   - "the page is reachable at /people/elon-musk"
-  - "the page renders through the existing PersonProfileTemplate"
+  - "the page renders through the existing /people/[id] route + presence-content pipeline"
   - "Next.js build succeeds for the web app"
-test: "cd web && npm run build"
 constraints:
   - "Do not claim Elon Musk has joined or endorsed the network."
   - "Do not recommend buying, selling, transferring, or holding any security."

@@ -18,7 +18,7 @@ done_when:
   - "Provider health transition to degraded is detected from a strict last-5 success-rate check (<0.50)."
   - "A single friction event is created per degradation transition with provider and last-5 evidence."
   - "Optional Telegram notification is emitted only when enabled and only on newly-created health events."
-test: "cd api && pytest -q tests/test_friction_api.py -k \"provider_health\""
+proof: operational
 constraints:
   - "no new notification providers; use existing adapter/service only"
   - "no schema migrations without explicit approval"

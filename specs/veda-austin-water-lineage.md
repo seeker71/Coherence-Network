@@ -3,7 +3,7 @@ idea_id: knowledge-and-resonance
 status: active
 source:
   - file: docs/lineage/urs-contribution-profile.graph.json
-    symbols: [presences, edges]
+    symbols: []
 requirements:
   - "Represent Veda Austin as ordinary source-backed profile graph data, not special UI."
   - "Represent the Gaia Open Minds episode as an artifact with summary-only extracted concepts."

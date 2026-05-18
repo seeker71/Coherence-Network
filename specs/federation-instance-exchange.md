@@ -3,7 +3,7 @@ idea_id: federation-and-nodes
 status: done
 source:
   - file: api/app/routers/federation.py
-    symbols: [register_instance, list_instances, get_instance, receive_payload, list_sync_history]
+    symbols: [register_instance, list_instances, get_instance, receive_payload]
   - file: api/app/services/federation_service.py
     symbols: [register_instance, list_instances, get_instance, receive_payload, list_sync_history, check_trust_level, _ensure_federation_sync_history_columns]
   - file: api/app/services/governance_service.py

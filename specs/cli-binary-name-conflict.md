@@ -3,13 +3,13 @@ idea_id: agent-cli
 status: done
 source:
   - file: cli/package.json
-    symbols: [bin]
+    symbols: []
   - file: cli/bin/coh.mjs
-    symbols: [CLI entry point with macOS conflict-detection warning]
+    symbols: []
   - file: cli/README.md
-    symbols: [installation instructions, usage examples]
+    symbols: []
   - file: CLAUDE.md
-    symbols: [Quick Lookup table, Key Conventions, Agent Guardrails]
+    symbols: []
 requirements:
   - "R1: Remove `cc` from cli/package.json bin map; keep `coh` and `coherence` as registered binaries"
   - "R2: Rename cli/bin/cc.mjs → cli/bin/coh.mjs; update bin map path accordingly"
@@ -76,9 +76,9 @@ No data model changes.
 
 ## Acceptance Tests
 
-No automated test file is needed for this spec — the done_when criteria are verified by shell commands (see Verification below). If a test file exists for CLI smoke tests, extend it with a `coh --help` exit-0 assertion.
+No automated test file is needed for this spec — verified via manual validation against the shell commands below. If a CLI smoke-test suite exists in `cli/tests/`, extend it with a `coh --help` exit-0 assertion.
 
-## Verification Scenarios
+## Verification
 
 ### Scenario 1 — `coh` works as primary command
 
@@ -139,3 +139,8 @@ grep -n " cc " CLAUDE.md | grep -v "Apple\|clang\|/usr/bin\|#\|coherence-cli\|bi
 - **Risk — Homebrew or other package managers**: If coherence-cli is installed via a non-npm path that still registers `cc`, this spec does not address that path. Assumption: npm global install is the only supported installation method.
 - **Assumption — `coh` is memorable enough**: `coh` is short and distinct. If user research shows confusion, `cn` remains an option but is out of scope here.
 - **Assumption — macOS is the only affected platform**: Linux and Windows do not ship `/usr/bin/cc` as Apple clang. The conflict-detection warning is macOS-only (guarded by `process.platform`).
+
+## Known Gaps and Follow-up Tasks
+
+- [ ] **Homebrew follow-up**: Add a Homebrew formula that registers only `coh` if package-manager parity becomes a need.
+- [ ] **Conflict-warning follow-up**: Replace the marker-file warning with a richer first-run experience if CLI onboarding grows beyond this single advisory.

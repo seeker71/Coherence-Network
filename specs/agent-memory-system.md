@@ -5,9 +5,9 @@ source:
   - file: api/app/routers/sensings.py
     symbols: [SensingCreate, SensingResponse, create_sensing(), list_sensings(), get_sensing()]
   - file: api/app/routers/memory.py
-    symbols: [MemoryMoment, MemoryRecall, create_moment(), recall(), consolidate()]
+    symbols: [create_moment, recall, consolidate]
   - file: api/app/services/memory_service.py
-    symbols: [write_moment(), consolidate_at_rest(), compose_retrieval(), decay_untouched()]
+    symbols: [write_moment, consolidate_at_rest, decay_untouched]
   - file: api/app/models/memory.py
     symbols: [MemoryMoment, ConsolidatedPrinciple, MemoryRecall]
   - file: docs/vision-kb/LOG.md

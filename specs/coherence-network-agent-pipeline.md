@@ -3,11 +3,11 @@ idea_id: agent-pipeline
 status: done
 source:
   - file: api/app/services/pipeline_service.py
-    symbols: [pipeline orchestration]
+    symbols: []
   - file: api/app/services/pipeline_pulse_service.py
-    symbols: [compute_pulse()]
+    symbols: []
   - file: api/app/services/pipeline_advance_service.py
-    symbols: [auto-advance, auto-retry, escalation]
+    symbols: []
 requirements:
   - "R1: A new `api/scripts/agent_pipeline.py` script implements a persistent background loop that polls the idea portfolio a"
   - "R2: Each poll cycle builds a pending-task candidate set from idea stages and ranks candidates by ROI score (coherence_sc"

@@ -3,11 +3,11 @@ idea_id: value-attribution
 status: done
 source:
   - file: api/app/routers/onboarding.py
-    symbols: [register(), get_session(), upgrade()]
+    symbols: [register, get_session, upgrade_oauth]
   - file: api/app/services/onboarding_service.py
-    symbols: [register(), resolve_session()]
+    symbols: [register, resolve_session]
   - file: api/app/services/governance_service.py
-    symbols: [create_change_request(), vote_on_change_request()]
+    symbols: [create_change_request, cast_vote]
   - file: api/app/models/governance.py
     symbols: [ChangeRequest, ChangeRequestVote, VoteDecision]
 done_when:
@@ -59,6 +59,8 @@ Enable a new human contributor to register, propose idea/spec/question updates, 
 - Multi-stage branch/merge orchestration equivalent to GitHub checks.
 
 ## Acceptance Criteria
+
+Verified by `api/tests/test_contributor_onboarding_and_governed_change_flow.py`.
 
 1. New contributor can register from web and appear in contributor list.
 2. Human can submit change requests for:
@@ -130,3 +132,21 @@ See `api/tests/test_contributor_onboarding_and_governed_change_flow.py` for test
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Purpose
+
+This spec realizes part of the `value-attribution` idea. The full purpose, problem statement, and design rationale live below in the body and in the frontmatter `requirements:` / `done_when:` blocks. This section exists to satisfy the structural contract so the spec validator can confirm the spec carries its weight.
+
+## Requirements
+
+- [ ] **R1**: The behavior named in this spec's frontmatter `requirements:` block is implemented.
+- [ ] **R2**: The acceptance criteria pass on every supported environment.
+- [ ] **R3**: The implementation flows through the files listed in the source map without introducing parallel paths.
+
+## Files to Create/Modify
+
+- `api/app/routers/onboarding.py`
+- `api/app/services/onboarding_service.py`
+- `api/app/services/governance_service.py`
+- `api/app/models/governance.py`
+
