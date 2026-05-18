@@ -983,7 +983,7 @@ def sense_substrate_shape() -> list[str]:
     """Sense whether substrate cells carry composed CTORs or flat type-markers.
 
     The structural-composition discipline promises every cell's CTOR is a
-    tree of R_Block.LET (key, value) pairs. The legacy flat encoder
+    tree of R_Block.LET (key, value) pairs. The earlier flat encoder
     produced CTORs of trivial-string recipes carrying type-marker strings
     like "name=str". Aggregate counts (cells/blueprints/recipes) look
     stable across either encoding — content-addressing means orphaned
