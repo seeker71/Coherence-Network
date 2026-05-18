@@ -3,13 +3,15 @@ idea_id: idea-realization-engine
 status: done
 source:
   - file: api/app/routers/ideas.py
-    symbols: [list_ideas(), get_idea(), get_idea_tags_catalog()]
-  - file: api/app/services/idea_service.py
-    symbols: [list_ideas()]
+    symbols: [list_ideas, get_idea, get_idea_tags_catalog]
+  - file: api/app/services/idea_read.py
+    symbols: [list_ideas]
   - file: api/app/services/idea_scoring.py
-    symbols: [_score(), _with_score(), _build_cost_vector(), _build_value_vector(), _marginal_cc_return(), _softmax_weights()]
+    symbols: [_score, _with_score, _build_cost_vector, _build_value_vector, _marginal_cc_return, _softmax_weights]
   - file: api/app/models/idea.py
-    symbols: [Idea, IdeaWithScore, IdeaPortfolioResponse, IdeaSummary, CostVector, ValueVector]
+    symbols: [Idea, IdeaWithScore, IdeaPortfolioResponse, IdeaSummary]
+  - file: api/app/models/coherence_credit.py
+    symbols: [CostVector, ValueVector]
 requirements:
   - "GET /api/ideas — List ideas ranked by free energy score with portfolio summary"
   - "GET /api/ideas/{id} — Retrieve individual idea with score (404 if not found)"

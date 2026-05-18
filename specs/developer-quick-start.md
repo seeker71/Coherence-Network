@@ -3,11 +3,11 @@ idea_id: developer-experience
 status: done
 source:
   - file: api/app/routers/health.py
-    symbols: [health_check]
+    symbols: [health]
   - file: api/tests/conftest.py
     symbols: [_reset_service_caches_between_tests]
   - file: scripts/agent_status.py
-    symbols: [get_worktrees, detect_conflicts]
+    symbols: [_parse_worktrees]
   - file: .claude/launch.json
     symbols: []
 requirements:

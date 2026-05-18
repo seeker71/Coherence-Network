@@ -3,9 +3,9 @@ idea_id: user-surfaces
 status: done
 source:
   - file: web/app/page.tsx
-    symbols: [homepage]
+    symbols: [Home]
   - file: web/app/globals.css
-    symbols: [accessibility styling]
+    symbols: []
 done_when:
   - "Light mode activates on toggle click; persists across page reloads."
   - "System `prefers-color-scheme: light` is respected on first visit."

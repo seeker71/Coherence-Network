@@ -3,11 +3,11 @@ idea_id: pipeline-reliability
 status: done
 source:
   - file: api/app/services/failed_task_diagnostics_service.py
-    symbols: [classify_error(), ensure_diagnostics()]
+    symbols: [classify_error, ensure_diagnostics]
   - file: api/app/models/agent.py
-    symbols: [error_summary, error_category fields]
+    symbols: [AgentTask, AgentTaskUpdate]
   - file: api/app/services/agent_task_store_service.py
-    symbols: [AgentTaskRecord.error_summary column]
+    symbols: []
 requirements:
   - "Error fields on model: Add `error_summary: Optional[str]` and `error_category: Optional[str]` to `AgentTask`, `AgentTaskListItem`, `AgentTaskUp"
   - "Require diagnostics on failure: When a task transitions to `status=failed` via PATCH, require at least one of `error_summary` or `output` to be non-empt"

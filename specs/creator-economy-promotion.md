@@ -3,9 +3,9 @@ idea_id: creator-economy-promotion
 status: done
 source:
   - file: api/app/routers/creator_economy.py
-    symbols: [get_creator_stats(), get_asset_proof_card(), list_featured_assets()]
+    symbols: [get_creator_stats, get_asset_proof_card, list_featured]
   - file: api/app/services/creator_economy_service.py
-    symbols: [compute_creator_stats(), build_proof_card()]
+    symbols: [compute_creator_stats, build_proof_card, list_featured]
   - file: api/app/models/creator_economy.py
     symbols: [CreatorStats, ProofCard, FeaturedAsset]
   - file: api/app/models/asset.py

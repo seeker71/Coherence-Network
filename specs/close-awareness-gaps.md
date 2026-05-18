@@ -9,7 +9,7 @@ source:
   - file: scripts/awareness_node_daemon.py
     symbols: [AgentProfile, build_identity_card(), render_identity_text(), load_profiles(), run_once()]
   - file: config/agent_profiles.json
-    symbols: [agents]
+    symbols: []
 requirements:
   - "Federation node messages are readable by id and include loopback messages when explicitly requested."
   - "Cursor fact report routing proof uses the current public routing service instead of a removed private helper."

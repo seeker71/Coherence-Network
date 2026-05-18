@@ -2,10 +2,12 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: api/app/services/idea_service.py
-    symbols: [slugify(), update_idea_slug()]
+  - file: api/app/services/idea_naming.py
+    symbols: [slugify]
+  - file: api/app/services/idea_write_ops.py
+    symbols: [update_idea_slug]
   - file: api/app/models/idea.py
-    symbols: [Idea.slug, Idea.slug_history]
+    symbols: [Idea]
 requirements:
   - Idea has UUID4 id (immutable) and slug (mutable, unique, URL-safe)
   - Slug auto-derived from name at creation when omitted

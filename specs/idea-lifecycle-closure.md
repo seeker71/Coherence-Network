@@ -2,10 +2,10 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: api/app/services/idea_service.py
-    symbols: [_sync_manifestation_status()]
+  - file: api/app/services/idea_lifecycle_ops.py
+    symbols: [_sync_manifestation_status]
   - file: api/app/models/idea.py
-    symbols: [IdeaStage.COMPLETE, IdeaLifecycle]
+    symbols: [IdeaStage, IdeaLifecycle]
 requirements:
   - Fix stage string comparisons in idea_to_task_bridge to match IdeaStage enum
   - Task history guard prevents duplicate tasks for same idea and phase

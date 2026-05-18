@@ -3,11 +3,11 @@ idea_id: value-attribution
 status: done
 source:
   - file: api/app/routers/onboarding.py
-    symbols: [register(), get_session(), upgrade()]
+    symbols: [register, get_session, upgrade_oauth]
   - file: api/app/services/onboarding_service.py
-    symbols: [register(), resolve_session()]
+    symbols: [register, resolve_session]
   - file: api/app/services/governance_service.py
-    symbols: [create_change_request(), vote_on_change_request()]
+    symbols: [create_change_request, cast_vote]
   - file: api/app/models/governance.py
     symbols: [ChangeRequest, ChangeRequestVote, VoteDecision]
 done_when:

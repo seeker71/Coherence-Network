@@ -3,7 +3,7 @@ idea_id: data-infrastructure
 status: done
 source:
   - file: api/app/services/unified_db.py
-    symbols: [Base, engine_cache, schema init]
+    symbols: [database_url, engine, get_sessionmaker, session, ensure_schema]
 requirements:
   - All services use unified_db.session() for database access
   - Single COHERENCE_DATABASE_URL env var controls all persistence

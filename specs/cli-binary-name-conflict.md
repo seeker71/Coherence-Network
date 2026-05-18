@@ -3,13 +3,13 @@ idea_id: agent-cli
 status: done
 source:
   - file: cli/package.json
-    symbols: [bin]
+    symbols: []
   - file: cli/bin/coh.mjs
-    symbols: [CLI entry point with macOS conflict-detection warning]
+    symbols: []
   - file: cli/README.md
-    symbols: [installation instructions, usage examples]
+    symbols: []
   - file: CLAUDE.md
-    symbols: [Quick Lookup table, Key Conventions, Agent Guardrails]
+    symbols: []
 requirements:
   - "R1: Remove `cc` from cli/package.json bin map; keep `coh` and `coherence` as registered binaries"
   - "R2: Rename cli/bin/cc.mjs → cli/bin/coh.mjs; update bin map path accordingly"

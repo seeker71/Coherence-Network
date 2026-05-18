@@ -3,7 +3,7 @@ idea_id: identity-and-onboarding
 status: done
 source:
   - file: api/app/services/onboarding_service.py
-    symbols: [register(), claim_handle()]
+    symbols: [register, resolve_session]
   - file: api/app/routers/onboarding.py
     symbols: [onboarding endpoints]
 requirements:

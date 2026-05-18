@@ -2,10 +2,10 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: api/app/services/idea_service.py
-    symbols: [set_parent_idea()]
+  - file: api/app/services/idea_hierarchy.py
+    symbols: [set_parent_idea]
   - file: api/app/models/idea.py
-    symbols: [IdeaType, parent_idea_id, child_idea_ids]
+    symbols: [IdeaType, Idea]
 requirements:
   - Idea model includes idea_type, parent_idea_id, child_idea_ids fields
   - IdeaType enum has super, child, standalone values

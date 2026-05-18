@@ -3,9 +3,9 @@ idea_id: knowledge-and-resonance
 status: active
 source:
   - file: docs/vision-kb/concepts/lc-sacred-imagination.md
-    symbols: [Summary, Practice, Cross-References]
+    symbols: []
   - file: docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md
-    symbols: [Agent Integration Guidance]
+    symbols: []
   - file: docs/vision-kb/INDEX.md
   - file: docs/vision-kb/LOG.md
 requirements:

@@ -3,11 +3,11 @@ idea_id: user-surfaces
 status: done
 source:
   - file: api/app/services/meta_service.py
-    symbols: [MetaEndpointsResponse, MetaGraphResponse]
+    symbols: []
   - file: api/app/routers/meta.py
-    symbols: [/api/meta endpoints]
+    symbols: []
   - file: api/app/models/meta.py
-    symbols: [EndpointNode, ModuleNode]
+    symbols: [EndpointNode, ModuleNode, MetaEndpointsResponse, MetaGraphResponse]
 done_when:
   - "`GET /api/meta/endpoints` returns HTTP 200 with `total`, `traced`, `coverage_pct`, and `endpoints` list."
   - "Each endpoint entry includes `path`, `method`, `path_hash`, `tags`, `has_trace`, and nullable `spec_id`/`idea_id`."

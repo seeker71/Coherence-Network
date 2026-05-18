@@ -9,9 +9,9 @@ source:
   - file: api/app/routers/governance.py
     symbols: [create_change_request, cast_vote]
   - file: api/app/services/governance_service.py
-    symbols: [create_change_request, vote_on_change_request]
+    symbols: [create_change_request, cast_vote]
   - file: api/app/routers/contributor_identity.py
-    symbols: [link_identity, get_identities, lookup_identity]
+    symbols: [link_identity, get_identities]
   - file: api/app/routers/memberships.py
     symbols: [list_members, invite_member, accept_invite]
   - file: api/app/routers/messages.py

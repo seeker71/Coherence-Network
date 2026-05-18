@@ -3,9 +3,9 @@ idea_id: knowledge-and-resonance
 status: active
 source:
   - file: docs/lineage/urs-contribution-profile.graph.json
-    symbols: [presences, edges]
+    symbols: []
   - file: docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md
-    symbols: [Executive Summary, Epistemic Note]
+    symbols: []
   - file: docs/vision-kb/resources/INDEX.md
   - file: docs/vision-kb/LOG.md
 requirements:

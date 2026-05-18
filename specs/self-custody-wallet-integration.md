@@ -13,9 +13,9 @@ source:
   - file: api/tests/test_views_and_wallets.py
     symbols: [wallet test suite]
   - file: web/app/settings/wallet/page.tsx
-    symbols: [WalletSettingsPage, ConnectedWallets]
+    symbols: [WalletSettingsPage]
   - file: web/components/wallet/WalletConnect.tsx
-    symbols: [WalletConnect, registerWallet, verifyWallet]
+    symbols: [WalletConnect]
   - file: web/components/wallet/WalletProvider.tsx
     symbols: [WalletProvider]
   - file: web/lib/wallet-config.ts

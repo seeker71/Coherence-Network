@@ -5,9 +5,9 @@ status: done
 priority: high
 source:
   - file: api/app/services/verification_service.py
-    symbols: [compute_daily_merkle, publish_snapshot, verify_chain]
+    symbols: [compute_daily_hashes, compute_merkle_root, get_chain]
   - file: api/app/routers/verification.py
-    symbols: [get_verification_chain, get_snapshot, recompute_and_verify]
+    symbols: [get_chain, get_snapshot, recompute_and_verify, publish_snapshot]
   - file: scripts/publish_snapshot.py
     symbols: [main]
 requirements:

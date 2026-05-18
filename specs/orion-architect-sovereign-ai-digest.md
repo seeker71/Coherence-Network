@@ -3,9 +3,9 @@ idea_id: knowledge-and-resonance
 status: active
 source:
   - file: docs/lineage/urs-contribution-profile.graph.json
-    symbols: [presences, edges]
+    symbols: []
   - file: docs/vision-kb/resources/orion-architect-sovereign-ai-2026-05-06.md
-    symbols: [Executive Summary, Epistemic Note]
+    symbols: []
 requirements:
   - "Ingest the ORION Architect YouTube video as summary and extracted concepts, not full caption storage."
   - "Add source-backed graph data that can affect Urs's profile like other profile sources."
