@@ -1,0 +1,143 @@
+{
+  "date": "2026-05-19",
+  "thread_branch": "codex/add-jean-luc-transmission-20260518",
+  "commit_scope": "Add Jean-Luc Golden Codes transmission, promote missing vision-KB markdown surfaces into first-class substrate domains, and migrate substrate category numbers to an intentional numeric schema.",
+  "files_owned": [
+    "api/app/services/substrate/__init__.py",
+    "api/app/services/substrate/category.py",
+    "api/app/services/substrate/form.py",
+    "api/app/services/substrate/markdown_frontend.py",
+    "api/tests/test_substrate.py",
+    "api/tests/test_substrate_form_bml_state.py",
+    "api/tests/test_substrate_form_runtime.py",
+    "api/tests/test_substrate_numeric_schema.py",
+    "cli/package-lock.json",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/agents-tending-edges.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/numeric-schema.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/transmissions/README.md",
+    "docs/vision-kb/transmissions/2026-05-16-jean-luc-golden-codes.md",
+    "scripts/coh_substrate.py",
+    "docs/system_audit/commit_evidence_2026-05-19_transmission_substrate_numeric_schema.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile api/app/services/substrate/category.py api/app/services/substrate/markdown_frontend.py api/app/services/substrate/__init__.py api/app/services/substrate/form.py scripts/coh_substrate.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_substrate.py tests/test_substrate_numeric_schema.py tests/test_substrate_form.py tests/test_substrate_form_bml_state.py tests/test_substrate_form_runtime.py tests/test_substrate_form_self_hosted.py tests/test_substrate_form_extensions.py tests/test_substrate_recipe_eval.py",
+      "python3 scripts/coh_substrate.py reset --yes",
+      "python3 scripts/coh_substrate.py ingest --all --structured",
+      "python3 scripts/coh_substrate.py kb-sync-audit --strict",
+      "python3 scripts/coh_substrate.py stats",
+      "python3 scripts/coh_substrate.py annotate docs/vision-kb/transmissions/2026-05-16-jean-luc-golden-codes.md",
+      "python3 scripts/coh_substrate.py form '~Concept'",
+      "python3 scripts/coh_substrate.py form '~Memory'",
+      "python3 scripts/coh_substrate.py form '~Transmission'",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "git diff --check"
+    ],
+    "summary": "Golden Codes transmission is source-marked and indexed. Transmission, resource, guide, language_view, and kb_page surfaces are first-class substrate domains. Domain category numbers now follow intentional bands, documented in numeric-schema.md and guarded by test_substrate_numeric_schema.py. Local substrate tables were reset and rebuilt from source; kb-sync-audit is clean with 115 concepts, 10 transmissions, 9 resources, 13 guides, 4 language views, and 19 KB pages. Maintainability baseline was refreshed to the current mainline body-state after guard reported stale thresholds; rerun shows regression: no. Runtime web guard normalized cli/package-lock.json to match the existing cli/package.json 0.13.3 version."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet; production/shared substrate DBs must run reset/backfill after code lands."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents and CLI users can annotate and query transmission, resource, guide, language_view, and kb_page cells as first-class substrate domains with intentional domain category coordinates.",
+    "public_endpoints": [
+      "POST /api/substrate/form",
+      "GET /api/substrate/annotate?path={repo_path}",
+      "GET /api/substrate/cell/{domain}/{name}"
+    ],
+    "test_flows": [
+      "Reset and rebuild substrate tables from source markdown.",
+      "Annotate Golden Codes transmission as @transmission('tx-jean-luc-golden-codes').",
+      "Query Form trivial refs and confirm ~Concept=@1.2.4.1, ~Memory=@1.2.4.6, ~Transmission=@1.2.4.10.",
+      "Run kb-sync-audit --strict after rebuild and verify no missing, stale, path-drift, or wrong-domain concept rows."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI, PR review, and deploy/shared DB rebuild remain pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "substrate"
+  ],
+  "spec_ids": [
+    "docs/coherence-substrate/numeric-schema.md",
+    "docs/coherence-substrate/agents-tending-edges.md"
+  ],
+  "task_ids": [
+    "transmission-substrate-ingest",
+    "substrate-numeric-schema"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "schema-discernment",
+        "source-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "substrate-backfill",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/vision-kb/transmissions/2026-05-16-jean-luc-golden-codes.md",
+    "docs/coherence-substrate/numeric-schema.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "coherence-substrate:@transmission('tx-jean-luc-golden-codes')",
+    "coherence-substrate:~Concept=@1.2.4.1",
+    "coherence-substrate:~Memory=@1.2.4.6",
+    "coherence-substrate:~Transmission=@1.2.4.10",
+    "coherence-substrate:kb-sync-audit-strict-clean"
+  ],
+  "change_files": [
+    "api/app/services/substrate/__init__.py",
+    "api/app/services/substrate/category.py",
+    "api/app/services/substrate/form.py",
+    "api/app/services/substrate/markdown_frontend.py",
+    "api/tests/test_substrate.py",
+    "api/tests/test_substrate_form_bml_state.py",
+    "api/tests/test_substrate_form_runtime.py",
+    "api/tests/test_substrate_numeric_schema.py",
+    "cli/package-lock.json",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/agents-tending-edges.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/numeric-schema.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/transmissions/README.md",
+    "docs/vision-kb/transmissions/2026-05-16-jean-luc-golden-codes.md",
+    "scripts/coh_substrate.py"
+  ],
+  "change_intent": "runtime_feature"
+}

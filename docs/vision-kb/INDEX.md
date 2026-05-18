@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-18 | **Concepts**: 115 | **Status**: 4 expanding, 55 seed, 55 deepening | **Transmissions held**: 9 (8 integrated, 1 witnessed-without-absorption)
+> **Last maintained**: 2026-05-18 | **Concepts**: 115 | **Status**: 4 expanding, 55 seed, 55 deepening | **Transmissions held**: 10 (8 integrated, 2 witnessed-without-absorption)
 
 ## How to use this KB
 
@@ -181,6 +181,7 @@ From [Giles — The Hati Suci and Light Hubs Vision](transmissions/2026-05-14-gi
 Transmissions held source-marked but **not** integrated as concepts (witness without absorption):
 
 - [Pleiadian "Emergency Warning" interview](transmissions/2026-04-29-pleiadian-emergency-warning.md) — recorded for completeness; its conspiratorial and unverified-specific framings did not pass the body's discernment for concept-seeding.
+- [Jean-Luc Bozzoli — Golden Codes and Golden Dolphins](transmissions/2026-05-16-jean-luc-golden-codes.md) — recorded from the 2026-05-16 email compilation; its golden-age, dolphin/whale, galactic-family, and Daniel Scranton excerpt threads resonate with existing concepts, so the body witnessed it with provenance rather than seeding new tissue.
 
 ### Level 3 — Vocabulary (9)
 - [Coherence](concepts/lc-w-coherence.md) — 432 Hz — frequencies align as one

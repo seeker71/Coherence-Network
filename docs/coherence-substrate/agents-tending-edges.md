@@ -37,7 +37,7 @@ The KB markdown and graph DB are not the whole body. Every canonical concept als
 - **Delete or rename** a concept: remove or move the file, run `python3 scripts/coh_substrate.py kb-sync-audit --strict` to see the stale cell, then run `python3 scripts/coh_substrate.py kb-sync-audit --prune-stale` after reviewing the stale row. Pruning removes the live NamedCell from the registry; interned Blueprint/Recipe nodes may remain as historical structural memory.
 - **Session proof**: include `kb-sync-audit --strict` in the spec/evidence command list whenever a KB concept is added, renamed, deleted, or materially changed.
 
-Current boundary: `kb-sync-audit` audits canonical concept files. It also counts language views, resources, and transmissions as unmodeled KB surfaces so the gap stays visible, but those surfaces are not yet first-class substrate domains.
+Current boundary: `kb-sync-audit` audits canonical concept files. It also counts the other first-class KB surfaces: language views, resources, guides, KB pages, and transmission records. These surfaces are live substrate domains through `python3 scripts/coh_substrate.py ingest-paths <path>` and targeted backfills such as `python3 scripts/coh_substrate.py ingest --resources --guides --language-views --kb-pages --transmissions --structured`; strict parity audits beyond canonical concepts can deepen from this ground.
 
 ### Spec (`specs/{slug}.md`)
 
@@ -85,6 +85,18 @@ Current boundary: `kb-sync-audit` audits canonical concept files. It also counts
 - Frontmatter: `id` (`tx-{slug}`), `kind: transmission`, `source_url`, `source_title`, `source_type`, `received` (date), `status`, `seeded_concepts` (list of lc-ids)
 - Add an entry to `docs/vision-kb/INDEX.md` under *Source-Marked Transmissions*
 - Each `seeded_concepts` entry must have a corresponding `lc-{id}.md` concept file with frontmatter `source: ../transmissions/{date}-{slug}.md` pointing back
+- Sync the substrate cell: `python3 scripts/coh_substrate.py ingest-paths docs/vision-kb/transmissions/{date}-{slug}.md`
+- The structured transmission ingester preserves frontmatter as a CTOR tree, authors `seeded_concepts[]` as `R_Transmit.WITNESS_TRANSMISSION` recipes, and authors body `→ lc-*` cross-reference lines as `R_Compose.CROSS_REF` recipes. Witnessed-without-absorption transmissions still teach the lattice through resonance edges without pretending they seeded new concept tissue.
+
+### Other vision-KB markdown surface
+
+- Resource files (`docs/vision-kb/resources/*.md`) sync as `@resource(...)` cells.
+- Guide files (`docs/vision-kb/guides/*.md`) sync as `@guide(...)` cells.
+- Concept language variants and glossary files sync as `@language_view(...)` cells.
+- Section pages, indexes, maps, and other non-concept KB markdown sync as `@kb_page(...)` cells.
+- For a single file, run `python3 scripts/coh_substrate.py ingest-paths <path>`.
+- For a backfill, run `python3 scripts/coh_substrate.py ingest --resources --guides --language-views --kb-pages --structured`.
+- The structured ingesters preserve frontmatter as CTOR trees and author body `lc-*` mentions as `R_Compose.CROSS_REF` recipes when the referenced concept already exists in the substrate. Language views and guides with frontmatter `id: lc-*` also receive a direct canonical concept edge.
 
 ## When you can't add the edge yet
 

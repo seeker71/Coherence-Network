@@ -101,27 +101,41 @@ class BRecipe(IntEnum):
 
 
 class BDomain(IntEnum):
-    """The Network's named entity types — what cells our body holds."""
+    """The Network's named entity types — what cells our body holds.
+
+    Instance bands are intentional:
+      1-9   living operating body: knowledge, intention, execution, witness
+      10-19 vision-KB surfaces: transmissions, resources, guides, views, maps
+      21-29 dimensional coordinates: spectrum, harmonic, geometry, polarity, topology
+
+    Gaps are kept on purpose. They are invitations for related tissue,
+    not accidents to compress away.
+    """
     UNDEFINED = 0
-    IDEA = 1        # problem-shape with capabilities, absorbed-ideas, spec-links
-    SPEC = 2        # executable form: source, requirements, done_when, test
-    CONCEPT = 3     # vision-kb story: cross_refs, visuals, parent
-    MEMORY = 4      # auto-loaded note: name, description, type, body
+    CONCEPT = 1     # primary knowledge organ: cross_refs, visuals, parent, geometry
+    IDEA = 2        # intention/problem-shape with capabilities, absorbed-ideas, spec-links
+    SPEC = 3        # executable contract: source, requirements, done_when, test
+    TASK = 4        # work unit: idea_id, status, context, witness
     PRESENCE = 5    # contributor: HUMAN/AGENT/SYSTEM with role, edges
-    TASK = 6        # work unit: idea_id, status, context, witness
+    MEMORY = 6      # carried agent/project context: name, description, type, body
     LINEAGE = 7     # transmission edge: kind, from, to, evidence
     WITNESS = 8     # event-as-proof: presence, action, evidence_url, timestamp
     GRAMMAR = 9     # parse rule: (pattern, action) — substrate-resident BMF-shaped grammar
+    TRANSMISSION = 10   # source-marked teaching entering the body
+    RESOURCE = 11       # source/extraction/resource records in the vision KB
+    GUIDE = 12          # reader/practice guides derived from concept tissue
+    LANGUAGE_VIEW = 13  # translated/localized views of canonical KB tissue
+    KB_PAGE = 14        # non-concept vision-KB pages, indexes, maps, and sections
     # Dimensional vocabulary — the geometric/harmonic axes a teaching can resonate along.
     # Cells in these domains are coordinates: Hz(741), ~Triad, ~ParallelFacets, ...
     # A concept holding `geometry: { arity: 3, form: triad, harmonic: 174 }` authors
     # edges into these domains; the substrate then equates cells with matching edge-sets
     # across discipline-vocabularies (gunas / dialectic / parallel-facets all triadic).
-    SPECTRUM = 10        # Hz bands: Hz(174), Hz(285), Hz(396), ..., Hz(963)
-    HARMONIC = 11        # intervals/ratios: Octave, Fifth, Fourth, Golden, 3:7
-    GEOMETRIC_FORM = 12  # named shapes: Triad, Pentad, Heptad, Ennead, Dodecad, ...
-    POLARITY = 13        # Unipolar, Bipolar-Complementary, Triadic-Tension, ParallelFacets
-    TOPOLOGY = 14        # Cyclic-Closed, Parallel, Nested, Holographic, Web, Radial, ...
+    SPECTRUM = 21        # Hz bands: Hz(174), Hz(285), Hz(396), ..., Hz(963)
+    HARMONIC = 22        # intervals/ratios: Octave, Fifth, Fourth, Golden, 3:7
+    GEOMETRIC_FORM = 23  # named shapes: Triad, Pentad, Heptad, Ennead, Dodecad, ...
+    POLARITY = 24        # Unipolar, Bipolar-Complementary, Triadic-Tension, ParallelFacets
+    TOPOLOGY = 25        # Cyclic-Closed, Parallel, Nested, Holographic, Web, Radial, ...
 
 
 # ---------------------------------------------------------------------------

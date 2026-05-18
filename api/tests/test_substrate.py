@@ -30,7 +30,13 @@ from app.services.substrate import (
     annotate_path,
     find_cells_compatible_with,
     find_equivalent_cells,
+    ingest_concept_file,
+    ingest_guide_file,
+    ingest_kb_page_file,
+    ingest_language_view_file,
     ingest_memory_file,
+    ingest_resource_file,
+    ingest_transmission_file,
     intern_node,
     lattice_stats,
     lookup_cell,
@@ -41,9 +47,12 @@ from app.services.substrate import (
 from app.services.substrate.category import (
     BBasic,
     BContainer,
+    BDomain,
     BType,
     Level,
+    RCompose,
     RBasic,
+    RTransmit,
     RType,
 )
 from app.services.substrate.kernel import DOMAIN_BLUEPRINT, DOMAIN_RECIPE
@@ -149,7 +158,7 @@ def test_recipe_dedup_via_makeself(session):
 
 def test_make_cell_persists_and_lookup_finds(session):
     """Creating a cell, then looking it up, returns the same shape."""
-    bp = NodeID(1, Level.BASIC, BBasic.DOMAIN, 4)  # MEMORY
+    bp = NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.MEMORY)
     cell = make_cell(session, "test-memory", "memory", bp, source_path="/tmp/x.md")
     assert cell.cell_id is not None
 
@@ -162,8 +171,8 @@ def test_make_cell_persists_and_lookup_finds(session):
 
 def test_make_cell_idempotent_on_domain_name(session):
     """Re-creating the same (domain, name) updates instead of duplicating."""
-    bp1 = NodeID(1, Level.BASIC, BBasic.DOMAIN, 4)
-    bp2 = NodeID(1, Level.BASIC, BBasic.DOMAIN, 1)  # IDEA
+    bp1 = NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.MEMORY)
+    bp2 = NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.IDEA)
     c1 = make_cell(session, "x", "memory", bp1)
     c2 = make_cell(session, "x", "memory", bp2)
     assert c1.cell_id == c2.cell_id
@@ -260,6 +269,134 @@ def test_lattice_stats_reflects_ingestion(session, tmp_path):
     after = lattice_stats(session)
     assert after["cells_total"] == 1
     assert after["blueprints_total"] >= 1
+
+
+def test_transmission_ingest_authors_seed_and_cross_ref_edges(session, tmp_path):
+    """Transmission records enter as their own substrate domain.
+
+    Seeded concepts become WITNESS_TRANSMISSION recipes, while body
+    cross-reference lines let witnessed-without-absorption transmissions
+    still point at concepts they resonate with.
+    """
+    c1 = tmp_path / "lc-a.md"
+    c1.write_text(textwrap.dedent("""\
+        ---
+        id: lc-a
+        hz: 528
+        status: seed
+        ---
+        # A
+        """))
+    c2 = tmp_path / "lc-b.md"
+    c2.write_text(textwrap.dedent("""\
+        ---
+        id: lc-b
+        hz: 639
+        status: seed
+        ---
+        # B
+        """))
+    ingest_concept_file(session, c1, structured=True)
+    ingest_concept_file(session, c2, structured=True)
+
+    tx = tmp_path / "2026-05-18-test-transmission.md"
+    tx.write_text(textwrap.dedent("""\
+        ---
+        id: tx-test-transmission
+        kind: transmission
+        source_url: null
+        source_title: Test Transmission
+        source_type: written
+        received: 2026-05-18
+        status: source-marked
+        seeded_concepts:
+          - lc-a
+        ---
+
+        # Test Transmission
+
+        ## Cross-References
+
+        → lc-a,
+        lc-b
+        """))
+
+    cell, bp, ctor = ingest_transmission_file(session, tx, structured=True)
+
+    assert cell.domain == "transmission"
+    assert cell.name == "tx-test-transmission"
+    assert bp is not None
+    assert ctor is not None
+
+    witness_cat = str(NodeID(1, Level.BASIC, RBasic.TRANSMIT, RTransmit.WITNESS_TRANSMISSION))
+    cross_ref_cat = str(NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF))
+    witness_edges = session.query(SubstrateNodeORM).filter(
+        SubstrateNodeORM.domain == DOMAIN_RECIPE,
+        SubstrateNodeORM.serialized.startswith(witness_cat),
+    ).count()
+    cross_ref_edges = session.query(SubstrateNodeORM).filter(
+        SubstrateNodeORM.domain == DOMAIN_RECIPE,
+        SubstrateNodeORM.serialized.startswith(cross_ref_cat),
+    ).count()
+
+    assert witness_edges >= 1
+    assert cross_ref_edges >= 2
+
+
+def test_kb_surface_ingesters_create_domains_and_cross_ref_edges(session, tmp_path):
+    """Non-concept KB surfaces enter as first-class substrate domains."""
+    concept = tmp_path / "lc-health.md"
+    concept.write_text(textwrap.dedent("""\
+        ---
+        id: lc-health
+        hz: 528
+        status: seed
+        ---
+        # Health
+        """))
+    ingest_concept_file(session, concept, structured=True)
+
+    resource = tmp_path / "resource.md"
+    resource.write_text("# Resource\n\nConnects to lc-health.\n")
+    guide = tmp_path / "lc-health-guide.md"
+    guide.write_text(textwrap.dedent("""\
+        ---
+        id: lc-health
+        type: guide
+        ---
+        # Guide
+        """))
+    language_view = tmp_path / "lc-health.de.md"
+    language_view.write_text(textwrap.dedent("""\
+        ---
+        id: lc-health
+        lang: de
+        ---
+        # Gesundheit
+        """))
+    kb_page = tmp_path / "INDEX.md"
+    kb_page.write_text("# Index\n\nSee lc-health.\n")
+
+    cells = [
+        ingest_resource_file(session, resource, structured=True)[0],
+        ingest_guide_file(session, guide, structured=True)[0],
+        ingest_language_view_file(session, language_view, structured=True)[0],
+        ingest_kb_page_file(session, kb_page, structured=True)[0],
+    ]
+
+    assert [cell.domain for cell in cells] == [
+        "resource",
+        "guide",
+        "language_view",
+        "kb_page",
+    ]
+
+    cross_ref_cat = str(NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF))
+    cross_ref_edges = session.query(SubstrateNodeORM).filter(
+        SubstrateNodeORM.domain == DOMAIN_RECIPE,
+        SubstrateNodeORM.serialized.startswith(cross_ref_cat),
+    ).count()
+    assert cross_ref_edges >= 4
 
 
 # ---------------------------------------------------------------------------

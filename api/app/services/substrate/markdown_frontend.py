@@ -97,6 +97,31 @@ def BID_task() -> NodeID:
     return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.TASK)
 
 
+def BID_transmission() -> NodeID:
+    """Trivial Transmission blueprint — source-marked teaching cells."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.TRANSMISSION)
+
+
+def BID_resource() -> NodeID:
+    """Trivial Resource blueprint — source/extraction records."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.RESOURCE)
+
+
+def BID_guide() -> NodeID:
+    """Trivial Guide blueprint — practice/reader guide cells."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.GUIDE)
+
+
+def BID_language_view() -> NodeID:
+    """Trivial LanguageView blueprint — translated/localized KB views."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.LANGUAGE_VIEW)
+
+
+def BID_kb_page() -> NodeID:
+    """Trivial KBPage blueprint — general vision-KB pages and indexes."""
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.KB_PAGE)
+
+
 def RID_string_lit(inst: int) -> NodeID:
     return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
 
@@ -984,6 +1009,269 @@ def _author_lineage_edges_from_frontmatter(
             )
 
 
+def ingest_transmission_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one source-marked transmission record.
+
+    The transmission file is not flattened into a generic lineage blob.
+    Its frontmatter becomes a structured CTOR tree, and its explicit
+    concept relationships become substrate recipes:
+
+      - seeded_concepts[] → R_Transmit.WITNESS_TRANSMISSION
+      - body cross-reference line (`→ lc-*`) → R_Compose.CROSS_REF
+
+    This lets witnessed-without-absorption transmissions participate in
+    the lattice without pretending they seeded new concept tissue.
+    """
+    parsed = parse_markdown_file(path)
+    cell, blueprint_id, ctor_id = _ingest_markdown_payload(
+        session,
+        parsed,
+        domain="transmission",
+        domain_blueprint=BID_transmission(),
+        name_field="id",
+        source_path=str(path),
+        structured=structured,
+    )
+    if structured:
+        _author_transmission_edges(
+            session, cell, parsed.frontmatter, parsed.body
+        )
+    return cell, blueprint_id, ctor_id
+
+
+def _author_transmission_edges(
+    session: Session,
+    cell: Any,
+    frontmatter: Dict[str, Any],
+    body: str,
+) -> None:
+    """Author substrate edges implied by a transmission record."""
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RCompose, RTransmit
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+
+    seeded = frontmatter.get("seeded_concepts")
+    if isinstance(seeded, list):
+        witness_cat = NodeID(
+            1, Level.BASIC, RBasic.TRANSMIT, RTransmit.WITNESS_TRANSMISSION
+        )
+        for entry in seeded:
+            slug = _slug_from_entry(entry)
+            if not slug:
+                continue
+            target = _lookup_cell(session, "concept", slug)
+            if target is None or target.cell_id is None:
+                continue
+            target_ref = NodeID(1, Level.TRIVIAL, RType.REF, target.cell_id)
+            intern_node(
+                session, DOMAIN_RECIPE, witness_cat, [source_ref, target_ref]
+            )
+
+    cross_ref_cat = NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF)
+    for slug in _extract_body_cross_refs(body):
+        target = _lookup_cell(session, "concept", slug)
+        if target is None or target.cell_id is None:
+            continue
+        target_ref = NodeID(1, Level.TRIVIAL, RType.REF, target.cell_id)
+        intern_node(
+            session, DOMAIN_RECIPE, cross_ref_cat, [source_ref, target_ref]
+        )
+
+
+def _extract_body_cross_refs(body: str) -> List[str]:
+    """Extract `lc-*` concept ids from transmission cross-reference lines."""
+    refs: List[str] = []
+    seen: set[str] = set()
+    in_cross_ref_block = False
+
+    def add_from(text: str) -> None:
+        for slug in re.findall(r"\blc-[a-z0-9-]+\b", text):
+            if slug not in seen:
+                seen.add(slug)
+                refs.append(slug)
+
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("→"):
+            in_cross_ref_block = True
+            add_from(stripped)
+            continue
+        if in_cross_ref_block:
+            if not stripped or stripped.startswith("#"):
+                in_cross_ref_block = False
+                continue
+            add_from(stripped)
+    return refs
+
+
+def ingest_resource_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one vision-KB resource/extraction file."""
+    parsed = parse_markdown_file(path)
+    cell, blueprint_id, ctor_id = _ingest_markdown_payload(
+        session,
+        parsed,
+        domain="resource",
+        domain_blueprint=BID_resource(),
+        source_path=str(path),
+        structured=structured,
+    )
+    if structured:
+        _author_body_concept_cross_refs(session, cell, parsed.body)
+    return cell, blueprint_id, ctor_id
+
+
+def ingest_guide_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one vision-KB guide file."""
+    parsed = parse_markdown_file(path)
+    cell, blueprint_id, ctor_id = _ingest_markdown_payload(
+        session,
+        parsed,
+        domain="guide",
+        domain_blueprint=BID_guide(),
+        source_path=str(path),
+        structured=structured,
+    )
+    if structured:
+        _author_frontmatter_concept_ref(session, cell, parsed.frontmatter)
+        _author_body_concept_cross_refs(session, cell, parsed.body)
+    return cell, blueprint_id, ctor_id
+
+
+def ingest_language_view_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one translated/localized vision-KB view."""
+    parsed = parse_markdown_file(path)
+    cell, blueprint_id, ctor_id = _ingest_markdown_payload(
+        session,
+        parsed,
+        domain="language_view",
+        domain_blueprint=BID_language_view(),
+        source_path=str(path),
+        structured=structured,
+    )
+    if structured:
+        _author_frontmatter_concept_ref(session, cell, parsed.frontmatter)
+        _author_body_concept_cross_refs(session, cell, parsed.body)
+    return cell, blueprint_id, ctor_id
+
+
+def ingest_kb_page_file(
+    session: Session, path: Path, structured: bool = False
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one general vision-KB markdown page or section index."""
+    parsed = parse_markdown_file(path)
+    cell, blueprint_id, ctor_id = _ingest_markdown_payload(
+        session,
+        parsed,
+        domain="kb_page",
+        domain_blueprint=BID_kb_page(),
+        source_path=str(path),
+        structured=structured,
+        name_override=_kb_page_name(path),
+    )
+    _prune_legacy_kb_page_cell(session, path, cell)
+    if structured:
+        _author_frontmatter_concept_ref(session, cell, parsed.frontmatter)
+        _author_body_concept_cross_refs(session, cell, parsed.body)
+    return cell, blueprint_id, ctor_id
+
+
+def _kb_page_name(path: Path) -> str:
+    """Stable identity for general KB pages, including section INDEX files."""
+    parts = path.parts
+    if "vision-kb" in parts:
+        idx = parts.index("vision-kb")
+        rel = Path(*parts[idx + 1:])
+    else:
+        rel = Path(path.name)
+    return rel.with_suffix("").as_posix()
+
+
+def _prune_legacy_kb_page_cell(session: Session, path: Path, cell: Any) -> None:
+    """Remove pre-relative-name KB page cells for the same source path."""
+    if cell is None or cell.cell_id is None or cell.name == path.stem:
+        return
+    from app.services.substrate.orm import SubstrateNamedCellORM
+
+    legacy = session.query(SubstrateNamedCellORM).filter_by(
+        domain="kb_page",
+        name=path.stem,
+        source_path=str(path),
+    ).one_or_none()
+    if legacy is not None and legacy.cell_id != cell.cell_id:
+        session.delete(legacy)
+
+
+def _author_frontmatter_concept_ref(
+    session: Session, cell: Any, frontmatter: Dict[str, Any]
+) -> None:
+    """Connect translated/guide pages to the canonical concept they name."""
+    concept_id = frontmatter.get("id")
+    if isinstance(concept_id, str) and concept_id.startswith("lc-"):
+        _author_concept_cross_ref_edges(session, cell, [concept_id])
+
+
+def _author_body_concept_cross_refs(session: Session, cell: Any, body: str) -> None:
+    """Author CROSS_REF edges from any markdown body that names `lc-*` ids."""
+    _author_concept_cross_ref_edges(session, cell, _extract_all_concept_refs(body))
+
+
+def _author_concept_cross_ref_edges(
+    session: Session, cell: Any, slugs: List[str]
+) -> None:
+    """Author R_Compose.CROSS_REF recipes to existing concept cells."""
+    from app.services.substrate.kernel import (
+        DOMAIN_RECIPE,
+        intern_node,
+        lookup_cell as _lookup_cell,
+    )
+    from app.services.substrate.category import RCompose
+
+    if cell is None or cell.cell_id is None:
+        return
+
+    source_ref = NodeID(1, Level.TRIVIAL, RType.REF, cell.cell_id)
+    cross_ref_cat = NodeID(1, Level.BASIC, RBasic.COMPOSE, RCompose.CROSS_REF)
+    seen: set[str] = set()
+    for slug in slugs:
+        if slug in seen:
+            continue
+        seen.add(slug)
+        target = _lookup_cell(session, "concept", slug)
+        if target is None or target.cell_id is None:
+            continue
+        target_ref = NodeID(1, Level.TRIVIAL, RType.REF, target.cell_id)
+        intern_node(
+            session, DOMAIN_RECIPE, cross_ref_cat, [source_ref, target_ref]
+        )
+
+
+def _extract_all_concept_refs(text: str) -> List[str]:
+    """Extract all `lc-*` concept ids from a markdown body."""
+    refs: List[str] = []
+    seen: set[str] = set()
+    for slug in re.findall(r"\blc-[a-z0-9-]+\b", text):
+        if slug not in seen:
+            seen.add(slug)
+            refs.append(slug)
+    return refs
+
+
 def ingest_witness_event(
     session: Session,
     presence: str,
@@ -1128,6 +1416,11 @@ def ingest_markdown_text(
         "concept": BID_concept(),
         "presence": BID_presence(),
         "lineage": BID_lineage(),
+        "transmission": BID_transmission(),
+        "resource": BID_resource(),
+        "guide": BID_guide(),
+        "language_view": BID_language_view(),
+        "kb_page": BID_kb_page(),
         "witness": BID_witness(),
         "task": BID_task(),
     }
@@ -1180,6 +1473,7 @@ def _ingest_markdown_payload(
     name_field: Optional[str] = None,
     source_path: Optional[str] = None,
     structured: bool = False,
+    name_override: Optional[str] = None,
 ) -> Tuple[Any, NodeID, NodeID]:
     """Shared ingest core — operates on already-parsed markdown.
 
@@ -1189,8 +1483,8 @@ def _ingest_markdown_payload(
     of the earlier flat type-marker encoder. See
     docs/coherence-substrate/structural-composition.md.
     """
-    name = None
-    if name_field:
+    name = name_override
+    if not name and name_field:
         name = parsed.frontmatter.get(name_field)
     if not name:
         name = parsed.frontmatter.get("name") or parsed.frontmatter.get("title")

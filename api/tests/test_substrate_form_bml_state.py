@@ -141,8 +141,8 @@ def test_state_primitives_compose_inside_choose(session):
 
 
 def test_state_inside_with_block(session):
-    """`with @1.2.4.3 { save; discard }` — BML's `with` carrying state ops."""
-    nid = form_evaluate_text(session, "with @1.2.4.3 { save; discard }").value
+    """`with @1.2.4.1 { save; discard }` — BML's `with` carrying state ops."""
+    nid = form_evaluate_text(session, "with @1.2.4.1 { save; discard }").value
     assert nid.type_ == RBasic.BLOCK  # WITH is RBlock.WITH
 
 
