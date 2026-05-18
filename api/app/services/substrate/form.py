@@ -108,6 +108,11 @@ TRIVIAL_REFS: Dict[str, NodeID] = {
     "Task": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.TASK),
     "Lineage": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.LINEAGE),
     "Witness": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.WITNESS),
+    "Transmission": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.TRANSMISSION),
+    "Resource": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.RESOURCE),
+    "Guide": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.GUIDE),
+    "LanguageView": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.LANGUAGE_VIEW),
+    "KBPage": NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.KB_PAGE),
     # Container trivial blueprints
     "List": NodeID(1, Level.BASIC, BBasic.CONTAINER, BContainer.LIST),
     "Object": NodeID(1, Level.BASIC, BBasic.CONTAINER, BContainer.OBJECT),
@@ -125,6 +130,11 @@ DOMAIN_TO_REF: Dict[str, str] = {
     "task": "Task",
     "lineage": "Lineage",
     "witness": "Witness",
+    "transmission": "Transmission",
+    "resource": "Resource",
+    "guide": "Guide",
+    "language_view": "LanguageView",
+    "kb_page": "KBPage",
 }
 
 

@@ -7,7 +7,7 @@ equivalence queries, path annotation, and Form expression evaluation.
 Usage:
     coh_substrate.py ingest <path>...                  # ingest specific files
     coh_substrate.py ingest --memories                  # backfill memories
-    coh_substrate.py ingest --all                       # backfill all 5 domains
+    coh_substrate.py ingest --all                       # backfill all markdown domains
     coh_substrate.py stats                              # lattice statistics
     coh_substrate.py equivalent <domain> <name>         # structural equivalents
     coh_substrate.py annotate <path>                    # substrate context for a file
@@ -35,11 +35,16 @@ from app.services.substrate import (  # noqa: E402
     form_serialize_cell,
     form_serialize_node_id,
     ingest_concept_file,
+    ingest_guide_file,
     ingest_idea_file,
+    ingest_kb_page_file,
+    ingest_language_view_file,
     ingest_lineage_file,
     ingest_memory_file,
     ingest_presence_file,
+    ingest_resource_file,
     ingest_spec_file,
+    ingest_transmission_file,
     lattice_stats,
     lookup_cell,
 )
@@ -50,8 +55,23 @@ MEMORY_DIR = Path.home() / ".claude/projects/-Users-ursmuff-source-Coherence-Net
 SPEC_DIR = REPO_ROOT / "specs"
 IDEA_DIR = REPO_ROOT / "ideas"
 CONCEPT_DIR = REPO_ROOT / "docs/vision-kb/concepts"
+GUIDE_DIR = REPO_ROOT / "docs/vision-kb/guides"
+GLOSSARY_DIR = REPO_ROOT / "docs/vision-kb/glossary"
 PRESENCE_DIR = REPO_ROOT / "docs/presences"
 LINEAGE_DIR = REPO_ROOT / "docs/lineage"
+TRANSMISSION_DIR = REPO_ROOT / "docs/vision-kb/transmissions"
+RESOURCE_DIR = REPO_ROOT / "docs/vision-kb/resources"
+VKB_DIR = REPO_ROOT / "docs/vision-kb"
+KB_PAGE_DIRS = [
+    VKB_DIR,
+    VKB_DIR / "locations",
+    VKB_DIR / "materials",
+    VKB_DIR / "realization",
+    VKB_DIR / "scales",
+    VKB_DIR / "spaces",
+    VKB_DIR / "stories",
+    VKB_DIR / "wanderings",
+]
 
 # Composting artifacts — historical sense-records that no longer carry live
 # lineage edges. They stay in the tree as memory but don't enter the substrate.
@@ -68,9 +88,29 @@ _INGESTERS = {
     "memory": (MEMORY_DIR, ingest_memory_file, lambda p: p.name.upper() != "MEMORY.MD"),
     "spec": (SPEC_DIR, ingest_spec_file, lambda p: p.name not in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md")),
     "idea": (IDEA_DIR, ingest_idea_file, lambda p: p.name not in ("INDEX.md", "TEMPLATE.md")),
-    "concept": (CONCEPT_DIR, ingest_concept_file, lambda p: p.name not in ("INDEX.md", "SCHEMA.md", "LOG.md")),
+    "concept": (
+        CONCEPT_DIR,
+        ingest_concept_file,
+        lambda p: p.name not in ("INDEX.md", "SCHEMA.md", "LOG.md") and "." not in p.stem,
+    ),
     "presence": (PRESENCE_DIR, ingest_presence_file, lambda p: p.name not in ("INDEX.md", "README.md")),
     "lineage": (LINEAGE_DIR, ingest_lineage_file, lambda p: p.name not in _LINEAGE_COMPOST),
+    "transmission": (TRANSMISSION_DIR, ingest_transmission_file, lambda p: p.name != "README.md"),
+    "resource": (RESOURCE_DIR, ingest_resource_file, lambda p: p.name != "INDEX.md"),
+    "guide": (GUIDE_DIR, ingest_guide_file, lambda p: True),
+    "language_view": (
+        [CONCEPT_DIR, GLOSSARY_DIR],
+        ingest_language_view_file,
+        lambda p: p.suffix == ".md" and (
+            (p.parent == CONCEPT_DIR and "." in p.stem)
+            or p.parent == GLOSSARY_DIR
+        ),
+    ),
+    "kb_page": (
+        KB_PAGE_DIRS,
+        ingest_kb_page_file,
+        lambda p: p.suffix == ".md" and p.name not in ("SCHEMA.md",),
+    ),
 }
 
 
@@ -78,21 +118,42 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     structured = getattr(args, "structured", False)
     if args.all:
         rc = 0
-        for domain in ("memory", "spec", "idea", "concept", "presence", "lineage"):
+        for domain in (
+            "memory",
+            "spec",
+            "idea",
+            "concept",
+            "presence",
+            "lineage",
+            "transmission",
+            "resource",
+            "guide",
+            "language_view",
+            "kb_page",
+        ):
             rc |= _ingest_domain(domain, structured=structured)
         return rc
-    if args.memories:
-        return _ingest_domain("memory", structured=structured)
-    if args.specs:
-        return _ingest_domain("spec", structured=structured)
-    if args.ideas:
-        return _ingest_domain("idea", structured=structured)
-    if args.concepts:
-        return _ingest_domain("concept", structured=structured)
-    if args.presences:
-        return _ingest_domain("presence", structured=structured)
-    if args.lineages:
-        return _ingest_domain("lineage", structured=structured)
+    selected = [
+        ("memories", "memory"),
+        ("specs", "spec"),
+        ("ideas", "idea"),
+        ("concepts", "concept"),
+        ("presences", "presence"),
+        ("lineages", "lineage"),
+        ("transmissions", "transmission"),
+        ("resources", "resource"),
+        ("guides", "guide"),
+        ("language_views", "language_view"),
+        ("kb_pages", "kb_page"),
+    ]
+    selected_domains = [
+        domain for attr, domain in selected if getattr(args, attr, False)
+    ]
+    if selected_domains:
+        rc = 0
+        for domain in selected_domains:
+            rc |= _ingest_domain(domain, structured=structured)
+        return rc
     if args.paths:
         return _ingest_files([Path(p) for p in args.paths], structured=structured)
     print("ingest: no target specified (try --memories, --all, or paths)", file=sys.stderr)
@@ -108,10 +169,55 @@ def _ingest_files(paths: list[Path], *, structured: bool = False) -> int:
             if path.suffix != ".md":
                 print(f"  skip (not .md): {path}", file=sys.stderr)
                 continue
-            cell, bp_id, ctor_id = ingest_memory_file(session, path, structured=structured)
-            print(f"  ingested {path.name}: cell_id={cell.cell_id} blueprint={bp_id}")
+            domain = _domain_for_path(path)
+            ingester = _INGESTERS.get(domain or "memory", _INGESTERS["memory"])[1]
+            cell, bp_id, ctor_id = ingester(session, path, structured=structured)
+            print(
+                f"  [{domain or 'memory'}] {path.name}: "
+                f"cell_id={cell.cell_id} blueprint={bp_id}"
+            )
         session.commit()
     return 0
+
+
+def _domain_for_path(path: Path) -> str | None:
+    """Infer substrate domain from a repository path."""
+    s = str(path).replace("\\", "/")
+    parts = s.split("/")
+    if "specs" in parts and not path.name.startswith(("INDEX", "TEMPLATE", "MANIFEST")):
+        return "spec"
+    if "ideas" in parts and not path.name.startswith(("INDEX", "TEMPLATE")):
+        return "idea"
+    if (
+        "concepts" in parts
+        and "vision-kb" in parts
+        and "." in path.stem
+        and not path.name.startswith(("INDEX", "SCHEMA", "LOG"))
+    ):
+        return "language_view"
+    if "glossary" in parts and "vision-kb" in parts and path.suffix == ".md":
+        return "language_view"
+    if "concepts" in parts and "vision-kb" in parts and not path.name.startswith(("INDEX", "SCHEMA", "LOG")):
+        return "concept"
+    if "transmissions" in parts and "vision-kb" in parts and path.name != "README.md":
+        return "transmission"
+    if "resources" in parts and "vision-kb" in parts and path.name != "INDEX.md":
+        return "resource"
+    if "guides" in parts and "vision-kb" in parts and path.suffix == ".md":
+        return "guide"
+    if (
+        "vision-kb" in parts
+        and path.suffix == ".md"
+        and not {"concepts", "transmissions", "resources", "guides", "glossary"}.intersection(parts)
+    ):
+        return "kb_page"
+    if "presences" in parts and not path.name.startswith(("INDEX", "README")):
+        return "presence"
+    if "memory" in parts and path.name.upper() != "MEMORY.MD":
+        return "memory"
+    if "lineage" in parts and path.name not in _LINEAGE_COMPOST:
+        return "lineage"
+    return None
 
 
 def _ingest_domain(domain: str, *, structured: bool = False) -> int:
@@ -119,12 +225,19 @@ def _ingest_domain(domain: str, *, structured: bool = False) -> int:
         print(f"unknown domain: {domain}", file=sys.stderr)
         return 1
     base, ingester, filter_fn = _INGESTERS[domain]
-    if not base.exists():
-        print(f"{domain}: dir not found ({base}) — skipped", file=sys.stderr)
+    bases = base if isinstance(base, list) else [base]
+    existing_bases = [p for p in bases if p.exists()]
+    missing_bases = [p for p in bases if not p.exists()]
+    for missing in missing_bases:
+        print(f"{domain}: dir not found ({missing}) — skipped", file=sys.stderr)
+    if not existing_bases:
         return 0
-    md_files = sorted([p for p in base.glob("*.md") if filter_fn(p)])
+    md_files = sorted(
+        [p for b in existing_bases for p in b.glob("*.md") if filter_fn(p)]
+    )
     mode = "structured" if structured else "flat"
-    print(f"Ingesting {len(md_files)} {domain} files from {base} [{mode}]")
+    base_label = ", ".join(str(b) for b in existing_bases)
+    print(f"Ingesting {len(md_files)} {domain} files from {base_label} [{mode}]")
     success = fail = 0
     with session_scope() as session:
         for path in md_files:
@@ -157,6 +270,31 @@ def cmd_stats(args: argparse.Namespace) -> int:
         print("Coherence-substrate lattice stats:")
         for key, value in s.items():
             print(f"  {key}: {value}")
+    return 0
+
+
+def cmd_reset(args: argparse.Namespace) -> int:
+    """Clear computed substrate tables so they can be rebuilt from sources."""
+    if not args.yes:
+        print("reset: pass --yes to clear substrate tables", file=sys.stderr)
+        return 2
+
+    from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+    from app.services.substrate.substrate_strings import SubstrateStringORM
+
+    with session_scope() as session:
+        cells = session.query(SubstrateNamedCellORM).count()
+        nodes = session.query(SubstrateNodeORM).count()
+        strings = session.query(SubstrateStringORM).count()
+        session.query(SubstrateNamedCellORM).delete()
+        session.query(SubstrateNodeORM).delete()
+        session.query(SubstrateStringORM).delete()
+        session.commit()
+
+    print(
+        "reset: cleared substrate tables "
+        f"({cells} cells, {nodes} nodes, {strings} strings)"
+    )
     return 0
 
 
@@ -358,7 +496,12 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--concepts", action="store_true")
     p_ingest.add_argument("--presences", action="store_true")
     p_ingest.add_argument("--lineages", action="store_true")
-    p_ingest.add_argument("--all", action="store_true", help="Backfill all five domains")
+    p_ingest.add_argument("--transmissions", action="store_true")
+    p_ingest.add_argument("--resources", action="store_true")
+    p_ingest.add_argument("--guides", action="store_true")
+    p_ingest.add_argument("--language-views", action="store_true")
+    p_ingest.add_argument("--kb-pages", action="store_true")
+    p_ingest.add_argument("--all", action="store_true", help="Backfill all substrate markdown domains")
     p_ingest.add_argument(
         "--structured",
         action="store_true",
@@ -370,6 +513,16 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     sub.add_parser("stats", help="Print lattice statistics")
+
+    p_reset = sub.add_parser(
+        "reset",
+        help="Clear computed substrate tables before a schema rebuild",
+    )
+    p_reset.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm clearing substrate_nodes, substrate_named_cells, and substrate_strings",
+    )
 
     p_eq = sub.add_parser("equivalent", help="Find structurally-equivalent cells")
     p_eq.add_argument("domain")
@@ -513,6 +666,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_ingest(args)
     if args.cmd == "stats":
         return cmd_stats(args)
+    if args.cmd == "reset":
+        return cmd_reset(args)
     if args.cmd == "equivalent":
         return cmd_equivalent(args)
     if args.cmd == "annotate":
@@ -1416,19 +1571,19 @@ def cmd_shape_check(args: argparse.Namespace) -> int:
     """
     from app.services.substrate import (
         find_equivalent_cells,
-        ingest_concept_file,
-        ingest_idea_file,
-        ingest_memory_file,
-        ingest_presence_file,
-        ingest_spec_file,
         parse_markdown_file,
     )
     from app.services.substrate.markdown_frontend import (
         BID_concept,
+        BID_guide,
         BID_idea,
+        BID_kb_page,
+        BID_language_view,
         BID_memory,
         BID_presence,
+        BID_resource,
         BID_spec,
+        BID_transmission,
         frontmatter_to_blueprint,
     )
 
@@ -1444,8 +1599,20 @@ def cmd_shape_check(args: argparse.Namespace) -> int:
             domain = "spec"
         elif "ideas/" in str(path):
             domain = "idea"
+        elif "vision-kb/concepts/" in str(path) and "." in path.stem:
+            domain = "language_view"
+        elif "vision-kb/glossary/" in str(path):
+            domain = "language_view"
         elif "vision-kb/concepts/" in str(path):
             domain = "concept"
+        elif "vision-kb/transmissions/" in str(path):
+            domain = "transmission"
+        elif "vision-kb/resources/" in str(path):
+            domain = "resource"
+        elif "vision-kb/guides/" in str(path):
+            domain = "guide"
+        elif "vision-kb/" in str(path):
+            domain = "kb_page"
         elif "presences/" in str(path):
             domain = "presence"
         else:
@@ -1454,6 +1621,9 @@ def cmd_shape_check(args: argparse.Namespace) -> int:
     domain_bp = {
         "spec": BID_spec, "idea": BID_idea, "concept": BID_concept,
         "presence": BID_presence, "memory": BID_memory,
+        "transmission": BID_transmission,
+        "resource": BID_resource, "guide": BID_guide,
+        "language_view": BID_language_view, "kb_page": BID_kb_page,
     }.get(domain, BID_memory)()
 
     parsed = parse_markdown_file(path)
@@ -1529,11 +1699,16 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
 
     from app.services.substrate import (
         ingest_concept_file,
+        ingest_guide_file,
         ingest_idea_file,
+        ingest_kb_page_file,
+        ingest_language_view_file,
         ingest_lineage_file,
         ingest_memory_file,
         ingest_presence_file,
+        ingest_resource_file,
         ingest_spec_file,
+        ingest_transmission_file,
     )
 
     DOMAIN_INGESTERS = {
@@ -1543,35 +1718,12 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
         "presence": ingest_presence_file,
         "memory": ingest_memory_file,
         "lineage": ingest_lineage_file,
+        "transmission": ingest_transmission_file,
+        "resource": ingest_resource_file,
+        "guide": ingest_guide_file,
+        "language_view": ingest_language_view_file,
+        "kb_page": ingest_kb_page_file,
     }
-
-    # Composting artifacts live in docs/lineage as memory but skip the substrate.
-    _LINEAGE_COMPOST = {
-        "INDEX.md",
-        "unmerged-branches-2026-04-26.md",
-        "unshipped-by-idea-2026-04-27.md",
-        "unshipped-digest-2026-04-27.md",
-        "unshipped-themes-2026-04-27.md",
-        "unshipped-work-archive-2026-04-26.md",
-    }
-
-    def _domain_for(path: Path) -> str | None:
-        # Accept both relative and absolute paths
-        s = str(path).replace("\\", "/")
-        parts = s.split("/")
-        if "specs" in parts and not path.name.startswith(("INDEX", "TEMPLATE", "MANIFEST")):
-            return "spec"
-        if "ideas" in parts and not path.name.startswith(("INDEX", "TEMPLATE")):
-            return "idea"
-        if "concepts" in parts and "vision-kb" in parts and not path.name.startswith(("INDEX", "SCHEMA", "LOG")):
-            return "concept"
-        if "presences" in parts and not path.name.startswith(("INDEX", "README")):
-            return "presence"
-        if "memory" in parts and path.name.upper() != "MEMORY.MD":
-            return "memory"
-        if "lineage" in parts and path.name not in _LINEAGE_COMPOST:
-            return "lineage"
-        return None
 
     structured = not getattr(args, "flat", False)
     success = skipped = failed = 0
@@ -1580,7 +1732,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
             if not path.exists() or path.is_dir() or path.suffix != ".md":
                 skipped += 1
                 continue
-            domain = _domain_for(path)
+            domain = _domain_for_path(path)
             if domain is None:
                 skipped += 1
                 continue
@@ -1650,11 +1802,19 @@ def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
             duplicate_ids.setdefault(concept_id, [str(expected[concept_id])]).append(str(resolved))
         expected[concept_id] = resolved
 
-    language_views = sorted(p.resolve() for p in CONCEPT_DIR.glob("*.md") if _is_language_view(p))
+    language_views = sorted(
+        [p.resolve() for p in CONCEPT_DIR.glob("*.md") if _is_language_view(p)]
+        + [p.resolve() for p in GLOSSARY_DIR.glob("*.md")]
+    )
     resources = sorted((REPO_ROOT / "docs/vision-kb/resources").glob("*.md"))
-    transmissions = sorted((REPO_ROOT / "docs/vision-kb/transmissions").glob("*.md"))
     resources = [p for p in resources if p.name != "INDEX.md"]
-    transmissions = [p for p in transmissions if p.name != "README.md"]
+    guides = sorted((REPO_ROOT / "docs/vision-kb/guides").glob("*.md"))
+    kb_pages = sorted(
+        p.resolve()
+        for base in KB_PAGE_DIRS
+        for p in base.glob("*.md")
+        if p.name != "SCHEMA.md"
+    )
 
     with session_scope() as session:
         rows = session.query(SubstrateNamedCellORM).all()
@@ -1699,7 +1859,12 @@ def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
             if row.domain == "concept":
                 continue
             resolved = _source_path(row.source_path)
-            if resolved and resolved.exists() and concept_root in resolved.parents:
+            if (
+                resolved
+                and resolved.exists()
+                and concept_root in resolved.parents
+                and not _is_language_view(resolved)
+            ):
                 wrong_domain.append({
                     "cell": f"{row.domain}/{row.name}",
                     "source_path": row.source_path,
@@ -1720,11 +1885,13 @@ def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
         else:
             prune_cells = []
 
-    unmodeled = {
+    first_class = {
         "language_views": len(language_views),
         "resources": len(resources),
-        "transmissions": len(transmissions),
-        "note": "These KB surfaces are counted for awareness; canonical concept cells are the only vision-kb substrate domain audited here.",
+        "guides": len(guides),
+        "kb_pages": len(kb_pages),
+        "transmissions": len([p for p in TRANSMISSION_DIR.glob("*.md") if p.name != "README.md"]),
+        "note": "Canonical concept parity is audited here. Other KB markdown surfaces are first-class substrate domains through ingest-paths / ingest --resources --guides --language-views --kb-pages --transmissions.",
     }
 
     result = {
@@ -1735,7 +1902,7 @@ def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
         "path_drift": path_drift,
         "wrong_domain": wrong_domain,
         "duplicate_frontmatter_ids": duplicate_ids,
-        "unmodeled_kb_surfaces": unmodeled,
+        "first_class_kb_surfaces": first_class,
         "pruned_cells": [f"{r.domain}/{r.name}" for r in prune_cells],
     }
 
@@ -1752,10 +1919,12 @@ def cmd_kb_sync_audit(args: argparse.Namespace) -> int:
         print(f"  wrong-domain concept paths: {len(wrong_domain)}")
         print(f"  duplicate concept ids: {len(duplicate_ids)}")
         print(
-            "  unmodeled KB surfaces: "
-            f"{unmodeled['language_views']} language views, "
-            f"{unmodeled['resources']} resources, "
-            f"{unmodeled['transmissions']} transmissions"
+            "  first-class KB surfaces: "
+            f"{first_class['language_views']} language views, "
+            f"{first_class['resources']} resources, "
+            f"{first_class['guides']} guides, "
+            f"{first_class['kb_pages']} KB pages, "
+            f"{first_class['transmissions']} transmissions"
         )
         if missing:
             print("\nMissing:")
