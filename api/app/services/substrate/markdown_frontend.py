@@ -151,7 +151,7 @@ def substrate_string_recipe(session: Session, value: str) -> NodeID:
     """A trivial String recipe carrying `value` via the substrate string-table.
 
     Cross-process stable: same string → same instance → same NodeID. This
-    is the value-leaf primitive. Unlike the legacy hash-based encoding
+    is the value-leaf primitive. Unlike the earlier hash-based encoding
     (which collides + can't be reversed), this is recoverable: given the
     NodeID's instance, `lookup_string_value(session, instance)` returns
     the original string.
@@ -271,7 +271,7 @@ def frontmatter_to_structured_ctor(
 ) -> Optional[NodeID]:
     """Build a fully-expressed CTOR recipe from frontmatter.
 
-    Unlike the legacy `frontmatter_to_*` encoder (which produces type-marker
+    Unlike the earlier `frontmatter_to_*` encoder (which produces type-marker
     string-recipes that lose all values), this preserves every value as a
     recoverable substrate-resident recipe. The shape is:
 
@@ -502,7 +502,7 @@ def ingest_memory_file(
 
     `structured=True` activates the composition-discipline encoder
     (named-pair CTORs with substrate-resident values). Default is the
-    legacy encoder for backward compatibility during migration. See
+    earlier flat encoder, kept reachable for the migration window. See
     docs/coherence-substrate/structural-composition.md.
 
     Returns (NamedCell, blueprint NodeID, ctor recipe NodeID).
@@ -1183,10 +1183,10 @@ def _ingest_markdown_payload(
 ) -> Tuple[Any, NodeID, NodeID]:
     """Shared ingest core — operates on already-parsed markdown.
 
-    `structured=True` activates the new composition-discipline encoder
+    `structured=True` activates the composition-discipline encoder
     (frontmatter_to_structured_ctor) which produces a fully-expressed
     CTOR with named-pair recipes and substrate-resident values, instead
-    of the legacy type-marker encoder. See
+    of the earlier flat type-marker encoder. See
     docs/coherence-substrate/structural-composition.md.
     """
     name = None

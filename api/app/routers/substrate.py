@@ -395,7 +395,7 @@ def get_shape_health() -> ShapeHealthOut:
 
     The structural-composition discipline (CLAUDE.md → "Structural
     composition discipline") promises every cell's CTOR is a tree of
-    R_Block.LET (key, value) pairs all the way down. The legacy flat
+    R_Block.LET (key, value) pairs all the way down. The earlier flat
     encoder produced CTORs whose children were trivial-string recipes
     holding type-marker strings like "name=str".
 

@@ -123,7 +123,7 @@ def _ingest_domain(domain: str, *, structured: bool = False) -> int:
         print(f"{domain}: dir not found ({base}) — skipped", file=sys.stderr)
         return 0
     md_files = sorted([p for p in base.glob("*.md") if filter_fn(p)])
-    mode = "structured" if structured else "legacy"
+    mode = "structured" if structured else "flat"
     print(f"Ingesting {len(md_files)} {domain} files from {base} [{mode}]")
     success = fail = 0
     with session_scope() as session:
@@ -482,12 +482,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Read paths from stdin (one per line)",
     )
     p_ingest_paths.add_argument(
-        "--legacy-flat",
+        "--flat",
+        dest="flat",
         action="store_true",
         help=(
-            "Use the legacy flat encoder. Default is the structured "
-            "composition-discipline encoder — keep this off unless you "
-            "are explicitly testing the flat path."
+            "Use the flat type-marker encoder. Default is the structured "
+            "composition-discipline encoder — pass this only when explicitly "
+            "testing the flat path."
         ),
     )
 
@@ -1572,7 +1573,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
             return "lineage"
         return None
 
-    structured = not getattr(args, "legacy_flat", False)
+    structured = not getattr(args, "flat", False)
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
@@ -1584,8 +1585,8 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
                 skipped += 1
                 continue
             try:
-                # Resolve to absolute so source_path is consistent across
-                # callers (the hook, manual annotate, the legacy ingest path).
+                # Resolve to absolute so source_path stays consistent across
+                # callers (the hook, manual annotate, the file-only path).
                 cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
                     session, path.resolve(), structured=structured
                 )
