@@ -37,6 +37,7 @@ list[CellView], or a Python str/None.
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
@@ -708,6 +709,40 @@ ExprNode = Any  # any AST node — too many to enumerate
 # ---------------------------------------------------------------------------
 
 
+# Bootstrap-keyword dispatch — replaces a ~30-way if/elif chain that ran
+# per IDENT token. Each entry maps the keyword to the Parser method name
+# that handles it; `parse_keyword_or_ident` does one `.get(kw)` and
+# `getattr(self, name)()`.
+_KEYWORD_DISPATCH: Dict[str, str] = {
+    "true":     "_parse_true",
+    "false":    "_parse_false",
+    "if":       "parse_if",
+    "do":       "parse_do_block",
+    "with":     "parse_with",
+    "let":      "parse_let",
+    "match":    "parse_match",
+    "choose":   "parse_choose",
+    "fail":     "_parse_fail",
+    "stop":     "_parse_stop",
+    "save":     "_parse_save",
+    "restore":  "_parse_restore",
+    "discard":  "_parse_discard",
+    "raise":    "parse_raise",
+    "resume":   "_parse_resume",
+    "delegate": "parse_delegate",
+    "undo":     "parse_undo",
+    "inverse":  "parse_inverse",
+    "common":   "parse_common",
+    "method":   "parse_method_def",
+    "invoke":   "parse_method_invoke",
+    "try":      "parse_try_catch",
+    "for":      "parse_for",
+    "while":    "parse_while",
+    "set":      "parse_set",
+    "defn":     "parse_defn",
+}
+
+
 class Parser:
     def __init__(self, tokens, *, prefer_registered: bool = False):
         """Tokens may be:
@@ -991,78 +1026,12 @@ class Parser:
             if node is not None:
                 return node
 
-        # Built-in keywords (the bootstrap grammar)
-        if kw == "true":
-            self.consume("IDENT")
-            return BoolLit(True)
-        if kw == "false":
-            self.consume("IDENT")
-            return BoolLit(False)
-        if kw == "if":
-            return self.parse_if()
-        if kw == "do":
-            return self.parse_do_block()
-        if kw == "with":
-            return self.parse_with()
-        if kw == "let":
-            return self.parse_let()
-        if kw == "match":
-            return self.parse_match()
-        if kw == "choose":
-            return self.parse_choose()
-        if kw == "fail":
-            self.consume("IDENT")
-            return FailExpr()
-        if kw == "stop":
-            self.consume("IDENT")
-            return StopExpr()
-        if kw == "save":
-            self.consume("IDENT")
-            return SaveExpr()
-        if kw == "restore":
-            self.consume("IDENT")
-            return RestoreExpr()
-        if kw == "discard":
-            self.consume("IDENT")
-            return DiscardExpr()
-        if kw == "raise":
-            self.consume("IDENT")
-            # Optional value after raise; if the next token starts an
-            # expression (atom, paren, ident, etc.) parse it as payload.
-            nxt = self.peek().kind
-            if nxt in ("INT", "STRING", "AT", "TILDE", "LPAREN", "LBRACK", "IDENT", "DOT"):
-                # Some IDENTs ARE statement terminators in catch/end context;
-                # be permissive and parse-attempt — fall back to no value on
-                # certain reserved follow-ups.
-                if nxt == "IDENT" and self.peek().value in ("catch", "then", "else", "end"):
-                    return RaiseExpr()
-                return RaiseExpr(value=self.parse_expr())
-            return RaiseExpr()
-        if kw == "resume":
-            self.consume("IDENT")
-            return ResumeExpr()
-        if kw == "delegate":
-            return self.parse_delegate()
-        if kw == "undo":
-            return self.parse_undo()
-        if kw == "inverse":
-            return self.parse_inverse()
-        if kw == "common":
-            return self.parse_common()
-        if kw == "method":
-            return self.parse_method_def()
-        if kw == "invoke":
-            return self.parse_method_invoke()
-        if kw == "try":
-            return self.parse_try_catch()
-        if kw == "for":
-            return self.parse_for()
-        if kw == "while":
-            return self.parse_while()
-        if kw == "set":
-            return self.parse_set()
-        if kw == "defn":
-            return self.parse_defn()
+        # Built-in keywords (the bootstrap grammar) — dispatched via a
+        # class-level dict so the hot path is a single `.get(kw)` instead
+        # of walking ~30 string-equality comparisons per IDENT token.
+        handler_name = _KEYWORD_DISPATCH.get(kw)
+        if handler_name is not None:
+            return getattr(self, handler_name)()
 
         # User-registered keywords (the rule-driven extension point —
         # this is where the grammar becomes alive at runtime).
@@ -1107,6 +1076,53 @@ class Parser:
         self.consume("ASSIGN")
         body = self.parse_expr()
         return FnDef(name=name, params=params, body=body)
+
+    # ------- Bare-keyword leaves — small helpers for the dispatch dict.
+    def _parse_true(self) -> BoolLit:
+        self.consume("IDENT")
+        return BoolLit(True)
+
+    def _parse_false(self) -> BoolLit:
+        self.consume("IDENT")
+        return BoolLit(False)
+
+    def _parse_fail(self) -> FailExpr:
+        self.consume("IDENT")
+        return FailExpr()
+
+    def _parse_stop(self) -> StopExpr:
+        self.consume("IDENT")
+        return StopExpr()
+
+    def _parse_save(self) -> SaveExpr:
+        self.consume("IDENT")
+        return SaveExpr()
+
+    def _parse_restore(self) -> RestoreExpr:
+        self.consume("IDENT")
+        return RestoreExpr()
+
+    def _parse_discard(self) -> DiscardExpr:
+        self.consume("IDENT")
+        return DiscardExpr()
+
+    def _parse_resume(self) -> ResumeExpr:
+        self.consume("IDENT")
+        return ResumeExpr()
+
+    def parse_raise(self) -> RaiseExpr:
+        self.consume("IDENT")  # 'raise'
+        # Optional value after raise; if the next token starts an
+        # expression (atom, paren, ident, etc.) parse it as payload.
+        nxt = self.peek().kind
+        if nxt in ("INT", "STRING", "AT", "TILDE", "LPAREN", "LBRACK", "IDENT", "DOT"):
+            # Some IDENTs ARE statement terminators in catch/end context;
+            # be permissive and parse-attempt — fall back to no value on
+            # certain reserved follow-ups.
+            if nxt == "IDENT" and self.peek().value in ("catch", "then", "else", "end"):
+                return RaiseExpr()
+            return RaiseExpr(value=self.parse_expr())
+        return RaiseExpr()
 
     def parse_if(self) -> IfExpr:
         self.consume("IDENT")  # 'if'
@@ -2070,6 +2086,17 @@ def _evaluate_query(session: Session, q: Query) -> FormResult:
 # ---------------------------------------------------------------------------
 
 
+# Bounded parse cache for the prefer_registered=False (bootstrap-grammar)
+# path. Skipped for prefer_registered=True because the user-registered
+# keyword registry can mutate at runtime — the same text could parse to a
+# different AST after a register_form_keyword call. The bootstrap grammar
+# is frozen at module load, so its parse is a pure function of text and
+# safe to memoize. AST nodes are dataclasses read by evaluators without
+# mutation, so the shared object is also safe to return.
+_PARSE_CACHE: "OrderedDict[str, Any]" = OrderedDict()
+_PARSE_CACHE_MAX = 256
+
+
 def parse(text: str, *, prefer_registered: bool = False) -> Any:
     """Parse a single Form expression.
 
@@ -2078,6 +2105,11 @@ def parse(text: str, *, prefer_registered: bool = False) -> Any:
     Used for partial self-hosting demonstrations — see
     `docs/coherence-substrate/form-language.md` ("Self-hosting").
     """
+    key = text.strip() if not prefer_registered else None
+    if key is not None and key in _PARSE_CACHE:
+        _PARSE_CACHE.move_to_end(key)
+        return _PARSE_CACHE[key]
+
     tokens = tokenize(text.strip())
     parser = Parser(tokens, prefer_registered=prefer_registered)
     result = parser.parse()
@@ -2085,6 +2117,11 @@ def parse(text: str, *, prefer_registered: bool = False) -> Any:
         raise SyntaxError(
             f"Form: trailing input at pos {parser.peek().pos}: {parser.peek().value!r}"
         )
+
+    if key is not None:
+        _PARSE_CACHE[key] = result
+        if len(_PARSE_CACHE) > _PARSE_CACHE_MAX:
+            _PARSE_CACHE.popitem(last=False)
     return result
 
 
