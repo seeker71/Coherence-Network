@@ -356,6 +356,140 @@ def get_histogram(domain: str) -> HistogramOut:
 
 
 # ---------------------------------------------------------------------------
+# Shape-health — does each cell's CTOR carry structured composition or
+# flat type-markers? Catches silent flatten regressions where aggregate
+# counts look stable while cell CTORs point at flat encodings.
+# ---------------------------------------------------------------------------
+
+
+class DomainShapeOut(BaseModel):
+    total: int
+    structured: int
+    flat: int
+    no_ctor: int
+    ratio: float  # structured / (structured + flat), 0..1
+
+
+class ShapeHealthOut(BaseModel):
+    overall: DomainShapeOut
+    domains: dict[str, DomainShapeOut]
+    flags: list[str]
+
+
+# A CTOR's serialized representation looks like
+#   "1.2.9.1+<child>+<child>+..."
+# where each `<child>` is a NodeID in `package.level.type.instance` form.
+# Structured CTORs have children at composite level (level >= 3, e.g.
+# `1.3.X.Y`) — each child is itself a composed (key, value) recipe.
+# Flat CTORs have children at trivial level (`1.1.X.Y`, level == 1) —
+# each child is a leaf recipe carrying a type-marker string.
+#
+# The discriminator: a CTOR is structured iff at least one direct child
+# is at level >= 2 (i.e. carries internal composition); flat iff every
+# direct child is at level 1 (trivial leaves only).
+
+
+@router.get("/shape_health", response_model=ShapeHealthOut, tags=["substrate"])
+def get_shape_health() -> ShapeHealthOut:
+    """Sense whether cells carry composed CTORs or flat type-markers.
+
+    The structural-composition discipline (CLAUDE.md → "Structural
+    composition discipline") promises every cell's CTOR is a tree of
+    R_Block.LET (key, value) pairs all the way down. The legacy flat
+    encoder produced CTORs whose children were trivial-string recipes
+    holding type-marker strings like "name=str".
+
+    Both shapes hash to NodeIDs that look superficially similar; the
+    lattice/stats endpoint reports the same recipe count whether cells
+    point at structured or flat CTORs. This endpoint distinguishes them
+    by examining each CTOR's direct children: a `+1.2.9.3` token in the
+    serialized representation means R_Block.LET is present (structured);
+    children that are only `+1.1.5.*` (trivial strings) mean flat.
+
+    Flags raised when ratio < 0.95 (5%+ of cells carry flat CTORs) so
+    the wellness check surfaces silent flatten regressions before they
+    compound.
+    """
+    with session_scope() as session:
+        cells = session.query(SubstrateNamedCellORM).all()
+
+        # Pre-fetch all CTOR node serialized strings in one batch.
+        ctor_ids = {c.ctor_recipe_node_id for c in cells if c.ctor_recipe_node_id}
+        ctor_nodes = (
+            session.query(SubstrateNodeORM)
+            .filter(SubstrateNodeORM.node_id.in_(ctor_ids))
+            .all()
+        ) if ctor_ids else []
+        ctor_serialized: dict[int, str] = {n.node_id: n.serialized for n in ctor_nodes}
+
+        def _classify(node_id: int | None) -> str:
+            if not node_id:
+                return "no_ctor"
+            serialized = ctor_serialized.get(node_id, "")
+            # Parse "category+child+child+..." into child NodeIDs and
+            # read each child's level (second integer in p.l.t.i form).
+            parts = serialized.split("+")
+            if len(parts) <= 1:
+                return "no_ctor"
+            child_levels: list[int] = []
+            for child in parts[1:]:
+                segments = child.split(".")
+                if len(segments) >= 2:
+                    try:
+                        child_levels.append(int(segments[1]))
+                    except ValueError:
+                        continue
+            if not child_levels:
+                return "no_ctor"
+            # Structured iff any direct child has level >= 2 (i.e. is itself
+            # a composed recipe). Flat iff every child is at level 1.
+            return "structured" if any(lv >= 2 for lv in child_levels) else "flat"
+
+        by_domain: dict[str, dict[str, int]] = {}
+        overall_counts = {"structured": 0, "flat": 0, "no_ctor": 0, "total": 0}
+        for cell in cells:
+            kind = _classify(cell.ctor_recipe_node_id)
+            bucket = by_domain.setdefault(
+                cell.domain, {"structured": 0, "flat": 0, "no_ctor": 0, "total": 0}
+            )
+            bucket[kind] += 1
+            bucket["total"] += 1
+            overall_counts[kind] += 1
+            overall_counts["total"] += 1
+
+        def _to_out(counts: dict[str, int]) -> DomainShapeOut:
+            denom = counts["structured"] + counts["flat"]
+            ratio = (counts["structured"] / denom) if denom > 0 else 1.0
+            return DomainShapeOut(
+                total=counts["total"],
+                structured=counts["structured"],
+                flat=counts["flat"],
+                no_ctor=counts["no_ctor"],
+                ratio=round(ratio, 4),
+            )
+
+        domains = {d: _to_out(c) for d, c in by_domain.items()}
+        overall = _to_out(overall_counts)
+
+        flags: list[str] = []
+        if overall.ratio < 0.95 and overall.flat > 0:
+            flags.append(
+                f"overall structured ratio {overall.ratio:.0%} — "
+                f"{overall.flat} of {overall.flat + overall.structured} "
+                f"cells carry flat CTORs; re-ingest with --structured"
+            )
+        for name, shape in domains.items():
+            if shape.ratio < 0.95 and shape.flat > 0:
+                flags.append(
+                    f"{name}: structured ratio {shape.ratio:.0%} — "
+                    f"{shape.flat} flat cells "
+                    f"(of {shape.flat + shape.structured})"
+                )
+
+        return ShapeHealthOut(overall=overall, domains=domains, flags=flags)
+
+
+# ---------------------------------------------------------------------------
 # Form-language evaluation — the substrate-native query DSL
 # ---------------------------------------------------------------------------
 
