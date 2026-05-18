@@ -974,7 +974,24 @@ The bootstrap parser (`form.py`) builds Python dataclass AST nodes, then `_to_re
 
 [`api/app/services/substrate/form_stream.py`](../../api/app/services/substrate/form_stream.py) is the BMF-faithful shape on this body. Each parse rule's success **directly emits a Recipe NodeID** to a working stack; no AST node is materialized between parse and intern. The kernel's content-addressing guarantees that for every expression both parsers cover, **the streaming and AST paths emit the same NodeID** — verified by [`api/tests/test_substrate_form_stream.py`](../../api/tests/test_substrate_form_stream.py).
 
-Coverage in this proof: integer literals, binary arithmetic, comparison, logic, parenthesized grouping, `if/then/else`. Deliberately small — the architectural property is what's load-bearing, not the surface area. The current parser stays as the production path; the streaming parser proves the alternative shape on the same substrate.
+Coverage spans the recipe-producing grammar:
+- Trivial leaves: integer / boolean / string literals, `NodeID` literals, `~Trivial` refs, identifiers, `.self`, cell refs `@domain(name)`
+- Arithmetic, comparison, logic with precedence; unary `!` and `-`; parenthesized grouping
+- Conditional: `if/then/else` and `if/then`
+- Block family: `do { stmts }`, `let name = expr`, `with X { body }`
+- Match: `match scrutinee { pat => body, ... }`
+- Choice (RChoice): `choose [a, b, c]`, `fail`, `stop`
+- State (RState): `save`, `restore`, `discard`
+- Exception (RException): `raise`, `resume`
+- Try (RTry): `try { body } catch { handler }`
+- Delegate (RDelegate): `delegate @X to @Y`
+- Reverse (RReverse): `undo (expr)`, `inverse(expr)`
+- Common (RCommon): `common @X @Y`
+- Method (RMethod): `method NAME on @X { body }`, `invoke NAME on @X [args]`
+
+Every category named in the wellness check's *"meta-circular engine — Form arms cover 4/15 Python dispatch branches"* (BLOCK, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE, COMMON, METHOD, TRY) now has a streaming-emit path proven by content-addressing equivalence. The asymmetry is closing.
+
+The current parser stays as the production path; the streaming parser proves the alternative shape on the same substrate. What's intentionally out of scope here: queries (`?cells`, `?equivalent`, ...) and projections (`|>`) — they return query results, not Recipe NodeIDs, so they live in a different return-type space.
 
 What this prototype establishes:
 
