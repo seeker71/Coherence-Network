@@ -150,48 +150,26 @@ class Token:
     pos: int
 
 
-_TOKEN_PATTERNS = [
-    ("WS", r"[ \t\n\r]+"),
-    ("COMMENT", r"#[^\n]*"),
-    ("PROJECT", r"\|>"),
-    ("ARROW", r"=>"),
-    ("EQ", r"=="),
-    ("NEQ", r"!="),
-    ("LE", r"<="),
-    ("GE", r">="),
-    ("AND", r"&&"),
-    ("OR", r"\|\|"),
-    ("ASSIGN", r"="),
-    ("LT", r"<"),
-    ("GT", r">"),
-    ("PLUS", r"\+"),
-    ("MINUS", r"-"),
-    ("STAR", r"\*"),
-    ("SLASH", r"/"),
-    ("PERCENT", r"%"),
-    ("BANG", r"!"),
-    ("AT", r"@"),
-    ("TILDE", r"~"),
-    ("QMARK", r"\?"),
-    ("COLON", r":"),
-    ("SEMI", r";"),
-    ("COMMA", r","),
-    ("DOT", r"\."),
-    ("LBRACE", r"\{"),
-    ("RBRACE", r"\}"),
-    ("LBRACK", r"\["),
-    ("RBRACK", r"\]"),
-    ("LPAREN", r"\("),
-    ("RPAREN", r"\)"),
-    # Triple-quoted multiline strings come FIRST so the alternation matches
-    # them before the single-quote rule. Non-greedy across any character.
-    ("STRING", r'"""[\s\S]*?"""|"([^"\\]|\\.)*"'),
-    ("INT", r"\d+"),
-    ("IDENT", r"[A-Za-z_][A-Za-z_0-9\-]*"),
-]
-_TOKEN_RE = re.compile(
-    "|".join(f"(?P<{name}>{pat})" for name, pat in _TOKEN_PATTERNS)
-)
+# Token patterns live in the runtime-extensible registry
+# `form_lexer._TOKEN_PATTERNS`. The tokenizer reads its compiled regex
+# from there via `get_token_regex()`, so adding a new token kind no
+# longer requires editing this file:
+#
+#     from app.services.substrate.form_lexer import register_token_pattern
+#     register_token_pattern("DOLLAR", r"\$", before="PLUS")
+#
+# The compiled regex is cached and re-built on registry mutation.
+
+
+def _token_re():
+    """Return the registry's currently-compiled master token regex.
+
+    Indirection lets the tokenizer pick up registry mutations without
+    holding a stale compiled regex. The registry caches the compiled
+    regex internally and invalidates it on `register_token_pattern` /
+    `unregister_token_pattern`."""
+    from app.services.substrate.form_lexer import get_token_regex
+    return get_token_regex()
 
 
 def tokenize(text: str) -> List[Token]:
@@ -200,7 +178,7 @@ def tokenize(text: str) -> List[Token]:
     tokens: List[Token] = []
     pos = 0
     while pos < len(text):
-        m = _TOKEN_RE.match(text, pos)
+        m = _token_re().match(text, pos)
         if not m:
             raise SyntaxError(f"Form: unexpected char at pos {pos}: {text[pos]!r}")
         kind = m.lastgroup or ""
@@ -222,7 +200,7 @@ def tokenize_iter(text: str):
     """
     pos = 0
     while pos < len(text):
-        m = _TOKEN_RE.match(text, pos)
+        m = _token_re().match(text, pos)
         if not m:
             raise SyntaxError(f"Form: unexpected char at pos {pos}: {text[pos]!r}")
         kind = m.lastgroup or ""
@@ -255,7 +233,7 @@ def tokenize_chunks(chunks):
         """Return (token_or_None, advance_chars). None if can't safely match yet."""
         if not buf:
             return None, 0
-        m = _TOKEN_RE.match(buf, 0)
+        m = _token_re().match(buf, 0)
         if not m:
             # No match. If chunks may still arrive, the unmatched prefix
             # might be the start of a multi-char token (e.g. opening quote
@@ -977,51 +955,18 @@ class Parser:
         return a
 
     def parse_primary(self) -> ExprNode:
+        """Dispatch primary-atom parsing through the runtime-extensible
+        registry. Each token kind ("INT", "STRING", "AT", "TILDE", "DOT",
+        "LPAREN", "LBRACK", "LBRACE", "IDENT", "QMARK") has a registered
+        handler in `form_atoms.py`. New atom shapes can be added at
+        runtime by `register_atom(token_kind, handler)`.
+
+        Closes the form-language.md gap: "Primary-atom parsing ... still
+        hardcoded" — no longer hardcoded.
+        """
+        from app.services.substrate.form_atoms import dispatch_atom
         t = self.peek()
-        if t.kind == "AT":
-            return self.parse_at()
-        if t.kind == "TILDE":
-            return self.parse_trivial_ref()
-        if t.kind == "INT":
-            return IntLit(int(self.consume("INT").value))
-        if t.kind == "STRING":
-            raw = self.consume("STRING").value
-            body = _unquote(raw)
-            # If the body contains a `${...}` marker, parse as interpolation
-            # — yields a concat chain `str(expr) + "..." + ...`. Otherwise
-            # a plain StringLit.
-            if "${" in body:
-                return _interpolated_to_ast(body)
-            return StringLit(value=body)
-        if t.kind == "LPAREN":
-            self.consume("LPAREN")
-            inner = self.parse_expr()
-            self.consume("RPAREN")
-            return inner
-        if t.kind == "LBRACK":
-            return self.parse_list_literal()
-        if t.kind == "LBRACE":
-            return self.parse_dict_literal()
-        if t.kind == "IDENT":
-            return self.parse_keyword_or_ident()
-        if t.kind == "DOT":
-            # `.self` — references the implicit subject of an enclosing `with`.
-            # Other dot-access forms (`.field`, `.method`) aren't shipped yet.
-            self.consume("DOT")
-            ident = self.peek()
-            if ident.kind == "IDENT" and ident.value == "self":
-                self.consume("IDENT")
-                return SelfRef()
-            raise SyntaxError(
-                f"Form: only `.self` is supported in dot-prefix position at pos {t.pos} "
-                f"(got `.{ident.value}`)"
-            )
-        if t.kind == "QMARK":
-            # `?<query>` in expression position — nested queries become composable
-            # (e.g. `?on_change ?cells { body }`). The Query AST node carries the
-            # full query structure; downstream eval/execute handles it.
-            return self.parse_query()
-        raise SyntaxError(f"Form: unexpected {t.kind}({t.value!r}) at pos {t.pos}")
+        return dispatch_atom(self, t.kind)
 
     def parse_keyword_or_ident(self) -> ExprNode:
         t = self.peek()
@@ -1485,7 +1430,18 @@ class Parser:
                 self.consume("IDENT")
                 filters.append(self.parse_filter())
             return Query(kind="cells", arg=arg, filters=filters)
-        raise SyntaxError(f"Form: unknown query keyword: {kw!r}")
+        # Generic registry-driven dispatch — any registered query verb that
+        # doesn't need a custom argument-parser (e.g. `?queries`, plus any
+        # runtime-registered verb via `register_form_query`) parses as a
+        # bare `?<verb>`. The evaluator dispatches via the registry; if no
+        # handler is registered it raises NameError at evaluate-time.
+        from app.services.substrate.form_queries import lookup_form_query
+        if lookup_form_query(kw) is not None:
+            return Query(kind=kw)
+        # Unknown verb — still parse as a bare query so the evaluator's
+        # registry-driven NameError is what surfaces (consistent error
+        # shape regardless of whether the verb is parser-known or not).
+        return Query(kind=kw)
 
     def parse_filter(self) -> Filter:
         field_tok = self.consume("IDENT")
@@ -1966,129 +1922,16 @@ def evaluate(session: Session, ast: Any) -> FormResult:
 
 
 def _evaluate_query(session: Session, q: Query) -> FormResult:
-    if q.kind == "equivalent":
-        target = evaluate(session, q.arg)
-        if target.kind == "cell":
-            cells = find_equivalent_cells(session, target.value.blueprint, exclude_name=target.value.name)
-            return FormResult("cells", cells)
-        if target.kind == "node_id":
-            cells = find_equivalent_cells(session, target.value)
-            return FormResult("cells", cells)
-        raise TypeError(f"Form: ?equivalent expects cell or node_id")
+    """Dispatch a `?<verb>` query through the runtime-extensible registry.
 
-    if q.kind == "compatible":
-        bp_result = evaluate(session, q.arg)
-        if bp_result.kind != "node_id":
-            raise TypeError(f"Form: ?compatible |> expects a NodeID")
-        views = find_cells_compatible_with(session, bp_result.value)
-        return FormResult("views", views)
-
-    if q.kind == "lattice":
-        # Substrate-snapshot lens — read-only count of every interned thing.
-        from app.services.substrate.kernel import lattice_stats as _stats
-        return FormResult("lattice", _stats(session))
-
-    if q.kind == "keywords":
-        # Grammar-introspection lens — names of every runtime-registered keyword.
-        from app.services.substrate.form_rules import list_registered_keywords
-        return FormResult("keywords", list_registered_keywords())
-
-    if q.kind == "vocabulary":
-        # Verb-cluster lens — histogram of recipe/blueprint types currently interned.
-        from app.services.substrate.kernel import vocabulary_histogram
-        return FormResult("vocabulary", vocabulary_histogram(session))
-
-    if q.kind in ("on_change", "project"):
-        # Reactive / spatial-projection lenses (form layer).  The subscription
-        # engine and the renderer activate the recipes at runtime; here we
-        # just compile the AST to its Recipe NodeID so the intent persists.
-        rid = _to_recipe_node_id(session, q.arg)
-        return FormResult("recipe", rid)
-
-    if q.kind in ("shaped_by", "harmonic_at"):
-        # Resonance-walk query: given a target cell, return cells whose
-        # resonance edge of the named verb points at it.
-        from app.services.substrate.orm import SubstrateNamedCellORM
-        from app.services.substrate.kernel import _orm_to_cell
-        from app.services.substrate.resonance import (
-            find_cells_shaping,
-            find_cells_harmonic_at,
-        )
-
-        rhs = evaluate(session, q.arg)
-        if rhs.kind != "cell":
-            raise TypeError(
-                f"Form: ?{q.kind} expects a cell ref on the right, got {rhs.kind}"
-            )
-        target_db_id = rhs.value.cell_id
-        if target_db_id is None:
-            raise LookupError(f"Form: target cell has no db id (was it persisted?)")
-
-        if q.kind == "shaped_by":
-            source_db_ids = find_cells_shaping(session, target_db_id)
-        else:
-            source_db_ids = find_cells_harmonic_at(session, target_db_id)
-
-        cells = []
-        for sid in source_db_ids:
-            row = (
-                session.query(SubstrateNamedCellORM)
-                .filter_by(cell_id=sid)
-                .one_or_none()
-            )
-            if row:
-                cells.append(_orm_to_cell(session, row))
-        return FormResult("cells", cells)
-
-    if q.kind == "cells":
-        from app.services.substrate.orm import SubstrateNamedCellORM
-        from app.services.substrate.kernel import _orm_to_cell
-
-        if q.arg is not None:
-            # ?cells |> @blueprint — return CellViews
-            bp_result = evaluate(session, q.arg)
-            if bp_result.kind != "node_id":
-                raise TypeError(f"Form: ?cells |> expects a NodeID")
-            domain_filter = None
-            for f in q.filters:
-                if f.field == "domain" and f.op == "==":
-                    domain_filter = f.value
-            views = find_cells_compatible_with(session, bp_result.value, domain=domain_filter)
-            return FormResult("views", views)
-
-        # ?cells [where ...] — return raw cells
-        rows = session.query(SubstrateNamedCellORM)
-        shape_filter_cell: Optional[NamedCell] = None
-        for f in q.filters:
-            if f.field == "domain" and f.op == "==" and isinstance(f.value, str):
-                rows = rows.filter_by(domain=f.value)
-            elif f.field == "name" and f.op == "matches" and isinstance(f.value, str):
-                rows = rows.filter(SubstrateNamedCellORM.name.like(f.value.replace("*", "%")))
-            elif f.field == "shape" and f.op == "==":
-                # `where shape == @<atom-ref>` — resolve the atom-ref, then filter by
-                # blueprint equality OR (when the rhs is itself a cell) by structural
-                # equivalence with that cell's blueprint.
-                rhs = evaluate(session, f.value)
-                if rhs.kind == "node_id":
-                    target_bp = rhs.value
-                elif rhs.kind == "cell":
-                    target_bp = rhs.value.blueprint
-                else:
-                    raise TypeError(
-                        f"Form: ?cells where shape == ... expects a NodeID or cell rhs, got {rhs.kind}"
-                    )
-                # Match cells whose blueprint NodeID equals the target.
-                from app.services.substrate.kernel import _node_to_db_id
-                target_bp_db = _node_to_db_id(session, target_bp)
-                rows = rows.filter(SubstrateNamedCellORM.blueprint_node_id == target_bp_db)
-            else:
-                raise SyntaxError(
-                    f"Form: unsupported filter ({f.field!r} {f.op!r} {type(f.value).__name__})"
-                )
-        cells = [_orm_to_cell(session, r) for r in rows.all()]
-        return FormResult("cells", cells)
-
-    raise NameError(f"Form: unknown query kind {q.kind!r}")
+    Each verb's handler lives in `form_queries.py` and can be replaced
+    or extended at runtime via `register_form_query`. The dispatch
+    table is no longer hardcoded here — closing the gap named in
+    `form-language.md` → "Query operators ... are still hardcoded
+    in _evaluate_query`."
+    """
+    from app.services.substrate.form_queries import dispatch_query
+    return dispatch_query(session, q)
 
 
 # ---------------------------------------------------------------------------
