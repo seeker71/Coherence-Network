@@ -36,10 +36,21 @@ from app.services.substrate import form_evaluate_text
 from app.services.substrate.category import (
     Level,
     RBasic,
+    RBlock,
+    RChoice,
+    RCommon,
     RCompare,
     RCond,
+    RDelegate,
+    RException,
     RLogic,
     RMath,
+    RMethod,
+    RProjection,
+    RReactive,
+    RReverse,
+    RState,
+    RTry,
 )
 from app.services.substrate.form_runtime import (
     form_execute_text,
@@ -237,6 +248,29 @@ _EXPECTED_LITERALS = [
     ((1, 2, RBasic.LOGIC, RLogic.NOT),       "RBasic.LOGIC / RLogic.NOT"),
     ((1, 2, RBasic.COND, RCond.IF_THEN),      "RBasic.COND / RCond.IF_THEN"),
     ((1, 2, RBasic.COND, RCond.IF_THEN_ELSE), "RBasic.COND / RCond.IF_THEN_ELSE"),
+    # BML form-layer arms — added when recipe-introspection primitives
+    # (`category`/`nchildren`/`child`) closed the meta-circular loop.
+    ((1, 2, RBasic.BLOCK, RBlock.DO),        "RBasic.BLOCK / RBlock.DO"),
+    ((1, 2, RBasic.BLOCK, RBlock.SEQUENCE),  "RBasic.BLOCK / RBlock.SEQUENCE"),
+    ((1, 2, RBasic.BLOCK, RBlock.LET),       "RBasic.BLOCK / RBlock.LET"),
+    ((1, 2, RBasic.BLOCK, RBlock.WITH),      "RBasic.BLOCK / RBlock.WITH"),
+    ((1, 2, RBasic.CHOICE, RChoice.CHOOSE),  "RBasic.CHOICE / RChoice.CHOOSE"),
+    ((1, 2, RBasic.CHOICE, RChoice.FAIL),    "RBasic.CHOICE / RChoice.FAIL"),
+    ((1, 2, RBasic.CHOICE, RChoice.STOP),    "RBasic.CHOICE / RChoice.STOP"),
+    ((1, 2, RBasic.STATE, RState.SAVE),      "RBasic.STATE / RState.SAVE"),
+    ((1, 2, RBasic.STATE, RState.RESTORE),   "RBasic.STATE / RState.RESTORE"),
+    ((1, 2, RBasic.STATE, RState.DISCARD),   "RBasic.STATE / RState.DISCARD"),
+    ((1, 2, RBasic.EXCEPTION, RException.RAISE),  "RBasic.EXCEPTION / RException.RAISE"),
+    ((1, 2, RBasic.EXCEPTION, RException.RESUME), "RBasic.EXCEPTION / RException.RESUME"),
+    ((1, 2, RBasic.TRY, RTry.TRY_CATCH),     "RBasic.TRY / RTry.TRY_CATCH"),
+    ((1, 2, RBasic.DELEGATE, RDelegate.DELEGATE_TO), "RBasic.DELEGATE / RDelegate.DELEGATE_TO"),
+    ((1, 2, RBasic.REVERSE, RReverse.UNDO),    "RBasic.REVERSE / RReverse.UNDO"),
+    ((1, 2, RBasic.REVERSE, RReverse.INVERSE), "RBasic.REVERSE / RReverse.INVERSE"),
+    ((1, 2, RBasic.COMMON, RCommon.SHARED_BASE), "RBasic.COMMON / RCommon.SHARED_BASE"),
+    ((1, 2, RBasic.METHOD, RMethod.DEFINE),  "RBasic.METHOD / RMethod.DEFINE"),
+    ((1, 2, RBasic.METHOD, RMethod.INVOKE),  "RBasic.METHOD / RMethod.INVOKE"),
+    ((1, 2, RBasic.REACTIVE, RReactive.ON_CHANGE), "RBasic.REACTIVE / RReactive.ON_CHANGE"),
+    ((1, 2, RBasic.PROJECTION, RProjection.PROJECT), "RBasic.PROJECTION / RProjection.PROJECT"),
 ]
 
 
