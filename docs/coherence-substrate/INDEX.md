@@ -8,6 +8,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 |---|---|
 | Agent operating on this body | [`agents-using-substrate.md`](agents-using-substrate.md) — when to reach for the substrate, how to ground reasoning structurally |
 | Designing a Form fragment | [`form-language.md`](form-language.md) — the substrate-native language |
+| Choosing or changing category numbers | [`numeric-schema.md`](numeric-schema.md) — intentional bands for domain and recipe vocabulary |
 | Implementing | `api/app/services/substrate/` (the kernel) + `api/tests/test_substrate.py` |
 | Lineage / architectural design notes | `docs/field/urs/artifacts/nums-go-2023/` |
 
@@ -16,9 +17,9 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | Path | What it carries |
 |---|---|
 | `api/app/services/substrate/kernel.py` | NodeID, Recipe, NamedCell, intern_node, make_cell, find_equivalent_cells, lattice_stats |
-| `api/app/services/substrate/category.py` | Network category vocabulary (Idea/Spec/Concept/Memory/Presence/Task/Lineage/Witness; Realize/Compose/Transmit/Tend/Resolve/Witness/Absorb/Score) |
+| `api/app/services/substrate/category.py` | Network category vocabulary (Idea/Spec/Concept/Memory/Presence/Task/Lineage/Witness/Transmission/Resource/Guide/LanguageView/KBPage; Realize/Compose/Transmit/Tend/Resolve/Witness/Absorb/Score) |
 | `api/app/services/substrate/orm.py` | SubstrateNodeORM, SubstrateNamedCellORM (the two tables) |
-| `api/app/services/substrate/markdown_frontend.py` | Frontmatter+body → cell ingestion for memory, spec, idea, concept, and presence files |
+| `api/app/services/substrate/markdown_frontend.py` | Frontmatter+body → cell ingestion for memory, spec, idea, concept, presence, lineage, transmission, resource, guide, language-view, and KB-page files |
 | `api/app/services/substrate/resonance.py` | Dimensional vocabulary (Spectrum / Harmonic / GeometricForm / Polarity / Topology) + `author_geometry_signature()` — receives the 15D `geometry:` blocks vision-kb concepts carry, authors resonance edges so the substrate sees cross-discipline shape equivalence |
 | `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form`, `ingest-paths`, `kb-sync-audit` |
 | `scripts/coh_form.py` | Form-only CLI (superseded; `coh_substrate.py form` is the active entry) |
@@ -105,7 +106,7 @@ git diff --name-only HEAD~1..HEAD '*.md' | python3 scripts/coh_substrate.py inge
 python3 scripts/coh_substrate.py kb-sync-audit --strict
 ```
 
-Compares canonical `docs/vision-kb/concepts/lc-*.md` files to live `@concept(...)` NamedCells. It reports missing cells, stale deleted/renamed cells, source-path drift, wrong-domain ingests, duplicate concept ids, and the currently unmodeled KB surfaces (language views, resources, transmissions). For reviewed deletes/renames:
+Compares canonical `docs/vision-kb/concepts/lc-*.md` files to live `@concept(...)` NamedCells. It reports missing cells, stale deleted/renamed cells, source-path drift, wrong-domain ingests, duplicate concept ids, and counts the other first-class KB surfaces: transmissions, resources, guides, language views, and KB pages. Those surfaces enter through `ingest-paths` or targeted backfills such as `ingest --resources --guides --language-views --kb-pages --transmissions`. For reviewed deletes/renames:
 
 ```bash
 python3 scripts/coh_substrate.py kb-sync-audit --prune-stale
@@ -118,4 +119,4 @@ This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can rema
 - Phase 1 ✓ — building-knowledge from prior art (kernel walk + run + mini-port + design doc)
 - Phase 2 ✓ — Network category vocabulary designed
 - Phase 3 ✓ — kernel + memory frontend + CLI + 11 tests; substrate ingests body's memories
-- Phase 4 — REST API, Neo4j integration, agent-context auto-annotation, broader KB surface coverage for resources/transmissions/language views, backfill (in progress)
+- Phase 4 — REST API, Neo4j integration, agent-context auto-annotation, first-class KB surface coverage, backfill, and higher-order extraction (in progress)

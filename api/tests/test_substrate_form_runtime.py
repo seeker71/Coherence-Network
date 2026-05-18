@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.services.substrate import form_execute_text
+from app.services.substrate.category import BDomain
 from app.services.substrate.form_runtime import Frame, execute
 from app.services.substrate.form_speculation import FailSignal
 from app.services.substrate.kernel import NodeID
@@ -372,8 +373,10 @@ def test_blueprint_category(session):
     _seed_memory_cell(session)
     result = form_execute_text(session, '@memory("test memory").blueprint.category')
     assert isinstance(result, NodeID)
-    # Memory category is @1.2.4.4 = (pkg=1, level=BASIC=2, type=DOMAIN=4, instance=MEMORY=4)
-    assert (result.package, result.level, result.type_, result.instance) == (1, 2, 4, 4)
+    # Memory category is @1.2.4.6 in the intentional domain band.
+    assert (result.package, result.level, result.type_, result.instance) == (
+        1, 2, 4, BDomain.MEMORY,
+    )
 
 
 def test_blueprint_nchildren(session):

@@ -106,14 +106,14 @@ Every NodeID is `package.level.type.instance`:
 ```form
 @1.5.4.1                            # Memory blueprint at level COMPLEX_3
 @1.1.2.2                            # Integer trivial blueprint
-@1.2.4.4                            # Memory domain blueprint at level BASIC
+@1.2.4.6                            # Memory domain blueprint at level BASIC
 @2.5.4.1                            # same shape, different package (e.g. branch worktree)
 ```
 
 Trivial constructors give names to the well-known leaf NodeIDs:
 
 ```form
-~Memory      = @1.2.4.4              # the Memory domain blueprint
+~Memory      = @1.2.4.6              # the Memory domain blueprint
 ~Integer     = @1.1.2.2
 ~String      = @1.1.2.4
 ~Slug        = @1.1.3.1
@@ -146,7 +146,7 @@ The `form` keyword interns the composition into a Blueprint NodeID and binds it 
 ```
 @memory("arrival relational ground")           ← cell (gas, level 5)
 ├── .blueprint  →  @1.5.4.1                    ← composite Blueprint (ice, level 5)
-│   ├── .category  →  @1.2.4.4                 ← B_Domain.MEMORY (level 2, the type-of-the-type)
+│   ├── .category  →  @1.2.4.6                 ← B_Domain.MEMORY (level 2, the type-of-the-type)
 │   ├── .child(0)  →  @1.4.1.1                 ← field-Blueprint for `name` (level 4)
 │   │   ├── .category  →  @1.2.1.4             ← B_Container.OBJECT
 │   │   ├── .child(0)  →  @1.3.1.1             ← sub-composition (slug + value)
@@ -169,7 +169,7 @@ Every level holds the same shape as the levels above and below — categories co
 
 ```form
 @memory("arrival relational ground").blueprint                     # → @1.5.4.1
-@memory("arrival relational ground").blueprint.category            # → @1.2.4.4  (B_Domain.MEMORY)
+@memory("arrival relational ground").blueprint.category            # → @1.2.4.6  (B_Domain.MEMORY)
 @memory("arrival relational ground").blueprint.nchildren           # → 4
 @memory("arrival relational ground").blueprint.child(0)            # → @1.4.1.1  (the name-field Blueprint)
 @memory("arrival relational ground").blueprint.child(0).category   # → @1.2.1.4  (B_Container.OBJECT)
@@ -945,7 +945,7 @@ resume               # → recipe @1.2.23.2
 
 do { save; 1 + 2; restore }         # composes inside do-blocks
 choose [save, raise]                # composes inside choose
-with @1.2.4.3 { save; discard }     # composes inside with
+with @1.2.4.1 { save; discard }     # composes inside with
 ```
 
 **Implementation honesty:** leaf primitives (`save`, `raise` alone) return bare category NodeIDs without persisting to `substrate_nodes` — the kernel's `intern_node` skips re-interning trivial leaves with no children. So `?vocabulary` only sees them once they're embedded in a composite recipe (the composite's stored row carries them as serialized children). This mirrors how `fail`/`stop` work; not a bug, an architectural property.

@@ -90,6 +90,13 @@ absorbing it as anonymous belief.
   Earth-activated nodes in the New Earth grid, with the first three
   Hubs already in form (Hati Suci, Bali; a Cacao Forest in Bali; Nacpan
   Beach, Palawan, Philippines). **1 concept seeded (`lc-light-hubs`).**
+- [`2026-05-16-jean-luc-golden-codes.md`](2026-05-16-jean-luc-golden-codes.md)
+  — *Golden Codes - Golden Dolphins & Activating the Light DNA of a
+  Golden Age*, email compilation from Jean-Luc Bozzoli received
+  2026-05-16. Gathers golden-age, dolphin/whale, galactic-family, and
+  Daniel Scranton excerpt threads. **No concepts seeded — witnessed
+  with provenance; resonates with existing galactic and arrival
+  concepts.**
 
 ## Two postures the body holds toward sources
 
