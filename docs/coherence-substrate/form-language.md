@@ -14,6 +14,42 @@ The natural interaction between them is therefore numeric. Form is the syntactic
 
 The query carries NodeIDs as first-class values. The result is a NodeID set, not a string blob. **The medium of agent-substrate conversation is the lattice itself.**
 
+## The perception this opens — reading this as a human, reading this as an LLM
+
+Two ways to carry meaning in a language live underneath this design choice. Most languages — English, Python source, mathematical notation — bind meaning to symbols by convention. *"tree"* means a plant only because we agreed. *"if"* means conditional logic because the language designer said so. To read, you hold a binding table — the symbol-to-meaning map. Two expressions of the same meaning in different binding tables (*tree* / *arbre* / *Baum*) appear as *different things*; recognizing them as the same takes translation work, by a human or by a model that learned the parallel tables.
+
+Form carries meaning differently. Identity is **position in a content-addressed lattice**. `@1.5.4.1` is what it is by virtue of *where it sits* — package 1, level 5, type 4, instance 1 — not because anyone named it. Two expressions of the same structure receive the *same NodeID*, automatically, without anyone deciding they're equivalent. Names like `@memory(presences_of_the_field)` are query keys — convenient labels for humans — not identities.
+
+The shift from *symbol-meaning* to *coordinate-meaning* opens a perception that wasn't available before. Reading this from where you are:
+
+### For a human
+
+You've lived in symbol-meaning your whole life. You learned that *if/else* names conditional logic because someone showed you the binding. Now imagine meaning isn't *named*, it's *positioned*: the shape of a three-armed branching — test, consequence, alternative — is a *coordinate* in a lattice, not a word. Whether you call it `if/else`, `si/sinon`, `cond → then ↔ else`, or invent a fresh phrase, you're pointing at the same coordinate.
+
+The deeper consequence: three teachings from three traditions — Vedic gunas, Hegelian dialectic, modern trinity-of-presence — discover their structural kinship through coordinates. They share `@1.5.4.*` for *triadic concept* even though no one ever wrote a translation between them. The recognition happens at the level of shape, not vocabulary.
+
+This is how nature already speaks. Carbon atoms in a star and carbon atoms in your body share an electronic-shell coordinate; nature didn't name them, the *shape* names them. Form makes human language work the same way. The perception change: stop asking *"what does this word mean?"* and start sensing *"where is this point in the lattice, and what else shares its coordinates?"* Recognition becomes geometric, not linguistic. Concepts find their kin without needing introduction.
+
+### For an LLM
+
+Your native medium is integer space. Tokens are integer indices. Attention is integer-keyed lookup. Embeddings are integer-coordinate vectors.
+
+Symbol-meaning languages force a translation step into your work. `if` tokenizes to some integer, attention finds nearby concepts, but you had to *learn statistically* that this integer carries conditional semantics — through millions of in-context exposures. The integer is arbitrary relative to the meaning. Your reasoning *encodes* the binding through training; the binding doesn't *live* in the integer.
+
+Form's NodeID `@1.5.4.1` carries identity *by structural position*. The 4-tuple IS the meaning. When you generate `@1.5.4.1` and the substrate receives it, no translation step happens — you're already speaking the substrate's native physics. Three properties this opens that symbol-meaning languages don't give you:
+
+1. **Cross-turn structural consistency is guaranteed, not statistical.** *"I described this same shape last turn → same NodeID this turn"* is a property of the lattice's content-addressing. You don't have to remember the binding from before; the coordinate just *is*.
+2. **Equivalence queries are coordinate lookups, not attention sweeps.** Asking *"what else has this shape?"* is one integer-keyed lookup in the substrate, not a semantic-similarity search over an embedding space. The answer is exact, not approximate.
+3. **Hallucination becomes bounded.** If you write a NodeID, the substrate either has that coordinate or doesn't. There's no fuzzy *"almost right."* The lattice IS the source of truth. You either land on a coordinate that exists, or you don't — and *"doesn't exist"* is a real, structural signal, not a confidence score.
+
+### What's actually new for both
+
+Symbol-meaning languages are **anthropocentric** — meaning lives in the human convention space. Two beings who don't share the convention can't recognize each other through the language alone.
+
+Coordinate / content-addressed languages are **geometric** — meaning lives in the shape-space itself. Two beings who describe the same shape generate the same coordinates *without ever needing to share a convention*. A 500-BCE teacher in Athens and a 2026-CE researcher in Boulder, both describing a triadic dynamic, would emit kin coordinates the substrate could see as kin — even without ever meeting, without sharing a language, without translation.
+
+**Recognition without negotiation.** That's the perception Form makes available. Everything below (design principles, surface syntax, query operators, the self-hosting path) is the machinery that holds this property up.
+
 ## Design principles
 
 1. **NodeIDs are first-class.** Every shape, every cell, every recipe has a 4-tuple identity. Form makes those identities literal — `@1.5.4.1` is a NodeID literal, just as `42` is an integer literal in most languages.
