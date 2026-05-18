@@ -30,6 +30,7 @@ form_runtime's equivalents.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -286,6 +287,16 @@ def _identifier_ast(nid: NodeID) -> Any:
     return Identifier(name=f"__hashed_{nid.instance}")
 
 
+# Bounded reconstruction cache. The substrate is append-only at the row
+# level (interned shapes, allocated string-instances, created cells never
+# change after writing), so a NodeID maps to a stable AST shape across
+# the process lifetime. Evaluators (form_runtime.execute, _to_recipe_node_id)
+# walk AST nodes read-only, so sharing a single AST object across callers
+# is safe. Capping the cache keeps memory bounded under heavy use.
+_NODE_TO_AST_CACHE: "OrderedDict[NodeID, Any]" = OrderedDict()
+_NODE_TO_AST_CACHE_MAX = 1024
+
+
 def node_to_ast(session: Session, nid: NodeID) -> Any:
     """Reconstruct an AST node from a Recipe NodeID.
 
@@ -293,6 +304,18 @@ def node_to_ast(session: Session, nid: NodeID) -> Any:
     parser's AST. `eval_recipe` calls this then hands the result to
     `form_runtime.execute` — one engine, two input modes.
     """
+    cached = _NODE_TO_AST_CACHE.get(nid)
+    if cached is not None:
+        _NODE_TO_AST_CACHE.move_to_end(nid)
+        return cached
+    ast = _node_to_ast_uncached(session, nid)
+    _NODE_TO_AST_CACHE[nid] = ast
+    if len(_NODE_TO_AST_CACHE) > _NODE_TO_AST_CACHE_MAX:
+        _NODE_TO_AST_CACHE.popitem(last=False)
+    return ast
+
+
+def _node_to_ast_uncached(session: Session, nid: NodeID) -> Any:
     from app.services.substrate.form import (
         IntLit, BoolLit, StringLit, Identifier,
         CommonExpr, DelegateExpr, OnChangeExpr, ProjectExpr, TryCatchExpr,

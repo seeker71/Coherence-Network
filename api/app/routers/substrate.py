@@ -510,7 +510,7 @@ class FormResultOut(BaseModel):
     """Discriminated union of Form evaluation outcomes.
 
     `kind` names which field carries the result. Other fields are null.
-    Kinds: node_id, recipe, cell, view, cells, views.
+    Kinds: node_id, recipe, cell, view, cells, views, lattice, keywords, vocabulary.
     """
 
     kind: str
@@ -519,6 +519,9 @@ class FormResultOut(BaseModel):
     view: CellViewOut | None = None
     cells: list[CellOut] | None = None
     views: list[CellViewOut] | None = None
+    lattice: dict[str, int] | None = None
+    keywords: list[str] | None = None
+    vocabulary: dict[str, dict[str, int]] | None = None
 
 
 def _cell_view_out(v: CellView) -> CellViewOut:
@@ -582,6 +585,33 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
                 kind="views",
                 views=[_cell_view_out(v) for v in result.value],
             )
+        if result.kind == "lattice":
+            # ?lattice — substrate-snapshot lens
+            return FormResultOut(kind="lattice", lattice=result.value)
+        if result.kind == "keywords":
+            # ?keywords — grammar-introspection lens
+            return FormResultOut(kind="keywords", keywords=list(result.value))
+        if result.kind == "vocabulary":
+            # ?vocabulary — verb-cluster histogram. Translate type_ ints to
+            # category names so the response is legible without a category
+            # lookup table on the caller's side.
+            from app.services.substrate.category import BBasic, RBasic
+
+            raw = result.value
+            named: dict[str, dict[str, int]] = {"recipes": {}, "blueprints": {}}
+            for type_int, count in raw.get("recipes", {}).items():
+                try:
+                    name = RBasic(type_int).name
+                except ValueError:
+                    name = f"type_{type_int}"
+                named["recipes"][name] = count
+            for type_int, count in raw.get("blueprints", {}).items():
+                try:
+                    name = BBasic(type_int).name
+                except ValueError:
+                    name = f"type_{type_int}"
+                named["blueprints"][name] = count
+            return FormResultOut(kind="vocabulary", vocabulary=named)
         raise HTTPException(
             status_code=500,
             detail=f"unknown FormResult.kind: {result.kind}",
