@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 126
+**Total files**: 128
 
 | File | Purpose |
 |---|---|
@@ -20,6 +20,7 @@
 | [agent_issues_routes.py](agent_issues_routes.py) | Agent fatal issues, monitor issues, metrics, effectiveness, collective-health routes. |
 | [agent_monitor_helpers.py](agent_monitor_helpers.py) | Monitor and status-report helpers for agent routes. No routes. |
 | [agent_prompt_ab_routes.py](agent_prompt_ab_routes.py) | Agent prompt A/B ROI stats route. |
+| [agent_question_routes.py](agent_question_routes.py) | Agent question routes — sub-agent questions with SSE answers. |
 | [agent_route_telegram_routes.py](agent_route_telegram_routes.py) | Agent route (routing) and Telegram diagnostics routes. |
 | [agent_run_state_routes.py](agent_run_state_routes.py) | Agent run-state and runner registry routes. |
 | [agent_smart_reap_routes.py](agent_smart_reap_routes.py) | Smart-reap routes: diagnose stuck tasks before marking them timed_out. |
@@ -131,6 +132,7 @@
 | [vision.py](vision.py) | Vision content routes backed by graph records. |
 | [vitality.py](vitality.py) | Workspace vitality routes — living-system health metrics. |
 | [wallets.py](wallets.py) | Wallets router — connect, verify, and manage on-chain wallets. |
+| [wellness.py](wellness.py) | Wellness — the body sensing itself, surfaced outward. |
 | [workspace_projects.py](workspace_projects.py) | Workspace Project routes — group ideas within a workspace. |
 | [workspaces.py](workspaces.py) | Workspace CRUD routes — the tenant primitive. |
 | [world_lens.py](world_lens.py) | World lens — see the world through a concept's or contributor's frequency. |

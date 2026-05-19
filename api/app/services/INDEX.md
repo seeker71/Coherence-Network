@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 227
+**Total files**: 228
 
 | File | Purpose |
 |---|---|
@@ -21,6 +21,7 @@
 | [agent_execution_service.py](agent_execution_service.py) | Server-side execution for agent tasks. |
 | [agent_execution_task_flow.py](agent_execution_task_flow.py) | Agent execution orchestration helpers. |
 | [agent_monitor_guidance_service.py](agent_monitor_guidance_service.py) | Guidance text helpers for agent monitor issues. |
+| [agent_question_service.py](agent_question_service.py) | Agent question channel — in-memory queue and SSE event log. |
 | [agent_routing_service.py](agent_routing_service.py) | Deterministic agent routing and provider classification utilities. |
 | [agent_run_state_service.py](agent_run_state_service.py) | Shared run-state lease tracking for agent workers. |
 | [agent_runner_registry_service.py](agent_runner_registry_service.py) | Runner registry for pull-based workers (DB-backed with local fallback). |
