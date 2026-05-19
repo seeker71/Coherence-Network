@@ -1,20 +1,15 @@
 // S-expression bootstrap reader — `.fk` text → recipe tree.
 //
-// Syntax recognized in v0:
+// Surface vocabulary matches the Go/Rust kernels exactly via buildVerb.
+// Verb names (`add`, `sub`, `mul`, `eq`, `le`, ...) intern to specific
+// RBasic recipes; everything else is a function call.
 //
-//   atoms:         123 -45 "string" true false null ident
-//   forms:         (op arg1 arg2 ...)
-//   math ops:      + - * / mod
-//   compare ops:   < <= > >= == !=
-//   logic ops:     and or not
-//   special:       (if c t e)  (do e1 e2 ...)  (defn name (p1 p2) body)
-//                  (list e1 e2 ...)
-//   call:          (ident arg1 ...)  — when ident resolves to a closure
-//
-// Aligned with Go/Rust kernel readers. Same source text ⇒ same NodeIDs.
+// Operator forms (`+`, `-`, `<`, `<=`, ...) are also accepted as aliases
+// so the playground stays ergonomic. The interned NodeIDs are identical.
 
 import {
   Kernel,
+  Level,
   RBasic,
   RBlock,
   RCmp,
@@ -22,7 +17,6 @@ import {
   RLogic,
   RMath,
   Triv,
-  Level,
   type NodeID,
 } from "./kernel.ts";
 
@@ -43,7 +37,6 @@ function tokenize(src: string): Token[] {
       continue;
     }
     if (c === ";") {
-      // line comment to end of line
       while (i < src.length && src[i] !== "\n") i++;
       continue;
     }
@@ -78,11 +71,10 @@ function tokenize(src: string): Token[] {
         i++;
       }
       if (src[i] !== quote) throw new Error(`unterminated string at ${start}`);
-      i++; // consume closing quote
+      i++;
       toks.push({ kind: "str", text: s, pos: start });
       continue;
     }
-    // ident or number
     const start = i;
     while (i < src.length) {
       const ch = src[i];
@@ -125,11 +117,9 @@ function consume(s: ParseState): Token {
   return t;
 }
 
-// readForm — read one S-expression atom or list and intern as recipe.
 export function readForm(k: Kernel, src: string): NodeID {
   const s: ParseState = { toks: tokenize(src), i: 0 };
   const node = readOne(k, s);
-  // Allow trailing whitespace only.
   if (s.i !== s.toks.length) {
     const t = s.toks[s.i];
     throw new Error(`extra tokens after expression at ${t?.pos}`);
@@ -137,8 +127,6 @@ export function readForm(k: Kernel, src: string): NodeID {
   return node;
 }
 
-// readAll — read a sequence of top-level forms, wrap them in a BLOCK.
-// This is what file reading uses.
 export function readAll(k: Kernel, src: string): NodeID {
   const s: ParseState = { toks: tokenize(src), i: 0 };
   const forms: NodeID[] = [];
@@ -146,7 +134,7 @@ export function readAll(k: Kernel, src: string): NodeID {
     forms.push(readOne(k, s));
   }
   if (forms.length === 0) return k.internTrivialNull();
-  if (forms.length === 1 && forms[0] !== undefined) return forms[0];
+  if (forms.length === 1) return forms[0]!;
   return k.intern(
     { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.DO },
     forms,
@@ -165,10 +153,9 @@ function readOne(k: Kernel, s: ParseState): NodeID {
     if (t.text === "true") return k.internTrivialBool(true);
     if (t.text === "false") return k.internTrivialBool(false);
     if (t.text === "null") return k.internTrivialNull();
-    // bare identifier — wrap in IDENT recipe so the walker resolves it
-    // through the frame, not as a string literal
+    // Bare identifier: wrap in IDENT recipe; the walker resolves through frame.
     return k.intern(
-      { pkg: 1, level: Level.BASIC, type: RBasic.IDENT, inst: 0 },
+      { pkg: 1, level: Level.BASIC, type: RBasic.IDENT, inst: 1 },
       [k.internString(t.text)],
     );
   }
@@ -185,41 +172,54 @@ function readList(k: Kernel, s: ParseState): NodeID {
     consume(s);
     return k.internTrivialNull();
   }
-  if (head.kind !== "ident") {
-    // (expr expr ...) with no leading op → treat as function call where
-    // first item is the callee
-    return readFnCall(k, s);
-  }
-
-  switch (head.text) {
-    case "+":
-    case "-":
-    case "*":
-    case "/":
-    case "mod":
-      return readMath(k, s);
-    case "<":
-    case "<=":
-    case ">":
-    case ">=":
-    case "==":
-    case "!=":
-      return readCompare(k, s);
-    case "and":
-    case "or":
-    case "not":
-      return readLogic(k, s);
-    case "if":
-      return readIf(k, s);
-    case "do":
-      return readDo(k, s);
-    case "defn":
+  // Special forms with non-uniform child shapes (let, defn) need to peek
+  // at the verb before reading children.
+  if (head.kind === "ident") {
+    const verb = head.text;
+    if (verb === "let") {
+      consume(s);
+      return readLet(k, s);
+    }
+    if (verb === "defn") {
+      consume(s);
       return readDefn(k, s);
-    case "list":
-      return readListForm(k, s);
-    default:
-      return readFnCall(k, s);
+    }
+    if (verb === "if") {
+      consume(s);
+      const kids = readChildrenUntilRparen(k, s);
+      if (kids.length === 2) {
+        return k.intern(
+          { pkg: 1, level: Level.BASIC, type: RBasic.COND, inst: RCond.IF_THEN },
+          kids,
+        );
+      }
+      if (kids.length === 3) {
+        return k.intern(
+          {
+            pkg: 1,
+            level: Level.BASIC,
+            type: RBasic.COND,
+            inst: RCond.IF_THEN_ELSE,
+          },
+          kids,
+        );
+      }
+      throw new Error("if: need 2 or 3 args");
+    }
+    // Verb forms: consume the verb, read remaining children, dispatch
+    // through buildVerb.
+    consume(s);
+    const kids = readChildrenUntilRparen(k, s);
+    return buildVerb(k, verb, kids);
   }
+  // (expr expr...) with no leading ident — function call where first item
+  // is the callee expression
+  const callee = readOne(k, s);
+  const args = readChildrenUntilRparen(k, s);
+  return k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.FNCALL, inst: 1 },
+    [callee, ...args],
+  );
 }
 
 function readChildrenUntilRparen(k: Kernel, s: ParseState): NodeID[] {
@@ -235,143 +235,189 @@ function readChildrenUntilRparen(k: Kernel, s: ParseState): NodeID[] {
   }
 }
 
-function readMath(k: Kernel, s: ParseState): NodeID {
-  const opTok = consume(s);
-  const opMap: Record<string, number> = {
-    "+": RMath.PLUS,
-    "-": RMath.MINUS,
-    "*": RMath.MUL,
-    "/": RMath.DIV,
-    "mod": RMath.MOD,
-  };
-  const op = opMap[opTok.text];
-  if (op === undefined) throw new Error(`unknown math op ${opTok.text}`);
-  const kids = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: op },
-    kids,
-  );
-}
-
-function readCompare(k: Kernel, s: ParseState): NodeID {
-  const opTok = consume(s);
-  const opMap: Record<string, number> = {
-    "<": RCmp.LT,
-    "<=": RCmp.LE,
-    ">": RCmp.GT,
-    ">=": RCmp.GE,
-    "==": RCmp.EQ,
-    "!=": RCmp.NE,
-  };
-  const op = opMap[opTok.text];
-  if (op === undefined) throw new Error(`unknown compare op ${opTok.text}`);
-  const kids = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: op },
-    kids,
-  );
-}
-
-function readLogic(k: Kernel, s: ParseState): NodeID {
-  const opTok = consume(s);
-  const opMap: Record<string, number> = {
-    "and": RLogic.AND,
-    "or": RLogic.OR,
-    "not": RLogic.NOT,
-  };
-  const op = opMap[opTok.text];
-  if (op === undefined) throw new Error(`unknown logic op ${opTok.text}`);
-  const kids = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.LOGIC, inst: op },
-    kids,
-  );
-}
-
-function readIf(k: Kernel, s: ParseState): NodeID {
-  consume(s); // "if"
-  const kids = readChildrenUntilRparen(k, s);
-  if (kids.length !== 3) throw new Error("if needs 3 args (cond, then, else)");
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.COND, inst: RCond.IF },
-    kids,
-  );
-}
-
-function readDo(k: Kernel, s: ParseState): NodeID {
-  consume(s); // "do"
-  const kids = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.DO },
-    kids,
-  );
-}
-
-// (defn name (p1 p2 ...) body)
-function readDefn(k: Kernel, s: ParseState): NodeID {
-  consume(s); // "defn"
+// (let <name> <value>) — interns name as a bare string trivial so the
+// walker reads NameID directly from the inst slot (no IDENT recipe).
+function readLet(k: Kernel, s: ParseState): NodeID {
   const nameTok = consume(s);
   if (nameTok.kind !== "ident")
-    throw new Error("defn: name must be identifier");
-  // parameters list
+    throw new Error("let: name must be identifier");
+  const value = readOne(k, s);
+  const close = consume(s);
+  if (close.kind !== "rparen") throw new Error("let: expected )");
+  const nameTrivial: NodeID = {
+    pkg: 1,
+    level: Level.TRIVIAL,
+    type: Triv.STRING,
+    inst: k.internName(nameTok.text),
+  };
+  return k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.LET },
+    [nameTrivial, value],
+  );
+}
+
+// (defn <name> (<params>...) <body>) — names and params get repackaged as
+// bare string trivials so the walker reads NameID via inst (matches Go).
+function readDefn(k: Kernel, s: ParseState): NodeID {
+  const nameTok = consume(s);
+  if (nameTok.kind !== "ident") throw new Error("defn: name must be identifier");
   const lparen = consume(s);
-  if (lparen.kind !== "lparen")
-    throw new Error("defn: expected ( for parameter list");
-  const params: NodeID[] = [];
+  if (lparen.kind !== "lparen") throw new Error("defn: expected ( for params");
+  const paramTrivials: NodeID[] = [];
   while (true) {
     const t = peek(s);
-    if (t === undefined) throw new Error("defn: unterminated parameter list");
+    if (t === undefined) throw new Error("defn: unterminated param list");
     if (t.kind === "rparen") {
       consume(s);
       break;
     }
-    if (t.kind !== "ident")
-      throw new Error("defn: parameters must be identifiers");
+    if (t.kind !== "ident") throw new Error("defn: params must be identifiers");
     consume(s);
-    params.push(
-      k.intern(
-        { pkg: 1, level: Level.BASIC, type: RBasic.IDENT, inst: 0 },
-        [k.internString(t.text)],
-      ),
-    );
+    paramTrivials.push({
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.STRING,
+      inst: k.internName(t.text),
+    });
   }
-  const paramList = k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: 0 },
-    params,
-  );
   const body = readOne(k, s);
   const close = consume(s);
   if (close.kind !== "rparen") throw new Error("defn: expected )");
+  const nameTrivial: NodeID = {
+    pkg: 1,
+    level: Level.TRIVIAL,
+    type: Triv.STRING,
+    inst: k.internName(nameTok.text),
+  };
+  const paramsBlock = k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+    paramTrivials,
+  );
   return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.FNDEF, inst: 0 },
-    [
-      k.intern(
-        { pkg: 1, level: Level.BASIC, type: RBasic.IDENT, inst: 0 },
-        [k.internString(nameTok.text)],
-      ),
-      paramList,
-      body,
-    ],
+    { pkg: 1, level: Level.BASIC, type: RBasic.FNDEF, inst: 1 },
+    [nameTrivial, paramsBlock, body],
   );
 }
 
-function readListForm(k: Kernel, s: ParseState): NodeID {
-  consume(s); // "list"
-  const kids = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: 0 },
-    kids,
-  );
-}
-
-function readFnCall(k: Kernel, s: ParseState): NodeID {
-  const calleeTok = peek(s);
-  if (calleeTok === undefined) throw new Error("call: missing callee");
-  // The callee can be any expression; pass through readOne.
-  const callee = readOne(k, s);
-  const args = readChildrenUntilRparen(k, s);
-  return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.FNCALL, inst: 0 },
-    [callee, ...args],
-  );
+// buildVerb — map a surface verb to its RBasic recipe. Matches Go/Rust
+// kernel's buildVerb exactly so the same source produces the same NodeIDs.
+function buildVerb(k: Kernel, verb: string, args: NodeID[]): NodeID {
+  switch (verb) {
+    case "do":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.DO },
+        args,
+      );
+    case "seq":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+        args,
+      );
+    // Math
+    case "add":
+    case "+":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.PLUS },
+        args,
+      );
+    case "sub":
+    case "-":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.MINUS },
+        args,
+      );
+    case "mul":
+    case "*":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.MUL },
+        args,
+      );
+    case "div":
+    case "/":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.DIV },
+        args,
+      );
+    case "mod":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.MOD },
+        args,
+      );
+    // Compare
+    case "eq":
+    case "==":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.EQ },
+        args,
+      );
+    case "ne":
+    case "!=":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.NE },
+        args,
+      );
+    case "lt":
+    case "<":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.LT },
+        args,
+      );
+    case "le":
+    case "<=":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.LE },
+        args,
+      );
+    case "gt":
+    case ">":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.GT },
+        args,
+      );
+    case "ge":
+    case ">=":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.GE },
+        args,
+      );
+    // Logic
+    case "and":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.LOGIC, inst: RLogic.AND },
+        args,
+      );
+    case "or":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.LOGIC, inst: RLogic.OR },
+        args,
+      );
+    case "not":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.LOGIC, inst: RLogic.NOT },
+        args,
+      );
+    case "list":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: 1 },
+        args,
+      );
+    case "params":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+        args,
+      );
+    default: {
+      // Function call: bare-string-trivial callee, then args.
+      const nameTrivial: NodeID = {
+        pkg: 1,
+        level: Level.TRIVIAL,
+        type: Triv.STRING,
+        inst: k.internName(verb),
+      };
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.FNCALL, inst: 1 },
+        [nameTrivial, ...args],
+      );
+    }
+  }
 }
