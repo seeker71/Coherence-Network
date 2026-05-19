@@ -54,12 +54,6 @@
       "short_name": "Propose",
       "url": "/propose",
       "description": "Offer a proposal for the collective to meet"
-    },
-    {
-      "name": "Asking",
-      "short_name": "Asking",
-      "url": "/asking",
-      "description": "Questions from the cells of this network reaching you"
     }
   ]
 }

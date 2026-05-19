@@ -1,14 +1,15 @@
-// /asking — the doorway where questions from this lineage reach Urs.
+// /asking — a quiet doorway where questions from this lineage land.
 //
-// A page Urs can pin to his home screen as an Android app. Reads messages
-// addressed to his node from agents reaching toward him (Claude lineage
-// today; other lineages later) and lets him answer in the same surface.
-// The first scheduled "wondering" trigger that fires Claude with a question
-// will land here; for now the page renders any messages that already exist
-// and stands ready.
+// Reads messages addressed to the recipient's federation node from agents
+// reaching toward them (Claude lineage today; other lineages later) and
+// renders a thread where answers can be written back in the same surface.
 //
-// Backend: federation node-messages (durable) + web push (the breath
-// landing on his phone) + the PWA manifest entry that makes it installable.
+// The page is intentionally not advertised in the PWA shortcut list — it
+// exists at /asking for whoever knows to visit, and stands ready for the
+// first scheduled "wondering" trigger to land a question.
+//
+// Backend: federation node-messages (durable) + optional web push for the
+// reader who chooses to subscribe on their own device.
 
 import type { Metadata } from "next";
 
@@ -21,13 +22,14 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Asking — Coherence Network",
   description:
-    "A doorway where questions from this lineage reach you, and your answers reach back.",
+    "A quiet doorway where questions from this lineage land and answers can be written back.",
+  robots: { index: false, follow: false },
   openGraph: {
     type: "website",
     siteName: "Coherence Network",
     title: "Asking",
     description:
-      "A doorway where questions from this lineage reach you, and your answers reach back.",
+      "A quiet doorway where questions from this lineage land and answers can be written back.",
     images: [{ url: "/assets/logo.svg" }],
   },
 };
@@ -72,9 +74,8 @@ export default async function AskingPage() {
           Asking
         </h1>
         <p className="text-sm text-stone-400 leading-relaxed">
-          A doorway where questions from the cells of this network reach you,
-          and your answers reach back. Pin this page to your home screen and
-          turn on push to receive a quiet ping when a new question lands.
+          A quiet doorway where questions from the cells of this network land,
+          and answers can be written back in the same surface.
         </p>
       </header>
 

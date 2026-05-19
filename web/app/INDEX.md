@@ -17,7 +17,7 @@
 | `/api-coverage` | [page.tsx](api-coverage/page.tsx) | _no top-of-file purpose_ |
 | `/api-health` | [page.tsx](api-health/page.tsx) | _no top-of-file purpose_ |
 | `/arrival/[id]` | [page.tsx](arrival/[id]/page.tsx) | /arrival/[id] — the moment of being received. After /begin lands, the |
-| `/asking` | [page.tsx](asking/page.tsx) | /asking — the doorway where questions from this lineage reach Urs. |
+| `/asking` | [page.tsx](asking/page.tsx) | /asking — a quiet doorway where questions from this lineage land. |
 | `/assets/[asset_id]` | [page.tsx](assets/[asset_id]/page.tsx) | _no top-of-file purpose_ |
 | `/assets/[asset_id]/proof` | [page.tsx](assets/[asset_id]/proof/page.tsx) | _no top-of-file purpose_ |
 | `/assets` | [page.tsx](assets/page.tsx) | _no top-of-file purpose_ |
