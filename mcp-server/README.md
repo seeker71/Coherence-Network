@@ -156,6 +156,16 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 | `coherence_task_seed` | Create a new task from an idea. |
 | `coherence_task_events` | View the activity event log for a task. |
 
+### Substrate + Form
+
+| Tool | What it does |
+|------|-------------|
+| `coherence_substrate_form` | Evaluate Form notation against the coherence-substrate with `mode=ast` or `mode=streaming`. |
+
+`mode=ast` uses the full Form evaluator for queries and cells. `mode=streaming`
+uses the BMF-style direct Recipe emitter for supported recipe expressions and
+returns the emitted Recipe NodeID.
+
 ### Awareness Streaming — presence in and out
 
 | Tool | What it does |

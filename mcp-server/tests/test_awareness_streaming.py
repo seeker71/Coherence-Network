@@ -16,6 +16,7 @@ def test_awareness_tools_are_registered() -> None:
         "coherence_awareness_stream",
         "coherence_node_message_send",
         "coherence_node_messages",
+        "coherence_substrate_form",
         "coherence_get_field_story",
         "coherence_get_field_story_artifact",
         "coherence_contribute_field_story",
@@ -87,6 +88,37 @@ def test_agent_invitation_dispatch_routes_to_api(monkeypatch) -> None:
 
     assert result == {"id": "agent-resonance-onboarding"}
     assert calls == [("/api/agent/invitation", None)]
+
+
+def test_substrate_form_dispatch_routes_to_api(monkeypatch) -> None:
+    calls: list[tuple[str, dict]] = []
+
+    def fake_post(path: str, body: dict) -> dict:
+        calls.append((path, body))
+        return {"kind": "lattice", "lattice": {"nodes": 1}}
+
+    monkeypatch.setattr(mcp_server, "api_post", fake_post)
+
+    result = mcp_server.dispatch(
+        "coherence_substrate_form",
+        {"expression": "?lattice"},
+    )
+    streaming_result = mcp_server.dispatch(
+        "coherence_substrate_form",
+        {"expression": "1 + 2", "mode": "streaming"},
+    )
+    bad_mode = mcp_server.dispatch(
+        "coherence_substrate_form",
+        {"expression": "1 + 2", "mode": "direct"},
+    )
+
+    assert result == {"kind": "lattice", "lattice": {"nodes": 1}}
+    assert streaming_result == {"kind": "lattice", "lattice": {"nodes": 1}}
+    assert bad_mode == {"error": "mode must be one of: ast, streaming"}
+    assert calls == [
+        ("/api/substrate/form", {"expression": "?lattice", "mode": "ast"}),
+        ("/api/substrate/form", {"expression": "1 + 2", "mode": "streaming"}),
+    ]
 
 
 def test_decode_sse_events_handles_json_keepalive_and_raw_text() -> None:

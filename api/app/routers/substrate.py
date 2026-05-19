@@ -25,6 +25,7 @@ from app.services.substrate import (
     find_cells_compatible_with,
     find_equivalent_cells,
     form_evaluate_text,
+    form_stream_emit,
     ingest_markdown_text,
     lattice_stats,
     lookup_cell,
@@ -504,6 +505,14 @@ class FormRequest(BaseModel):
             "Grammar: docs/coherence-substrate/form-language.md."
         ),
     )
+    mode: str = Field(
+        default="ast",
+        pattern="^(ast|streaming)$",
+        description=(
+            "Evaluation path. 'ast' uses the full Form evaluator; 'streaming' "
+            "uses the BMF-style direct Recipe emitter for its supported recipe subset."
+        ),
+    )
 
 
 class FormResultOut(BaseModel):
@@ -543,13 +552,21 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
 
     Returns a discriminated result: the `kind` field names which payload
     field carries the value (node_id / recipe / cell / view / cells /
-    views). Parse and evaluation errors return HTTP 400 with the failure
-    reason; the substrate stays read-only.
+    views). `mode="streaming"` routes supported recipe expressions through
+    the direct-emission parser and returns the emitted Recipe NodeID. Parse
+    and evaluation errors return HTTP 400 with the failure reason; the
+    substrate stays read-only.
 
     Grammar lives in docs/coherence-substrate/form-language.md.
     """
     with session_scope() as session:
         try:
+            if req.mode == "streaming":
+                node_id = form_stream_emit(session, req.expression)
+                return FormResultOut(
+                    kind="recipe",
+                    node_id=NodeIDOut.from_node_id(node_id),
+                )
             result = form_evaluate_text(session, req.expression)
         except LookupError as exc:
             # The expression parsed and evaluated cleanly, but a cell or

@@ -369,6 +369,27 @@ TOOLS: list[Tool] = [
         description="Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path.",
         inputSchema={"type": "object", "properties": {}},
     ),
+    # Substrate
+    Tool(
+        name="coherence_substrate_form",
+        description="Evaluate Form notation against the coherence-substrate. Supports the full AST evaluator or the streaming direct-Recipe emitter.",
+        inputSchema={
+            "type": "object",
+            "required": ["expression"],
+            "properties": {
+                "expression": {
+                    "type": "string",
+                    "description": "Form expression, e.g. '?lattice', '?cells where domain == \"spec\"', or '1 + 2'.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["ast", "streaming"],
+                    "description": "ast or streaming. Streaming emits a Recipe NodeID for the supported recipe subset.",
+                    "default": "ast",
+                },
+            },
+        },
+    ),
     # Federation
     Tool(
         name="coherence_list_federation_nodes",
@@ -1353,6 +1374,15 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/friction/report", {"window_days": args.get("window_days", 30)})
         case "coherence_agent_invitation":
             return api_get("/api/agent/invitation")
+        # Substrate
+        case "coherence_substrate_form":
+            mode = (args.get("mode") or "ast").strip().lower()
+            if mode not in {"ast", "streaming"}:
+                return {"error": "mode must be one of: ast, streaming"}
+            return api_post(
+                "/api/substrate/form",
+                {"expression": args["expression"], "mode": mode},
+            )
         # Federation
         case "coherence_list_federation_nodes":
             nodes = api_get("/api/federation/nodes")
