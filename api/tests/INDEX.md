@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 174
+**Total files**: 175
 
 | File | Purpose |
 |---|---|
@@ -150,6 +150,7 @@
 | [test_substrate_form_lens.py](test_substrate_form_lens.py) | Form lens operators — `?lattice` and `?keywords`. |
 | [test_substrate_form_loops.py](test_substrate_form_loops.py) | for/while loops + `set` for mutation across iterations. |
 | [test_substrate_form_operators.py](test_substrate_form_operators.py) | Tests for operator self-hosting — the last keyword-layer gap. |
+| [test_substrate_form_question_effects.py](test_substrate_form_question_effects.py) | Form runtime bridge to the agent question SSE channel. |
 | [test_substrate_form_registries.py](test_substrate_form_registries.py) | Tests for the three runtime-extensible registries Form now consults: |
 | [test_substrate_form_rules.py](test_substrate_form_rules.py) | Tests for runtime-registered Form keywords. |
 | [test_substrate_form_runtime.py](test_substrate_form_runtime.py) | Recipe-execution engine — Form expressions running, not just interning. |

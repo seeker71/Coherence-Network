@@ -6,7 +6,6 @@ wrappers over existing service functions -- no business logic lives here.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 from uuid import uuid4
@@ -235,7 +234,6 @@ def fork_idea_handler(arguments: dict[str, Any]) -> Any:
     from app.services import idea_service
 
     source_id = str(arguments["source_idea_id"])
-    contributor_id = str(arguments["contributor_id"])
     adaptation_notes = arguments.get("adaptation_notes", "")
 
     source = idea_service.get_idea(source_id)
@@ -346,7 +344,7 @@ def _serialize_substrate_value(value: Any) -> Any:
 
     NodeID → "p.l.t.i" string.  NamedCell → {domain, name, blueprint}.
     CellView → {cell, view_blueprint, compatible, reason}.
-    Lists recurse.  Primitives pass through.
+    Lists and dicts recurse.  Primitives pass through.
     """
     from app.services.substrate.kernel import NodeID, NamedCell, CellView
 
@@ -370,6 +368,8 @@ def _serialize_substrate_value(value: Any) -> Any:
         }
     if isinstance(value, list):
         return [_serialize_substrate_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _serialize_substrate_value(v) for k, v in value.items()}
     return value
 
 
