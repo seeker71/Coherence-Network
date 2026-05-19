@@ -1,0 +1,101 @@
+{
+  "date": "2026-05-19",
+  "thread_branch": "codex/kernel-form-streaming-breath-20260519",
+  "commit_scope": "Expose Form-language substrate evaluation through MCP and add an explicit streaming parser mode to the substrate Form API.",
+  "files_owned": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_form_endpoint.py",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/server.json",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "docs/system_audit/commit_evidence_2026-05-19_kernel_form_streaming_mcp.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "cd api && python3 -m pytest tests/test_substrate_form_endpoint.py tests/test_substrate_form_stream.py -q",
+      "python3 scripts/build_readmes.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-19_kernel_form_streaming_mcp.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Prompt entry gate passed in the worktree. MCP awareness tests pass with the new Form tool registration and dispatch route. Substrate Form endpoint and streaming parser tests pass, including API proof that mode=streaming emits the same Recipe NodeID as the AST path for the covered recipe expression. Branch is rebased on origin/main. Evidence validation, whitespace check, local PR guard, and stale PR follow-through check all pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "MCP clients can ask the coherence-substrate in Form notation through coherence_substrate_form, and API callers can select the streaming direct-Recipe emitter with POST /api/substrate/form mode=streaming.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Dispatch coherence_substrate_form with default mode and verify it posts expression+mode=ast to /api/substrate/form.",
+      "Dispatch coherence_substrate_form with mode=streaming and verify it posts expression+mode=streaming to /api/substrate/form.",
+      "POST /api/substrate/form with expression '1 + 2 * 3' through ast and streaming modes and verify both return the same recipe NodeID."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation passed; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "mcp-awareness-streaming",
+    "substrate"
+  ],
+  "spec_ids": [
+    "specs/mcp-awareness-streaming.md",
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "task_ids": [
+    "kernel-form-streaming-breath-20260519"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "mcp-server/tests/test_awareness_streaming.py::test_substrate_form_dispatch_routes_to_api",
+    "api/tests/test_substrate_form_endpoint.py::test_form_endpoint_streaming_mode_emits_same_recipe_node",
+    "api/app/routers/substrate.py:POST /api/substrate/form mode=streaming"
+  ],
+  "change_files": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_form_endpoint.py",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/server.json",
+    "mcp-server/tests/test_awareness_streaming.py"
+  ],
+  "change_intent": "runtime_feature"
+}
