@@ -1,0 +1,78 @@
+{
+  "date": "2026-05-19",
+  "thread_branch": "codex/heal-web-organ-ssh-keyscan-20260519",
+  "commit_scope": "Heal an intermittent Hostinger Auto Deploy failure by retrying SSH host-key discovery before web rollout.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-05-19_heal_web_organ_ssh_keyscan.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 10 https://pulse.coherencycoin.com/pulse/now | jq '.'",
+      "gh run view 26082183262 --repo seeker71/Coherence-Network --log-failed",
+      "python3 - <<'PY'\nfrom pathlib import Path\npath = Path('.github/workflows/hostinger-auto-deploy.yml')\ntext = path.read_text()\nrequired = ['ssh-keyscan -T 10 -H \"$host\"', 'max_attempts=5', '::warning::ssh-keyscan attempt', '::error::ssh-keyscan failed']\nmissing = [item for item in required if item not in text]\nprint({'missing': missing})\nraise SystemExit(1 if missing else 0)\nPY",
+      "python3 - <<'PY'\nimport yaml\nwith open('.github/workflows/hostinger-auto-deploy.yml', encoding='utf-8') as f:\n    data = yaml.safe_load(f)\nprint({'workflow': data.get('name'), 'jobs': sorted(data.get('jobs', {}))})\nPY",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-19_heal_web_organ_ssh_keyscan.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Pulse is currently overall=breathing with web=breathing and no ongoing silences. The concrete failed Hostinger run 26082183262 died in Configure SSH at ssh-keyscan before deploy or public verification. The workflow now retries ssh-keyscan up to five times with a 10-second timeout and annotated warnings/errors. Branch is current with origin/main; evidence validation, workflow guard, runtime drift guard, and stale PR follow-through checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and Hostinger Auto Deploy workflow execution."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local workflow validation passed; CI and main-branch deploy validation remain pending."
+  },
+  "idea_ids": [
+    "public-verification-framework"
+  ],
+  "spec_ids": [
+    "docs/spec-proof-shapes.md"
+  ],
+  "task_ids": [
+    "heal-web-organ-ssh-keyscan-20260519"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "workflow-hardening",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pulse:overall=breathing web=breathing ongoing_silences=0 at 2026-05-19T14:32:07Z",
+    "github-actions:Hostinger Auto Deploy run 26082183262 failed in Configure SSH",
+    ".github/workflows/hostinger-auto-deploy.yml:Configure SSH retries ssh-keyscan"
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml"
+  ],
+  "change_intent": "process_only"
+}
