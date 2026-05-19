@@ -1046,6 +1046,8 @@ This is a host-bound effect, so Rust and Go kernel work proves conformance by ma
 
 The same Rust and Go runners also execute the pure built-in vector [`kernel-conformance/form-core-builtins.json`](kernel-conformance/form-core-builtins.json), covering `len`, `head`, `tail`, `sum`, `concat`, and `reverse` over literal strings and lists. That widens executable conformance without claiming the full Form grammar yet.
 
+They also execute the pure infix vector [`kernel-conformance/form-infix-operators.json`](kernel-conformance/form-infix-operators.json), covering arithmetic precedence, parentheses, comparisons, boolean chains, unary minus, unary not, and literal equality. The boundary remains explicit: these are vector-backed conformance slices, not complete Rust or Go Form runtimes.
+
 ## The four self-* faculties
 
 Form is a substrate-native language; the meaningful question is not "what features does it have" but "how does it relate to itself." Four faculties:
