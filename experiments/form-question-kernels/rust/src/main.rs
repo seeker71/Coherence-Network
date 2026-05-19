@@ -298,6 +298,281 @@ fn eval_builtin(name: &str, args: Vec<Value>) -> Result<Value, String> {
     }
 }
 
+#[derive(Clone, Debug)]
+enum ExprToken {
+    Value(Value),
+    Op(String),
+    LParen,
+    RParen,
+}
+
+fn tokenize_expr(input: &str) -> Result<Vec<ExprToken>, String> {
+    let chars: Vec<char> = input.chars().collect();
+    let mut tokens = Vec::new();
+    let mut pos = 0;
+    while pos < chars.len() {
+        let ch = chars[pos];
+        if ch.is_whitespace() {
+            pos += 1;
+            continue;
+        }
+        if ch == '"' {
+            let start = pos;
+            pos += 1;
+            let mut escape = false;
+            while pos < chars.len() {
+                let current = chars[pos];
+                if escape {
+                    escape = false;
+                } else if current == '\\' {
+                    escape = true;
+                } else if current == '"' {
+                    pos += 1;
+                    break;
+                }
+                pos += 1;
+            }
+            if pos > chars.len() || chars.get(pos.saturating_sub(1)) != Some(&'"') {
+                return Err("unterminated string literal".to_string());
+            }
+            let raw: String = chars[start..pos].iter().collect();
+            tokens.push(ExprToken::Value(Value::String(parse_string(&raw)?)));
+            continue;
+        }
+        if ch.is_ascii_digit() {
+            let start = pos;
+            pos += 1;
+            while pos < chars.len() && chars[pos].is_ascii_digit() {
+                pos += 1;
+            }
+            let raw: String = chars[start..pos].iter().collect();
+            let value = raw
+                .parse::<i64>()
+                .map_err(|err| format!("invalid integer {raw:?}: {err}"))?;
+            tokens.push(ExprToken::Value(json!(value)));
+            continue;
+        }
+        if ch.is_ascii_alphabetic() {
+            let start = pos;
+            pos += 1;
+            while pos < chars.len() && (chars[pos].is_ascii_alphanumeric() || chars[pos] == '_') {
+                pos += 1;
+            }
+            let raw: String = chars[start..pos].iter().collect();
+            let value = match raw.as_str() {
+                "true" => Value::Bool(true),
+                "false" => Value::Bool(false),
+                "null" => Value::Null,
+                _ => return Err(format!("unsupported identifier {raw:?}")),
+            };
+            tokens.push(ExprToken::Value(value));
+            continue;
+        }
+        if ch == '(' {
+            tokens.push(ExprToken::LParen);
+            pos += 1;
+            continue;
+        }
+        if ch == ')' {
+            tokens.push(ExprToken::RParen);
+            pos += 1;
+            continue;
+        }
+        if pos + 1 < chars.len() {
+            let two: String = chars[pos..pos + 2].iter().collect();
+            if matches!(two.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||") {
+                tokens.push(ExprToken::Op(two));
+                pos += 2;
+                continue;
+            }
+        }
+        if matches!(ch, '+' | '-' | '*' | '/' | '%' | '<' | '>' | '!') {
+            tokens.push(ExprToken::Op(ch.to_string()));
+            pos += 1;
+            continue;
+        }
+        return Err(format!("unsupported expression character {ch:?}"));
+    }
+    Ok(tokens)
+}
+
+struct ExprParser {
+    tokens: Vec<ExprToken>,
+    pos: usize,
+}
+
+impl ExprParser {
+    fn parse(mut self) -> Result<Value, String> {
+        let value = self.parse_or()?;
+        if self.pos != self.tokens.len() {
+            return Err(format!("unexpected token {:?}", self.tokens[self.pos]));
+        }
+        Ok(value)
+    }
+
+    fn peek_op(&self, op: &str) -> bool {
+        matches!(self.tokens.get(self.pos), Some(ExprToken::Op(actual)) if actual == op)
+    }
+
+    fn take_op(&mut self, op: &str) -> bool {
+        if self.peek_op(op) {
+            self.pos += 1;
+            return true;
+        }
+        false
+    }
+
+    fn parse_or(&mut self) -> Result<Value, String> {
+        let mut left = self.parse_and()?;
+        while self.take_op("||") {
+            let right = self.parse_and()?;
+            left = if truthy(&left) { left } else { right };
+        }
+        Ok(left)
+    }
+
+    fn parse_and(&mut self) -> Result<Value, String> {
+        let mut left = self.parse_compare()?;
+        while self.take_op("&&") {
+            let right = self.parse_compare()?;
+            left = if truthy(&left) { right } else { left };
+        }
+        Ok(left)
+    }
+
+    fn parse_compare(&mut self) -> Result<Value, String> {
+        let mut left = self.parse_add()?;
+        loop {
+            let op = match self.tokens.get(self.pos) {
+                Some(ExprToken::Op(op))
+                    if matches!(op.as_str(), "==" | "!=" | "<" | "<=" | ">" | ">=") =>
+                {
+                    op.clone()
+                }
+                _ => break,
+            };
+            self.pos += 1;
+            let right = self.parse_add()?;
+            left = apply_compare(&op, &left, &right)?;
+        }
+        Ok(left)
+    }
+
+    fn parse_add(&mut self) -> Result<Value, String> {
+        let mut left = self.parse_mul()?;
+        loop {
+            if self.take_op("+") {
+                let right = self.parse_mul()?;
+                left = apply_numeric("+", &left, &right)?;
+            } else if self.take_op("-") {
+                let right = self.parse_mul()?;
+                left = apply_numeric("-", &left, &right)?;
+            } else {
+                break;
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_mul(&mut self) -> Result<Value, String> {
+        let mut left = self.parse_unary()?;
+        loop {
+            if self.take_op("*") {
+                let right = self.parse_unary()?;
+                left = apply_numeric("*", &left, &right)?;
+            } else if self.take_op("/") {
+                let right = self.parse_unary()?;
+                left = apply_numeric("/", &left, &right)?;
+            } else if self.take_op("%") {
+                let right = self.parse_unary()?;
+                left = apply_numeric("%", &left, &right)?;
+            } else {
+                break;
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_unary(&mut self) -> Result<Value, String> {
+        if self.take_op("-") {
+            return Ok(json!(-value_as_i64(&self.parse_unary()?, "unary -")?));
+        }
+        if self.take_op("!") {
+            return Ok(Value::Bool(!truthy(&self.parse_unary()?)));
+        }
+        self.parse_primary()
+    }
+
+    fn parse_primary(&mut self) -> Result<Value, String> {
+        match self.tokens.get(self.pos).cloned() {
+            Some(ExprToken::Value(value)) => {
+                self.pos += 1;
+                Ok(value)
+            }
+            Some(ExprToken::LParen) => {
+                self.pos += 1;
+                let value = self.parse_or()?;
+                match self.tokens.get(self.pos) {
+                    Some(ExprToken::RParen) => {
+                        self.pos += 1;
+                        Ok(value)
+                    }
+                    _ => Err("missing closing ')'".to_string()),
+                }
+            }
+            other => Err(format!(
+                "expected literal or parenthesized expression, got {other:?}"
+            )),
+        }
+    }
+}
+
+fn truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(item) => *item,
+        Value::Number(item) => item.as_i64().unwrap_or(0) != 0,
+        Value::String(item) => !item.is_empty(),
+        Value::Array(item) => !item.is_empty(),
+        Value::Object(item) => !item.is_empty(),
+    }
+}
+
+fn apply_numeric(op: &str, left: &Value, right: &Value) -> Result<Value, String> {
+    let a = value_as_i64(left, op)?;
+    let b = value_as_i64(right, op)?;
+    let value = match op {
+        "+" => a + b,
+        "-" => a - b,
+        "*" => a * b,
+        "/" => a / b,
+        "%" => a % b,
+        _ => return Err(format!("unsupported numeric op {op:?}")),
+    };
+    Ok(json!(value))
+}
+
+fn apply_compare(op: &str, left: &Value, right: &Value) -> Result<Value, String> {
+    let value = match op {
+        "==" => left == right,
+        "!=" => left != right,
+        "<" => value_as_i64(left, op)? < value_as_i64(right, op)?,
+        "<=" => value_as_i64(left, op)? <= value_as_i64(right, op)?,
+        ">" => value_as_i64(left, op)? > value_as_i64(right, op)?,
+        ">=" => value_as_i64(left, op)? >= value_as_i64(right, op)?,
+        _ => return Err(format!("unsupported comparison op {op:?}")),
+    };
+    Ok(Value::Bool(value))
+}
+
+fn eval_expression(form: &str) -> Result<Value, String> {
+    ExprParser {
+        tokens: tokenize_expr(form)?,
+        pos: 0,
+    }
+    .parse()
+}
+
 fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
     let trimmed = form.trim();
     if trimmed.starts_with("ask(") {
@@ -335,12 +610,16 @@ fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
         let question_id = parse_string(&args[0])?;
         return state.await_answer(&question_id);
     }
-    let (name, raw_args) = call_parts(trimmed)?;
-    let args = raw_args
-        .into_iter()
-        .map(|arg| parse_value(&arg))
-        .collect::<Result<Vec<_>, _>>()?;
-    eval_builtin(&name, args)
+    match call_parts(trimmed) {
+        Ok((name, raw_args)) => {
+            let args = raw_args
+                .into_iter()
+                .map(|arg| parse_value(&arg))
+                .collect::<Result<Vec<_>, _>>()?;
+            eval_builtin(&name, args)
+        }
+        Err(_) => eval_expression(trimmed),
+    }
 }
 
 fn run_case(case: &Value) -> Result<Value, String> {

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "surface": "form-infix-operators",
+  "description": "Pure Form infix operators over literal values. Kernels conform by returning the same JSON-safe values with no host events.",
+  "harness": {
+    "command": "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel python --kernel rust --kernel go",
+    "target_command": null
+  },
+  "cases": [
+    {
+      "name": "multiplication_precedes_addition",
+      "form": "1 + 2 * 3",
+      "expected_value": 7,
+      "expected_events": []
+    },
+    {
+      "name": "parentheses_override_precedence",
+      "form": "(1 + 2) * 3",
+      "expected_value": 9,
+      "expected_events": []
+    },
+    {
+      "name": "integer_division_and_subtraction",
+      "form": "10 - 6 / 2",
+      "expected_value": 7,
+      "expected_events": []
+    },
+    {
+      "name": "modulo_returns_remainder",
+      "form": "9 % 4",
+      "expected_value": 1,
+      "expected_events": []
+    },
+    {
+      "name": "unary_minus_participates_in_arithmetic",
+      "form": "-3 + 5",
+      "expected_value": 2,
+      "expected_events": []
+    },
+    {
+      "name": "comparison_and_logic_chain",
+      "form": "5 > 3 && 2 <= 2",
+      "expected_value": true,
+      "expected_events": []
+    },
+    {
+      "name": "unary_not_and_or_chain",
+      "form": "!(1 == 1) || 4 != 5",
+      "expected_value": true,
+      "expected_events": []
+    },
+    {
+      "name": "string_equality_compares_values",
+      "form": "\"co\" == \"co\"",
+      "expected_value": true,
+      "expected_events": []
+    }
+  ],
+  "kernels": {
+    "python": {
+      "status": "implemented",
+      "entrypoint": "app.services.substrate.form_runtime.form_execute_text",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel python"
+    },
+    "rust": {
+      "status": "implemented",
+      "entrypoint": "experiments/form-question-kernels/rust/src/main.rs",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel rust",
+      "runner": [
+        "cargo",
+        "run",
+        "--quiet",
+        "--manifest-path",
+        "experiments/form-question-kernels/rust/Cargo.toml",
+        "--",
+        "{vector}"
+      ]
+    },
+    "go": {
+      "status": "implemented",
+      "entrypoint": "experiments/form-question-kernels/go/question_kernel.go",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel go",
+      "runner": [
+        "go",
+        "run",
+        "experiments/form-question-kernels/go/question_kernel.go",
+        "{vector}"
+      ]
+    }
+  }
+}
