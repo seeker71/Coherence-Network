@@ -89,6 +89,12 @@ impl State {
     }
 }
 
+type Env = Vec<HashMap<String, Value>>;
+
+fn lookup_binding(env: &Env, name: &str) -> Option<Value> {
+    env.iter().rev().find_map(|scope| scope.get(name).cloned())
+}
+
 fn split_args(input: &str) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
@@ -132,6 +138,100 @@ fn split_args(input: &str) -> Vec<String> {
         args.push(current.trim().to_string());
     }
     args
+}
+
+fn split_top_level(input: &str, separator: char) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut in_string = false;
+    let mut escape = false;
+    let mut paren_depth = 0;
+    let mut square_depth = 0;
+    let mut brace_depth = 0;
+    for ch in input.chars() {
+        if escape {
+            current.push(ch);
+            escape = false;
+            continue;
+        }
+        if ch == '\\' && in_string {
+            current.push(ch);
+            escape = true;
+            continue;
+        }
+        if ch == '"' {
+            in_string = !in_string;
+            current.push(ch);
+            continue;
+        }
+        if !in_string {
+            match ch {
+                '(' => paren_depth += 1,
+                ')' => paren_depth -= 1,
+                '[' => square_depth += 1,
+                ']' => square_depth -= 1,
+                '{' => brace_depth += 1,
+                '}' => brace_depth -= 1,
+                _ if ch == separator
+                    && paren_depth == 0
+                    && square_depth == 0
+                    && brace_depth == 0 =>
+                {
+                    parts.push(current.trim().to_string());
+                    current.clear();
+                    continue;
+                }
+                _ => {}
+            }
+        }
+        current.push(ch);
+    }
+    if !current.trim().is_empty() {
+        parts.push(current.trim().to_string());
+    }
+    parts
+}
+
+fn find_top_level_keyword(input: &str, keyword: &str) -> Option<usize> {
+    let mut in_string = false;
+    let mut escape = false;
+    let mut paren_depth = 0;
+    let mut square_depth = 0;
+    let mut brace_depth = 0;
+    let mut positions = input.char_indices().peekable();
+    while let Some((index, ch)) = positions.next() {
+        if escape {
+            escape = false;
+            continue;
+        }
+        if ch == '\\' && in_string {
+            escape = true;
+            continue;
+        }
+        if ch == '"' {
+            in_string = !in_string;
+            continue;
+        }
+        if !in_string {
+            match ch {
+                '(' => paren_depth += 1,
+                ')' => paren_depth -= 1,
+                '[' => square_depth += 1,
+                ']' => square_depth -= 1,
+                '{' => brace_depth += 1,
+                '}' => brace_depth -= 1,
+                _ => {}
+            }
+            if paren_depth == 0
+                && square_depth == 0
+                && brace_depth == 0
+                && input[index..].starts_with(keyword)
+            {
+                return Some(index);
+            }
+        }
+    }
+    None
 }
 
 fn parse_string(raw: &str) -> Result<String, String> {
@@ -306,7 +406,7 @@ enum ExprToken {
     RParen,
 }
 
-fn tokenize_expr(input: &str) -> Result<Vec<ExprToken>, String> {
+fn tokenize_expr(input: &str, env: &Env) -> Result<Vec<ExprToken>, String> {
     let chars: Vec<char> = input.chars().collect();
     let mut tokens = Vec::new();
     let mut pos = 0;
@@ -363,7 +463,8 @@ fn tokenize_expr(input: &str) -> Result<Vec<ExprToken>, String> {
                 "true" => Value::Bool(true),
                 "false" => Value::Bool(false),
                 "null" => Value::Null,
-                _ => return Err(format!("unsupported identifier {raw:?}")),
+                _ => lookup_binding(env, &raw)
+                    .ok_or_else(|| format!("unsupported identifier {raw:?}"))?,
             };
             tokens.push(ExprToken::Value(value));
             continue;
@@ -565,16 +666,97 @@ fn apply_compare(op: &str, left: &Value, right: &Value) -> Result<Value, String>
     Ok(Value::Bool(value))
 }
 
-fn eval_expression(form: &str) -> Result<Value, String> {
+fn eval_expression(form: &str, env: &Env) -> Result<Value, String> {
     ExprParser {
-        tokens: tokenize_expr(form)?,
+        tokens: tokenize_expr(form, env)?,
         pos: 0,
     }
     .parse()
 }
 
 fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
+    let mut env = vec![HashMap::new()];
+    eval_form_in(state, form, &mut env)
+}
+
+fn eval_if(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let rest = form
+        .trim()
+        .strip_prefix("if ")
+        .ok_or_else(|| format!("invalid if expression {form:?}"))?;
+    let then_pos = find_top_level_keyword(rest, " then ")
+        .ok_or_else(|| format!("if expression missing then: {form:?}"))?;
+    let cond_src = rest[..then_pos].trim();
+    let after_then = &rest[then_pos + " then ".len()..];
+    let (then_src, else_src) = match find_top_level_keyword(after_then, " else ") {
+        Some(else_pos) => (
+            after_then[..else_pos].trim(),
+            Some(after_then[else_pos + " else ".len()..].trim()),
+        ),
+        None => (after_then.trim(), None),
+    };
+    if truthy(&eval_form_in(state, cond_src, env)?) {
+        return eval_form_in(state, then_src, env);
+    }
+    match else_src {
+        Some(src) => eval_form_in(state, src, env),
+        None => Ok(Value::Null),
+    }
+}
+
+fn eval_do(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let text = form.trim();
+    let inner = text
+        .strip_prefix("do")
+        .map(str::trim)
+        .and_then(|body| body.strip_prefix('{'))
+        .and_then(|body| body.strip_suffix('}'))
+        .ok_or_else(|| format!("invalid do block {form:?}"))?;
+    env.push(HashMap::new());
+    let mut result = Value::Null;
+    for stmt in split_top_level(inner, ';') {
+        result = eval_form_in(state, &stmt, env)?;
+    }
+    env.pop();
+    Ok(result)
+}
+
+fn eval_let(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let rest = form
+        .trim()
+        .strip_prefix("let ")
+        .ok_or_else(|| format!("invalid let expression {form:?}"))?;
+    let (name, value_src) = rest
+        .split_once('=')
+        .ok_or_else(|| format!("let expression missing '=': {form:?}"))?;
+    let name = name.trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+        || name.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+    {
+        return Err(format!("invalid let binding name {name:?}"));
+    }
+    let value = eval_form_in(state, value_src.trim(), env)?;
+    let scope = env
+        .last_mut()
+        .ok_or_else(|| "internal error: missing environment scope".to_string())?;
+    scope.insert(name.to_string(), value.clone());
+    Ok(value)
+}
+
+fn eval_form_in(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
     let trimmed = form.trim();
+    if trimmed.starts_with("if ") {
+        return eval_if(state, trimmed, env);
+    }
+    if trimmed.starts_with("do") {
+        return eval_do(state, trimmed, env);
+    }
+    if trimmed.starts_with("let ") {
+        return eval_let(state, trimmed, env);
+    }
     if trimmed.starts_with("ask(") {
         let args = split_args(&call_body(trimmed, "ask")?);
         if args.len() < 2 || args.len() > 4 {
@@ -614,11 +796,19 @@ fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
         Ok((name, raw_args)) => {
             let args = raw_args
                 .into_iter()
-                .map(|arg| parse_value(&arg))
+                .map(|arg| eval_form_in(state, &arg, env))
                 .collect::<Result<Vec<_>, _>>()?;
             eval_builtin(&name, args)
         }
-        Err(_) => eval_expression(trimmed),
+        Err(_) => {
+            if trimmed.starts_with('[') && trimmed.ends_with(']') {
+                return Ok(Value::Array(parse_array(trimmed)?));
+            }
+            if trimmed.starts_with('{') && trimmed.ends_with('}') {
+                return Ok(Value::Object(parse_object(trimmed)?));
+            }
+            eval_expression(trimmed, env)
+        }
     }
 }
 
