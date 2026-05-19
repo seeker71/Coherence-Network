@@ -1029,6 +1029,21 @@ Shipped surfaces:
 - CLI: `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute)
 - Agent integration: substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
 
+### Host effects: agent questions
+
+Form can now write to the agent question channel through ordinary runtime calls:
+
+```form
+ask("sub-agent", "Which path should I take?", ["continue", "pause"], {task_id: "task_1"})
+await_answer("question_abc123")
+```
+
+`ask(agent_id, question, choices=[], context={})` opens a human question in the existing agent queue and emits the `question_opened` event that `/api/agent/questions/stream` sends to the web console. `context.task_id` and `context.thread_id` are lifted onto the question record when present.
+
+`await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. Suspension/resume around unanswered questions belongs to the sub-agent runner, not to the Form runtime hot path.
+
+This is a host-bound effect, so Rust and Go kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json): Python is implemented here; Rust and Go are named as conformance targets until executable kernels exist.
+
 ## The four self-* faculties
 
 Form is a substrate-native language; the meaningful question is not "what features does it have" but "how does it relate to itself." Four faculties:

@@ -20,11 +20,11 @@ from app.services.substrate import (
     CellView,
     NamedCell,
     NodeID,
-    PathAnnotation,
     annotate_path,
     find_cells_compatible_with,
     find_equivalent_cells,
     form_evaluate_text,
+    form_execute_text,
     form_stream_emit,
     ingest_markdown_text,
     lattice_stats,
@@ -32,7 +32,6 @@ from app.services.substrate import (
     lookup_node,
     view_cell_through_blueprint,
 )
-from app.services.substrate.kernel import DOMAIN_BLUEPRINT, DOMAIN_RECIPE
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.unified_db import session as session_scope
 
@@ -507,10 +506,11 @@ class FormRequest(BaseModel):
     )
     mode: str = Field(
         default="ast",
-        pattern="^(ast|streaming)$",
+        pattern="^(ast|streaming|run)$",
         description=(
-            "Evaluation path. 'ast' uses the full Form evaluator; 'streaming' "
-            "uses the BMF-style direct Recipe emitter for its supported recipe subset."
+            "Evaluation path. 'ast' uses the structural Form evaluator; 'streaming' "
+            "uses the BMF-style direct Recipe emitter for its supported recipe subset; "
+            "'run' executes Form through the runtime and returns the computed value."
         ),
     )
 
@@ -519,7 +519,8 @@ class FormResultOut(BaseModel):
     """Discriminated union of Form evaluation outcomes.
 
     `kind` names which field carries the result. Other fields are null.
-    Kinds: node_id, recipe, cell, view, cells, views, lattice, keywords, vocabulary.
+    Kinds: node_id, recipe, cell, view, cells, views, lattice, keywords,
+    vocabulary, value.
     """
 
     kind: str
@@ -531,6 +532,7 @@ class FormResultOut(BaseModel):
     lattice: dict[str, int] | None = None
     keywords: list[str] | None = None
     vocabulary: dict[str, dict[str, int]] | None = None
+    value: Any | None = None
 
 
 def _cell_view_out(v: CellView) -> CellViewOut:
@@ -540,6 +542,22 @@ def _cell_view_out(v: CellView) -> CellViewOut:
         compatible=v.compatible,
         reason=v.reason,
     )
+
+
+def _runtime_value_out(value: Any) -> Any:
+    """Render Form runtime values into JSON-safe response payloads."""
+    if isinstance(value, NodeID):
+        node = NodeIDOut.from_node_id(value)
+        return node.model_dump(by_alias=True) if node else None
+    if isinstance(value, NamedCell):
+        return CellOut.from_cell(value).model_dump(by_alias=True)
+    if isinstance(value, CellView):
+        return _cell_view_out(value).model_dump(by_alias=True)
+    if isinstance(value, list):
+        return [_runtime_value_out(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _runtime_value_out(item) for key, item in value.items()}
+    return value
 
 
 @router.post("/form", response_model=FormResultOut, tags=["substrate"])
@@ -553,9 +571,10 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
     Returns a discriminated result: the `kind` field names which payload
     field carries the value (node_id / recipe / cell / view / cells /
     views). `mode="streaming"` routes supported recipe expressions through
-    the direct-emission parser and returns the emitted Recipe NodeID. Parse
-    and evaluation errors return HTTP 400 with the failure reason; the
-    substrate stays read-only.
+    the direct-emission parser and returns the emitted Recipe NodeID.
+    `mode="run"` executes Form and returns the runtime value, including
+    host-bound effects such as `ask(...)`. Parse and evaluation errors
+    return HTTP 400 with the failure reason.
 
     Grammar lives in docs/coherence-substrate/form-language.md.
     """
@@ -567,6 +586,9 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
                     kind="recipe",
                     node_id=NodeIDOut.from_node_id(node_id),
                 )
+            if req.mode == "run":
+                value = form_execute_text(session, req.expression)
+                return FormResultOut(kind="value", value=_runtime_value_out(value))
             result = form_evaluate_text(session, req.expression)
         except LookupError as exc:
             # The expression parsed and evaluated cleanly, but a cell or
@@ -577,7 +599,15 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
                 status_code=404,
                 detail=f"form lookup failed: {exc}",
             ) from exc
-        except (ValueError, SyntaxError, TypeError, KeyError) as exc:
+        except (
+            ValueError,
+            SyntaxError,
+            TypeError,
+            KeyError,
+            NameError,
+            RuntimeError,
+            IndexError,
+        ) as exc:
             raise HTTPException(
                 status_code=400,
                 detail=f"form parse/eval failed: {type(exc).__name__}: {exc}",

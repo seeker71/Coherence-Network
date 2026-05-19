@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "surface": "form-question-effects",
+  "description": "Host-bound Form effects for sub-agent human questions. Kernels conform by producing the same question records and event transcript.",
+  "host_channel": {
+    "question_stream": "/api/agent/questions/stream",
+    "answer_endpoint": "/api/agent/questions/{id}/answer",
+    "runtime_endpoint": "/api/substrate/form",
+    "runtime_mode": "run"
+  },
+  "cases": [
+    {
+      "name": "ask_opens_question",
+      "form": "ask(\"sub-agent\", \"Choose deployment path?\", [\"continue\", \"pause\"], {task_id: \"task_1\", thread_id: \"thread_1\"})",
+      "expected_value": {
+        "agent_id": "sub-agent",
+        "question": "Choose deployment path?",
+        "task_id": "task_1",
+        "thread_id": "thread_1",
+        "choices": ["continue", "pause"],
+        "status": "open",
+        "answer": null
+      },
+      "expected_events": [
+        {
+          "event_type": "question_opened",
+          "question": {
+            "agent_id": "sub-agent",
+            "question": "Choose deployment path?",
+            "task_id": "task_1",
+            "thread_id": "thread_1",
+            "choices": ["continue", "pause"],
+            "status": "open",
+            "answer": null
+          }
+        }
+      ],
+      "volatile_fields": ["id", "created_at", "updated_at", "answered_at"]
+    },
+    {
+      "name": "await_answer_reads_current_answer",
+      "setup": {
+        "open_question_form": "ask(\"sub-agent\", \"Continue?\", [\"yes\", \"no\"], {task_id: \"task_2\"})",
+        "answer": "yes",
+        "answered_by": "web"
+      },
+      "form": "await_answer(\"${question_id}\")",
+      "expected_value": "yes",
+      "expected_events": [
+        {
+          "event_type": "question_opened"
+        },
+        {
+          "event_type": "question_answered",
+          "question": {
+            "status": "answered",
+            "answer": "yes",
+            "answered_by": "web"
+          }
+        }
+      ],
+      "volatile_fields": ["id", "created_at", "updated_at", "answered_at"]
+    },
+    {
+      "name": "await_answer_open_question_returns_null",
+      "setup": {
+        "open_question_form": "ask(\"sub-agent\", \"Continue?\", [\"yes\", \"no\"], {task_id: \"task_3\"})"
+      },
+      "form": "await_answer(\"${question_id}\")",
+      "expected_value": null,
+      "expected_events": [
+        {
+          "event_type": "question_opened"
+        }
+      ],
+      "volatile_fields": ["id", "created_at", "updated_at", "answered_at"]
+    }
+  ],
+  "kernels": {
+    "python": {
+      "status": "implemented",
+      "entrypoint": "app.services.substrate.form_runtime.form_execute_text",
+      "proof": "api/tests/test_substrate_form_question_effects.py"
+    },
+    "rust": {
+      "status": "conformance-target",
+      "entrypoint": null,
+      "proof": null
+    },
+    "go": {
+      "status": "conformance-target",
+      "entrypoint": null,
+      "proof": null
+    }
+  }
+}

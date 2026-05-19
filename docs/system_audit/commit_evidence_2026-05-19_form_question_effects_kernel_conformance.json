@@ -1,0 +1,119 @@
+{
+  "date": "2026-05-19",
+  "thread_branch": "codex/form-kernel-question-effects-20260519",
+  "commit_scope": "Make the agent question SSE channel writable from Form runtime execution and publish the Rust/Go kernel conformance target for the same question-effect transcript.",
+  "files_owned": [
+    "api/app/services/substrate/form_runtime.py",
+    "api/app/routers/substrate.py",
+    "api/app/services/mcp_tool_registry.py",
+    "api/tests/test_substrate_form_question_effects.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "specs/agent-question-sse-channel.md",
+    "specs/form-question-effects-kernel-conformance.md",
+    "api/tests/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-19_form_question_effects_kernel_conformance.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "python3 scripts/context_budget.py --token-budget 60000 specs/form-question-effects-kernel-conformance.md api/app/services/substrate/form_runtime.py api/app/routers/substrate.py api/tests/test_substrate_form_question_effects.py docs/coherence-substrate/form-language.md docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+      "cd api && .venv/bin/pytest tests/test_substrate_form_question_effects.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_substrate_form_question_effects.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q",
+      "ruff check api/app/services/substrate/form_runtime.py api/app/routers/substrate.py api/app/services/mcp_tool_registry.py api/tests/test_substrate_form_question_effects.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-question-effects-kernel-conformance.md",
+      "python3 -m json.tool docs/coherence-substrate/kernel-conformance/agent-question-effects.json >/dev/null",
+      "python3 scripts/generate_repo_indexes.py",
+      "git fetch origin main",
+      "git stash push -u -m codex-form-kernel-question-effects && git rebase origin/main && git stash pop",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Arrival wellness and prompt-guide passed in a dedicated worktree. The fresh worktree had no api/.venv, so the initial .venv pytest command failed with 'no such file or directory' and the focused tests were rerun with the primary repo API virtualenv from the same worktree, passing 10 tests. A first context-budget run exceeded the default 50000-token budget; the same file set passed with --token-budget 60000. Focused Ruff, spec quality, JSON syntax, generated indexes, whitespace, rebase freshness, wellness, local PR guard, and stale PR follow-through passed. Wellness also surfaced one stale symbol claim in the previous question-channel spec; this breath corrected it and the follow-up wellness run resolved every claimed symbol."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet; no web UI change in this breath."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A Form expression can open a sub-agent human question, the existing question service emits the SSE event, and /api/substrate/form mode=run returns the created question as JSON-safe runtime output.",
+    "public_endpoints": [
+      "POST /api/substrate/form",
+      "GET /api/agent/questions/stream",
+      "POST /api/agent/questions/{question_id}/answer"
+    ],
+    "test_flows": [
+      "Run ask(\"form-subagent\", ...) through form_execute_text and verify an open question plus question_opened event.",
+      "Answer the opened question through the existing service and verify await_answer(question_id) returns the answer string.",
+      "POST /api/substrate/form with mode=run and an ask(...) expression, then verify kind=value and the returned question fields."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI, PR, and deployment checks are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-question-sse-channel.md",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "task_ids": [
+    "form-kernel-question-effects-20260519"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_substrate_form_question_effects.py::test_form_ask_opens_question_and_emits_sse_event",
+    "api/tests/test_substrate_form_question_effects.py::test_form_await_answer_reads_answer_when_present",
+    "api/tests/test_substrate_form_question_effects.py::test_substrate_form_run_mode_returns_question_value",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/routers/substrate.py",
+    "api/app/services/mcp_tool_registry.py",
+    "api/app/services/substrate/form_runtime.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_substrate_form_question_effects.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "specs/INDEX.md",
+    "specs/agent-question-sse-channel.md",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "change_intent": "runtime_feature"
+}
