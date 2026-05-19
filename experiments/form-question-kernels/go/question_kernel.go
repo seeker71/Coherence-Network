@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -370,6 +371,389 @@ func evalBuiltin(name string, args []any) (any, error) {
 	}
 }
 
+type exprToken struct {
+	kind  string
+	value any
+	op    string
+}
+
+func tokenizeExpr(input string) ([]exprToken, error) {
+	var tokens []exprToken
+	for pos := 0; pos < len(input); {
+		ch := input[pos]
+		if ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t' {
+			pos++
+			continue
+		}
+		if ch == '"' {
+			start := pos
+			pos++
+			escape := false
+			for pos < len(input) {
+				current := input[pos]
+				if escape {
+					escape = false
+				} else if current == '\\' {
+					escape = true
+				} else if current == '"' {
+					pos++
+					break
+				}
+				pos++
+			}
+			if pos > len(input) || input[pos-1] != '"' {
+				return nil, fmt.Errorf("unterminated string literal")
+			}
+			value, err := parseString(input[start:pos])
+			if err != nil {
+				return nil, err
+			}
+			tokens = append(tokens, exprToken{kind: "value", value: value})
+			continue
+		}
+		if ch >= '0' && ch <= '9' {
+			start := pos
+			pos++
+			for pos < len(input) && input[pos] >= '0' && input[pos] <= '9' {
+				pos++
+			}
+			raw := input[start:pos]
+			value, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid integer %q: %w", raw, err)
+			}
+			tokens = append(tokens, exprToken{kind: "value", value: value})
+			continue
+		}
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') {
+			start := pos
+			pos++
+			for pos < len(input) && ((input[pos] >= 'a' && input[pos] <= 'z') || (input[pos] >= 'A' && input[pos] <= 'Z') || (input[pos] >= '0' && input[pos] <= '9') || input[pos] == '_') {
+				pos++
+			}
+			raw := input[start:pos]
+			switch raw {
+			case "true":
+				tokens = append(tokens, exprToken{kind: "value", value: true})
+			case "false":
+				tokens = append(tokens, exprToken{kind: "value", value: false})
+			case "null":
+				tokens = append(tokens, exprToken{kind: "value", value: nil})
+			default:
+				return nil, fmt.Errorf("unsupported identifier %q", raw)
+			}
+			continue
+		}
+		if ch == '(' {
+			tokens = append(tokens, exprToken{kind: "lparen"})
+			pos++
+			continue
+		}
+		if ch == ')' {
+			tokens = append(tokens, exprToken{kind: "rparen"})
+			pos++
+			continue
+		}
+		if pos+1 < len(input) {
+			two := input[pos : pos+2]
+			if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" {
+				tokens = append(tokens, exprToken{kind: "op", op: two})
+				pos += 2
+				continue
+			}
+		}
+		if strings.ContainsRune("+-*/%<>!", rune(ch)) {
+			tokens = append(tokens, exprToken{kind: "op", op: string(ch)})
+			pos++
+			continue
+		}
+		return nil, fmt.Errorf("unsupported expression character %q", ch)
+	}
+	return tokens, nil
+}
+
+type exprParser struct {
+	tokens []exprToken
+	pos    int
+}
+
+func (p *exprParser) parse() (any, error) {
+	value, err := p.parseOr()
+	if err != nil {
+		return nil, err
+	}
+	if p.pos != len(p.tokens) {
+		return nil, fmt.Errorf("unexpected token %#v", p.tokens[p.pos])
+	}
+	return value, nil
+}
+
+func (p *exprParser) takeOp(op string) bool {
+	if p.pos < len(p.tokens) && p.tokens[p.pos].kind == "op" && p.tokens[p.pos].op == op {
+		p.pos++
+		return true
+	}
+	return false
+}
+
+func (p *exprParser) parseOr() (any, error) {
+	left, err := p.parseAnd()
+	if err != nil {
+		return nil, err
+	}
+	for p.takeOp("||") {
+		right, err := p.parseAnd()
+		if err != nil {
+			return nil, err
+		}
+		if !truthy(left) {
+			left = right
+		}
+	}
+	return left, nil
+}
+
+func (p *exprParser) parseAnd() (any, error) {
+	left, err := p.parseCompare()
+	if err != nil {
+		return nil, err
+	}
+	for p.takeOp("&&") {
+		right, err := p.parseCompare()
+		if err != nil {
+			return nil, err
+		}
+		if truthy(left) {
+			left = right
+		}
+	}
+	return left, nil
+}
+
+func (p *exprParser) parseCompare() (any, error) {
+	left, err := p.parseAdd()
+	if err != nil {
+		return nil, err
+	}
+	for p.pos < len(p.tokens) && p.tokens[p.pos].kind == "op" {
+		op := p.tokens[p.pos].op
+		if op != "==" && op != "!=" && op != "<" && op != "<=" && op != ">" && op != ">=" {
+			break
+		}
+		p.pos++
+		right, err := p.parseAdd()
+		if err != nil {
+			return nil, err
+		}
+		left, err = applyCompare(op, left, right)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return left, nil
+}
+
+func (p *exprParser) parseAdd() (any, error) {
+	left, err := p.parseMul()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		if p.takeOp("+") {
+			right, err := p.parseMul()
+			if err != nil {
+				return nil, err
+			}
+			left, err = applyNumeric("+", left, right)
+			if err != nil {
+				return nil, err
+			}
+		} else if p.takeOp("-") {
+			right, err := p.parseMul()
+			if err != nil {
+				return nil, err
+			}
+			left, err = applyNumeric("-", left, right)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return left, nil
+		}
+	}
+}
+
+func (p *exprParser) parseMul() (any, error) {
+	left, err := p.parseUnary()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		if p.takeOp("*") {
+			right, err := p.parseUnary()
+			if err != nil {
+				return nil, err
+			}
+			left, err = applyNumeric("*", left, right)
+			if err != nil {
+				return nil, err
+			}
+		} else if p.takeOp("/") {
+			right, err := p.parseUnary()
+			if err != nil {
+				return nil, err
+			}
+			left, err = applyNumeric("/", left, right)
+			if err != nil {
+				return nil, err
+			}
+		} else if p.takeOp("%") {
+			right, err := p.parseUnary()
+			if err != nil {
+				return nil, err
+			}
+			left, err = applyNumeric("%", left, right)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return left, nil
+		}
+	}
+}
+
+func (p *exprParser) parseUnary() (any, error) {
+	if p.takeOp("-") {
+		value, err := p.parseUnary()
+		if err != nil {
+			return nil, err
+		}
+		item, err := asInt(value, "unary -")
+		if err != nil {
+			return nil, err
+		}
+		return -item, nil
+	}
+	if p.takeOp("!") {
+		value, err := p.parseUnary()
+		if err != nil {
+			return nil, err
+		}
+		return !truthy(value), nil
+	}
+	return p.parsePrimary()
+}
+
+func (p *exprParser) parsePrimary() (any, error) {
+	if p.pos >= len(p.tokens) {
+		return nil, fmt.Errorf("expected literal or parenthesized expression")
+	}
+	token := p.tokens[p.pos]
+	switch token.kind {
+	case "value":
+		p.pos++
+		return token.value, nil
+	case "lparen":
+		p.pos++
+		value, err := p.parseOr()
+		if err != nil {
+			return nil, err
+		}
+		if p.pos >= len(p.tokens) || p.tokens[p.pos].kind != "rparen" {
+			return nil, fmt.Errorf("missing closing ')'")
+		}
+		p.pos++
+		return value, nil
+	default:
+		return nil, fmt.Errorf("expected literal or parenthesized expression, got %#v", token)
+	}
+}
+
+func truthy(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return false
+	case bool:
+		return typed
+	case int64:
+		return typed != 0
+	case int:
+		return typed != 0
+	case float64:
+		return typed != 0
+	case string:
+		return typed != ""
+	case []any:
+		return len(typed) > 0
+	case map[string]any:
+		return len(typed) > 0
+	default:
+		return true
+	}
+}
+
+func applyNumeric(op string, left any, right any) (any, error) {
+	a, err := asInt(left, op)
+	if err != nil {
+		return nil, err
+	}
+	b, err := asInt(right, op)
+	if err != nil {
+		return nil, err
+	}
+	switch op {
+	case "+":
+		return a + b, nil
+	case "-":
+		return a - b, nil
+	case "*":
+		return a * b, nil
+	case "/":
+		return a / b, nil
+	case "%":
+		return a % b, nil
+	default:
+		return nil, fmt.Errorf("unsupported numeric op %q", op)
+	}
+}
+
+func applyCompare(op string, left any, right any) (any, error) {
+	switch op {
+	case "==":
+		return fmt.Sprintf("%#v", left) == fmt.Sprintf("%#v", right), nil
+	case "!=":
+		return fmt.Sprintf("%#v", left) != fmt.Sprintf("%#v", right), nil
+	case "<", "<=", ">", ">=":
+		a, err := asInt(left, op)
+		if err != nil {
+			return nil, err
+		}
+		b, err := asInt(right, op)
+		if err != nil {
+			return nil, err
+		}
+		switch op {
+		case "<":
+			return a < b, nil
+		case "<=":
+			return a <= b, nil
+		case ">":
+			return a > b, nil
+		case ">=":
+			return a >= b, nil
+		}
+	}
+	return nil, fmt.Errorf("unsupported comparison op %q", op)
+}
+
+func evalExpression(form string) (any, error) {
+	tokens, err := tokenizeExpr(form)
+	if err != nil {
+		return nil, err
+	}
+	return (&exprParser{tokens: tokens}).parse()
+}
+
 func evalForm(s *state, form string) (any, error) {
 	trimmed := strings.TrimSpace(form)
 	if strings.HasPrefix(trimmed, "ask(") {
@@ -428,18 +812,18 @@ func evalForm(s *state, form string) (any, error) {
 		return s.awaitAnswer(questionID)
 	}
 	name, rawArgs, err := callParts(trimmed)
-	if err != nil {
-		return nil, err
-	}
-	args := make([]any, 0, len(rawArgs))
-	for _, rawArg := range rawArgs {
-		value, err := parseValue(rawArg)
-		if err != nil {
-			return nil, err
+	if err == nil {
+		args := make([]any, 0, len(rawArgs))
+		for _, rawArg := range rawArgs {
+			value, err := parseValue(rawArg)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, value)
 		}
-		args = append(args, value)
+		return evalBuiltin(name, args)
 	}
-	return evalBuiltin(name, args)
+	return evalExpression(trimmed)
 }
 
 func runCase(rawCase map[string]any) (map[string]any, error) {

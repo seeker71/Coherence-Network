@@ -20,6 +20,13 @@ CORE_VECTOR = (
     / "kernel-conformance"
     / "form-core-builtins.json"
 )
+INFIX_VECTOR = (
+    REPO_ROOT
+    / "docs"
+    / "coherence-substrate"
+    / "kernel-conformance"
+    / "form-infix-operators.json"
+)
 
 
 def _run_harness(*args: str) -> subprocess.CompletedProcess[str]:
@@ -111,6 +118,46 @@ def test_rust_and_go_kernels_pass_core_builtin_vector() -> None:
     result = _run_harness(
         "--vector",
         str(CORE_VECTOR),
+        "--kernel",
+        "rust",
+        "--kernel",
+        "go",
+        "--json",
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
+        ("rust", "pass"),
+        ("go", "pass"),
+    ]
+
+
+def test_python_kernel_passes_infix_operator_vector() -> None:
+    result = _run_harness("--vector", str(INFIX_VECTOR), "--kernel", "python", "--json")
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert body["status"] == "pass"
+    assert body["surface"] == "form-infix-operators"
+    assert [case["name"] for case in body["kernels"][0]["cases"]] == [
+        "multiplication_precedes_addition",
+        "parentheses_override_precedence",
+        "integer_division_and_subtraction",
+        "modulo_returns_remainder",
+        "unary_minus_participates_in_arithmetic",
+        "comparison_and_logic_chain",
+        "unary_not_and_or_chain",
+        "string_equality_compares_values",
+    ]
+
+
+def test_rust_and_go_kernels_pass_infix_operator_vector() -> None:
+    _skip_without_toolchains()
+
+    result = _run_harness(
+        "--vector",
+        str(INFIX_VECTOR),
         "--kernel",
         "rust",
         "--kernel",

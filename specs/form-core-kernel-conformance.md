@@ -93,7 +93,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-core-kernel-conforman
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task: add an infix arithmetic/logical vector and parser support for Rust/Go.
+- Follow-up task: expand beyond built-ins with an infix arithmetic/logical vector and parser support for Rust/Go. See `specs/form-infix-kernel-conformance.md`.
 - Follow-up task: add a lexical block vector for `do`, `let`, and `if`.
 - Follow-up task: rename or split the experiment runner directory once it carries enough surface to justify a non-question-specific module boundary.
 
