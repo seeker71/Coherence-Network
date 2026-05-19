@@ -72,6 +72,17 @@ func (s *state) awaitAnswer(questionID string) (any, error) {
 	return item["answer"], nil
 }
 
+type env []map[string]any
+
+func lookupBinding(bindings env, name string) (any, bool) {
+	for i := len(bindings) - 1; i >= 0; i-- {
+		if value, ok := bindings[i][name]; ok {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
 func contextString(context map[string]any, key string) any {
 	if value, ok := context[key].(string); ok {
 		return value
@@ -126,6 +137,105 @@ func splitArgs(input string) []string {
 		args = append(args, strings.TrimSpace(current.String()))
 	}
 	return args
+}
+
+func splitTopLevel(input string, separator byte) []string {
+	var parts []string
+	var current strings.Builder
+	inString := false
+	escape := false
+	parenDepth := 0
+	squareDepth := 0
+	braceDepth := 0
+	for i := 0; i < len(input); i++ {
+		ch := input[i]
+		if escape {
+			current.WriteByte(ch)
+			escape = false
+			continue
+		}
+		if ch == '\\' && inString {
+			current.WriteByte(ch)
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			current.WriteByte(ch)
+			continue
+		}
+		if !inString {
+			switch ch {
+			case '(':
+				parenDepth++
+			case ')':
+				parenDepth--
+			case '[':
+				squareDepth++
+			case ']':
+				squareDepth--
+			case '{':
+				braceDepth++
+			case '}':
+				braceDepth--
+			default:
+				if ch == separator && parenDepth == 0 && squareDepth == 0 && braceDepth == 0 {
+					parts = append(parts, strings.TrimSpace(current.String()))
+					current.Reset()
+					continue
+				}
+			}
+		}
+		current.WriteByte(ch)
+	}
+	if strings.TrimSpace(current.String()) != "" {
+		parts = append(parts, strings.TrimSpace(current.String()))
+	}
+	return parts
+}
+
+func findTopLevelKeyword(input string, keyword string) int {
+	inString := false
+	escape := false
+	parenDepth := 0
+	squareDepth := 0
+	braceDepth := 0
+	for i := 0; i < len(input); i++ {
+		ch := input[i]
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch ch {
+		case '(':
+			parenDepth++
+		case ')':
+			parenDepth--
+		case '[':
+			squareDepth++
+		case ']':
+			squareDepth--
+		case '{':
+			braceDepth++
+		case '}':
+			braceDepth--
+		}
+		if parenDepth == 0 && squareDepth == 0 && braceDepth == 0 && strings.HasPrefix(input[i:], keyword) {
+			return i
+		}
+	}
+	return -1
 }
 
 func parseString(raw string) (string, error) {
@@ -377,7 +487,7 @@ type exprToken struct {
 	op    string
 }
 
-func tokenizeExpr(input string) ([]exprToken, error) {
+func tokenizeExpr(input string, bindings env) ([]exprToken, error) {
 	var tokens []exprToken
 	for pos := 0; pos < len(input); {
 		ch := input[pos]
@@ -440,7 +550,11 @@ func tokenizeExpr(input string) ([]exprToken, error) {
 			case "null":
 				tokens = append(tokens, exprToken{kind: "value", value: nil})
 			default:
-				return nil, fmt.Errorf("unsupported identifier %q", raw)
+				value, ok := lookupBinding(bindings, raw)
+				if !ok {
+					return nil, fmt.Errorf("unsupported identifier %q", raw)
+				}
+				tokens = append(tokens, exprToken{kind: "value", value: value})
 			}
 			continue
 		}
@@ -746,8 +860,8 @@ func applyCompare(op string, left any, right any) (any, error) {
 	return nil, fmt.Errorf("unsupported comparison op %q", op)
 }
 
-func evalExpression(form string) (any, error) {
-	tokens, err := tokenizeExpr(form)
+func evalExpression(form string, bindings env) (any, error) {
+	tokens, err := tokenizeExpr(form, bindings)
 	if err != nil {
 		return nil, err
 	}
@@ -755,7 +869,94 @@ func evalExpression(form string) (any, error) {
 }
 
 func evalForm(s *state, form string) (any, error) {
+	bindings := env{map[string]any{}}
+	return evalFormIn(s, form, bindings)
+}
+
+func evalIf(s *state, form string, bindings env) (any, error) {
+	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(form), "if "))
+	thenPos := findTopLevelKeyword(rest, " then ")
+	if thenPos < 0 {
+		return nil, fmt.Errorf("if expression missing then: %q", form)
+	}
+	condSrc := strings.TrimSpace(rest[:thenPos])
+	afterThen := rest[thenPos+len(" then "):]
+	elsePos := findTopLevelKeyword(afterThen, " else ")
+	thenSrc := strings.TrimSpace(afterThen)
+	elseSrc := ""
+	if elsePos >= 0 {
+		thenSrc = strings.TrimSpace(afterThen[:elsePos])
+		elseSrc = strings.TrimSpace(afterThen[elsePos+len(" else "):])
+	}
+	cond, err := evalFormIn(s, condSrc, bindings)
+	if err != nil {
+		return nil, err
+	}
+	if truthy(cond) {
+		return evalFormIn(s, thenSrc, bindings)
+	}
+	if elseSrc == "" {
+		return nil, nil
+	}
+	return evalFormIn(s, elseSrc, bindings)
+}
+
+func evalDo(s *state, form string, bindings env) (any, error) {
+	text := strings.TrimSpace(form)
+	body := strings.TrimSpace(strings.TrimPrefix(text, "do"))
+	if !strings.HasPrefix(body, "{") || !strings.HasSuffix(body, "}") {
+		return nil, fmt.Errorf("invalid do block %q", form)
+	}
+	inner := body[1 : len(body)-1]
+	local := append(bindings, map[string]any{})
+	var result any
+	for _, stmt := range splitTopLevel(inner, ';') {
+		value, err := evalFormIn(s, stmt, local)
+		if err != nil {
+			return nil, err
+		}
+		result = value
+	}
+	return result, nil
+}
+
+func evalLet(s *state, form string, bindings env) (any, error) {
+	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(form), "let "))
+	parts := strings.SplitN(rest, "=", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("let expression missing '=': %q", form)
+	}
+	name := strings.TrimSpace(parts[0])
+	if name == "" || (name[0] >= '0' && name[0] <= '9') {
+		return nil, fmt.Errorf("invalid let binding name %q", name)
+	}
+	for _, ch := range name {
+		if ch != '_' && (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') && (ch < 'a' || ch > 'z') {
+			return nil, fmt.Errorf("invalid let binding name %q", name)
+		}
+	}
+	value, err := evalFormIn(s, strings.TrimSpace(parts[1]), bindings)
+	if err != nil {
+		return nil, err
+	}
+	if len(bindings) == 0 {
+		return nil, fmt.Errorf("internal error: missing environment scope")
+	}
+	bindings[len(bindings)-1][name] = value
+	return value, nil
+}
+
+func evalFormIn(s *state, form string, bindings env) (any, error) {
 	trimmed := strings.TrimSpace(form)
+	if strings.HasPrefix(trimmed, "if ") {
+		return evalIf(s, trimmed, bindings)
+	}
+	if strings.HasPrefix(trimmed, "do") {
+		return evalDo(s, trimmed, bindings)
+	}
+	if strings.HasPrefix(trimmed, "let ") {
+		return evalLet(s, trimmed, bindings)
+	}
 	if strings.HasPrefix(trimmed, "ask(") {
 		body, err := callBody(trimmed, "ask")
 		if err != nil {
@@ -815,7 +1016,7 @@ func evalForm(s *state, form string) (any, error) {
 	if err == nil {
 		args := make([]any, 0, len(rawArgs))
 		for _, rawArg := range rawArgs {
-			value, err := parseValue(rawArg)
+			value, err := evalFormIn(s, rawArg, bindings)
 			if err != nil {
 				return nil, err
 			}
@@ -823,7 +1024,13 @@ func evalForm(s *state, form string) (any, error) {
 		}
 		return evalBuiltin(name, args)
 	}
-	return evalExpression(trimmed)
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		return parseArray(trimmed)
+	}
+	if strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}") {
+		return parseObject(trimmed)
+	}
+	return evalExpression(trimmed, bindings)
 }
 
 func runCase(rawCase map[string]any) (map[string]any, error) {

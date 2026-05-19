@@ -1048,6 +1048,8 @@ The same Rust and Go runners also execute the pure built-in vector [`kernel-conf
 
 They also execute the pure infix vector [`kernel-conformance/form-infix-operators.json`](kernel-conformance/form-infix-operators.json), covering arithmetic precedence, parentheses, comparisons, boolean chains, unary minus, unary not, and literal equality. The boundary remains explicit: these are vector-backed conformance slices, not complete Rust or Go Form runtimes.
 
+They now execute the pure control-flow vector [`kernel-conformance/form-control-flow.json`](kernel-conformance/form-control-flow.json), covering `if`, `do`, and `let` over literals, local names, existing infix expressions, and existing built-in calls. This proves lexical block value flow and lazy branch selection across the three kernels while keeping closures, loops, mutation, cell lookup, methods, and persistence outside the Rust/Go claim.
+
 ## The four self-* faculties
 
 Form is a substrate-native language; the meaningful question is not "what features does it have" but "how does it relate to itself." Four faculties:

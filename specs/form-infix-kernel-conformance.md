@@ -103,7 +103,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-infix-kernel-conforma
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task: add a lexical block vector for `do`, `let`, and `if`.
+- Follow-up task closed by `specs/form-control-flow-kernel-conformance.md`: add a lexical block vector for `do`, `let`, and `if`.
 - Follow-up task: add variables and function-call operands inside infix expressions.
 - Follow-up task: rename or split the experiment runner directory once it carries enough surface to justify a non-question-specific module boundary.
 

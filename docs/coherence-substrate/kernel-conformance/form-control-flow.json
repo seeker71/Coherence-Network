@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "surface": "form-control-flow",
+  "description": "Pure Form control flow over literals, local bindings, and existing expression slices. Kernels conform by returning the same JSON-safe values with no host events.",
+  "harness": {
+    "command": "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel python --kernel rust --kernel go",
+    "target_command": null
+  },
+  "cases": [
+    {
+      "name": "if_then_else_true_branch",
+      "form": "if true then 1 else 2",
+      "expected_value": 1,
+      "expected_events": []
+    },
+    {
+      "name": "if_then_else_false_branch",
+      "form": "if false then 1 else 2",
+      "expected_value": 2,
+      "expected_events": []
+    },
+    {
+      "name": "if_without_else_returns_null",
+      "form": "if false then 1",
+      "expected_value": null,
+      "expected_events": []
+    },
+    {
+      "name": "if_evaluates_only_selected_branch",
+      "form": "if false then unknown_name else 4",
+      "expected_value": 4,
+      "expected_events": []
+    },
+    {
+      "name": "do_block_returns_last_statement",
+      "form": "do { 1; 2; 3 }",
+      "expected_value": 3,
+      "expected_events": []
+    },
+    {
+      "name": "let_bindings_feed_later_expressions",
+      "form": "do { let x = 5; let y = x + 3; y * 2 }",
+      "expected_value": 16,
+      "expected_events": []
+    },
+    {
+      "name": "let_binding_feeds_builtin_call",
+      "form": "do { let xs = concat([1], [2, 3]); sum(xs) }",
+      "expected_value": 6,
+      "expected_events": []
+    },
+    {
+      "name": "inner_do_let_scope_does_not_leak",
+      "form": "do { let x = 1; do { let x = 99 }; x }",
+      "expected_value": 1,
+      "expected_events": []
+    }
+  ],
+  "kernels": {
+    "python": {
+      "status": "implemented",
+      "entrypoint": "app.services.substrate.form_runtime.form_execute_text",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel python"
+    },
+    "rust": {
+      "status": "implemented",
+      "entrypoint": "experiments/form-question-kernels/rust/src/main.rs",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel rust",
+      "runner": [
+        "cargo",
+        "run",
+        "--quiet",
+        "--manifest-path",
+        "experiments/form-question-kernels/rust/Cargo.toml",
+        "--",
+        "{vector}"
+      ]
+    },
+    "go": {
+      "status": "implemented",
+      "entrypoint": "experiments/form-question-kernels/go/question_kernel.go",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel go",
+      "runner": [
+        "go",
+        "run",
+        "experiments/form-question-kernels/go/question_kernel.go",
+        "{vector}"
+      ]
+    }
+  }
+}
