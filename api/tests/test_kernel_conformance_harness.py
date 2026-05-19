@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,22 +41,40 @@ def test_python_kernel_passes_question_effect_vector() -> None:
     ]
 
 
-def test_rust_and_go_targets_are_explicitly_skipped_when_allowed() -> None:
-    result = _run_harness("--kernel", "rust", "--kernel", "go", "--allow-targets", "--json")
+def _skip_without_toolchains() -> None:
+    missing = [name for name in ("cargo", "go") if shutil.which(name) is None]
+    if missing:
+        pytest.skip(f"kernel runner toolchain(s) unavailable: {', '.join(missing)}")
+
+
+def test_rust_and_go_kernels_pass_question_effect_vector() -> None:
+    _skip_without_toolchains()
+
+    result = _run_harness("--kernel", "rust", "--kernel", "go", "--json")
 
     assert result.returncode == 0, result.stderr or result.stdout
     body = json.loads(result.stdout)
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
-        ("rust", "skipped"),
-        ("go", "skipped"),
+        ("rust", "pass"),
+        ("go", "pass"),
     ]
-    assert all("conformance target" in item["reason"] for item in body["kernels"])
+    for kernel in body["kernels"]:
+        assert [case["name"] for case in kernel["cases"]] == [
+            "ask_opens_question",
+            "await_answer_reads_current_answer",
+            "await_answer_open_question_returns_null",
+        ]
 
 
-def test_rust_target_fails_without_executable_runner() -> None:
-    result = _run_harness("--kernel", "rust", "--json")
+def test_default_runs_all_implemented_kernels() -> None:
+    _skip_without_toolchains()
 
-    assert result.returncode == 1
+    result = _run_harness("--json")
+
+    assert result.returncode == 0, result.stderr or result.stdout
     body = json.loads(result.stdout)
-    assert body["status"] == "fail"
-    assert "target-only" in body["error"]
+    assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
+        ("python", "pass"),
+        ("rust", "pass"),
+        ("go", "pass"),
+    ]

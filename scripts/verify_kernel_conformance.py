@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -144,11 +145,97 @@ def run_python_kernel(vector: dict[str, Any]) -> dict[str, Any]:
     return {"kernel": "python", "status": "pass", "cases": cases}
 
 
+def _runner_command(kernel: dict[str, Any], vector_path: Path) -> list[str]:
+    raw = kernel.get("runner")
+    if not isinstance(raw, list) or not raw:
+        raise ConformanceError("implemented external kernel is missing runner command")
+    command: list[str] = []
+    for part in raw:
+        text = str(part).replace("{vector}", str(vector_path))
+        command.append(text)
+    return command
+
+
+def _validate_external_case(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(actual, dict):
+        raise ConformanceError(
+            f"external case must be an object, got {type(actual).__name__}"
+        )
+    if actual.get("name") != case.get("name"):
+        raise ConformanceError(
+            f"external case name mismatch: expected {case.get('name')!r}, "
+            f"got {actual.get('name')!r}"
+        )
+    _assert_subset(case.get("expected_value"), actual.get("value"), "$.expected_value")
+    expected_events = case.get("expected_events") or []
+    events = actual.get("events") or []
+    if len(events) != len(expected_events):
+        raise ConformanceError(
+            f"{case.get('name')}: expected {len(expected_events)} event(s), "
+            f"got {len(events)}"
+        )
+    for index, expected_event in enumerate(expected_events):
+        _assert_subset(expected_event, events[index], f"$.expected_events[{index}]")
+    return {
+        "name": case["name"],
+        "status": "pass",
+        "question_id": actual.get("question_id"),
+        "events": [event["event_type"] for event in events],
+    }
+
+
+def run_external_kernel(
+    vector: dict[str, Any],
+    kernel_name: str,
+    kernel: dict[str, Any],
+    *,
+    vector_path: Path,
+) -> dict[str, Any]:
+    command = _runner_command(kernel, vector_path)
+    proc = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout).strip()
+        raise ConformanceError(
+            f"{kernel_name} runner failed with exit {proc.returncode}: {tail}"
+        )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise ConformanceError(
+            f"{kernel_name} runner did not emit JSON: {exc}"
+        ) from exc
+    if payload.get("kernel") != kernel_name:
+        raise ConformanceError(
+            f"{kernel_name} runner reported kernel {payload.get('kernel')!r}"
+        )
+    actual_cases = payload.get("cases")
+    if not isinstance(actual_cases, list):
+        raise ConformanceError(f"{kernel_name} runner output missing cases list")
+    expected_cases = vector.get("cases") or []
+    if len(actual_cases) != len(expected_cases):
+        raise ConformanceError(
+            f"{kernel_name} runner returned {len(actual_cases)} case(s), "
+            f"expected {len(expected_cases)}"
+        )
+    cases = [
+        _validate_external_case(case, actual)
+        for case, actual in zip(expected_cases, actual_cases)
+    ]
+    return {"kernel": kernel_name, "status": "pass", "cases": cases}
+
+
 def run_kernel(
     vector: dict[str, Any],
     kernel_name: str,
     *,
     allow_targets: bool = False,
+    vector_path: Path = DEFAULT_VECTOR,
 ) -> dict[str, Any]:
     kernels = vector.get("kernels") or {}
     kernel = kernels.get(kernel_name)
@@ -158,6 +245,13 @@ def run_kernel(
     status = str(kernel.get("status") or "")
     if kernel_name == "python" and status == "implemented":
         return run_python_kernel(vector)
+    if status == "implemented":
+        return run_external_kernel(
+            vector,
+            kernel_name,
+            kernel,
+            vector_path=vector_path,
+        )
 
     if status == "conformance-target":
         result = {
@@ -206,9 +300,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        vector = load_vector(args.vector)
+        vector_path = (
+            args.vector if args.vector.is_absolute() else Path.cwd() / args.vector
+        )
+        vector = load_vector(vector_path)
         results = [
-            run_kernel(vector, kernel, allow_targets=args.allow_targets)
+            run_kernel(
+                vector,
+                kernel,
+                allow_targets=args.allow_targets,
+                vector_path=vector_path,
+            )
             for kernel in _selected_kernels(vector, args.kernel)
         ]
     except (ConformanceError, OSError, json.JSONDecodeError) as exc:
