@@ -107,7 +107,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-control-flow-kernel-c
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task: add `for`, `while`, and `set` conformance over local JSON-safe values.
+- Follow-up task closed by `specs/form-loop-mutation-kernel-conformance.md`: add `for`, `while`, and `set` conformance over local JSON-safe values.
 - Follow-up task: add `defn` call/recursion conformance once the runner boundary is renamed away from question-only experiments.
 - Follow-up task: rename or split the experiment runner directory once it carries enough surface to justify a non-question-specific module boundary.
 

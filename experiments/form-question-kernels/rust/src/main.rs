@@ -95,6 +95,16 @@ fn lookup_binding(env: &Env, name: &str) -> Option<Value> {
     env.iter().rev().find_map(|scope| scope.get(name).cloned())
 }
 
+fn assign_binding(env: &mut Env, name: &str, value: Value) -> Result<Value, String> {
+    for scope in env.iter_mut().rev() {
+        if scope.contains_key(name) {
+            scope.insert(name.to_string(), value.clone());
+            return Ok(value);
+        }
+    }
+    Err(format!("set {name:?} has no enclosing binding"))
+}
+
 fn split_args(input: &str) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
@@ -232,6 +242,47 @@ fn find_top_level_keyword(input: &str, keyword: &str) -> Option<usize> {
         }
     }
     None
+}
+
+fn split_head_body(input: &str) -> Result<(String, String), String> {
+    let text = input.trim();
+    if !text.ends_with('}') {
+        return Err(format!("missing braced body in {input:?}"));
+    }
+    let mut in_string = false;
+    let mut escape = false;
+    let mut paren_depth = 0;
+    let mut square_depth = 0;
+    for (index, ch) in text.char_indices() {
+        if escape {
+            escape = false;
+            continue;
+        }
+        if ch == '\\' && in_string {
+            escape = true;
+            continue;
+        }
+        if ch == '"' {
+            in_string = !in_string;
+            continue;
+        }
+        if in_string {
+            continue;
+        }
+        match ch {
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            '[' => square_depth += 1,
+            ']' => square_depth -= 1,
+            '{' if paren_depth == 0 && square_depth == 0 => {
+                let head = text[..index].trim().to_string();
+                let body = text[index + 1..text.len() - 1].trim().to_string();
+                return Ok((head, body));
+            }
+            _ => {}
+        }
+    }
+    Err(format!("missing braced body in {input:?}"))
 }
 
 fn parse_string(raw: &str) -> Result<String, String> {
@@ -713,10 +764,7 @@ fn eval_do(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String
         .and_then(|body| body.strip_suffix('}'))
         .ok_or_else(|| format!("invalid do block {form:?}"))?;
     env.push(HashMap::new());
-    let mut result = Value::Null;
-    for stmt in split_top_level(inner, ';') {
-        result = eval_form_in(state, &stmt, env)?;
-    }
+    let result = eval_statements(state, inner, env)?;
     env.pop();
     Ok(result)
 }
@@ -746,6 +794,125 @@ fn eval_let(state: &mut State, form: &str, env: &mut Env) -> Result<Value, Strin
     Ok(value)
 }
 
+fn eval_set(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let rest = form
+        .trim()
+        .strip_prefix("set ")
+        .ok_or_else(|| format!("invalid set expression {form:?}"))?;
+    let (name, value_src) = rest
+        .split_once('=')
+        .ok_or_else(|| format!("set expression missing '=': {form:?}"))?;
+    let name = name.trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+        || name.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+    {
+        return Err(format!("invalid set binding name {name:?}"));
+    }
+    let value = eval_form_in(state, value_src.trim(), env)?;
+    assign_binding(env, name, value)
+}
+
+fn eval_array(state: &mut State, form: &str, env: &mut Env) -> Result<Vec<Value>, String> {
+    let text = form.trim();
+    if text == "[]" {
+        return Ok(Vec::new());
+    }
+    if !text.starts_with('[') || !text.ends_with(']') {
+        return Err(format!("invalid list {form:?}"));
+    }
+    split_args(&text[1..text.len() - 1])
+        .into_iter()
+        .map(|item| eval_form_in(state, &item, env))
+        .collect()
+}
+
+fn eval_statements(state: &mut State, body: &str, env: &mut Env) -> Result<Value, String> {
+    let mut result = Value::Null;
+    for stmt in split_top_level(body, ';') {
+        result = eval_form_in(state, &stmt, env)?;
+    }
+    Ok(result)
+}
+
+fn eval_for(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let rest = form
+        .trim()
+        .strip_prefix("for ")
+        .ok_or_else(|| format!("invalid for expression {form:?}"))?;
+    let in_pos = find_top_level_keyword(rest, " in ")
+        .ok_or_else(|| format!("for expression missing in: {form:?}"))?;
+    let var_name = rest[..in_pos].trim();
+    if var_name.is_empty()
+        || !var_name
+            .chars()
+            .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+        || var_name
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_digit())
+    {
+        return Err(format!("invalid for binding name {var_name:?}"));
+    }
+    let (iter_src, body_src) = split_head_body(rest[in_pos + " in ".len()..].trim())?;
+    let iterable = eval_form_in(state, &iter_src, env)?;
+    let items: Vec<Value> = match iterable {
+        Value::Array(items) => items,
+        Value::String(text) => text
+            .chars()
+            .map(|ch| Value::String(ch.to_string()))
+            .collect(),
+        other => {
+            return Err(format!(
+                "for expects a list or string, got {}",
+                value_kind(&other)
+            ))
+        }
+    };
+    let mut results = Vec::new();
+    for item in items {
+        let mut scope = HashMap::new();
+        scope.insert(var_name.to_string(), item);
+        env.push(scope);
+        let result = eval_statements(state, &body_src, env);
+        env.pop();
+        results.push(result?);
+    }
+    Ok(Value::Array(results))
+}
+
+fn eval_while(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
+    let rest = form
+        .trim()
+        .strip_prefix("while ")
+        .ok_or_else(|| format!("invalid while expression {form:?}"))?;
+    let (cond_src, body_src) = split_head_body(rest)?;
+    let mut result = Value::Null;
+    let mut iterations = 0_usize;
+    let max_iterations = 100_000_usize;
+    while truthy(&eval_form_in(state, &cond_src, env)?) {
+        result = eval_statements(state, &body_src, env)?;
+        iterations += 1;
+        if iterations > max_iterations {
+            return Err(format!("while loop exceeded {max_iterations} iterations"));
+        }
+    }
+    Ok(result)
+}
+
+fn value_kind(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "bool",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
 fn eval_form_in(state: &mut State, form: &str, env: &mut Env) -> Result<Value, String> {
     let trimmed = form.trim();
     if trimmed.starts_with("if ") {
@@ -756,6 +923,15 @@ fn eval_form_in(state: &mut State, form: &str, env: &mut Env) -> Result<Value, S
     }
     if trimmed.starts_with("let ") {
         return eval_let(state, trimmed, env);
+    }
+    if trimmed.starts_with("set ") {
+        return eval_set(state, trimmed, env);
+    }
+    if trimmed.starts_with("for ") {
+        return eval_for(state, trimmed, env);
+    }
+    if trimmed.starts_with("while ") {
+        return eval_while(state, trimmed, env);
     }
     if trimmed.starts_with("ask(") {
         let args = split_args(&call_body(trimmed, "ask")?);
@@ -802,7 +978,7 @@ fn eval_form_in(state: &mut State, form: &str, env: &mut Env) -> Result<Value, S
         }
         Err(_) => {
             if trimmed.starts_with('[') && trimmed.ends_with(']') {
-                return Ok(Value::Array(parse_array(trimmed)?));
+                return Ok(Value::Array(eval_array(state, trimmed, env)?));
             }
             if trimmed.starts_with('{') && trimmed.ends_with('}') {
                 return Ok(Value::Object(parse_object(trimmed)?));

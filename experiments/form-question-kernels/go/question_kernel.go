@@ -83,6 +83,16 @@ func lookupBinding(bindings env, name string) (any, bool) {
 	return nil, false
 }
 
+func assignBinding(bindings env, name string, value any) (any, error) {
+	for i := len(bindings) - 1; i >= 0; i-- {
+		if _, ok := bindings[i][name]; ok {
+			bindings[i][name] = value
+			return value, nil
+		}
+	}
+	return nil, fmt.Errorf("set %q has no enclosing binding", name)
+}
+
 func contextString(context map[string]any, key string) any {
 	if value, ok := context[key].(string); ok {
 		return value
@@ -236,6 +246,50 @@ func findTopLevelKeyword(input string, keyword string) int {
 		}
 	}
 	return -1
+}
+
+func splitHeadBody(input string) (string, string, error) {
+	text := strings.TrimSpace(input)
+	if !strings.HasSuffix(text, "}") {
+		return "", "", fmt.Errorf("missing braced body in %q", input)
+	}
+	inString := false
+	escape := false
+	parenDepth := 0
+	squareDepth := 0
+	for i := 0; i < len(text); i++ {
+		ch := text[i]
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch ch {
+		case '(':
+			parenDepth++
+		case ')':
+			parenDepth--
+		case '[':
+			squareDepth++
+		case ']':
+			squareDepth--
+		case '{':
+			if parenDepth == 0 && squareDepth == 0 {
+				return strings.TrimSpace(text[:i]), strings.TrimSpace(text[i+1 : len(text)-1]), nil
+			}
+		}
+	}
+	return "", "", fmt.Errorf("missing braced body in %q", input)
 }
 
 func parseString(raw string) (string, error) {
@@ -909,15 +963,7 @@ func evalDo(s *state, form string, bindings env) (any, error) {
 	}
 	inner := body[1 : len(body)-1]
 	local := append(bindings, map[string]any{})
-	var result any
-	for _, stmt := range splitTopLevel(inner, ';') {
-		value, err := evalFormIn(s, stmt, local)
-		if err != nil {
-			return nil, err
-		}
-		result = value
-	}
-	return result, nil
+	return evalStatements(s, inner, local)
 }
 
 func evalLet(s *state, form string, bindings env) (any, error) {
@@ -946,6 +992,132 @@ func evalLet(s *state, form string, bindings env) (any, error) {
 	return value, nil
 }
 
+func evalSet(s *state, form string, bindings env) (any, error) {
+	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(form), "set "))
+	parts := strings.SplitN(rest, "=", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("set expression missing '=': %q", form)
+	}
+	name := strings.TrimSpace(parts[0])
+	if name == "" || (name[0] >= '0' && name[0] <= '9') {
+		return nil, fmt.Errorf("invalid set binding name %q", name)
+	}
+	for _, ch := range name {
+		if ch != '_' && (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') && (ch < 'a' || ch > 'z') {
+			return nil, fmt.Errorf("invalid set binding name %q", name)
+		}
+	}
+	value, err := evalFormIn(s, strings.TrimSpace(parts[1]), bindings)
+	if err != nil {
+		return nil, err
+	}
+	return assignBinding(bindings, name, value)
+}
+
+func evalArray(s *state, form string, bindings env) ([]any, error) {
+	text := strings.TrimSpace(form)
+	if text == "[]" {
+		return []any{}, nil
+	}
+	if !strings.HasPrefix(text, "[") || !strings.HasSuffix(text, "]") {
+		return nil, fmt.Errorf("invalid list %q", form)
+	}
+	items := splitArgs(text[1 : len(text)-1])
+	out := make([]any, 0, len(items))
+	for _, item := range items {
+		value, err := evalFormIn(s, item, bindings)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, value)
+	}
+	return out, nil
+}
+
+func evalStatements(s *state, body string, bindings env) (any, error) {
+	var result any
+	for _, stmt := range splitTopLevel(body, ';') {
+		value, err := evalFormIn(s, stmt, bindings)
+		if err != nil {
+			return nil, err
+		}
+		result = value
+	}
+	return result, nil
+}
+
+func evalFor(s *state, form string, bindings env) (any, error) {
+	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(form), "for "))
+	inPos := findTopLevelKeyword(rest, " in ")
+	if inPos < 0 {
+		return nil, fmt.Errorf("for expression missing in: %q", form)
+	}
+	varName := strings.TrimSpace(rest[:inPos])
+	if varName == "" || (varName[0] >= '0' && varName[0] <= '9') {
+		return nil, fmt.Errorf("invalid for binding name %q", varName)
+	}
+	for _, ch := range varName {
+		if ch != '_' && (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') && (ch < 'a' || ch > 'z') {
+			return nil, fmt.Errorf("invalid for binding name %q", varName)
+		}
+	}
+	iterSrc, bodySrc, err := splitHeadBody(strings.TrimSpace(rest[inPos+len(" in "):]))
+	if err != nil {
+		return nil, err
+	}
+	iterable, err := evalFormIn(s, iterSrc, bindings)
+	if err != nil {
+		return nil, err
+	}
+	var items []any
+	switch typed := iterable.(type) {
+	case []any:
+		items = typed
+	case string:
+		for _, ch := range typed {
+			items = append(items, string(ch))
+		}
+	default:
+		return nil, fmt.Errorf("for expects a list or string, got %T", iterable)
+	}
+	results := make([]any, 0, len(items))
+	for _, item := range items {
+		local := append(bindings, map[string]any{varName: item})
+		value, err := evalStatements(s, bodySrc, local)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, value)
+	}
+	return results, nil
+}
+
+func evalWhile(s *state, form string, bindings env) (any, error) {
+	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(form), "while "))
+	condSrc, bodySrc, err := splitHeadBody(rest)
+	if err != nil {
+		return nil, err
+	}
+	var result any
+	const maxIterations = 100000
+	for iterations := 0; ; iterations++ {
+		cond, err := evalFormIn(s, condSrc, bindings)
+		if err != nil {
+			return nil, err
+		}
+		if !truthy(cond) {
+			return result, nil
+		}
+		result, err = evalStatements(s, bodySrc, bindings)
+		if err != nil {
+			return nil, err
+		}
+		if iterations >= maxIterations {
+			return nil, fmt.Errorf("while loop exceeded %d iterations", maxIterations)
+		}
+	}
+}
+
 func evalFormIn(s *state, form string, bindings env) (any, error) {
 	trimmed := strings.TrimSpace(form)
 	if strings.HasPrefix(trimmed, "if ") {
@@ -956,6 +1128,15 @@ func evalFormIn(s *state, form string, bindings env) (any, error) {
 	}
 	if strings.HasPrefix(trimmed, "let ") {
 		return evalLet(s, trimmed, bindings)
+	}
+	if strings.HasPrefix(trimmed, "set ") {
+		return evalSet(s, trimmed, bindings)
+	}
+	if strings.HasPrefix(trimmed, "for ") {
+		return evalFor(s, trimmed, bindings)
+	}
+	if strings.HasPrefix(trimmed, "while ") {
+		return evalWhile(s, trimmed, bindings)
 	}
 	if strings.HasPrefix(trimmed, "ask(") {
 		body, err := callBody(trimmed, "ask")
@@ -1025,7 +1206,7 @@ func evalFormIn(s *state, form string, bindings env) (any, error) {
 		return evalBuiltin(name, args)
 	}
 	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
-		return parseArray(trimmed)
+		return evalArray(s, trimmed, bindings)
 	}
 	if strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}") {
 		return parseObject(trimmed)

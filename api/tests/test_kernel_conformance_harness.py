@@ -34,6 +34,13 @@ CONTROL_VECTOR = (
     / "kernel-conformance"
     / "form-control-flow.json"
 )
+LOOP_VECTOR = (
+    REPO_ROOT
+    / "docs"
+    / "coherence-substrate"
+    / "kernel-conformance"
+    / "form-loop-mutation.json"
+)
 
 
 def _run_harness(*args: str) -> subprocess.CompletedProcess[str]:
@@ -205,6 +212,46 @@ def test_rust_and_go_kernels_pass_control_flow_vector() -> None:
     result = _run_harness(
         "--vector",
         str(CONTROL_VECTOR),
+        "--kernel",
+        "rust",
+        "--kernel",
+        "go",
+        "--json",
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
+        ("rust", "pass"),
+        ("go", "pass"),
+    ]
+
+
+def test_python_kernel_passes_loop_mutation_vector() -> None:
+    result = _run_harness("--vector", str(LOOP_VECTOR), "--kernel", "python", "--json")
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert body["status"] == "pass"
+    assert body["surface"] == "form-loop-mutation"
+    assert [case["name"] for case in body["kernels"][0]["cases"]] == [
+        "for_list_returns_body_values",
+        "for_accumulates_with_set",
+        "for_appends_with_set_and_concat",
+        "for_string_iterates_characters",
+        "while_counts_with_set",
+        "while_returns_last_body_value",
+        "while_unentered_returns_null",
+        "set_walks_to_outer_frame",
+    ]
+
+
+def test_rust_and_go_kernels_pass_loop_mutation_vector() -> None:
+    _skip_without_toolchains()
+
+    result = _run_harness(
+        "--vector",
+        str(LOOP_VECTOR),
         "--kernel",
         "rust",
         "--kernel",
