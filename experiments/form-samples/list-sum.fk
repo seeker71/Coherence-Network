@@ -1,0 +1,9 @@
+; list-sum.fk — list primitives + recursion. Sums [1, 2, 3, 4, 5] → 15.
+; The native list/head/tail/empty primitives are what Form-on-top will
+; eventually reach for to express its own token-list walking.
+(do
+    (defn sum-list (xs)
+        (if (eq (len xs) 0)
+            0
+            (add (head xs) (sum-list (tail xs)))))
+    (sum-list (list 1 2 3 4 5)))

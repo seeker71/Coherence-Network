@@ -184,6 +184,13 @@ defn ev(n) = match n.category {
 #     The deepest closure (named in form-language.md "What remains
 #     beyond step 8"). Once the engine runs in Form, a Form-level
 #     parser tokenize-in-Form / parse-in-Form completes the cycle.
+#
+# These three are walked in detail in the companion file
+# `form-runtime-in-form.form`, which attempts each remaining runtime
+# layer (lexer / parser / AST evaluator / registries / substrate
+# write) in Form syntax and names 15 specific surface extensions that
+# would close the gap. Each gap is one builtin or one constructor;
+# none asks for a structural rebuild.
 
 # ─────────────────────────────────────────────────────────────────────
 # The asymmetry made visible

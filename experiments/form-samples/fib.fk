@@ -1,0 +1,7 @@
+; fib.fk — naive recursive Fibonacci. The tree walker's cost surfaces here.
+(do
+    (defn fib (n)
+        (if (le n 1)
+            n
+            (add (fib (sub n 1)) (fib (sub n 2)))))
+    (fib 20))

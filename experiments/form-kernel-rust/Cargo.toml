@@ -1,0 +1,8 @@
+[package]
+name = "form-kernel-rust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "form-kernel-rust"
+path = "src/main.rs"
