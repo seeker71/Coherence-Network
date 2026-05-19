@@ -1,0 +1,10 @@
+; string-walk.fk — char-by-char walk over a string, counting digits.
+; This is the shape Form-on-top's lexer will use to scan source text.
+(do
+    (defn count-digits (s i acc)
+        (if (eq i (str_len s))
+            acc
+            (if (and (ge (ord (char_at s i)) 48) (le (ord (char_at s i)) 57))
+                (count-digits s (add i 1) (add acc 1))
+                (count-digits s (add i 1) acc))))
+    (count-digits "abc123def45" 0 0))

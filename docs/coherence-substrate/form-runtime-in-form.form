@@ -1,0 +1,368 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-runtime-in-form.form — the runtime in Form's own voice, the rest
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to `form-engine.form`. That file took the recipe-evaluator
+# meta-circular — one Form arm per RBasic verb. This file walks the
+# remaining runtime layers — lexer, parser, frame/closure, builtin
+# dispatch, registries, substrate write — and tries to write each in
+# Form. Where Form has the surface, the code runs. Where the surface
+# is missing, the gap is marked `# GAP:` with the smallest extension
+# that would close it.
+#
+# Asymmetry is the signal. Each `# GAP:` is one breath away from a
+# more symmetric body; none are accidents, all are namable.
+
+# ─────────────────────────────────────────────────────────────────────
+# Layer 1 — the lexer
+# ─────────────────────────────────────────────────────────────────────
+#
+# Python lexer walks a master regex, picks the longest-matching
+# (kind, value) at each cursor. Form has list/dict literals, `set`
+# mutation, recursion, and indexing. A char-by-char scanner is
+# structurally expressible — *if* the char primitives exist.
+
+# What a single-char classifier would look like in Form:
+
+defn is_digit(c) = c >= "0" && c <= "9";
+defn is_alpha(c) = (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_";
+defn is_ws(c) = c == " " || c == "\t" || c == "\n" || c == "\r";
+
+# GAP-L1: char literals don't exist as a distinct type. `"0"` is a
+#         StringLit of length 1. The comparisons above assume string
+#         ordering is char-wise lexicographic — which Python's `<`
+#         provides for single-char strings, but Form has no test that
+#         pins this contract. Smallest extension: `ord(c)` + `chr(n)`
+#         builtins, or a documented "single-char strings compare by
+#         codepoint" guarantee. Without one, lexer-in-Form is operating
+#         on undocumented Python semantics leaking through.
+
+# An integer-token scan would be:
+
+defn scan_int(s, i) = do {
+    let j = i;
+    let n = len(s);
+    while j < n && is_digit(s[j]) {
+        set j = j + 1
+    };
+    {kind: "INT", value: int(substring(s, i, j)), next: j}
+};
+
+# GAP-L2: `substring(s, start, end)` is not a registered builtin. The
+#         `s[i]` index returns a single-char string (PR #1686), but
+#         there is no range-slice. Smallest extension: `substring(s,
+#         start, end)` builtin, or `s[a..b]` syntax.
+
+# Master scanner — emits a token list:
+
+defn tokenize(s) = do {
+    let tokens = [];
+    let i = 0;
+    let n = len(s);
+    while i < n {
+        let c = s[i];
+        if is_ws(c) then set i = i + 1
+        else if is_digit(c) then do {
+            let tok = scan_int(s, i);
+            set tokens = concat(tokens, [tok]);
+            set i = tok.next
+        }
+        else if is_alpha(c) then do {
+            # ... scan_ident, same shape
+            set i = i + 1
+        }
+        # ... + 30 more single-/double-char operator branches
+        else fail
+    };
+    tokens
+};
+
+# GAP-L3: the token-pattern *registry* (`form_lexer._TOKEN_PATTERNS`) is
+#         a Python list mutated by `register_token_pattern`. From Form
+#         there is no surface to read or extend that registry. Smallest
+#         extension: builtins `token_patterns()` (read), `register_token(
+#         kind, regex)` (write). Once those exist, the if/else cascade
+#         above collapses to a registry-walk: for each pattern in
+#         token_patterns() try-match, take longest.
+#
+# GAP-L4: even with the registry visible, the matcher needs *regex*.
+#         Form has no regex primitive. Two paths: (a) add `match_regex(
+#         pattern, s, i)` builtin; (b) replace regex sources with
+#         structured matchers — each pattern carries a `Recipe` that
+#         describes its shape (char-class star, literal-then-ident,
+#         etc.) and the substrate already has match. (b) is the more
+#         coherent move — regex was always the foreign shape sitting
+#         inside the substrate's grammar.
+
+# ─────────────────────────────────────────────────────────────────────
+# Layer 2 — the parser
+# ─────────────────────────────────────────────────────────────────────
+#
+# Recursive descent through precedence levels. Each level is shaped
+# `lhs := higher; while peek matches op-at-this-level: lhs = BinOp(op,
+# lhs, parse_higher())`. Form has recursion, `set`, and dicts; the
+# shape itself is fine.
+
+# A single precedence level expressed in Form:
+
+defn parse_add(tokens, i) = do {
+    let result = parse_mul(tokens, i);
+    let lhs = result.ast;
+    set i = result.next;
+    while i < len(tokens) && (tokens[i].kind == "PLUS" || tokens[i].kind == "MINUS") {
+        let op = tokens[i].value;
+        set i = i + 1;
+        let rhs_result = parse_mul(tokens, i);
+        set lhs = {tag: "BinOp", op: op, left: lhs, right: rhs_result.ast};
+        set i = rhs_result.next
+    };
+    {ast: lhs, next: i}
+};
+
+# This *runs* in today's Form, given AST-as-dict-with-tag. So the
+# shape is expressible. What it cannot do yet:
+
+# GAP-P1: the operator registry (`form_operators._OPERATORS`) carries
+#         precedence numbers per token kind. The hardcoded ladder above
+#         (parse_or → parse_and → parse_compare → parse_add → parse_mul)
+#         is what we want to derive from the registry, not duplicate.
+#         Smallest extension: builtin `operators_at_precedence(n)` and
+#         `max_precedence()`. Then one generic `parse_at_level(tokens,
+#         i, level)` reads the registry and there is no ladder to
+#         maintain in Form *or* in Python.
+#
+# GAP-P2: the primary-atom registry (`form_atoms._ATOM_HANDLERS`) maps
+#         token kind → handler closure. To dispatch from Form,
+#         `dispatch[tokens[i].kind](tokens, i)` would call the result of
+#         a dict index. **Form's FnCall takes a name (string), not a
+#         callable expression — `(f)(x)` is not a parse.** This is the
+#         single largest hole for registry-style dispatch. Smallest
+#         extension: allow `expr(args)` where expr evaluates to a
+#         Closure (extend FnCall.name → FnCall.callee : AST). Already
+#         half-present — closures are first-class values; only the
+#         call site is name-only.
+#
+# GAP-P3: the keyword registry (`form_rules`) carries
+#         `(pattern, template)` pairs. The pattern DSL (Sequence,
+#         Capture, IdentCapture, Opt, Literal, RepeatedCapture) is
+#         Python-class-shaped. From Form, those classes are not
+#         constructible. Smallest extension: `pattern.sequence([...])`,
+#         `pattern.capture("name")`, etc., as substrate-resident
+#         constructors that return recipes the parser already consumes.
+#         self_host.py already builds these from Python; a Form
+#         surface would let new keywords be added without Python.
+
+# ─────────────────────────────────────────────────────────────────────
+# Layer 3 — the AST evaluator
+# ─────────────────────────────────────────────────────────────────────
+#
+# `form-engine.form` Part 2 already covers the *recipe* evaluator
+# (NodeID → value) for 15 RBasic categories. The *AST* evaluator
+# (Python dataclass → value) is what Python's `execute()` does — the
+# bridge between parse and recipe-intern.
+
+# An AST-as-dict evaluator branch, in Form:
+
+defn eval_ast(ast, frame) = match ast.tag {
+    "IntLit" => ast.value,
+    "BinOp" => apply_op(ast.op, eval_ast(ast.left, frame), eval_ast(ast.right, frame)),
+    "Identifier" => frame_lookup(frame, ast.name),
+    "Let" => frame_bind(frame, ast.name, eval_ast(ast.value, frame)),
+    "IfExpr" => if eval_ast(ast.cond, frame)
+                then eval_ast(ast.then_branch, frame)
+                else (if ast.else_branch == null then null
+                      else eval_ast(ast.else_branch, frame)),
+    _ => fail
+};
+
+# This is the SHAPE that runs. Two real gaps once you try to ship it:
+
+# GAP-E1: frames are Python `Frame` objects with parent-pointer chains
+#         and `lookup` / `bindings` / `has` / `subject` slots. To
+#         express a frame in Form, dicts work — but the *parent chain*
+#         needs cycle-free walking that today's `frame.lookup(name)`
+#         provides. Without `frame_lookup(frame, name)` as a builtin
+#         (or `Frame` as a substrate-resident shape), Form code has
+#         to re-implement scope walking on top of dict-with-parent-
+#         field — works, but the Python Frame's nuance (subject
+#         frames, state stacks, exception handlers, delegate chains)
+#         doesn't lift.
+#
+# GAP-E2: many AST tags (FnDef, FnCall, ForExpr, WhileExpr, DictExpr,
+#         IndexExpr, TernaryExpr, MethodInvokeExpr, Access, MethodCall,
+#         TryCatchExpr, OnChangeExpr, RaiseExpr, ResumeExpr,
+#         DelegateExpr, UndoExpr, InverseExpr, CommonExpr,
+#         MethodDefExpr, ProjectExpr, SaveExpr, RestoreExpr,
+#         DiscardExpr, ChooseExpr, FailExpr, StopExpr, SelfRef,
+#         WithExpr, MatchArm, MatchExpr, DoBlock) are roughly **31 AST
+#         classes** in form.py. `form-engine.form` Part 2 has arms for
+#         15 RBasic categories; the rest of the AST shapes don't all
+#         have Recipe-category counterparts. Smallest extension: every
+#         AST class needs a Recipe category so `n.category` from Form
+#         can recognize it. Several already exist (RBlock.LET / DO /
+#         SEQUENCE, RException.RAISE, RTry, RChoice, ...). The audit
+#         is mechanical: enumerate the 31 classes, map each to its
+#         RBasic NodeID, name the missing ones.
+
+# ─────────────────────────────────────────────────────────────────────
+# Layer 4 — registries (the meta-circular hinge)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Five registries live as Python module globals:
+#
+#   form_lexer._TOKEN_PATTERNS    — ordered list of (kind, regex)
+#   form_atoms._ATOM_HANDLERS     — dict token-kind → closure
+#   form_rules.<keyword registry> — dict name → (pattern, template)
+#   form_operators._OPERATORS     — dict symbol → OperatorRule
+#   form_eval._BINARY_EVAL, _UNARY_EVAL — dict op-symbol → category-NodeID
+#
+# From Form, none of these are visible as values, mutable as state, or
+# iterable as collections. Today's `bootstrap_self_host()` calls Python
+# `register_*` functions from Python. The substrate is read-only from
+# Form (`/api/substrate/*` is REST read-only by design).
+
+# What the surface would look like in Form if it existed:
+
+# read:
+let kinds = token_pattern_kinds();           # ["WS", "COMMENT", "PROJECT", ...]
+let handler = atom_handler("INT");           # the closure that parses int literals
+
+# write:
+register_token_pattern("MY_OP", "\\$\\$");
+register_atom("INT", fn(parser) = ...);
+
+# GAP-R1: no Form surface for any of the five registries. Smallest
+#         extension: builtins `token_pattern_kinds()`,
+#         `token_pattern_regex(kind)`, `register_token_pattern(kind,
+#         regex)`, parallel sets for atoms / keywords / operators /
+#         eval-categories. Each registry is a few lines of Python
+#         glue.
+#
+# GAP-R2: registry *values* are closures (atom handlers, operator
+#         templates). Storing a Form-defined closure into a registry
+#         requires Form closures to be passable to Python registration
+#         functions and re-invokable when the parser reaches them.
+#         Today, builtins pass closures through `_CURRENT_SESSION` to
+#         re-enter `execute()`. The mechanism exists; the surface is
+#         what's missing.
+#
+# GAP-R3: persistence. Registries are process-global. A Form module
+#         that registers a keyword survives the current process, not
+#         a fresh `coh substrate form` invocation. For "the body
+#         remembers its own grammar", registrations must round-trip
+#         through the substrate itself — each registered keyword
+#         interned as a cell whose CTOR carries (name, pattern,
+#         template). Today the patterns *are* substrate-resident
+#         recipes; what's missing is the registry-as-substrate-table
+#         that the parser reads at startup.
+
+# ─────────────────────────────────────────────────────────────────────
+# Layer 5 — substrate write
+# ─────────────────────────────────────────────────────────────────────
+#
+# Form reads the substrate (n.category, n.children[k], n.value).
+# Form *cannot write* — there is no `intern_recipe(category, [children])`
+# or `define_cell(domain, name, blueprint, recipe)` builtin.
+#
+# A self-hosted compiler — Form text → Recipe NodeID — needs write
+# access. Today the compile path runs in Python (`_to_recipe_node_id`
+# in form.py).
+
+let plus_two_three = intern_recipe(
+    @1.2.12.1,            # RBasic.MATH.PLUS
+    [intern_trivial(2), intern_trivial(3)]
+);
+
+# GAP-W1: `intern_recipe(category, children)` not exposed as builtin.
+# GAP-W2: `intern_trivial(value)` not exposed as builtin (the inverse
+#         of `n.value` — encode a Python value as a trivial NodeID).
+# GAP-W3: `define_cell(domain, name, blueprint_nid, recipe_nid)` not
+#         exposed — the ingest path is Python-only.
+#
+# The REST surface is read-only by design (Tom's principle: writes are
+# operational, reads are exploratory). But internal-to-Form should be
+# different — the body should be able to recompose itself. Smallest
+# extension: the three builtins above, with the same write paths the
+# Python ingest functions use. Side-effect isolation can be done by
+# scoping writes to a session-local recipe buffer that commits at
+# block end (matching SAVE/RESTORE/DISCARD semantics already in BML).
+
+# ─────────────────────────────────────────────────────────────────────
+# Summary — the asymmetry made specific
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each gap below is a single extension. None is structural; all are
+# surface. The body knows how to do every one of these in Python —
+# it just doesn't yet have the Form-side word for it.
+#
+# Lexer (5):
+#   L1  char primitives — ord/chr or codepoint-comparison contract
+#   L2  substring(s, start, end) builtin
+#   L3  token-pattern registry surface (read + register from Form)
+#   L4  regex builtin OR structured matcher recipes (regex is foreign)
+#
+# Parser (3):
+#   P1  operators_at_precedence(n) / max_precedence() — derive ladder
+#   P2  callable expression at call site (FnCall.name → .callee : AST)
+#       — single biggest hole; registry-style dispatch needs this
+#   P3  pattern-DSL constructors as substrate-resident Form surface
+#
+# Evaluator (2):
+#   E1  Frame as substrate-resident shape OR frame_lookup builtin —
+#       so scope walking lifts with all its nuance (subject, state,
+#       exceptions, delegate, common)
+#   E2  Recipe category for each of the 31 AST classes (audit) —
+#       extend form-engine.form Part 2 to symmetric coverage
+#
+# Registries (3):
+#   R1  five registries (lexer / atoms / keywords / operators / eval)
+#       each gain `list_*` + `register_*` Form-side builtins
+#   R2  Form-defined closures register-able as handlers
+#   R3  registries persist through substrate cells, not process state
+#
+# Substrate write (3):
+#   W1  intern_recipe(category, children)
+#   W2  intern_trivial(value)
+#   W3  define_cell(domain, name, blueprint, recipe)
+#
+# That is 15 named gaps closing what Part 4 of form-engine.form
+# pointed at (4a identifier resolution → E1; 4b call from recipes →
+# P2 + E2; 4c lexer/parser in Form → L1-L4 + P1-P3 + R1-R3). Each
+# names exactly one builtin or one constructor; none of them ask for
+# a structural rebuild.
+#
+# The composition discipline holds: every gap is a *leaf surface*,
+# not a re-shaping of the tree. The tree's already right.
+#
+# ─────────────────────────────────────────────────────────────────────
+# What's beneath the gaps — the kernel
+# ─────────────────────────────────────────────────────────────────────
+#
+# "Everything else can be written in Form" implies a floor. Two
+# vertical-slice kernels in `experiments/form-kernel-go/` (854 LoC)
+# and `experiments/form-kernel-rust/` (737 LoC) carry the floor end-
+# to-end — NodeID + content-addressed intern + recipe walker (22
+# RBasic arms) + frame/closure system + native primitives (strings,
+# lists, file I/O) + S-expression bootstrap reader. Both read `.fk`
+# source files from disk and walk them. Five sample programs (fact,
+# fib, closure, list-sum, string-walk) produce identical results in
+# both kernels.
+#
+# Runtime comparison + honest read on language alignment lives in
+# `experiments/form-kernel-comparison.md`. After three focused
+# optimization breaths each (slice returns, interned NameIDs, arena
+# frames + recipe-fold), both kernels stay under 1000 lines and
+# produce identical results across every sample. Go ends up
+# ~20-25% faster than Rust on long workloads; Rust's safety model
+# carries a measurable runtime cost even with the Rc/RefCell tax
+# eliminated. The trade lives between raw throughput (Go) and
+# compiler-enforced structural discipline (Rust).
+#
+# What's still ahead, in breaths:
+#   • The Form-surface-syntax parser written in Form itself (loaded
+#     by the S-expression bootstrap reader, then takes over).
+#   • The query layer in Form (?equivalent, |>, ?cells).
+#   • Substrate persistence integration (cells round-trip through
+#     Postgres / Neo4j from inside the kernel).
+#   • Embedding the chosen kernel back into the existing Python API
+#     surface (PyO3 for Rust, cgo for Go).
