@@ -52,15 +52,67 @@ export const RBasic = {
   LIST: 34,
 } as const;
 
+// Triv — trivial RTypes.
+//
+// Backward-compat: `INT` keeps slot 1 (aliased to INT32 in this kernel).
+// New typed numerics get higher slots. Wide types (64-bit) route through
+// per-type overflow tables; ≤32-bit types encode inline in NodeID.inst.
+//
+// See docs/coherence-substrate/numeric-types-plan.md for the cross-kernel
+// migration plan.
 export const Triv = {
-  INT: 1,
+  INT: 1, // ← INT32 (backward-compat alias)
   STRING: 2,
   BOOL: 3,
   NULL: 4,
+  INT32: 1, // same slot as INT
+  INT64: 5, // overflow table
+  FLOAT32: 6, // inline (IEEE 754 bits reinterpret)
+  FLOAT64: 7, // overflow table
+  INT8: 8, // inline
+  INT16: 9, // inline
+  UINT8: 10, // inline
+  UINT16: 11, // inline
+  UINT32: 12, // inline
+  UINT64: 13, // overflow table
 } as const;
 
-// Per-RBasic instance constants — aligned with Go/Rust
+// MATH instance encoding — width-aware. The low nibble carries the op
+// (PLUS/MINUS/MUL/DIV/MOD); the high nibble carries the width marker so
+// MATH.PLUS_F64 is a distinct NodeID from MATH.PLUS_I32.
+//
+//   inst = (width_marker << 4) | op_marker
+//
+//   width_marker  0=i32 (default)  1=i8  2=i16  3=i64
+//                 4=u8  5=u16  6=u32  7=u64
+//                 8=f32  9=f64
+//   op_marker     1=PLUS 2=MINUS 3=MUL 4=DIV 5=MOD
+export const RMathWidth = {
+  I32: 0,
+  I8: 1,
+  I16: 2,
+  I64: 3,
+  U8: 4,
+  U16: 5,
+  U32: 6,
+  U64: 7,
+  F32: 8,
+  F64: 9,
+} as const;
+
 export const RMath = { PLUS: 1, MINUS: 2, MUL: 3, DIV: 4, MOD: 5 } as const;
+
+export function mathInst(width: number, op: number): number {
+  return ((width & 0xf) << 4) | (op & 0xf);
+}
+
+export function mathWidth(inst: number): number {
+  return (inst >> 4) & 0xf;
+}
+
+export function mathOp(inst: number): number {
+  return inst & 0xf;
+}
 export const RCmp = { EQ: 1, NE: 2, LT: 3, LE: 4, GT: 5, GE: 6 } as const;
 export const RLogic = { AND: 1, OR: 2, NOT: 3 } as const;
 export const RCond = { IF_THEN: 1, IF_THEN_ELSE: 2 } as const;
@@ -111,6 +163,20 @@ export class Kernel {
   strs: string[] = [];
   private strIdx = new Map<string, NameID>();
 
+  // Overflow tables for 64-bit numerics. Each is content-addressed by
+  // value: `intern_int64(42)` returns the same inst every call.
+  //
+  // Float canonicalization on intern:
+  //   - NaN bit patterns collapse to the quiet-NaN canonical
+  //   - -0.0 and +0.0 share an entry (canonical +0.0)
+  //   - +Inf and -Inf keep distinct identity
+  private i64s: bigint[] = [];
+  private i64Idx = new Map<bigint, number>();
+  private u64s: bigint[] = [];
+  private u64Idx = new Map<bigint, number>();
+  private f64s: number[] = [];
+  private f64Idx = new Map<string, number>(); // keyed by IEEE bit pattern as hex
+
   // Natives — map from NameID to NativeFn. Lookup is u32-keyed.
   natives = new Map<NameID, NativeFn>();
 
@@ -152,6 +218,150 @@ export class Kernel {
     return { pkg: 1, level: Level.TRIVIAL, type: Triv.NULL, inst: 0 };
   }
 
+  // ---- Typed numerics — inline (≤32 bit) ----
+
+  internTrivialInt8(n: number): NodeID {
+    const v = (n << 24) >> 24; // sign-extend
+    return {
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.INT8,
+      inst: v >>> 0,
+    };
+  }
+
+  internTrivialInt16(n: number): NodeID {
+    const v = (n << 16) >> 16;
+    return {
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.INT16,
+      inst: v >>> 0,
+    };
+  }
+
+  internTrivialUint8(n: number): NodeID {
+    return {
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.UINT8,
+      inst: n & 0xff,
+    };
+  }
+
+  internTrivialUint16(n: number): NodeID {
+    return {
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.UINT16,
+      inst: n & 0xffff,
+    };
+  }
+
+  internTrivialUint32(n: number): NodeID {
+    return {
+      pkg: 1,
+      level: Level.TRIVIAL,
+      type: Triv.UINT32,
+      inst: n >>> 0,
+    };
+  }
+
+  internTrivialFloat32(f: number): NodeID {
+    // Reinterpret f32 bits as u32, store inline.
+    const buf = new ArrayBuffer(4);
+    new Float32Array(buf)[0] = f;
+    const inst = new Uint32Array(buf)[0]!;
+    return { pkg: 1, level: Level.TRIVIAL, type: Triv.FLOAT32, inst };
+  }
+
+  // ---- Typed numerics — overflow tables (64-bit) ----
+
+  internTrivialInt64(n: bigint): NodeID {
+    const existing = this.i64Idx.get(n);
+    if (existing !== undefined) {
+      return { pkg: 1, level: Level.TRIVIAL, type: Triv.INT64, inst: existing };
+    }
+    const idx = this.i64s.length;
+    this.i64s.push(n);
+    this.i64Idx.set(n, idx);
+    return { pkg: 1, level: Level.TRIVIAL, type: Triv.INT64, inst: idx };
+  }
+
+  internTrivialUint64(n: bigint): NodeID {
+    if (n < 0n) throw new Error(`uint64: negative value ${n}`);
+    const existing = this.u64Idx.get(n);
+    if (existing !== undefined) {
+      return { pkg: 1, level: Level.TRIVIAL, type: Triv.UINT64, inst: existing };
+    }
+    const idx = this.u64s.length;
+    this.u64s.push(n);
+    this.u64Idx.set(n, idx);
+    return { pkg: 1, level: Level.TRIVIAL, type: Triv.UINT64, inst: idx };
+  }
+
+  internTrivialFloat64(f: number): NodeID {
+    // Float canonicalization for content-addressing:
+    //   - all NaN bit patterns → one canonical quiet NaN
+    //   - -0.0 → +0.0
+    let canonical = f;
+    if (Number.isNaN(f)) {
+      canonical = NaN; // JS NaN is canonical-quiet already
+    } else if (f === 0 && 1 / f === -Infinity) {
+      canonical = 0;
+    }
+    // Key the index by the IEEE 754 bit pattern so equal-bits ⇒ same index.
+    const buf = new ArrayBuffer(8);
+    new Float64Array(buf)[0] = canonical;
+    const lo = new Uint32Array(buf)[0]!;
+    const hi = new Uint32Array(buf)[1]!;
+    const key = `${hi.toString(16)}_${lo.toString(16)}`;
+    const existing = this.f64Idx.get(key);
+    if (existing !== undefined) {
+      return {
+        pkg: 1,
+        level: Level.TRIVIAL,
+        type: Triv.FLOAT64,
+        inst: existing,
+      };
+    }
+    const idx = this.f64s.length;
+    this.f64s.push(canonical);
+    this.f64Idx.set(key, idx);
+    return { pkg: 1, level: Level.TRIVIAL, type: Triv.FLOAT64, inst: idx };
+  }
+
+  // ---- Decoders for the overflow tables ----
+
+  decodeInt64(inst: number): bigint {
+    const v = this.i64s[inst];
+    if (v === undefined) throw new Error(`int64: bad index ${inst}`);
+    return v;
+  }
+
+  decodeUint64(inst: number): bigint {
+    const v = this.u64s[inst];
+    if (v === undefined) throw new Error(`uint64: bad index ${inst}`);
+    return v;
+  }
+
+  decodeFloat64(inst: number): number {
+    const v = this.f64s[inst];
+    if (v === undefined) throw new Error(`float64: bad index ${inst}`);
+    return v;
+  }
+
+  decodeFloat32(inst: number): number {
+    const buf = new ArrayBuffer(4);
+    new Uint32Array(buf)[0] = inst;
+    return new Float32Array(buf)[0]!;
+  }
+
+  // boxValue — wrap a NodeID into a Value-of-kind-nodeid for native returns.
+  boxValue(n: NodeID): Value {
+    return { kind: "nodeid", nodeid: n };
+  }
+
   internName(s: string): NameID {
     const existing = this.strIdx.get(s);
     if (existing !== undefined) return existing;
@@ -181,7 +391,8 @@ export class Kernel {
       throw new Error(`trivialValue: ${nodeKey(n)} is composite`);
     }
     switch (n.type) {
-      case Triv.INT: {
+      case Triv.INT32: {
+        // (same slot as Triv.INT)
         const u = n.inst >>> 0;
         const i = u > 0x7fffffff ? u - 0x100000000 : u;
         return { kind: "int", int: i };
@@ -197,6 +408,30 @@ export class Kernel {
         return { kind: "bool", bool: n.inst !== 0 };
       case Triv.NULL:
         return { kind: "null" };
+      case Triv.INT8: {
+        const u = n.inst >>> 0;
+        const i = u > 0x7f ? (u | 0xffffff00) | 0 : u;
+        return { kind: "i8", int: i };
+      }
+      case Triv.INT16: {
+        const u = n.inst >>> 0;
+        const i = u > 0x7fff ? (u | 0xffff0000) | 0 : u;
+        return { kind: "i16", int: i };
+      }
+      case Triv.UINT8:
+        return { kind: "u8", int: n.inst & 0xff };
+      case Triv.UINT16:
+        return { kind: "u16", int: n.inst & 0xffff };
+      case Triv.UINT32:
+        return { kind: "u32", int: n.inst >>> 0 };
+      case Triv.INT64:
+        return { kind: "i64", bigint: this.decodeInt64(n.inst) };
+      case Triv.UINT64:
+        return { kind: "u64", bigint: this.decodeUint64(n.inst) };
+      case Triv.FLOAT32:
+        return { kind: "f32", float: this.decodeFloat32(n.inst) };
+      case Triv.FLOAT64:
+        return { kind: "f64", float: this.decodeFloat64(n.inst) };
       default:
         throw new Error(`trivialValue: unknown trivial type ${n.type}`);
     }
@@ -233,7 +468,18 @@ export class Kernel {
       case "null":
         return "null";
       case "int":
+      case "i8":
+      case "i16":
+      case "u8":
+      case "u16":
+      case "u32":
         return String(v.int);
+      case "i64":
+      case "u64":
+        return String(v.bigint);
+      case "f32":
+      case "f64":
+        return String(v.float);
       case "str":
         return JSON.stringify(v.str);
       case "bool":
@@ -382,6 +628,26 @@ export class Kernel {
       walk(k, argNodeID(args, 0), new Frame(null)),
     );
 
+    // Typed-numeric construction and decoding
+    this.registerNative("make_int8", (k, args) => k.boxValue(k.internTrivialInt8(argInt(args, 0))));
+    this.registerNative("make_int16", (k, args) => k.boxValue(k.internTrivialInt16(argInt(args, 0))));
+    this.registerNative("make_int32", (k, args) => k.boxValue(k.internTrivialInt(argInt(args, 0))));
+    this.registerNative("make_int64", (k, args) => k.boxValue(k.internTrivialInt64(argBigInt(args, 0))));
+    this.registerNative("make_uint8", (k, args) => k.boxValue(k.internTrivialUint8(argInt(args, 0))));
+    this.registerNative("make_uint16", (k, args) => k.boxValue(k.internTrivialUint16(argInt(args, 0))));
+    this.registerNative("make_uint32", (k, args) => k.boxValue(k.internTrivialUint32(argInt(args, 0))));
+    this.registerNative("make_uint64", (k, args) => k.boxValue(k.internTrivialUint64(argBigInt(args, 0))));
+    this.registerNative("make_float32", (k, args) => k.boxValue(k.internTrivialFloat32(argFloat(args, 0))));
+    this.registerNative("make_float64", (k, args) => k.boxValue(k.internTrivialFloat64(argFloat(args, 0))));
+
+    // Width-conversion casts (operate on values, not nodeids — Form's
+    // common case for narrowing/widening at runtime)
+    this.registerNative("i64", (_k, args) => ({ kind: "i64", bigint: argBigInt(args, 0) }));
+    this.registerNative("u64", (_k, args) => ({ kind: "u64", bigint: argBigInt(args, 0) }));
+    this.registerNative("f32", (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
+    this.registerNative("f64", (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
+    this.registerNative("i32", (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
+
     // Debug
     this.registerNative("trace", (_k, args) => {
       if (args.length >= 2) {
@@ -402,7 +668,18 @@ export class Kernel {
       case "null":
         return "null";
       case "int":
+      case "i8":
+      case "i16":
+      case "u8":
+      case "u16":
+      case "u32":
         return String(v.int);
+      case "i64":
+      case "u64":
+        return String(v.bigint);
+      case "f32":
+      case "f64":
+        return String(v.float);
       case "str":
         return v.str;
       case "bool":
@@ -420,8 +697,49 @@ export class Kernel {
 // argN helpers — typed extraction with friendly errors.
 function argInt(args: Value[], i: number): number {
   const v = args[i];
-  if (v?.kind !== "int") throw new Error(`arg ${i}: expected int`);
-  return v.int;
+  if (!v) throw new Error(`arg ${i}: missing`);
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
+  throw new Error(`arg ${i}: expected int-like, got ${v.kind}`);
+}
+function argFloat(args: Value[], i: number): number {
+  const v = args[i];
+  if (!v) throw new Error(`arg ${i}: missing`);
+  if (v.kind === "f32" || v.kind === "f64") return v.float;
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
+  throw new Error(`arg ${i}: expected number, got ${v.kind}`);
+}
+function argBigInt(args: Value[], i: number): bigint {
+  const v = args[i];
+  if (!v) throw new Error(`arg ${i}: missing`);
+  if (v.kind === "i64" || v.kind === "u64") return v.bigint;
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return BigInt(v.int);
+  throw new Error(`arg ${i}: expected integer, got ${v.kind}`);
 }
 function argStr(args: Value[], i: number): string {
   const v = args[i];
@@ -445,7 +763,16 @@ function argNodeID(args: Value[], i: number): NodeID {
 
 export type Value =
   | { kind: "null" }
-  | { kind: "int"; int: number }
+  | { kind: "int"; int: number } // INT32 (alias kept for backward-compat)
+  | { kind: "i8"; int: number }
+  | { kind: "i16"; int: number }
+  | { kind: "u8"; int: number }
+  | { kind: "u16"; int: number }
+  | { kind: "u32"; int: number }
+  | { kind: "i64"; bigint: bigint }
+  | { kind: "u64"; bigint: bigint }
+  | { kind: "f32"; float: number }
+  | { kind: "f64"; float: number }
   | { kind: "str"; str: string }
   | { kind: "bool"; bool: boolean }
   | { kind: "list"; list: Value[] }
@@ -542,20 +869,149 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
 }
 
 function expectInt(v: Value, op: string): number {
-  if (v.kind !== "int") throw new Error(`${op}: expected int, got ${v.kind}`);
+  if (
+    v.kind !== "int" &&
+    v.kind !== "i8" &&
+    v.kind !== "i16" &&
+    v.kind !== "u8" &&
+    v.kind !== "u16" &&
+    v.kind !== "u32"
+  )
+    throw new Error(`${op}: expected int-like, got ${v.kind}`);
   return v.int;
+}
+
+function expectFloat(v: Value, op: string): number {
+  if (v.kind === "f32" || v.kind === "f64") return v.float;
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
+  throw new Error(`${op}: expected number-like, got ${v.kind}`);
+}
+
+function expectBigInt(v: Value, op: string): bigint {
+  if (v.kind === "i64" || v.kind === "u64") return v.bigint;
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return BigInt(v.int);
+  throw new Error(`${op}: expected integer-like, got ${v.kind}`);
 }
 
 function walkMath(
   k: Kernel,
-  op: number,
+  inst: number,
   kids: readonly NodeID[],
   frame: Frame,
 ): Value {
   if (kids.length < 2) throw new Error("math: need at least 2 args");
-  let acc = expectInt(walk(k, kids[0]!, frame), "math");
+  const width = mathWidth(inst);
+  const op = mathOp(inst);
+
+  // Float64 — typed path, no boxing inside the loop.
+  if (width === RMathWidth.F64) {
+    let acc = expectFloat(walk(k, kids[0]!, frame), "math.f64");
+    for (let i = 1; i < kids.length; i++) {
+      const x = expectFloat(walk(k, kids[i]!, frame), "math.f64");
+      switch (op) {
+        case RMath.PLUS:
+          acc = acc + x;
+          break;
+        case RMath.MINUS:
+          acc = acc - x;
+          break;
+        case RMath.MUL:
+          acc = acc * x;
+          break;
+        case RMath.DIV:
+          acc = acc / x;
+          break;
+        case RMath.MOD:
+          acc = acc - Math.floor(acc / x) * x;
+          break;
+        default:
+          throw new Error(`math.f64: unknown op ${op}`);
+      }
+    }
+    return { kind: "f64", float: acc };
+  }
+
+  // Float32 — same shape, narrow to f32 at boundary.
+  if (width === RMathWidth.F32) {
+    let acc = expectFloat(walk(k, kids[0]!, frame), "math.f32");
+    for (let i = 1; i < kids.length; i++) {
+      const x = expectFloat(walk(k, kids[i]!, frame), "math.f32");
+      switch (op) {
+        case RMath.PLUS:
+          acc = Math.fround(acc + x);
+          break;
+        case RMath.MINUS:
+          acc = Math.fround(acc - x);
+          break;
+        case RMath.MUL:
+          acc = Math.fround(acc * x);
+          break;
+        case RMath.DIV:
+          acc = Math.fround(acc / x);
+          break;
+        case RMath.MOD:
+          acc = Math.fround(acc - Math.floor(acc / x) * x);
+          break;
+        default:
+          throw new Error(`math.f32: unknown op ${op}`);
+      }
+    }
+    return { kind: "f32", float: acc };
+  }
+
+  // Int64 / Uint64 — typed path via BigInt.
+  if (width === RMathWidth.I64 || width === RMathWidth.U64) {
+    let acc = expectBigInt(walk(k, kids[0]!, frame), "math.i64");
+    for (let i = 1; i < kids.length; i++) {
+      const x = expectBigInt(walk(k, kids[i]!, frame), "math.i64");
+      switch (op) {
+        case RMath.PLUS:
+          acc = acc + x;
+          break;
+        case RMath.MINUS:
+          acc = acc - x;
+          break;
+        case RMath.MUL:
+          acc = acc * x;
+          break;
+        case RMath.DIV:
+          if (x === 0n) throw new Error("division by zero");
+          acc = acc / x;
+          break;
+        case RMath.MOD:
+          if (x === 0n) throw new Error("modulo by zero");
+          acc = acc % x;
+          break;
+        default:
+          throw new Error(`math.i64: unknown op ${op}`);
+      }
+    }
+    return width === RMathWidth.I64
+      ? { kind: "i64", bigint: acc }
+      : { kind: "u64", bigint: acc };
+  }
+
+  // I32 default path — backward-compat fast path.
+  let acc = expectInt(walk(k, kids[0]!, frame), "math.i32");
   for (let i = 1; i < kids.length; i++) {
-    const x = expectInt(walk(k, kids[i]!, frame), "math");
+    const x = expectInt(walk(k, kids[i]!, frame), "math.i32");
     switch (op) {
       case RMath.PLUS:
         acc = (acc + x) | 0;
@@ -575,7 +1031,7 @@ function walkMath(
         acc = acc - ((acc / x) | 0) * x;
         break;
       default:
-        throw new Error(`math: unknown op ${op}`);
+        throw new Error(`math.i32: unknown op ${op}`);
     }
   }
   return { kind: "int", int: acc };
@@ -596,35 +1052,57 @@ function walkCompare(
     return { kind: "bool", bool: op === RCmp.EQ ? equal : !equal };
   }
 
-  const a = expectInt(av, "compare");
-  const b = expectInt(bv, "compare");
+  // Width-mixing in comparisons: if either side is float, compare as float;
+  // if either side is bigint, compare as bigint; else as int.
   let r: boolean;
-  switch (op) {
-    case RCmp.LT:
-      r = a < b;
-      break;
-    case RCmp.LE:
-      r = a <= b;
-      break;
-    case RCmp.GT:
-      r = a > b;
-      break;
-    case RCmp.GE:
-      r = a >= b;
-      break;
-    default:
-      throw new Error(`compare: unknown op ${op}`);
+  if (av.kind === "f32" || av.kind === "f64" || bv.kind === "f32" || bv.kind === "f64") {
+    const a = expectFloat(av, "compare");
+    const b = expectFloat(bv, "compare");
+    switch (op) {
+      case RCmp.LT: r = a < b; break;
+      case RCmp.LE: r = a <= b; break;
+      case RCmp.GT: r = a > b; break;
+      case RCmp.GE: r = a >= b; break;
+      default: throw new Error(`compare: unknown op ${op}`);
+    }
+  } else if (av.kind === "i64" || av.kind === "u64" || bv.kind === "i64" || bv.kind === "u64") {
+    const a = expectBigInt(av, "compare");
+    const b = expectBigInt(bv, "compare");
+    switch (op) {
+      case RCmp.LT: r = a < b; break;
+      case RCmp.LE: r = a <= b; break;
+      case RCmp.GT: r = a > b; break;
+      case RCmp.GE: r = a >= b; break;
+      default: throw new Error(`compare: unknown op ${op}`);
+    }
+  } else {
+    const a = expectInt(av, "compare");
+    const b = expectInt(bv, "compare");
+    switch (op) {
+      case RCmp.LT: r = a < b; break;
+      case RCmp.LE: r = a <= b; break;
+      case RCmp.GT: r = a > b; break;
+      case RCmp.GE: r = a >= b; break;
+      default: throw new Error(`compare: unknown op ${op}`);
+    }
   }
   return { kind: "bool", bool: r };
 }
 
 function valueEqual(a: Value, b: Value): boolean {
+  // Cross-width numeric equality: compare numerically across widths.
+  const aNum = isNumericValue(a);
+  const bNum = isNumericValue(b);
+  if (aNum && bNum) {
+    if (a.kind === "i64" || a.kind === "u64" || b.kind === "i64" || b.kind === "u64") {
+      return numericToBig(a) === numericToBig(b);
+    }
+    return numericToNum(a) === numericToNum(b);
+  }
   if (a.kind !== b.kind) return false;
   switch (a.kind) {
     case "null":
       return true;
-    case "int":
-      return a.int === (b as { int: number }).int;
     case "str":
       return a.str === (b as { str: string }).str;
     case "bool":
@@ -632,6 +1110,63 @@ function valueEqual(a: Value, b: Value): boolean {
     default:
       return false;
   }
+}
+
+function isNumericValue(
+  v: Value,
+): v is
+  | { kind: "int"; int: number }
+  | { kind: "i8"; int: number }
+  | { kind: "i16"; int: number }
+  | { kind: "u8"; int: number }
+  | { kind: "u16"; int: number }
+  | { kind: "u32"; int: number }
+  | { kind: "i64"; bigint: bigint }
+  | { kind: "u64"; bigint: bigint }
+  | { kind: "f32"; float: number }
+  | { kind: "f64"; float: number } {
+  return (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32" ||
+    v.kind === "i64" ||
+    v.kind === "u64" ||
+    v.kind === "f32" ||
+    v.kind === "f64"
+  );
+}
+
+function numericToNum(v: Value): number {
+  if (v.kind === "f32" || v.kind === "f64") return v.float;
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  throw new Error(`numericToNum: ${v.kind} is not numeric`);
+}
+
+function numericToBig(v: Value): bigint {
+  if (v.kind === "i64" || v.kind === "u64") return v.bigint;
+  if (v.kind === "f32" || v.kind === "f64") return BigInt(Math.trunc(v.float));
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return BigInt(v.int);
+  throw new Error(`numericToBig: ${v.kind} is not numeric`);
 }
 
 function walkLogic(

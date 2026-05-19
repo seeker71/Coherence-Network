@@ -10,18 +10,20 @@
 import {
   Kernel,
   Level,
+  mathInst,
   RBasic,
   RBlock,
   RCmp,
   RCond,
   RLogic,
   RMath,
+  RMathWidth,
   Triv,
   type NodeID,
 } from "./kernel.ts";
 
 interface Token {
-  kind: "lparen" | "rparen" | "int" | "str" | "ident";
+  kind: "lparen" | "rparen" | "int" | "float" | "str" | "ident";
   text: string;
   pos: number;
 }
@@ -94,6 +96,8 @@ function tokenize(src: string): Token[] {
     const text = src.slice(start, i);
     if (/^-?\d+$/.test(text)) {
       toks.push({ kind: "int", text, pos: start });
+    } else if (/^-?\d+\.\d+(e-?\d+)?$/i.test(text) || /^-?\d+e-?\d+$/i.test(text)) {
+      toks.push({ kind: "float", text, pos: start });
     } else {
       toks.push({ kind: "ident", text, pos: start });
     }
@@ -145,6 +149,9 @@ function readOne(k: Kernel, s: ParseState): NodeID {
   const t = consume(s);
   if (t.kind === "int") {
     return k.internTrivialInt(parseInt(t.text, 10));
+  }
+  if (t.kind === "float") {
+    return k.internTrivialFloat64(parseFloat(t.text));
   }
   if (t.kind === "str") {
     return k.internString(t.text);
@@ -341,6 +348,47 @@ function buildVerb(k: Kernel, verb: string, args: NodeID[]): NodeID {
     case "mod":
       return k.intern(
         { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: RMath.MOD },
+        args,
+      );
+    // Float64 math
+    case "addf":
+    case "+.":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.F64, RMath.PLUS) },
+        args,
+      );
+    case "subf":
+    case "-.":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.F64, RMath.MINUS) },
+        args,
+      );
+    case "mulf":
+    case "*.":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.F64, RMath.MUL) },
+        args,
+      );
+    case "divf":
+    case "/.":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.F64, RMath.DIV) },
+        args,
+      );
+    // Int64 math
+    case "addq":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.I64, RMath.PLUS) },
+        args,
+      );
+    case "subq":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.I64, RMath.MINUS) },
+        args,
+      );
+    case "mulq":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATH, inst: mathInst(RMathWidth.I64, RMath.MUL) },
         args,
       );
     // Compare
