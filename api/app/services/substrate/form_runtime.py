@@ -64,7 +64,6 @@ from app.services.substrate.form import (
     IntLit,
     IndexExpr,
     Let,
-    MatchArm,
     MatchExpr,
     MethodCall,
     MethodDefExpr,
@@ -93,7 +92,12 @@ from app.services.substrate.form import (
     parse as form_parse,
 )
 from app.services.substrate.form_speculation import FailSignal, StopSignal
-from app.services.substrate.kernel import NodeID, lookup_cell, view_cell_through_blueprint
+from app.services.substrate.kernel import (
+    NodeID,
+    lookup_cell,
+    register_mutation_callback as _register_mc,
+    view_cell_through_blueprint,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +264,6 @@ def _auto_fire_callback(session: Session) -> None:
 
 # Auto-register on module import so reactive lenses fire without callers
 # needing to wire up the callback explicitly.
-from app.services.substrate.kernel import register_mutation_callback as _register_mc
 _register_mc(_auto_fire_callback)
 
 
@@ -491,6 +494,58 @@ def _builtin_bool_value(nid: Any) -> bool:
     return v
 
 
+def _builtin_ask(*args: Any) -> dict[str, Any]:
+    """`ask(agent_id, question, choices=[], context={})` — open a human question.
+
+    This is a host-bound effect: Form emits into the agent question channel,
+    which in turn feeds the existing SSE web surface.
+    """
+    if len(args) < 2 or len(args) > 4:
+        raise TypeError(
+            "Form runtime: ask(agent_id, question, choices=[], context={}) "
+            f"expects 2 to 4 arg(s), got {len(args)}"
+        )
+    agent_id, question = args[0], args[1]
+    if not isinstance(agent_id, str) or not isinstance(question, str):
+        raise TypeError("Form runtime: ask() expects string agent_id and question")
+    choices: list[str] = []
+    if len(args) >= 3 and args[2] is not None:
+        if not isinstance(args[2], list):
+            raise TypeError("Form runtime: ask() choices must be a list of strings")
+        choices = [str(choice) for choice in args[2]]
+    context: dict[str, Any] = {}
+    if len(args) >= 4 and args[3] is not None:
+        if not isinstance(args[3], dict):
+            raise TypeError("Form runtime: ask() context must be a dict")
+        context = dict(args[3])
+
+    from app.services.agent_question_service import create_question
+
+    task_id = context.get("task_id")
+    thread_id = context.get("thread_id")
+    return create_question(
+        agent_id=agent_id,
+        question=question,
+        choices=choices,
+        context=context,
+        task_id=str(task_id) if task_id is not None else None,
+        thread_id=str(thread_id) if thread_id is not None else None,
+    )
+
+
+def _builtin_await_answer(question_id: Any) -> str | None:
+    """`await_answer(question_id)` — read the current answer, or null."""
+    if not isinstance(question_id, str):
+        raise TypeError("Form runtime: await_answer() expects a question id string")
+    from app.services.agent_question_service import get_question
+
+    question = get_question(question_id)
+    if question is None:
+        raise LookupError(f"Form runtime: question {question_id!r} not found")
+    answer = question.get("answer")
+    return str(answer) if answer is not None else None
+
+
 _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     # List ops
     "len": lambda x: len(x),
@@ -524,6 +579,9 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     "integer_value": _builtin_integer_value,
     "string_value": _builtin_string_value,
     "bool_value": _builtin_bool_value,
+    # Host effects — bridge Form execution into the agent question channel.
+    "ask": _builtin_ask,
+    "await_answer": _builtin_await_answer,
 }
 
 
@@ -604,14 +662,14 @@ def execute(session: Session, ast: Any, frame: Optional[Frame] = None) -> Any:
     if isinstance(ast, BinOp):
         # Short-circuit for && and ||
         if ast.op == "&&":
-            l = execute(session, ast.left, frame)
-            if not l:
-                return l
+            left_value = execute(session, ast.left, frame)
+            if not left_value:
+                return left_value
             return execute(session, ast.right, frame)
         if ast.op == "||":
-            l = execute(session, ast.left, frame)
-            if l:
-                return l
+            left_value = execute(session, ast.left, frame)
+            if left_value:
+                return left_value
             return execute(session, ast.right, frame)
         left = execute(session, ast.left, frame)
         right = execute(session, ast.right, frame)
@@ -1076,7 +1134,7 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
                     nchildren, value (trivial-leaf decode).
     Dicts expose their keys; missing key raises AttributeError.
     """
-    from app.services.substrate.kernel import NamedCell, lookup_node
+    from app.services.substrate.kernel import NamedCell
 
     # Dict literal access — `{a: 1, b: 2}.a` → 1.
     if isinstance(target, dict):
