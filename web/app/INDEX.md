@@ -4,12 +4,13 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 153
+**Total files**: 154
 
 | Route | File | Purpose |
 |---|---|---|
 | `/activity` | [page.tsx](activity/page.tsx) | _no top-of-file purpose_ |
 | `/agent` | [page.tsx](agent/page.tsx) | _no top-of-file purpose_ |
+| `/agent/questions` | [page.tsx](agent/questions/page.tsx) | _no top-of-file purpose_ |
 | `/alive/flow` | [page.tsx](alive/flow/page.tsx) | _no top-of-file purpose_ |
 | `/alive` | [page.tsx](alive/page.tsx) | _no top-of-file purpose_ |
 | `/alive/spectrum` | [page.tsx](alive/spectrum/page.tsx) | _no top-of-file purpose_ |

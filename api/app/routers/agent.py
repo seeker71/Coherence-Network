@@ -21,6 +21,7 @@ from app.routers.agent_auto_heal_routes import router as auto_heal_router
 from app.routers.agent_smart_reap_routes import router as smart_reap_router
 from app.routers.agent_task_chain_routes import router as task_chain_router
 from app.routers.agent_external_encounters import router as external_encounters_router
+from app.routers.agent_question_routes import router as question_router
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ router.include_router(telegram_router)
 router.include_router(execute_router, prefix="/agent")
 router.include_router(task_log_router, prefix="/agent")
 router.include_router(task_activity_router, prefix="/agent")
+router.include_router(question_router, prefix="/agent")
 router.include_router(tasks_router, prefix="/agent")
 router.include_router(run_state_router, prefix="/agent")
 router.include_router(usage_router, prefix="/agent")

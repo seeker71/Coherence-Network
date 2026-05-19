@@ -1,0 +1,129 @@
+{
+  "date": "2026-05-19",
+  "thread_branch": "codex/agent-question-sse-form-kernel-20260519",
+  "commit_scope": "Add a sub-agent human-question channel with SSE streaming and a web answer console, with Form/Rust/Go kernel conformance named as the next boundary.",
+  "files_owned": [
+    "specs/agent-question-sse-channel.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_question_routes.py",
+    "api/app/services/agent_question_service.py",
+    "api/tests/test_agent_question_sse.py",
+    "web/app/agent/page.tsx",
+    "web/app/agent/questions/",
+    "web/app/agent/questions/page.tsx",
+    "api/app/routers/INDEX.md",
+    "api/app/services/INDEX.md",
+    "api/tests/INDEX.md",
+    "web/app/INDEX.md",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-19_agent_question_sse_channel.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "cd api && .venv/bin/pytest tests/test_agent_question_sse.py -q",
+      "cd api && python3 -m pytest tests/test_agent_question_sse.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-question-sse-channel.md",
+      "cd web && npm run build",
+      "cd web && npm ci --cache ../.cache/npm",
+      "cd web && npm run build",
+      "python3 scripts/generate_repo_indexes.py",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "git diff --check",
+      "cd api && python3 -m ruff check app/routers/agent_question_routes.py app/services/agent_question_service.py tests/test_agent_question_sse.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd api && python3 -m uvicorn app.main:app --port 18100",
+      "cd web && API_URL=http://localhost:18100 npm run start -- --port 3110",
+      "Playwright browser check: seed POST /api/agent/questions, open /agent/questions, submit answer, verify 0 open and answered row"
+    ],
+    "summary": "Arrival wellness and prompt-guide passed in the worktree. The first pytest command failed because api/.venv was absent in this fresh worktree, so the same focused test was run with python3 -m pytest and passed. The first web build failed because node_modules was absent; npm ci installed dependencies from package-lock.json and subsequent builds passed. A dev-server browser attempt hit an existing Tailwind config require/ESM issue, so the visible route was verified against the production build with next start. Spec quality, generated indexes, rebase freshness, whitespace, focused Ruff checks, local PR guard, stale PR follow-through, and browser answer-flow checks passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A sub-agent can POST a human question, the API emits question_opened/question_answered SSE events, and /agent/questions renders a live answer console.",
+    "public_endpoints": [
+      "POST /api/agent/questions",
+      "GET /api/agent/questions",
+      "GET /api/agent/questions/stream",
+      "POST /api/agent/questions/{question_id}/answer",
+      "GET /agent/questions"
+    ],
+    "test_flows": [
+      "Create a question through POST /api/agent/questions, list open questions, answer it, and verify it leaves the open queue.",
+      "Create a question and read /api/agent/questions/stream with max_events=1 to verify the replayed question_opened event.",
+      "Build the Next.js app and verify /agent/questions appears in the production route table.",
+      "Open /agent/questions against local API/web, answer a seeded question, and verify the page moves it from open to answered."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation passed; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "agent-question-sse-form-kernel-20260519"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_question_sse.py::test_agent_question_lifecycle",
+    "api/tests/test_agent_question_sse.py::test_agent_question_sse_replays_opened_event",
+    "web/app/agent/questions/page.tsx:/agent/questions",
+    "specs/agent-question-sse-channel.md:Kernel Boundary"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_question_routes.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/agent_question_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_agent_question_sse.py",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "specs/agent-question-sse-channel.md",
+    "web/app/INDEX.md",
+    "web/app/agent/page.tsx",
+    "web/app/agent/questions/",
+    "web/app/agent/questions/page.tsx"
+  ],
+  "change_intent": "runtime_feature"
+}

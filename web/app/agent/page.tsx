@@ -85,6 +85,9 @@ export default async function AgentPage() {
         <Link href="/usage" className="text-muted-foreground hover:text-foreground">
           Usage
         </Link>
+        <Link href="/agent/questions" className="text-muted-foreground hover:text-foreground">
+          Questions
+        </Link>
         <Link href="/gates" className="text-muted-foreground hover:text-foreground">
           Gates
         </Link>

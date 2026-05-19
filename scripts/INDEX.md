@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 102
+**Total files**: 104
 
 | File | Purpose |
 |---|---|
@@ -40,6 +40,7 @@
 | [encounter.py](encounter.py) | !/usr/bin/env python3 |
 | [ensure_worktree_start_clean.py](ensure_worktree_start_clean.py) | !/usr/bin/env python3 |
 | [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
+| [export_graph_to_repo.py](export_graph_to_repo.py) | !/usr/bin/env python3 |
 | [export_lineage.py](export_lineage.py) | !/usr/bin/env python3 |
 | [export_vision_image_prompts.py](export_vision_image_prompts.py) | !/usr/bin/env python3 |
 | [external_proof_demo.py](external_proof_demo.py) | !/usr/bin/env python3 |
@@ -93,7 +94,9 @@
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
+| [sync_presence_content.py](sync_presence_content.py) | !/usr/bin/env python3 |
 | [sync_presence_slugs.py](sync_presence_slugs.py) | !/usr/bin/env python3 |
+| [sync_presences_from_render.py](sync_presences_from_render.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
 | [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
 | [upgrade_specs.py](upgrade_specs.py) | !/usr/bin/env python3 |
