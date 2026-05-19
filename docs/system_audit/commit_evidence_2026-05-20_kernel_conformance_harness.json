@@ -1,0 +1,101 @@
+{
+  "date": "2026-05-20",
+  "thread_branch": "codex/kernel-conformance-harness-20260520",
+  "commit_scope": "Add an executable kernel conformance harness for the Form question-effect vector, with Python passing today and Rust/Go reported as target-only until real runners exist.",
+  "files_owned": [
+    "scripts/verify_kernel_conformance.py",
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/coherence-substrate/form-language.md",
+    "specs/form-question-effects-kernel-conformance.md",
+    "api/tests/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-20_kernel_conformance_harness.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name], witness_started_at}'",
+      "make wellness",
+      "make prompt-guide",
+      "python3 scripts/context_budget.py --token-budget 60000 scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py specs/form-question-effects-kernel-conformance.md docs/coherence-substrate/form-language.md docs/coherence-substrate/kernel-conformance/agent-question-effects.json docs/coherence-substrate/kernel-conformance/README.md",
+      "python3 scripts/verify_kernel_conformance.py --kernel python --json",
+      "python3 scripts/verify_kernel_conformance.py --kernel rust --allow-targets --json",
+      "python3 scripts/verify_kernel_conformance.py --kernel rust --json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_kernel_conformance_harness.py tests/test_substrate_form_question_effects.py -q",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_substrate_form_question_effects.py tests/test_kernel_conformance_harness.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q",
+      "ruff check scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-question-effects-kernel-conformance.md",
+      "python3 -m json.tool docs/coherence-substrate/kernel-conformance/agent-question-effects.json >/dev/null",
+      "python3 scripts/generate_repo_indexes.py",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Session-start pulse was breathing and arrival wellness passed. A fresh worktree was created from origin/main at 26e20a175. The conformance harness ran the Python kernel through all question-effect vector cases, returned explicit skipped target status for Rust with --allow-targets, and returned non-zero when Rust was requested without an executable runner. Focused tests passed: 13 tests across question effects, endpoint mode, SSE, and the harness. Focused Ruff, spec quality, JSON syntax, generated indexes, whitespace, wellness, local PR guard, and stale PR follow-through passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI, PR, and deployment checks are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "task_ids": [
+    "kernel-conformance-harness-20260520"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/verify_kernel_conformance.py --kernel python",
+    "api/tests/test_kernel_conformance_harness.py::test_python_kernel_passes_question_effect_vector",
+    "api/tests/test_kernel_conformance_harness.py::test_rust_and_go_targets_are_explicitly_skipped_when_allowed",
+    "api/tests/test_kernel_conformance_harness.py::test_rust_target_fails_without_executable_runner",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/system_audit/commit_evidence_2026-05-20_kernel_conformance_harness.json",
+    "scripts/INDEX.md",
+    "scripts/verify_kernel_conformance.py",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "change_intent": "process_only"
+}
