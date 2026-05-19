@@ -1,0 +1,20 @@
+; numeric.fk — exercises abs / min2 / max2 / minimum / maximum / product.
+; Returns an aggregate integer; both kernels must agree.
+;
+;   (abs -7)                              → 7
+;   (min2 3 9)                            → 3
+;   (max2 3 9)                            → 9
+;   (minimum [4 2 8 1 6])                 → 1
+;   (maximum [4 2 8 1 6])                 → 8
+;   (product [1 2 3 4 5])                 → 120
+;   (sum [10 20 30])                      → 60
+;   Total                                  → 208
+
+(do
+    (add (abs (sub 0 7))
+    (add (min2 3 9)
+    (add (max2 3 9)
+    (add (minimum (list 4 2 8 1 6))
+    (add (maximum (list 4 2 8 1 6))
+    (add (product (list 1 2 3 4 5))
+         (sum    (list 10 20 30)))))))))

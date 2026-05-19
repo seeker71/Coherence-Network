@@ -1,0 +1,10 @@
+; map-square.fk — higher-order: a Form-defined `map` calling a closure
+; passed as an argument. Exercises closure-as-value through the FnCall path.
+; Expected output: [1, 4, 9, 16, 25]
+(do
+    (defn square (x) (mul x x))
+    (defn my-map (f xs)
+        (if (eq (len xs) 0)
+            (empty)
+            (cons (f (head xs)) (my-map f (tail xs)))))
+    (my-map square (list 1 2 3 4 5)))

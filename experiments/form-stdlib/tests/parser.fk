@@ -1,0 +1,67 @@
+; parser.fk — exercise the Form-side parser end-to-end.
+; Loaded after form-stdlib/core.fk and form-stdlib/parser.fk.
+;
+; Grammar this breath (2c): full arithmetic, parens, identifiers, fncalls,
+; comparisons, if/then/else, defn, ; for statement sep. Both kernels must
+; produce identical recipes (content-addressing → identical NodeIDs) and
+; walk to identical values.
+;
+; --- Breath 2a/2b cases (arithmetic + fncall) -------------------- sum = 149
+;   "42"                            → 42
+;   "1 + 2 * 3"                     → 7
+;   "(1 + 2) * 3"                   → 9
+;   "(1 + 2) * (3 + 4)"             → 21
+;   "10 - 3 - 2"                    → 5
+;   "100 / 5 / 2"                   → 10
+;   "2 + 3 * 4 - 1"                 → 13
+;   "len(list(1, 2, 3, 4, 5))"      → 5
+;   "head(list(7, 8, 9))"           → 7
+;   "nth(list(10, 20, 30), 1)"      → 20
+;   "len(cons(0, list(1, 2)))"      → 3
+;   "1 + len(list(1, 2)) * 3"       → 7
+;
+; --- Breath 2c cases (comparisons + if + defn + recursion) ------- sum = 946
+;   "if 1 < 2 then 10 else 20"                       → 10
+;   "if 5 == 5 then 1 else 0"                        → 1
+;   "if 3 != 4 then 1 else 0"                        → 1
+;   "if 7 >= 7 then 100 else 200"                    → 100
+;   "defn double(x) = x * 2; double(5)"              → 10
+;   "defn square(x) = x * x; square(7)"              → 49
+;   "defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6)"
+;                                                    → 720
+;   "defn fib(n) = if n <= 1 then n else fib(n - 1) + fib(n - 2); fib(10)"
+;                                                    → 55
+;
+; --- Breath 2d cases (let bindings) -------------------------------- sum = 82
+;   "let x = 5; x + 10"                              → 15
+;   "let x = 3; let y = 4; x * y"                    → 12
+;   "let x = 5; let y = x + 2; x * y"                → 35
+;   "let x = 10; if x > 5 then x * 2 else x"         → 20
+;
+; Total                                                            → 1177
+
+(do
+    (add (eval-form "42")
+    (add (eval-form "1 + 2 * 3")
+    (add (eval-form "(1 + 2) * 3")
+    (add (eval-form "(1 + 2) * (3 + 4)")
+    (add (eval-form "10 - 3 - 2")
+    (add (eval-form "100 / 5 / 2")
+    (add (eval-form "2 + 3 * 4 - 1")
+    (add (eval-form "len(list(1, 2, 3, 4, 5))")
+    (add (eval-form "head(list(7, 8, 9))")
+    (add (eval-form "nth(list(10, 20, 30), 1)")
+    (add (eval-form "len(cons(0, list(1, 2)))")
+    (add (eval-form "1 + len(list(1, 2)) * 3")
+    (add (eval-form "if 1 < 2 then 10 else 20")
+    (add (eval-form "if 5 == 5 then 1 else 0")
+    (add (eval-form "if 3 != 4 then 1 else 0")
+    (add (eval-form "if 7 >= 7 then 100 else 200")
+    (add (eval-form "defn double(x) = x * 2; double(5)")
+    (add (eval-form "defn square(x) = x * x; square(7)")
+    (add (eval-form "defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6)")
+    (add (eval-form "defn fib(n) = if n <= 1 then n else fib(n - 1) + fib(n - 2); fib(10)")
+    (add (eval-form "let x = 5; x + 10")
+    (add (eval-form "let x = 3; let y = 4; x * y")
+    (add (eval-form "let x = 5; let y = x + 2; x * y")
+         (eval-form "let x = 10; if x > 5 then x * 2 else x"))))))))))))))))))))))))))

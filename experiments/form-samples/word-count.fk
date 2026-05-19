@@ -1,0 +1,16 @@
+; word-count.fk — count whitespace-separated tokens in a string.
+; Exercises char_at + ord + nested or + tail recursion with multiple
+; accumulators. The shape the Form-side lexer will reach for.
+; Expected output: 9
+(do
+    (defn is-ws (c)
+        (or (eq c 32) (or (eq c 9) (or (eq c 10) (eq c 13)))))
+    (defn scan (s i in-word total)
+        (if (eq i (str_len s))
+            (if (eq in-word 1) (add total 1) total)
+            (if (is-ws (ord (char_at s i)))
+                (if (eq in-word 1)
+                    (scan s (add i 1) 0 (add total 1))
+                    (scan s (add i 1) 0 total))
+                (scan s (add i 1) 1 total))))
+    (scan "the quick brown fox jumps over the lazy dog" 0 0 0))

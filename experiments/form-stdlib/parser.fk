@@ -1,0 +1,412 @@
+; form-stdlib/parser.fk — Form-side tokenizer + recursive-descent parser
+; for arithmetic + comparisons + if/then/else + defn. Reads text, produces
+; recipes the kernel walks. Built on substrate-write natives.
+;
+; Grammar (Breath 2c):
+;   program := stmt { ';' stmt }
+;   stmt    := defn | expr
+;   defn    := 'defn' IDENT '(' [params] ')' '=' expr
+;   params  := IDENT { ',' IDENT }
+;   expr    := cmp
+;   cmp     := sum [ cmp-op sum ]
+;   sum     := term { ('+'|'-') term }
+;   term    := factor { ('*'|'/') factor }
+;   factor  := INT | bool | if-expr | IDENT | IDENT '(' [args] ')' | '(' expr ')'
+;   if-expr := 'if' expr 'then' expr 'else' expr
+;   args    := expr { ',' expr }
+;   cmp-op  := '<' | '<=' | '>' | '>=' | '==' | '!='
+;   bool    := 'true' | 'false'
+;
+; Tests: a defn'd recursive function called from the same parsed program
+; runs end-to-end. fact(6) → 720, fib(10) → 55. Form surface syntax now
+; expresses everything we have S-expressions for at the bootstrap layer.
+
+(do
+    ;; --- ASCII codepoints ---------------------------------------------
+    ;;   '0'..'9' = 48..57    'A'..'Z' = 65..90   'a'..'z' = 97..122
+    ;;   '_' = 95             ' ' = 32  '\t' = 9  '\n' = 10  '\r' = 13
+    ;;   '+' = 43   '-' = 45   '*' = 42   '/' = 47
+    ;;   '(' = 40   ')' = 41   ',' = 44   ';' = 59
+    ;;   '<' = 60   '>' = 62   '=' = 61   '!' = 33
+
+    (defn is-digit (c)
+        (and (ge (ord c) 48) (le (ord c) 57)))
+
+    (defn is-alpha (c)
+        (or (and (ge (ord c) 65) (le (ord c) 90))
+            (or (and (ge (ord c) 97) (le (ord c) 122))
+                (eq (ord c) 95))))
+
+    (defn is-ident-cont (c)
+        (or (is-alpha c) (is-digit c)))
+
+    (defn is-ws (c)
+        (or (eq (ord c) 32)
+            (or (eq (ord c) 9)
+                (or (eq (ord c) 10)
+                    (eq (ord c) 13)))))
+
+    ;; --- string helpers -----------------------------------------------
+    (defn substr (s a b)
+        (if (ge a b)
+            ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn scan-while (s i pred)
+        (if (eq i (str_len s))
+            i
+            (if (pred (char_at s i))
+                (scan-while s (add i 1) pred)
+                i)))
+
+    ;; --- token shape: (list kind value) -------------------------------
+    (defn tok-kind (t) (head t))
+    (defn tok-val  (t) (head (tail t)))
+    (defn mk-tok (k v) (list k v))
+
+    ;; --- tokenizer dispatch -------------------------------------------
+    (defn next-tok (s i)
+        (if (eq i (str_len s))
+            (list (mk-tok "EOF" "") i)
+            (if (is-ws (char_at s i))
+                (next-tok s (add i 1))
+                (next-tok-nonws s i))))
+
+    (defn next-tok-nonws (s i)
+        (do
+            (let c (char_at s i))
+            (if (is-digit c)
+                (next-tok-int s i)
+                (if (is-alpha c)
+                    (next-tok-ident s i)
+                    (next-tok-op s i)))))
+
+    (defn next-tok-int (s i)
+        (do
+            (let end (scan-while s i is-digit))
+            (list (mk-tok "INT" (substr s i end)) end)))
+
+    (defn next-tok-ident (s i)
+        (do
+            (let end (scan-while s i is-ident-cont))
+            (list (mk-tok "IDENT" (substr s i end)) end)))
+
+    ;; --- multi-char operators: peek next char, emit 2-char if it pairs
+    (defn maybe-eq-suffix (s i if-paired if-alone)
+        (do
+            (let next (add i 1))
+            (if (and (lt next (str_len s))
+                     (eq (ord (char_at s next)) 61))
+                (list if-paired (add i 2))
+                (list if-alone next))))
+
+    (defn next-tok-op (s i)
+        (do
+            (let c (char_at s i))
+            (let oc (ord c))
+            ;; Multi-char first
+            (if (eq oc 60) (maybe-eq-suffix s i (mk-tok "LE" "<=") (mk-tok "LT" "<"))
+            (if (eq oc 62) (maybe-eq-suffix s i (mk-tok "GE" ">=") (mk-tok "GT" ">"))
+            (if (eq oc 61) (maybe-eq-suffix s i (mk-tok "EQEQ" "==") (mk-tok "EQ" "="))
+            (if (eq oc 33) (maybe-eq-suffix s i (mk-tok "NEQ" "!=") (mk-tok "BANG" "!"))
+            (next-tok-single s i)))))))
+
+    (defn next-tok-single (s i)
+        (do
+            (let c (char_at s i))
+            (let next (add i 1))
+            (if (eq (ord c) 43) (list (mk-tok "PLUS"   "+") next)
+                (if (eq (ord c) 45) (list (mk-tok "MINUS"  "-") next)
+                    (if (eq (ord c) 42) (list (mk-tok "STAR"   "*") next)
+                        (if (eq (ord c) 47) (list (mk-tok "SLASH"  "/") next)
+                            (if (eq (ord c) 40) (list (mk-tok "LPAREN" "(") next)
+                                (if (eq (ord c) 41) (list (mk-tok "RPAREN" ")") next)
+                                    (if (eq (ord c) 44) (list (mk-tok "COMMA"  ",") next)
+                                        (if (eq (ord c) 59) (list (mk-tok "SEMI"   ";") next)
+                                            (list (mk-tok "ERROR" c) next)))))))))))
+
+    ;; --- tokenize: full source → token list ending with EOF -----------
+    (defn tokenize-loop (s i)
+        (do
+            (let tn (next-tok s i))
+            (let tok (head tn))
+            (let next (head (tail tn)))
+            (if (str_eq (tok-kind tok) "EOF")
+                (list tok)
+                (cons tok (tokenize-loop s next)))))
+
+    (defn tokenize (s) (tokenize-loop s 0))
+
+    ;; --- substrate categories the parser interns into -----------------
+    (let MATH-PLUS  (make_nodeid 1 2 12 1))
+    (let MATH-MINUS (make_nodeid 1 2 12 2))
+    (let MATH-MUL   (make_nodeid 1 2 12 3))
+    (let MATH-DIV   (make_nodeid 1 2 12 4))
+    (let COMPARE-EQ  (make_nodeid 1 2 13 1))
+    (let COMPARE-NEQ (make_nodeid 1 2 13 2))
+    (let COMPARE-LT  (make_nodeid 1 2 13 3))
+    (let COMPARE-LE  (make_nodeid 1 2 13 4))
+    (let COMPARE-GT  (make_nodeid 1 2 13 5))
+    (let COMPARE-GE  (make_nodeid 1 2 13 6))
+    (let COND-IF-ELSE (make_nodeid 1 2 11 2))
+    (let BLOCK-DO     (make_nodeid 1 2 9 1))
+    (let BLOCK-SEQ    (make_nodeid 1 2 9 2))
+    (let BLOCK-LET    (make_nodeid 1 2 9 3))
+    (let IDENT-CAT  (make_nodeid 1 2 33 1))
+    (let FNDEF-CAT  (make_nodeid 1 2 31 1))
+    (let FNCALL-CAT (make_nodeid 1 2 32 1))
+    (let TRUE-TRIV  (make_nodeid 1 1 3 1))
+    (let FALSE-TRIV (make_nodeid 1 1 3 0))
+
+    ;; --- pair helpers --------------------------------------------------
+    (defn pair-recipe (p) (head p))
+    (defn pair-rest   (p) (head (tail p)))
+    (defn mk-pair (r rest) (list r rest))
+
+    ;; --- comparison-token helpers ------------------------------------
+    (defn is-cmp-tok (k)
+        (or (str_eq k "LT")
+            (or (str_eq k "LE")
+                (or (str_eq k "GT")
+                    (or (str_eq k "GE")
+                        (or (str_eq k "EQEQ") (str_eq k "NEQ")))))))
+
+    (defn cmp-cat (k)
+        (if (str_eq k "LT")   COMPARE-LT
+            (if (str_eq k "LE")   COMPARE-LE
+                (if (str_eq k "GT")   COMPARE-GT
+                    (if (str_eq k "GE")   COMPARE-GE
+                        (if (str_eq k "EQEQ") COMPARE-EQ
+                            COMPARE-NEQ))))))
+
+    ;; --- parse-factor: leaves of the expression grammar --------------
+    ;; Order matters: keyword checks for `if`/`true`/`false` come before
+    ;; the generic IDENT path so they're not misread as variable refs.
+    (defn parse-factor (toks)
+        (do
+            (let t (head toks))
+            (let k (tok-kind t))
+            (if (str_eq k "INT")
+                (mk-pair (intern_trivial_int (str_to_int (tok-val t))) (tail toks))
+                (if (str_eq k "LPAREN")
+                    (parse-paren (tail toks))
+                    (if (str_eq k "IDENT")
+                        (parse-factor-ident t (tail toks))
+                        (mk-pair (intern_trivial_int 0) toks))))))
+
+    (defn parse-factor-ident (t rest)
+        (do
+            (let v (tok-val t))
+            (if (str_eq v "if")    (parse-if (cons t rest))
+                (if (str_eq v "true")  (mk-pair TRUE-TRIV  rest)
+                    (if (str_eq v "false") (mk-pair FALSE-TRIV rest)
+                        (parse-after-ident t rest))))))
+
+    (defn parse-paren (toks)
+        (do
+            (let inner (parse-expr toks))
+            (mk-pair (pair-recipe inner) (tail (pair-rest inner)))))
+
+    (defn parse-after-ident (name-tok rest-toks)
+        (do
+            (let kind (tok-kind (head rest-toks)))
+            (if (str_eq kind "LPAREN")
+                (parse-fncall name-tok (tail rest-toks))
+                (mk-pair
+                    (intern_node IDENT-CAT
+                                 (list (intern_trivial_string (tok-val name-tok))))
+                    rest-toks))))
+
+    (defn parse-fncall (name-tok args-toks)
+        (do
+            (let name-triv (intern_trivial_string (tok-val name-tok)))
+            (if (str_eq (tok-kind (head args-toks)) "RPAREN")
+                (mk-pair (intern_node FNCALL-CAT (list name-triv))
+                         (tail args-toks))
+                (parse-fncall-with-args name-triv args-toks))))
+
+    (defn parse-fncall-with-args (name-triv args-toks)
+        (do
+            (let args-pair (parse-args args-toks))
+            (let arg-list  (pair-recipe args-pair))
+            (let after     (pair-rest   args-pair))
+            (mk-pair (intern_node FNCALL-CAT (cons name-triv arg-list))
+                     (tail after))))
+
+    (defn parse-args (toks)
+        (do
+            (let first (parse-expr toks))
+            (let arg1 (pair-recipe first))
+            (let after (pair-rest first))
+            (if (str_eq (tok-kind (head after)) "COMMA")
+                (parse-args-cont arg1 (tail after))
+                (mk-pair (list arg1) after))))
+
+    (defn parse-args-cont (arg1 toks)
+        (do
+            (let rest-args (parse-args toks))
+            (mk-pair (cons arg1 (pair-recipe rest-args)) (pair-rest rest-args))))
+
+    ;; --- if cond then expr else expr ---------------------------------
+    (defn parse-if (toks)
+        (do
+            ;; toks starts with IDENT(if); skip it
+            (let after-if (tail toks))
+            (let cond-pair (parse-expr after-if))
+            (let cond-recipe (pair-recipe cond-pair))
+            ;; expect IDENT(then)
+            (let after-then (tail (pair-rest cond-pair)))
+            (let then-pair (parse-expr after-then))
+            (let then-recipe (pair-recipe then-pair))
+            ;; expect IDENT(else)
+            (let after-else (tail (pair-rest then-pair)))
+            (let else-pair (parse-expr after-else))
+            (mk-pair (intern_node COND-IF-ELSE
+                                  (list cond-recipe then-recipe (pair-recipe else-pair)))
+                     (pair-rest else-pair))))
+
+    ;; --- sum, term: arithmetic precedence ladder --------------------
+    (defn parse-term-cont (lhs toks)
+        (do
+            (let kind (tok-kind (head toks)))
+            (if (or (str_eq kind "STAR") (str_eq kind "SLASH"))
+                (parse-term-step lhs toks)
+                (mk-pair lhs toks))))
+
+    (defn parse-term-step (lhs toks)
+        (do
+            (let op-kind (tok-kind (head toks)))
+            (let rhs-pair (parse-factor (tail toks)))
+            (let cat (if (str_eq op-kind "STAR") MATH-MUL MATH-DIV))
+            (parse-term-cont (intern_node cat (list lhs (pair-recipe rhs-pair)))
+                             (pair-rest rhs-pair))))
+
+    (defn parse-term (toks)
+        (do
+            (let first (parse-factor toks))
+            (parse-term-cont (pair-recipe first) (pair-rest first))))
+
+    (defn parse-sum-cont (lhs toks)
+        (do
+            (let kind (tok-kind (head toks)))
+            (if (or (str_eq kind "PLUS") (str_eq kind "MINUS"))
+                (parse-sum-step lhs toks)
+                (mk-pair lhs toks))))
+
+    (defn parse-sum-step (lhs toks)
+        (do
+            (let op-kind (tok-kind (head toks)))
+            (let rhs-pair (parse-term (tail toks)))
+            (let cat (if (str_eq op-kind "PLUS") MATH-PLUS MATH-MINUS))
+            (parse-sum-cont (intern_node cat (list lhs (pair-recipe rhs-pair)))
+                            (pair-rest rhs-pair))))
+
+    (defn parse-sum (toks)
+        (do
+            (let first (parse-term toks))
+            (parse-sum-cont (pair-recipe first) (pair-rest first))))
+
+    ;; --- comparison: non-chained, loosest binding -------------------
+    (defn parse-cmp (toks)
+        (do
+            (let lhs-pair (parse-sum toks))
+            (let lhs (pair-recipe lhs-pair))
+            (let after (pair-rest lhs-pair))
+            (let kind (tok-kind (head after)))
+            (if (is-cmp-tok kind)
+                (do
+                    (let rhs-pair (parse-sum (tail after)))
+                    (mk-pair (intern_node (cmp-cat kind)
+                                          (list lhs (pair-recipe rhs-pair)))
+                             (pair-rest rhs-pair)))
+                (mk-pair lhs after))))
+
+    ;; --- expr — the entry point for any value-producing form -------
+    (defn parse-expr (toks) (parse-cmp toks))
+
+    ;; --- defn name(params) = body -----------------------------------
+    (defn parse-defn (toks)
+        (do
+            (let after-defn (tail toks))                 ; skip 'defn'
+            (let name-tok (head after-defn))
+            (let name-triv (intern_trivial_string (tok-val name-tok)))
+            (let after-name (tail after-defn))
+            (let after-lp (tail after-name))             ; skip '('
+            (let params-pair (parse-param-names after-lp))
+            (let param-names (pair-recipe params-pair))
+            (let after-params (pair-rest params-pair))
+            (let after-rp (tail after-params))           ; skip ')'
+            (let after-eq (tail after-rp))               ; skip '='
+            (let body-pair (parse-expr after-eq))
+            (let params-block (intern_node BLOCK-SEQ param-names))
+            (mk-pair (intern_node FNDEF-CAT
+                                  (list name-triv params-block (pair-recipe body-pair)))
+                     (pair-rest body-pair))))
+
+    (defn parse-param-names (toks)
+        (do
+            (if (str_eq (tok-kind (head toks)) "RPAREN")
+                (mk-pair (empty) toks)
+                (parse-param-names-nonempty toks))))
+
+    (defn parse-param-names-nonempty (toks)
+        (do
+            (let name (intern_trivial_string (tok-val (head toks))))
+            (let after (tail toks))
+            (if (str_eq (tok-kind (head after)) "COMMA")
+                (do
+                    (let rest (parse-param-names-nonempty (tail after)))
+                    (mk-pair (cons name (pair-recipe rest)) (pair-rest rest)))
+                (mk-pair (list name) after))))
+
+    ;; --- let name = value -------------------------------------------
+    ;; Binds `name` in the current scope. Returns the bound value, so
+    ;; `let x = 5` standalone evaluates to 5 — and subsequent statements
+    ;; in the same DO-block see x in scope.
+    (defn parse-let (toks)
+        (do
+            (let after-let (tail toks))                  ; skip 'let'
+            (let name-tok (head after-let))
+            (let name-triv (intern_trivial_string (tok-val name-tok)))
+            (let after-name (tail after-let))
+            (let after-eq (tail after-name))             ; skip '='
+            (let value-pair (parse-expr after-eq))
+            (mk-pair (intern_node BLOCK-LET
+                                  (list name-triv (pair-recipe value-pair)))
+                     (pair-rest value-pair))))
+
+    ;; --- top-level statement: defn | let | expr ---------------------
+    (defn parse-stmt (toks)
+        (do
+            (let t (head toks))
+            (if (and (str_eq (tok-kind t) "IDENT") (str_eq (tok-val t) "defn"))
+                (parse-defn toks)
+                (if (and (str_eq (tok-kind t) "IDENT") (str_eq (tok-val t) "let"))
+                    (parse-let toks)
+                    (parse-expr toks)))))
+
+    ;; --- program: stmts separated by ';' wrapped in DO when >1 ------
+    (defn parse-stmts (toks)
+        (do
+            (let first (parse-stmt toks))
+            (let first-rec (pair-recipe first))
+            (let after (pair-rest first))
+            (if (str_eq (tok-kind (head after)) "SEMI")
+                (do
+                    (let rest (parse-stmts (tail after)))
+                    (mk-pair (cons first-rec (pair-recipe rest)) (pair-rest rest)))
+                (mk-pair (list first-rec) after))))
+
+    (defn parse-program (toks)
+        (do
+            (let stmts-pair (parse-stmts toks))
+            (let stmts (pair-recipe stmts-pair))
+            (if (eq (len stmts) 1)
+                (head stmts)
+                (intern_node BLOCK-DO stmts))))
+
+    ;; --- top level ----------------------------------------------------
+    (defn parse (s) (parse-program (tokenize s)))
+    (defn eval-form (s) (walk_recipe (parse s)))
+
+    0)
