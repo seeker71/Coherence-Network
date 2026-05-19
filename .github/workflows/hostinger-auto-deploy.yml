@@ -50,7 +50,21 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$HOSTINGER_SSH_KEY" > ~/.ssh/id_hostinger
           chmod 600 ~/.ssh/id_hostinger
-          ssh-keyscan -H "${HOSTINGER_SSH_HOST#*@}" >> ~/.ssh/known_hosts
+          host="${HOSTINGER_SSH_HOST#*@}"
+          attempt=1
+          max_attempts=5
+          while :; do
+            if ssh-keyscan -T 10 -H "$host" >> ~/.ssh/known_hosts; then
+              break
+            fi
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "::error::ssh-keyscan failed for $host after $attempt attempts"
+              exit 1
+            fi
+            echo "::warning::ssh-keyscan attempt $attempt failed for $host; retrying in 5s"
+            sleep 5
+            attempt=$((attempt + 1))
+          done
 
       - name: Sync tracked deploy script to VPS
         run: |
