@@ -111,6 +111,10 @@
       "description": "Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path."
     },
     {
+      "name": "coherence_substrate_form",
+      "description": "Evaluate Form notation against the coherence-substrate through the AST evaluator or streaming direct-Recipe emitter."
+    },
+    {
       "name": "coherence_list_federation_nodes",
       "description": "List federated nodes and their capabilities."
     },
