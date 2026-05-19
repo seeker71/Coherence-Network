@@ -1042,7 +1042,7 @@ await_answer("question_abc123")
 
 `await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. Suspension/resume around unanswered questions belongs to the sub-agent runner, not to the Form runtime hot path.
 
-This is a host-bound effect, so Rust and Go kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json), and the executable harness is `python3 scripts/verify_kernel_conformance.py --kernel python`: Python is implemented here; Rust and Go return target-only status until executable kernels exist.
+This is a host-bound effect, so Rust and Go kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json), and the executable harness is `python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go`: Python runs through the full Form runtime; Rust and Go currently run narrow question-effect kernels for `ask(...)` and `await_answer(...)` only.
 
 ## The four self-* faculties
 

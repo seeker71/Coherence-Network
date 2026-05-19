@@ -1,0 +1,108 @@
+{
+  "date": "2026-05-20",
+  "thread_branch": "codex/rust-go-question-kernels-20260520",
+  "commit_scope": "Promote the Rust and Go Form question-effect kernels from target-only entries to executable conformance runners for the shared ask/await_answer vector.",
+  "files_owned": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/system_audit/commit_evidence_2026-05-20_rust_go_question_kernels.json",
+    "experiments/form-question-kernels/",
+    "experiments/form-question-kernels/go/question_kernel.go",
+    "experiments/form-question-kernels/rust/.gitignore",
+    "experiments/form-question-kernels/rust/Cargo.lock",
+    "experiments/form-question-kernels/rust/Cargo.toml",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "scripts/verify_kernel_conformance.py",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "python3 scripts/context_budget.py --token-budget 60000 scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py specs/form-question-effects-kernel-conformance.md docs/coherence-substrate/form-language.md docs/coherence-substrate/kernel-conformance/agent-question-effects.json docs/coherence-substrate/kernel-conformance/README.md experiments/form-question-kernels/rust/src/main.rs experiments/form-question-kernels/go/question_kernel.go",
+      "python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_substrate_form_question_effects.py tests/test_kernel_conformance_harness.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q",
+      "cargo check --manifest-path experiments/form-question-kernels/rust/Cargo.toml",
+      "go run experiments/form-question-kernels/go/question_kernel.go docs/coherence-substrate/kernel-conformance/agent-question-effects.json >/tmp/go-question-kernel.json",
+      "cargo fmt --manifest-path experiments/form-question-kernels/rust/Cargo.toml",
+      "gofmt -w experiments/form-question-kernels/go/question_kernel.go",
+      "ruff check scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-question-effects-kernel-conformance.md",
+      "python3 -m json.tool docs/coherence-substrate/kernel-conformance/agent-question-effects.json >/dev/null",
+      "python3 scripts/generate_repo_indexes.py",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "A fresh worktree from origin/main at 7d6ad166 promoted the Rust and Go question-effect vector entries to implemented runner commands, then rebased onto the latest origin/main before push proof. The Python harness now validates external runner JSON against the shared expected values and event transcript. Rust and Go each implement only the narrow ask(...) and await_answer(...) surface used by the vector; the docs and spec explicitly avoid claiming full Form runtime support. Focused conformance, API/SSE regression tests, toolchain checks, formatting, Ruff, spec quality, JSON syntax, generated indexes, wellness, whitespace, local PR guard, and stale PR follow-through passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI, PR, and deployment checks are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "task_ids": [
+    "rust-go-question-kernels-20260520"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go",
+    "api/tests/test_kernel_conformance_harness.py::test_rust_and_go_kernels_pass_question_effect_vector",
+    "api/tests/test_kernel_conformance_harness.py::test_default_runs_all_implemented_kernels",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "experiments/form-question-kernels/go/question_kernel.go",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json"
+  ],
+  "change_files": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/system_audit/commit_evidence_2026-05-20_rust_go_question_kernels.json",
+    "experiments/form-question-kernels/",
+    "experiments/form-question-kernels/go/question_kernel.go",
+    "experiments/form-question-kernels/rust/.gitignore",
+    "experiments/form-question-kernels/rust/Cargo.lock",
+    "experiments/form-question-kernels/rust/Cargo.toml",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "scripts/verify_kernel_conformance.py",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "change_intent": "process_only"
+}
