@@ -1,0 +1,117 @@
+{
+  "date": "2026-05-20",
+  "thread_branch": "codex/form-loop-kernel-vector-20260520",
+  "commit_scope": "Add a pure Form loop/mutation conformance vector and widen the Rust/Go runners to pass it alongside the existing control-flow, infix, core built-ins, and question-effect vectors.",
+  "files_owned": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "docs/system_audit/commit_evidence_2026-05-20_form_loop_kernel_vector.json",
+    "experiments/form-question-kernels/go/question_kernel.go",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "specs/INDEX.md",
+    "specs/form-control-flow-kernel-conformance.md",
+    "specs/form-loop-mutation-kernel-conformance.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "make prompt-guide",
+      "python3 scripts/context_budget.py --token-budget 90000 scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/form-language.md docs/coherence-substrate/kernel-conformance/README.md docs/coherence-substrate/kernel-conformance/form-control-flow.json docs/coherence-substrate/kernel-conformance/form-infix-operators.json docs/coherence-substrate/kernel-conformance/form-core-builtins.json docs/coherence-substrate/kernel-conformance/agent-question-effects.json specs/form-control-flow-kernel-conformance.md experiments/form-question-kernels/rust/src/main.rs experiments/form-question-kernels/go/question_kernel.go api/app/services/substrate/form_runtime.py api/tests/test_substrate_form_loops.py api/tests/test_substrate_form_runtime.py",
+      "cargo fmt --manifest-path experiments/form-question-kernels/rust/Cargo.toml",
+      "gofmt -w experiments/form-question-kernels/go/question_kernel.go",
+      "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-loop-mutation.json --kernel python --kernel rust --kernel go --json",
+      "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel python --kernel rust --kernel go --json",
+      "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel python --kernel rust --kernel go --json",
+      "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-core-builtins.json --kernel python --kernel rust --kernel go --json",
+      "python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --json",
+      "cargo check --manifest-path experiments/form-question-kernels/rust/Cargo.toml",
+      "go run experiments/form-question-kernels/go/question_kernel.go docs/coherence-substrate/kernel-conformance/form-loop-mutation.json >/tmp/go-loop-kernel.json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_kernel_conformance_harness.py -q",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_kernel_conformance_harness.py tests/test_substrate_form_loops.py tests/test_substrate_form_question_effects.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q",
+      "ruff check api/tests/test_kernel_conformance_harness.py scripts/verify_kernel_conformance.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-loop-mutation-kernel-conformance.md",
+      "python3 scripts/validate_spec_quality.py --file specs/form-control-flow-kernel-conformance.md",
+      "python3 -m json.tool docs/coherence-substrate/kernel-conformance/form-loop-mutation.json >/dev/null",
+      "python3 -m json.tool docs/coherence-substrate/kernel-conformance/form-control-flow.json >/dev/null",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "python3 -m json.tool docs/system_audit/commit_evidence_2026-05-20_form_loop_kernel_vector.json >/dev/null",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-20_form_loop_kernel_vector.json",
+      "git diff --check",
+      "git rev-parse --abbrev-ref HEAD",
+      "git stash push -u -m codex-rebase-form-loop-kernel-vector && git fetch origin main && git rebase origin/main && git stash pop",
+      "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-loop-mutation.json --kernel python --kernel rust --kernel go --json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_kernel_conformance_harness.py -q",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Pulse was breathing at arrival. The branch adds form-loop-mutation.json, expands the Rust/Go runners from local control flow to a tiny local loop/mutation evaluator for for-list results, for-string iteration, accumulator mutation with set, list appending through concat, while-counting, while returning the last body value, unentered while returning null, and set through an inner block to an outer binding. Python, Rust, and Go pass the new loop/mutation vector, the control-flow vector, the infix vector, the core built-ins vector, and the existing question-effect vector. Focused conformance, loop/API/SSE regression tests, toolchain checks, formatting, Ruff, spec quality, generated indexes, JSON syntax, wellness, whitespace, evidence validation, rebase freshness, local PR guard, and stale PR follow-through passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No post-merge deploy attempted yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI, PR, and post-merge deploy checks are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/form-loop-mutation-kernel-conformance.md"
+  ],
+  "task_ids": [
+    "form-loop-kernel-vector-20260520"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-loop-mutation.json --kernel python --kernel rust --kernel go",
+    "api/tests/test_kernel_conformance_harness.py::test_python_kernel_passes_loop_mutation_vector",
+    "api/tests/test_kernel_conformance_harness.py::test_rust_and_go_kernels_pass_loop_mutation_vector",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "experiments/form-question-kernels/go/question_kernel.go"
+  ],
+  "change_files": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "docs/system_audit/commit_evidence_2026-05-20_form_loop_kernel_vector.json",
+    "experiments/form-question-kernels/go/question_kernel.go",
+    "experiments/form-question-kernels/rust/src/main.rs",
+    "specs/INDEX.md",
+    "specs/form-control-flow-kernel-conformance.md",
+    "specs/form-loop-mutation-kernel-conformance.md"
+  ],
+  "change_intent": "process_only"
+}
