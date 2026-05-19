@@ -1,7 +1,8 @@
-// Minimal Go runner for the Form question-effect conformance vector.
+// Minimal Go runner for shared Form conformance vectors.
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -135,19 +136,19 @@ func parseString(raw string) (string, error) {
 	return out, nil
 }
 
-func parseStringList(raw string) ([]string, error) {
+func parseArray(raw string) ([]any, error) {
 	text := strings.TrimSpace(raw)
 	if text == "[]" {
-		return []string{}, nil
+		return []any{}, nil
 	}
 	if !strings.HasPrefix(text, "[") || !strings.HasSuffix(text, "]") {
 		return nil, fmt.Errorf("invalid list %q", raw)
 	}
 	inner := text[1 : len(text)-1]
 	items := splitArgs(inner)
-	out := make([]string, 0, len(items))
+	out := make([]any, 0, len(items))
 	for _, item := range items {
-		value, err := parseString(item)
+		value, err := parseValue(item)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +157,7 @@ func parseStringList(raw string) ([]string, error) {
 	return out, nil
 }
 
-func parseContext(raw string) (map[string]any, error) {
+func parseObject(raw string) (map[string]any, error) {
 	text := strings.TrimSpace(raw)
 	out := map[string]any{}
 	if text == "{}" {
@@ -172,13 +173,56 @@ func parseContext(raw string) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid context pair %q", pair)
 		}
 		key := strings.Trim(strings.TrimSpace(parts[0]), "\"")
-		value, err := parseString(parts[1])
+		value, err := parseValue(parts[1])
 		if err != nil {
 			return nil, err
 		}
 		out[key] = value
 	}
 	return out, nil
+}
+
+func parseValue(raw string) (any, error) {
+	text := strings.TrimSpace(raw)
+	if strings.HasPrefix(text, "[") && strings.HasSuffix(text, "]") {
+		return parseArray(text)
+	}
+	if strings.HasPrefix(text, "{") && strings.HasSuffix(text, "}") {
+		return parseObject(text)
+	}
+	decoder := json.NewDecoder(bytes.NewBufferString(text))
+	decoder.UseNumber()
+	var out any
+	if err := decoder.Decode(&out); err != nil {
+		return nil, fmt.Errorf("unsupported literal %q: %w", raw, err)
+	}
+	return normalizeJSONNumbers(out), nil
+}
+
+func normalizeJSONNumbers(value any) any {
+	switch typed := value.(type) {
+	case json.Number:
+		if strings.ContainsAny(typed.String(), ".eE") {
+			f, _ := typed.Float64()
+			return f
+		}
+		i, _ := typed.Int64()
+		return i
+	case []any:
+		out := make([]any, 0, len(typed))
+		for _, item := range typed {
+			out = append(out, normalizeJSONNumbers(item))
+		}
+		return out
+	case map[string]any:
+		out := map[string]any{}
+		for key, item := range typed {
+			out[key] = normalizeJSONNumbers(item)
+		}
+		return out
+	default:
+		return value
+	}
 }
 
 func callBody(form string, name string) (string, error) {
@@ -188,6 +232,142 @@ func callBody(form string, name string) (string, error) {
 		return "", fmt.Errorf("unsupported Form expression %q", form)
 	}
 	return trimmed[len(prefix) : len(trimmed)-1], nil
+}
+
+func callParts(form string) (string, []string, error) {
+	trimmed := strings.TrimSpace(form)
+	open := strings.Index(trimmed, "(")
+	if open <= 0 || !strings.HasSuffix(trimmed, ")") {
+		return "", nil, fmt.Errorf("unsupported Form expression %q", form)
+	}
+	name := strings.TrimSpace(trimmed[:open])
+	for _, ch := range name {
+		if ch != '_' && (ch < '0' || ch > '9') && (ch < 'A' || ch > 'Z') && (ch < 'a' || ch > 'z') {
+			return "", nil, fmt.Errorf("unsupported Form call %q", form)
+		}
+	}
+	return name, splitArgs(trimmed[open+1 : len(trimmed)-1]), nil
+}
+
+func asArray(value any, name string) ([]any, error) {
+	items, ok := value.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s expects a list", name)
+	}
+	return items, nil
+}
+
+func asInt(value any, name string) (int64, error) {
+	switch typed := value.(type) {
+	case int64:
+		return typed, nil
+	case int:
+		return int64(typed), nil
+	case float64:
+		if typed == float64(int64(typed)) {
+			return int64(typed), nil
+		}
+	}
+	return 0, fmt.Errorf("%s expects integer values", name)
+}
+
+func evalBuiltin(name string, args []any) (any, error) {
+	switch name {
+	case "len":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("len expects 1 arg, got %d", len(args))
+		}
+		switch typed := args[0].(type) {
+		case []any:
+			return int64(len(typed)), nil
+		case map[string]any:
+			return int64(len(typed)), nil
+		case string:
+			return int64(len([]rune(typed))), nil
+		default:
+			return nil, fmt.Errorf("len expects a list, object, or string")
+		}
+	case "head":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("head expects 1 arg, got %d", len(args))
+		}
+		items, err := asArray(args[0], "head")
+		if err != nil {
+			return nil, err
+		}
+		if len(items) == 0 {
+			return nil, nil
+		}
+		return items[0], nil
+	case "tail":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("tail expects 1 arg, got %d", len(args))
+		}
+		items, err := asArray(args[0], "tail")
+		if err != nil {
+			return nil, err
+		}
+		if len(items) <= 1 {
+			return []any{}, nil
+		}
+		return append([]any{}, items[1:]...), nil
+	case "sum":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("sum expects 1 arg, got %d", len(args))
+		}
+		items, err := asArray(args[0], "sum")
+		if err != nil {
+			return nil, err
+		}
+		var total int64
+		for _, item := range items {
+			value, err := asInt(item, "sum")
+			if err != nil {
+				return nil, err
+			}
+			total += value
+		}
+		return total, nil
+	case "concat":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("concat expects 2 args, got %d", len(args))
+		}
+		leftString, leftIsString := args[0].(string)
+		rightString, rightIsString := args[1].(string)
+		if leftIsString && rightIsString {
+			return leftString + rightString, nil
+		}
+		leftItems, leftIsList := args[0].([]any)
+		rightItems, rightIsList := args[1].([]any)
+		if leftIsList && rightIsList {
+			out := append([]any{}, leftItems...)
+			out = append(out, rightItems...)
+			return out, nil
+		}
+		return nil, fmt.Errorf("concat expects two strings or two lists")
+	case "reverse":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("reverse expects 1 arg, got %d", len(args))
+		}
+		if text, ok := args[0].(string); ok {
+			runes := []rune(text)
+			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+				runes[i], runes[j] = runes[j], runes[i]
+			}
+			return string(runes), nil
+		}
+		items, err := asArray(args[0], "reverse")
+		if err != nil {
+			return nil, err
+		}
+		out := append([]any{}, items...)
+		for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+			out[i], out[j] = out[j], out[i]
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("unsupported Form function %q", name)
+	}
 }
 
 func evalForm(s *state, form string) (any, error) {
@@ -211,14 +391,21 @@ func evalForm(s *state, form string) (any, error) {
 		}
 		choices := []string{}
 		if len(args) >= 3 {
-			choices, err = parseStringList(args[2])
+			rawChoices, err := parseArray(args[2])
 			if err != nil {
 				return nil, err
+			}
+			for _, item := range rawChoices {
+				choice, ok := item.(string)
+				if !ok {
+					return nil, fmt.Errorf("ask choices must be strings")
+				}
+				choices = append(choices, choice)
 			}
 		}
 		context := map[string]any{}
 		if len(args) >= 4 {
-			context, err = parseContext(args[3])
+			context, err = parseObject(args[3])
 			if err != nil {
 				return nil, err
 			}
@@ -240,7 +427,19 @@ func evalForm(s *state, form string) (any, error) {
 		}
 		return s.awaitAnswer(questionID)
 	}
-	return nil, fmt.Errorf("unsupported Form expression %q", form)
+	name, rawArgs, err := callParts(trimmed)
+	if err != nil {
+		return nil, err
+	}
+	args := make([]any, 0, len(rawArgs))
+	for _, rawArg := range rawArgs {
+		value, err := parseValue(rawArg)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, value)
+	}
+	return evalBuiltin(name, args)
 }
 
 func runCase(rawCase map[string]any) (map[string]any, error) {

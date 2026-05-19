@@ -1,4 +1,4 @@
-//! Minimal Rust runner for the Form question-effect conformance vector.
+//! Minimal Rust runner for shared Form conformance vectors.
 
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
@@ -139,7 +139,7 @@ fn parse_string(raw: &str) -> Result<String, String> {
         .map_err(|err| format!("invalid string {raw:?}: {err}"))
 }
 
-fn parse_string_list(raw: &str) -> Result<Vec<String>, String> {
+fn parse_array(raw: &str) -> Result<Vec<Value>, String> {
     let text = raw.trim();
     if text == "[]" {
         return Ok(Vec::new());
@@ -150,11 +150,11 @@ fn parse_string_list(raw: &str) -> Result<Vec<String>, String> {
     let inner = &text[1..text.len() - 1];
     split_args(inner)
         .into_iter()
-        .map(|item| parse_string(&item))
+        .map(|item| parse_value(&item))
         .collect()
 }
 
-fn parse_context(raw: &str) -> Result<Map<String, Value>, String> {
+fn parse_object(raw: &str) -> Result<Map<String, Value>, String> {
     let text = raw.trim();
     let mut out = Map::new();
     if text == "{}" {
@@ -169,9 +169,20 @@ fn parse_context(raw: &str) -> Result<Map<String, Value>, String> {
             .split_once(':')
             .ok_or_else(|| format!("invalid context pair {pair:?}"))?;
         let key = key.trim().trim_matches('"').to_string();
-        out.insert(key, Value::String(parse_string(value.trim())?));
+        out.insert(key, parse_value(value.trim())?);
     }
     Ok(out)
+}
+
+fn parse_value(raw: &str) -> Result<Value, String> {
+    let text = raw.trim();
+    if text.starts_with('[') && text.ends_with(']') {
+        return Ok(Value::Array(parse_array(text)?));
+    }
+    if text.starts_with('{') && text.ends_with('}') {
+        return Ok(Value::Object(parse_object(text)?));
+    }
+    serde_json::from_str::<Value>(text).map_err(|err| format!("unsupported literal {raw:?}: {err}"))
 }
 
 fn call_body(form: &str, name: &str) -> Result<String, String> {
@@ -181,6 +192,110 @@ fn call_body(form: &str, name: &str) -> Result<String, String> {
         return Err(format!("unsupported Form expression {form:?}"));
     }
     Ok(trimmed[prefix.len()..trimmed.len() - 1].to_string())
+}
+
+fn call_parts(form: &str) -> Result<(String, Vec<String>), String> {
+    let trimmed = form.trim();
+    let open = trimmed
+        .find('(')
+        .ok_or_else(|| format!("unsupported Form expression {form:?}"))?;
+    if !trimmed.ends_with(')') {
+        return Err(format!("unsupported Form expression {form:?}"));
+    }
+    let name = trimmed[..open].trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+    {
+        return Err(format!("unsupported Form call {form:?}"));
+    }
+    let body = &trimmed[open + 1..trimmed.len() - 1];
+    Ok((name.to_string(), split_args(body)))
+}
+
+fn value_as_array(value: &Value, name: &str) -> Result<Vec<Value>, String> {
+    value
+        .as_array()
+        .cloned()
+        .ok_or_else(|| format!("{name} expects a list"))
+}
+
+fn value_as_i64(value: &Value, name: &str) -> Result<i64, String> {
+    value
+        .as_i64()
+        .ok_or_else(|| format!("{name} expects integer values"))
+}
+
+fn eval_builtin(name: &str, args: Vec<Value>) -> Result<Value, String> {
+    match name {
+        "len" => {
+            if args.len() != 1 {
+                return Err(format!("len expects 1 arg, got {}", args.len()));
+            }
+            let n = match &args[0] {
+                Value::Array(items) => items.len(),
+                Value::Object(items) => items.len(),
+                Value::String(text) => text.chars().count(),
+                _ => return Err("len expects a list, object, or string".to_string()),
+            };
+            Ok(json!(n))
+        }
+        "head" => {
+            if args.len() != 1 {
+                return Err(format!("head expects 1 arg, got {}", args.len()));
+            }
+            let items = value_as_array(&args[0], "head")?;
+            Ok(items.first().cloned().unwrap_or(Value::Null))
+        }
+        "tail" => {
+            if args.len() != 1 {
+                return Err(format!("tail expects 1 arg, got {}", args.len()));
+            }
+            let items = value_as_array(&args[0], "tail")?;
+            Ok(Value::Array(items.into_iter().skip(1).collect()))
+        }
+        "sum" => {
+            if args.len() != 1 {
+                return Err(format!("sum expects 1 arg, got {}", args.len()));
+            }
+            let items = value_as_array(&args[0], "sum")?;
+            let mut total = 0_i64;
+            for item in &items {
+                total += value_as_i64(item, "sum")?;
+            }
+            Ok(json!(total))
+        }
+        "concat" => {
+            if args.len() != 2 {
+                return Err(format!("concat expects 2 args, got {}", args.len()));
+            }
+            match (&args[0], &args[1]) {
+                (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{a}{b}"))),
+                (Value::Array(a), Value::Array(b)) => {
+                    let mut out = a.clone();
+                    out.extend(b.clone());
+                    Ok(Value::Array(out))
+                }
+                _ => Err("concat expects two strings or two lists".to_string()),
+            }
+        }
+        "reverse" => {
+            if args.len() != 1 {
+                return Err(format!("reverse expects 1 arg, got {}", args.len()));
+            }
+            match &args[0] {
+                Value::Array(items) => {
+                    let mut out = items.clone();
+                    out.reverse();
+                    Ok(Value::Array(out))
+                }
+                Value::String(text) => Ok(Value::String(text.chars().rev().collect())),
+                _ => Err("reverse expects a list or string".to_string()),
+            }
+        }
+        _ => Err(format!("unsupported Form function {name:?}")),
+    }
 }
 
 fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
@@ -193,12 +308,20 @@ fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
         let agent_id = parse_string(&args[0])?;
         let question = parse_string(&args[1])?;
         let choices = if args.len() >= 3 {
-            parse_string_list(&args[2])?
+            parse_array(&args[2])?
+                .into_iter()
+                .map(|value| {
+                    value
+                        .as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| "ask choices must be strings".to_string())
+                })
+                .collect::<Result<Vec<_>, _>>()?
         } else {
             Vec::new()
         };
         let context = if args.len() >= 4 {
-            parse_context(&args[3])?
+            parse_object(&args[3])?
         } else {
             Map::new()
         };
@@ -212,7 +335,12 @@ fn eval_form(state: &mut State, form: &str) -> Result<Value, String> {
         let question_id = parse_string(&args[0])?;
         return state.await_answer(&question_id);
     }
-    Err(format!("unsupported Form expression {form:?}"))
+    let (name, raw_args) = call_parts(trimmed)?;
+    let args = raw_args
+        .into_iter()
+        .map(|arg| parse_value(&arg))
+        .collect::<Result<Vec<_>, _>>()?;
+    eval_builtin(&name, args)
 }
 
 fn run_case(case: &Value) -> Result<Value, String> {

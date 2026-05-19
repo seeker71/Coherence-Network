@@ -13,6 +13,13 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HARNESS = REPO_ROOT / "scripts" / "verify_kernel_conformance.py"
+CORE_VECTOR = (
+    REPO_ROOT
+    / "docs"
+    / "coherence-substrate"
+    / "kernel-conformance"
+    / "form-core-builtins.json"
+)
 
 
 def _run_harness(*args: str) -> subprocess.CompletedProcess[str]:
@@ -75,6 +82,45 @@ def test_default_runs_all_implemented_kernels() -> None:
     body = json.loads(result.stdout)
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("python", "pass"),
+        ("rust", "pass"),
+        ("go", "pass"),
+    ]
+
+
+def test_python_kernel_passes_core_builtin_vector() -> None:
+    result = _run_harness("--vector", str(CORE_VECTOR), "--kernel", "python", "--json")
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert body["status"] == "pass"
+    assert body["surface"] == "form-core-builtins"
+    assert [case["name"] for case in body["kernels"][0]["cases"]] == [
+        "len_counts_list",
+        "head_returns_first_item",
+        "tail_returns_remaining_items",
+        "sum_reduces_integer_list",
+        "concat_merges_lists",
+        "concat_merges_strings",
+        "reverse_flips_list",
+    ]
+
+
+def test_rust_and_go_kernels_pass_core_builtin_vector() -> None:
+    _skip_without_toolchains()
+
+    result = _run_harness(
+        "--vector",
+        str(CORE_VECTOR),
+        "--kernel",
+        "rust",
+        "--kernel",
+        "go",
+        "--json",
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    body = json.loads(result.stdout)
+    assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
     ]

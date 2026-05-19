@@ -1042,7 +1042,9 @@ await_answer("question_abc123")
 
 `await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. Suspension/resume around unanswered questions belongs to the sub-agent runner, not to the Form runtime hot path.
 
-This is a host-bound effect, so Rust and Go kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json), and the executable harness is `python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go`: Python runs through the full Form runtime; Rust and Go currently run narrow question-effect kernels for `ask(...)` and `await_answer(...)` only.
+This is a host-bound effect, so Rust and Go kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json), and the executable harness is `python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go`: Python runs through the full Form runtime; Rust and Go currently run narrow conformance kernels for `ask(...)` and `await_answer(...)`.
+
+The same Rust and Go runners also execute the pure built-in vector [`kernel-conformance/form-core-builtins.json`](kernel-conformance/form-core-builtins.json), covering `len`, `head`, `tail`, `sum`, `concat`, and `reverse` over literal strings and lists. That widens executable conformance without claiming the full Form grammar yet.
 
 ## The four self-* faculties
 
