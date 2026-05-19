@@ -6,8 +6,10 @@ Kernel conformance vectors describe Form-visible behavior that every substrate k
 
 ```bash
 python3 scripts/verify_kernel_conformance.py --kernel python
-python3 scripts/verify_kernel_conformance.py --kernel rust --allow-targets --json
-python3 scripts/verify_kernel_conformance.py --kernel go --allow-targets --json
+python3 scripts/verify_kernel_conformance.py --kernel rust
+python3 scripts/verify_kernel_conformance.py --kernel go
 ```
 
-Python runs the vector today. Rust and Go return explicit `skipped` target status until their executable runners are present. Without `--allow-targets`, asking for a target-only kernel fails so CI cannot accidentally treat a named target as shipped.
+Python, Rust, and Go all run the question-effect vector today. The Rust and Go runners are deliberately narrow question-effect kernels, not full Form runtimes: they parse the `ask(...)` and `await_answer(...)` forms used by this host-bound vector, emit the same question transcript, and let the Python harness compare actual values/events against the shared contract.
+
+Future kernels become `implemented` only when their vector entry names an executable runner and proof file. Target-only kernels remain explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior.
