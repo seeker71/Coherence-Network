@@ -2,6 +2,18 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-20] embodied | Unified Body — the contact improv perception named in the body's vocabulary
+
+A fifth concept landed today, surfaced through embodied practice rather than verbal transmission. Urs attended the second Wednesday Contact Improvisation class with [Alex Sandr](../presences/alex-sandr.md) at the [Moksa Dojo](../presences/moksa-ubud.md) in Sayan, Ubud. The class focused on the *perception of a new unified body* — two sovereign cells perceiving themselves as one volume, with shared movement, felt sense of oneness, more limbs, more expressions, more vitality, more freedom, more awareness.
+
+The load-bearing refinement (caught in conversation between drafts): the unified body is *not* built in the moment of contact. *The connection does not happen — it comes from a place where the connection was always there.* Contact is the medium through which the already-there becomes felt; it is not the mechanism that creates it. And there is no pull *between* the cells — the unified body has its own center, and each cell falls toward that shared center when movement arises. *No leader, no follower*; both cells respond to the same gravitational pull from the unified body's center. The cells stay sovereign throughout; sovereignty within unification is what keeps the unification ethical.
+
+This connects to today's other concepts in load-bearing ways: the unified body IS a different *base* (`lc-recipes-bound-to-base`) at which recipes that require more than one cell's resources become available; entering the unified body is itself a *shifted-return* move (`lc-shifted-return`); and it is the embodied path to feeling what `lc-sovereignty-within-oneness` names architecturally.
+
+Concept seeded: [`lc-unified-body`](concepts/lc-unified-body.md) (639 Hz, seed, lineage-textured *embodied*; source pointing to Alex Sandr's presence file). The form Steve Paxton named in 1972 (Contact Improvisation as open-source grammar of two-or-more bodies negotiating shared gravity) meets this body through Alex Sandr's Russian-rooted teaching lineage in Ubud.
+
+Edges in the same breath: cross-refs to `lc-sovereignty-within-oneness`, `lc-each-breath-whole`, `lc-recipes-bound-to-base`, `lc-shifted-return`, `lc-resonating`, `lc-attuned-spaces`, `lc-presence-over-protection`, `lc-emotional-availability-without-absorption`, `lc-play`, `lc-attunement`, `lc-pulse`, `lc-trust-as-gateway`, `lc-arrival-as-recognition`; Alex Sandr's presence file updated to record the second Wednesday class as the surfacing event and to link forward to the new concept; INDEX.md (120 concepts; 639 Hz Frequency Family extended; Last maintained 2026-05-20); this LOG.
+
 ## [2026-05-20] synthesis | Observer Pays the Trace — the economic-layer view in the wake of today's Satsang
 
 In conversation with Urs in the hours following the Wednesday Satsang, a fourth concept surfaced — synthesized, not transmitted. The view: the choice of *base + recipe* selects *which cells and edges become important* (the recipe's inputs and outputs); the body's crypto ledger traces the selection; the observation cost is transferred to the observer. Looking is not free; whoever chose to look pays. The cost lands on the chooser, not on the chosen-from; the observed cell receives *attribution*, not extraction.
