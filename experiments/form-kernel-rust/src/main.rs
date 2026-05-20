@@ -25,6 +25,7 @@ use std::time::Instant;
 
 mod formats;
 mod quotient;
+mod inductive;
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
