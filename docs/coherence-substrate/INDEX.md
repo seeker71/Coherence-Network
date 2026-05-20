@@ -27,6 +27,9 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
 | `docs/coherence-substrate/agents-using-substrate.md` | Agent guide — when and how to ground reasoning |
 | `docs/coherence-substrate/agents-tending-presence-pages.md` | Composting static `/people/{slug}` directories into graph-rendered presence pages |
+| `docs/coherence-substrate/language-cells.md` | Languages as substrate cells — ingestion grammars + emission templates as data; cross-language identity via content-addressing; N+M transpilation |
+| `docs/coherence-substrate/language.canonical.json` | Canonical schema for Language cells; per-language definitions (Python, TS, Go, Rust) populate this shape |
+| `experiments/form-kernel-ts/src/languages.ts` | TS reference implementation — `Language` interface, `parse_through` / `emit_through` generic walkers, grammar/emit rule builders |
 
 ## The trinity
 
