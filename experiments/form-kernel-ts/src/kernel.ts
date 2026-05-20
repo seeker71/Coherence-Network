@@ -46,6 +46,10 @@ export const Level = {
   COMPLEX_7: 9,
 } as const;
 
+// LevelValue — any concrete level constant. Used by universe-polymorphic
+// FNDEFs (#22) to bind level-parameters at specialization time.
+export type LevelValue = (typeof Level)[keyof typeof Level];
+
 // RBasic — aligned with api/app/services/substrate/category.py
 //
 // Higher-math arms (slots 70+) — substrate cells govern their semantics:
@@ -72,6 +76,11 @@ export const RBasic = {
   BLANKET: 80,          // #25 — Markov blanket (cell boundary recipe)
   PROJECT: 81,          // #28 — holographic PROJECT operation
   GENERATIVE: 82,       // #26 — generative model recipes (per-cell)
+  VECTOR: 83,           // #9  — vector format-recipe (parameterized over element + width)
+  TILE: 84,             // #9  — parallel pattern: tile loop by tile_size
+  PARALLELIZE: 85,      // #9  — parallel pattern: dispatch op across num_threads
+  VECTORIZE: 86,        // #9  — parallel pattern: lower op to simd_width-wide SIMD
+  OBSERVER: 87,         // #27 — observer context (active QUOTIENTs for an observer)
 } as const;
 
 // Triv — trivial RTypes.
@@ -922,10 +931,14 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
     case RBasic.GENERATIVE:
     case RBasic.PROOF:
     case RBasic.INFERENCE:
+    case RBasic.VECTOR:
+    case RBasic.TILE:
+    case RBasic.PARALLELIZE:
+    case RBasic.VECTORIZE:
       // Higher-architecture recipes — walking returns the NodeID itself,
       // letting downstream code reason structurally without crashing on
       // recipes whose semantics are interpreted by their own module
-      // (blanket.ts, project.ts, generative.ts, proof.ts).
+      // (blanket.ts, project.ts, generative.ts, proof.ts, vector.ts, parallel.ts).
       return { kind: "nodeid", nodeid: node };
     default:
       throw new Error(`walk: unsupported RBasic type ${cat.type}`);
