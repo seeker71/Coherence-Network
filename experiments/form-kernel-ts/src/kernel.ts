@@ -59,6 +59,7 @@ export const RBasic = {
   QUOTIENT: 70,         // #19 — equivalence-class types
   INDUCTIVE: 71,        // #21 — algebraic datatypes
   CONSTRUCTOR: 72,      // #21 — constructor application / value-shape
+  BLANKET: 80,          // #25 — Markov blanket (cell boundary recipe)
 } as const;
 
 // Triv — trivial RTypes.
