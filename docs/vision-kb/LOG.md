@@ -2,6 +2,25 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-20] transmission | Vasudev Baba's Wednesday Satsang — three legs of one teaching on body frequency, the base, the shifted return, and the trainable predator
+
+Vasudev Baba's Wednesday-morning Satsang at Ilena Young's Ranakami sanctuary in Sayan, Ubud, refined the May 11 essay *On frequency, consciousness and the assemblage point* into three legs of one teaching:
+
+**Leg 1 — the mechanism.** The recipes running at each chakra are unique to that chakra; the same recipe-name run from a different base is not the same recipe; what is sensed, what is watching what, and which path the signal traces all depend on which base holds command. This speaks directly to the substrate's middle trinity-term — Recipe (the *water* — *how something HAPPENS*) — and asks Recipe identity to carry base alongside operational shape. *Spiritual bypass* gets named as recipe-import-from-wrong-base without moral weight: the third-chakra costume of a fourth-chakra recipe.
+
+**Leg 2 — the practice.** Three movements: *relieve, shift, return*. Breath as the most reliable lever (tension-fear breath → joyful-silence-witness breath = base shift, embodied in real time). The return is the operative act, not the shift: the shifted cell walks back into the original space, the old recipes lose their matched-base counterpart and strip away (feels like fire), and *gentle, loving, joyful, playful alternatives we do not have symbols or stories for* arrive pre-linguistically — criterion interior, *a closer vibe-match to our desired felt sense in the body and from our external senses*. The body is the canon; the return brings what matches.
+
+**Leg 3 — the longer arc.** The inherited system that composes identities (Castaneda's *predator* / *flyers*; Sufi *nafs*; Buddhist *kleshas*; Vedantic *vasanas*; contemplative *false self*) is not enemy. It is *trainable*. Identities are downstream of which recipes the predator selects from — the substrate's NamedCell layer is downstream of its Recipe layer. The freedom released: *try without penalty other than time or dealing with the results.* No moral ledger debiting failed iterations. The cell is upstream of every identity it ever wore.
+
+Transmission held: [`transmissions/2026-05-20-vasudev-baba-satsang-recipes-and-base.md`](transmissions/2026-05-20-vasudev-baba-satsang-recipes-and-base.md) — received 2026-05-20 in person; third Vasudev Baba transmission into this body in twelve days (Enneagram 2026-05-09 → On Frequency essay 2026-05-11 → today's Satsang). Same teacher, same room, same architecture turning to face this body from a new angle each week.
+
+Three concepts seeded:
+- [`lc-recipes-bound-to-base`](concepts/lc-recipes-bound-to-base.md) (741 Hz, seed) — the mechanism. Seven chakras as parallel-strategies, each running its own recipes.
+- [`lc-shifted-return`](concepts/lc-shifted-return.md) (528 Hz, seed) — the practice. Three-movement gesture of relieve-shift-return; breath as embodied lever; return as the operative act; alternatives we have no symbols for.
+- [`lc-train-the-predator`](concepts/lc-train-the-predator.md) (528 Hz, seed) — the longer arc. The inherited identity-composing system is trainable, not enemy. Freedom to iterate without moral cost. NamedCell downstream of Recipe in the substrate trinity.
+
+Edges tended in the same breath: cross-reference forward from `lc-assemblage-point` to the mechanism-concept; cross-reference forward from `lc-when-the-pressure-comes` to the practice-concept (sibling Satsang teachings two weeks apart); companion-concept section added at `lc-essence-and-the-nine-costumes` pointing to `lc-train-the-predator` (the nine fixations as default-recipes the predator composes from); forward-pointer added at the 2026-05-11 transmission file to today's deepening; transmissions README *Currently held* extended; INDEX.md foundational-teachings list (three entries), source-marked-transmissions list, 741 + 528 Hz Frequency Families, concept count (115 → 118), transmission count (10 → 11, integrated 8 → 9), and *Last maintained*; this LOG.
+
 ## [2026-05-18] transmission | Jean-Luc Bozzoli — golden codes and golden dolphins
 
 Jean-Luc Bozzoli's email compilation *Golden Codes - Golden Dolphins & Activating the Light DNA of a Golden Age* entered the body as a source-marked transmission record.
