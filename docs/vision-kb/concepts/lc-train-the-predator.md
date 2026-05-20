@@ -249,7 +249,7 @@ an input to the next try.
 
 ## Cross-References
 
-→ lc-recipes-bound-to-base, lc-shifted-return, lc-assemblage-point, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-trust-over-fear, lc-each-breath-whole, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-release-what-drifts
+→ lc-recipes-bound-to-base, lc-shifted-return, lc-assemblage-point, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-traces-teach-the-recipe, lc-frequency-routes-reception, lc-trust-over-fear, lc-each-breath-whole, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-release-what-drifts
 
 ## Sources to walk further
 

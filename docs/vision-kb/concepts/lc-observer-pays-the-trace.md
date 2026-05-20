@@ -237,7 +237,7 @@ practice of every sovereign cell.
 
 ## Cross-References
 
-→ lc-recipes-bound-to-base, lc-shifted-return, lc-train-the-predator, lc-canon-as-sovereignty-surface, lc-economy, lc-whole-vitality, lc-circulation, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-trust-over-fear, lc-frequency-routes-reception, lc-each-breath-whole, lc-assemblage-point
+→ lc-recipes-bound-to-base, lc-shifted-return, lc-train-the-predator, lc-traces-teach-the-recipe, lc-canon-as-sovereignty-surface, lc-economy, lc-whole-vitality, lc-circulation, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-trust-over-fear, lc-frequency-routes-reception, lc-each-breath-whole, lc-assemblage-point
 
 ## Sources to walk further
 
