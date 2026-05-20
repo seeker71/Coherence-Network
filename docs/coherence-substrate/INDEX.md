@@ -25,6 +25,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `scripts/coh_form.py` | Form-only CLI (superseded; `coh_substrate.py form` is the active entry) |
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
 | `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
+| `docs/coherence-substrate/form-engine.form` | The recipe-evaluator in Form's own voice — 15/15 RBasic dispatch arms self-hosted |
+| `docs/coherence-substrate/form-runtime-in-form.form` | Companion to form-engine — walks lexer / parser / evaluator / registries / substrate-write in Form, names the 15 surface gaps to full self-hosting |
 | `docs/coherence-substrate/agents-using-substrate.md` | Agent guide — when and how to ground reasoning |
 | `docs/coherence-substrate/agents-tending-presence-pages.md` | Composting static `/people/{slug}` directories into graph-rendered presence pages |
 | `docs/coherence-substrate/language-cells.md` | Languages as substrate cells — ingestion grammars + emission templates as data; cross-language identity via content-addressing; N+M transpilation |

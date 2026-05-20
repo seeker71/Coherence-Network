@@ -1029,6 +1029,29 @@ Shipped surfaces:
 - CLI: `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute)
 - Agent integration: substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
 
+### Host effects: agent questions
+
+Form can now write to the agent question channel through ordinary runtime calls:
+
+```form
+ask("sub-agent", "Which path should I take?", ["continue", "pause"], {task_id: "task_1"})
+await_answer("question_abc123")
+```
+
+`ask(agent_id, question, choices=[], context={})` opens a human question in the existing agent queue and emits the `question_opened` event that `/api/agent/questions/stream` sends to the web console. `context.task_id` and `context.thread_id` are lifted onto the question record when present.
+
+`await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. Suspension/resume around unanswered questions belongs to the sub-agent runner, not to the Form runtime hot path.
+
+This is a host-bound effect, so Rust, Go, and TypeScript kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. The shared vector is [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json), and the executable harness is `python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --kernel typescript`: Python runs through the full Form runtime; Rust, Go, and TypeScript currently run narrow conformance kernels for `ask(...)` and `await_answer(...)`.
+
+The same Rust, Go, and TypeScript runners also execute the pure built-in vector [`kernel-conformance/form-core-builtins.json`](kernel-conformance/form-core-builtins.json), covering `len`, `head`, `tail`, `sum`, `concat`, and `reverse` over literal strings and lists. That widens executable conformance without claiming the full Form grammar yet.
+
+They also execute the pure infix vector [`kernel-conformance/form-infix-operators.json`](kernel-conformance/form-infix-operators.json), covering arithmetic precedence, parentheses, comparisons, boolean chains, unary minus, unary not, and literal equality. The boundary remains explicit: these are vector-backed conformance slices, not complete Rust, Go, or TypeScript Form runtimes.
+
+They now execute the pure control-flow vector [`kernel-conformance/form-control-flow.json`](kernel-conformance/form-control-flow.json), covering `if`, `do`, and `let` over literals, local names, existing infix expressions, and existing built-in calls. This proves lexical block value flow and lazy branch selection across the four kernels while keeping closures, loops, mutation, cell lookup, methods, and persistence outside the vector-runner claim.
+
+They now execute the pure loop/mutation vector [`kernel-conformance/form-loop-mutation.json`](kernel-conformance/form-loop-mutation.json), covering `for`, `while`, and `set` over local JSON-safe values. This proves local iteration, accumulator mutation, string iteration, unentered while returning `null`, and inner-block mutation of outer bindings while keeping functions, recursion, methods, cells, recipe introspection, and persistence outside the vector-runner claim.
+
 ## The four self-* faculties
 
 Form is a substrate-native language; the meaningful question is not "what features does it have" but "how does it relate to itself." Four faculties:

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 174
+**Total files**: 176
 
 | File | Purpose |
 |---|---|
@@ -96,6 +96,7 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
+| [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
 | [test_lens_translation_boundaries.py](test_lens_translation_boundaries.py) | _no top-of-file purpose_ |
 | [test_libretranslate_backend.py](test_libretranslate_backend.py) | LibreTranslate backend — verifies translation + glossary post-substitution. |
@@ -150,6 +151,7 @@
 | [test_substrate_form_lens.py](test_substrate_form_lens.py) | Form lens operators — `?lattice` and `?keywords`. |
 | [test_substrate_form_loops.py](test_substrate_form_loops.py) | for/while loops + `set` for mutation across iterations. |
 | [test_substrate_form_operators.py](test_substrate_form_operators.py) | Tests for operator self-hosting — the last keyword-layer gap. |
+| [test_substrate_form_question_effects.py](test_substrate_form_question_effects.py) | Form runtime bridge to the agent question SSE channel. |
 | [test_substrate_form_registries.py](test_substrate_form_registries.py) | Tests for the three runtime-extensible registries Form now consults: |
 | [test_substrate_form_rules.py](test_substrate_form_rules.py) | Tests for runtime-registered Form keywords. |
 | [test_substrate_form_runtime.py](test_substrate_form_runtime.py) | Recipe-execution engine — Form expressions running, not just interning. |

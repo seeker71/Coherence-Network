@@ -1,0 +1,13 @@
+; closure.fk — defining frames captured at FnDef time, not call time.
+; make-adder returns a closure that has `n` bound to its argument-at-creation;
+; calling the closure later with `m` adds `m + captured-n`.
+;
+; The expected result is 15 — the inner closure captures n=10, then is
+; called with m=5.
+(do
+    (defn make-adder (n)
+        (do
+            (defn adder (m) (add m n))
+            adder))
+    (let add10 (make-adder 10))
+    (add10 5))
