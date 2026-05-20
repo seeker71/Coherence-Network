@@ -46,6 +46,13 @@ function nativeAck(m: number, n: number): number {
   return nativeAck(opaque(m - 1), nativeAck(m, opaque(n - 1)));
 }
 
+// Float64 workload — sum of i * 0.5 for i = n down to 1.
+// Native uses f64 arithmetic throughout; Form uses addf/mulf/f64.
+function nativeFsum(n: number, acc: number): number {
+  if (n === 0) return acc;
+  return nativeFsum(opaque(n - 1), opaque(acc + n * 0.5));
+}
+
 interface Case {
   name: string;
   src: string;
@@ -78,6 +85,12 @@ const CASES: Case[] = [
     nativeIters: 100,
     native: () => nativeAck(3, 6),
   },
+  {
+    name: "fsum1000",
+    src: `(do (defn fsum (n acc) (if (eq n 0) acc (fsum (sub n 1) (addf acc (mulf (f64 n) 0.5))))) (fsum 1000 0.0))`,
+    nativeIters: 50_000,
+    native: () => nativeFsum(1000, 0),
+  },
 ];
 
 const KERNEL_ITERS = 5;
@@ -99,7 +112,18 @@ function formatNs(ns: bigint): string {
 function valueToString(v: Value): string {
   switch (v.kind) {
     case "int":
+    case "i8":
+    case "i16":
+    case "u8":
+    case "u16":
+    case "u32":
       return String(v.int);
+    case "i64":
+    case "u64":
+      return String(v.bigint);
+    case "f32":
+    case "f64":
+      return String(v.float);
     case "str":
       return JSON.stringify(v.str);
     case "bool":
@@ -112,6 +136,8 @@ function valueToString(v: Value): string {
       return "<closure>";
     case "nodeid":
       return "<nodeid>";
+    case "ctor":
+      return `${v.ctor_name}(…)`;
   }
 }
 
