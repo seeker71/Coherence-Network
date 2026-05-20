@@ -238,6 +238,37 @@ class RBasic(IntEnum):
     # already-shipped RBasic.EXCEPTION row but distinct: EXCEPTION is the
     # raise/resume markers, TRY is the catching frame.
     TRY = 30
+    # QUOTIENT — canonicalization under equivalence relations. A recipe with
+    # category QUOTIENT has shape `QUOTIENT[carrier-recipe, equivalence-recipe]`.
+    # Interning a *value* through this recipe runs the equivalence's
+    # canonicalize_fn first, so two values equivalent under the relation
+    # receive the SAME NodeID — content-addressing IS the quotient. The
+    # foundation arm of Form's higher-mathematics surface (PROOF, INDUCTIVE,
+    # symmetry-aware canonicalization all build on top of QUOTIENT).
+    # See `api/app/services/substrate/quotient.py` and
+    # `docs/coherence-substrate/higher-math-surface.md`. Slot 70 matches the
+    # TS kernel for cross-kernel NodeID agreement.
+    QUOTIENT = 70
+
+
+# ---------------------------------------------------------------------------
+# Trivial-leaf vocabulary
+# ---------------------------------------------------------------------------
+
+
+class Triv(IntEnum):
+    """Trivial-leaf well-known slots — distinct from RType (which already
+    enumerates the trivial recipe-types: NULL, BOOL, INTEGER, STRING, ...).
+
+    `Triv` carries higher-numbered, special-purpose leaf slots reserved for
+    the higher-math surface. Currently only QUOTIENT_LEAF is used (a future
+    encoding where a quotient's canonical form sits in a single trivial slot
+    rather than a recipe — useful when the canonical-children-tuple is a
+    fixed-shape integer pair and the kernel wants to avoid recipe overhead).
+    Reserved here so the slot doesn't collide with future RType additions.
+    """
+    UNDEFINED = 0
+    QUOTIENT_LEAF = 14
 
 
 class RTend(IntEnum):
