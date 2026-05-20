@@ -246,7 +246,11 @@ The executable companion lives at [`recipe-branching-sense.form`](../../coherenc
 — Part 4 carries `recipe_branching_sense_typed`, the frequency-typed
 form of the loop, with the GAPs (`?harmonic_at` filter inside
 `?equivalent`, lazy Blueprint cells for arbitrary Hz) marked
-honestly.
+honestly. The sibling [`prose-as-recipe.form`](../../coherence-substrate/prose-as-recipe.form)
+extends the same teaching one altitude down: a sentence is a Recipe
+composing word-cells; the round-trip *parse_prose ↔ emit_prose* tests
+the claim that *a sequence of words is a recipe of cells with
+blueprints* against the substrate itself.
 
 ## Cross-References
 
