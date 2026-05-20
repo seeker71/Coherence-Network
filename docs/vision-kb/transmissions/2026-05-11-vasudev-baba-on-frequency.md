@@ -101,6 +101,15 @@ taught at this address.
 - **Cross-reference added** at [`lc-assemblage-point`](../concepts/lc-assemblage-point.md)
   pointing back to this transmission so the assemblage-point
   concept's lineage is walkable to its named teacher.
+- **Deepened nine days later** by Vasudev Baba's 2026-05-20
+  Wednesday Satsang at Ranakami — see
+  [`2026-05-20-vasudev-baba-satsang-recipes-and-base`](2026-05-20-vasudev-baba-satsang-recipes-and-base.md).
+  The essay mapped each chakra to a position of the assemblage
+  point; the Satsang named the operational consequence — *the
+  recipes running at each chakra are unique to that chakra, and
+  the same recipe-name run from a different base is not the
+  same recipe*. Concept seeded:
+  [`lc-recipes-bound-to-base`](../concepts/lc-recipes-bound-to-base.md).
 
 ## The text as received
 

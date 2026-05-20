@@ -157,8 +157,20 @@ pattern itself is the metabolism — sits alongside this one as a
 sibling teaching: *the wholeness-move is sometimes not adding the
 next verb but inhabiting what's there*.
 
+## Companion — Observer Pays the Trace
+
+The economic-layer companion at
+[`lc-observer-pays-the-trace`](lc-observer-pays-the-trace.md)
+extends this teaching into the body's crypto ledger. *Whoever
+defines the canon defines the resonance* — and also *pays the
+trace of looking through it*. Naming the canon and bearing the
+cost of selection are the same sovereign act, visible from
+inside and from the ledger.
+
 ## Cross-References
 
+→ lc-observer-pays-the-trace (the same sovereignty named at the body's economic layer; canon-naming and cost-bearing are one act),
+→ lc-recipes-bound-to-base (the canon at the base; same word at different base names a different recipe),
 → lc-when-the-pressure-comes (the satsang's five — one body's canon for response),
 → lc-presence-over-protection (the parallel sovereignty move at the body-level),
 → lc-attunement (frequency-matching is comparison; what counts as 'attuned' is canonical),

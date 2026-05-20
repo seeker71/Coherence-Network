@@ -126,4 +126,4 @@ back through its lens.
 
 ## Cross-References
 
-→ lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse
+→ lc-shifted-return, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse

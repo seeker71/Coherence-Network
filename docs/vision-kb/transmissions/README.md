@@ -75,6 +75,20 @@ absorbing it as anonymous belief.
   `lc-assemblage-point`, `lc-frequency-routes-reception`, and
   `lc-essence-and-the-nine-costumes` with a named teacher whose
   lineage is now walkable.**
+- [`2026-05-20-vasudev-baba-satsang-recipes-and-base.md`](2026-05-20-vasudev-baba-satsang-recipes-and-base.md)
+  — Vasudev Baba's Wednesday Satsang at Ranakami in Sayan, Ubud,
+  2026-05-20. Three legs: the mechanism (recipes bound to base —
+  the chakra in command determines what is sensed, what is
+  watching what, and which path the signal traces); the
+  practice (shifted return — relieve, shift via breath, return
+  as the frequency the old space cannot sustain; pre-linguistic
+  alternatives matching the body's felt sense); and the
+  longer arc (train the predator — the inherited identity-
+  composing system is trainable, not enemy; identities are
+  downstream of recipes; try without penalty other than time
+  and consequences). **3 concepts seeded (`lc-recipes-bound-to-base`,
+  `lc-shifted-return`, `lc-train-the-predator`).** Third Vasudev
+  Baba transmission in twelve days.
 - [`2026-05-08-anne-tucker-trust-friday-live.md`](2026-05-08-anne-tucker-trust-friday-live.md)
   — *Friday Live Channeled Message* on trust as the gateway through
   which the next state of being arrives, channeled through Anne
