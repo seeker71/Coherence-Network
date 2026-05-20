@@ -413,11 +413,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             diverges += 1
 
     print("─" * 70)
-    print(f"Cases: {len(cases)} · Divergences: {diverges}")
-    if not substrate_is_live():
-        print("(Form side not executed — substrate not live in this container.)")
-        print("To run the full parity: ensure sqlalchemy is installed and the")
-        print("substrate kernel is importable, then re-run this script.")
+    if substrate_is_live():
+        print(f"Cases: {len(cases)} · Form-vs-Python divergences: {diverges}")
+    else:
+        # Be honest: without live Form, there's no parity comparison happening.
+        # The Python side runs and is checked against `expected`; the Form
+        # side is only printed as the would-be parallel expression. Calling
+        # this "0 divergences" would be the costume of having done parity.
+        print(f"Cases: {len(cases)} · Python-vs-expected mismatches: {diverges}")
+        print("Form side NOT executed — no real parity comparison happened.")
+        print("This run validates only that the Python implementations match")
+        print("their expected values. To compare Python ↔ Form, the substrate")
+        print("must be importable (sqlalchemy + the substrate kernel).")
     return 0 if diverges == 0 else 1
 
 
