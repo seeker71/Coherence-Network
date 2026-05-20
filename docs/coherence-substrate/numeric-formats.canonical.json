@@ -1,0 +1,183 @@
+{
+  "$comment": "Canonical numeric format-recipe bootstrap. Every kernel (Python, Go, Rust, TS) interns these in the listed order. Content-addressing makes identical tree structure produce identical NodeIDs across kernels. This is the cross-kernel coordination contract.",
+
+  "version": 1,
+
+  "semantic_kind": {
+    "CARDINAL": 1, "INTEGER": 2, "RATIONAL": 3, "REAL": 4, "COMPLEX": 5,
+    "BIT_PATTERN": 6, "LOG_VALUE": 7, "PROBABILITY": 8, "INTERVAL": 9,
+    "ORDINAL": 10, "AMPLITUDE": 11, "PHASE": 12, "MEASURE": 13
+  },
+
+  "encoding_kind": {
+    "TWOS_COMPLEMENT": 1, "SIGN_MAGNITUDE": 2, "UNSIGNED": 3,
+    "IEEE_754": 4, "POSIT": 5, "LOOKUP_TABLE": 6, "BLOCK_FP": 7,
+    "LOG_SPACE": 8, "RATIONAL_PAIR": 9, "COMPLEX_PAIR": 10, "RAW_BITS": 11
+  },
+
+  "arith_hint_code": {
+    "native-fp": 1, "native-int": 2, "native-int-narrow": 3,
+    "bigint": 4, "table-lookup-via-fp32": 5,
+    "dequant-fp32-then-native": 6, "software-fp-via-fp32": 7,
+    "software-posit": 8, "xor-popcount": 9,
+    "logaddexp-logsubexp": 10, "rational-bigint": 11
+  },
+
+  "arith_op_code": {
+    "add": 1, "sub": 2, "mul": 3, "div": 4, "mod": 5
+  },
+
+  "format_category": {
+    "$comment": "RBasic slot for format-recipes. Bootstrap-coordinated.",
+    "rbasic_format": 50,
+    "rbasic_numeric": 51
+  },
+
+  "$intern_order_comment": "Each format is interned by calling intern(category=RBasic.FORMAT, inst=encoding, children=[semantic_kind, encoding, bits, storage_hint, arithmetic_hint, ...extras]). The children list is canonical and the order matters for content-addressing. All optional extras come AFTER the five required children, in the order listed in `children_after_required` below.",
+
+  "children_after_required": [
+    "mantissa_bits",
+    "exponent_bits",
+    "exponent_bias",
+    "posit_n",
+    "posit_es",
+    "lookup_values"
+  ],
+
+  "$lookup_values_encoding": "Lookup values are floats. Each is encoded as two i32 children: the low 32 bits of the IEEE 754 double (little-endian), then the high 32 bits. So a table of N values contributes 2N children, appended in order.",
+
+  "formats": [
+    {
+      "name": "fp64",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 64,
+      "storage_hint": "v8-double",
+      "arithmetic_hint": "native-fp",
+      "mantissa_bits": 52,
+      "exponent_bits": 11,
+      "exponent_bias": 1023
+    },
+    {
+      "name": "fp32",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 32,
+      "storage_hint": "v8-double-narrowed",
+      "arithmetic_hint": "native-fp",
+      "mantissa_bits": 23,
+      "exponent_bits": 8,
+      "exponent_bias": 127
+    },
+    {
+      "name": "bf16",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 16,
+      "storage_hint": "u16-array",
+      "arithmetic_hint": "software-fp-via-fp32",
+      "mantissa_bits": 7,
+      "exponent_bits": 8,
+      "exponent_bias": 127
+    },
+    {
+      "name": "fp8-e4m3",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 8,
+      "storage_hint": "u8-array",
+      "arithmetic_hint": "table-lookup-via-fp32",
+      "mantissa_bits": 3,
+      "exponent_bits": 4,
+      "exponent_bias": 7
+    },
+    {
+      "name": "fp8-e5m2",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 8,
+      "storage_hint": "u8-array",
+      "arithmetic_hint": "table-lookup-via-fp32",
+      "mantissa_bits": 2,
+      "exponent_bits": 5,
+      "exponent_bias": 15
+    },
+    {
+      "name": "fp4-uniform",
+      "semantic_kind": "REAL",
+      "encoding": "IEEE_754",
+      "bits": 4,
+      "storage_hint": "nibble-packed",
+      "arithmetic_hint": "table-lookup-via-fp32",
+      "mantissa_bits": 2,
+      "exponent_bits": 1,
+      "exponent_bias": 1
+    },
+    {
+      "name": "nf4",
+      "semantic_kind": "REAL",
+      "encoding": "LOOKUP_TABLE",
+      "bits": 4,
+      "storage_hint": "nibble-packed",
+      "arithmetic_hint": "dequant-fp32-then-native",
+      "lookup_values": [
+        -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453,
+        -0.28444138169288635, -0.18477343022823334, -0.09105003625154495, 0.0,
+        0.07958029955625534, 0.16093020141124725, 0.24611230194568634,
+        0.33791524171829224, 0.44070982933044434, 0.5626170039176941,
+        0.7229568362236023, 1.0
+      ]
+    },
+    {"name": "i8",  "semantic_kind": "INTEGER",  "encoding": "TWOS_COMPLEMENT", "bits": 8,  "storage_hint": "i32-smi",       "arithmetic_hint": "native-int-narrow"},
+    {"name": "i16", "semantic_kind": "INTEGER",  "encoding": "TWOS_COMPLEMENT", "bits": 16, "storage_hint": "i32-smi",       "arithmetic_hint": "native-int-narrow"},
+    {"name": "i32", "semantic_kind": "INTEGER",  "encoding": "TWOS_COMPLEMENT", "bits": 32, "storage_hint": "i32-smi",       "arithmetic_hint": "native-int"},
+    {"name": "i64", "semantic_kind": "INTEGER",  "encoding": "TWOS_COMPLEMENT", "bits": 64, "storage_hint": "bigint",        "arithmetic_hint": "bigint"},
+    {"name": "u8",  "semantic_kind": "CARDINAL", "encoding": "UNSIGNED",        "bits": 8,  "storage_hint": "i32-smi",       "arithmetic_hint": "native-int-narrow"},
+    {"name": "u16", "semantic_kind": "CARDINAL", "encoding": "UNSIGNED",        "bits": 16, "storage_hint": "i32-smi",       "arithmetic_hint": "native-int-narrow"},
+    {"name": "u32", "semantic_kind": "CARDINAL", "encoding": "UNSIGNED",        "bits": 32, "storage_hint": "i32-smi",       "arithmetic_hint": "native-int"},
+    {"name": "u64", "semantic_kind": "CARDINAL", "encoding": "UNSIGNED",        "bits": 64, "storage_hint": "bigint",        "arithmetic_hint": "bigint"},
+    {"name": "i4",  "semantic_kind": "INTEGER",  "encoding": "TWOS_COMPLEMENT", "bits": 4,  "storage_hint": "nibble-packed", "arithmetic_hint": "native-int-narrow"},
+    {
+      "name": "bitnet-158",
+      "semantic_kind": "INTEGER",
+      "encoding": "LOOKUP_TABLE",
+      "bits": 2,
+      "storage_hint": "crumb-packed",
+      "arithmetic_hint": "native-int",
+      "lookup_values": [-1, 0, 1]
+    },
+    {"name": "bit-1",    "semantic_kind": "BIT_PATTERN", "encoding": "RAW_BITS",  "bits": 1,  "storage_hint": "bitfield",  "arithmetic_hint": "xor-popcount"},
+    {"name": "log-prob", "semantic_kind": "PROBABILITY", "encoding": "LOG_SPACE", "bits": 64, "storage_hint": "v8-double", "arithmetic_hint": "logaddexp-logsubexp"}
+  ],
+
+  "conformance_vectors": {
+    "$comment": "Each vector lists (format-name, op, operand_a, operand_b, expected_result). Numbers given as JS-style. Bigints suffixed with 'n'. Floats compared with format-appropriate epsilon (1e-12 for fp64, 1e-6 for fp32, 1e-2 for fp8/fp4/nf4).",
+
+    "vectors": [
+      {"format": "fp64", "op": "add", "a": 1.5, "b": 2.25, "expected": 3.75},
+      {"format": "fp64", "op": "mul", "a": 0.1, "b": 0.2, "expected": 0.020000000000000004},
+      {"format": "fp64", "op": "div", "a": 1.0, "b": 3.0, "expected": 0.3333333333333333},
+      {"format": "i32", "op": "add", "a": 1000000, "b": 1000000, "expected": 2000000},
+      {"format": "i32", "op": "mul", "a": 65536, "b": 65536, "expected": 0, "$note": "i32 overflow wraps to 0"},
+      {"format": "i64", "op": "mul", "a": "1000000n", "b": "1000000n", "expected": "1000000000000n"},
+      {"format": "i64", "op": "add", "a": "9223372036854775807n", "b": "0n", "expected": "9223372036854775807n"},
+      {"format": "u64", "op": "mul", "a": "1000n", "b": "1000n", "expected": "1000000n"},
+      {"format": "bitnet-158", "op": "add", "a": 1, "b": -1, "expected": 0},
+      {"format": "bitnet-158", "op": "mul", "a": -1, "b": -1, "expected": 1},
+      {"format": "bit-1", "op": "add", "a": 1, "b": 1, "expected": 0, "$note": "XOR add"},
+      {"format": "bit-1", "op": "mul", "a": 1, "b": 1, "expected": 1, "$note": "AND mul"},
+      {"format": "log-prob", "op": "mul", "a": -1.0, "b": -2.0, "expected": -3.0, "$note": "log mult = add"},
+      {"format": "fp8-e4m3", "op": "add", "a": 0.5, "b": 0.25, "expected": 0.75},
+      {"format": "i8", "op": "add", "a": 127, "b": 1, "expected": -128, "$note": "i8 wraps"}
+    ],
+
+    "canonicalization_vectors": [
+      {"$comment": "Two intern calls with the same float produce the same NodeID.",
+       "format": "fp64", "value_a": 3.14159, "value_b": 3.14159, "same_nodeid": true},
+      {"$comment": "+0 and -0 share a NodeID.",
+       "format": "fp64", "value_a": 0.0, "value_b": -0.0, "same_nodeid": true},
+      {"$comment": "All NaN bit patterns collapse to canonical quiet NaN.",
+       "format": "fp64", "value_a": "NaN", "value_b": "NaN", "same_nodeid": true}
+    ]
+  }
+}

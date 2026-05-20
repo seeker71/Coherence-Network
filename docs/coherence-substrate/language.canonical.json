@@ -1,0 +1,86 @@
+{
+  "$comment": "Canonical Language cell schema. Every kernel (Python, Go, Rust, TS) reads this template and interns Language cells against it. Per-language definitions (python.lang.json, typescript.lang.json, etc.) populate the shape and are written separately. See docs/coherence-substrate/language-cells.md for the architecture.",
+
+  "version": 1,
+
+  "rbasic_language": 60,
+
+  "grammar_rule_kind": {
+    "$comment": "Grammar rule node kinds. inst = kind code, children carry parameters. Two rules with identical kind + children intern to the same NodeID.",
+    "LITERAL": 1,
+    "ALT": 2,
+    "SEQ": 3,
+    "STAR": 4,
+    "PLUS": 5,
+    "OPT": 6,
+    "TOKEN_CLASS": 7,
+    "RULE_REF": 8,
+    "CAPTURE": 9
+  },
+
+  "emit_rule_kind": {
+    "$comment": "Emission template node kinds. inst = 0x80 | kind to keep namespace disjoint from grammar rules under the same RBasic slot.",
+    "LITERAL": 1,
+    "CHILD": 2,
+    "JOIN_CHILDREN": 3,
+    "WHEN_CATEGORY": 4,
+    "SEQ": 5
+  },
+
+  "token_classes": {
+    "$comment": "Built-in token-class names. New token classes are kernel writes (a per-name matcher), but most languages cover their needs with these four. Rare lexer needs (heredocs, regex literals) get language-specific token classes added on demand.",
+    "supported": ["number", "ident", "whitespace", "string-literal"]
+  },
+
+  "language_cell_inst": 255,
+  "$language_cell_inst_comment": "Reserved inst marker for the Language cell itself (vs grammar/emit rules under the same RBasic slot). 0xFF stays disjoint from kind codes (≤9) and emit-flagged codes (0x80..0x85).",
+
+  "language_cell_children": [
+    {"name": "name",              "kind": "string",  "$comment": "Diagnostic identifier (e.g. \"python\")"},
+    {"name": "version",           "kind": "string",  "$comment": "Semver-shaped; bumps invalidate cached NodeIDs"},
+    {"name": "ingestion_grammar", "kind": "noderef", "$comment": "Root grammar rule"},
+    {"name": "emission_template", "kind": "noderef", "$comment": "Root emit rule"},
+    {"name": "stdlib_bindings",   "kind": "list",    "$comment": "Flat list of (name-string, recipe-noderef) pairs"},
+    {"name": "numeric_defaults",  "kind": "list",    "$comment": "Flat list of (name-string, format-recipe-noderef) pairs"}
+  ],
+
+  "$per_language_definition_shape": "A per-language file (e.g. python.lang.json) carries: name, version, grammar (a tree of {kind, children} matching grammar_rule_kind), emission (matching emit_rule_kind), stdlib (list of {name, recipe-id}), numeric_defaults (list of {name, format-name from numeric-formats.canonical.json}).",
+
+  "per_language_template": {
+    "$comment": "Skeleton for a per-language definition. Populate grammar and emission; reference stdlib by recipe-id (computed elsewhere) and numeric_defaults by format-name (matches numeric-formats.canonical.json).",
+    "name": "<language-name>",
+    "version": "<semver>",
+    "grammar": {
+      "$comment": "Root grammar rule. Recursively shaped as {kind: <one of grammar_rule_kind>, children: [...]}.",
+      "kind": "CAPTURE",
+      "ctor": "program",
+      "body": {"kind": "PLUS", "body": {"kind": "RULE_REF", "name": "statement"}}
+    },
+    "named_rules": {
+      "$comment": "Optional table of name → rule. RULE_REF nodes in `grammar` resolve through this table at registration time.",
+      "statement": {"kind": "ALT", "alternatives": []}
+    },
+    "emission": {
+      "$comment": "Root emit rule.",
+      "kind": "JOIN_CHILDREN",
+      "separator": "\n",
+      "first": 0,
+      "last": -1
+    },
+    "stdlib": [
+      {"$comment": "Each entry binds a surface name to a substrate recipe. The recipe-id refers to a cell that exists prior to language registration (e.g. interned by the kernel's stdlib bootstrap)."}
+    ],
+    "numeric_defaults": [
+      {"$comment": "Per-language numeric type name → format name (from numeric-formats.canonical.json)."}
+    ]
+  },
+
+  "example_languages_deferred": [
+    "python.lang.json",
+    "typescript.lang.json",
+    "go.lang.json",
+    "rust.lang.json"
+  ],
+
+  "$cross_language_identity_contract": "A captured recipe under ctor name X with the same inner tree shape interns to the same NodeID regardless of which Language cell produced it. This is the load-bearing invariant: ctor naming and child ordering are the cross-language convergence point. Two languages disagree on syntax but MUST agree on the post-CAPTURE recipe shape — that is the substrate's claim to language-blindness."
+}

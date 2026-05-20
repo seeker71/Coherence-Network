@@ -3,25 +3,31 @@
 // Usage:
 //   tsx src/main.ts --expr "(+ 1 2)"
 //   tsx src/main.ts --bench
-//   tsx src/main.ts path/to/file.fk [path/to/next.fk ...]
+//   tsx src/main.ts path/to/file.fk
 
 import { readFile } from "node:fs/promises";
 import { Frame, Kernel, walk } from "./kernel.ts";
 import { readAll, readForm } from "./reader.ts";
 import { runBench } from "./bench.ts";
 import { compileNode } from "./compiler.ts";
+import { runNumericBench } from "./numeric-bench.ts";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0) {
     console.error(
-      "usage: tsx src/main.ts (--expr <expr> | --bench | --compiled <expr> | <file.fk> [file.fk ...])",
+      "usage: tsx src/main.ts (--expr <expr> | --bench | --compiled <expr> | <file.fk>)",
     );
     process.exit(2);
   }
 
   if (args[0] === "--bench") {
     runBench();
+    return;
+  }
+
+  if (args[0] === "--numeric-bench") {
+    runNumericBench();
     return;
   }
 
@@ -53,14 +59,12 @@ async function main(): Promise<void> {
     return;
   }
 
-  const paths = args;
-  if (paths.length === 0) {
+  const path = args[0];
+  if (path === undefined) {
     console.error("missing source file");
     process.exit(2);
   }
-  const src = (await Promise.all(paths.map((path) => readFile(path, "utf8")))).join(
-    "\n",
-  );
+  const src = await readFile(path, "utf8");
   const node = readAll(k, src);
   const value = walk(k, node, frame);
   console.log(k.render(value));

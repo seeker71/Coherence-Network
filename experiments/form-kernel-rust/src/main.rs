@@ -23,20 +23,24 @@ use std::fs;
 use std::rc::Rc;
 use std::time::Instant;
 
+mod formats;
+mod quotient;
+mod inductive;
+
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
 // ---------------------------------------------------------------------------
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-struct NodeID {
-    pkg: u32,
-    level: u32,
-    ty: u32,
-    inst: u32,
+pub(crate) struct NodeID {
+    pub(crate) pkg: u32,
+    pub(crate) level: u32,
+    pub(crate) ty: u32,
+    pub(crate) inst: u32,
 }
 
-const LEVEL_TRIVIAL: u32 = 1;
-const LEVEL_BASIC: u32 = 2;
+pub(crate) const LEVEL_TRIVIAL: u32 = 1;
+pub(crate) const LEVEL_BASIC: u32 = 2;
 
 // RBasic — aligned with api/app/services/substrate/category.py
 const RB_BLOCK: u32 = 9;
@@ -50,8 +54,8 @@ const RB_FNCALL: u32 = 32;
 const RB_IDENT: u32 = 33;
 const RB_LIST: u32 = 34;
 
-const TRIV_INT: u32 = 1;
-const TRIV_STRING: u32 = 2;
+pub(crate) const TRIV_INT: u32 = 1;
+pub(crate) const TRIV_STRING: u32 = 2;
 const TRIV_BOOL: u32 = 3;
 const TRIV_NULL: u32 = 4;
 
@@ -113,7 +117,7 @@ type FrameId = u32;
 // Kernel — the immutable-during-walk substrate: intern table, string
 // table, native dispatch. Mutates only at parse/intern time. Held as
 // `&Kernel` by the walker so children() can return borrowed slices.
-struct Kernel {
+pub(crate) struct Kernel {
     by_shape: HashMap<ShapeKey, NodeID>,
     by_id: HashMap<NodeID, Recipe>,
     strs: Vec<String>,
@@ -165,7 +169,7 @@ impl Arena {
 }
 
 impl Kernel {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut k = Self {
             by_shape: HashMap::new(),
             by_id: HashMap::new(),
@@ -179,7 +183,7 @@ impl Kernel {
     }
 
     // intern — content-addressed insertion. Same shape ⇒ same NodeID.
-    fn intern(&mut self, category: NodeID, children: Vec<NodeID>) -> NodeID {
+    pub(crate) fn intern(&mut self, category: NodeID, children: Vec<NodeID>) -> NodeID {
         let key = ShapeKey { category, children: children.clone() };
         if let Some(&nid) = self.by_shape.get(&key) {
             return nid;
@@ -191,11 +195,11 @@ impl Kernel {
         nid
     }
 
-    fn intern_trivial_int(&self, n: i64) -> NodeID {
+    pub(crate) fn intern_trivial_int(&self, n: i64) -> NodeID {
         NodeID { pkg: 1, level: LEVEL_TRIVIAL, ty: TRIV_INT, inst: (n as i32) as u32 }
     }
 
-    fn intern_string(&mut self, s: &str) -> NodeID {
+    pub(crate) fn intern_string(&mut self, s: &str) -> NodeID {
         if let Some(&idx) = self.str_idx.get(s) {
             return NodeID { pkg: 1, level: LEVEL_TRIVIAL, ty: TRIV_STRING, inst: idx };
         }
@@ -215,11 +219,11 @@ impl Kernel {
     // Owned children — clones the children vec. The slice version went
     // away when substrate-write natives required `&mut Kernel`; future
     // breath restores zero-copy via Cow<'_, [NodeID]>.
-    fn children(&self, n: NodeID) -> Vec<NodeID> {
+    pub(crate) fn children(&self, n: NodeID) -> Vec<NodeID> {
         self.by_id.get(&n).map(|r| r.children.clone()).unwrap_or_default()
     }
 
-    fn trivial_value(&self, n: NodeID) -> Value {
+    pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone()),
@@ -256,7 +260,7 @@ impl Kernel {
 // `Nid` lets Form code hold NodeIDs as first-class values — the foundation
 // for substrate-write natives that close form-runtime-in-form gaps W1-W3.
 #[derive(Clone, Debug)]
-enum Value {
+pub(crate) enum Value {
     Null,
     Int(i64),
     Str(String),
@@ -1012,12 +1016,17 @@ fn main() {
 
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
-        eprintln!("usage: form-kernel-rust <file.fk> [more.fk ...] | --expr \"...\" | --bench");
+        eprintln!("usage: form-kernel-rust <file.fk> [more.fk ...] | --expr \"...\" | --bench | --numeric-bench");
         std::process::exit(2);
     }
 
     if args[0] == "--bench" {
         run_bench();
+        return;
+    }
+
+    if args[0] == "--numeric-bench" {
+        formats::run_numeric_bench();
         return;
     }
 

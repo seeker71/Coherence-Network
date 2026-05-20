@@ -1,6 +1,6 @@
 # form-kernel-ts — performance analysis, two-order-of-magnitude unlock
 
-Companion to [`form-kernel-comparison.md`](./form-kernel-comparison.md), which now treats Go, Rust, and TypeScript as sibling kernels under one validator.
+Companion to [`form-kernel-comparison.md`](./form-kernel-comparison.md) (Go/Rust).
 This doc walks the TS kernel's two paths:
 
 1. **Walker** — same shape as the Go and Rust kernels: tree-walking
@@ -171,9 +171,9 @@ friction that wanted closing.
 
 ## Cross-kernel agreement
 
-The TypeScript walker and compiled path are verified against the Go and Rust kernels:
+All values verified against Go and Rust kernels:
 
-| Workload | Sibling kernels return |
+| Workload | All four kernels return |
 |---|---|
 | `fib(28)` | `317811` |
 | `fact(12)` | `479001600` |

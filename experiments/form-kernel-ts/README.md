@@ -39,9 +39,6 @@ kernels carry the load-bearing ones):
 - **Recipe → JS compiler** — emits JS source from recipe trees, compiles
   via `new Function`, V8 JITs the result. Brings overhead from 100–500×
   native down to 1× for arithmetic recursion.
-- **Shared conformance runner** — executes the same question-effect,
-  builtins, infix, control-flow, and loop vectors as Python, Rust, and Go
-  through `scripts/verify_kernel_conformance.py --kernel typescript`.
 
 ## Performance — bench numbers
 
@@ -60,11 +57,12 @@ full analysis.
 ```sh
 npx tsx src/main.ts --bench       # walker + compiled side-by-side
 npx tsx src/main.ts --compiled "(do (defn fib (n) (if (le n 1) n (add (fib (sub n 1)) (fib (sub n 2))))) (fib 28))"
-npx tsx src/conformance.ts ../../docs/coherence-substrate/kernel-conformance/form-loop-mutation.json
 ```
 
-## What's still ripening
+## What's deferred to follow-up breaths
 
+- Conformance-harness wiring (`scripts/verify_kernel_conformance.py
+  --kernel ts`)
 - Browser build target (currently Node.js / `tsx` only)
 - Form-on-top stack from `experiments/form-stdlib/` running on TS
 - Compiler LIST literal emission (currently walker-fallback)
@@ -85,7 +83,6 @@ npm install                                    # zero runtime deps; tsx for dev
 npx tsx src/main.ts --expr "(+ 1 2)"           # → 3
 npx tsx src/main.ts --expr "(if (< 1 2) 'yes' 'no')"   # → "yes"
 npx tsx src/main.ts ../form-samples/fact.fk    # when stdlib loads, runs samples
-npm run conformance -- ../../docs/coherence-substrate/kernel-conformance/agent-question-effects.json
 ```
 
 ## Lineage
