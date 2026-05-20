@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 105
+**Total files**: 107
 
 | File | Purpose |
 |---|---|
@@ -71,6 +71,7 @@
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | !/usr/bin/env python3 |
 | [poll_task_progress.py](poll_task_progress.py) | !/usr/bin/env python3 |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
+| [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | !/usr/bin/env python3 |
 | [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
 | [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
@@ -87,6 +88,7 @@
 | [seed_schema_to_db.py](seed_schema_to_db.py) | !/usr/bin/env python3 |
 | [seed_ucore_ideas.py](seed_ucore_ideas.py) | !/usr/bin/env python3 |
 | [sense_external_signals.py](sense_external_signals.py) | !/usr/bin/env python3 |
+| [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | !/usr/bin/env python3 |
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |

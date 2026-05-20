@@ -303,7 +303,8 @@ def pick_strategy(spectrum, desire, presets=None):
 
 class Cell:
     def __init__(self, name: str = "cell", seed: int = 0,
-                 desire_decay: float = 0.85, fulfillment_gain: float = 1.4):
+                 desire_decay: float = 0.85, fulfillment_gain: float = 1.4,
+                 publish_traces: bool = True):
         self.name = name
         self.adapter = Adapter(seed=seed)
         self.training_set: list[tuple[list[float], list[float]]] = []
@@ -312,6 +313,13 @@ class Cell:
         self.desire_decay = desire_decay
         self.fulfillment_gain = fulfillment_gain
         self.timeline: list[dict] = []
+        # strategy-firing trace pipeline — see specs/recipes-tuned-by-trace.md.
+        # Snapshot taken at firing, published on the next perceive once the
+        # cell has settled. Sovereignty: any cell can flip publish_traces
+        # false and the perceive loop runs identically.
+        self.publish_traces = publish_traces
+        self._pending_strategy_snapshot: dict | None = None
+        self._fresh_inhabit: bool = False
 
     # —— learning ——
 
@@ -334,8 +342,44 @@ class Cell:
     # —— perceiving (one moment at a time, stateful) ——
 
     def perceive(self, text: str, sense: str = "thought") -> dict:
+        # ─── publish pending strategy_fired trace if the cell has settled ──
+        # from a prior firing. See specs/recipes-tuned-by-trace.md.
+        if self._pending_strategy_snapshot and self.publish_traces and self.timeline:
+            last = self.timeline[-1]
+            sense_after = {
+                "spectrum": list(last["spectrum"]),
+                "desire": [last["desire"][n] for n in NEED_NAMES],
+                "frequency": None,
+            }
+            from substrate_bridge import publish_strategy_trace
+            publish_strategy_trace(
+                self,
+                self._pending_strategy_snapshot["strategy"],
+                self._pending_strategy_snapshot["sense_before"],
+                sense_after,
+            )
+            self._pending_strategy_snapshot = None
+
         x = shared_base(text, sense)
         spec, dispos, needs, _, _ = self.adapter.forward(x)
+
+        # capture sense_before BEFORE the inhabit-blend reshapes spec.
+        # Only on the FIRST perceive after each inhabit() call — fresh-flag
+        # is set by inhabit(), cleared here on first consumption. Subsequent
+        # perceives consuming the decay tail do not trigger new snapshots.
+        strat_held_pre = getattr(self, "_inhabit_strategy", None)
+        if (strat_held_pre is not None and getattr(self, "_fresh_inhabit", False)
+                and self.publish_traces):
+            self._pending_strategy_snapshot = {
+                "strategy": strat_held_pre.name,
+                "sense_before": {
+                    "spectrum": list(spec),
+                    "desire": list(self.desire),
+                    "frequency": None,
+                },
+            }
+            self._fresh_inhabit = False
+
         # consume inhabit-bias if set: blend strategy's f×a into the
         # spectrum at current intensity, then *decay* the intensity for
         # next perceive (rather than binary clear). Real bodies have a
@@ -424,6 +468,10 @@ class Cell:
         self._inhabit_strategy = strategy
         self._inhabit_intensity = max(0.0, min(1.0, intensity))
         self._inhabit_decay = max(0.0, min(1.0, decay))
+        # mark the firing fresh so perceive() captures one sense_before
+        # snapshot on its next consumption (and only its next — decay-tail
+        # perceives don't open new traces). See specs/recipes-tuned-by-trace.md.
+        self._fresh_inhabit = True
         return {
             "inhabit": strategy.name,
             "intensity": self._inhabit_intensity,
@@ -436,6 +484,7 @@ class Cell:
         held = getattr(self, "_inhabit_strategy", None)
         self._inhabit_strategy = None
         self._inhabit_intensity = 0.0
+        self._fresh_inhabit = False
         return {"released": held.name if held else None}
 
     # —— probing (read-only sample, no state mutation) ——
