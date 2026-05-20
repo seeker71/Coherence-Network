@@ -257,13 +257,10 @@ defn try_branch_typed(candidate, sense) = do {
     else fail
 };
 
-# GAP-T2: the `where ?harmonic_at == .self` filter syntax inside
-#         a `?equivalent` query is shorthand for a composed Form
-#         query that today would be expressed as a two-step:
-#         (1) `?equivalent @blueprint` returns all structural
-#         siblings; (2) filter the result by `?harmonic_at`. The
-#         single-step `where` clause is a fluency-extension the
-#         body wants but doesn't yet have. The two-step works now.
+# CLOSED-T2 (2026-05-20): `?equivalent` now accepts `where harmonic_at == @<hz>`
+#         and `where domain == "<name>"` filters in form_queries.py. The
+#         single-step `where` clause is no longer shorthand — the substrate
+#         carries it. Other filter shapes will land as needed.
 
 # CLOSED-T3 (2026-05-20): `hz_cell(session, hz)` in resonance.py is
 #         already idempotent and lazy-creates the cell for any integer
