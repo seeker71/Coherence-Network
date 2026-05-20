@@ -140,4 +140,4 @@ dispatches over when the lock is specifically pressure-shaped.
 
 ## Cross-References
 
-→ lc-shifted-return, lc-recipes-bound-to-base, lc-assemblage-point, lc-recipe-branching-sense, lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse
+→ lc-shifted-return, lc-recipes-bound-to-base, lc-assemblage-point, lc-recipe-branching-sense, lc-traces-teach-the-recipe, lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse
