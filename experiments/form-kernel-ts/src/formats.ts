@@ -310,11 +310,11 @@ export function buildFormatLibrary(k: Kernel): FormatLibrary {
     ),
     INT8: makeFormatRecipe(
       k, "i8", SemanticKind.INTEGER, EncodingKind.TWOS_COMPLEMENT, 8,
-      "i32-smi", "native-int",
+      "i32-smi", "native-int-narrow",
     ),
     INT16: makeFormatRecipe(
       k, "i16", SemanticKind.INTEGER, EncodingKind.TWOS_COMPLEMENT, 16,
-      "i32-smi", "native-int",
+      "i32-smi", "native-int-narrow",
     ),
     INT32: makeFormatRecipe(
       k, "i32", SemanticKind.INTEGER, EncodingKind.TWOS_COMPLEMENT, 32,
@@ -326,11 +326,11 @@ export function buildFormatLibrary(k: Kernel): FormatLibrary {
     ),
     UINT8: makeFormatRecipe(
       k, "u8", SemanticKind.CARDINAL, EncodingKind.UNSIGNED, 8,
-      "i32-smi", "native-int",
+      "i32-smi", "native-int-narrow",
     ),
     UINT16: makeFormatRecipe(
       k, "u16", SemanticKind.CARDINAL, EncodingKind.UNSIGNED, 16,
-      "i32-smi", "native-int",
+      "i32-smi", "native-int-narrow",
     ),
     UINT32: makeFormatRecipe(
       k, "u32", SemanticKind.CARDINAL, EncodingKind.UNSIGNED, 32,
