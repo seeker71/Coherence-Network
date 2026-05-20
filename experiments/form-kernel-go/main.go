@@ -956,12 +956,17 @@ func catFnCall() NodeID             { return NodeID{1, LevelBasic, RBasicFnCall,
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --expr \"...\" | --bench")
+		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --expr \"...\" | --bench | --numeric-bench")
 		os.Exit(2)
 	}
 
 	if args[0] == "--bench" {
 		runBench()
+		return
+	}
+
+	if args[0] == "--numeric-bench" {
+		runNumericBench()
 		return
 	}
 

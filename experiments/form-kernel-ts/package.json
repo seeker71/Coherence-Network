@@ -6,7 +6,6 @@
   "description": "Vertical-slice host for Form-on-top, in TypeScript. Third sibling kernel beside form-kernel-go and form-kernel-rust.",
   "scripts": {
     "kernel": "tsx src/main.ts",
-    "conformance": "tsx src/conformance.ts",
     "check": "tsc --noEmit"
   },
   "devDependencies": {

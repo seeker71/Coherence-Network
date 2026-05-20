@@ -38,12 +38,15 @@ import {
   Frame,
   Kernel,
   Level,
+  mathOp,
+  mathWidth,
   RBasic,
   RBlock,
   RCmp,
   RCond,
   RLogic,
   RMath,
+  RMathWidth,
   Triv,
   type NodeID,
   type Value,
@@ -109,9 +112,13 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     "callNative",
     "valueAsInt",
     "valueAsBool",
+    "valueAsNum",
     "boxInt",
     "boxBool",
     "boxNull",
+    "boxFloat",
+    "boxBig",
+    "boxAny",
     src,
   );
   return factory(
@@ -122,9 +129,13 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     callNative,
     valueAsInt,
     valueAsBool,
+    valueAsNum,
     boxInt,
     boxBool,
     boxNull,
+    boxFloat,
+    boxBig,
+    boxAny,
   ) as CompiledFn;
 }
 
@@ -150,13 +161,57 @@ function callNative(
 }
 
 function valueAsInt(v: Value): number {
-  if (v.kind === "int") return v.int;
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  if (v.kind === "f32" || v.kind === "f64") return v.float | 0;
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
   throw new Error(`expected int, got ${v.kind}`);
 }
 
 function valueAsBool(v: Value): boolean {
   if (v.kind === "bool") return v.bool;
   throw new Error(`expected bool, got ${v.kind}`);
+}
+
+// Generic primitive extractor — returns raw JS number / bigint / bool / etc.
+function valueAsNum(v: Value): number | bigint | boolean | null | string {
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return v.int;
+  if (v.kind === "f32" || v.kind === "f64") return v.float;
+  if (v.kind === "i64" || v.kind === "u64") return v.bigint;
+  if (v.kind === "bool") return v.bool;
+  if (v.kind === "str") return v.str;
+  if (v.kind === "null") return null;
+  throw new Error(`valueAsNum: cannot unbox ${v.kind}`);
+}
+
+// Generic boxer — wraps a raw JS primitive into the smallest fitting Value.
+function boxAny(x: number | bigint | boolean | null | string | Value): Value {
+  if (typeof x === "number") {
+    if (Number.isInteger(x) && Math.abs(x) < 0x80000000) {
+      return { kind: "int", int: x };
+    }
+    return { kind: "f64", float: x };
+  }
+  if (typeof x === "bigint") return { kind: "i64", bigint: x };
+  if (typeof x === "boolean") return { kind: "bool", bool: x };
+  if (typeof x === "string") return { kind: "str", str: x };
+  if (x === null) return { kind: "null" };
+  return x;
 }
 
 function boxInt(n: number): Value {
@@ -171,13 +226,21 @@ function boxNull(): Value {
   return { kind: "null" };
 }
 
+function boxFloat(n: number): Value {
+  return { kind: "f64", float: n };
+}
+
+function boxBig(n: bigint): Value {
+  return { kind: "i64", bigint: n };
+}
+
 // emitExpr returns a JS source string. The expression's type is inferred
 // structurally — pure-numeric subtrees emit raw JS that V8 JITs natively.
 // Boundary-crossing emissions (entering/leaving the compiled scope) get
 // boxed/unboxed through helpers.
 function emitExpr(k: Kernel, node: NodeID, scope: CompileScope): string {
   if (node.level === Level.TRIVIAL) {
-    return emitTrivial(node);
+    return emitTrivial(node, k);
   }
   const cat = k.category(node);
   const kids = k.children(node);
@@ -213,8 +276,8 @@ function emitExpr(k: Kernel, node: NodeID, scope: CompileScope): string {
   }
 }
 
-function emitTrivial(node: NodeID): string {
-  if (node.type === Triv.INT) {
+function emitTrivial(node: NodeID, k?: Kernel): string {
+  if (node.type === Triv.INT32) {
     const u = node.inst >>> 0;
     const i = u > 0x7fffffff ? u - 0x100000000 : u;
     return String(i);
@@ -225,16 +288,41 @@ function emitTrivial(node: NodeID): string {
   if (node.type === Triv.NULL) {
     return "null";
   }
-  // STRING: not on the hot path; box at the boundary.
+  // FLOAT32 — inline IEEE bits as a literal.
+  if (node.type === Triv.FLOAT32) {
+    const buf = new ArrayBuffer(4);
+    new Uint32Array(buf)[0] = node.inst;
+    const f = new Float32Array(buf)[0]!;
+    return Number.isFinite(f) ? `${f}` : f > 0 ? "Infinity" : f < 0 ? "-Infinity" : "NaN";
+  }
+  // FLOAT64, INT64, UINT64 — overflow types, need kernel to decode.
+  if (k !== undefined) {
+    if (node.type === Triv.FLOAT64) {
+      const v = k.decodeFloat64(node.inst);
+      if (Number.isNaN(v)) return "NaN";
+      if (v === Infinity) return "Infinity";
+      if (v === -Infinity) return "-Infinity";
+      return String(v);
+    }
+    if (node.type === Triv.INT64) {
+      return `${k.decodeInt64(node.inst).toString()}n`;
+    }
+    if (node.type === Triv.UINT64) {
+      return `${k.decodeUint64(node.inst).toString()}n`;
+    }
+  }
+  // STRING and others: not on the hot path; box at the boundary.
   return `(/* trivial type ${node.type} */ null)`;
 }
 
 function emitMath(
   k: Kernel,
-  op: number,
+  inst: number,
   kids: readonly NodeID[],
   scope: CompileScope,
 ): string {
+  const width = mathWidth(inst);
+  const op = mathOp(inst);
   const parts = kids.map((c) => `(${emitExpr(k, c, scope)})`);
   const opStr =
     op === RMath.PLUS
@@ -248,13 +336,38 @@ function emitMath(
             : op === RMath.MOD
               ? "%"
               : "+";
-  // Wrap with | 0 to keep i32 semantics across the chain — matches Go's
-  // int32 arithmetic and prevents V8 from boxing into double-precision.
-  // Multiplication uses Math.imul for i32 semantics.
-  if (op === RMath.MUL) {
-    if (parts.length === 2) {
-      return `Math.imul(${parts[0]}, ${parts[1]})`;
+
+  // FLOAT64 — emit straight JS arithmetic with no boxing, no | 0.
+  // V8 will keep these as f64 throughout the chain.
+  if (width === RMathWidth.F64) {
+    let acc = parts[0]!;
+    for (let i = 1; i < parts.length; i++) {
+      acc = `(${acc} ${opStr} ${parts[i]})`;
     }
+    return acc;
+  }
+
+  // FLOAT32 — same but narrow with Math.fround at each step.
+  if (width === RMathWidth.F32) {
+    let acc = parts[0]!;
+    for (let i = 1; i < parts.length; i++) {
+      acc = `Math.fround(${acc} ${opStr} ${parts[i]})`;
+    }
+    return acc;
+  }
+
+  // INT64 / UINT64 — BigInt arithmetic. Slower than primitives but real.
+  if (width === RMathWidth.I64 || width === RMathWidth.U64) {
+    let acc = `BigInt(${parts[0]})`;
+    for (let i = 1; i < parts.length; i++) {
+      acc = `(${acc} ${opStr} BigInt(${parts[i]}))`;
+    }
+    return acc;
+  }
+
+  // I32 default — | 0 / Math.imul to keep V8's SMI tagging.
+  if (op === RMath.MUL) {
+    if (parts.length === 2) return `Math.imul(${parts[0]}, ${parts[1]})`;
     let acc = parts[0]!;
     for (let i = 1; i < parts.length; i++) {
       acc = `Math.imul(${acc}, ${parts[i]})`;
@@ -269,7 +382,6 @@ function emitMath(
     }
     return acc;
   }
-  // Plus, minus, mod — left fold, | 0 at each step.
   let acc = parts[0]!;
   for (let i = 1; i < parts.length; i++) {
     acc = `((${acc} ${opStr} ${parts[i]}) | 0)`;
@@ -479,13 +591,13 @@ function emitFnCall(
     const args = kids.slice(1).map((a) => emitExpr(k, a, scope));
     return `${localFn}(${args.join(", ")})`;
   }
-  // Native — emit a callNative with boxed args
+  // Native — emit a callNative with generic-boxed args + generic unbox.
   const nat = k.natives.get(nameID);
   if (nat !== undefined) {
     const argExprs = kids
       .slice(1)
-      .map((a) => `boxInt(${emitExpr(k, a, scope)})`);
-    return `valueAsInt(callNative(k, ${nameID}, [${argExprs.join(", ")}]))`;
+      .map((a) => `boxAny(${emitExpr(k, a, scope)})`);
+    return `valueAsNum(callNative(k, ${nameID}, [${argExprs.join(", ")}]))`;
   }
   // Unknown — fallback to walker
   return emitWalkerFallback(kids[0]!);
@@ -500,15 +612,14 @@ function emitWalkerFallback(node: NodeID): string {
 // is inferred from the expression: arithmetic chains yield numbers, compares
 // yield bools, function calls of compiled local fns return numbers (since
 // compiled fns return raw types).
-function emitBox(bodySrc: string, varName: string): string {
-  // Heuristic: if the body uses === / < / > / ! at the top, it's bool.
-  // Otherwise treat as int. The boundary check at runtime catches mismatches.
-  const trimmed = bodySrc.trim();
-  if (
-    trimmed.startsWith("(!") ||
-    /\b(===|!==|<=|>=|<|>)\b/.test(trimmed.slice(-30))
-  ) {
-    return `typeof ${varName} === "boolean" ? boxBool(${varName}) : typeof ${varName} === "number" ? boxInt(${varName}) : ${varName} == null ? boxNull() : ${varName}`;
-  }
-  return `typeof ${varName} === "number" ? boxInt(${varName}) : typeof ${varName} === "boolean" ? boxBool(${varName}) : ${varName} == null ? boxNull() : ${varName}`;
+function emitBox(_bodySrc: string, varName: string): string {
+  // Type-discriminate at runtime — covers all paths cleanly.
+  // Number → int (smi-fit) or float; bigint → i64; bool/null/Value passthrough.
+  return `(
+    typeof ${varName} === "bigint" ? boxBig(${varName}) :
+    typeof ${varName} === "boolean" ? boxBool(${varName}) :
+    typeof ${varName} === "number"
+      ? (Number.isInteger(${varName}) && Math.abs(${varName}) < 0x80000000 ? boxInt(${varName}) : boxFloat(${varName}))
+      : ${varName} == null ? boxNull() : ${varName}
+  )`;
 }
