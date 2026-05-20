@@ -69,22 +69,32 @@ def test_python_kernel_passes_question_effect_vector() -> None:
     ]
 
 
-def _skip_without_toolchains() -> None:
-    missing = [name for name in ("cargo", "go") if shutil.which(name) is None]
+def _skip_without_toolchains(*names: str) -> None:
+    requested = names or ("cargo", "go", "npx")
+    missing = [name for name in requested if shutil.which(name) is None]
     if missing:
         pytest.skip(f"kernel runner toolchain(s) unavailable: {', '.join(missing)}")
 
 
-def test_rust_and_go_kernels_pass_question_effect_vector() -> None:
+def test_rust_go_and_typescript_kernels_pass_question_effect_vector() -> None:
     _skip_without_toolchains()
 
-    result = _run_harness("--kernel", "rust", "--kernel", "go", "--json")
+    result = _run_harness(
+        "--kernel",
+        "rust",
+        "--kernel",
+        "go",
+        "--kernel",
+        "typescript",
+        "--json",
+    )
 
     assert result.returncode == 0, result.stderr or result.stdout
     body = json.loads(result.stdout)
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]
     for kernel in body["kernels"]:
         assert [case["name"] for case in kernel["cases"]] == [
@@ -105,6 +115,7 @@ def test_default_runs_all_implemented_kernels() -> None:
         ("python", "pass"),
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]
 
 
@@ -126,7 +137,7 @@ def test_python_kernel_passes_core_builtin_vector() -> None:
     ]
 
 
-def test_rust_and_go_kernels_pass_core_builtin_vector() -> None:
+def test_rust_go_and_typescript_kernels_pass_core_builtin_vector() -> None:
     _skip_without_toolchains()
 
     result = _run_harness(
@@ -136,6 +147,8 @@ def test_rust_and_go_kernels_pass_core_builtin_vector() -> None:
         "rust",
         "--kernel",
         "go",
+        "--kernel",
+        "typescript",
         "--json",
     )
 
@@ -144,6 +157,7 @@ def test_rust_and_go_kernels_pass_core_builtin_vector() -> None:
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]
 
 
@@ -166,7 +180,7 @@ def test_python_kernel_passes_infix_operator_vector() -> None:
     ]
 
 
-def test_rust_and_go_kernels_pass_infix_operator_vector() -> None:
+def test_rust_go_and_typescript_kernels_pass_infix_operator_vector() -> None:
     _skip_without_toolchains()
 
     result = _run_harness(
@@ -176,6 +190,8 @@ def test_rust_and_go_kernels_pass_infix_operator_vector() -> None:
         "rust",
         "--kernel",
         "go",
+        "--kernel",
+        "typescript",
         "--json",
     )
 
@@ -184,6 +200,7 @@ def test_rust_and_go_kernels_pass_infix_operator_vector() -> None:
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]
 
 
@@ -206,7 +223,7 @@ def test_python_kernel_passes_control_flow_vector() -> None:
     ]
 
 
-def test_rust_and_go_kernels_pass_control_flow_vector() -> None:
+def test_rust_go_and_typescript_kernels_pass_control_flow_vector() -> None:
     _skip_without_toolchains()
 
     result = _run_harness(
@@ -216,6 +233,8 @@ def test_rust_and_go_kernels_pass_control_flow_vector() -> None:
         "rust",
         "--kernel",
         "go",
+        "--kernel",
+        "typescript",
         "--json",
     )
 
@@ -224,6 +243,7 @@ def test_rust_and_go_kernels_pass_control_flow_vector() -> None:
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]
 
 
@@ -246,7 +266,7 @@ def test_python_kernel_passes_loop_mutation_vector() -> None:
     ]
 
 
-def test_rust_and_go_kernels_pass_loop_mutation_vector() -> None:
+def test_rust_go_and_typescript_kernels_pass_loop_mutation_vector() -> None:
     _skip_without_toolchains()
 
     result = _run_harness(
@@ -256,6 +276,8 @@ def test_rust_and_go_kernels_pass_loop_mutation_vector() -> None:
         "rust",
         "--kernel",
         "go",
+        "--kernel",
+        "typescript",
         "--json",
     )
 
@@ -264,4 +286,5 @@ def test_rust_and_go_kernels_pass_loop_mutation_vector() -> None:
     assert [(item["kernel"], item["status"]) for item in body["kernels"]] == [
         ("rust", "pass"),
         ("go", "pass"),
+        ("typescript", "pass"),
     ]

@@ -1,17 +1,17 @@
-# form-kernel — Go vs Rust, three optimization breaths each
+# form-kernel — Go, Rust, and TypeScript siblings
 
-Two implementations of the smallest host that lets Form-on-top write the rest. Both ship: NodeID + content-addressed intern + recipe walker (22 RBasic arms) + frame/closure system + native primitives + S-expression bootstrap reader. Both read real `.fk` source files end-to-end.
+Three implementations now keep the smallest Form host honest: Go, Rust, and TypeScript. Each reads real `.fk` source files end-to-end through NodeID/content-addressed intern, recipe walking, frame/closure state, native primitives, and the S-expression bootstrap reader.
 
-This doc captures the optimization arc: idiomatic v0, three focused breaths each, what each breath cost and what it bought.
+This doc preserves the original Go/Rust optimization arc: idiomatic v0, three focused breaths each, what each breath cost, and what it bought. The TypeScript performance path is tracked separately in [`form-kernel-ts-comparison.md`](form-kernel-ts-comparison.md), and the shared validator now checks all three siblings.
 
-## End-state — all five samples, both kernels
+## End-state — all samples, sibling kernels
 
 ```
 closure.fk     → 15          fact.fk    → 3628800     fib.fk    → 6765
 list-sum.fk    → 15          string-walk.fk → 5
 ```
 
-Both produce identical results on every sample. Both stay under 1000 lines. Both are best-in-class idiomatic code — no `unsafe` in Rust, no `interface{}` boxing in Go, no hacks.
+Go, Rust, and TypeScript produce identical results on every sample and stdlib test in `form-kernel-validate.sh`. Go and Rust stay under 1000 lines as native kernels; TypeScript adds a second compiled path for browser/workbench-shaped execution without weakening the shared correctness gate.
 
 ## Benchmark — kernel vs native, both languages
 
@@ -99,27 +99,28 @@ Three breaths produced almost no architectural conversation. The code was alread
 
 The big friction event was a sed mistake, not a language conversation. Go's compiler didn't push back on anything I did. That's the gift: high velocity. That's the risk: the discipline lives entirely in human attention and tests.
 
-### Both arrived at "best-in-class code we can be proud of"
+### Go and Rust arrived at "best-in-class code we can be proud of"
 
-Both files now read cleanly top-to-bottom: substrate → walker → frames → natives → bootstrap reader → main. Both have clear narratives. Both have intent-revealing names. Both stay under 1000 lines. Neither has dead code, comments-explaining-what, or premature abstraction.
+Both native files now read cleanly top-to-bottom: substrate → walker → frames → natives → bootstrap reader → main. Both have clear narratives. Both have intent-revealing names. Both stay under 1000 lines. Neither has dead code, comments-explaining-what, or premature abstraction.
 
 The Rust file is 123 lines shorter. The Go file is faster.
 
-## The honest read — keep both, use them as each other's witness
+## The honest read — keep all siblings as witnesses
 
-The "which to keep" question dissolved. **Both stay.** The kernels are written in different languages with different optimization choices and different bug profiles; their failure modes are unlikely to align. When both kernels agree on a Form program's output, that agreement is a far stronger correctness signal than either kernel alone. When they disagree, exactly one of three things is true:
+The "which to keep" question dissolved. **They all stay.** The kernels are written in different languages with different optimization choices and different bug profiles; their failure modes are unlikely to align. When Go, Rust, and TypeScript agree on a Form program's output, that agreement is a far stronger correctness signal than any one kernel alone. When they disagree, exactly one of four things is true:
 
 1. The Go kernel has a bug
 2. The Rust kernel has a bug
-3. The Form spec has an undocumented corner
+3. The TypeScript kernel has a bug
+4. The Form spec has an undocumented corner
 
-All three are findable. None of them are findable if only one implementation exists.
+All four are findable. None of them are findable if only one implementation exists.
 
-This is **differential testing built into the architecture, not bolted on**. The validation harness [`form-kernel-validate.sh`](form-kernel-validate.sh) is the gate. Every new `.fk` source file joins the diff. Every breath of Form-on-top (lexer, parser, stdlib, query, persistence) gets validated by both kernels simultaneously.
+This is **differential testing built into the architecture, not bolted on**. The validation harness [`form-kernel-validate.sh`](form-kernel-validate.sh) is the gate. Every new `.fk` source file joins the diff. Every breath of Form-on-top (lexer, parser, stdlib, query, persistence) gets validated by all sibling kernels simultaneously.
 
-**The runtime difference becomes a feature, not a verdict.** Go is faster on most workloads; Rust is smaller and safer. When the kernel ships to edge cells via WASM, Rust is chosen automatically. When the kernel runs the daily substrate workload, Go is chosen automatically. The Python `api/` embedding picks whichever has the cleaner FFI story for the target.
+**The runtime difference becomes a feature, not a verdict.** Go is faster on most native walker workloads; Rust is smaller and safer; TypeScript has the browser-adjacent path and a compiled recipe-to-JS mode for hot interactive work. When the kernel ships to edge cells via WASM, Rust remains the natural candidate. When the kernel runs the daily substrate workload, Go remains a strong native candidate. When the FormPlayground wants keystroke-by-keystroke evaluation without an API round trip, TypeScript has the shortest path.
 
-The path forward lives in [`form-kernel-roadmap.md`](form-kernel-roadmap.md): seven breaths that walk **all of Form, written in Form, on top of both kernels**, with the validation gate green at every step. The pivotal one — Breath 2 — is **grammar as data**: a template registry (pattern + template primitives, the body's idiomatic shape from `form_rules.py`/`form_builders.py`/`self_host.py`) plus two engines (classic lex-then-parse + BMF-style streaming-emit) that both consult it. Same source × same registry × 2 engines × 2 kernels = **four implementations** of the same parse, cross-validated by content-addressing. Adding a new keyword becomes one Form file, picked up by all four implementations simultaneously. **The parser doesn't change when the grammar grows** — that's what self-hosting actually means.
+The path forward lives in [`form-kernel-roadmap.md`](form-kernel-roadmap.md): seven breaths that walk **all of Form, written in Form, on top of sibling kernels**, with the validation gate green at every step. The pivotal one — Breath 2 — is **grammar as data**: a template registry (pattern + template primitives, the body's idiomatic shape from `form_rules.py`/`form_builders.py`/`self_host.py`) plus two engines (classic lex-then-parse + BMF-style streaming-emit) that both consult it. Same source × same registry × 2 engines × 3 kernels = **six implementations** of the same parse, cross-validated by content-addressing. Adding a new keyword becomes one Form file, picked up by all six implementations simultaneously. **The parser doesn't change when the grammar grows** — that's what self-hosting actually means.
 
 ## What's still ahead
 
@@ -133,9 +134,10 @@ After the choice is made:
 ## Run
 
 ```bash
-# Both kernels accept the same .fk source files
+# Sibling kernels accept the same .fk source files
 ./form-kernel-go      experiments/form-samples/fact.fk        # → 3628800
 ./form-kernel-rust    experiments/form-samples/fact.fk        # → 3628800
+npx tsx form-kernel-ts/src/main.ts experiments/form-samples/fact.fk # → 3628800
 
 # Inline
 ./form-kernel-go   --expr "(add 2 (mul 3 4))"                 # → 14
@@ -144,4 +146,5 @@ After the choice is made:
 # Benchmark
 ./form-kernel-go   --bench
 ./form-kernel-rust --bench
+npx tsx form-kernel-ts/src/main.ts --bench
 ```

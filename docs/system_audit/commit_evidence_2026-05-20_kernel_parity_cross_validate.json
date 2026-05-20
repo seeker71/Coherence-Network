@@ -1,0 +1,160 @@
+{
+  "date": "2026-05-20",
+  "thread_branch": "codex/kernel-parity-cross-validate-20260520",
+  "commit_scope": "Restore the TypeScript Form kernel as the third sibling, register it in the shared conformance vectors, and cross-validate Python/Rust/Go/TypeScript vector behavior plus Go/Rust/TypeScript .fk execution.",
+  "files_owned": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/coherence-substrate/kernel-conformance/form-control-flow.json",
+    "docs/coherence-substrate/kernel-conformance/form-core-builtins.json",
+    "docs/coherence-substrate/kernel-conformance/form-infix-operators.json",
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "docs/system_audit/commit_evidence_2026-05-20_kernel_parity_cross_validate.json",
+    "experiments/form-kernel-comparison.md",
+    "experiments/form-kernel-roadmap.md",
+    "experiments/form-kernel-ts-comparison.md",
+    "experiments/form-kernel-ts/",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-samples/README.md",
+    "experiments/form-samples/fact.fk",
+    "experiments/form-stdlib/tests/numeric.fk",
+    "experiments/form-stdlib/tests/parser.fk",
+    "specs/INDEX.md",
+    "specs/agent-question-sse-channel.md",
+    "specs/form-control-flow-kernel-conformance.md",
+    "specs/form-core-kernel-conformance.md",
+    "specs/form-infix-kernel-conformance.md",
+    "specs/form-loop-mutation-kernel-conformance.md",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "python3 scripts/agent_status.py --json",
+      "npm --prefix experiments/form-kernel-ts install",
+      "npm --prefix experiments/form-kernel-ts run check",
+      "python3 scripts/verify_kernel_conformance.py --json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_kernel_conformance_harness.py",
+      "cd experiments && ./form-kernel-validate.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/form-question-effects-kernel-conformance.md",
+      "python3 scripts/validate_spec_quality.py --file specs/form-core-kernel-conformance.md",
+      "python3 scripts/validate_spec_quality.py --file specs/form-infix-kernel-conformance.md",
+      "python3 scripts/validate_spec_quality.py --file specs/form-control-flow-kernel-conformance.md",
+      "python3 scripts/validate_spec_quality.py --file specs/form-loop-mutation-kernel-conformance.md",
+      "python3 scripts/context_budget.py --token-budget 50000 docs/coherence-substrate/form-language.md docs/coherence-substrate/kernel-conformance specs/form-question-effects-kernel-conformance.md specs/form-core-kernel-conformance.md specs/form-infix-kernel-conformance.md specs/form-control-flow-kernel-conformance.md specs/form-loop-mutation-kernel-conformance.md specs/agent-question-sse-channel.md api/tests/test_kernel_conformance_harness.py",
+      "python3 scripts/context_budget.py --token-budget 50000 experiments/form-kernel-ts experiments/form-kernel-validate.sh experiments/form-kernel-comparison.md experiments/form-kernel-roadmap.md experiments/form-kernel-ts-comparison.md",
+      "python3 scripts/context_budget.py --token-budget 50000 experiments/form-samples experiments/form-stdlib/tests",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "python3 -m json.tool docs/system_audit/commit_evidence_2026-05-20_kernel_parity_cross_validate.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-20_kernel_parity_cross_validate.json",
+      "git fetch origin main",
+      "git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "A dedicated worktree from origin/main restored the stranded TypeScript Form kernel commits, then wired TypeScript into every current kernel conformance vector beside Python, Rust, and Go. The harness now expects Python/Rust/Go/TypeScript pass status for question effects, core built-ins, infix operators, control flow, and loop/mutation. The experiment validator now compares Go, Rust, and TypeScript on every .fk sample and stdlib test, including multi-file prelude loading. TypeScript list rendering was normalized to Go/Rust output and a stale parser test paren was corrected. Focused TypeScript checks, vector conformance, pytest harness coverage, sibling-kernel differential validation, spec quality, context-budget manifests, index freshness, whitespace checks, evidence validation, rebase, local PR guard, and stale PR follow-through passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deployment attempted for this experiment/spec/test change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is ready; CI and PR checks are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/agent-question-sse-channel.md",
+    "specs/form-question-effects-kernel-conformance.md",
+    "specs/form-core-kernel-conformance.md",
+    "specs/form-infix-kernel-conformance.md",
+    "specs/form-control-flow-kernel-conformance.md",
+    "specs/form-loop-mutation-kernel-conformance.md"
+  ],
+  "task_ids": [
+    "kernel-parity-cross-validate-20260520"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "kernel-parity-review"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "experiments/form-kernel-ts/src/conformance.ts",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/coherence-substrate/kernel-conformance/form-core-builtins.json",
+    "docs/coherence-substrate/kernel-conformance/form-infix-operators.json",
+    "docs/coherence-substrate/kernel-conformance/form-control-flow.json",
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "api/tests/test_kernel_conformance_harness.py::test_default_runs_all_implemented_kernels",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-kernel-roadmap.md"
+  ],
+  "change_files": [
+    "api/tests/test_kernel_conformance_harness.py",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/kernel-conformance/README.md",
+    "docs/coherence-substrate/kernel-conformance/agent-question-effects.json",
+    "docs/coherence-substrate/kernel-conformance/form-control-flow.json",
+    "docs/coherence-substrate/kernel-conformance/form-core-builtins.json",
+    "docs/coherence-substrate/kernel-conformance/form-infix-operators.json",
+    "docs/coherence-substrate/kernel-conformance/form-loop-mutation.json",
+    "docs/system_audit/commit_evidence_2026-05-20_kernel_parity_cross_validate.json",
+    "experiments/form-kernel-comparison.md",
+    "experiments/form-kernel-roadmap.md",
+    "experiments/form-kernel-ts-comparison.md",
+    "experiments/form-kernel-ts/.gitignore",
+    "experiments/form-kernel-ts/README.md",
+    "experiments/form-kernel-ts/package-lock.json",
+    "experiments/form-kernel-ts/package.json",
+    "experiments/form-kernel-ts/src/bench.ts",
+    "experiments/form-kernel-ts/src/compiler.ts",
+    "experiments/form-kernel-ts/src/conformance.ts",
+    "experiments/form-kernel-ts/src/kernel.ts",
+    "experiments/form-kernel-ts/src/main.ts",
+    "experiments/form-kernel-ts/src/reader.ts",
+    "experiments/form-kernel-ts/tsconfig.json",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-samples/README.md",
+    "experiments/form-samples/fact.fk",
+    "experiments/form-stdlib/tests/numeric.fk",
+    "experiments/form-stdlib/tests/parser.fk",
+    "specs/INDEX.md",
+    "specs/agent-question-sse-channel.md",
+    "specs/form-control-flow-kernel-conformance.md",
+    "specs/form-core-kernel-conformance.md",
+    "specs/form-infix-kernel-conformance.md",
+    "specs/form-loop-mutation-kernel-conformance.md",
+    "specs/form-question-effects-kernel-conformance.md"
+  ],
+  "change_intent": "process_only"
+}

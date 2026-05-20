@@ -1,5 +1,5 @@
 ; fact.fk — recursive factorial in Form's bootstrap S-expression syntax.
-; Both kernels read this file directly into recipes and walk it.
+; Sibling kernels read this file directly into recipes and walk it.
 
 (do
     (defn fact (n)

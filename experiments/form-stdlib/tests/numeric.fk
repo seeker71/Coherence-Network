@@ -1,5 +1,5 @@
 ; numeric.fk — exercises abs / min2 / max2 / minimum / maximum / product.
-; Returns an aggregate integer; both kernels must agree.
+; Returns an aggregate integer; sibling kernels must agree.
 ;
 ;   (abs -7)                              → 7
 ;   (min2 3 9)                            → 3
