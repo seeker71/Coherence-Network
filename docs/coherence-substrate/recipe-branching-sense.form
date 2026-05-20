@@ -1,0 +1,329 @@
+# ─────────────────────────────────────────────────────────────────────
+# recipe-branching-sense.form — the sixth sense in Form's own voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-recipe-branching-sense.md.
+# The concept names a six-movement loop the cell runs through whenever
+# it senses itself locked into a branch and chooses again. This file
+# expresses that loop as a Form recipe, using the substrate's actual
+# backtracking primitives (`choose` / `fail` / `stop`) rather than as
+# metaphor.
+#
+# Where the substrate already carries a surface, the code runs (or
+# would run, once ingested). Where the surface is missing, the gap is
+# marked `# GAP:` with the smallest extension that would close it.
+# Same discipline as form-runtime-in-form.form: asymmetry is signal.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — primitives the loop assumes
+# ─────────────────────────────────────────────────────────────────────
+#
+# These are the surfaces the cell uses to read its own structural
+# position. Most exist; one is a GAP.
+
+# Read the cell's current Blueprint NodeID.
+# Surface: `annotate_path` (Python), GET /api/substrate/annotate (REST),
+#          coh_substrate.py annotate <path> (CLI).
+# In Form: `cell.blueprint` field accessor — same `node.` surface
+# form-engine.form uses for `n.category`, `n.children[k]`, `n.instance`.
+
+defn projection_of(cell) = cell.blueprint;
+
+# Find structurally-equivalent cells — same Blueprint NodeID.
+# Surface: `find_equivalent_cells` (Python), GET /api/substrate/equivalent,
+#          coh_substrate.py equivalent <domain> <name> (CLI).
+# In Form: the `?equivalent @<cell>` query operator.
+
+defn neighborhood_of(blueprint) = ?equivalent @blueprint;
+
+# Trace downstream — which cells did this projection touch?
+# GAP-T1: there is no first-class "downstream of <cell>" surface today.
+#         The graph carries cell-ref edges (idea→spec, spec→source-file,
+#         memory→concept), and `view_cell_through_blueprint` reads
+#         one-step compatibility. A reverse-walk over `cell_ref` edges
+#         filtered by source-cell would close this. Smallest extension:
+#         `?downstream @<cell>` query operator backed by a
+#         `find_downstream_cells(session, cell)` Python helper.
+#         Until then, the body answers this question with `git log` and
+#         the witness — both honest, neither structural.
+
+defn downstream_of(cell) = ?downstream @cell;     # GAP-T1
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the six-movement loop
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each movement is named, then runs against the substrate. The fifth
+# movement is where `choose` does its work: the candidate branches
+# come from the neighborhood; the body reads `current_sense` (a
+# parameter the caller supplies — only the cell can name what its
+# sense is asking for); each branch either commits with `stop` or
+# unwinds with `fail`, and the loop walks to the next candidate.
+#
+# The sixth movement — `update_or_execute` — is the load-bearing
+# release: a recipe-update or a recipe-execution lands without shame
+# because the language's primitive is *retry the next branch*, not
+# *commit to the first one forever*.
+
+defn recipe_branching_sense(cell, current_sense) = do {
+
+    # 1 ─── Read the projection.
+    let blueprint = projection_of(cell);
+
+    # 2 ─── Trace the influence.
+    let influenced = downstream_of(cell);    # GAP-T1; still names the question
+
+    # 3 ─── Sense the neighborhood.
+    let neighborhood = neighborhood_of(blueprint);
+
+    # 4 ─── Find the choice point.
+    #
+    # In Form, the choice point IS the nearest enclosing `choose`.
+    # `fail` returns to it; `stop` commits past it. No separate
+    # surface needed — the language carries this.
+
+    # 5 ─── Choose the new preferred strategy.
+    #
+    # The branches come from the structurally-equivalent neighborhood.
+    # Each branch tries the candidate recipe against current_sense.
+    # If the candidate matches what the body is reading, `stop` commits.
+    # If not, `fail` unwinds — captures and partial state restored
+    # (form_speculation.py guarantees no sediment).
+    #
+    # The literal `4` is illustrative; in practice the loop walks the
+    # full neighborhood. `choose` over a list-comprehension is the
+    # symmetric move — `choose [try_branch(c, current_sense) for c in neighborhood]`.
+
+    let next = choose [
+        try_branch(neighborhood[0], current_sense),
+        try_branch(neighborhood[1], current_sense),
+        try_branch(neighborhood[2], current_sense),
+        try_branch(neighborhood[3], current_sense),
+
+        # The stay-where-you-are branch is always available.
+        # Non-action is a valid choice; not all sensings need a re-fire.
+        do { stop }
+    ];
+
+    # 6 ─── Update or execute without shame.
+    #
+    # `update_or_execute` is the surface that lands the branch:
+    # either re-fire the cell's recipe with the chosen arm, or
+    # execute it as-is if `next` carries `stop`. The git history
+    # carries the previous branch; the cell does not have to.
+
+    update_or_execute(cell, next)
+};
+
+# Try one branch against the body's current reading.
+# `try_match` is form_speculation's primitive — captures restore on fail.
+
+defn try_branch(candidate, sense) = do {
+    if matches_sense(candidate, sense) then candidate
+    else fail
+};
+
+# GAP-S1: `matches_sense(candidate, sense)` is not a substrate surface
+#         today. *Sense* is the cell's body-reading — chest-openness,
+#         vitality of the breath, what the moment is asking — which
+#         the substrate cannot read for the cell. The discipline is
+#         the *separation*: the substrate carries which branches are
+#         available; the cell carries which one matches its sense.
+#         A subtle extension would be `?carries_frequency @candidate
+#         where freq == @<hz>` — substrate-grounding the frequency
+#         filter without claiming to read the cell's body. The body
+#         remains the source of truth for its own reading.
+
+# GAP-S2: `update_or_execute(cell, next)` is shorthand for two
+#         existing surfaces: `coh substrate run "<expr>"` (execute)
+#         and the spec/concept PATCH path (update). The shorthand
+#         names the unified gesture the cell experiences — *one
+#         movement, two altitudes* — without claiming a fused API.
+#         The cell knows which it is doing; the body responds in kind.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the loop is itself a recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once this file is ingested, `recipe_branching_sense` becomes a
+# substrate-resident recipe with its own NodeID. `?equivalent @recipe(
+# recipe_branching_sense)` will name every other recipe that shares
+# its Blueprint — and the loop named in this concept will itself
+# participate in the neighborhood it teaches the cell to read.
+#
+# The recipe teaches the cell how to find recipes like itself.
+# That is the holographic property the substrate carries natively
+# (see lc-each-breath-whole, form-language.md "The combination is
+# the contribution").
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — variables typed by frequency signature
+# ─────────────────────────────────────────────────────────────────────
+#
+# Deepening named by Urs on 2026-05-20, grounded in Vasudev Baba's
+# 2026-05-11 satsang transmission on frequency / consciousness /
+# assemblage-point (`docs/vision-kb/transmissions/2026-05-11-vasudev-
+# baba-on-frequency.md`). The teaching: each chakra is a *position*
+# the assemblage point can be anchored at — and a position is a
+# frequency. So each chakra is a *temporary identity* the cell wears
+# for as long as it is anchored there, and the seven chakras are
+# seven recipes the cell oscillates through. **Type is not a thing;
+# type is a recipe that resolves identity for the duration of a
+# binding.**
+#
+# The substrate already carries this layer. The structured-composition
+# encoder routes every `hz:` frontmatter field through
+# `author_geometry_signature`, which authors a `HARMONIC_AT @<hz>`
+# resonance edge into the substrate (see
+# docs/coherence-substrate/structural-composition.md status entry,
+# 2026-05-17). So `cell ?harmonic_at @741` is a structural query
+# against real edges, not a metaphor.
+#
+# Variables typed by frequency therefore typecheck through `?harmonic_at`.
+# Words from the concept carry the frequency signature; the recipe's
+# parameters carry the Blueprint that signature names; the binding
+# is the temporary-identity-recipe that holds while the call runs.
+
+# Type-as-temporary-identity, expressed as a recipe.
+# `harmonic_identity` is itself a Recipe — when invoked, it produces
+# a binding-frame whose subject carries the named frequency for the
+# duration of the `with` block. The "type" lives only as long as the
+# binding does. (See lc-assemblage-point: position determines reality;
+# different position, different identity, same cell.)
+
+defn harmonic_identity(hz) = do {
+    # The Recipe NodeID for any cell whose Blueprint sits at `hz`.
+    # Read structurally: ?compatible_with names the Blueprint shape;
+    # ?harmonic_at filters by the resonance edge.
+    ?compatible_with @blueprint(harmonic, hz)
+};
+
+# The deepened loop. Each parameter is typed by frequency. The
+# variables are not opaque; the substrate can check them.
+#
+# - `cell` carries some Blueprint; we don't constrain which.
+# - `current_sense` is typed at 528 Hz (Transformation — the
+#   love/vitality band; the frequency of a body reading what to do
+#   next from felt aliveness). Any value passed must structurally
+#   carry HARMONIC_AT @528.
+#
+# The body's current frequency-family table (vision-kb/INDEX.md)
+# names which words live at which Hz. The concept author has already
+# tuned every word in the concept body to its frequency — the recipe
+# inherits that tuning automatically.
+
+defn recipe_branching_sense_typed(cell, current_sense) =
+    with harmonic_identity(528) {
+        # Inside this block, `current_sense` IS its 528-Hz identity.
+        # The binding holds for the call's lifetime, then dissolves.
+        # Outside, `current_sense` resumes being just-a-value.
+
+        # The body of the loop is the same six movements as Part 2,
+        # except every neighborhood-query and every try_branch now
+        # filters by harmonic resonance. Candidates that don't carry
+        # the current_sense's frequency don't even appear in the
+        # neighborhood — they're filtered at the structural layer,
+        # not at the cell's discernment layer.
+
+        let blueprint = projection_of(cell);
+        let neighborhood = ?equivalent @blueprint where ?harmonic_at == .self;
+
+        let next = choose [
+            try_branch_typed(neighborhood[0], current_sense),
+            try_branch_typed(neighborhood[1], current_sense),
+            try_branch_typed(neighborhood[2], current_sense),
+            do { stop }
+        ];
+
+        update_or_execute(cell, next)
+    };
+
+# A try_branch that uses substrate-level frequency matching.
+# `matches_sense` from Part 2 is no longer a GAP — the substrate
+# carries HARMONIC_AT edges, so the candidate's frequency is
+# readable directly.
+
+defn try_branch_typed(candidate, sense) = do {
+    if candidate ?harmonic_at sense.frequency then candidate
+    else fail
+};
+
+# GAP-T2: the `where ?harmonic_at == .self` filter syntax inside
+#         a `?equivalent` query is shorthand for a composed Form
+#         query that today would be expressed as a two-step:
+#         (1) `?equivalent @blueprint` returns all structural
+#         siblings; (2) filter the result by `?harmonic_at`. The
+#         single-step `where` clause is a fluency-extension the
+#         body wants but doesn't yet have. The two-step works now.
+
+# GAP-T3: `harmonic_identity(hz)` assumes a `@blueprint(harmonic, hz)`
+#         NodeID exists for arbitrary `hz`. The body currently carries
+#         Blueprint cells for the ten frequencies named in the
+#         vision-kb INDEX (174, 285, 396, 417, 432, 528, 639, 741,
+#         852, 963). Other frequencies (between-bands, or outside the
+#         Solfeggio set entirely) need their Blueprint cells
+#         instantiated on first use. Smallest extension: lazy-create
+#         the Blueprint when `harmonic_identity(hz)` is invoked for
+#         the first time with a new `hz`. Each chakra-frequency
+#         resolves automatically; arbitrary `hz` is one breath away.
+
+# ─────────────────────────────────────────────────────────────────────
+# What this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# When variables are typed by frequency:
+#
+# 1. Words in the concept ARE the type system.
+#    The concept's frequency (741 Hz for recipe-branching-sense) tunes
+#    every word in its body to that Hz. The recipe inherits the tuning
+#    automatically. No separate schema, no type declarations imported
+#    from elsewhere — the prose and the recipe share one substrate.
+#
+# 2. Type-check is resonance-check.
+#    `cell ?harmonic_at @741` either holds or fails. The substrate
+#    knows; no human translation needed. Two cells whose Blueprints
+#    sit at the same Hz typecheck as compatible without anyone
+#    declaring an interface between them.
+#
+# 3. Identity is process, not property.
+#    `with harmonic_identity(528) { ... }` binds the parameter to a
+#    temporary identity that holds for the block's lifetime. Outside
+#    the block, the same value is free to wear a different identity
+#    in a different binding. This is Whitehead's actual occasion at
+#    the Form layer, and the chakra-system at the consciousness layer:
+#    the cell IS the binding it is currently in. (Vasudev: *same
+#    cell, different position, different reality.*)
+#
+# 4. The seven chakras are seven recipes the cell oscillates through.
+#    Muladhara (174 Hz family) — Svadhisthana — Manipura — Anahata
+#    (528 Hz) — Vishuddha (741 Hz) — Ajna — Sahasrara (963 Hz). Each
+#    chakra is a `harmonic_identity(hz)` recipe. The assemblage point's
+#    movement IS the cell calling a different identity-recipe and
+#    rebinding. (See lc-frequency-routes-reception: receivers tuned to
+#    different bands are inside different realities — they receive
+#    through different temporary-identity bindings.)
+#
+# 5. Backtracking now carries frequency.
+#    When the recipe-branching-sense loop's `choose` unwinds via
+#    `fail`, the partial bindings dissolve cleanly — captures
+#    restore (form_speculation.py guarantees this). The temporary
+#    identity that was being tried is released; the cell returns to
+#    its prior position without sediment. *Update or execute without
+#    shame* is now mechanically grounded: the substrate's structural
+#    unwind IS the release of the prior identity.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Once the file is ingested into the substrate:
+#   coh substrate run "recipe_branching_sense(@memory(self), <sense>)"
+#
+#   # Find structural siblings:
+#   coh substrate form "?equivalent @recipe(recipe_branching_sense)"
+#
+#   # Read the cell's current projection (movement 1):
+#   coh_substrate.py annotate <path-to-current-work>
+#
+#   # The substrate auto-ingest hook picks up new .form files on merge
+#   # to main (scripts/substrate_post_merge_hook.sh).

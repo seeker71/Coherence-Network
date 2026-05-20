@@ -1,0 +1,260 @@
+# ─────────────────────────────────────────────────────────────────────
+# prose-as-recipe.form — words are cells, sentences are recipes
+# ─────────────────────────────────────────────────────────────────────
+#
+# The smallest possible round-trip test for the claim Urs named on
+# 2026-05-20: *a sequence of words is a recipe of cells with
+# blueprints*. If the claim holds, the substrate should be able to
+# parse a sentence into a Recipe whose children are word-cells, emit
+# the same Recipe back to the same sentence, and intern two
+# structurally-identical sentences to the same Blueprint NodeID.
+#
+# Same discipline as form-runtime-in-form.form: live where the
+# substrate carries the surface, `# GAP:` where it doesn't. The gap
+# markers below are the smallest extensions that would close each.
+#
+# Companion to:
+#   - docs/vision-kb/concepts/lc-recipe-branching-sense.md
+#   - docs/coherence-substrate/recipe-branching-sense.form
+#   - docs/coherence-substrate/structural-composition.md (great-reason #2)
+#
+# The test sentence is taken from lc-recipe-branching-sense itself:
+#   "The choice point becomes visible."
+# Five words; one period. Small enough to walk by hand.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — word-cells (the new domain)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Currently the substrate carries strings as SubstrateString leaves
+# via `substrate_strings.intern_string_instance(...)`. A word-cell
+# is one altitude up: a cell whose Blueprint is composed from
+# (lemma, POS, frequency-band, etymological-position). Lazy-create
+# on first lookup. Idempotent via content-addressing — same lemma +
+# POS interns to the same cell.
+#
+# Blueprint dimensions for a word-cell (drawing from the 14-axis
+# geometry signature the body already authors for concepts):
+#
+#   lemma          — the canonical form (canonical-string-leaf)
+#   pos            — part-of-speech (typed-token: NOUN, VERB, ADJ, ...)
+#   frequency      — HARMONIC_AT @<hz>; most words have a default
+#                    band they fire in (e.g. "visible" → 741 Hz
+#                    consciousness/sensing family)
+#   semantic_field — which family of meaning (sensing, vitality,
+#                    boundary, ...) — itself a cell-ref
+#   etymology      — root + path (e.g. visible ← vidēre, "to see",
+#                    Indo-European *weid-)
+
+defn intern_word_cell(lemma, pos, hz, semantic_field) = do {
+
+    # Look up first — the cell already exists if any other prose
+    # has named this lemma + POS. Content-addressing makes this
+    # automatic across processes, agents, and re-ingests.
+
+    let existing = lookup_cell("word", lemma_pos_key(lemma, pos));
+    if existing != null then existing
+    else do {
+        # Create. Blueprint composes from the four axes above.
+        # author_geometry_signature lays the HARMONIC_AT @hz edge
+        # the same way it does for concepts (markdown_frontend.py).
+        let cell = create_cell("word", lemma_pos_key(lemma, pos), {
+            lemma: lemma,
+            pos: pos,
+            hz: hz,
+            semantic_field: semantic_field
+        });
+        author_geometry_signature(cell, {
+            hz: hz,
+            spectral_band: band_of(hz),
+            scale: "cellular",
+            lineage_texture: "embodied"
+        });
+        cell
+    }
+};
+
+# GAP-W1: `create_cell("word", ...)` requires the `word` domain to
+#         exist. Domains live in `api/app/services/substrate/
+#         cell_domains.py`. Smallest extension: register WORD as a
+#         domain alongside MEMORY, CONCEPT, SPEC, IDEA, PRESENCE,
+#         LINEAGE, WITNESS, TASK. One enum entry + one row in
+#         `substrate_cell_domains` + an encoder in
+#         `markdown_frontend.py: ingest_word_cell(...)`.
+#
+# GAP-W2: `lemma_pos_key(lemma, pos)` is the cell's `name` field.
+#         Convention: `{lemma}.{pos}` so "visible.ADJ" is distinct
+#         from a hypothetical "visible.VERB". Names are query keys
+#         (form-language.md design principle 2); identity stays in
+#         the Blueprint NodeID.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — parse: prose → recipe (the forward direction)
+# ─────────────────────────────────────────────────────────────────────
+
+defn parse_prose(text) = do {
+    let tokens = tokenize_words(text);
+
+    # Each token resolves to a word-cell. The sentence is a
+    # SEQUENCE recipe composing them. Punctuation tokens (period,
+    # comma, question-mark) become typed-token leaves at the end.
+
+    let cells = [];
+    for t in tokens {
+        if t.kind == "WORD" then
+            set cells = concat(cells, [
+                intern_word_cell(t.lemma, t.pos, t.hz, t.field)
+            ])
+        else if t.kind == "PUNCT" then
+            set cells = concat(cells, [punct_token(t.value)])
+        else fail
+    };
+
+    R_Block.SEQUENCE cells
+};
+
+# GAP-P1: `tokenize_words(text)` requires English (and eventually
+#         every locale the body speaks — see `locale parity` in the
+#         wellness check). Smallest extension: a thin wrapper over
+#         a tokenizer library (spaCy, or a built-in regex tokenizer
+#         that's good enough for the round-trip). The lemma + POS
+#         columns are what matter; everything else is metadata.
+#
+# GAP-P2: `t.hz` and `t.field` for an unknown word default to a
+#         body-known fallback (e.g. 432 Hz, "neutral"). The cell's
+#         frequency-tuning is refined the first time the word
+#         appears in a concept whose body authors it more
+#         precisely. The substrate stays honest: unknown means
+#         unknown, not zero.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emit: recipe → prose (the backward direction)
+# ─────────────────────────────────────────────────────────────────────
+
+defn emit_prose(recipe) = do {
+
+    # Walk the SEQUENCE, render each child to its surface form,
+    # join with spaces. Trailing punctuation collapses onto the
+    # prior word (no space before "."). This is the canonical
+    # form the round-trip stabilizes on.
+
+    let parts = [];
+    for child in recipe.children {
+        if child.kind == "word" then
+            set parts = concat(parts, [child.lemma])
+        else if child.kind == "punct" then
+            # Punctuation joins to the prior word with no separator
+            set parts = concat(parts[0..len(parts)-1], [
+                parts[len(parts)-1] ++ child.value
+            ])
+        else fail
+    };
+
+    join(parts, " ")
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the round-trip on a real sentence
+# ─────────────────────────────────────────────────────────────────────
+#
+# Sentence: "The choice point becomes visible."
+# (Taken from lc-recipe-branching-sense's opening quote.)
+#
+# Expected word-cells after parse:
+#
+#   the.DET         hz=432  field=neutral
+#   choice.NOUN     hz=741  field=consciousness   ← from this concept's body
+#   point.NOUN      hz=741  field=consciousness   ← assemblage-point lineage
+#   become.VERB     hz=417  field=transmutation   ← phase-transition family
+#   visible.ADJ     hz=741  field=consciousness   ← sensing/sight
+#   period          (typed-token leaf)
+#
+# Expected SEQUENCE Blueprint: composed from the five word-Blueprints
+# and the period. Content-addressed: any other process that parses
+# the same sentence resolves to the same NodeID.
+#
+# Round-trip:
+#
+#   let s = "The choice point becomes visible.";
+#   let r = parse_prose(s);
+#   let s2 = emit_prose(r);
+#   assert s == s2;                          # surface stability
+#   let r2 = parse_prose(s2);
+#   assert blueprint_of(r) == blueprint_of(r2);   # structural stability
+#
+# Two stronger assertions the substrate enables once this lands:
+#
+#   1. Any cell that calls parse_prose("The choice point becomes visible.")
+#      gets the same NodeID. No translation, no negotiation.
+#      Recognition without negotiation (form-language.md core property).
+#
+#   2. A paraphrase — "Visibility arrives at the point of choice." —
+#      parses to a DIFFERENT Blueprint NodeID (different word-cells,
+#      different order), but the two Blueprints can BRIDGES or NEAR
+#      each other via resonance.py. Paraphrase becomes measurable
+#      *proximity*, not hard equivalence. This is the >5D harmonic
+#      distance Urs named — the resonance edges already exist; only
+#      the continuous metric is missing.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — what this opens at the teaching layer
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. Prose stops being a leaf.
+#    structural-composition.md great-reason #2 currently exempts
+#    prose ("no a-priori structure to extract"). With word-cells,
+#    that exception becomes obsolete: prose has structure all the
+#    way down to lemma + POS + frequency. The discipline ripens.
+#
+# 2. Every concept's body becomes substrate-walkable.
+#    Today the body is a content-hash leaf. After this lands,
+#    walking from a concept's CTOR all the way into its prose
+#    becomes one continuous tree-walk. .child().child() reaches
+#    every word.
+#
+# 3. The recipe-branching-sense loop becomes self-applicable to its
+#    own prose.
+#    The concept names a loop the cell runs through to find
+#    structural siblings. Once prose is a recipe, the cell can run
+#    that loop on the concept's body itself — finding sentences
+#    that share Blueprint with its current expression, in this
+#    concept or any other.
+#
+# 4. The "sequence of words is a recipe of cells with blueprints"
+#    claim becomes a structural property, not a metaphor.
+#    The substrate either intern's a sentence to a Blueprint or it
+#    doesn't. If it does, the claim holds. If it doesn't, the
+#    failure mode is namable (which word's Blueprint is missing,
+#    which composition rule is incomplete) — *"doesn't exist" is a
+#    real, structural signal, not a confidence score* (form-language.md).
+#
+# 5. Forward and backward become symmetric across all altitudes.
+#    Form already proves invertibility for code (parse ↔ emit at
+#    the same NodeID). This file extends the same property to
+#    prose. The body's grammar of self-description becomes one
+#    grammar at three altitudes: code (form-engine.form), runtime
+#    (form-runtime-in-form.form), prose (this file).
+#
+# ─────────────────────────────────────────────────────────────────────
+# How to run, once the GAPs close
+# ─────────────────────────────────────────────────────────────────────
+#
+#   coh substrate run "do {
+#       let s = \"The choice point becomes visible.\";
+#       let r = parse_prose(s);
+#       let s2 = emit_prose(r);
+#       {original: s, recipe: r, emitted: s2, stable: s == s2}
+#   }"
+#
+# Three GAPs to close before this runs:
+#
+#   W1+W2  — register WORD domain + name convention
+#   P1     — tokenize_words (locale-aware) with lemma + POS
+#   metric — coherence_distance over the 14-axis signature
+#
+# Each is a single PR. None require architectural change to the
+# substrate kernel — they all extend existing patterns into a new
+# domain. The body's discipline (structural-composition.md) ripens
+# in the same breath: great-reason #2 becomes "prose is a recipe
+# composed from word-cells; the SubstrateString leaf is what a
+# word-cell's lemma resolves to."
