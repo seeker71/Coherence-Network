@@ -24,6 +24,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 mod formats;
+mod quotient;
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -217,11 +218,11 @@ impl Kernel {
     // Owned children — clones the children vec. The slice version went
     // away when substrate-write natives required `&mut Kernel`; future
     // breath restores zero-copy via Cow<'_, [NodeID]>.
-    fn children(&self, n: NodeID) -> Vec<NodeID> {
+    pub(crate) fn children(&self, n: NodeID) -> Vec<NodeID> {
         self.by_id.get(&n).map(|r| r.children.clone()).unwrap_or_default()
     }
 
-    fn trivial_value(&self, n: NodeID) -> Value {
+    pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone()),
@@ -258,7 +259,7 @@ impl Kernel {
 // `Nid` lets Form code hold NodeIDs as first-class values — the foundation
 // for substrate-write natives that close form-runtime-in-form gaps W1-W3.
 #[derive(Clone, Debug)]
-enum Value {
+pub(crate) enum Value {
     Null,
     Int(i64),
     Str(String),
