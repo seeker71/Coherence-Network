@@ -887,9 +887,129 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
       const items = kids.map((c) => walk(k, c, frame));
       return { kind: "list", list: items };
     }
+    case RBasic.INDUCTIVE:
+      // INDUCTIVE recipes are type definitions. Walking one yields the
+      // NodeID of the type itself.
+      return { kind: "nodeid", nodeid: node };
+    case RBasic.CONSTRUCTOR:
+      return walkConstructor(k, node, kids, frame);
+    case RBasic.CHOICE:
+      return walkChoice(k, node, kids, frame);
+    case RBasic.QUOTIENT:
+      // QUOTIENT recipes — walking one yields its NodeID so structural
+      // reasoning over equivalence-class types can address them.
+      return { kind: "nodeid", nodeid: node };
     default:
       throw new Error(`walk: unsupported RBasic type ${cat.type}`);
   }
+}
+
+// CONSTRUCTOR recipe shape:
+//   children: [inductive-ref, ctor-name-trivial, ctor-index-trivial, args...]
+function walkConstructor(
+  k: Kernel,
+  _node: NodeID,
+  kids: readonly NodeID[],
+  frame: Frame,
+): Value {
+  if (kids.length < 3) {
+    throw new Error("constructor: need 3+ children (inductive, name, index)");
+  }
+  const inductive = kids[0]!;
+  const nameNode = kids[1]!;
+  const indexNode = kids[2]!;
+  if (nameNode.level !== Level.TRIVIAL || nameNode.type !== Triv.STRING) {
+    throw new Error("constructor: name must be a string trivial");
+  }
+  if (indexNode.level !== Level.TRIVIAL || indexNode.type !== Triv.INT32) {
+    throw new Error("constructor: index must be an int trivial");
+  }
+  const args: Value[] = [];
+  for (let i = 3; i < kids.length; i++) {
+    args.push(walk(k, kids[i]!, frame));
+  }
+  const indexVal = k.trivialValue(indexNode);
+  return {
+    kind: "ctor",
+    inductive,
+    ctor_name: k.nameStr(nameNode.inst),
+    ctor_index: indexVal.kind === "int" ? indexVal.int : 0,
+    args,
+  };
+}
+
+// CHOICE recipe shape:
+//   children: [scrutinee, arm0-ctor-name, arm0-body, ...]
+function walkChoice(
+  k: Kernel,
+  _node: NodeID,
+  kids: readonly NodeID[],
+  frame: Frame,
+): Value {
+  if (kids.length < 1) throw new Error("choice: need scrutinee");
+  if ((kids.length - 1) % 2 !== 0) {
+    throw new Error("choice: arms must be (name, body) pairs");
+  }
+  const scrutinee = walk(k, kids[0]!, frame);
+  if (scrutinee.kind !== "ctor") {
+    throw new Error(`choice: scrutinee must be ctor value (got ${scrutinee.kind})`);
+  }
+  const armNames: string[] = [];
+  const armBodies: NodeID[] = [];
+  for (let i = 1; i < kids.length; i += 2) {
+    const nameNode = kids[i]!;
+    if (nameNode.level !== Level.TRIVIAL || nameNode.type !== Triv.STRING) {
+      throw new Error("choice: arm name must be string trivial");
+    }
+    armNames.push(k.nameStr(nameNode.inst));
+    armBodies.push(kids[i + 1]!);
+  }
+  // Totality check — only when scrutinee carries an inductive ref
+  const indRecipe = k.recipeAt(scrutinee.inductive);
+  if (indRecipe !== undefined && indRecipe.category.type === RBasic.INDUCTIVE) {
+    // Walk inductive's constructors to find missing arms
+    const ctorChildren = indRecipe.children.slice(2); // skip name + params
+    const ctorNames: string[] = [];
+    for (const ctorNid of ctorChildren) {
+      const ctorRecipe = k.recipeAt(ctorNid);
+      if (ctorRecipe && ctorRecipe.category.type === RBasic.CONSTRUCTOR) {
+        const cName = ctorRecipe.children[1];
+        if (cName && cName.level === Level.TRIVIAL && cName.type === Triv.STRING) {
+          ctorNames.push(k.nameStr(cName.inst));
+        }
+      }
+    }
+    const missing = ctorNames.filter((n) => !armNames.includes(n));
+    if (missing.length > 0) {
+      throw new Error(
+        `choice: non-total — missing constructor${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}`,
+      );
+    }
+  }
+  // Dispatch
+  for (let i = 0; i < armNames.length; i++) {
+    if (armNames[i] === scrutinee.ctor_name) {
+      const body = armBodies[i]!;
+      const bodyRecipe = k.recipeAt(body);
+      if (bodyRecipe === undefined) {
+        return walk(k, body, frame);
+      }
+      if (bodyRecipe.category.type === RBasic.FNDEF) {
+        const params = k.children(bodyRecipe.children[1]!);
+        const armFrame = new Frame(frame);
+        for (let j = 0; j < params.length; j++) {
+          const p = params[j]!;
+          if (p.level !== Level.TRIVIAL || p.type !== Triv.STRING) {
+            throw new Error("choice: arm params must be string trivials");
+          }
+          armFrame.bind(p.inst, scrutinee.args[j] ?? { kind: "null" });
+        }
+        return walk(k, bodyRecipe.children[2]!, armFrame);
+      }
+      return walk(k, body, frame);
+    }
+  }
+  throw new Error(`choice: no arm matches constructor ${scrutinee.ctor_name}`);
 }
 
 function expectInt(v: Value, op: string): number {
