@@ -40,6 +40,11 @@ export const Level = {
 } as const;
 
 // RBasic — aligned with api/app/services/substrate/category.py
+//
+// Higher-math arms (slots 70+) — substrate cells govern their semantics:
+//   QUOTIENT (70): canonicalization under an equivalence relation —
+//     see ./quotient.ts. The category instance carries the equivalence
+//     family code; children are [carrier-recipe, equivalence-recipe].
 export const RBasic = {
   BLOCK: 9,
   COND: 11,
@@ -50,6 +55,10 @@ export const RBasic = {
   FNCALL: 32,
   IDENT: 33,
   LIST: 34,
+  CHOICE: 35,           // pattern-match arm (extended in #21 with totality)
+  QUOTIENT: 70,         // #19 — equivalence-class types
+  INDUCTIVE: 71,        // #21 — algebraic datatypes
+  CONSTRUCTOR: 72,      // #21 — constructor application / value-shape
 } as const;
 
 // Triv — trivial RTypes.
@@ -75,6 +84,10 @@ export const Triv = {
   UINT16: 11, // inline
   UINT32: 12, // inline
   UINT64: 13, // overflow table
+  QUOTIENT_LEAF: 14, // canonical-form leaf produced by a QUOTIENT canonicalization;
+  //                     the inst indexes a (quotient-recipe, canonical-children-tuple)
+  //                     entry in the kernel's quotient cache. See ./quotient.ts.
+  CONSTRUCTOR_TAG: 15, // #21 — small-int tag used by walker for ctor values
 } as const;
 
 // MATH instance encoding — width-aware. The low nibble carries the op
@@ -490,6 +503,8 @@ export class Kernel {
         return "<closure>";
       case "nodeid":
         return `@${nodeKey(v.nodeid)}`;
+      case "ctor":
+        return `${v.ctor_name}(${v.args.map((a) => this.render(a)).join(", ")})`;
     }
   }
 
@@ -690,6 +705,8 @@ export class Kernel {
         return "<closure>";
       case "nodeid":
         return `@${nodeKey(v.nodeid)}`;
+      case "ctor":
+        return `${v.ctor_name}(${v.args.map((a) => this.render(a)).join(", ")})`;
     }
   }
 }
@@ -777,7 +794,14 @@ export type Value =
   | { kind: "bool"; bool: boolean }
   | { kind: "list"; list: Value[] }
   | { kind: "closure"; closure: Closure }
-  | { kind: "nodeid"; nodeid: NodeID };
+  | { kind: "nodeid"; nodeid: NodeID }
+  | { // #21 — INDUCTIVE-typed value (constructor application result)
+      kind: "ctor";
+      inductive: NodeID;
+      ctor_name: string;
+      ctor_index: number;
+      args: Value[];
+    };
 
 export interface Closure {
   readonly params: readonly NameID[];

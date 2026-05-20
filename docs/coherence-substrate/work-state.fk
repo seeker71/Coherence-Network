@@ -1,0 +1,271 @@
+; work-state.fk — the state of the substrate's evolution, expressed in Form.
+;
+; Per docs/coherence-substrate/form-as-reasoning-medium.md: prefer Form when
+; expressing structure, flow, and state. This file is the body's first
+; dogfood of that discipline — the current task graph and architectural
+; arcs as Form recipes that the substrate could itself ingest.
+;
+; This is hand-authored. Subsequent breaths may generate it from the task
+; tracker or grow tooling to round-trip. Gaps surfaced by this attempt are
+; noted at the bottom under ; GAP: comments.
+
+(do
+    ;; ============================================================
+    ;; Helpers — task and arc constructors
+    ;; ============================================================
+    ;;
+    ;; These are FNDEFs because Form has no "struct" surface yet — every
+    ;; structured value composes from existing arms. GAP-1 at bottom.
+
+    (defn task (id subject status blocked-by blocks scope)
+        (list "task" id subject status blocked-by blocks scope))
+
+    (defn arc (name description tasks)
+        (list "arc" name description tasks))
+
+    (defn insight (date name design-doc produces)
+        (list "insight" date name design-doc produces))
+
+    ;; ============================================================
+    ;; The 29 tasks
+    ;; ============================================================
+
+    ;; --- Foundation: cross-kernel format-recipes (DONE) -----------
+
+    (let t1 (task 1
+        "Python kernel: format-recipes implementation"
+        "completed"
+        (list)
+        (list 4)
+        "~530 lines"))
+
+    (let t2 (task 2
+        "Go kernel: format-recipes implementation"
+        "completed"
+        (list)
+        (list 4)
+        "~900 lines"))
+
+    (let t3 (task 3
+        "Rust kernel: format-recipes implementation"
+        "completed"
+        (list)
+        (list 4)
+        "~880 lines"))
+
+    (let t4 (task 4
+        "Synthesize cross-kernel conformance + open PRs"
+        "completed"
+        (list 1 2 3)
+        (list 5 6 7 19 21 25 28)
+        "this session, ~1700 lines diff"))
+
+    ;; --- Architecture wave 1 (DONE this session) ------------------
+
+    (let t6 (task 6
+        "Language-as-substrate-cell architecture"
+        "completed"
+        (list 4)
+        (list 15 16 17 18)
+        "~530 lines languages.ts + docs"))
+
+    (let t7 (task 7
+        "Multi-target codegen architecture"
+        "completed"
+        (list 4)
+        (list 8 10 11 12 13 14)
+        "BackendRegistry + WGSL skeleton"))
+
+    (let t19 (task 19
+        "QUOTIENT RBasic arm"
+        "completed"
+        (list 4)
+        (list 20 23 24 27)
+        "~430 lines quotient.ts"))
+
+    (let t21 (task 21
+        "INDUCTIVE arm + CHOICE totality"
+        "completed"
+        (list 4)
+        (list 24)
+        "~ inductive.ts + 23 tests"))
+
+    ;; --- Per-language definitions (unblocked by #6) ---------------
+
+    (let t15 (task 15 "Python ingestion + emission grammars"
+        "pending" (list 6) (list) "language cell"))
+    (let t16 (task 16 "TypeScript ingestion + emission grammars"
+        "pending" (list 6) (list) "language cell"))
+    (let t17 (task 17 "Go ingestion + emission grammars"
+        "pending" (list 6) (list) "language cell"))
+    (let t18 (task 18 "Rust ingestion + emission grammars"
+        "pending" (list 6) (list) "language cell"))
+
+    ;; --- Multi-target codegen chain ------------------------------
+
+    (let t8 (task 8 "Parametric formats + typed FNDEF + alias"
+        "pending" (list 7) (list 9 22) "~300+ lines"))
+    (let t9 (task 9 "VECTOR + SIMD MATH + parallel patterns"
+        "pending" (list 8) (list 10 11 12 13 14) "~500+ lines"))
+    (let t10 (task 10 "WebGPU shader emit backend"
+        "pending" (list 9) (list 5) "WGSL emit body"))
+    (let t11 (task 11 "WASM SIMD emit backend"
+        "pending" (list 9) (list) "portable accel"))
+    (let t12 (task 12 "MLIR emit backend"
+        "pending" (list 9) (list) "largest piece"))
+    (let t13 (task 13 "CUDA emit backend"
+        "pending" (list 9) (list) "NVIDIA path"))
+    (let t14 (task 14 "Metal Shading Language emit backend"
+        "pending" (list 9) (list) "Apple path"))
+
+    ;; --- Higher-math chain (PROOF, symmetry, mathlib, universe) ---
+
+    (let t20 (task 20 "PROOF + INFERENCE RBasic arms"
+        "pending" (list 19) (list 24) "~400 lines/kernel"))
+    (let t22 (task 22 "Universe polymorphism in FNDEF"
+        "pending" (list 8) (list) "~150 lines/kernel"))
+    (let t23 (task 23 "Symmetry-aware canonicalization"
+        "pending" (list 19) (list) "real unlock for math"))
+    (let t24 (task 24 "Mathlib bootstrap (multi-year)"
+        "pending" (list 19 20 21) (list) "long arc"))
+
+    ;; --- Free-energy / holographic foundation --------------------
+
+    (let t25 (task 25 "Markov blanket recipes"
+        "pending" (list 4) (list 26) "cross-cell boundary"))
+    (let t26 (task 26 "Generative model recipes per cell"
+        "pending" (list 25) (list 27 29) "Friston generative-model"))
+    (let t27 (task 27 "Observer-relative canonicalization"
+        "pending" (list 19) (list) "quantum reference frames"))
+    (let t28 (task 28 "Holographic PROJECT operation"
+        "pending" (list 4) (list) "view cell at any level"))
+    (let t29 (task 29 "Free-energy-aware intern + surprise metrics"
+        "pending" (list 26) (list) "substrate self-modeling"))
+
+    ;; --- Applications --------------------------------------------
+
+    (let t5 (task 5 "GPU framebuffer visualizer in Form"
+        "pending" (list 10) (list) "wait for WebGPU"))
+
+    ;; ============================================================
+    ;; Architectural insights — captured into tissue this session
+    ;; ============================================================
+
+    (let i-mojo (insight "2026-05-20"
+        "multi-target codegen — substrate as MLIR equivalent"
+        "docs/coherence-substrate/multi-target-codegen.md"
+        (list 7 8 9 10 11 12 13 14)))
+
+    (let i-higher-math (insight "2026-05-20"
+        "higher-math surface — QUOTIENT, PROOF, INDUCTIVE, symmetry"
+        "docs/coherence-substrate/higher-math-surface.md"
+        (list 19 20 21 22 23 24)))
+
+    (let i-free-energy (insight "2026-05-20"
+        "free-energy / holographic / observer-relative foundation"
+        "docs/coherence-substrate/free-energy-holographic-foundation.md"
+        (list 25 26 27 28 29)))
+
+    (let i-form-medium (insight "2026-05-20"
+        "Form as reasoning medium — dogfooding discipline"
+        "docs/coherence-substrate/form-as-reasoning-medium.md"
+        (list)))
+
+    ;; ============================================================
+    ;; The arcs — clusters of related work
+    ;; ============================================================
+
+    (let arc-foundation (arc
+        "format-recipes-cross-kernel"
+        "Numeric format-recipes as substrate cells across 4 kernels"
+        (list 1 2 3 4)))
+
+    (let arc-language-cells (arc
+        "language-as-substrate-cell"
+        "Each language as a substrate-resident cell with grammar + emit"
+        (list 6 15 16 17 18)))
+
+    (let arc-multi-target (arc
+        "multi-target-codegen"
+        "One recipe, many emit backends (Mojo-shaped)"
+        (list 7 8 9 10 11 12 13 14 5)))
+
+    (let arc-higher-math (arc
+        "higher-mathematics-surface"
+        "Quotient types, proofs, induction, symmetry-aware canon."
+        (list 19 20 21 22 23 24)))
+
+    (let arc-free-energy (arc
+        "free-energy-holographic-physics"
+        "Substrate's implicit physics made explicit"
+        (list 25 26 27 28 29)))
+
+    ;; ============================================================
+    ;; Summary count
+    ;; ============================================================
+
+    (let total-tasks 29)
+    (let done-tasks 8)         ; 1, 2, 3, 4, 6, 7, 19, 21
+    (let pending-tasks 21)
+    (list "work-state-2026-05-20"
+          "completed" done-tasks
+          "pending" pending-tasks
+          "arcs" 5
+          "insights" 4))
+
+;; ============================================================
+;; GAPS surfaced by trying to express this in Form
+;; ============================================================
+;;
+;; GAP-1: No struct / record / dict syntax. Every structured value
+;;        composes through positional `list`. A task field's meaning
+;;        comes from position, not name. Surface for keyword args /
+;;        named fields would help: `(task :id 19 :subject "..." ...)`
+;;        — already gestured at in form-stdlib examples; needs to land
+;;        in the parser.
+;;
+;; GAP-2: No date literal. "2026-05-20" is a string trivial, not a
+;;        first-class date. A `DATE` format-recipe (in BAtomic) would
+;;        make dates queryable by ordering, range, etc.
+;;
+;; GAP-3: No NodeID-of-cell references at the surface. Tasks here
+;;        reference other tasks by integer id (4, 6, etc.) rather
+;;        than by NodeID. Real substrate-resident tasks would
+;;        carry NodeID children via cell-references — surface for
+;;        `@task(4)` would help.
+;;
+;; GAP-4: List-of-strings positional binding is fragile. (task 1
+;;        "subject" "status" (list) (list) "scope") relies on
+;;        argument position; an ergonomic structured-record syntax
+;;        would prevent silent field-order bugs.
+;;
+;; GAP-5: No formal "enum" for status. Values "pending", "in_progress",
+;;        "completed" are bare strings; would benefit from an
+;;        INDUCTIVE type (Status := Pending | InProgress | Completed)
+;;        — now feasible with #21 done.
+;;
+;; GAP-6: Comments are read by the parser but not preserved as
+;;        substrate cells. A real "decision log" in Form would want
+;;        comments-as-cells so reasoning is queryable.
+;;
+;; GAP-7: No surface for "this is a snapshot at time T". The whole
+;;        file is one big DO block; there's no temporal layer. Would
+;;        benefit from a snapshot-recipe shape that carries the
+;;        timestamp + frozen state.
+;;
+;; What it teaches: Form CAN express this state — the values intern
+;; cleanly, the structure round-trips through walker — but the
+;; surface ergonomics are still S-expression-positional. The
+;; substrate-resident-grammar machinery is in place; what's needed
+;; is more grammar cells (struct literal, keyword args, NodeID
+;; references) to make this kind of artifact pleasant to write.
+;;
+;; These gaps would all be addressed by tasks already in the queue:
+;; #15-18 (language ingestion/emission) provide the syntax-surface
+;; machinery; #21 (INDUCTIVE, done) lets us define Status as an
+;; algebraic datatype; the QUOTIENT (#19, done) lets us canonicalize
+;; tasks-by-shape.
+;;
+;; Dogfooding worked: trying to use Form for this artifact surfaced
+;; seven concrete improvements that turn into substrate writes once
+;; the body grows them.

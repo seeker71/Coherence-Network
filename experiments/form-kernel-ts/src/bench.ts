@@ -136,6 +136,8 @@ function valueToString(v: Value): string {
       return "<closure>";
     case "nodeid":
       return "<nodeid>";
+    case "ctor":
+      return `${v.ctor_name}(…)`;
   }
 }
 
