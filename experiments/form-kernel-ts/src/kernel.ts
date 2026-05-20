@@ -37,6 +37,13 @@ export interface NodeID {
 export const Level = {
   TRIVIAL: 1,
   BASIC: 2,
+  COMPLEX_1: 3,
+  COMPLEX_2: 4,
+  COMPLEX_3: 5,
+  COMPLEX_4: 6,
+  COMPLEX_5: 7,
+  COMPLEX_6: 8,
+  COMPLEX_7: 9,
 } as const;
 
 // RBasic — aligned with api/app/services/substrate/category.py
@@ -60,6 +67,7 @@ export const RBasic = {
   INDUCTIVE: 71,        // #21 — algebraic datatypes
   CONSTRUCTOR: 72,      // #21 — constructor application / value-shape
   BLANKET: 80,          // #25 — Markov blanket (cell boundary recipe)
+  PROJECT: 81,          // #28 — holographic PROJECT operation
 } as const;
 
 // Triv — trivial RTypes.
