@@ -2,7 +2,7 @@
 ; Loaded after form-stdlib/core.fk and form-stdlib/parser.fk.
 ;
 ; Grammar this breath (2c): full arithmetic, parens, identifiers, fncalls,
-; comparisons, if/then/else, defn, ; for statement sep. Both kernels must
+; comparisons, if/then/else, defn, ; for statement sep. Sibling kernels must
 ; produce identical recipes (content-addressing → identical NodeIDs) and
 ; walk to identical values.
 ;
@@ -64,4 +64,4 @@
     (add (eval-form "let x = 5; x + 10")
     (add (eval-form "let x = 3; let y = 4; x * y")
     (add (eval-form "let x = 5; let y = x + 2; x * y")
-         (eval-form "let x = 10; if x > 5 then x * 2 else x"))))))))))))))))))))))))))
+         (eval-form "let x = 10; if x > 5 then x * 2 else x")))))))))))))))))))))))))

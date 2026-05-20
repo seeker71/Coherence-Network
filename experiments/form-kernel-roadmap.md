@@ -1,12 +1,12 @@
 # form-kernel — the path to "all of Form in Form + kernel"
 
-The body holds two kernel implementations (Go, Rust) of the smallest substrate-walker host. From here, **everything else lives in Form itself**. The kernels are siblings; they keep each other honest. Both run every Form source file the body produces; any divergence is a bug in exactly one of three places — Go kernel, Rust kernel, or an undocumented spec corner. All three are findable, only because two implementations exist.
+The body holds three kernel implementations (Go, Rust, TypeScript) of the smallest substrate-walker host. From here, **everything else lives in Form itself**. The kernels are siblings; they keep each other honest. All three run every Form source file the body produces; any divergence is a bug in exactly one of four places — Go kernel, Rust kernel, TypeScript kernel, or an undocumented spec corner. All four are findable, only because multiple implementations exist.
 
-This doc names the breaths between *kernels working in isolation* and *Form-on-top fully self-hosting on top of either kernel*.
+This doc names the breaths between *kernels working in isolation* and *Form-on-top fully self-hosting on top of any sibling kernel*.
 
-## The dual-kernel discipline (locked in)
+## The sibling-kernel discipline (locked in)
 
-**Every new Form source file runs through both kernels.** [`form-kernel-validate.sh`](form-kernel-validate.sh) is the gate — it diffs outputs and fails on disagreement. The pre-merge check, the rapid-feedback loop, the safety net for every breath below.
+**Every new Form source file runs through Go, Rust, and TypeScript.** [`form-kernel-validate.sh`](form-kernel-validate.sh) is the gate — it diffs outputs and fails on disagreement. The pre-merge check, the rapid-feedback loop, the safety net for every breath below.
 
 ```bash
 ./form-kernel-validate.sh             # all samples
@@ -14,7 +14,7 @@ This doc names the breaths between *kernels working in isolation* and *Form-on-t
 ./form-kernel-validate.sh --bench     # side-by-side bench output
 ```
 
-Current state: **10 samples, 0 divergent.** Adding a new `.fk` file means it joins the gate. Validator also walks `form-stdlib/tests/*.fk` — each test loads `form-stdlib/core.fk` first as prelude, then runs against both kernels.
+Current state: **12 validation workloads, 0 divergent.** Adding a new `.fk` file means it joins the gate. Validator also walks `form-stdlib/tests/*.fk` — each test loads `form-stdlib/core.fk` first as prelude, then runs against all sibling kernels.
 
 ## What "all of Form in Form" actually means
 
@@ -50,7 +50,7 @@ Pure Form code on top of the kernel's native primitives. Lives in [`form-stdlib/
 - Aggregators: `sum`, `product`, `maximum`, `minimum`
 - Quantifiers: `any?`, `all?`
 
-**Tests at [`form-stdlib/tests/`](form-stdlib/tests/):** lists (→ 220), higher (→ 53), numeric (→ 208). All three pass on both kernels.
+**Tests at [`form-stdlib/tests/`](form-stdlib/tests/):** lists (→ 220), higher (→ 53), numeric (→ 208). All three pass on all sibling kernels.
 
 **Kernel changes that landed alongside:**
 - Bool literals `true` / `false` as parse-time trivials — kept Form predicates reading naturally without awkward `(eq 0 0)` constructors. ~6 lines per kernel.
@@ -60,7 +60,7 @@ Pure Form code on top of the kernel's native primitives. Lives in [`form-stdlib/
 
 ### Breath 1.5 — Substrate write surface *(landed)*
 
-Foundational unblock for Breath 2. Form code now holds NodeIDs as first-class values (`Value::Nid` variant in both kernels) and can construct recipes via 8 new natives:
+Foundational unblock for Breath 2. Form code now holds NodeIDs as first-class values (`Value::Nid` in the sibling kernels) and can construct recipes via 8 new natives:
 
 - `make_nodeid(pkg, level, ty, inst)` — raw NodeID construction
 - `intern_trivial_int(n)` / `intern_trivial_string(s)` — wrap a value as a trivial NodeID
@@ -70,7 +70,7 @@ Foundational unblock for Breath 2. Form code now holds NodeIDs as first-class va
 
 Closes form-runtime-in-form gaps W1, W2, W3 (intern_recipe, intern_trivial, define_cell — the last only partially; full cell-write awaits substrate persistence integration in Breath 5).
 
-**Test:** [`form-stdlib/tests/substrate-write.fk`](form-stdlib/tests/substrate-write.fk) — Form code builds `(1 + 2)` and `(3 * 4)` from raw substrate primitives, walks them, introspects the children, verifies content-addressing (building the same shape twice yields the same NodeID, walking either produces the same result). Returns `30` on both kernels.
+**Test:** [`form-stdlib/tests/substrate-write.fk`](form-stdlib/tests/substrate-write.fk) — Form code builds `(1 + 2)` and `(3 * 4)` from raw substrate primitives, walks them, introspects the children, verifies content-addressing (building the same shape twice yields the same NodeID, walking either produces the same result). Returns `30` on all sibling kernels.
 
 **Architectural change in Rust:**
 The walker signature changed from `walk(&Kernel, ...)` to `walk(&mut Kernel, ...)` so substrate-write natives can mutate the intern table. This undid Breath 1's slice-returning `children()` optimization — `children()` now returns owned `Vec<NodeID>`, paying a clone on each walk step. Native function signature changed from `fn(&Kernel, &[Value]) -> Value` to `fn(&mut Kernel, &mut Arena, &[Value]) -> Value`.
@@ -98,7 +98,7 @@ The error-message change in this breath makes the suffering bearable while it la
 | `panic: runtime error: index out of range [1709] with length 1709` (5-line Go internal trace) | `parse error: unclosed \`(\` opened at line 1 col 1 in \`(add ...)\` (reached end of input)` |
 | No way to inspect mid-computation values | `(trace x)` and `(trace "label" x)` print to stderr, return value unchanged |
 
-**Both kernels updated to:**
+**Sibling kernels updated to:**
 - Track 1-based `line` / `col` on every bootstrap token
 - Bounds-check every recipe read; on failure, point at the source location and the relevant opening `(`
 - Install a panic hook (Rust) / `recover()` (Go) so users see `form-kernel-X: <message>` instead of language-runtime backtraces
@@ -110,7 +110,7 @@ The error-message change in this breath makes the suffering bearable while it la
 
 ### Breath 2a — Form-side recursive-descent parser *(landed)*
 
-First half of Breath 2. Hand-written recursive-descent parser in Form for arithmetic expressions, built on the substrate-write natives. Reads text → tokens → recipes; both kernels produce identical NodeIDs via content-addressing.
+First half of Breath 2. Hand-written recursive-descent parser in Form for arithmetic expressions, built on the substrate-write natives. Reads text → tokens → recipes; sibling kernels produce identical NodeIDs via content-addressing.
 
 **Lives in:** [`form-stdlib/parser.fk`](form-stdlib/parser.fk).
 
@@ -120,7 +120,7 @@ First half of Breath 2. Hand-written recursive-descent parser in Form for arithm
 - Precedence: `*` binds tighter than `+`
 - Left-associative for both levels
 
-**Test:** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) parses 10 expressions including `"1 + 2 * 3"` (→ 7), `"5 * 5 + 5 * 5"` (→ 50), `"2 * 3 * 4"` (→ 24). Aggregate `216` on both kernels.
+**Test:** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) parses 10 expressions including `"1 + 2 * 3"` (→ 7), `"5 * 5 + 5 * 5"` (→ 50), `"2 * 3 * 4"` (→ 24). Aggregate `216` on all sibling kernels.
 
 **What landed in the kernels alongside:**
 - All function bodies and `if`-branches in Form are *single expressions*. Multiple statements need `(do ...)` wrapping — the Form parser's first lesson. The parser file itself uses `do` blocks liberally as a result; the structural clarity is what the body wants.
@@ -129,7 +129,7 @@ First half of Breath 2. Hand-written recursive-descent parser in Form for arithm
 - Keywords: `if then else`, `let = in`, `defn = `
 - The template-driven refactor (factor hand-coded parser into pattern+template registry)
 - The BMF-style streaming-emit engine
-- 4-way cross-validation matrix
+- 6-way cross-validation matrix
 
 ### Breath 2b — Full arithmetic + parens + identifiers + function calls *(landed)*
 
@@ -149,7 +149,7 @@ factor := INT | IDENT | IDENT '(' [args] ')' | '(' expr ')'
 args   := expr { ',' expr }
 ```
 
-**Test** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) — 12 expressions across precedence, parens, left-associativity, and function-call composition. Aggregate 149 on both kernels. Critical cases verified individually:
+**Test** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) — 12 expressions across precedence, parens, left-associativity, and function-call composition. Aggregate 149 on all sibling kernels. Critical cases verified individually:
 
 | Expression | Result | Why it matters |
 |---|---|---|
@@ -168,7 +168,7 @@ Function calls work because **the substrate's `FnCall` recipe checks natives bef
 
 ### Breath 2c — Comparisons + if + defn + recursion *(landed)*
 
-Form surface syntax now expresses everything the bootstrap S-expression layer does. The defining test, all parsed and executed by Form-on-top on top of both kernels:
+Form surface syntax now expresses everything the bootstrap S-expression layer does. The defining test, all parsed and executed by Form-on-top on top of sibling kernels:
 
 ```
 defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6)   → 720
@@ -201,7 +201,7 @@ bool    := 'true' | 'false'
 - `FNDEF` (RBasic 31)
 - Trivial `BOOL` (level=1, type=3) for `true`/`false` parsed identifiers
 
-**Test:** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) — 20 expressions across the full surface, aggregate **1095** on both kernels. Notable cases verified:
+**Test:** [`form-stdlib/tests/parser.fk`](form-stdlib/tests/parser.fk) — 20 expressions across the full surface, aggregate **1095** on all sibling kernels. Notable cases verified:
 - `if 1 < 2 then 10 else 20` → 10 (cmp + if)
 - `if 5 == 5 then 1 else 0` → 1 (equality)
 - `defn double(x) = x * 2; double(5)` → 10 (defn + call)
@@ -213,7 +213,7 @@ bool    := 'true' | 'false'
 **What's still ahead (the rest of Breath 2):**
 - The template-driven refactor (factor hand-coded parser into pattern+template registry)
 - The BMF-style streaming-emit engine
-- 4-way cross-validation matrix
+- 6-way cross-validation matrix
 
 ### Breath 2d — Local `let` bindings *(landed)*
 
@@ -225,7 +225,7 @@ Final piece of the hand-coded surface syntax. `let name = value` parses to a `BL
 - `let x = 5; let y = x + 2; x * y` → 35 (binding references earlier binding)
 - `let x = 10; if x > 5 then x * 2 else x` → 20 (let + if composition)
 
-**Aggregate now: 1177 on both kernels** across 24 surface-syntax expressions.
+**Aggregate now: 1177 on all sibling kernels** across 24 surface-syntax expressions.
 
 **The hand-coded parser is now structurally complete** for the bootstrap surface syntax. Anything written in S-expressions can also be written in Form surface syntax with identical recipes. The next major arc moves grammar from hand-coded code into data.
 
@@ -243,9 +243,9 @@ This is the substrate's actual long-term goal — what PR #1718 was building tow
 
 **First migration target:** move `let`, `if`, `defn` out of hand-coded `parse-stmt` / `parse-factor` and into the template registry. The hand-coded precedence ladder (`cmp/sum/term/factor`) stays for now; precedence-as-data is a separate move (operator registry).
 
-**Success criterion:** adding a new keyword (e.g. `unless cond then body else other` desugaring to `if (not cond) ...`) is ONE registry row, no parser code changes. Both kernels see identical recipes.
+**Success criterion:** adding a new keyword (e.g. `unless cond then body else other` desugaring to `if (not cond) ...`) is ONE registry row, no parser code changes. All sibling kernels see identical recipes.
 
-**What this unlocks:** the BMF-style streaming-emit engine (Breath 2f) consumes the same registry — different traversal strategy, same grammar. The 4-way cross-validation matrix (Breath 2g) follows naturally: same source × same registry × 2 engines × 2 kernels = 4 implementations, all must produce the same NodeID.
+**What this unlocks:** the BMF-style streaming-emit engine (Breath 2f) consumes the same registry — different traversal strategy, same grammar. The 6-way cross-validation matrix (Breath 2g) follows naturally: same source × same registry × 2 engines × 3 kernels = 6 implementations, all must produce the same NodeID.
 
 ### Breath 2 — Grammar as data: template registry + two engines
 
@@ -275,28 +275,30 @@ Each pattern primitive and each template primitive is itself a recipe constructo
 
 **Layer 3 — Cross-validation.**
 
-Same source × same template registry × 2 engines × 2 kernels = **four implementations** of the same parse. With content-addressing, validation is NodeID equality:
+Same source × same template registry × 2 engines × 3 kernels = **six implementations** of the same parse. With content-addressing, validation is NodeID equality:
 
 ```
 ✓  fact.form
     classic(go)=0xABC  classic(rust)=0xABC
+    classic(ts)=0xABC
     bmf(go)=0xABC      bmf(rust)=0xABC
+    bmf(ts)=0xABC
 ```
 
-All four equal → spec holds. Any disagreement → exactly one is wrong (or the registry has an ambiguous row). The validation harness grows to compare across this matrix automatically.
+All six equal → spec holds. Any disagreement → exactly one is wrong (or the registry has an ambiguous row). The validation harness grows to compare across this matrix automatically.
 
 **The payoff — actual self-hosting.**
 
-When Form needs a new keyword (say, `until cond { body }`), the change is one Form file: a single `(register-keyword ...)` call in `form-grammar/extensions.fk`. Both engines pick it up. Both kernels execute it. No parser code changes. No kernel changes. The grammar grows by data.
+When Form needs a new keyword (say, `until cond { body }`), the change is one Form file: a single `(register-keyword ...)` call in `form-grammar/extensions.fk`. Both engines pick it up. All sibling kernels execute it. No parser code changes. No kernel changes. The grammar grows by data.
 
-This is what the Python layer's `bootstrap_self_host` was always pointing at — and what the keyword/operator registries (PR #1718) made structurally possible. The Form breath completes the loop: grammar lives in Form, defined by Form code, executed by either kernel.
+This is what the Python layer's `bootstrap_self_host` was always pointing at — and what the keyword/operator registries (PR #1718) made structurally possible. The Form breath completes the loop: grammar lives in Form, defined by Form code, executed by any sibling kernel.
 
 **Closes (from form-runtime-in-form):**
 - **L1-L4** (char ops, substring, structured matchers, token-pattern registry surface) — the registry IS the templates; the token patterns are themselves substrate-resident.
 - **P1-P3** (precedence registry, callable expressions, pattern-DSL constructors as Form surface) — both engines consult the precedence registry; the pattern-DSL constructors are Form-callable.
 - **R1-R3** (registry surfaces from Form, Form-closure registration, registries persist as substrate cells) — each template row IS a cell; the registry IS persistent.
 
-**Success criterion at end of breath:** a Form source file in *surface syntax* (`defn fact(n) = if n <= 1 then 1 else n * fact(n-1)`) parses to the same recipes as the S-expression form, via either engine, in either kernel, consulting the same template registry. **The body parses itself, four ways, and they all agree, because they're all consulting the same data.** Adding a new keyword is one Form file; all four implementations learn it simultaneously.
+**Success criterion at end of breath:** a Form source file in *surface syntax* (`defn fact(n) = if n <= 1 then 1 else n * fact(n-1)`) parses to the same recipes as the S-expression form, via either engine, in any sibling kernel, consulting the same template registry. **The body parses itself, six ways, and they all agree, because they're all consulting the same data.** Adding a new keyword is one Form file; all six implementations learn it simultaneously.
 
 ### Breath 3 — Bootstrap handoff
 
@@ -306,14 +308,14 @@ The kernel's S-expression reader stays (for emergency use), but Form source file
 3. Loading either `form-parser-classic/*.fk` or `form-parser-bmf/*.fk` (S-expr) → recipes → callable closures
 4. From this point on, any `.form` file means "parse in surface syntax"; `.fk` files stay S-expression for bootstrap
 
-**Success:** A `fact.form` file in surface syntax produces `3628800` through both kernels via both parser paths; the bootstrap `.fk` files continue to validate.
+**Success:** A `fact.form` file in surface syntax produces `3628800` through all sibling kernels via both parser paths; the bootstrap `.fk` files continue to validate.
 
 ### Breath 4 — Query layer in Form
 
 `?equivalent`, `|>`, `?cells`, `?children`, `?annotate`, `?lattice`. Pure Form code reading the substrate via kernel primitives.
 
 **Lives in:** `form-query/query.fk`
-**Success:** `?equivalent @memory("User biographical arc")` returns the same equivalence set as `python3 scripts/coh_substrate.py equivalent memory "User biographical arc"`; both kernels agree on the result.
+**Success:** `?equivalent @memory("User biographical arc")` returns the same equivalence set as `python3 scripts/coh_substrate.py equivalent memory "User biographical arc"`; all sibling kernels agree on the result.
 **Closes:** form-runtime-in-form gaps R1-R3 (registry surfaces, Form-closure registration).
 
 ### Breath 5 — Substrate persistence bridge
@@ -321,17 +323,17 @@ The kernel's S-expression reader stays (for emergency use), but Form source file
 Form code that reads/writes cells in Postgres via kernel I/O primitives (the kernel grows two natives: `substrate_read(cell-ref)` and `substrate_write(cell)` that hit a local socket; the actual DB is talked to via the existing Python service or directly).
 
 **Lives in:** `form-substrate/persistence.fk`
-**Success:** A Form program reads a memory cell, modifies a field, writes it back; the change is visible to `coh_substrate.py annotate`. Both kernels produce identical write payloads.
+**Success:** A Form program reads a memory cell, modifies a field, writes it back; the change is visible to `coh_substrate.py annotate`. All sibling kernels produce identical write payloads.
 
 ### Breath 6 — Embed in `api/`
 
-The kernel of choice (decided after Breath 5 with full evidence from real substrate workloads) replaces `api/app/services/substrate/form_runtime.py`. PyO3 wrapper for Rust or cgo wrapper for Go. The Python services continue to function; the runtime is now native. The other kernel stays in `experiments/` as the differential testing partner.
+The native kernel of choice (decided after Breath 5 with full evidence from real substrate workloads) replaces `api/app/services/substrate/form_runtime.py`. PyO3 wrapper for Rust or cgo wrapper for Go. The Python services continue to function; the runtime is now native. The other sibling kernels stay in `experiments/` as differential testing partners, with TypeScript serving web/workbench targets.
 
-**Success:** All existing substrate tests pass; `coh_substrate.py form '<expr>'` uses the native kernel; latency drops measurably. The other kernel stays in `experiments/` as the differential testing partner.
+**Success:** All existing substrate tests pass; `coh_substrate.py form '<expr>'` uses the native kernel; latency drops measurably. The other sibling kernels stay in `experiments/` as differential testing partners.
 
 ### Breath 7 — Compost the Python form_runtime
 
-After Breath 7 lands and stabilizes, the Python `form_runtime.py` (1278 lines) becomes residue. The body's wellness check covers correctness; the two native kernels keep each other honest. Compost with care — the Python module taught the body what Form is.
+After Breath 7 lands and stabilizes, the Python `form_runtime.py` (1278 lines) becomes residue. The body's wellness check covers correctness; the sibling kernels keep each other honest. Compost with care — the Python module taught the body what Form is.
 
 ## What success looks like at the end
 
@@ -341,11 +343,11 @@ $ cat hello.form
 defn greet(name) = "hello, " ++ name
 greet("network")
 
-# Either kernel runs it directly
+# Any sibling kernel runs it directly
 $ ./form-kernel-go hello.form
 hello, network
 
-# Both kernels keep each other honest
+# Sibling kernels keep each other honest
 $ ./form-kernel-validate.sh hello.form
   ✓  hello.form  → hello, network
 ```
@@ -354,7 +356,7 @@ Where every line in `hello.form`'s parse-and-execution pipeline runs on Form cod
 
 ## The size constraint stays
 
-Each kernel stays under 1000 lines. New primitives land only when Form-on-top has demonstrated it can't write the surface itself. The constraint forces honesty about what's truly foundational vs what's convenience.
+The native kernels stay under 1000 lines. New primitives land only when Form-on-top has demonstrated it can't write the surface itself. The constraint forces honesty about what's truly foundational vs what's convenience; TypeScript carries its compiler path as a separate optimization surface rather than bloating the walker.
 
 ## How to use this doc
 
@@ -366,7 +368,7 @@ When picking the next breath: read this top-down, find the first unchecked item,
 # Run the validator (the discipline)
 ./form-kernel-validate.sh
 
-# Run a single sample through both kernels
+# Run a single sample through all sibling kernels
 ./form-kernel-validate.sh form-samples/fact.fk
 
 # Run benches side-by-side
@@ -375,4 +377,5 @@ When picking the next breath: read this top-down, find the first unchecked item,
 # Run a single kernel directly (for development / debugging)
 ./form-kernel-go/bin-go      form-samples/fact.fk
 ./form-kernel-rust/target/release/form-kernel-rust  form-samples/fact.fk
+npx tsx form-kernel-ts/src/main.ts form-samples/fact.fk
 ```

@@ -142,7 +142,7 @@ python3 scripts/validate_spec_quality.py --file specs/agent-question-sse-channel
 
 - Database persistence for questions.
 - Authentication and role-specific answer authorization.
-- Full Rust or Go kernel execution.
+- Full Rust, Go, or TypeScript kernel execution.
 - Complete Form evaluator support for `ask` and `await_answer`.
 
 ## Risks and Assumptions

@@ -20,10 +20,10 @@
 - [attention-heuristics-pipeline-status](attention-heuristics-pipeline-status.md) — Attention Heuristics in Pipeline-Status
 - [coherence-network-agent-pipeline](coherence-network-agent-pipeline.md) — Coherence Network Agent Pipeline
 - [external-agent-encounter-records](external-agent-encounter-records.md) — External Agent Encounter Records
-- [form-control-flow-kernel-conformance](form-control-flow-kernel-conformance.md) — lexical breath across Python, Rust, and Go
-- [form-core-kernel-conformance](form-core-kernel-conformance.md) — pure built-ins breathe across Python, Rust, and Go
-- [form-infix-kernel-conformance](form-infix-kernel-conformance.md) — literal operators breathe across Python, Rust, and Go
-- [form-loop-mutation-kernel-conformance](form-loop-mutation-kernel-conformance.md) — local iteration breath across Python, Rust, and Go
+- [form-control-flow-kernel-conformance](form-control-flow-kernel-conformance.md) — lexical breath across Python, Rust, Go, and TypeScript
+- [form-core-kernel-conformance](form-core-kernel-conformance.md) — pure built-ins breathe across Python, Rust, Go, and TypeScript
+- [form-infix-kernel-conformance](form-infix-kernel-conformance.md) — literal operators breathe across Python, Rust, Go, and TypeScript
+- [form-loop-mutation-kernel-conformance](form-loop-mutation-kernel-conformance.md) — local iteration breath across Python, Rust, Go, and TypeScript
 - [form-question-effects-kernel-conformance](form-question-effects-kernel-conformance.md) — Form Question Effects Kernel Conformance
 - [pipeline-observability-and-auto-review](pipeline-observability-and-auto-review.md) — Pipeline Observability and Auto-Review
 - [project-manager-pipeline](project-manager-pipeline.md) — Project Manager Pipeline
