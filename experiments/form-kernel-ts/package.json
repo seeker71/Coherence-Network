@@ -1,0 +1,17 @@
+{
+  "name": "form-kernel-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vertical-slice host for Form-on-top, in TypeScript. Third sibling kernel beside form-kernel-go and form-kernel-rust.",
+  "scripts": {
+    "kernel": "tsx src/main.ts",
+    "conformance": "tsx src/conformance.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.0"
+  }
+}

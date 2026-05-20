@@ -1,6 +1,6 @@
 # form-samples
 
-Real `.fk` source files in Form's S-expression bootstrap syntax. Both kernels ([`../form-kernel-go/`](../form-kernel-go/) and [`../form-kernel-rust/`](../form-kernel-rust/)) read these files end-to-end and produce identical results.
+Real `.fk` source files in Form's S-expression bootstrap syntax. The Go, Rust, and TypeScript kernels ([`../form-kernel-go/`](../form-kernel-go/), [`../form-kernel-rust/`](../form-kernel-rust/), and [`../form-kernel-ts/`](../form-kernel-ts/)) read these files end-to-end and produce identical results.
 
 | Sample | What it exercises | Expected output |
 |---|---|---|
@@ -11,9 +11,10 @@ Real `.fk` source files in Form's S-expression bootstrap syntax. Both kernels ([
 | [`string-walk.fk`](string-walk.fk) | Char-by-char string scan (`char_at`, `ord`) — shape Form-on-top's lexer will use | `5` |
 
 ```bash
-# Run any sample through either kernel
+# Run any sample through a sibling kernel
 ./form-kernel-go      form-samples/fact.fk   # → 3628800
 ./form-kernel-rust    form-samples/fact.fk   # → 3628800
+npx --yes tsx form-kernel-ts/src/main.ts form-samples/fact.fk
 ```
 
 ## S-expression verb vocabulary (bootstrap)

@@ -3,7 +3,7 @@
   "surface": "form-question-effects",
   "description": "Host-bound Form effects for sub-agent human questions. Kernels conform by producing the same question records and event transcript.",
   "harness": {
-    "command": "python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go",
+    "command": "python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --kernel typescript",
     "target_command": null
   },
   "host_channel": {
@@ -111,6 +111,19 @@
         "go",
         "run",
         "experiments/form-question-kernels/go/question_kernel.go",
+        "{vector}"
+      ]
+    },
+    "typescript": {
+      "status": "implemented",
+      "entrypoint": "experiments/form-kernel-ts/src/conformance.ts",
+      "proof": "api/tests/test_kernel_conformance_harness.py",
+      "harness": "scripts/verify_kernel_conformance.py --kernel typescript",
+      "runner": [
+        "npx",
+        "--yes",
+        "tsx",
+        "experiments/form-kernel-ts/src/conformance.ts",
         "{vector}"
       ]
     }
