@@ -234,7 +234,7 @@ that change. Full practice at
 
 ## Cross-References
 
-→ lc-shifted-return, lc-train-the-predator, lc-assemblage-point, lc-frequency-routes-reception, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-w-frequency, lc-perception-as-interface, lc-voice-over-intentions, lc-gatherings-that-carry, lc-devotion-placement, lc-each-breath-whole
+→ lc-shifted-return, lc-train-the-predator, lc-observer-pays-the-trace, lc-assemblage-point, lc-frequency-routes-reception, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-w-frequency, lc-perception-as-interface, lc-voice-over-intentions, lc-gatherings-that-carry, lc-devotion-placement, lc-each-breath-whole
 
 ## Sources to walk further
 
