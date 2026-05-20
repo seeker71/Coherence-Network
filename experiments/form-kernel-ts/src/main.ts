@@ -10,6 +10,7 @@ import { Frame, Kernel, walk } from "./kernel.ts";
 import { readAll, readForm } from "./reader.ts";
 import { runBench } from "./bench.ts";
 import { compileNode } from "./compiler.ts";
+import { runNumericBench } from "./numeric-bench.ts";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -22,6 +23,11 @@ async function main(): Promise<void> {
 
   if (args[0] === "--bench") {
     runBench();
+    return;
+  }
+
+  if (args[0] === "--numeric-bench") {
+    runNumericBench();
     return;
   }
 
