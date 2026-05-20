@@ -26,6 +26,7 @@ import { WorldSignals } from "./_components/WorldSignals";
 import { EnergyContributors } from "./_components/EnergyContributors";
 import { ResonantAssets } from "./_components/ResonantAssets";
 import { CarriedBy } from "./_components/CarriedBy";
+import { SubstratePosition } from "./_components/SubstratePosition";
 import { ConceptVoices } from "./_components/ConceptVoices";
 import { ReactionBar } from "@/components/ReactionBar";
 import { InfluenceWeb } from "@/components/presence/InfluenceWeb";
@@ -380,6 +381,10 @@ export default async function VisionConceptPage({
 
             <div className="max-w-3xl space-y-4 pt-8">
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
+              {/* The structural position — door from felt-meaning into
+                  the lattice's content-addressed view of this same cell.
+                  Renders null if the cell isn't in the substrate yet. */}
+              <SubstratePosition conceptId={conceptId} />
               <div className="flex gap-4 text-sm pt-4">
                 <Link href={localizedHref("/vision", lang)} className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.backToRoot")}</Link>
                 <Link href={localizedHref("/vision/realize", lang)} className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.livingIt")}</Link>

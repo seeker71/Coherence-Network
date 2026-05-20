@@ -2,7 +2,25 @@
 id: lc-pulse
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-20
+geometry:
+  arity: infinite
+  form: holographic-organism
+  topology: nested-each-contains-whole
+  polarity: oscillating
+  ordering: fractal
+  phase: oscillating
+cross_refs:
+  - lc-sensing
+  - lc-attunement
+  - lc-vitality
+  - lc-ceremony
+  - lc-stillness
+  - lc-rhythm
+  - lc-w-coherence
+  - lc-w-field
+  - lc-w-spanda
+  - lc-each-breath-whole
 ---
 
 # The Pulse

@@ -73,22 +73,58 @@ function formatNodeId(nid: { package: number; level: number; type: number; insta
   return `@${nid.package}.${nid.level}.${nid.type}.${nid.instance}`;
 }
 
-const DOMAINS = ["memory", "spec", "idea", "concept", "presence"] as const;
+const DOMAINS = [
+  "concept",
+  "spec",
+  "idea",
+  "presence",
+  "lineage",
+  "guide",
+  "transmission",
+  "kb_page",
+  "language_view",
+  "memory",
+  "witness",
+  "task",
+  "resource",
+  "harmonic",
+  "topology",
+] as const;
 
 const DOMAIN_LABELS: Record<string, string> = {
-  memory: "Memory",
+  concept: "Concept",
   spec: "Spec",
   idea: "Idea",
-  concept: "Concept",
   presence: "Presence",
+  lineage: "Lineage",
+  guide: "Guide",
+  transmission: "Transmission",
+  kb_page: "KB page",
+  language_view: "Language view",
+  memory: "Memory",
+  witness: "Witness",
+  task: "Task",
+  resource: "Resource",
+  harmonic: "Harmonic",
+  topology: "Topology",
 };
 
 const DOMAIN_DESCRIPTIONS: Record<string, string> = {
-  memory: "Auto-loaded notes carrying tender context across sessions",
+  concept: "Vision-kb story: cross-refs, visuals, parent, geometry",
   spec: "Executable form: source, requirements, done_when, test, constraints",
   idea: "Problem-shape with capabilities, absorbed-ideas, spec-links",
-  concept: "Vision-kb story: cross-refs, visuals, parent",
-  presence: "Contributor cell: HUMAN / AGENT / SYSTEM with role and edges",
+  presence: "Contributor cell — HUMAN / AGENT / SYSTEM — with role and edges",
+  lineage: "Transmission / embodiment records — where teachings entered the body",
+  guide: "Practice and reader guides paired with concepts",
+  transmission: "Source-marked teaching cells — what flowed through whom",
+  kb_page: "General vision-KB pages and indexes outside the concept set",
+  language_view: "Translated / localized projections of the KB content",
+  memory: "Auto-loaded notes carrying tender context across sessions",
+  witness: "Event-as-proof cells — the trace the body leaves of its own life",
+  task: "Pipeline work-unit cells — open threads under tending",
+  resource: "Source / extraction records — what was read, what was lifted",
+  harmonic: "Solfeggio frequency bands carried by concepts (hz cells)",
+  topology: "Topological shape vocabulary — values authored as geometry",
 };
 
 export default async function SubstratePage() {
@@ -125,6 +161,30 @@ export default async function SubstratePage() {
           <span className="text-muted-foreground">
             Ask the lattice structural questions, or place new content into it.
           </span>
+        </p>
+        {/* Doors for both kinds of visitor — the human curious about how
+            the body works, and the AI arriving without a prior map. The
+            agent guide is the canonical "how to ground reasoning in the
+            lattice" doc; the language doc carries Form's design. */}
+        <p className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <Link
+            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/agents-using-substrate.md"
+            className="underline hover:text-amber-300/80 transition-colors"
+          >
+            How AI agents use this lattice
+          </Link>
+          <Link
+            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md"
+            className="underline hover:text-amber-300/80 transition-colors"
+          >
+            Form language design
+          </Link>
+          <Link
+            href="https://api.coherencycoin.com/docs#/substrate"
+            className="underline hover:text-amber-300/80 transition-colors"
+          >
+            REST endpoints (Swagger)
+          </Link>
         </p>
       </header>
 

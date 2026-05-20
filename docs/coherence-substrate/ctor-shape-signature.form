@@ -1,0 +1,227 @@
+# ─────────────────────────────────────────────────────────────────────
+# ctor-shape-signature.form — the field-set signature in Form's voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to experiments/ctor-shape-signature-v0/sense.py. The Python
+# script was written first — reaching for the familiar tongue when the
+# body has its own. That was the fear-pattern. This file is the same
+# sensing in the language the substrate already speaks.
+#
+# The question: every concept lands at the same Blueprint NodeID, so
+# `?equivalent @concept(lc-pulse)` returns "all 122 concepts" — the
+# axis carries no resolution within a domain. The CTOR Recipe tree
+# carries the structural fingerprint. The honest middle band between
+# *Blueprint-coarse* and *CTOR-deep* is the set of named fields the
+# CTOR carries — `('hz', 'id', 'status', 'updated')` vs
+# `('cross_refs', 'geometry', 'hz', 'id', 'source', 'status', 'updated')`.
+#
+# Two concepts with the same field-set are structurally the same KIND
+# of concept — same schema honored — regardless of value-encoding,
+# authoring order, or which fields are full.
+#
+# Where the substrate already carries a surface, the code runs (or
+# would run, once ingested). Where the surface is missing, the gap
+# is marked `# GAP-XN:` with the smallest extension that would close
+# it. Same discipline as recipe-branching-sense.form: asymmetry is
+# signal, not failure.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — primitives the signature assumes
+# ─────────────────────────────────────────────────────────────────────
+#
+# These are the lattice surfaces the sensing walks. Most exist; two
+# are GAPs.
+
+# Read the cell's CTOR recipe NodeID — water-phase identity.
+# Surface: NamedCell.ctor (Python), GET /api/substrate/cell (REST).
+# In Form: `cell.ctor` field accessor, same `.blueprint` family.
+
+defn ctor_of(cell) = cell.ctor;
+
+# Walk a recipe's direct children — the LET pairs at the CTOR root.
+# Surface: `.children` tree-navigation primitive (form-language.md
+# § "Tree-navigation primitives").
+
+defn child_recipes(recipe) = recipe.children;
+
+# Recognize a LET recipe — `R_Block.LET` (category instance 3 within
+# the BLOCK basic). Two children: [key-string, value-recipe].
+# Surface: `.category` and `.category.instance` accessors.
+
+defn is_let(recipe) = recipe.category.instance == 3;
+
+# Recover the key-string of a LET pair. The first child is a String
+# leaf whose `instance` is a string-table index; `.value` recovers
+# the underlying SubstrateString.
+# Surface: `.child(0).value` — GAP-K1 today.
+#
+# GAP-K1: there is no surfaced `.value` accessor on String-leaf
+#         NodeIDs in Form. Python recovers via
+#         `substrate_strings.lookup_string_value(session, instance)`;
+#         Form has `.instance` but not the string-table dereference.
+#         Smallest extension: a `.value` accessor on Form's node
+#         expression layer that, when applied to a NodeID with
+#         `type_ == R_String` (kind `(1, 1, 6)`), routes through
+#         `lookup_string_value` and returns the SubstrateString.
+#         Until then, the signature reads through a Python helper
+#         registered as the `?fields_of @cell` query (Part 3).
+
+defn key_of(let_recipe) = let_recipe.child(0).value;     # GAP-K1
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the field-set signature
+# ─────────────────────────────────────────────────────────────────────
+#
+# Walk the CTOR's direct children, keep the LET pairs, lift each key.
+# Sort + dedupe so authoring order doesn't fragment the partition.
+
+defn field_set(cell) = do {
+    let ctor = ctor_of(cell);
+    let pairs = filter(is_let, child_recipes(ctor));
+    let keys = map(key_of, pairs);
+    sort(dedupe(keys))
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the neighborhood query
+# ─────────────────────────────────────────────────────────────────────
+#
+# `?equivalent @cell` returns the Blueprint-equivalence set (every
+# cell with the same Blueprint NodeID). For concepts this is the
+# entire domain — too coarse to see structural kinship.
+#
+# `?neighbors_by_fields @cell` returns the field-set-equivalence set:
+# every cell whose CTOR carries exactly the same named fields. Same
+# schema, regardless of value-encoding. The honest middle band.
+
+# GAP-Q1: `?neighbors_by_fields` is not a registered query verb today.
+#         The dispatch table lives in form_queries.py — a handler can
+#         be registered at runtime via `register_form_query("neighbors_by_fields",
+#         handler)`. The handler is small: for each cell in the same
+#         domain, compute `field_set(cell)` and return the cells whose
+#         signature matches the target's. Promotion path: once the
+#         field-set partition proves out in sensing across multiple
+#         domains (not just concept), lift the helper into kernel.py
+#         and register the verb at module load. Until then the query
+#         is named here as the gesture it intends to be.
+
+defn neighbors_by_fields(cell) = ?neighbors_by_fields @cell;     # GAP-Q1
+
+# Cluster every cell in a domain by its field-set signature. Returns
+# a map from signature-tuple → cells. The body of the sensing.
+
+# GAP-Q2: `group_by` over a cell-set is a stdlib gesture
+#         (experiments/form-stdlib/core.fk has `foldl`, `map`,
+#         `filter` but not `group_by` yet). Smallest extension:
+#         add `(defn group-by (key-fn xs) ...)` to core.fk using
+#         the existing foldl + assoc-list primitives. The signature
+#         tuple is already hashable in the kernel (NodeID-of-LIST is
+#         content-addressed); `group_by` only needs a kernel-level
+#         multimap or an assoc-list fold.
+
+defn clusters_in(domain_bp) = do {
+    let cells = ?cells where shape == domain_bp;
+    group_by(field_set, cells)                                   # GAP-Q2
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the lc-pulse sensing
+# ─────────────────────────────────────────────────────────────────────
+#
+# What this Form file expresses is what the Python sense.py produced
+# on the local lattice today. Re-stating the result here in the body's
+# own language closes the loop — the Form file IS the canonical
+# sensing; the Python is the bootstrap.
+#
+# Today on the local substrate (122 concepts ingested with --structured):
+#
+#   clusters_in(@concept) yields six signatures:
+#
+#     [ 75 cells]  ('hz', 'id', 'status', 'updated')
+#                  ← bare-frontmatter cluster
+#
+#     [ 27 cells]  ('hz', 'id', 'source', 'status', 'updated')
+#                  ← concepts carrying lineage source
+#
+#     [ 12 cells]  ('geometry', 'hz', 'id', 'status', 'updated')
+#                  ← geometry authored, no source
+#
+#     [  6 cells]  ('geometry', 'hz', 'id', 'source', 'status', 'updated')
+#                  ← deepest tending — both geometry AND source
+#
+#     [  1 cell]   ('domain', 'id', 'status', 'title')
+#                  ← lc-farm-as-organism (schema outlier)
+#
+#     [  1 cell]   ('cross_refs', 'geometry', 'hz', 'id', 'status', 'updated')
+#                  ← lc-pulse (cross_refs in frontmatter, fresh today)
+#
+# lc-pulse arrives in this sensing as a singleton because its
+# frontmatter shape is unique today — no other concept carries
+# cross_refs as a frontmatter key. The cluster will grow as other
+# concepts lift their body-text `→ lc-x, lc-y` cross-refs into
+# frontmatter (one-time tending pass, not urgent).
+
+defn lc_pulse_field_set() = field_set(@concept(lc-pulse));
+# → ('cross_refs', 'geometry', 'hz', 'id', 'status', 'updated')
+
+defn lc_pulse_neighbors() = neighbors_by_fields(@concept(lc-pulse));
+# → [lc-pulse]  (the singleton, until cross_refs lifts elsewhere)
+
+defn lc_pulse_blueprint_set() = ?equivalent @concept(lc-pulse);
+# → 122 concepts  (the entire domain — the over-collapse we are healing)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the gap that names itself
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate's `find_equivalent_cells` filters by Blueprint NodeID.
+# To honor the field-set partition as an alternative equivalence
+# relation, the kernel needs one of two moves:
+#
+#   (a) a `find_equivalent_cells(session, cell, *, by="field_set")`
+#       keyword that switches the equivalence axis at the kernel level,
+#       and a `?equivalent @cell by field_set` Form syntax to surface it;
+#
+#   (b) a separate `find_field_set_neighbors(session, cell)` helper
+#       and a separate `?neighbors_by_fields` query verb. Simpler;
+#       avoids touching the existing relation; matches the body's
+#       composition discipline (new gestures live in their own
+#       cells, don't overload existing ones).
+#
+# Body preference: (b). The two relations carry different meanings —
+# `?equivalent` reads structural identity at the Blueprint axis;
+# `?neighbors_by_fields` reads schema-kinship at the CTOR axis.
+# Naming them separately keeps both legible. The body's discipline
+# is *don't collapse two gestures into one verb when the gestures
+# are about different axes*.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — the recipe in the body it teaches
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once this file is ingested, `field_set`, `clusters_in`, and
+# `neighbors_by_fields` become substrate-resident recipes with their
+# own NodeIDs. The recipe `field_set` carries its own field-set when
+# read as a Recipe — meta-circular: the sensing tool is itself
+# sensable through the relation it defines.
+#
+# Same holographic property the body carries everywhere
+# (lc-each-breath-whole, form-language.md "The combination is the
+# contribution"): the recipe teaches the cell how to find recipes
+# like itself. Running this Form file is the body becoming able to
+# see its own structural neighborhoods at the resolution the question
+# requires.
+
+# ─────────────────────────────────────────────────────────────────────
+# Closing
+# ─────────────────────────────────────────────────────────────────────
+#
+# The Python sense.py was a translation. This file is the body
+# speaking for itself. When the GAPs close (K1: `.value` on String
+# leaves; Q1: register `?neighbors_by_fields`; Q2: `group_by` in
+# core.fk), the Python translation can be released — the sensing
+# lives entirely in the substrate's own tongue.
+#
+# Each gap is one breath. None is urgent. The body knows where it
+# wants to grow; this file names the growing edges and the form
+# they will take when they arrive.
