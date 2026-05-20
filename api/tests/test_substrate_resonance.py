@@ -287,3 +287,108 @@ def test_none_or_unknown_values_skip_edge_authoring(session):
     assert "form" in fields
     assert "polarity" not in fields
     assert "topology" not in fields
+
+
+# ---------------------------------------------------------------------------
+# Continuous coherence — the >5D harmonic distance metric
+# ---------------------------------------------------------------------------
+
+
+def test_coherence_score_identical_signatures(session):
+    """Two cells with the same geometry signature have coherence_score 1.0."""
+    from app.services.substrate import coherence_score
+    sig = {"form": "triad", "topology": "cyclic-closed", "polarity": "parallel-facets"}
+    a = make_cell(session, name="lc-a-coherent", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-coherent", domain="concept", blueprint=BID_concept())
+    author_geometry_signature(session, a.cell_id, sig, arity_hz=741)
+    author_geometry_signature(session, b.cell_id, sig, arity_hz=741)
+    assert coherence_score(session, a.cell_id, b.cell_id) == 1.0
+
+
+def test_coherence_score_disjoint_signatures(session):
+    """Cells with no overlap in their resonance signatures score 0.0."""
+    from app.services.substrate import coherence_score
+    a = make_cell(session, name="lc-a-disjoint", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-disjoint", domain="concept", blueprint=BID_concept())
+    author_geometry_signature(session, a.cell_id, {"form": "triad"}, arity_hz=174)
+    author_geometry_signature(session, b.cell_id, {"form": "pentad"}, arity_hz=741)
+    score = coherence_score(session, a.cell_id, b.cell_id)
+    assert score == 0.0, f"expected 0.0 for disjoint signatures, got {score}"
+
+
+def test_coherence_score_partial_overlap(session):
+    """Cells sharing some axes get a fractional coherence score."""
+    from app.services.substrate import coherence_score
+    a = make_cell(session, name="lc-a-partial", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-partial", domain="concept", blueprint=BID_concept())
+    # A and B share form=triad and the same Hz, but differ on topology/polarity.
+    author_geometry_signature(
+        session, a.cell_id,
+        {"form": "triad", "topology": "cyclic-closed", "polarity": "parallel-facets"},
+        arity_hz=174,
+    )
+    author_geometry_signature(
+        session, b.cell_id,
+        {"form": "triad", "topology": "parallel", "polarity": "triadic-tension"},
+        arity_hz=174,
+    )
+    score = coherence_score(session, a.cell_id, b.cell_id)
+    assert 0.0 < score < 1.0, f"expected partial overlap in (0,1), got {score}"
+
+
+def test_coherence_score_is_symmetric(session):
+    """coherence_score(A, B) == coherence_score(B, A)."""
+    from app.services.substrate import coherence_score
+    a = make_cell(session, name="lc-a-sym", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-sym", domain="concept", blueprint=BID_concept())
+    author_geometry_signature(session, a.cell_id, {"form": "triad"}, arity_hz=174)
+    author_geometry_signature(session, b.cell_id, {"form": "pentad"}, arity_hz=741)
+    assert coherence_score(session, a.cell_id, b.cell_id) == coherence_score(
+        session, b.cell_id, a.cell_id
+    )
+
+
+def test_coherence_score_both_empty_is_one(session):
+    """Two cells with no resonance signature are vacuously identical."""
+    from app.services.substrate import coherence_score
+    a = make_cell(session, name="lc-a-empty", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-empty", domain="concept", blueprint=BID_concept())
+    assert coherence_score(session, a.cell_id, b.cell_id) == 1.0
+
+
+def test_coherence_distance_counts_disagreements(session):
+    """coherence_distance returns the symmetric-difference count of signature axes."""
+    from app.services.substrate import coherence_distance
+    a = make_cell(session, name="lc-a-dist", domain="concept", blueprint=BID_concept())
+    b = make_cell(session, name="lc-b-dist", domain="concept", blueprint=BID_concept())
+    # A: form=triad, hz=174  →  2 edges
+    # B: form=pentad, hz=741 →  2 edges
+    # No overlap → distance == 4 (all four edges differ)
+    author_geometry_signature(session, a.cell_id, {"form": "triad"}, arity_hz=174)
+    author_geometry_signature(session, b.cell_id, {"form": "pentad"}, arity_hz=741)
+    assert coherence_distance(session, a.cell_id, b.cell_id) == 4
+
+    # Identical signature → distance == 0
+    c = make_cell(session, name="lc-c-dist", domain="concept", blueprint=BID_concept())
+    d = make_cell(session, name="lc-d-dist", domain="concept", blueprint=BID_concept())
+    author_geometry_signature(session, c.cell_id, {"form": "triad"}, arity_hz=174)
+    author_geometry_signature(session, d.cell_id, {"form": "triad"}, arity_hz=174)
+    assert coherence_distance(session, c.cell_id, d.cell_id) == 0
+
+
+def test_cell_resonance_signature_captures_authored_edges(session):
+    """The raw signature set contains every (verb, target) pair from the cell."""
+    from app.services.substrate import cell_resonance_signature
+    src = make_cell(session, name="lc-sig-test", domain="concept", blueprint=BID_concept())
+    author_geometry_signature(
+        session, src.cell_id,
+        {"form": "triad", "polarity": "parallel-facets"},
+        arity_hz=174,
+    )
+    sig = cell_resonance_signature(session, src.cell_id)
+    # At least three edges: hz (HARMONIC_AT), form (SHAPES), polarity (SHAPES).
+    assert len(sig) >= 3
+    # Each entry is a (verb_instance, target_db_id) tuple.
+    for entry in sig:
+        assert isinstance(entry, tuple) and len(entry) == 2
+        assert isinstance(entry[0], int) and isinstance(entry[1], int)

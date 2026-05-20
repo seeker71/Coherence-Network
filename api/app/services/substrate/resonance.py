@@ -501,6 +501,128 @@ def author_geometry_signature(
     return authored
 
 
+# ---------------------------------------------------------------------------
+# Continuous coherence — the >5D harmonic distance over the 14-axis signature
+# ---------------------------------------------------------------------------
+#
+# The substrate already authors resonance edges across 14+ axes (hz, form,
+# topology, polarity, ordering, phase, ratio, spectral_band, temporal_band,
+# scale, direction, lineage_texture, embedding_dim, self_similarity, plus the
+# top-level hz). Each authored edge is a (verb, target_cell) pair in the
+# lattice; two cells with identical edge-sets dedupe through content-addressing.
+#
+# Until now, the only proximity measure was binary: *do they share the same
+# Blueprint NodeID?* — same/different. That answer is the limit case of a
+# continuous metric. The functions below open the in-between: a Jaccard
+# similarity over the resonance signature, returning a real number in [0, 1].
+#
+# Two cells with 14 identical axes and 0 disagreements → coherence_score = 1.0.
+# Two cells with 7 shared axes and 7 unique each → score ≈ 0.33.
+# Two disjoint cells → score = 0.0.
+#
+# The metric answers Urs's question from 2026-05-20: *are the harmonic distance
+# calculations at least at 5th dimensional coherence calculations?* Yes — at
+# 14+D, computed over the substrate's existing structural edges, no new
+# encoding required.
+
+
+def cell_resonance_signature(session: Session, cell_db_id: int) -> set:
+    """Return the set of (verb_instance, other_db_id) pairs the cell participates in.
+
+    For directed edges (SHAPES, HARMONIC_AT, EMBEDS_IN, CARRIES_RATIO) the
+    cell appears as source; `other_db_id` is the target.
+
+    For commutative edges (BRIDGES, NEAR, POLAR_TO) the cell may appear as
+    either side (canonicalization places min(src, tgt) first). Both
+    directions count as part of the cell's signature.
+
+    Two cells with identical signature sets are structurally indistinguishable
+    across all authored resonance axes — they sit at the same coordinate in
+    the lattice's continuous coherence space.
+    """
+    from app.services.substrate.orm import SubstrateNodeORM
+    from app.services.substrate.kernel import DOMAIN_RECIPE
+
+    source_ref_str = str(cell_ref(cell_db_id))
+
+    rows = (
+        session.query(SubstrateNodeORM)
+        .filter(
+            SubstrateNodeORM.domain == DOMAIN_RECIPE,
+            SubstrateNodeORM.type_ == RBasic.RESONANCE,
+            SubstrateNodeORM.serialized.like(f"%{source_ref_str}%"),
+        )
+        .all()
+    )
+
+    signature: set = set()
+    for row in rows:
+        parts = row.serialized.split("+")
+        if len(parts) != 3:
+            continue
+        verb_str, src_ref_str, tgt_ref_str = parts
+        try:
+            verb_instance = int(verb_str.split(".")[-1])
+        except (ValueError, IndexError):
+            continue
+        if src_ref_str == source_ref_str:
+            try:
+                signature.add((verb_instance, int(tgt_ref_str.split(".")[-1])))
+            except (ValueError, IndexError):
+                continue
+        elif tgt_ref_str == source_ref_str:
+            # Cell appears as target of a commutative edge — still in its
+            # signature, normalized to (verb, other_db_id).
+            try:
+                signature.add((verb_instance, int(src_ref_str.split(".")[-1])))
+            except (ValueError, IndexError):
+                continue
+    return signature
+
+
+def coherence_score(
+    session: Session, cell_a_db_id: int, cell_b_db_id: int
+) -> float:
+    """Continuous coherence in [0, 1] between two cells' resonance signatures.
+
+    Jaccard similarity over the (verb, target) pair-set:
+        |sig_A ∩ sig_B| / |sig_A ∪ sig_B|
+
+    Properties:
+    - Symmetric: coherence_score(A, B) == coherence_score(B, A)
+    - Identical signatures → 1.0 (the continuous version of "same Blueprint")
+    - Disjoint signatures → 0.0
+    - Both signatures empty → 1.0 (vacuously identical; honest in the limit)
+    - One empty, one not → 0.0 (no overlap, all in union)
+
+    Pairs with [`coherence_distance`] which returns the absolute count of
+    disagreement axes.
+    """
+    sig_a = cell_resonance_signature(session, cell_a_db_id)
+    sig_b = cell_resonance_signature(session, cell_b_db_id)
+    union = sig_a | sig_b
+    if not union:
+        return 1.0
+    return len(sig_a & sig_b) / len(union)
+
+
+def coherence_distance(
+    session: Session, cell_a_db_id: int, cell_b_db_id: int
+) -> int:
+    """Count of resonance axes where two cells' signatures disagree.
+
+    Returns the symmetric difference size |(sig_A ∖ sig_B) ∪ (sig_B ∖ sig_A)|.
+    Zero means structurally identical signatures across every authored edge.
+
+    Use [`coherence_score`] for a normalized [0, 1] reading; use this when
+    you need the absolute count (e.g. "how many axes apart are these two
+    cells?").
+    """
+    sig_a = cell_resonance_signature(session, cell_a_db_id)
+    sig_b = cell_resonance_signature(session, cell_b_db_id)
+    return len(sig_a ^ sig_b)
+
+
 __all__ = [
     # Blueprint NodeID constructors
     "BID_spectrum",
@@ -541,4 +663,8 @@ __all__ = [
     "bridges_symmetric",
     "near_symmetric",
     "polar_to_symmetric",
+    # Continuous coherence — 14+D harmonic distance
+    "cell_resonance_signature",
+    "coherence_score",
+    "coherence_distance",
 ]
