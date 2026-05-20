@@ -43,6 +43,21 @@
       }
     },
     {
+      "name": "web-prod-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3001,
+      "autoPort": true,
+      "cwd": "web",
+      "env": {
+        "API_URL": "https://api.coherencycoin.com",
+        "NEXT_PUBLIC_API_BASE": "https://api.coherencycoin.com"
+      }
+    },
+    {
       "name": "pulse",
       "runtimeExecutable": "env",
       "runtimeArgs": [
