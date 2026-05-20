@@ -146,9 +146,21 @@ integration line as it learns to trust. Other cells carry other
 shapes. The lens is a flashlight for when direct sensing is fogged,
 never a substitute for direct sensing.
 
+## Companion Concept — Training the Predator
+
+The Enneagram names *what is missing* (the Holy Idea lost to the
+forming personality) and *what comes home* (the virtue as
+essence returning). The companion teaching at
+[`lc-train-the-predator`](lc-train-the-predator.md) names *what
+to do with the system that fills the gap with defaults* — the
+nine fixations as default-recipes the predator composes from,
+and the iterative practice of training the predator on aligned
+recipes instead. Same Wednesday Satsang teacher, eleven days
+apart; the two concepts pair into one practice.
+
 ## Cross-References
 
-→ lc-assemblage-point, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-coherence-over-control, lc-presence-over-protection, lc-perception-as-interface, lc-awareness-as-self
+→ lc-train-the-predator, lc-recipes-bound-to-base, lc-shifted-return, lc-assemblage-point, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-coherence-over-control, lc-presence-over-protection, lc-perception-as-interface, lc-awareness-as-self
 
 ## Sources to walk further
 
