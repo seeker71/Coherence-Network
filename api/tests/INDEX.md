@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 176
+**Total files**: 179
 
 | File | Purpose |
 |---|---|
@@ -94,6 +94,7 @@
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
 | [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
+| [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
@@ -107,6 +108,7 @@
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
+| [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
 | [test_persistence_contract_config.py](test_persistence_contract_config.py) | _no top-of-file purpose_ |
@@ -116,6 +118,7 @@
 | [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
+| [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |
 | [test_renderers_router.py](test_renderers_router.py) | Route-level tests for /api/renderers/* endpoints. |

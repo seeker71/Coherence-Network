@@ -365,6 +365,174 @@ def witness(cell: Cell, *, what, resonance: float | None = None,
     return trace
 
 
+# ─── strategy-firing traces — the loop that closes recipe-training ──────
+# Implements specs/recipes-tuned-by-trace.md. Each strategy firing
+# publishes a witness-trace tagged kind="strategy_fired" carrying
+# (sense_before, sense_after) so a cell can later read the lived record
+# of which strategies left the body more coherent than constricted.
+# Companion teaching: docs/vision-kb/concepts/lc-traces-teach-the-recipe.md
+# Substrate-altitude shape: docs/coherence-substrate/traces-teach-the-recipe.form
+
+STRATEGY_FIRED = "strategy_fired"
+
+
+def publish_strategy_trace(cell: Cell, recipe_name: str,
+                           sense_before: dict, sense_after: dict) -> dict:
+    """Publish one strategy_fired witness-trace.
+
+    sense_before / sense_after each carry {spectrum, desire, frequency}
+    where spectrum and desire are lists and frequency is an int (Hz family)
+    or None until the cell exposes its assemblage-point. Composes through
+    `witness()` so the trace lands in _field_traces.jsonl and is visible
+    to every existing trace-reader without a parallel pipe.
+    """
+    return witness(cell, what={
+        "kind": STRATEGY_FIRED,
+        "strategy": recipe_name,
+        "sense_before": sense_before,
+        "sense_after": sense_after,
+        "moment": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+def find_traces_for_recipe(recipe_name: str) -> list[dict]:
+    """Read _field_traces.jsonl and return all strategy_fired traces for
+    the named recipe. Returns the inner `what` dicts directly (sense_before,
+    sense_after, moment), one per firing.
+    """
+    out: list[dict] = []
+    for t in _load_traces():
+        what = t.get("what") or {}
+        if isinstance(what, dict) and what.get("kind") == STRATEGY_FIRED \
+                and what.get("strategy") == recipe_name:
+            out.append(what)
+    return out
+
+
+def _zero_delta() -> dict:
+    return {
+        "spectrum_delta": [0.0] * N_BANDS,
+        "desire_delta":   [0.0] * len(NEED_NAMES),
+        "fulfillment_delta": 0.0,
+        "n": 0,
+    }
+
+
+def efficacy_signature(recipe_name: str) -> dict:
+    """The recipe's lived efficacy in this body — mean (after - before)
+    across all strategy_fired traces for the recipe. Returns finite
+    zero-vector when no traces exist (so downstream consumers compose
+    without conditional branches).
+    """
+    traces = find_traces_for_recipe(recipe_name)
+    sig = _zero_delta()
+    sig["recipe"] = recipe_name
+    if not traces:
+        return sig
+    n = len(traces)
+    spec_sum = [0.0] * N_BANDS
+    des_sum  = [0.0] * len(NEED_NAMES)
+    for t in traces:
+        before = t.get("sense_before") or {}
+        after  = t.get("sense_after") or {}
+        bs = before.get("spectrum") or []
+        as_ = after.get("spectrum") or []
+        bd = before.get("desire")   or []
+        ad = after.get("desire")    or []
+        for i in range(min(N_BANDS, len(bs), len(as_))):
+            spec_sum[i] += as_[i] - bs[i]
+        for i in range(min(len(NEED_NAMES), len(bd), len(ad))):
+            des_sum[i] += ad[i] - bd[i]
+    spec_delta = [v / n for v in spec_sum]
+    des_delta  = [v / n for v in des_sum]
+    return {
+        "recipe": recipe_name,
+        "n": n,
+        "spectrum_delta": spec_delta,
+        "desire_delta":   des_delta,
+        "fulfillment_delta": sum(spec_delta) / N_BANDS,
+    }
+
+
+def _cosine_vec(a: list[float], b: list[float]) -> float:
+    import math
+    if not a or not b:
+        return 0.0
+    n = min(len(a), len(b))
+    dot = sum(a[i] * b[i] for i in range(n))
+    na = math.sqrt(sum(v * v for v in a[:n])) or 1.0
+    nb = math.sqrt(sum(v * v for v in b[:n])) or 1.0
+    return dot / (na * nb)
+
+
+def efficacy_alignment(signature: dict, spectrum: list[float]) -> float:
+    """How well a strategy's mean post-firing spectrum complements the
+    current spectrum. A strategy that brings rest-band uplift scores
+    high against a rest-deficient sense. Returns 0.0 when n==0 so the
+    informed-fit blend gracefully reduces to cosine-fit alone.
+    """
+    if not signature or signature.get("n", 0) == 0:
+        return 0.0
+    delta = signature.get("spectrum_delta") or []
+    deficit = [-v for v in spectrum[:N_BANDS]]
+    return _cosine_vec(delta, deficit)
+
+
+def pick_strategy_informed(spectrum: list[float], desire: list[float],
+                           presets=None, alpha: float = 0.5) -> dict:
+    """Strategy selection that consults the lived efficacy-prior alongside
+    cosine-fit on (frequency × angle). `alpha == 0.0` is byte-equivalent
+    to organ.pick_strategy; `alpha == 1.0` selects purely by efficacy.
+    Operator-fallback (desire > 1.5 AND top_score < 0.4) still applies.
+
+    Returns the same shape as pick_strategy, with one added field:
+    `alpha` (the blend weight used).
+    """
+    from organ import pick_strategy, _strategy_score, STRATEGIES, OPERATOR_DESIRE_THRESHOLD, OPERATOR_FIT_THRESHOLD
+    if alpha <= 0.0:
+        sel = pick_strategy(spectrum, desire, presets)
+        sel["alpha"] = 0.0
+        return sel
+    presets = presets if presets is not None else STRATEGIES
+    total_desire = sum(desire) if desire else 0.0
+    named = [s for s in presets if s.name != "freq-angle-focus"]
+    operator = next((s for s in presets if s.name == "freq-angle-focus"), None)
+
+    def informed(s):
+        cosine = _strategy_score(s, spectrum, total_desire)
+        sig = efficacy_signature(s.name)
+        align = efficacy_alignment(sig, spectrum)
+        return (1.0 - alpha) * cosine + alpha * align
+
+    scored = [(s, informed(s)) for s in named]
+    scored.sort(key=lambda t: -t[1])
+    if not scored:
+        return {
+            "chosen": operator,
+            "chosen_score": 0.0,
+            "named_ranked": [],
+            "operator": operator,
+            "operator_fallback_active": True,
+            "total_desire": total_desire,
+            "alpha": alpha,
+        }
+    top_named, top_score = scored[0]
+    fallback = (
+        operator is not None
+        and total_desire > OPERATOR_DESIRE_THRESHOLD
+        and top_score < OPERATOR_FIT_THRESHOLD
+    )
+    return {
+        "chosen": operator if fallback else top_named,
+        "chosen_score": top_score,
+        "named_ranked": scored,
+        "operator": operator,
+        "operator_fallback_active": fallback,
+        "total_desire": total_desire,
+        "alpha": alpha,
+    }
+
+
 # ─── learning capacities — available to any cell, never imposed ─────────
 # These are the verbs we explored together: predict, select strategy,
 # score surprise, respond, *and not-respond as a first-class response*.

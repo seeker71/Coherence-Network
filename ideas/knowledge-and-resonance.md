@@ -10,6 +10,7 @@ specs:
   - [living-signal-layer](../specs/living-signal-layer.md)
   - [source-artifact-sensing-graph-integration](../specs/source-artifact-sensing-graph-integration.md)
   - [gitnexus-integration-experiment](../specs/gitnexus-integration-experiment.md)
+  - [recipes-tuned-by-trace](../specs/recipes-tuned-by-trace.md)
 ---
 
 # Knowledge and Resonance
