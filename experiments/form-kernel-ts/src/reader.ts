@@ -191,6 +191,10 @@ function readList(k: Kernel, s: ParseState): NodeID {
       consume(s);
       return readDefn(k, s);
     }
+    if (verb === "alias") {
+      consume(s);
+      return readAlias(k, s);
+    }
     if (verb === "if") {
       consume(s);
       const kids = readChildrenUntilRparen(k, s);
@@ -265,12 +269,61 @@ function readLet(k: Kernel, s: ParseState): NodeID {
 
 // (defn <name> (<params>...) <body>) — names and params get repackaged as
 // bare string trivials so the walker reads NameID via inst (matches Go).
+//
+// Extended surface (additive; back-compat preserved):
+//
+//   (defn foo (a b) <body>)                           — untyped, original
+//   (defn foo (a:i32 b:i32) <body>)                   — strict-typed params
+//   (defn foo (a:i32 b:i32) :ret i32 <body>)          — strict-typed + return
+//   (defn foo :tparams (T:Format U:Format)            — parametric: T,U bound
+//                (a:T b:T) :ret T <body>)               to FormatRecipe-class
+//
+// A type annotation `name:type` is one ident token (the tokenizer doesn't
+// split on ':'). The walker dispatches on the FNDEF inst slot:
+//   inst = 1  → original 3-child shape (back-compat: [name, params, body])
+//   inst = 2  → typed/parametric 4-child shape:
+//                 [name, params, body, fnmeta] where fnmeta carries the
+//                 type-parameter list, the per-arg type slots, and the
+//                 return-type slot.  See parametric.ts for the layout.
 function readDefn(k: Kernel, s: ParseState): NodeID {
   const nameTok = consume(s);
   if (nameTok.kind !== "ident") throw new Error("defn: name must be identifier");
+
+  // Optional :tparams (T:C ...) — type parameters with constraints.
+  let typeParamPairs: { name: string; constraint: string }[] = [];
+  let next = peek(s);
+  if (next?.kind === "ident" && next.text === ":tparams") {
+    consume(s);
+    const lp = consume(s);
+    if (lp.kind !== "lparen") throw new Error("defn: :tparams expects (");
+    while (true) {
+      const tp = peek(s);
+      if (tp === undefined) throw new Error("defn: unterminated :tparams");
+      if (tp.kind === "rparen") {
+        consume(s);
+        break;
+      }
+      if (tp.kind !== "ident")
+        throw new Error("defn: :tparams entries must be ident");
+      consume(s);
+      // Accept `T` or `T:Constraint`. Default constraint is "Format".
+      const colon = tp.text.indexOf(":");
+      if (colon < 0) {
+        typeParamPairs.push({ name: tp.text, constraint: "Format" });
+      } else {
+        typeParamPairs.push({
+          name: tp.text.slice(0, colon),
+          constraint: tp.text.slice(colon + 1) || "Format",
+        });
+      }
+    }
+  }
+
   const lparen = consume(s);
   if (lparen.kind !== "lparen") throw new Error("defn: expected ( for params");
   const paramTrivials: NodeID[] = [];
+  const paramTypes: (string | null)[] = [];
+  let anyTyped = false;
   while (true) {
     const t = peek(s);
     if (t === undefined) throw new Error("defn: unterminated param list");
@@ -280,13 +333,36 @@ function readDefn(k: Kernel, s: ParseState): NodeID {
     }
     if (t.kind !== "ident") throw new Error("defn: params must be identifiers");
     consume(s);
+    const colon = t.text.indexOf(":");
+    let paramName: string;
+    let paramType: string | null;
+    if (colon < 0) {
+      paramName = t.text;
+      paramType = null;
+    } else {
+      paramName = t.text.slice(0, colon);
+      paramType = t.text.slice(colon + 1);
+      anyTyped = true;
+    }
     paramTrivials.push({
       pkg: 1,
       level: Level.TRIVIAL,
       type: Triv.STRING,
-      inst: k.internName(t.text),
+      inst: k.internName(paramName),
     });
+    paramTypes.push(paramType);
   }
+
+  // Optional :ret <type-ident>
+  let retType: string | null = null;
+  next = peek(s);
+  if (next?.kind === "ident" && next.text === ":ret") {
+    consume(s);
+    const rt = consume(s);
+    if (rt.kind !== "ident") throw new Error("defn: :ret expects ident");
+    retType = rt.text;
+  }
+
   const body = readOne(k, s);
   const close = consume(s);
   if (close.kind !== "rparen") throw new Error("defn: expected )");
@@ -300,9 +376,70 @@ function readDefn(k: Kernel, s: ParseState): NodeID {
     { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
     paramTrivials,
   );
+
+  const typed = anyTyped || retType !== null || typeParamPairs.length > 0;
+  if (!typed) {
+    // Back-compat: original 3-child FNDEF shape, inst=1.
+    return k.intern(
+      { pkg: 1, level: Level.BASIC, type: RBasic.FNDEF, inst: 1 },
+      [nameTrivial, paramsBlock, body],
+    );
+  }
+
+  // Typed shape: inst=2, 4 children [name, params, body, fnmeta].
+  // fnmeta is a SEQUENCE of three SEQUENCEs:
+  //   tparams-seq: [name-trivial, constraint-trivial, ...]
+  //   ptypes-seq:  [type-trivial-or-null, ...] (one per param)
+  //   ret-seq:     [type-trivial] or [] when no return type
+  const tparamsChildren: NodeID[] = [];
+  for (const tp of typeParamPairs) {
+    tparamsChildren.push(k.internString(tp.name));
+    tparamsChildren.push(k.internString(tp.constraint));
+  }
+  const tparamsSeq = k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+    tparamsChildren,
+  );
+  const ptypesChildren: NodeID[] = paramTypes.map((t) =>
+    t === null ? k.internTrivialNull() : k.internString(t),
+  );
+  const ptypesSeq = k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+    ptypesChildren,
+  );
+  const retSeq = k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+    retType === null ? [] : [k.internString(retType)],
+  );
+  const fnmeta = k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.SEQUENCE },
+    [tparamsSeq, ptypesSeq, retSeq],
+  );
   return k.intern(
-    { pkg: 1, level: Level.BASIC, type: RBasic.FNDEF, inst: 1 },
-    [nameTrivial, paramsBlock, body],
+    { pkg: 1, level: Level.BASIC, type: RBasic.FNDEF, inst: 2 },
+    [nameTrivial, paramsBlock, body, fnmeta],
+  );
+}
+
+// (alias <name> <value-expr>) — interns an ALIAS recipe whose children are
+// the name-string-trivial and the target node. Read at compile time via
+// resolveAlias(); not walked at run time.
+function readAlias(k: Kernel, s: ParseState): NodeID {
+  const nameTok = consume(s);
+  if (nameTok.kind !== "ident")
+    throw new Error("alias: name must be identifier");
+  const target = readOne(k, s);
+  const close = consume(s);
+  if (close.kind !== "rparen") throw new Error("alias: expected )");
+  const nameTrivial: NodeID = {
+    pkg: 1,
+    level: Level.TRIVIAL,
+    type: Triv.STRING,
+    inst: k.internName(nameTok.text),
+  };
+  return k.intern(
+    { pkg: 1, level: Level.BASIC, type: RBasic.ALIAS, inst: 1 },
+    [nameTrivial, target],
   );
 }
 

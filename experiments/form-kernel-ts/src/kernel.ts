@@ -66,8 +66,12 @@ export const RBasic = {
   QUOTIENT: 70,         // #19 — equivalence-class types
   INDUCTIVE: 71,        // #21 — algebraic datatypes
   CONSTRUCTOR: 72,      // #21 — constructor application / value-shape
+  PROOF: 73,            // #20 — propositions-as-types (Curry-Howard)
+  INFERENCE: 74,        // #20 — inference rules + applications
+  ALIAS: 75,            // #8  — compile-time bindings (substrate cells)
   BLANKET: 80,          // #25 — Markov blanket (cell boundary recipe)
   PROJECT: 81,          // #28 — holographic PROJECT operation
+  GENERATIVE: 82,       // #26 — generative model recipes (per-cell)
 } as const;
 
 // Triv — trivial RTypes.
@@ -907,6 +911,21 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
     case RBasic.QUOTIENT:
       // QUOTIENT recipes — walking one yields its NodeID so structural
       // reasoning over equivalence-class types can address them.
+      return { kind: "nodeid", nodeid: node };
+    case RBasic.ALIAS:
+      // ALIAS recipes (#8) — children: [name-trivial, target-nodeid].
+      // Walking returns the target NodeID so alias resolution is transparent.
+      if (kids.length >= 2) return { kind: "nodeid", nodeid: kids[1]! };
+      return { kind: "nodeid", nodeid: node };
+    case RBasic.BLANKET:
+    case RBasic.PROJECT:
+    case RBasic.GENERATIVE:
+    case RBasic.PROOF:
+    case RBasic.INFERENCE:
+      // Higher-architecture recipes — walking returns the NodeID itself,
+      // letting downstream code reason structurally without crashing on
+      // recipes whose semantics are interpreted by their own module
+      // (blanket.ts, project.ts, generative.ts, proof.ts).
       return { kind: "nodeid", nodeid: node };
     default:
       throw new Error(`walk: unsupported RBasic type ${cat.type}`);
