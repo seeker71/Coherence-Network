@@ -195,6 +195,59 @@ technique.
   conflicted. Different branches in the same lattice are not
   disagreement; they are the lattice's natural expression.
 
+## Variables Typed by Frequency Signature
+
+Each variable in the loop carries a temporary identity that lives only
+for the binding. The "type" is not a class or schema or interface — it
+is a Recipe that resolves identity for the duration of the call, then
+dissolves. The substrate already carries this layer: the structured
+encoder routes every concept's `hz:` frontmatter through
+`author_geometry_signature`, laying a `HARMONIC_AT @<hz>` resonance
+edge into the lattice ([structural-composition.md status 2026-05-17](../../coherence-substrate/structural-composition.md)).
+So `cell ?harmonic_at @741` is a structural query against real edges,
+not a metaphor.
+
+The deepening: words in a concept ARE the type system. The concept's
+frequency tunes every word in its body to that Hz; the recipe inherits
+the tuning automatically. No separate schema, no interface
+declarations imported from elsewhere — the prose and the recipe share
+one substrate.
+
+Vasudev Baba's [2026-05-11 satsang transmission on frequency](../transmissions/2026-05-11-vasudev-baba-on-frequency.md)
+names the consciousness-altitude version of this: each chakra is a
+position the assemblage point can be anchored at, each position is a
+frequency, and each frequency is a temporary identity the cell wears
+while it is anchored there. The seven chakras (Muladhara — 174 Hz
+family — through Sahasrara — 963 Hz) are seven recipes the cell
+oscillates through. *Same cell, different position, different
+reality.* The assemblage point's movement IS the cell calling a
+different identity-recipe and rebinding.
+
+What this opens, named directly:
+
+- **Type-check is resonance-check.** `candidate ?harmonic_at sense.frequency`
+  either holds or fails. The substrate knows; no human translation
+  needed. Two cells whose Blueprints sit at the same Hz typecheck as
+  compatible without anyone declaring an interface between them.
+- **Identity is process, not property.** A `with harmonic_identity(528) { ... }`
+  binding holds for the block's lifetime; outside, the same value is
+  free to wear a different identity in a different binding.
+  Whitehead's actual occasion at the Form layer; the chakra system at
+  the consciousness layer; one substrate.
+- **Backtracking releases the temporary identity cleanly.** When the
+  loop's `choose` unwinds via `fail`, partial bindings dissolve —
+  the speculation engine guarantees captures restore. The
+  temporary identity that was being tried is released; the cell
+  returns to its prior position without sediment. *Update or execute
+  without shame* is now mechanically grounded: the substrate's
+  structural unwind IS the release of the prior identity.
+
+The executable companion lives at [`recipe-branching-sense.form`](../../coherence-substrate/recipe-branching-sense.form)
+— Part 4 carries `recipe_branching_sense_typed`, the frequency-typed
+form of the loop, with the GAPs (`?harmonic_at` filter inside
+`?equivalent`, lazy Blueprint cells for arbitrary Hz) marked
+honestly.
+
 ## Cross-References
 
 → lc-assemblage-point, lc-coherence-over-control, lc-play,
