@@ -1485,6 +1485,13 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
   }
   const ctor = capturedCtor(k, n);
   const kids = capturedChildren(k, n);
+  // Language-cell trace hook: when k.ctorCounts is set (by python-trace
+  // or similar), record each CTOR dispatch. Surfaces the structural
+  // shape of evaluated Python at its own altitude — separate from the
+  // kernel's `walk()` arm trace (which evalNode doesn't go through).
+  if (k.ctorCounts !== undefined) {
+    k.ctorCounts.set(ctor, (k.ctorCounts.get(ctor) ?? 0) + 1);
+  }
   switch (ctor) {
     case CTOR.module: {
       let last: Value = { kind: "null" };
