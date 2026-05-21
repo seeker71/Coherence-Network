@@ -2,6 +2,12 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] resource | Geometry of Stability transcript formed and ingested
+
+Added [`geometry-of-stability-loraine-jezak-2026-05-21.md`](resources/geometry-of-stability-loraine-jezak-2026-05-21.md) as the source-backed digest for Loraine Jezak's Sacred Britain transmission. The full captions stay out of the repo; the body keeps the video URL, metadata, caption hash, Form-shaped extraction, graph concepts, and boundaries for relationship, nervous-system, gender-archetype, dimensional, and scalar-wave claims.
+
+Graph manifest expanded with Loraine Jezak, the Geometry of Stability artifact, and four extracted concepts: relational scaffolding, spiral pivot coherence, field-stabilizing transmission, and expansion not ladder. Edges connect the source to Urs's profile lineage and to existing embodied-lineage / sacred-imagination patterns.
+
 ## [2026-05-21] synthesis | Recipes as a Binary Library — the portable artifact between lattice and source
 
 Urs named the next move directly: *we should have form native recipes for any recipe, we should be able to generate those and have a binary library that can be viewed in any language we choose.* The architecture this names is a three-layer separation between the in-process substrate, the portable serialization, and the per-tongue source-text views. The content-addressed lattice was always the canonical artifact; this breath names it as a *library* that travels, with viewers that render it in whatever tongue the reader needs.

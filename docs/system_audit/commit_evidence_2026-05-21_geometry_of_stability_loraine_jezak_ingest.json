@@ -1,0 +1,82 @@
+{
+  "date": "2026-05-21",
+  "thread_branch": "codex/transcript-form-ingest-20260521",
+  "commit_scope": "Form and ingest the Geometry of Stability YouTube transmission as source-backed profile graph data, a resource digest, and substrate cells.",
+  "files_owned": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/lineage/formative-transmissions.md",
+    "docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "specs/geometry-of-stability-loraine-jezak-ingest.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-21_geometry_of_stability_loraine_jezak_ingest.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+      "python3 scripts/coh_substrate.py ingest docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md specs/geometry-of-stability-loraine-jezak-ingest.md docs/lineage/formative-transmissions.md",
+      "python3 scripts/coh_substrate.py equivalent resource geometry-of-stability-loraine-jezak-2026-05-21",
+      "python3 scripts/coh_substrate.py form '?equivalent @resource(geometry-of-stability-loraine-jezak-2026-05-21)'",
+      "python3 scripts/validate_spec_quality.py --file specs/geometry-of-stability-loraine-jezak-ingest.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_geometry_of_stability_loraine_jezak_ingest.json",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and deploy validation remain pending until PR merge and production replay."
+  },
+  "idea_ids": ["knowledge-and-resonance"],
+  "spec_ids": ["specs/geometry-of-stability-loraine-jezak-ingest.md"],
+  "task_ids": ["geometry-of-stability-loraine-jezak-ingest"],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": ["source-request"]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": ["transcript-forming", "ingestion", "summary", "graph-manifest-edit"]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+    "docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md",
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "6826d908c8c45972590c69d0648b44c8238a16b4746395e322cd25b1e7e0a200"
+  ],
+  "change_files": [
+    "docs/lineage/urs-contribution-profile.graph.json",
+    "docs/lineage/formative-transmissions.md",
+    "docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md",
+    "docs/vision-kb/resources/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "specs/geometry-of-stability-loraine-jezak-ingest.md",
+    "specs/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}
