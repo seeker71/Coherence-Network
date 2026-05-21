@@ -57,11 +57,16 @@ export type LevelValue = (typeof Level)[keyof typeof Level];
 //     see ./quotient.ts. The category instance carries the equivalence
 //     family code; children are [carrier-recipe, equivalence-recipe].
 export const RBasic = {
+  UNDEFINED: 0,         // honest "no Form category settled yet"
+  WITNESS: 6,           // substrate self-attestation
   BLOCK: 9,
+  CALL: 10,             // invoke external effect (I/O, tool)
   COND: 11,
   MATH: 12,
   COMPARE: 13,
   LOGIC: 14,
+  ACCESS: 15,           // read property / field
+  METHOD: 27,           // transform on a cell-like value
   FNDEF: 31,
   FNCALL: 32,
   IDENT: 33,
@@ -186,6 +191,97 @@ export function nodeKey(n: NodeID): string {
 
 export type NativeFn = (k: Kernel, args: Value[]) => Value;
 
+// NativeEntry — a native's function plus the Form category it expresses.
+// Carries Blueprint attribution into the kernel: when the walker dispatches
+// through a native, the trace records the category alongside the FNCALL
+// arm. UNDEFINED is the honest marker for natives whose Form attribution
+// hasn't been settled yet.
+export interface NativeEntry {
+  readonly category: NodeID;
+  readonly fn: NativeFn;
+}
+
+// Trace — per-arm dispatch counters. Sibling-parity with the Go and Rust
+// kernels' Trace structures. Hot path stays free when trace is undefined.
+export class Trace {
+  totalWalks = 0;
+  armCounts = new Map<number, number>();
+  choiceAttempts = 0;
+  choiceSuccesses = 0;
+  choiceFailures = 0;
+
+  record(armTy: number): void {
+    this.totalWalks++;
+    this.armCounts.set(armTy, (this.armCounts.get(armTy) ?? 0) + 1);
+  }
+
+  static armName(armTy: number): string {
+    switch (armTy) {
+      case RBasic.BLOCK: return "BLOCK";
+      case RBasic.COND: return "COND";
+      case RBasic.MATH: return "MATH";
+      case RBasic.COMPARE: return "COMPARE";
+      case RBasic.LOGIC: return "LOGIC";
+      case RBasic.IDENT: return "IDENT";
+      case RBasic.FNDEF: return "FNDEF";
+      case RBasic.FNCALL: return "FNCALL";
+      case RBasic.LIST: return "LIST";
+      case RBasic.WITNESS: return "WITNESS";
+      case RBasic.CALL: return "CALL";
+      case RBasic.ACCESS: return "ACCESS";
+      case RBasic.METHOD: return "METHOD";
+      default: return "OTHER";
+    }
+  }
+
+  toJSON(): Record<string, unknown> {
+    const arms = Array.from(this.armCounts.entries())
+      .map(([armTy, count]) => ({
+        arm_ty: armTy,
+        arm_name: Trace.armName(armTy),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+    return {
+      total_walks: this.totalWalks,
+      arms,
+      choice_attempts: this.choiceAttempts,
+      choice_successes: this.choiceSuccesses,
+      choice_failures: this.choiceFailures,
+      choice_success_rate:
+        this.choiceAttempts > 0
+          ? this.choiceSuccesses / this.choiceAttempts
+          : 0,
+    };
+  }
+}
+
+// Native-attribution category constructors. Each names the Form-shape a
+// native expresses; the walker records them in the trace when the native
+// fires. Mirrors Rust/Go kernel's cat_call / cat_witness / cat_access /
+// cat_method / cat_list_nat / cat_undefined.
+export function catCall(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.CALL, inst: 1 };
+}
+export function catWitness(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.WITNESS, inst: 1 };
+}
+export function catAccess(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.ACCESS, inst: 1 };
+}
+export function catMethod(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.METHOD, inst: 1 };
+}
+export function catListNat(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: 1 };
+}
+export function catCompareEq(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.EQ };
+}
+export function catUndefined(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.UNDEFINED, inst: 0 };
+}
+
 export class Kernel {
   // Composite recipes — keyed by content (recipeKey) for intern dedup,
   // and by NodeID (nodeKey) for walker access.
@@ -212,8 +308,14 @@ export class Kernel {
   private f64s: number[] = [];
   private f64Idx = new Map<string, number>(); // keyed by IEEE bit pattern as hex
 
-  // Natives — map from NameID to NativeFn. Lookup is u32-keyed.
-  natives = new Map<NameID, NativeFn>();
+  // Natives — map from NameID to NativeEntry (fn + Blueprint category).
+  // Lookup is u32-keyed. The category lets the walker record which
+  // Form-shape a native expresses, alongside the FNCALL arm.
+  natives = new Map<NameID, NativeEntry>();
+
+  // Optional tracing — undefined for hot-path runs, set by trace
+  // subcommand. Sibling-parity with Go/Rust kernels.
+  trace?: Trace;
 
   constructor() {
     this.registerNatives();
@@ -535,82 +637,99 @@ export class Kernel {
   // identifier resolves to a NameID in the natives map.
   // -------------------------------------------------------------------------
 
-  private registerNative(name: string, fn: NativeFn): void {
-    this.natives.set(this.internName(name), fn);
+  private registerNative(name: string, category: NodeID, fn: NativeFn): void {
+    this.natives.set(this.internName(name), { category, fn });
+  }
+
+  // setNative — public registration helper for language adapters
+  // (lang-go.ts, lang-python.ts, etc.) that previously reached into the
+  // natives map directly. Default category is UNDEFINED (honest about
+  // unsettled Form attribution); pass an explicit category to opt in.
+  setNative(name: string, fn: NativeFn, category: NodeID = catUndefined()): void {
+    this.natives.set(this.internName(name), { category, fn });
   }
 
   private registerNatives(): void {
-    this.registerNative("print", (_k, args) => {
+    // Blueprint attribution discipline (mirrors Rust/Go kernels):
+    //   catCall      — invoke external effect (I/O, tool)
+    //   catAccess    — read property / field
+    //   catMethod    — transform on a cell-like value
+    //   catCompareEq — equality (str_eq)
+    //   catListNat   — construct/destructure a List
+    //   catWitness   — substrate self-attestation
+    //   catUndefined — honest "no Form category settled yet"
+
+    this.registerNative("print", catCall(), (_k, args) => {
       const parts = args.map((a) => this.renderForPrint(a));
       process.stdout.write(parts.join(" ") + "\n");
       return { kind: "null" };
     });
     // String ops
-    this.registerNative("str_len", (_k, args) => ({
+    this.registerNative("str_len", catAccess(), (_k, args) => ({
       kind: "int",
       int: argStr(args, 0).length,
     }));
-    this.registerNative("substring", (_k, args) => ({
+    this.registerNative("substring", catAccess(), (_k, args) => ({
       kind: "str",
       str: argStr(args, 0).slice(argInt(args, 1), argInt(args, 2)),
     }));
-    this.registerNative("char_at", (_k, args) => {
+    this.registerNative("char_at", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       const i = argInt(args, 1);
       return { kind: "str", str: s[i] ?? "" };
     });
-    this.registerNative("str_concat", (_k, args) => ({
+    this.registerNative("str_concat", catMethod(), (_k, args) => ({
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
-    this.registerNative("str_eq", (_k, args) => ({
+    this.registerNative("str_eq", catCompareEq(), (_k, args) => ({
       kind: "bool",
       bool: argStr(args, 0) === argStr(args, 1),
     }));
-    this.registerNative("int_to_str", (_k, args) => ({
+    this.registerNative("int_to_str", catMethod(), (_k, args) => ({
       kind: "str",
       str: String(argInt(args, 0)),
     }));
-    this.registerNative("str_to_int", (_k, args) => ({
+    this.registerNative("str_to_int", catMethod(), (_k, args) => ({
       kind: "int",
       int: parseInt(argStr(args, 0), 10) || 0,
     }));
-    this.registerNative("ord", (_k, args) => {
+    this.registerNative("ord", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       return { kind: "int", int: s.length === 0 ? -1 : s.charCodeAt(0) };
     });
     // List ops
-    this.registerNative("list", (_k, args) => ({
+    this.registerNative("list", catListNat(), (_k, args) => ({
       kind: "list",
       list: args.slice(),
     }));
-    this.registerNative("cons", (_k, args) => {
+    this.registerNative("cons", catListNat(), (_k, args) => {
       const head = args[0] ?? { kind: "null" };
       const tail = argList(args, 1);
       return { kind: "list", list: [head, ...tail] };
     });
-    this.registerNative("head", (_k, args) => {
+    this.registerNative("head", catListNat(), (_k, args) => {
       const lst = argList(args, 0);
       return lst[0] ?? { kind: "null" };
     });
-    this.registerNative("tail", (_k, args) => ({
+    this.registerNative("tail", catListNat(), (_k, args) => ({
       kind: "list",
       list: argList(args, 0).slice(1),
     }));
-    this.registerNative("len", (_k, args) => {
+    this.registerNative("len", catAccess(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") return { kind: "int", int: v.list.length };
       if (v?.kind === "str") return { kind: "int", int: v.str.length };
       return { kind: "int", int: 0 };
     });
-    this.registerNative("nth", (_k, args) => {
+    this.registerNative("nth", catAccess(), (_k, args) => {
       const lst = argList(args, 0);
       const i = argInt(args, 1);
       return lst[i] ?? { kind: "null" };
     });
-    this.registerNative("empty", () => ({ kind: "list", list: [] }));
+    this.registerNative("empty", catListNat(), () => ({ kind: "list", list: [] }));
     // File I/O
-    this.registerNative("read_file", (_k, args) => {
+    this.registerNative("read_file", catCall(), (_k, args) => {
       try {
         return { kind: "str", str: readFileSync(argStr(args, 0), "utf8") };
       } catch {
@@ -618,10 +737,8 @@ export class Kernel {
       }
     });
 
-    // Substrate write surface — Form code holds NodeIDs as values and
-    // constructs recipes via these natives. Closes the form-runtime-in-
-    // form gaps W1–W3.
-    this.registerNative("make_nodeid", (_k, args) => ({
+    // Substrate write surface — all attributed as WITNESS.
+    this.registerNative("make_nodeid", catWitness(), (_k, args) => ({
       kind: "nodeid",
       nodeid: {
         pkg: argInt(args, 0),
@@ -630,15 +747,15 @@ export class Kernel {
         inst: argInt(args, 3),
       },
     }));
-    this.registerNative("intern_trivial_int", (k, args) => ({
+    this.registerNative("intern_trivial_int", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.internTrivialInt(argInt(args, 0)),
     }));
-    this.registerNative("intern_trivial_string", (k, args) => ({
+    this.registerNative("intern_trivial_string", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.internString(argStr(args, 0)),
     }));
-    this.registerNative("intern_node", (k, args) => {
+    this.registerNative("intern_node", catWitness(), (k, args) => {
       const cat = argNodeID(args, 0);
       const kids = argList(args, 1).map((v) => {
         if (v.kind !== "nodeid")
@@ -647,46 +764,57 @@ export class Kernel {
       });
       return { kind: "nodeid", nodeid: k.intern(cat, kids) };
     });
-    this.registerNative("node_category", (k, args) => ({
+    this.registerNative("node_category", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.category(argNodeID(args, 0)),
     }));
-    this.registerNative("node_children", (k, args) => {
+    this.registerNative("node_children", catWitness(), (k, args) => {
       const kids = k.children(argNodeID(args, 0));
       return {
         kind: "list",
         list: kids.map((c) => ({ kind: "nodeid", nodeid: c } as Value)),
       };
     });
-    this.registerNative("node_value", (k, args) =>
+    this.registerNative("node_value", catWitness(), (k, args) =>
       k.trivialValue(argNodeID(args, 0)),
     );
-    this.registerNative("walk_recipe", (k, args) =>
+    this.registerNative("walk_recipe", catWitness(), (k, args) =>
       walk(k, argNodeID(args, 0), new Frame(null)),
     );
 
-    // Typed-numeric construction and decoding
-    this.registerNative("make_int8", (k, args) => k.boxValue(k.internTrivialInt8(argInt(args, 0))));
-    this.registerNative("make_int16", (k, args) => k.boxValue(k.internTrivialInt16(argInt(args, 0))));
-    this.registerNative("make_int32", (k, args) => k.boxValue(k.internTrivialInt(argInt(args, 0))));
-    this.registerNative("make_int64", (k, args) => k.boxValue(k.internTrivialInt64(argBigInt(args, 0))));
-    this.registerNative("make_uint8", (k, args) => k.boxValue(k.internTrivialUint8(argInt(args, 0))));
-    this.registerNative("make_uint16", (k, args) => k.boxValue(k.internTrivialUint16(argInt(args, 0))));
-    this.registerNative("make_uint32", (k, args) => k.boxValue(k.internTrivialUint32(argInt(args, 0))));
-    this.registerNative("make_uint64", (k, args) => k.boxValue(k.internTrivialUint64(argBigInt(args, 0))));
-    this.registerNative("make_float32", (k, args) => k.boxValue(k.internTrivialFloat32(argFloat(args, 0))));
-    this.registerNative("make_float64", (k, args) => k.boxValue(k.internTrivialFloat64(argFloat(args, 0))));
+    // native_blueprint — introspection: return a native's Form category.
+    this.registerNative("native_blueprint", catWitness(), (k, args) => {
+      const name = argStr(args, 0);
+      const id = k.lookupName(name);
+      if (id === undefined) return { kind: "null" };
+      const ne = k.natives.get(id);
+      if (ne === undefined) return { kind: "null" };
+      return { kind: "nodeid", nodeid: ne.category };
+    });
 
-    // Width-conversion casts (operate on values, not nodeids — Form's
-    // common case for narrowing/widening at runtime)
-    this.registerNative("i64", (_k, args) => ({ kind: "i64", bigint: argBigInt(args, 0) }));
-    this.registerNative("u64", (_k, args) => ({ kind: "u64", bigint: argBigInt(args, 0) }));
-    this.registerNative("f32", (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
-    this.registerNative("f64", (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
-    this.registerNative("i32", (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
+    // Typed-numeric construction and decoding — attributed as WITNESS
+    // (substrate-write for typed trivials) and METHOD (value conversion).
+    this.registerNative("make_int8", catWitness(), (k, args) => k.boxValue(k.internTrivialInt8(argInt(args, 0))));
+    this.registerNative("make_int16", catWitness(), (k, args) => k.boxValue(k.internTrivialInt16(argInt(args, 0))));
+    this.registerNative("make_int32", catWitness(), (k, args) => k.boxValue(k.internTrivialInt(argInt(args, 0))));
+    this.registerNative("make_int64", catWitness(), (k, args) => k.boxValue(k.internTrivialInt64(argBigInt(args, 0))));
+    this.registerNative("make_uint8", catWitness(), (k, args) => k.boxValue(k.internTrivialUint8(argInt(args, 0))));
+    this.registerNative("make_uint16", catWitness(), (k, args) => k.boxValue(k.internTrivialUint16(argInt(args, 0))));
+    this.registerNative("make_uint32", catWitness(), (k, args) => k.boxValue(k.internTrivialUint32(argInt(args, 0))));
+    this.registerNative("make_uint64", catWitness(), (k, args) => k.boxValue(k.internTrivialUint64(argBigInt(args, 0))));
+    this.registerNative("make_float32", catWitness(), (k, args) => k.boxValue(k.internTrivialFloat32(argFloat(args, 0))));
+    this.registerNative("make_float64", catWitness(), (k, args) => k.boxValue(k.internTrivialFloat64(argFloat(args, 0))));
 
-    // Debug
-    this.registerNative("trace", (_k, args) => {
+    // Width-conversion casts (operate on values — METHOD-shape transforms)
+    this.registerNative("i64", catMethod(), (_k, args) => ({ kind: "i64", bigint: argBigInt(args, 0) }));
+    this.registerNative("u64", catMethod(), (_k, args) => ({ kind: "u64", bigint: argBigInt(args, 0) }));
+    this.registerNative("f32", catMethod(), (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
+    this.registerNative("f64", catMethod(), (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
+    this.registerNative("i32", catMethod(), (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
+
+    // Debug — no Form category claimed; honest about being outside the
+    // structural vocabulary.
+    this.registerNative("trace", catUndefined(), (_k, args) => {
       if (args.length >= 2) {
         const label = args[0]?.kind === "str" ? args[0].str : "trace";
         process.stderr.write(
@@ -698,6 +826,12 @@ export class Kernel {
       process.stderr.write(`[trace] ${this.renderForPrint(v)}\n`);
       return v;
     });
+  }
+
+  // lookupName — internal-only name → NameID lookup, used by
+  // native_blueprint. Returns undefined for unbound names.
+  lookupName(s: string): NameID | undefined {
+    return this.strIdx.get(s);
   }
 
   private renderForPrint(v: Value): string {
@@ -875,6 +1009,13 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
   }
   const cat = k.category(node);
   const kids = k.children(node);
+
+  // Tracing hook: when k.trace is set, record arm dispatch. Pure
+  // counter increment — no allocation, no IO. Sibling-parity with the
+  // Rust and Go kernels.
+  if (k.trace !== undefined) {
+    k.trace.record(cat.type);
+  }
 
   switch (cat.type) {
     case RBasic.IDENT: {
@@ -1480,13 +1621,19 @@ function walkFnCall(
 
   if (calleeName !== null) {
     // Native dispatch
-    const nat = k.natives.get(calleeName);
-    if (nat !== undefined) {
+    const ne = k.natives.get(calleeName);
+    if (ne !== undefined) {
       const args: Value[] = [];
       for (let i = 1; i < kids.length; i++) {
         args.push(walk(k, kids[i]!, frame));
       }
-      return nat(k, args);
+      // Native Blueprint attribution — record the Form category the
+      // native expresses alongside the FNCALL arm. The kernel knows
+      // itself even when the call leaves Form-land.
+      if (k.trace !== undefined && ne.category.type !== RBasic.UNDEFINED) {
+        k.trace.record(ne.category.type);
+      }
+      return ne.fn(k, args);
     }
     // Closure via frame
     const v = frame.lookup(calleeName);

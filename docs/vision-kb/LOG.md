@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] synthesis | Form-kernel runtime visualizer — Python on Form, memory as a body
+
+Urs named the synthesis:
+
+> *this should allow us to run any python code using the form kernel runtime and visualize hot-spots and other interesting run-time behavior like blueprint and recipe clusters or interactions*
+
+Four pieces, each shipped, that now compose. Concept seeded: [`lc-form-kernel-runtime-visualizer`](concepts/lc-form-kernel-runtime-visualizer.md) (528 Hz).
+
+The two infrastructural moves that close the loop:
+
+1. **Blueprint attribution on every kernel native** (Rust + Go + TypeScript). Each `NativeEntry` carries the RBasic category it expresses — `print` as CALL, `intern_node` as WITNESS, `head` as LIST, `str_concat` as METHOD. The walker records the category in the trace alongside the FNCALL arm. Form code introspects via `(native_blueprint "name")` → the category NodeID. Sibling parity holds: same NodeIDs, same trace shape across all three kernels.
+
+2. **NodeID provenance plane on the memory-as-framebuffer**. Parallel to the existing `crc32(file:line)` source-location plane, the framebuffer now records the substrate NodeID of the Blueprint/Recipe/Cell that authored each write — `Tracked::new_with_nodeid(value, nodeid)` and `track_node!(field, expr, nodeid)`. The visualizer-side surface that lets a kernel-driven mutator stamp Form identity on the bytes it writes.
+
+Plus the public profile: [`kernels/README.md`](../../kernels/README.md) names the kernels as the core execution engine — five distinctive capabilities (cross-kernel structural identity, native Blueprint attribution, meta-circular evaluator, Python-on-Form via BMF, memory-as-framebuffer as observability coordinate-space). CLAUDE.md's Architecture section now points at the kernel home alongside api/web/db/tests.
+
 ## [2026-05-21] proof | native macOS binary executes Form recipes — no Python in the runtime
 
 Urs named the destination directly:
