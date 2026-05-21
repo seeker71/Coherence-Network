@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 109
+**Total files**: 110
 
 | File | Purpose |
 |---|---|
@@ -54,6 +54,7 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
 | [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
 | [generate_work_visuals.py](generate_work_visuals.py) | !/usr/bin/env python3 |
+| [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |

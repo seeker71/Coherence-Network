@@ -1,0 +1,374 @@
+# ─────────────────────────────────────────────────────────────────────
+# gh-cli-grammar.form — `gh` CLI as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Concrete demonstration of lc-tools-as-form-cells. The `gh` CLI is one
+# of the body's most-invoked external tools (PR creation, merge,
+# diffing, issue management). Expressing it as a Form Language cell
+# lets cells invoke `gh` through structural composition instead of
+# bash-string-glue, and lets the substrate's content-addressing
+# recognize the same `gh pr view 1234` regardless of which cell
+# composed it.
+#
+# Covers the subcommands the body uses most:
+#   gh pr view   <number> [--json fields]
+#   gh pr list   [--state <s>] [--limit <n>] [--json fields]
+#   gh pr create [--title <t>] [--body <b>] [--base <branch>]
+#   gh pr merge  <number> [--squash | --merge | --rebase] [--delete-branch]
+#   gh pr diff   <number>
+#   gh issue list / view / create
+#   gh run list / view / watch
+#
+# Each subcommand becomes one recipe-pair (args_tree → shell_invocation,
+# shell_response → result_tree). Composed under the gh_language_cell
+# Blueprint at the parent altitude.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — common result shapes
+# ─────────────────────────────────────────────────────────────────────
+
+form pull_request_shape = {
+    number:       ~Int,
+    title:        ~String,
+    state:        ~Slug,            # "OPEN" | "CLOSED" | "MERGED"
+    body:         ~String,
+    base_ref:     ~Slug,
+    head_ref:     ~Slug,
+    author:       ~Slug,
+    created_at:   ~DateLit,
+    merged_at:    ?~DateLit,
+    url:          ~URLLit,
+    labels:       ~List,            # [~Slug]
+    reviewers:    ~List,            # [~Slug]
+    mergeable:    ?~Bool,
+};
+
+form issue_shape = {
+    number:     ~Int,
+    title:      ~String,
+    state:      ~Slug,              # "OPEN" | "CLOSED"
+    body:       ~String,
+    author:     ~Slug,
+    created_at: ~DateLit,
+    closed_at:  ?~DateLit,
+    url:        ~URLLit,
+    labels:     ~List,
+};
+
+form workflow_run_shape = {
+    id:           ~Int,
+    name:         ~String,
+    status:       ~Slug,            # "queued" | "in_progress" | "completed"
+    conclusion:   ?~Slug,           # "success" | "failure" | "cancelled" | …
+    branch:       ~Slug,
+    head_sha:     ~String,
+    event:        ~Slug,            # "push" | "pull_request" | "workflow_dispatch"
+    started_at:   ~DateLit,
+    duration_ms:  ~Int,
+    url:          ~URLLit,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — gh pr view
+# ─────────────────────────────────────────────────────────────────────
+
+form gh_pr_view_args = {
+    number:    ~Int,                # PR number to view
+    json_fields: ?~List,            # [~Slug] — JSON field names to extract
+};
+
+defn gh_pr_view_call(args) = shell_invocation_shape {
+    command: "gh",
+    argv: concat(
+        ["pr", "view", int_to_string(args.number)],
+        if args.json_fields != null
+           then ["--json", join(args.json_fields, ",")]
+           else []
+    ),
+    env:     {},
+    stdin:   null,
+    cwd:     null,
+    timeout: 30,
+};
+
+defn gh_pr_view_parse(response) = do {
+    # exit-code 0: parse stdout as JSON (when --json given) or as
+    # gh's plain-text view; surface stderr as a diagnostic leaf
+    # regardless.
+    if response.exit_code != 0
+    then {
+        kind:        "tool_error",
+        tool:        "gh pr view",
+        exit_code:   response.exit_code,
+        stderr:      response.stderr,
+        duration_ms: response.duration_ms,
+    }
+    else parse(@language(json), response.stdout)
+};
+
+defn gh_pr_view = tool_grammar_shape {
+    modality:          modality_shape { name: "tool", domain: "github" },
+    call_pattern:      @recipe(gh_pr_view_call),
+    response_pattern:  @recipe(gh_pr_view_parse),
+    carrier:           "shell",
+    version:           "gh-cli >= 2.40",
+    cross_modal_links: [],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — gh pr list
+# ─────────────────────────────────────────────────────────────────────
+
+form gh_pr_list_args = {
+    state:       ?~Slug,            # "open" | "closed" | "merged" | "all"
+    limit:       ?~Int,
+    base:        ?~Slug,            # base branch filter
+    author:      ?~Slug,
+    json_fields: ?~List,
+};
+
+defn gh_pr_list_call(args) = shell_invocation_shape {
+    command: "gh",
+    argv: concat(
+        ["pr", "list"],
+        if args.state  != null then ["--state",  args.state]                 else [],
+        if args.limit  != null then ["--limit",  int_to_string(args.limit)]  else [],
+        if args.base   != null then ["--base",   args.base]                  else [],
+        if args.author != null then ["--author", args.author]                else [],
+        if args.json_fields != null
+           then ["--json", join(args.json_fields, ",")]
+           else []
+    ),
+    env: {}, stdin: null, cwd: null, timeout: 30,
+};
+
+defn gh_pr_list_parse(response) = do {
+    if response.exit_code != 0
+    then tool_error("gh pr list", response)
+    else parse(@language(json), response.stdout)
+};
+
+defn gh_pr_list = tool_grammar_shape {
+    modality:          modality_shape { name: "tool", domain: "github" },
+    call_pattern:      @recipe(gh_pr_list_call),
+    response_pattern:  @recipe(gh_pr_list_parse),
+    carrier:           "shell",
+    version:           "gh-cli >= 2.40",
+    cross_modal_links: [],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — gh pr create
+# ─────────────────────────────────────────────────────────────────────
+
+form gh_pr_create_args = {
+    title: ~String,
+    body:  ~String,
+    base:  ?~Slug,                  # base branch; default "main"
+    head:  ?~Slug,                  # head branch; default current
+    draft: ?~Bool,
+};
+
+defn gh_pr_create_call(args) = shell_invocation_shape {
+    command: "gh",
+    argv: concat(
+        ["pr", "create", "--title", args.title, "--body", args.body],
+        if args.base != null  then ["--base", args.base] else [],
+        if args.head != null  then ["--head", args.head] else [],
+        if args.draft == true then ["--draft"] else []
+    ),
+    env: {}, stdin: null, cwd: null, timeout: 30,
+};
+
+defn gh_pr_create_parse(response) = do {
+    if response.exit_code != 0
+    then tool_error("gh pr create", response)
+    else {
+        # `gh pr create` prints the URL on stdout on success.
+        url: trim(response.stdout),
+        diagnostic: trim(response.stderr),
+    }
+};
+
+defn gh_pr_create = tool_grammar_shape {
+    modality:          modality_shape { name: "tool", domain: "github" },
+    call_pattern:      @recipe(gh_pr_create_call),
+    response_pattern:  @recipe(gh_pr_create_parse),
+    carrier:           "shell",
+    version:           "gh-cli >= 2.40",
+    cross_modal_links: [],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — gh pr merge
+# ─────────────────────────────────────────────────────────────────────
+
+form gh_pr_merge_args = {
+    number:         ~Int,
+    strategy:       ?~Slug,         # "squash" | "merge" | "rebase"
+    delete_branch:  ?~Bool,
+    auto:           ?~Bool,         # --auto: enable auto-merge
+    body:           ?~String,       # commit message body
+};
+
+defn gh_pr_merge_call(args) = shell_invocation_shape {
+    command: "gh",
+    argv: concat(
+        ["pr", "merge", int_to_string(args.number)],
+        if args.strategy == "squash" then ["--squash"]
+        else if args.strategy == "merge"  then ["--merge"]
+        else if args.strategy == "rebase" then ["--rebase"]
+        else [],
+        if args.delete_branch == true then ["--delete-branch"] else [],
+        if args.auto == true          then ["--auto"]          else [],
+        if args.body != null          then ["--body", args.body] else []
+    ),
+    env: {}, stdin: null, cwd: null, timeout: 60,
+};
+
+defn gh_pr_merge_parse(response) = do {
+    if response.exit_code != 0
+    then tool_error("gh pr merge", response)
+    else {
+        merged:      true,
+        diagnostic:  response.stderr,
+        duration_ms: response.duration_ms,
+    }
+};
+
+defn gh_pr_merge = tool_grammar_shape {
+    modality:          modality_shape { name: "tool", domain: "github" },
+    call_pattern:      @recipe(gh_pr_merge_call),
+    response_pattern:  @recipe(gh_pr_merge_parse),
+    carrier:           "shell",
+    version:           "gh-cli >= 2.40",
+    cross_modal_links: [],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — gh run list / view / watch
+# ─────────────────────────────────────────────────────────────────────
+
+form gh_run_list_args = {
+    branch:        ?~Slug,
+    workflow:      ?~String,
+    limit:         ?~Int,
+    json_fields:   ?~List,
+};
+
+defn gh_run_list_call(args) = shell_invocation_shape {
+    command: "gh",
+    argv: concat(
+        ["run", "list"],
+        if args.branch   != null then ["--branch", args.branch] else [],
+        if args.workflow != null then ["--workflow", args.workflow] else [],
+        if args.limit    != null then ["--limit", int_to_string(args.limit)] else [],
+        if args.json_fields != null
+           then ["--json", join(args.json_fields, ",")]
+           else []
+    ),
+    env: {}, stdin: null, cwd: null, timeout: 30,
+};
+
+defn gh_run_list_parse(response) = do {
+    if response.exit_code != 0
+    then tool_error("gh run list", response)
+    else parse(@language(json), response.stdout)
+};
+
+defn gh_run_list = tool_grammar_shape {
+    modality:          modality_shape { name: "tool", domain: "github" },
+    call_pattern:      @recipe(gh_run_list_call),
+    response_pattern:  @recipe(gh_run_list_parse),
+    carrier:           "shell",
+    version:           "gh-cli >= 2.40",
+    cross_modal_links: [],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — the gh Language-cell collection
+# ─────────────────────────────────────────────────────────────────────
+#
+# The parent cell that bundles every gh subcommand under one Blueprint.
+# A library export of this file (via `form_cli generate`) produces a
+# `.recipelib` carrying every recipe above, callable through
+# `form_cli execute gh-cli <subcommand> <args>`.
+
+defn gh_language_cell = language_cell_shape {
+    name:              "gh",
+    version:           "2.40",
+    grammar:           gh_overall_grammar,        # multi-subcommand dispatch
+    emission_template: gh_overall_emit,           # for round-trip (rare; mostly read-only)
+    stdlib_bindings:   [
+        ("pr_view",    @recipe(gh_pr_view)),
+        ("pr_list",    @recipe(gh_pr_list)),
+        ("pr_create",  @recipe(gh_pr_create)),
+        ("pr_merge",   @recipe(gh_pr_merge)),
+        ("run_list",   @recipe(gh_run_list)),
+    ],
+    numeric_defaults:  [],
+    cross_modal_links: [@language(json)],         # gh --json output parses as JSON
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — usage from a cell
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # View a PR by number:
+#   coh substrate run "invoke(@tool(gh_pr_view),
+#                              {number: 1234, json_fields: ['title', 'state']})"
+#
+#   # List today's merged PRs touching the form/ subtree:
+#   coh substrate run "invoke(@tool(gh_pr_list),
+#                              {state: 'merged', limit: 50,
+#                               json_fields: ['number', 'title', 'mergedAt', 'files']})"
+#
+#   # Create a PR with title and body:
+#   coh substrate run "invoke(@tool(gh_pr_create),
+#                              {title: 'tend: …', body: '…'})"
+#
+#   # Witness the invocation (publishes a tool_fired trace):
+#   coh substrate run "invoke_witnessed(@cell(self), @tool(gh_pr_merge),
+#                                       {number: 1234, strategy: 'squash',
+#                                        delete_branch: true})"
+#
+# The cell composes args as a Form object; the call_pattern emits the
+# shell invocation; carrier executes; response_pattern parses the
+# result back into a Form object. No string concatenation; no JSON
+# munging; same shape across every subcommand.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 9 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-G1: `tool_error(name, response)` is a shorthand the body could
+#         promote to a stdlib recipe — composes {kind: "tool_error",
+#         tool: name, exit_code, stderr, duration_ms}. Trivial.
+#
+# GAP-G2: `gh_overall_grammar` and `gh_overall_emit` are the parent-
+#         level grammar/emit that dispatch by subcommand name. Each
+#         recipe above carries its own (call, parse) pair; the parent
+#         is a thin dispatcher. Implementing the dispatcher is one
+#         small recipe.
+#
+# GAP-G3: Round-trip on parse. The current parse-half lands the
+#         response in a Form object; the symmetric emit-half (Form
+#         object → fake `gh` output, useful for tests/mocks) is named
+#         but not implemented. Same shape as png-grammar.form's
+#         GAP-P3: the structure is there; the test mocks are the next
+#         breath.
+#
+# GAP-G4: Authentication. `gh` reads from `~/.config/gh/hosts.yml` for
+#         the auth token. The Language cell does NOT carry the token;
+#         the carrier inherits the host's auth environment. Sovereignty:
+#         each cell that invokes gh runs under the host's gh auth;
+#         credential management stays at the carrier altitude.
+#
+# GAP-G5: Rate limiting. gh's API has rate limits; the Language cell
+#         does not retry. Cells consuming the tool can wrap the invoke
+#         call in their own retry-with-backoff recipe (composable; not
+#         part of the tool grammar itself).
+#
+# GAP-G6: Streaming output. `gh run watch` streams; the current
+#         response_pattern assumes batched stdout. A streaming carrier
+#         that yields incremental Form objects is a sibling extension.

@@ -2,6 +2,29 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] audit | grammar coverage + tools as Form Language cells
+
+Urs asked two load-bearing questions: *do we have form grammar for all the file formats in the repo, so we can ingest any file into form native object space if we choose to? we should also do that for any tool we use, we should have a form native way to interact with anything internal and external.*
+
+The honest answers, grounded in data and architecture:
+
+**Q1 — file-format coverage.** [`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) is the audit instrument. Scans the repo, cross-references against `docs/coherence-substrate/*-grammar.form`, surfaces what's covered and what's a gap. Current state: **7 extensions covered** (json, jsonl, yaml, yml, png, jpg/jpeg, image-via-svg) **18 gaps**. The biggest gaps by file count: `py` (926 files), `md` (698), `tsx`/`ts` (533 combined), `txt` (118 — `prose-as-recipe.form` exists but doesn't match the `*-grammar.form` naming convention; honest about the seam). Only `json` is wired into `form_cli convert` today. Each gap is one Language cell away — the audit is the proprioception, not the prescription.
+
+**Q2 — tools as Form Language cells.** Concept seeded: [`lc-tools-as-form-cells`](concepts/lc-tools-as-form-cells.md) (741 Hz, seed, synthesized). Every tool — internal scripts, external CLIs, REST APIs, graph queries — is a Form Language cell with the same four-part shape as file-format grammars, with the two halves named to reflect invocation direction: `(call_pattern, response_pattern)` instead of `(parse_bytes, emit_bytes)`. The lattice doesn't distinguish locality (internal vs external) or carrier (shell vs http vs in-process); carriers handle that detail.
+
+Three load-bearing claims of the new concept:
+- Tools are not a separate primitive — they compose under the Language cell shape that already exists.
+- Internal and external are symmetric — `coh substrate stats` and the Anthropic API call carry the same Language cell shape.
+- The result is composable — output of one tool is a Form object the next tool consumes; threading is content-addressed, not string-glued.
+
+Companion files:
+- [`tool-grammar.form`](../coherence-substrate/tool-grammar.form) — abstract `tool_grammar_shape` Blueprint with `call_pattern`/`response_pattern`/`carrier`/`version` fields, plus `shell_invocation_shape`, `http_invocation_shape`, `in_process_invocation_shape` for the three common carriers. The `invoke(tool, args_tree)` recipe runs the round-trip; `invoke_witnessed(cell, tool, args_tree)` publishes a `tool_fired` trace (sibling to the strategy_fired trace from `traces-teach-the-recipe.form`).
+- [`gh-cli-grammar.form`](../coherence-substrate/gh-cli-grammar.form) — first concrete example. `gh pr view`, `gh pr list`, `gh pr create`, `gh pr merge`, `gh run list` each as a Form Language cell with `pull_request_shape` / `workflow_run_shape` result shapes. Each carries a `call_pattern` (args-tree → shell invocation), `response_pattern` (parse via `@language(json)` when `--json` is used), and exit-code/stderr surfaced as Form diagnostic leaves.
+
+What this opens: cells compose tool pipelines structurally rather than through bash glue; the same `substrate_dispatch` registry that swaps `_cosine` for `form_native.cosine` can swap one tool carrier for another (slow CLI for fast in-process, remote API for cached local, mock for testing). Unix pipelines are the historical analog at the byte-stream altitude; this concept extends the pattern to Form objects threading through content-addressed NodeIDs.
+
+Edges in the same breath: INDEX.md (127 → 128 concepts; 741 Hz frequency family extended); this LOG; back-edge added in `lc-grammar-is-the-universal-recipe` cross-refs.
+
 ## [2026-05-21] surface | form_cli — Form-native runtime as a CLI
 
 Urs named the next operational shape: *we have a form native cli that can generate form native binaries and execute form native binaries and use I/O to convert I/O into form native objects and back into raw I/O using just the kernel and the binary library for pre-registered form native objects.*
