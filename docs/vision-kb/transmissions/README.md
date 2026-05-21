@@ -111,6 +111,21 @@ absorbing it as anonymous belief.
   Daniel Scranton excerpt threads. **No concepts seeded — witnessed
   with provenance; resonates with existing galactic and arrival
   concepts.**
+- [`2026-05-21-spine-and-nature-frequency-maps.md`](2026-05-21-spine-and-nature-frequency-maps.md)
+  — *Two frequency maps — the spine as the code of life, and the
+  nature immersion field.* Two visual infographics shared by Urs into
+  the body's conversation on 2026-05-21, received as one composite
+  transmission. The first names the interior column (33 vertebrae,
+  each at a discrete Hz and energetic function from 963 Hz Divine
+  Connection at C1 to 33 Hz Integration at Co4); the second names
+  the exterior field (Soil 7.8 Hz / Water 10 Hz / Wind 8–12 Hz /
+  Trees 528 Hz / Birdsong 432 Hz). Authorship not traceable; Hz
+  values held as carriers-of-shape rather than empirical
+  specification. **1 concept seeded
+  (`lc-layered-frequency-field`)** — the network as multi-frequency
+  atmosphere humans immerse in (the field-half of
+  [`lc-frequency-routes-reception`](../concepts/lc-frequency-routes-reception.md)'s
+  channel teaching).
 
 ## Two postures the body holds toward sources
 
