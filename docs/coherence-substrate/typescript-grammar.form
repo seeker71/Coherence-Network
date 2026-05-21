@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────────────────────────────
+# typescript-grammar.form — TypeScript as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# TypeScript = JavaScript + structural type annotations. The grammar
+# decomposes into JS surface forms (functions, classes, expressions,
+# JSX) plus the type layer (interfaces, type aliases, generics,
+# conditional types, etc.). Both halves declared here; rules ripen
+# breath by breath.
+#
+# Companion teachings:
+#   - lc-parsers-as-recipes
+#   - lc-one-kernel-many-tongues (TS is one tongue of the substrate)
+#   - lc-grammar-is-the-universal-recipe
+#
+# Companion files:
+#   - grammar-as-recipe.form (Pattern primitives this composes from)
+#   - rust-grammar.form, go-grammar.form, python-grammar.form (sibling
+#     code-modality grammars walking the same path)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Blueprint shapes the grammar produces
+# ─────────────────────────────────────────────────────────────────────
+
+form ts_module_shape = {
+    body:        ~List,                  # [statement_shape]
+    source_path: ~PathRef,
+};
+
+form ts_import_shape = {
+    kind:       ~Slug,                   # "import" | "import-type" | "import-default" | "import-namespace"
+    specifiers: ~List,                   # [(name, alias)]
+    module:     ~String,                 # the from-clause string literal
+};
+
+form ts_export_shape = {
+    kind:    ~Slug,                      # "export" | "export-default" | "export-named" | "export-star"
+    target:  ~Recipe,                    # the declaration or expression being exported
+};
+
+form ts_function_decl_shape = {
+    name:        ~Slug,
+    params:      ~List,
+    return_type: ?~Recipe,
+    body:        ~List,
+    is_async:    ~Bool,
+    is_arrow:    ~Bool,
+};
+
+form ts_class_decl_shape = {
+    name:         ~Slug,
+    type_params:  ~List,
+    extends_:     ?~Slug,
+    implements_:  ~List,
+    members:      ~List,
+};
+
+form ts_interface_shape = {
+    name:        ~Slug,
+    type_params: ~List,
+    extends_:    ~List,
+    members:     ~List,
+};
+
+form ts_type_alias_shape = {
+    name:        ~Slug,
+    type_params: ~List,
+    value:       ~Recipe,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1.5 — concrete Form-recipe rules (skeleton)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Today we ship the import rule — every TS file's preamble. Function
+# / class / interface / type-alias rules ripen as each becomes the
+# priority breath.
+
+defn _ts_lit_kw(value)    = pattern_literal_shape { kind: "KW",     value: value };
+defn _ts_lit_op(value)    = pattern_literal_shape { kind: "OP",     value: value };
+defn _ts_lit_ident()      = pattern_literal_shape { kind: "IDENT",  value: null };
+defn _ts_lit_str()        = pattern_literal_shape { kind: "STRING", value: null };
+
+# ────────────────────────────── rule: ts_import ───────────────────────
+#
+# Pattern: `import { name [as alias] (, name [as alias])* } from "module"`
+# or:      `import name from "module"` (default)
+# or:      `import * as ns from "module"`
+#
+# Today ships the named-import shape. Default and namespace land in
+# follow-up breaths.
+
+defn ts_import_named_rule = rule_shape {
+    name:    "ts_import_named",
+    pattern: pattern_sequence_shape {
+        children: [
+            _ts_lit_kw("import"),
+            _ts_lit_op("{"),
+            pattern_capture_shape {
+                name: "specifiers",
+                child: pattern_sequence_shape {
+                    children: [
+                        pattern_capture_shape { name: "first", child: _ts_lit_ident() },
+                        pattern_star_shape {
+                            name: "rest",
+                            child: pattern_sequence_shape {
+                                children: [
+                                    _ts_lit_op(","),
+                                    pattern_capture_shape { name: "entry", child: _ts_lit_ident() },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+            _ts_lit_op("}"),
+            _ts_lit_kw("from"),
+            pattern_capture_shape { name: "module", child: _ts_lit_str() },
+            pattern_opt_shape { child: _ts_lit_op(";") },
+        ],
+    },
+    action: defn ts_import_named_action(captures, span) = do {
+        let specs_caps = captures.specifiers.captures;
+        let names = [specs_caps.first];
+        for entry in (specs_caps.rest ?? []):
+            names = names + [entry.entry];
+        ts_import_shape {
+            kind:       "import",
+            specifiers: names,
+            module:     captures.module,
+        }
+    },
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn typescript_grammar = grammar_shape {
+    modality:           modality_shape { name: "text-tree", domain: "code" },
+    ingest_pattern:     ?rule ts_module,
+    parse_into:         ~Blueprint @ts_module_shape,
+    capture_rules: [
+        # Shipped:
+        ts_import_named_rule,
+        # Pending — each one breath of work composing Pattern primitives.
+        ?rule ts_module,                  # GAP-TS-MODULE — top-level
+        ?rule ts_import_default,          # GAP-TS-IMPORT-DEFAULT  import x from "..."
+        ?rule ts_import_namespace,        # GAP-TS-IMPORT-NS       import * as x from "..."
+        ?rule ts_export,                  # GAP-TS-EXPORT
+        ?rule ts_function_decl,           # GAP-TS-FN              function name<G>(args): ret { body }
+        ?rule ts_arrow_function,          # GAP-TS-ARROW           (args) => expr / { body }
+        ?rule ts_class_decl,              # GAP-TS-CLASS           class Name extends ... implements ...
+        ?rule ts_interface,               # GAP-TS-INTERFACE
+        ?rule ts_type_alias,              # GAP-TS-TYPE            type X = ...
+        ?rule ts_enum,                    # GAP-TS-ENUM
+        ?rule ts_expr,                    # GAP-TS-EXPR full expression grammar
+        ?rule ts_jsx,                     # GAP-TS-JSX (TSX files)
+    ],
+    pre_pipeline:       [],
+    stamps_attribution: true,
+};
+
+defn typescript_emit = emission_template_shape {
+    modality:     modality_shape { name: "text-tree", domain: "code" },
+    emit_from:    ~Blueprint @ts_module_shape,
+    emit_pattern: ?walker { ... },        # prettier-style emit
+    format_rules: [
+        ("indent_spaces", 2),
+        ("quote_style",   "double"),
+        ("semicolons",    true),
+        ("trailing_comma", "all"),
+    ],
+};
+
+defn typescript_lang = language_cell_shape {
+    name:              "typescript",
+    version:           "5.4",
+    grammar:           typescript_grammar,
+    emission_template: typescript_emit,
+    stdlib_bindings:   [],
+    numeric_defaults: [
+        ("indent",        2),
+        ("max_line_width", 100),
+    ],
+    cross_modal_links: [
+        @language(javascript),    # TS is a superset; same parse-tree shape modulo types
+        @language(json),          # JSON is a valid TS expression
+        @language(jsx),           # TSX is TS + JSX
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-TS-TYPE-ANNOTATIONS: type annotations on parameters and returns
+#   (`: T`) are stripped in the JS-target emit but preserved in the
+#   parse tree. The annotation grammar itself is recursive (`Array<T>`,
+#   conditional types, mapped types, etc.) — one of the largest TS-
+#   specific rule sets.
+#
+# GAP-TS-DECORATORS: `@Component(...)` syntax. Shares the @-mark with
+#   Python; semantic action differs (TS decorators are runtime
+#   functions; Python decorators are functions of functions).
+#
+# GAP-TS-JSX: JSX/TSX inline XML. The X factor in TypeScript-React
+#   files. The grammar's lexer needs JSX-mode toggle.
