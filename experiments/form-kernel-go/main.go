@@ -184,12 +184,81 @@ func armName(armTy uint32) string {
 	}
 }
 
+// armVariantName — readable label for an (arm_ty, arm_inst) pair.
+// Returns "MATH.PLUS", "COMPARE.LE", "BLOCK.LET", etc. For arms without
+// a known inst encoding, returns just the bare arm name. Symmetric with
+// the Rust/TS variant naming.
+func armVariantName(armTy uint32, armInst uint32) string {
+	base := armName(armTy)
+	var variant string
+	switch armTy {
+	case RBasicMath:
+		switch armInst {
+		case RMathPlus:
+			variant = "PLUS"
+		case RMathMinus:
+			variant = "MINUS"
+		case RMathMultiply:
+			variant = "MUL"
+		case RMathDivide:
+			variant = "DIV"
+		case RMathModulo:
+			variant = "MOD"
+		}
+	case RBasicCompare:
+		switch armInst {
+		case RCompareEq:
+			variant = "EQ"
+		case RCompareNe:
+			variant = "NE"
+		case RCompareLt:
+			variant = "LT"
+		case RCompareLe:
+			variant = "LE"
+		case RCompareGt:
+			variant = "GT"
+		case RCompareGe:
+			variant = "GE"
+		}
+	case RBasicLogic:
+		switch armInst {
+		case RLogicAnd:
+			variant = "AND"
+		case RLogicOr:
+			variant = "OR"
+		case RLogicNot:
+			variant = "NOT"
+		}
+	case RBasicCond:
+		switch armInst {
+		case RCondIfThen:
+			variant = "IF"
+		case RCondIfThenElse:
+			variant = "IF_ELSE"
+		}
+	case RBasicBlock:
+		switch armInst {
+		case RBlockDo:
+			variant = "DO"
+		case RBlockSequence:
+			variant = "SEQ"
+		case RBlockLet:
+			variant = "LET"
+		}
+	}
+	if variant == "" {
+		return base
+	}
+	return base + "." + variant
+}
+
 func (t *Trace) toJSON() map[string]interface{} {
 	type variantRec struct {
-		ArmTy   uint32 `json:"arm_ty"`
-		ArmInst uint32 `json:"arm_inst"`
-		ArmName string `json:"arm_name"`
-		Count   uint64 `json:"count"`
+		ArmTy      uint32 `json:"arm_ty"`
+		ArmInst    uint32 `json:"arm_inst"`
+		ArmName    string `json:"arm_name"`
+		ArmVariant string `json:"arm_variant_name"`
+		Count      uint64 `json:"count"`
 	}
 	type armRec struct {
 		ArmTy   uint32 `json:"arm_ty"`
@@ -201,7 +270,11 @@ func (t *Trace) toJSON() map[string]interface{} {
 	variants := make([]variantRec, 0, len(t.ArmCounts))
 	for k, c := range t.ArmCounts {
 		variants = append(variants, variantRec{
-			ArmTy: k.Ty, ArmInst: k.Inst, ArmName: armName(k.Ty), Count: c,
+			ArmTy:      k.Ty,
+			ArmInst:    k.Inst,
+			ArmName:    armName(k.Ty),
+			ArmVariant: armVariantName(k.Ty, k.Inst),
+			Count:      c,
 		})
 	}
 	sort.Slice(variants, func(i, j int) bool { return variants[i].Count > variants[j].Count })
