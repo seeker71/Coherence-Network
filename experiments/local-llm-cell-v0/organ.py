@@ -515,3 +515,19 @@ class Cell:
             "needs": dict(zip(NEED_NAMES, needs)),
             "kind": "probe",  # marks this as a read-only sample
         }
+
+
+# ─── Form-native execution as the runtime default ─────────────────────────
+#
+# Registers form_native implementations of cosine, sigmoid, and
+# strategy_score under the recipe names bound by the @substrate_dispatch
+# decorators above. After this import runs, every call to _cosine /
+# _sigmoid / _strategy_score in this process routes through the Form-
+# native recipe — same numbers, different execution path. Parity is
+# verified by parity_check.py (2400 test inputs, exact for pure
+# compositions, within 1e-6 for iterative approximations).
+#
+# The Python intrinsics above remain as the wrapped function bodies;
+# unregister_recipe("<name>") restores the Python path at any time.
+
+import default_form_native  # noqa: E402, F401  — registers on import
