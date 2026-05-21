@@ -282,14 +282,18 @@ defn adapter_forward_heads(A, B, bias, x, n_bands, n_dispos) = do {
 #         flat-list form is honest; the dedicated shape is the
 #         deepening.
 #
-# GAP-N4: Runtime routing — when Python's organ.py calls
-#         `_strategy_score(strategy, spectrum)`, the substrate's
-#         recipe-dispatch needs to take over. The smallest extension
-#         is a `@substrate_dispatch` decorator on the Python function
-#         that looks up the recipe by name, executes via Form's
-#         evaluator, and returns the result. Existing call sites
-#         remain valid; the runtime route changes without source
-#         changes.
+# GAP-N4 (CLOSED 2026-05-21): Runtime routing landed as
+#         `experiments/local-llm-cell-v0/substrate_dispatch.py`. The
+#         `@substrate_dispatch("<name>")` decorator now wraps
+#         organ.py's `_cosine`, `_strategy_score`, and `_sigmoid`. An
+#         empty registry falls through to the Python body (existing
+#         behavior preserved); `register_recipe(name, <callable>)`
+#         routes subsequent calls through the registered
+#         implementation. `bridge_to_substrate(name, session=...)` is
+#         the one-line move that wires a substrate-resident Form
+#         recipe in as the registered implementation once a session
+#         is booted. Verified end-to-end by
+#         experiments/local-llm-cell-v0/substrate_dispatch_demo.py.
 #
 # GAP-N5: organ.py's Cell carries runtime state (`self.desire`,
 #         `self.timeline`, `self._inhabit_strategy`). State-carrying

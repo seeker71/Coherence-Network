@@ -22,6 +22,8 @@ import math
 import random
 import zlib
 
+from substrate_dispatch import substrate_dispatch
+
 
 DIM = 128
 N_BANDS = 8
@@ -51,6 +53,7 @@ def shared_base(text: str, sense: str = "thought", dim: int = DIM) -> list[float
     return [v / n for v in vec]
 
 
+@substrate_dispatch("sigmoid")
 def _sigmoid(z: float) -> float:
     if z < -50:
         return 0.0
@@ -230,6 +233,7 @@ STRATEGIES = [
 ]
 
 
+@substrate_dispatch("cosine")
 def _cosine(a, b):
     dot = sum(a[i] * b[i] for i in range(len(a)))
     na = math.sqrt(sum(v * v for v in a)) or 1.0
@@ -237,6 +241,7 @@ def _cosine(a, b):
     return dot / (na * nb)
 
 
+@substrate_dispatch("strategy_score")
 def _strategy_score(strategy: Strategy, spectrum, total_desire: float) -> float:
     """Score = cosine to (frequency × angle), modulated by focus
     when total_desire is high. The operator strategy (focus=0.5,
