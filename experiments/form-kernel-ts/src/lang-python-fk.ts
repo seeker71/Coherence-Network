@@ -31,6 +31,164 @@ export interface EmitFkOptions {
 // at each emitFk call so output is deterministic across runs.
 let whileCounter = 0;
 
+// Does this node end with a `return` (somewhere along all paths)?
+// Used by emitDefBody to decide whether an if-statement's then-branch
+// short-circuits the function. A return at the bottom of the then-block,
+// or a return inside an inner if/loop within the then-block, all count.
+function containsReturn(k: Kernel, n: NodeID): boolean {
+  if (n.level === Level.TRIVIAL) return false;
+  const ctor = capturedCtor(k, n);
+  if (ctor === CTOR.return_) return true;
+  // Don't recurse into nested def/lambda — they have their own bodies.
+  if (ctor === CTOR.def_ || ctor === CTOR.lambda_) return false;
+  for (const c of capturedChildren(k, n)) {
+    if (containsReturn(k, c)) return true;
+  }
+  return false;
+}
+
+// CPS-style emission of a Python def body. Walks statements in order;
+// when an `if cond: <body-with-return>` appears, the *rest* of the
+// function body becomes the implicit else, lowered into a nested
+// (if cond <then-value> <rest>) shape. Without this, multi-statement
+// def bodies with early returns silently fall through.
+function emitDefBody(k: Kernel, bodyNode: NodeID, opts: EmitFkOptions): string {
+  // Body is typically CTOR.block; otherwise it's a single expression
+  // (matches the v1 def_rule shape for single-line bodies).
+  const bodyCtor = capturedCtor(k, bodyNode);
+  const stmts =
+    bodyCtor === CTOR.block ? capturedChildren(k, bodyNode) : [bodyNode];
+  return emitStmtSeq(k, stmts, 0, opts);
+}
+
+// Emit statements stmts[start..end] as a CPS-style chain. Early returns
+// short-circuit; the function's value is determined by the first
+// return that fires.
+function emitStmtSeq(
+  k: Kernel,
+  stmts: readonly NodeID[],
+  start: number,
+  opts: EmitFkOptions,
+): string {
+  if (start >= stmts.length) return "false"; // implicit fallthrough → None-ish
+  const stmt = stmts[start]!;
+  const ctor = capturedCtor(k, stmt);
+  const kids = capturedChildren(k, stmt);
+
+  if (ctor === CTOR.return_) {
+    return emit(k, kids[0]!, opts);
+  }
+
+  if (ctor === CTOR.if_) {
+    // CTOR.if_'s children are alternating [cond, body, cond, body, ..., else?].
+    // For def-body CPS, look at the then-bodies: if a then-body contains
+    // a return, the if becomes (if cond <then-value> <rest>) where
+    // <rest> is the CPS of the remaining function-body stmts.
+    return emitIfInDefBody(k, kids, stmts, start, opts);
+  }
+
+  if (ctor === CTOR.assign) {
+    const target = emitIdent(k, kids[0]!);
+    const value = emit(k, kids[1]!, opts);
+    const rest = emitStmtSeq(k, stmts, start + 1, opts);
+    return `(do (let ${target} ${value}) ${rest})`;
+  }
+
+  // Side-effect statement (call, etc.) — emit, then continue.
+  const sideEffect = emit(k, stmt, opts);
+  const rest = emitStmtSeq(k, stmts, start + 1, opts);
+  return start + 1 >= stmts.length
+    ? sideEffect
+    : `(do ${sideEffect} ${rest})`;
+}
+
+function emitIfInDefBody(
+  k: Kernel,
+  ifKids: readonly NodeID[],
+  stmts: readonly NodeID[],
+  start: number,
+  opts: EmitFkOptions,
+): string {
+  // ifKids: [cond0, body0, cond1, body1, ..., elseBody?]
+  // Compose right-to-left: nested ifs with the function's REST as the
+  // ultimate else.
+  let i = ifKids.length;
+  // Determine if there's an explicit else (odd count means odd kid is else).
+  let elseAcc: string;
+  if (i % 2 === 1) {
+    // Explicit else block
+    const elseNode = ifKids[i - 1]!;
+    elseAcc = emitBlockInDefBody(k, elseNode, stmts, start + 1, opts);
+    i -= 1;
+  } else {
+    // No explicit else — the function-body REST is the implicit else.
+    elseAcc = emitStmtSeq(k, stmts, start + 1, opts);
+  }
+  // Walk pairs (cond, body) from end to start.
+  while (i >= 2) {
+    const body = ifKids[i - 1]!;
+    const cond = ifKids[i - 2]!;
+    const condStr = emit(k, cond, opts);
+    const thenStr = emitBlockInDefBody(k, body, stmts, start + 1, opts);
+    elseAcc = `(if ${condStr} ${thenStr} ${elseAcc})`;
+    i -= 2;
+  }
+  return elseAcc;
+}
+
+// Emit a then-/else-block in def-body context. If the block ends with
+// a return, the block's value is that return's expression. Otherwise
+// the block executes for side effects and falls through to the function
+// body's REST (via emitStmtSeq on the outer stmts).
+function emitBlockInDefBody(
+  k: Kernel,
+  blockNode: NodeID,
+  outerStmts: readonly NodeID[],
+  outerStart: number,
+  opts: EmitFkOptions,
+): string {
+  const blockCtor = capturedCtor(k, blockNode);
+  const blockStmts =
+    blockCtor === CTOR.block ? capturedChildren(k, blockNode) : [blockNode];
+
+  if (containsReturn(k, blockNode)) {
+    // The block short-circuits — its CPS chain ends in the return value.
+    return emitStmtSeq(k, blockStmts, 0, opts);
+  }
+  // No return — execute for side effects, then continue with outer rest.
+  // Build: (do <block-stmts...> <outer-rest>)
+  const sideEffectStrs = blockStmts.map((s) => emit(k, s, opts));
+  const outerRest = emitStmtSeq(k, outerStmts, outerStart, opts);
+  return sideEffectStrs.length === 0
+    ? outerRest
+    : `(do ${sideEffectStrs.join(" ")} ${outerRest})`;
+}
+
+// Recursively collect assignment-target names from any node in a
+// subtree. Used by while/for emitters to find all loop-mutated
+// variables, including those nested inside if-statements, blocks,
+// etc. Names are returned in order of first encounter.
+function collectAssignTargets(k: Kernel, n: NodeID, out: string[], seen: Set<string>): void {
+  if (n.level === Level.TRIVIAL) return;
+  const ctor = capturedCtor(k, n);
+  const kids = capturedChildren(k, n);
+  if (ctor === CTOR.assign) {
+    const tn = emitIdent(k, kids[0]!);
+    if (!seen.has(tn)) {
+      seen.add(tn);
+      out.push(tn);
+    }
+    // Also scan the value side — though assignments-into-assignments
+    // (walrus) are unusual; skip for now.
+    return;
+  }
+  // Don't recurse INTO def_/lambda — their bodies are separate scopes.
+  if (ctor === CTOR.def_ || ctor === CTOR.lambda_) return;
+  for (const c of kids) {
+    collectAssignTargets(k, c, out, seen);
+  }
+}
+
 export function emitFk(k: Kernel, tree: NodeID, opts: EmitFkOptions = {}): string {
   whileCounter = 0;
   return emit(k, tree, opts);
@@ -145,10 +303,16 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
 
     case CTOR.def_: {
       // children: [name-ident-node, params-node, body-node]
+      // Body uses CPS-style emission: early returns short-circuit;
+      // if-then-without-else falls through to the remaining stmts as
+      // the implicit else. The kernel has no RETURN arm — the
+      // function's value is the last-evaluated expression, so the body
+      // must be one nested expression that yields the right value
+      // along every path.
       const name = emitIdent(k, kids[0]!);
       const paramNodes = capturedChildren(k, kids[1]!);
       const paramNames = paramNodes.map((p: NodeID) => emitIdent(k, p));
-      const body = emit(k, kids[2]!, opts);
+      const body = emitDefBody(k, kids[2]!, opts);
       return `(defn ${name} (${paramNames.join(" ")}) ${body})`;
     }
 
@@ -203,6 +367,69 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       return `(nth ${value} ${slice})`;
     }
 
+    // ── for-loop over a list ────────────────────────────────────
+    // Python:                Kernel (.fk):
+    //   for x in xs:          (defn _for_K (xs <loopvars>)
+    //       body                (if (eq (len xs) 0)
+    //                               <return-state>
+    //                               (do (let x (head xs))
+    //                                   body-with-recursive-tail-call)))
+    //                         (let _for_K_result (_for_K xs <loopvars>))
+    //
+    // Today supports for-loops over a list expression. range(N) and
+    // generic iterators land when the kernel grows iter/next natives.
+    case CTOR.for_: {
+      // children: [target-ident, iter-expr, body]
+      const target = emitIdent(k, kids[0]!);
+      const iterExpr = emit(k, kids[1]!, opts);
+      const bodyNode = kids[2]!;
+
+      // Recursively collect every assignment target in the body —
+      // accounts for nested if-statements, conditional mutation, etc.
+      const loopVars: string[] = [];
+      collectAssignTargets(k, bodyNode, loopVars, new Set<string>());
+
+      const helperName = `_for_${whileCounter++}`;
+      const params = ["_remaining", ...loopVars].join(" ");
+
+      // Body emits as a single block (do ...). The kernel's LET binds
+      // in the current frame; rebinds within the helper's body update
+      // the iteration's local copies of the loop vars. The trailing
+      // recursive call passes the current (rebound) loop var bindings.
+      const bodyStr = emit(k, bodyNode, opts);
+      const recCall =
+        loopVars.length === 0
+          ? `(${helperName} (tail _remaining))`
+          : `(${helperName} (tail _remaining) ${loopVars.join(" ")})`;
+
+      const wrappedBody = `(do (let ${target} (head _remaining)) ${bodyStr} ${recCall})`;
+
+      const elseBranch =
+        loopVars.length === 0
+          ? "null"
+          : loopVars.length === 1
+            ? loopVars[0]!
+            : `(list ${loopVars.join(" ")})`;
+
+      const helperDef = `(defn ${helperName} (${params}) (if (eq (len _remaining) 0) ${elseBranch} ${wrappedBody}))`;
+
+      let helperCall: string;
+      if (loopVars.length === 0) {
+        helperCall = `(${helperName} ${iterExpr})`;
+      } else if (loopVars.length === 1) {
+        helperCall = `(let ${loopVars[0]} (${helperName} ${iterExpr} ${loopVars[0]}))`;
+      } else {
+        const resultName = `_for_${whileCounter}_result`;
+        const destructure = loopVars
+          .map((v, i) => `(let ${v} (nth ${resultName} ${i}))`)
+          .join(" ");
+        helperCall =
+          `(let ${resultName} (${helperName} ${iterExpr} ${loopVars.join(" ")})) ` +
+          destructure;
+      }
+      return `(do ${helperDef} ${helperCall})`;
+    }
+
     // ── while-loop via accumulator-passing recursion ──────────
     // Python:                Kernel (Form-native equivalent):
     //   i = 0                (let i 0)
@@ -236,58 +463,34 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       const bodyKids =
         bodyCtor === CTOR.block ? capturedChildren(k, bodyNode) : [bodyNode];
 
-      // Collect loop-mutated variables in order of first assignment.
+      // Recursively collect every assignment target in the body —
+      // accounts for nested if-statements, conditional mutation, etc.
       const loopVars: string[] = [];
-      const loopVarSet = new Set<string>();
-      const sideEffects: NodeID[] = [];
-      const nextValues = new Map<string, NodeID>();
-
-      for (const stmt of bodyKids) {
-        if (capturedCtor(k, stmt) === CTOR.assign) {
-          const aKids = capturedChildren(k, stmt);
-          const targetName = emitIdent(k, aKids[0]!);
-          if (!loopVarSet.has(targetName)) {
-            loopVars.push(targetName);
-            loopVarSet.add(targetName);
-          }
-          nextValues.set(targetName, aKids[1]!);
-        } else {
-          sideEffects.push(stmt);
-        }
-      }
+      collectAssignTargets(k, bodyNode, loopVars, new Set<string>());
 
       if (loopVars.length === 0) {
         throw new Error(
           "emitFk: while-loop has no assigned loop variables — would loop forever. " +
-            "Need at least one `var = expr` in the body to progress the iteration.",
+            "Need at least one `var = expr` (possibly inside a conditional) in the body to progress.",
         );
       }
 
       // Generate a unique helper name. Counter lives in the closure.
       const helperName = `_while_${whileCounter++}`;
 
-      // Build the recursive-call args. Each loop var's next value is
-      // either its updated expression or its identity (if not reassigned
-      // — shouldn't happen but defensive).
-      const nextArgs = loopVars.map((v) => {
-        const nv = nextValues.get(v);
-        return nv !== undefined ? emit(k, nv, opts) : v;
-      });
-
-      // Body: side-effects sequenced before the recursive call,
-      // wrapped in a (do ...) when there are multiple statements.
-      // The kernel's nested (do ...) returns the last value, which is
-      // the recursive call's result — matching while-loop's "return
-      // the post-loop state" semantics.
-      const sideEffectStrs = sideEffects.map((s) => emit(k, s, opts));
+      // Body emits as a single (do ...) chain. The kernel's LET binds
+      // in the helper's frame; rebinds within the body update the
+      // iteration's local copies. The trailing recursive call passes
+      // the current (rebound) loop var bindings.
+      const bodyStr =
+        bodyKids.length === 1
+          ? emit(k, bodyKids[0]!, opts)
+          : `(do ${bodyKids.map((s) => emit(k, s, opts)).join(" ")})`;
       const recCall =
-        nextArgs.length === 0
+        loopVars.length === 0
           ? `(${helperName})`
-          : `(${helperName} ${nextArgs.join(" ")})`;
-      const trueBranch =
-        sideEffectStrs.length === 0
-          ? recCall
-          : `(do ${sideEffectStrs.join(" ")} ${recCall})`;
+          : `(${helperName} ${loopVars.join(" ")})`;
+      const trueBranch = `(do ${bodyStr} ${recCall})`;
 
       // The "else" branch — when cond is false — returns the current
       // state. For a single loop var, return that var's value. For
