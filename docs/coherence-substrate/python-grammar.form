@@ -18,24 +18,20 @@
 #   - language-cells.md (the N+M cross-language pattern Python was
 #     already named in)
 #
-# Python's stdlib `ast` module gives source attribution FOR FREE on
-# every AST node: lineno, col_offset, end_lineno, end_col_offset. The
-# parser stamps `source_attribution_shape` from those fields directly
-# — no custom tracking needed. (Same gesture as the framebuffer's
-# `track!` macro at the memory altitude; Python's ast carries the
-# equivalent natively.)
-#
-# This is the structural-prose declaration. The executable parse+emit
-# wires through Python's `ast.parse` / `ast.unparse` in scripts/form_cli.py.
+# The contract is Form-native BMF transmutation: source bytes stream
+# through token-streamer.form, match rules declared here, and emit
+# Form-native cells with source_attribution stamped from token spans.
+# Host-language syntax-tree bridges are compatibility probes only;
+# they do not count as parser completion.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 1 — module-level Blueprints
 # ─────────────────────────────────────────────────────────────────────
 #
 # A Python module is a sequence of top-level statements. The Blueprint
-# tree mirrors the ast.Module structure: a top-level `body` list, each
-# entry one of the statement shapes below, plus type_ignores for type-
-# checking comments.
+# tree is the Form-native target shape: a top-level `body` list, each
+# entry one statement shape below, plus type_ignores for type-checking
+# comments.
 
 form py_module_shape = {
     body:          ~List,                # [statement_shape]
@@ -48,9 +44,9 @@ form py_module_shape = {
 # Part 2 — statement-level Blueprints
 # ─────────────────────────────────────────────────────────────────────
 #
-# Each statement is one ast node-type. The list below covers the
-# common surface; rarer node types (Match, TryStar, AsyncWith, etc.)
-# follow the same shape and land as the body needs them.
+# Each statement is one Form-native Python source shape. The list below
+# covers the common surface; rarer source forms (Match, TryStar,
+# AsyncWith, etc.) follow the same shape and land as the body needs them.
 
 form py_function_def_shape = {
     name:          ~Slug,
@@ -309,36 +305,32 @@ defn python_grammar = grammar_shape {
     modality:           modality_shape { name: "text-tree", domain: "code" },
     ingest_pattern:     ?rule py_module,
     parse_into:         ~Blueprint @py_module_shape,
-    # capture_rules is a courtesy declaration; the executable parse
-    # routes through Python's `ast.parse` host intrinsic (GAP-PY1 below).
     capture_rules:      [
         rule(py_module,        "module → top-level stmt*",              module_node),
         rule(py_function_def,  "def name(args) -> type: body",          fn_def_node),
         rule(py_class_def,     "class Name(bases, **kw): body",         class_def_node),
         rule(py_assign,        "targets = value [# type_comment]",      assign_node),
         rule(py_call,          "func(args, **keywords)",                call_node),
-        # ... (full mapping in scripts/form_cli.py via ast.parse)
+        # Each additional Python construct lands here as a BMF rule,
+        # not as a host parser delegation.
     ],
-    pre_pipeline:       [],
-    # ast nodes carry lineno / col_offset / end_lineno / end_col_offset
-    # natively — the parser stamps source_attribution_shape from those
-    # fields directly. Per lc-the-recipe-remembers-its-source.
+    pre_pipeline:       [
+        ?stage(token_stream, produces: ~List @token_shape),
+    ],
+    # The tokenizer carries line/column/byte spans; semantic actions
+    # stamp source_attribution_shape from the matched span. Per
+    # lc-the-recipe-remembers-its-source.
     stamps_attribution: true,
 };
 
 defn python_emit = emission_template_shape {
     modality:      modality_shape { name: "text-tree", domain: "code" },
     emit_from:     ~Blueprint @py_module_shape,
-    # Emit routes through `ast.unparse` (Python 3.9+) on a reconstructed
-    # ast.Module. The Form recipe names the operation; the host carries
-    # the AST→source mechanics. Round-trip discipline: parse(unparse(x))
-    # ≈ x at the semantic altitude (whitespace + comment normalization
-    # tolerated; structural identity preserved).
     emit_pattern:  ?walker {
         on py_module:        emit_module,
         on py_function_def:  emit_function_def,
         on py_class_def:     emit_class_def,
-        # ... (full walker in scripts/form_cli.py)
+        # Each walker emits Python source bytes from Form cells.
     },
     format_rules: [
         ("indent_spaces",     4),
@@ -353,10 +345,7 @@ defn python_lang = language_cell_shape {
     version:           "3.12",
     grammar:           python_grammar,
     emission_template: python_emit,
-    stdlib_bindings: [
-        ("parse_ast",   @recipe(parse_via_ast_module)),
-        ("emit_ast",    @recipe(emit_via_ast_unparse)),
-    ],
+    stdlib_bindings:   [],
     numeric_defaults: [
         ("indent",            4),
         ("max_line_length",   100),
@@ -384,17 +373,18 @@ defn python_lang = language_cell_shape {
 #   surfaces every place the substrate_dispatch bridge wires a recipe.
 #   Substrate queries replace grep for source-level structural concerns.
 #
-# - **Source attribution from ast lineno gives perfect navigation.**
+# - **Source attribution from token spans gives perfect navigation.**
 #   organ.Cell.perceive() at line 336 carries
 #   `source_attribution.start_line == 336` in its Form recipe. The
 #   recipe-branching-sense loop can navigate from a firing back to the
 #   line of Python that authored it — without leaving the lattice.
 #
-# - **Round-trip via ast.unparse.** Python source → Form tree →
-#   Python source preserves structure (whitespace and comments
-#   normalize per ast.unparse's conventions). Cells that transform
-#   Python through the Form layer (e.g. add a decorator, rename a
-#   function, refactor a class) round-trip cleanly.
+# - **Round-trip through Form emit.** Python source → Form cells →
+#   Python source preserves structure at the semantic altitude, while
+#   comments and non-token whitespace remain sibling annotations. Cells
+#   that transform Python through the Form layer (e.g. add a decorator,
+#   rename a function, refactor a class) round-trip through emit walkers,
+#   not a host syntax-tree printer.
 #
 # - **Cross-language structural equivalence.** A Python function and
 #   its TypeScript port that compile to the same recipe NodeIDs are
@@ -422,7 +412,7 @@ defn python_lang = language_cell_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # GAP-PY1 (FIRST CLOSURE LANDED 2026-05-21): the import-statement
-#          family is now parsed via real BMF rules, not ast.parse.
+#          family is now parsed via real BMF rules.
 #          experiments/local-llm-cell-v0/bmf.py carries:
 #            - Tokenizer (char-by-char, not a regex-over-ast wrapper)
 #            - Pattern primitives: Literal / Capture / Sequence / Opt /
@@ -434,19 +424,19 @@ defn python_lang = language_cell_shape {
 #              aliased, multi-name, relative-N-dot, relative-with-module)
 #          experiments/local-llm-cell-v0/bmf_python_demo.py verifies
 #          13/13 import variations parse through BMF and produce Form
-#          objects structurally equivalent to the ast.parse path.
+#          objects structurally equivalent to the old host bridge.
 #          Source attribution stamped natively by the BMF tokenizer
-#          (token line/col), not borrowed from ast.parse.
+#          (token line/col), not borrowed from a host syntax tree.
 #
 #          Remaining: every other Python construct (def, class,
 #          assignments, control flow, expressions). Each is one
 #          BMF rule per breath, using the same primitives. The
-#          AST delegate shrinks; the BMF surface grows; the
+#          host bridge shrinks; the BMF surface grows; the
 #          self-hosting boundary moves with every rule landed.
 #
 #          The original GAP-PY1 framing still holds for the rest of
-#          Python's grammar — AST is the bootstrap that carries the
-#          uncovered constructs until BMF rules land for them.
+#          Python's grammar — the old bridge carries uncovered
+#          constructs only when explicitly requested for parity probes.
 #          Walking Python's grammar into the substrate, one
 #          construct at a time:
 #            - `import os` → Rule(Sequence([Literal("KW","import"),
@@ -458,25 +448,23 @@ defn python_lang = language_cell_shape {
 #                                                       Literal("OP",":"),
 #                                                       Capture("body","block")]),
 #                                              action=@recipe(build_py_function_def))
-#          As rules land in the grammar cell-domain, the AST delegate
+#          As rules land in the grammar cell-domain, the host bridge
 #          shrinks. The self-hosting boundary moves; the bootstrap
 #          becomes vestigial. Same path the body has walked for every
 #          other host intrinsic — Newton sqrt instead of math.sqrt,
 #          Taylor exp instead of math.exp, form_native.cosine wired
-#          as runtime default. AST today; BMF tomorrow; one rule
-#          per breath.
+#          as runtime default. BMF is the parser path; one rule per
+#          breath.
 #
-# GAP-PY2: Comments + non-token whitespace are erased by ast.parse.
-#          ast.unparse synthesizes idiomatic whitespace on emit; the
-#          round-trip is semantically identical but not byte-identical.
-#          A future tokenize-aware extension would preserve comments
-#          as sibling annotations (similar to how libcst handles them);
-#          today the body works at the AST altitude.
+# GAP-PY2: Comments + non-token whitespace need explicit sibling
+#          annotation shapes. The token stream already sees them;
+#          the rule set still needs to attach them to the emitted
+#          Form cells.
 #
 # GAP-PY3: Python 3.12's PEP 695 type parameters (`def f[T](x: T) -> T`)
 #          and the `type` statement land as `type_params` lists in the
-#          shapes above; the emit half assumes Python 3.12+ ast.unparse.
-#          For 3.11- emission the format_rules need a downgrade pass.
+#          shapes above; the emit half needs version-aware format
+#          rules for 3.11- emission.
 #
 # GAP-PY4: Match statements (PEP 634) land as py_match_shape (not
 #          shown above for brevity; the body's Python source rarely
@@ -486,8 +474,8 @@ defn python_lang = language_cell_shape {
 # GAP-PY5: Walrus operator (`:=`), positional-only markers (`/`),
 #          keyword-only markers (`*`) — the py_arguments_shape carries
 #          them via posonlyargs / kwonlyargs / kw_defaults; the walrus
-#          is py_named_expr_shape (not shown for brevity). All
-#          ast-supported; the Blueprints land as the body uses them.
+#          is py_named_expr_shape (not shown for brevity). The
+#          Blueprints land as the body uses them.
 #
 # GAP-PY6: Type comments (`# type: ignore`, `# type: List[int]`) ride
 #          on individual statements via `type_comment` slots. The
@@ -500,9 +488,10 @@ defn python_lang = language_cell_shape {
 #
 #   # Parse a Python file into a Form object tree:
 #   form_cli convert in --tongue python experiments/local-llm-cell-v0/organ.py
+#     # refuses host bridges unless --allow-host-bridge is explicit
 #
 #   # Round-trip:
-#   form_cli convert in --tongue python <file> > /tmp/tree.json
+#   form_cli convert --allow-host-bridge in --tongue python <file> > /tmp/tree.json
 #   form_cli convert out --tongue python /tmp/tree.json > /tmp/roundtrip.py
 #
 #   # Substrate queries (once auto-ingest runs):
