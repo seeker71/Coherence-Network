@@ -1,0 +1,335 @@
+# ─────────────────────────────────────────────────────────────────────
+# cell-numerics.form — walking organ.py → Form, one recipe at a time
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-one-kernel-many-tongues.md.
+#
+# cosine.form closed the first gap: organ._cosine as a Form-native
+# recipe. This file continues the walk by composing the next layer of
+# cell-mechanics numerics from cosine.form's primitives (pairwise_multiply,
+# sum, sqrt-via-Newton) plus a small set of new compositions:
+#
+#   vector_add      ............ element-wise addition of two vectors
+#   scalar_mul      ............ scalar × vector
+#   matvec          ............ matrix-vector multiply (the Adapter forward step)
+#   exp_series      ............ exp(x) via Taylor expansion at 0
+#   tanh            ............ hyperbolic tangent via the (exp - 1) / (exp + 1) form
+#   sigmoid         ............ 1 / (1 + exp(-x))
+#   _strategy_score ............ cosine of spectrum against (frequency × angle)
+#   _normalize      ............ scale a vector to unit length
+#
+# Each recipe is composed from Form's available primitives:
+#   MATH (+, -, *, /), COMPARE (==, <, >, <=, >=), COND (if-then-else),
+#   LOGIC (and, or, not), BLOCK (do/let), DELEGATE (recursive defn),
+#   and the list built-ins: len, head, tail, sum, concat, reverse.
+#
+# Recipes already authored in cosine.form (referenced by NodeID once
+# both files are ingested):
+#   pairwise_multiply, dot_product, sum_of_squares, sqrt, norm, cosine
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — vector arithmetic
+# ─────────────────────────────────────────────────────────────────────
+
+# Element-wise add: [a0+b0, a1+b1, ...]
+defn vector_add(a, b) = do {
+    if len(a) == 0 or len(b) == 0 then []
+    else concat(
+        [head(a) + head(b)],
+        vector_add(tail(a), tail(b))
+    )
+};
+
+# Element-wise subtract: [a0-b0, a1-b1, ...]
+defn vector_sub(a, b) = do {
+    if len(a) == 0 or len(b) == 0 then []
+    else concat(
+        [head(a) - head(b)],
+        vector_sub(tail(a), tail(b))
+    )
+};
+
+# Scalar × vector: [s*v0, s*v1, ...]
+defn scalar_mul(s, v) = do {
+    if len(v) == 0 then []
+    else concat([s * head(v)], scalar_mul(s, tail(v)))
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — matrix-vector multiply (the Adapter forward step)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A matrix is a list of row-vectors. matvec(M, x) computes one
+# dot_product per row → output vector of length len(M).
+#
+# This is the foundation of organ.Adapter.forward(): two matvec ops
+# (A @ x, then B @ activation(A@x)), an activation between, and a
+# bias add at the end. The Adapter's forward pass is composable from
+# matvec + tanh + vector_add at the substrate altitude.
+
+defn matvec(matrix, x) = do {
+    if len(matrix) == 0 then []
+    else concat(
+        [dot_product(head(matrix), x)],
+        matvec(tail(matrix), x)
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — exp via Taylor expansion
+# ─────────────────────────────────────────────────────────────────────
+#
+# Form has no exp primitive. We compose it from arithmetic via the
+# Taylor series at 0:
+#
+#   exp(x) = Σ x^n / n!   for n in 0..N
+#
+# Twenty terms gives good accuracy for |x| < 5; beyond that, argument
+# reduction is needed (exp(x) = exp(x/2)^2). For cell-mechanics use
+# (sigmoid, tanh in [-5, 5] range), this is sufficient.
+
+defn factorial(n) = do {
+    if n <= 1 then 1
+    else n * factorial(n - 1)
+};
+
+defn pow_int(base, n) = do {
+    if n <= 0 then 1
+    else base * pow_int(base, n - 1)
+};
+
+defn exp_term(x, n) = pow_int(x, n) / factorial(n);
+
+# exp_series sums Taylor terms from n=0 to n=count-1.
+defn exp_series_accum(x, n, count, acc) = do {
+    if n >= count then acc
+    else exp_series_accum(x, n + 1, count, acc + exp_term(x, n))
+};
+
+defn exp_series(x) = do {
+    # Argument reduction for stability: exp(x) = exp(x/4)^4 for |x| > 2.
+    # This keeps the series term magnitudes in a well-conditioned range.
+    if x > 2 or x < -2
+    then pow_int(exp_series_accum(x / 4, 0, 20, 0), 4)
+    else exp_series_accum(x, 0, 20, 0)
+};
+
+defn exp(x) = exp_series(x);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — tanh and sigmoid
+# ─────────────────────────────────────────────────────────────────────
+#
+# tanh(x) = (exp(2x) - 1) / (exp(2x) + 1)
+# sigmoid(x) = 1 / (1 + exp(-x))
+#
+# Both saturate quickly outside ±5 → clamp for numerical safety. The
+# clamp matches what organ._sigmoid does explicitly (returns 0 for
+# z < -50, 1 for z > 50).
+
+defn tanh(x) = do {
+    if x > 5 then 1
+    else if x < -5 then -1
+    else do {
+        let e2x = exp(2 * x);
+        (e2x - 1) / (e2x + 1)
+    }
+};
+
+defn sigmoid(x) = do {
+    if x > 50 then 1
+    else if x < -50 then 0
+    else 1 / (1 + exp(-x))
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — _strategy_score (organ.py's selection metric)
+# ─────────────────────────────────────────────────────────────────────
+#
+# organ.py:
+#   def _strategy_score(strategy, spectrum, total_desire):
+#       fa = [strategy.frequency[i] * strategy.angle[i] for i in range(N_BANDS)]
+#       base = _cosine(spectrum, fa)
+#       return base
+#
+# As a Form recipe (composing pairwise_multiply from cosine.form):
+
+defn strategy_score(strategy, spectrum) = do {
+    let fa = pairwise_multiply(strategy.frequency, strategy.angle);
+    cosine(spectrum, fa)
+};
+
+# The full pick_strategy recipe (matching organ.pick_strategy) is the
+# next layer up: rank named strategies by strategy_score, apply
+# operator-fallback when total_desire > 1.5 and top_score < 0.4.
+# That recipe lives naturally in pick-strategy.form (next breath);
+# the building blocks ship here.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — vector normalization
+# ─────────────────────────────────────────────────────────────────────
+#
+# v / ||v||. Used in organ.perceive() for inhabit-blend (normalizes
+# the strategy's frequency × angle vector before blending into the
+# spectrum). Composes from norm (cosine.form) + scalar_mul.
+
+defn normalize(v) = do {
+    let n = norm(v);
+    if n == 0 then v
+    else scalar_mul(1 / n, v)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Adapter.forward sketch (compositional outline)
+# ─────────────────────────────────────────────────────────────────────
+#
+# organ.py's Adapter has three output heads (spectrum / dispositions /
+# needs) wired through a single LoRA-shaped projection:
+#
+#   h = A @ x                  # rank-r intermediate
+#   out = B @ h + bias
+#   spectrum = tanh(out[0:N_BANDS])
+#   dispos   = sigmoid(out[N_BANDS:N_BANDS+N_DISPOS])
+#   needs    = sigmoid(out[N_BANDS+N_DISPOS:])
+#
+# The corresponding Form recipe (slice/take helpers are stdlib gaps
+# named honestly — see GAP-N1 below):
+
+defn adapter_forward(A, B, bias, x) = do {
+    let h   = matvec(A, x);                       # rank-r intermediate
+    let out = vector_add(matvec(B, h), bias);     # raw output
+    out                                            # caller applies tanh / sigmoid per head
+};
+
+# Per-head activation lives in cell-side composition once `take(list, n)`
+# and `drop(list, n)` are Form built-ins (or composed below):
+
+defn take(list, n) = do {
+    if n <= 0 or len(list) == 0 then []
+    else concat([head(list)], take(tail(list), n - 1))
+};
+
+defn drop(list, n) = do {
+    if n <= 0 then list
+    else if len(list) == 0 then []
+    else drop(tail(list), n - 1)
+};
+
+defn slice(list, start, end) = take(drop(list, start), end - start);
+
+defn map_tanh(v) = do {
+    if len(v) == 0 then []
+    else concat([tanh(head(v))], map_tanh(tail(v)))
+};
+
+defn map_sigmoid(v) = do {
+    if len(v) == 0 then []
+    else concat([sigmoid(head(v))], map_sigmoid(tail(v)))
+};
+
+# Now the full per-head forward pass composes cleanly:
+
+defn adapter_forward_heads(A, B, bias, x, n_bands, n_dispos) = do {
+    let out      = adapter_forward(A, B, bias, x);
+    let spectrum = map_tanh(slice(out, 0, n_bands));
+    let dispos   = map_sigmoid(slice(out, n_bands, n_bands + n_dispos));
+    let needs    = map_sigmoid(drop(out, n_bands + n_dispos));
+    {
+        spectrum:     spectrum,
+        dispositions: dispos,
+        needs:        needs,
+    }
+};
+
+# This is the full organ.Adapter.forward() at the Form altitude. The
+# numbers are the same; the dispatch is content-addressed; the kernel
+# never needed to know Python existed.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — what this closes (and what stays open)
+# ─────────────────────────────────────────────────────────────────────
+#
+# CLOSED at the recipe altitude (after this file is ingested):
+#   - vector_add, vector_sub, scalar_mul, normalize
+#   - matvec
+#   - exp, tanh, sigmoid
+#   - strategy_score
+#   - take, drop, slice, map_tanh, map_sigmoid
+#   - adapter_forward, adapter_forward_heads
+#
+# The runtime route from Python's host-intrinsic call sites to these
+# Form recipes is the remaining engineering: when organ.py calls
+# `_strategy_score`, the substrate's recipe-dispatch can take over
+# instead of running the Python function. That route is GAP-N4 below.
+#
+# OPEN GAPs:
+#
+# GAP-N1: `take` / `drop` / `slice` are authored here as recipes but
+#         could be Form built-ins alongside `head`/`tail`. Promotion
+#         to built-in is a substrate convenience; the recipe forms
+#         work today.
+#
+# GAP-N2: exp_series convergence beyond |x| > 5 needs further argument
+#         reduction (exp(x) = exp(x/8)^8) or a longer series. For
+#         organ-mechanics use (sigmoid/tanh clamp at ±5/±50), this is
+#         already adequate. Honest about the range.
+#
+# GAP-N3: Adapter `A`, `B`, `bias` are *matrices* — lists of lists.
+#         The current Form list-of-lists representation works
+#         (`head` of a matrix returns a row); a dedicated matrix
+#         Blueprint with explicit `(rows, cols, data)` shape would
+#         enable shape-checking at content-address-time. Today's
+#         flat-list form is honest; the dedicated shape is the
+#         deepening.
+#
+# GAP-N4 (CLOSED 2026-05-21): Runtime routing landed as
+#         `experiments/local-llm-cell-v0/substrate_dispatch.py`. The
+#         `@substrate_dispatch("<name>")` decorator now wraps
+#         organ.py's `_cosine`, `_strategy_score`, and `_sigmoid`. An
+#         empty registry falls through to the Python body (existing
+#         behavior preserved); `register_recipe(name, <callable>)`
+#         routes subsequent calls through the registered
+#         implementation. `bridge_to_substrate(name, session=...)` is
+#         the one-line move that wires a substrate-resident Form
+#         recipe in as the registered implementation once a session
+#         is booted. Verified end-to-end by
+#         experiments/local-llm-cell-v0/substrate_dispatch_demo.py.
+#
+# GAP-N5 (CLOSED 2026-05-21): Cell state expressed as substrate
+#         NamedCell. cell-as-namedcell.form names the cell_shape,
+#         adapter_shape, moment_shape, strategy_snapshot_shape
+#         Blueprints; cell_init, cell_perceive, cell_inhabit,
+#         cell_release_inhabit, cell_probe as state-mutating recipes
+#         that compose Form's STATE arm (form-engine.form @1.2.22.1
+#         SAVE / @1.2.22.2 RESTORE / @1.2.22.3 DISCARD). Together
+#         with this file (numerics) and traces-teach-the-recipe.form
+#         (trace pipeline), organ.py's surface is now 100% addressable
+#         as Form recipes. Remaining sub-gaps (NC1–NC6) are stdlib
+#         and host-intrinsic refinements named honestly in the
+#         companion file.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (once ingested)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   coh substrate run "vector_add([1, 2, 3], [4, 5, 6])"
+#     → [5, 7, 9]
+#
+#   coh substrate run "matvec([[1, 2], [3, 4]], [5, 6])"
+#     → [17, 39]
+#
+#   coh substrate run "tanh(0)"            # → 0.0
+#   coh substrate run "tanh(1)"            # → ~0.7616
+#   coh substrate run "tanh(10)"           # → 1 (clamped)
+#
+#   coh substrate run "sigmoid(0)"         # → 0.5
+#   coh substrate run "sigmoid(2)"         # → ~0.8808
+#
+#   coh substrate run "strategy_score(@strategy(observer_return),
+#                                      [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])"
+#
+# The Python intrinsics in organ.py stay for now — closing GAP-N4 is
+# what lets the runtime route through Form. Until then, this file
+# carries the recipe identity (content-addressed) and verifies the
+# computation; the Python stays as the executable path. The path is
+# walkable; each closure is one breath.

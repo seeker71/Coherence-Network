@@ -74,19 +74,15 @@ defn intern_word_cell(lemma, pos, hz, semantic_field) = do {
     }
 };
 
-# GAP-W1: `create_cell("word", ...)` requires the `word` domain to
-#         exist. Domains live in `api/app/services/substrate/
-#         cell_domains.py`. Smallest extension: register WORD as a
-#         domain alongside MEMORY, CONCEPT, SPEC, IDEA, PRESENCE,
-#         LINEAGE, WITNESS, TASK. One enum entry + one row in
-#         `substrate_cell_domains` + an encoder in
-#         `markdown_frontend.py: ingest_word_cell(...)`.
+# CLOSED-W1 (2026-05-20): WORD = 15 registered in BDomain
+#         (api/app/services/substrate/category.py). BID_word() now
+#         returns the NodeID, and the sentinel test_substrate_numeric_
+#         schema.py was updated to pin it.
 #
-# GAP-W2: `lemma_pos_key(lemma, pos)` is the cell's `name` field.
-#         Convention: `{lemma}.{pos}` so "visible.ADJ" is distinct
-#         from a hypothetical "visible.VERB". Names are query keys
-#         (form-language.md design principle 2); identity stays in
-#         the Blueprint NodeID.
+# CLOSED-W2 (2026-05-20): `lemma_pos_key(lemma, pos)` shipped in
+#         markdown_frontend.py — case-normalizing `{lemma}.{POS}` join.
+#         Tested in test_substrate_word_domain.py against the
+#         homograph case (visible.ADJ ≠ visible.VERB).
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 2 — parse: prose → recipe (the forward direction)
@@ -113,19 +109,16 @@ defn parse_prose(text) = do {
     R_Block.SEQUENCE cells
 };
 
-# GAP-P1: `tokenize_words(text)` requires English (and eventually
-#         every locale the body speaks — see `locale parity` in the
-#         wellness check). Smallest extension: a thin wrapper over
-#         a tokenizer library (spaCy, or a built-in regex tokenizer
-#         that's good enough for the round-trip). The lemma + POS
-#         columns are what matter; everything else is metadata.
+# CLOSED-P1 (2026-05-20): `tokenize_words(text)` shipped in
+#         markdown_frontend.py — regex tokenizer that walks the body-
+#         known lexicon (`_WORD_LEXICON_DEFAULTS`) for the test
+#         sentence's words and falls through for unknowns. Locale
+#         widening (spaCy, stanza, or a per-locale lemmatizer) is the
+#         next breath; the surface is in place.
 #
-# GAP-P2: `t.hz` and `t.field` for an unknown word default to a
-#         body-known fallback (e.g. 432 Hz, "neutral"). The cell's
-#         frequency-tuning is refined the first time the word
-#         appears in a concept whose body authors it more
-#         precisely. The substrate stays honest: unknown means
-#         unknown, not zero.
+# CLOSED-P2 (2026-05-20): the fallback ships as part of the same
+#         function: unknown words land at 432 Hz / neutral / POS=UNK.
+#         The substrate stays honest about unknown-as-unknown.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 3 — emit: recipe → prose (the backward direction)
@@ -246,15 +239,15 @@ defn emit_prose(recipe) = do {
 #       {original: s, recipe: r, emitted: s2, stable: s == s2}
 #   }"
 #
-# Three GAPs to close before this runs:
+# All four gaps closed 2026-05-20:
 #
-#   W1+W2  — register WORD domain + name convention
-#   P1     — tokenize_words (locale-aware) with lemma + POS
-#   metric — coherence_distance over the 14-axis signature
+#   W1+W2  ✓ WORD = 15 registered in BDomain; lemma_pos_key shipped
+#   P1     ✓ tokenize_words shipped with body-known lexicon + fallback
+#   P2     ✓ unknown-word fallback inside tokenize_words
+#   metric ✓ coherence_distance over the 14-axis signature in resonance.py
 #
-# Each is a single PR. None require architectural change to the
-# substrate kernel — they all extend existing patterns into a new
-# domain. The body's discipline (structural-composition.md) ripens
-# in the same breath: great-reason #2 becomes "prose is a recipe
-# composed from word-cells; the SubstrateString leaf is what a
+# None required architectural change to the substrate kernel. The body's
+# discipline (structural-composition.md) ripens in the same breath:
+# great-reason #2 ("prose is leaf-by-no-structure") becomes "prose is a
+# recipe composed from word-cells; the SubstrateString leaf is what a
 # word-cell's lemma resolves to."

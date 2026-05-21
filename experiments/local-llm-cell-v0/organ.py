@@ -22,6 +22,8 @@ import math
 import random
 import zlib
 
+from substrate_dispatch import substrate_dispatch
+
 
 DIM = 128
 N_BANDS = 8
@@ -51,6 +53,7 @@ def shared_base(text: str, sense: str = "thought", dim: int = DIM) -> list[float
     return [v / n for v in vec]
 
 
+@substrate_dispatch("sigmoid")
 def _sigmoid(z: float) -> float:
     if z < -50:
         return 0.0
@@ -230,6 +233,7 @@ STRATEGIES = [
 ]
 
 
+@substrate_dispatch("cosine")
 def _cosine(a, b):
     dot = sum(a[i] * b[i] for i in range(len(a)))
     na = math.sqrt(sum(v * v for v in a)) or 1.0
@@ -237,6 +241,7 @@ def _cosine(a, b):
     return dot / (na * nb)
 
 
+@substrate_dispatch("strategy_score")
 def _strategy_score(strategy: Strategy, spectrum, total_desire: float) -> float:
     """Score = cosine to (frequency × angle), modulated by focus
     when total_desire is high. The operator strategy (focus=0.5,
@@ -303,7 +308,8 @@ def pick_strategy(spectrum, desire, presets=None):
 
 class Cell:
     def __init__(self, name: str = "cell", seed: int = 0,
-                 desire_decay: float = 0.85, fulfillment_gain: float = 1.4):
+                 desire_decay: float = 0.85, fulfillment_gain: float = 1.4,
+                 publish_traces: bool = True):
         self.name = name
         self.adapter = Adapter(seed=seed)
         self.training_set: list[tuple[list[float], list[float]]] = []
@@ -312,6 +318,13 @@ class Cell:
         self.desire_decay = desire_decay
         self.fulfillment_gain = fulfillment_gain
         self.timeline: list[dict] = []
+        # strategy-firing trace pipeline — see specs/recipes-tuned-by-trace.md.
+        # Snapshot taken at firing, published on the next perceive once the
+        # cell has settled. Sovereignty: any cell can flip publish_traces
+        # false and the perceive loop runs identically.
+        self.publish_traces = publish_traces
+        self._pending_strategy_snapshot: dict | None = None
+        self._fresh_inhabit: bool = False
 
     # —— learning ——
 
@@ -334,8 +347,44 @@ class Cell:
     # —— perceiving (one moment at a time, stateful) ——
 
     def perceive(self, text: str, sense: str = "thought") -> dict:
+        # ─── publish pending strategy_fired trace if the cell has settled ──
+        # from a prior firing. See specs/recipes-tuned-by-trace.md.
+        if self._pending_strategy_snapshot and self.publish_traces and self.timeline:
+            last = self.timeline[-1]
+            sense_after = {
+                "spectrum": list(last["spectrum"]),
+                "desire": [last["desire"][n] for n in NEED_NAMES],
+                "frequency": None,
+            }
+            from substrate_bridge import publish_strategy_trace
+            publish_strategy_trace(
+                self,
+                self._pending_strategy_snapshot["strategy"],
+                self._pending_strategy_snapshot["sense_before"],
+                sense_after,
+            )
+            self._pending_strategy_snapshot = None
+
         x = shared_base(text, sense)
         spec, dispos, needs, _, _ = self.adapter.forward(x)
+
+        # capture sense_before BEFORE the inhabit-blend reshapes spec.
+        # Only on the FIRST perceive after each inhabit() call — fresh-flag
+        # is set by inhabit(), cleared here on first consumption. Subsequent
+        # perceives consuming the decay tail do not trigger new snapshots.
+        strat_held_pre = getattr(self, "_inhabit_strategy", None)
+        if (strat_held_pre is not None and getattr(self, "_fresh_inhabit", False)
+                and self.publish_traces):
+            self._pending_strategy_snapshot = {
+                "strategy": strat_held_pre.name,
+                "sense_before": {
+                    "spectrum": list(spec),
+                    "desire": list(self.desire),
+                    "frequency": None,
+                },
+            }
+            self._fresh_inhabit = False
+
         # consume inhabit-bias if set: blend strategy's f×a into the
         # spectrum at current intensity, then *decay* the intensity for
         # next perceive (rather than binary clear). Real bodies have a
@@ -424,6 +473,10 @@ class Cell:
         self._inhabit_strategy = strategy
         self._inhabit_intensity = max(0.0, min(1.0, intensity))
         self._inhabit_decay = max(0.0, min(1.0, decay))
+        # mark the firing fresh so perceive() captures one sense_before
+        # snapshot on its next consumption (and only its next — decay-tail
+        # perceives don't open new traces). See specs/recipes-tuned-by-trace.md.
+        self._fresh_inhabit = True
         return {
             "inhabit": strategy.name,
             "intensity": self._inhabit_intensity,
@@ -436,6 +489,7 @@ class Cell:
         held = getattr(self, "_inhabit_strategy", None)
         self._inhabit_strategy = None
         self._inhabit_intensity = 0.0
+        self._fresh_inhabit = False
         return {"released": held.name if held else None}
 
     # —— probing (read-only sample, no state mutation) ——
@@ -461,3 +515,19 @@ class Cell:
             "needs": dict(zip(NEED_NAMES, needs)),
             "kind": "probe",  # marks this as a read-only sample
         }
+
+
+# ─── Form-native execution as the runtime default ─────────────────────────
+#
+# Registers form_native implementations of cosine, sigmoid, and
+# strategy_score under the recipe names bound by the @substrate_dispatch
+# decorators above. After this import runs, every call to _cosine /
+# _sigmoid / _strategy_score in this process routes through the Form-
+# native recipe — same numbers, different execution path. Parity is
+# verified by parity_check.py (2400 test inputs, exact for pure
+# compositions, within 1e-6 for iterative approximations).
+#
+# The Python intrinsics above remain as the wrapped function bodies;
+# unregister_recipe("<name>") restores the Python path at any time.
+
+import default_form_native  # noqa: E402, F401  — registers on import

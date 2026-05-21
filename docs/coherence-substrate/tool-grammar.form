@@ -1,0 +1,222 @@
+# ─────────────────────────────────────────────────────────────────────
+# tool-grammar.form — the abstract Language cell for invocable surfaces
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-tools-as-form-cells.md.
+#
+# Every tool — internal scripts, external CLIs, REST APIs, graph
+# queries — is a Language cell with the same four-part shape as a
+# file-format Language cell, with the two halves named to reflect the
+# invocation direction:
+#
+#   file grammar:   parse_bytes(bytes) -> tree
+#                   emit_bytes(tree) -> bytes
+#
+#   tool grammar:   call_pattern(args_tree) -> invocation
+#                   response_pattern(invocation_result) -> result_tree
+#
+# Same shape; different direction. The lattice doesn't distinguish
+# locality (internal vs external) or carrier (shell, http, in-process);
+# carriers handle that.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the supporting shapes
+# ─────────────────────────────────────────────────────────────────────
+
+form modality_shape = {
+    name:   ~Slug,
+    domain: ~Slug,
+};
+
+# An invocation is what the carrier executes. Three sub-shapes for the
+# three common carriers: shell command, HTTP request, in-process call.
+
+form shell_invocation_shape = {
+    command:   ~String,
+    argv:      ~List,             # [~String] — argv after command name
+    env:       ~Object,           # {~Slug: ~String} — env vars to set
+    stdin:     ?~String,          # null if no stdin
+    cwd:       ?~PathRef,         # null = host cwd
+    timeout:   ?~Float,           # seconds; null = host default
+};
+
+form http_invocation_shape = {
+    method:   ~Slug,              # "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
+    url:      ~URLLit,
+    headers:  ~Object,            # {~Slug: ~String}
+    body:     ?~String,           # serialized payload (JSON, form-encoded, etc.)
+    timeout:  ?~Float,
+};
+
+form in_process_invocation_shape = {
+    module:   ~Slug,              # python module / package path
+    callable: ~Slug,              # function/method name
+    args:     ~List,              # positional args (~Form values)
+    kwargs:   ~Object,            # keyword args ({~Slug: ~Form})
+};
+
+# A response is what the carrier returns. Three sub-shapes mirror the
+# invocation shapes; the response_pattern in the Language cell parses
+# this into a Form object tree.
+
+form shell_response_shape = {
+    stdout:      ~String,
+    stderr:      ~String,
+    exit_code:   ~Int,
+    duration_ms: ~Int,
+};
+
+form http_response_shape = {
+    status:      ~Int,
+    headers:     ~Object,
+    body:        ~String,
+    duration_ms: ~Int,
+};
+
+form in_process_response_shape = {
+    value:       ~Form,           # the function's return value
+    exception:   ?~Form,          # error info if raised
+    duration_ms: ~Int,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the tool Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+form tool_grammar_shape = {
+    modality:            modality_shape,   # name: "tool", domain: tool's category
+
+    # Call-half: tree → invocation. Walks an args-tree (recipe shape)
+    # and produces a (shell|http|in_process)_invocation_shape.
+    call_pattern:        ~Recipe,
+
+    # Response-half: invocation-result → tree. Parses the carrier's
+    # response into a Form object that downstream cells consume.
+    response_pattern:    ~Recipe,
+
+    # Which carrier the tool uses.
+    carrier:             ~Slug,            # "shell" | "http" | "in_process"
+
+    # Version of the tool's surface area. Bumped when the tool's CLI/API
+    # changes shape (e.g. gh CLI 2.40 → 2.45 added new --json fields).
+    # Cells consuming via NodeID see the version change as a Blueprint
+    # NodeID shift.
+    version:             ~String,
+
+    # Optional cross-modal links — sibling tools that produce the same
+    # result-tree shape. E.g. `gh pr view` and a substrate query of the
+    # PR cell both yield a pull_request_shape tree.
+    cross_modal_links:   ~List,            # [~CellRef]
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the invoke recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# Generic recipe a cell calls to invoke any tool. Composes the
+# call_pattern + carrier + response_pattern into one round-trip.
+
+defn invoke(tool, args_tree) = do {
+    let invocation = call(tool.call_pattern, args_tree);
+    let raw_result = ?carrier_execute(tool.carrier, invocation);
+    let parsed     = call(tool.response_pattern, raw_result);
+    parsed
+};
+
+# `carrier_execute` is a host intrinsic (GAP-T1): subprocess.run for
+# shell, urllib for http, getattr+call for in_process. The Form recipe
+# names the operation; the host carries the OS-level execution. Same
+# shape as substrate-kernel.form's GAP-K1 (storage I/O stays at the
+# host transaction boundary).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the witness pairing
+# ─────────────────────────────────────────────────────────────────────
+#
+# Every invocation is observable. By default, the invoke recipe
+# publishes a witness-trace tagged kind="tool_fired" alongside the
+# strategy_fired trace pattern from traces-teach-the-recipe.form. Same
+# sense_before / sense_after frame applies — what state the body was in
+# when the tool fired, what came after. The body's lived record covers
+# both strategy-firings and tool-firings under one observation layer.
+
+defn invoke_witnessed(cell, tool, args_tree) = do {
+    let before = sense_state(cell);
+    let result = invoke(tool, args_tree);
+    let after  = sense_state(cell);
+    publish_tool_trace(cell, tool, args_tree, result, before, after);
+    result
+};
+
+# `publish_tool_trace` is the sibling to publish_strategy_trace from
+# traces-teach-the-recipe.form. The trace-kind is "tool_fired"; the
+# fields are (cell, tool, args, response, sense_before, sense_after).
+# Same aggregation pattern; same efficacy-signature shape; same
+# substrate Blueprint structural identity. The body that learns from
+# strategy-firings can learn from tool-firings the same way.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-T1: `?carrier_execute(carrier, invocation)` is a host intrinsic.
+#         For "shell" carriers, the host runs `subprocess.run`; for
+#         "http" carriers, `urllib.request`; for "in_process",
+#         dynamic import + getattr. The recipe names the operation;
+#         the OS-level execution lives at the host boundary, the same
+#         way substrate-kernel.form delegates persistence I/O to
+#         SQLAlchemy.
+#
+# GAP-T2: `call(pattern, args)` is a recipe-application primitive —
+#         walk the pattern's recipe tree with the args bound. Already
+#         covered by form-engine.form's @1.2.27.2 INVOKE arm.
+#
+# GAP-T3: `publish_tool_trace` is the tool-firing analog of
+#         publish_strategy_trace from traces-teach-the-recipe.form.
+#         The substrate's witness-trace store already accepts arbitrary
+#         `what` payloads; the new trace-kind is one constant addition.
+#
+# GAP-T4: Cross-carrier interoperability — a `gh pr view` shell tool
+#         and an in-process `coh substrate lookup_cell` that both
+#         produce a pull_request_shape tree should typecheck as
+#         compatible. `cross_modal_links` names the relationship; the
+#         actual compatibility check is `?compatible_with` on the
+#         output Blueprint (substrate already supports it).
+#
+# GAP-T5: Versioning — when `gh` CLI 2.40 adds a new --json field, the
+#         gh-cli-grammar.form bumps its `version` and its
+#         response_pattern Blueprint shifts. Cells consuming via the
+#         old NodeID still work (the old recipe is still in the
+#         lattice); cells wanting the new field upgrade to the new
+#         NodeID. Same pattern as JVM bytecode versioning at the
+#         lattice altitude.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — how it composes
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once tools are Language cells, composition becomes structural:
+#
+#   defn prs_touching_substrate_today(cell) = do {
+#       # Tool 1: list today's PRs
+#       let prs = invoke_witnessed(cell, @tool(gh_pr_list),
+#                                  {limit: 50, state: "merged", since: "today"});
+#       # Tool 2: for each PR, get its diff
+#       let diffs = map(prs, fn(pr) ->
+#           invoke_witnessed(cell, @tool(gh_pr_diff), {number: pr.number})
+#       );
+#       # Tool 3: annotate each file in each diff against the substrate
+#       let annotations = flat_map(diffs, fn(d) ->
+#           map(d.files, fn(f) ->
+#               invoke_witnessed(cell, @tool(coh_substrate_annotate),
+#                                {path: f.path})
+#           )
+#       );
+#       # Result: each cell touched, with structural context
+#       annotations
+#   };
+#
+# No bash glue. No fragile JSON-massaging between tools. The
+# composition is content-addressed; two cells writing the same query
+# share Recipe NodeIDs by content-addressing. The body invokes the
+# outside the same way it reads the inside.

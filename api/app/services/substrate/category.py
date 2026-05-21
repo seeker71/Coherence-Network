@@ -126,8 +126,13 @@ class BDomain(IntEnum):
     GUIDE = 12          # reader/practice guides derived from concept tissue
     LANGUAGE_VIEW = 13  # translated/localized views of canonical KB tissue
     KB_PAGE = 14        # non-concept vision-KB pages, indexes, maps, and sections
-    # Note: WORD = 15 lives on the claude/word-domain-N35bl-w1 branch
-    # (PR #1748). When that merges, this band continues at 16 below.
+    WORD = 15           # the smallest unit of KB content — a lexeme cell whose
+                        # Blueprint composes from (lemma, POS, hz, semantic_field).
+                        # Prose becomes substrate-walkable when sentences intern
+                        # as R_Block.SEQUENCE recipes over WORD cells. See
+                        # docs/coherence-substrate/prose-as-recipe.form for the
+                        # round-trip and scripts/prose_recipe_roundtrip.py for
+                        # the proof-of-concept in-memory.
     ARTIFACT = 16       # any git-tracked file as a substrate cell — closes
                         # the gas-cell gap from lc-form-perceptron. CTOR
                         # carries (path, kind, content_hash, size_bytes,

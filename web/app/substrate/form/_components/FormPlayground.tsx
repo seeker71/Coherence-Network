@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
@@ -522,10 +523,34 @@ function ResultPanel({ result }: { result: FormResultOut }) {
   );
 }
 
+// Build a starter expression when the playground arrives bound to a cell.
+// `?cell=@concept(lc-pulse)` becomes `@concept(lc-pulse).blueprint` — a
+// useful first question to ask of any cell. The visitor lands inside a
+// conversation already in progress, rather than at a blank textarea.
+function starterFromCell(cellRef: string | null): {
+  expr: string;
+  showcases: string;
+} | null {
+  if (!cellRef) return null;
+  const trimmed = cellRef.trim();
+  if (!trimmed.startsWith("@")) return null;
+  return {
+    expr: `${trimmed}.blueprint`,
+    showcases: `Reading ${trimmed}'s Blueprint NodeID — the cell's structural identity. Try .ctor for its CTOR recipe, or ?equivalent ${trimmed} for cells sharing its Blueprint.`,
+  };
+}
+
 export function FormPlayground() {
+  const searchParams = useSearchParams();
+  const cellParam = searchParams.get("cell");
+  const starter = starterFromCell(cellParam);
   const firstExample = GROUPS[0].examples[0];
-  const [expression, setExpression] = useState(firstExample.expr);
-  const [activeShowcase, setActiveShowcase] = useState(firstExample.showcases);
+  const [expression, setExpression] = useState(
+    starter ? starter.expr : firstExample.expr,
+  );
+  const [activeShowcase, setActiveShowcase] = useState(
+    starter ? starter.showcases : firstExample.showcases,
+  );
   const [evaluating, setEvaluating] = useState(false);
   const [result, setResult] = useState<FormResultOut | null>(null);
   const [error, setError] = useState<string | null>(null);

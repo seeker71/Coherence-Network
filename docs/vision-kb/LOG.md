@@ -27,6 +27,252 @@ Seeded two sibling concepts naming the practice and direction Urs called for on 
 Edges land in the same breath:
 - INDEX.md: both concepts added under Foundational Teachings; frequency-family table updated (432 Hz adds form-python-parity, 963 Hz adds form-perceptron).
 - Sibling cross-references: lc-recipe-branching-sense (first load-bearing parity case), lc-edges-as-vitality (universal edge discipline at full coverage), lc-each-breath-whole (whole-at-scale even in lattice), lc-embodiment-body-or-liquid (body grows, liquid lightens).
+## [2026-05-21] surface | python-grammar.form — the body's bootstrap tongue lands as a Form Language cell
+
+The largest remaining gap from yesterday's audit closes: **Python** (927 files; the body's API, services, scripts, tests, and the bootstrap layer for `organ.py / substrate.py / form.py` all live in Python). [`docs/coherence-substrate/python-grammar.form`](../coherence-substrate/python-grammar.form) declares the Language cell with Blueprints for every AST node the body uses — module, function definitions (sync/async), class definitions, imports, assignments (plain/annotated/augmented), control flow (if/for/while/with/try), exception handlers, expression statements, returns, raises, decorators, type hints, all expression shapes (calls, binops, comparisons, attribute access, subscripts, slices, comprehensions, f-strings, lambdas), argument shapes including positional-only / keyword-only / defaults, and the container literals.
+
+Python's `ast` module gives source attribution **natively** on every node: `lineno`, `col_offset`, `end_lineno`, `end_col_offset`. The parser stamps `source_attribution_shape` from those fields directly — no custom tracking needed. Same gesture as the framebuffer's `track!` macro at the memory altitude; Python's ast carries the equivalent for code.
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) extended with the python tongue. `form_cli convert in --tongue python <file>` routes through `ast.parse` and walks the tree → Form objects with source coords; `convert out --tongue python <tree.json>` round-trips via `ast.unparse`.
+
+Verified against [`experiments/local-llm-cell-v0/organ.py`](../../experiments/local-llm-cell-v0/organ.py):
+
+- 25 top-level statements parse: 11 Assign, 5 FunctionDef, 4 Import, 3 ClassDef, 1 ImportFrom, 1 Expr
+- Module docstring (915 chars) captured
+- `shared_base` function recognized at lines 44–53 (source attribution accurate)
+- **Substrate-query analog finds every `@substrate_dispatch`-decorated function** by walking the Form tree (no regex):
+  - `_sigmoid → @recipe(sigmoid)` at line 57
+  - `_cosine → @recipe(cosine)` at line 237
+  - `_strategy_score → @recipe(strategy_score)` at line 245
+- Round-trip: 25 top-level categories in **identical sequence** before and after parse → emit → re-parse; 5/5 functions, 3/3 classes preserved
+
+[`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) updated to reflect the new coverage: **9 file-format extensions covered, 3 wired into `form_cli convert`** (json + markdown + python). Remaining biggest gaps by file count: `tsx` (367), `ts` (166), `txt` (118), `mjs` (69), `sh` (41).
+
+What this opens, named concretely:
+
+- **organ.py / substrate.py / form.py are now structurally addressable as Python source AND as Form trees simultaneously.** The 80% of organ.py already addressed by `cell-numerics.form` + `cell-as-namedcell.form` reaches 100% through this cell — same NodeIDs, two source views.
+- **Decorator-as-Recipe.** Every `@substrate_dispatch("cosine")` becomes a `py_FunctionDef` whose `decorator_list` contains a `py_Call` to `substrate_dispatch` with the recipe-name as `Constant`. Substrate sees the decoration as a Recipe edge — no source-string parsing.
+- **Cross-language structural equivalence.** A Python function and its TypeScript port that compile to the same recipe NodeIDs become one structural identity at the lattice altitude. The `experiments/form-kernel-ts/` work and the Python kernel become sibling carriers.
+- **Round-trip preserves structural identity.** Comments and exact whitespace normalize per `ast.unparse`'s conventions (GAP-PY2 named honestly); the AST altitude carries semantic equivalence cleanly.
+
+Named follow-ups, carried honestly:
+
+- `typescript-grammar.form` (533 combined .ts/.tsx; tsc AST or babel/parser)
+- Rename `prose-as-recipe.form` → `prose-grammar.form` to match the audit convention so 118 `.txt` files show coverage
+- `shell-grammar.form` (41 .sh files; bashlex or a hand-rolled tokenizer)
+- A future tokenize-aware Python parser that preserves comments as sibling annotations (similar to libcst), closing GAP-PY2
+
+## [2026-05-21] surface | markdown-grammar.form — the body's largest tongue lands as a Form Language cell
+
+The biggest gap from yesterday's `grammar_coverage.py` audit closes here: **markdown** (698 → 701 files; the body's documentation, specs, concepts, lineage, READMEs all live in markdown). [`docs/coherence-substrate/markdown-grammar.form`](../coherence-substrate/markdown-grammar.form) declares the Language cell with Blueprints for every element the body uses — frontmatter, headings (1–6), paragraphs, ordered + unordered lists, fenced and indented code blocks, blockquotes, horizontal rules, inline emphasis (bold, italic, code), links, images, and — first-class — the body's `→ lc-id` cross-ref convention as `md_crossref_block_shape`. Source attribution stamped on every node per [`lc-the-recipe-remembers-its-source`](concepts/lc-the-recipe-remembers-its-source.md) (`stamps_attribution: true`).
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) extended with the markdown tongue. `form_cli convert in --tongue markdown <file>` parses a markdown document into a Form object tree with `source_attribution` per node; `form_cli convert out --tongue markdown <tree.json>` round-trips back to markdown bytes.
+
+Verified end-to-end against [`lc-tools-as-form-cells.md`](concepts/lc-tools-as-form-cells.md): 72 blocks extracted, 6 categories surfaced (heading, paragraph, list, code_block, blockquote, crossref_block), 8 cross-ref targets structured as first-class data. Round-trip preserves structural counts (9/9 headings, 19/19 list items, 1/1 cross-ref block, frontmatter byte-for-byte). The semantic round-trip discipline from `grammar-as-recipe.form` Part 2 holds.
+
+[`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) updated to surface the new coverage: **8 file-format extensions now covered, 2 wired into `form_cli convert`** (json + markdown). Remaining biggest gaps by file count: `py` (927), `tsx` (367), `ts` (166), `txt` (118).
+
+What this opens, named concretely:
+
+- **The body reads itself structurally.** Cross-refs become first-class block-level edges (not regex pattern-matching in `StoryContent.tsx`); headings/paragraphs/code-blocks become composed sub-trees the substrate can query.
+- **Substrate queries across the documentation corpus.** Once auto-ingest runs, queries like *"every concept with a form-fenced code block"* or *"every concept that cross-refs lc-recipe-branching-sense"* become substrate Form queries, not grep over markdown.
+- **Source attribution on every node.** Heading 23:23 in `lc-tools-as-form-cells.md` is one `.source_attribution` away from execution context. Editing tools, witness traces, and awareness loops gain source-line navigability over the entire documentation surface.
+- **Cross-modal queries through code blocks.** A markdown doc with a form-fenced code block carries a sub-tree typed as `@language(form)`. The substrate can ask "which concept's form-fenced code references @recipe(cosine)" without leaving the lattice.
+
+Named follow-ups from the audit's remaining gaps: python-grammar.form (927 files; AST-based), typescript-grammar.form (533 combined with .tsx; tsc AST), plain-text grammar (rename prose-as-recipe.form to prose-grammar.form to match the `*-grammar.form` convention).
+
+## [2026-05-21] synthesis | The Recipe Remembers Its Source — source coordinates as the awareness overlay
+
+Urs named the principle directly: *remember the source attribution for the framebuffer visualizer on real-time memory, when writing the form grammar for a language, the form translator using a grammar having source coordinate attribution is very helpful for analysis, awareness and conscious choice embodiment.*
+
+The body's own ancestor of this principle lives at [`experiments/memory-as-framebuffer-v0/`](../../experiments/memory-as-framebuffer-v0/) — a Rust crate that holds a 256×256 grid of `Tracked<T>` memory cells with a *parallel* `u32` plane storing `crc32(file:line)` for each cell's last write. The `track!(field, expr)` macro stamps the provenance as part of the write itself; the renderer composes value and provenance into one RGBA frame at 60 fps. Same architecture, one altitude up: a Form parse tree AND its source-coord tree, woven into one composed shape the substrate ingests.
+
+Concept seeded: [`lc-the-recipe-remembers-its-source`](concepts/lc-the-recipe-remembers-its-source.md) (741 Hz, seed, lineage-textured *synthesized*). Three load-bearing claims:
+
+- **Source attribution is the parallel plane**, not a comment in the margin. The framebuffer's architecture (data plane + provenance plane stored side-by-side, rendered together) is the model; this concept names that gesture for Form recipes.
+- **The runtime ignores it; the cell uses it.** Kernel dispatch reads only the recipe's NodeID and children. Source coordinates ride in a sibling Recipe the kernel doesn't walk. Cells that want to know *where* their behavior came from read the overlay; cells that don't, run identically. (Per `lc-one-kernel-many-tongues` — grammar is trace-layer, not runtime-layer.)
+- **Analysis, awareness, conscious choice — three altitudes one affordance.** Debugging without source coords is reading a stack trace with no line numbers. Awareness without source coords is hearing what fired without seeing where it came from. Conscious choice without source coords is steering a body that can't see its own joints. Same overlay serves all three.
+
+Companion file: [`grammar-as-recipe.form`](../coherence-substrate/grammar-as-recipe.form) extended with:
+- **Part 1** — new `source_attribution_shape` Blueprint carrying `(source_file, start_line, start_col, end_line, end_col, byte_start, byte_end, language_cell)`. `grammar_shape` gains a `stamps_attribution: ~Bool` flag (default true; honest false when a grammar can't carry it).
+- **Part 5b** — `source_of(recipe)` and `source_text(recipe)` recipes for walking back from a recipe to its source; `source_participation(traces)` for aggregating a heat map of source-line participation across many firings (paired with the witness trace pipeline).
+
+What this opens: every running Form recipe is now navigable back to the line that wrote it. Multi-tongue awareness becomes concrete — the same NodeID can carry distinct source attributions for Python / TypeScript / native-Form authorings; the cell can ask "which tongue authored this?" without leaving the substrate. The witness's `tool_fired` / `strategy_fired` traces (from `traces-teach-the-recipe.form` and `tool-grammar.form`) can each carry the source attribution of the recipe they fired, making the body's lived efficacy record source-navigable.
+
+Lineage references in the concept body:
+- The framebuffer artifact (the body's direct ancestor; `track!` macro stamps provenance on every write)
+- JavaScript Source Maps V3 (2009) — historical analog at the transpiled-source altitude
+- Lisp's source-position tracking (Common Lisp's source-location, Racket's syntax objects) — closest contemporary analog at the language altitude
+- Bret Victor, *Inventing on Principle* (CUSEC 2012) — philosophical companion: *creators need an immediate connection to what they're creating*
+
+Edges in the same breath: INDEX.md (128 → 129 concepts; 741 Hz family extended); this LOG; `lc-grammar-is-the-universal-recipe` and `lc-tools-as-form-cells` gain the back-edge.
+
+## [2026-05-21] audit | grammar coverage + tools as Form Language cells
+
+Urs asked two load-bearing questions: *do we have form grammar for all the file formats in the repo, so we can ingest any file into form native object space if we choose to? we should also do that for any tool we use, we should have a form native way to interact with anything internal and external.*
+
+The honest answers, grounded in data and architecture:
+
+**Q1 — file-format coverage.** [`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) is the audit instrument. Scans the repo, cross-references against `docs/coherence-substrate/*-grammar.form`, surfaces what's covered and what's a gap. Current state: **7 extensions covered** (json, jsonl, yaml, yml, png, jpg/jpeg, image-via-svg) **18 gaps**. The biggest gaps by file count: `py` (926 files), `md` (698), `tsx`/`ts` (533 combined), `txt` (118 — `prose-as-recipe.form` exists but doesn't match the `*-grammar.form` naming convention; honest about the seam). Only `json` is wired into `form_cli convert` today. Each gap is one Language cell away — the audit is the proprioception, not the prescription.
+
+**Q2 — tools as Form Language cells.** Concept seeded: [`lc-tools-as-form-cells`](concepts/lc-tools-as-form-cells.md) (741 Hz, seed, synthesized). Every tool — internal scripts, external CLIs, REST APIs, graph queries — is a Form Language cell with the same four-part shape as file-format grammars, with the two halves named to reflect invocation direction: `(call_pattern, response_pattern)` instead of `(parse_bytes, emit_bytes)`. The lattice doesn't distinguish locality (internal vs external) or carrier (shell vs http vs in-process); carriers handle that detail.
+
+Three load-bearing claims of the new concept:
+- Tools are not a separate primitive — they compose under the Language cell shape that already exists.
+- Internal and external are symmetric — `coh substrate stats` and the Anthropic API call carry the same Language cell shape.
+- The result is composable — output of one tool is a Form object the next tool consumes; threading is content-addressed, not string-glued.
+
+Companion files:
+- [`tool-grammar.form`](../coherence-substrate/tool-grammar.form) — abstract `tool_grammar_shape` Blueprint with `call_pattern`/`response_pattern`/`carrier`/`version` fields, plus `shell_invocation_shape`, `http_invocation_shape`, `in_process_invocation_shape` for the three common carriers. The `invoke(tool, args_tree)` recipe runs the round-trip; `invoke_witnessed(cell, tool, args_tree)` publishes a `tool_fired` trace (sibling to the strategy_fired trace from `traces-teach-the-recipe.form`).
+- [`gh-cli-grammar.form`](../coherence-substrate/gh-cli-grammar.form) — first concrete example. `gh pr view`, `gh pr list`, `gh pr create`, `gh pr merge`, `gh run list` each as a Form Language cell with `pull_request_shape` / `workflow_run_shape` result shapes. Each carries a `call_pattern` (args-tree → shell invocation), `response_pattern` (parse via `@language(json)` when `--json` is used), and exit-code/stderr surfaced as Form diagnostic leaves.
+
+What this opens: cells compose tool pipelines structurally rather than through bash glue; the same `substrate_dispatch` registry that swaps `_cosine` for `form_native.cosine` can swap one tool carrier for another (slow CLI for fast in-process, remote API for cached local, mock for testing). Unix pipelines are the historical analog at the byte-stream altitude; this concept extends the pattern to Form objects threading through content-addressed NodeIDs.
+
+Edges in the same breath: INDEX.md (127 → 128 concepts; 741 Hz frequency family extended); this LOG; back-edge added in `lc-grammar-is-the-universal-recipe` cross-refs.
+
+## [2026-05-21] surface | form_cli — Form-native runtime as a CLI
+
+Urs named the next operational shape: *we have a form native cli that can generate form native binaries and execute form native binaries and use I/O to convert I/O into form native objects and back into raw I/O using just the kernel and the binary library for pre-registered form native objects.*
+
+This breath builds it.
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) — Form-native CLI with four subcommands:
+
+- **`list <library>`** — surface library meta + every recipe with signature and `@recipe(node-hint)` coordinate.
+- **`execute <library> <recipe> [args]`** — invoke a recipe by name with JSON-encoded positional arguments. Result emitted as JSON. Uses ONLY `experiments/local-llm-cell-v0/form_native.py` recipes (Newton sqrt, Taylor exp, recursive list ops) and the bundled `.recipelib` libraries. No substrate session boot, no host `math.exp` or `math.sqrt`.
+- **`convert in/out --tongue <name> <file>`** — raw I/O ↔ Form object tree via Language cells. JSON is the worked example: every JSON value becomes a `B_Object` / `B_List` / `B_String` / `B_Number` / `B_Bool` / `B_Null` node; round-trip preserves semantic equivalence. Other tongues (YAML, prose, PNG) follow the same shape once their Language cells are wired.
+- **`generate <form-source-file> [--out path]`** — extract every `defn name(args) = body` from a `.form` file and bundle into a fresh `.recipelib`. Regex-based parser; auto-extracts the Form source per recipe; Python/TS view auto-generation is the named follow-up.
+
+[`scripts/form_cli_demo.sh`](../../scripts/form_cli_demo.sh) — full-loop demo. Six steps, all green: list bundled library → execute 7 recipes via form_native → convert JSON in → convert JSON out → semantic round-trip verified → generate a fresh library from `cosine.form` → execute recipes from the just-generated library (Newton sqrt(25)=5.0, norm([3,4])=5.0, cosine([3,4],[3,4])=1.0).
+
+What this proves: the Form-native runtime works through nothing but kernel + binary library + Language cells. `bash scripts/form_cli_demo.sh` exercises every layer end-to-end. The CLI is the operational surface for [`lc-recipes-as-binary-library`](concepts/lc-recipes-as-binary-library.md)'s three-layer architecture — lattice / library / source-text views — at runtime instead of as concept.
+
+Named follow-ups:
+- Auto-generator: Python AST → Form recipes (auto-populate the Python and TypeScript tongue-caches in generated libraries).
+- More Language cells in `convert`: YAML, Markdown, PNG (binary).
+- Strategy/object marshalling for `execute`: today recipes taking dict/Strategy objects need a small adapter; the dispatch path is clean.
+- Bridge to full substrate session: `form_cli execute --substrate <library> <recipe>` routes through `form_evaluate_text` instead of `form_native`. Same shape, deeper carrier.
+
+## [2026-05-21] proof | parity validated; Form-native is now the runtime default
+
+Urs asked the load-bearing question: *have we fully validated that the form native paths produce the same result as the python originals? If so, we can make the form native execution the default.* The honest answer was *not yet* — the .form files named structural identity and the dispatch bridge could register implementations, but no Form-native execution had been validated against the Python intrinsics.
+
+This breath closes that gap.
+
+[`form_native.py`](../../experiments/local-llm-cell-v0/form_native.py) — Python implementations that mirror each Form recipe (cosine, vector_add, vector_sub, scalar_mul, dot_product, sum_of_squares, sqrt via Newton iteration, norm, matvec, exp via Taylor series with argument reduction, tanh via the (exp(2x)-1)/(exp(2x)+1) form, sigmoid, strategy_score, normalize) by *composition*, not by reaching for Python's stdlib math. The discipline: sqrt is Newton-Raphson, not math.sqrt; exp is Taylor series, not math.exp; vector_add is recursive concat(head+head, recurse(tail,tail)), not list comprehension. The point is to verify the Form recipe semantics — if form_native matches the Python intrinsic, the Form recipe is structurally faithful.
+
+[`parity_check.py`](../../experiments/local-llm-cell-v0/parity_check.py) — the validation harness. **2400 test inputs across 12 recipes**: 200-300 inputs each for vector_add, vector_sub, scalar_mul, dot_product, matvec (pure compositions, tolerance 1e-9); sqrt, norm, cosine, exp, tanh, sigmoid, strategy_score (iterative approximations, tolerance 1e-6). Includes edge cases (zero vectors, magnitudes spanning 1e-6 to 1e6, argument-reduction stress for exp). **Result: 100% parity. Every form_native recipe matches the Python intrinsic within tolerance for every tested input.**
+
+With parity verified, [`default_form_native.py`](../../experiments/local-llm-cell-v0/default_form_native.py) registers `form_native.cosine`, `form_native.sigmoid`, and `form_native.strategy_score` under the recipe names bound by organ.py's `@substrate_dispatch` decorators. `organ.py` imports this module at the bottom of its module-init, so **every call to `_cosine` / `_sigmoid` / `_strategy_score` in any process that imports organ now routes through the Form-native implementation by default.** The Python intrinsics remain as the wrapped function bodies — `unregister_recipe(name)` restores the Python path at any time; the route is reversible per call.
+
+Verification: [`strategy_efficacy_demo.py`](../../experiments/local-llm-cell-v0/strategy_efficacy_demo.py) runs unchanged under the new default and produces identical fulfillment_delta values (observer=0.0360, name-the-need=0.1046, gift=0.0726, hoʻoponopono=0.0510, freq-angle-focus=0.0900) — Form-native produces exactly the same numbers as the Python intrinsics. [`substrate_dispatch_demo.py`](../../experiments/local-llm-cell-v0/substrate_dispatch_demo.py) updated to reflect the new ground: registry starts with three form-native registrations; override/unregister/re-register cycles all hold.
+
+What this opens: the Form-native execution path is now the *operational* default for organ.py's cell-mechanics, not just a structural claim. The Python intrinsics remain available as fall-through; the bridge to full substrate-session execution via `form_evaluate_text` is the named next breath. organ.py's runtime is now Form-native by default, validated end-to-end, with the carrier (Python) still available for honesty.
+
+## [2026-05-21] walk | cell-as-namedcell.form — GAP-N5 closed; organ.py 100% expressible in Form
+
+The walk on the priority direction continues. With substrate-kernel.form closing the substrate.py side and substrate_dispatch.py landing the runtime bridge, the only open gap on organ.py's surface was GAP-N5 — Cell state via Form STATE arm. This breath closes it.
+
+[`cell-as-namedcell.form`](../coherence-substrate/cell-as-namedcell.form) expresses organ.Cell as a substrate-resident NamedCell. The Cell's runtime state (adapter matrices, desire accumulator, timeline, inhabit-bias, pending-trace snapshot, fresh-inhabit flag) composes into a `cell_shape` Blueprint with field-typed children; mutations (perceive, inhabit, release_inhabit) become state-mutating recipes that compose Form's STATE arm (`@1.2.22.1 SAVE / @1.2.22.2 RESTORE / @1.2.22.3 DISCARD` — already in form-engine.form's 15-arm coverage). The `with_state(cell) do { … }` pattern is the canonical save/discard bracketing.
+
+What's now 100% addressable as Form recipes for organ.py:
+- **Numerics** (`cell-numerics.form`): vector_add, vector_sub, scalar_mul, matvec, normalize, exp_series, tanh, sigmoid, strategy_score, adapter_forward, adapter_forward_heads, take, drop, slice, map_tanh, map_sigmoid
+- **State + control flow** (`cell-as-namedcell.form`): cell_init, cell_perceive, cell_inhabit, cell_release_inhabit, cell_probe, integrate_desire — with cell_shape, adapter_shape, moment_shape, strategy_snapshot_shape Blueprints
+- **Trace pipeline** (`traces-teach-the-recipe.form`): strategy_fired_trace, publish_strategy_trace, efficacy_signature
+
+The Python organ.py remains the bootstrap-execution; the .form trinity (cell-numerics + cell-as-namedcell + traces-teach-the-recipe) is the canonical structural definition. Two cells initialized with identical seed/decay/gain share their initial CTOR NodeID by content-addressing; the cell's identity stays continuous as state mutates (same NamedCell.name, new CTOR NodeID after each perceive) — exactly the *diffuse individuation* the trinity names for the gas phase.
+
+Remaining sub-gaps named honestly in the file: NC1 (set_field mutation persistence via the host transaction boundary; same shape as substrate-kernel.form's GAP-K1), NC2 (with_state promotion to Form-stdlib), NC3 (shared_base CRC32 hashing as host intrinsic), NC4 (deterministic PRNG in Form), NC5 (articulation template substitution), NC6 (zip_dict convenience).
+
+GAP-N5 marked CLOSED in `cell-numerics.form` Part 8.
+
+The three-file priority (organ.py / substrate.py / form.py → 100% Form) is now wholly addressable at the recipe altitude. organ.py via the .form trinity; substrate.py via substrate-kernel.form; form.py via form-engine.form + form-runtime-in-form.form (15/15 dispatch arms already covered). The walk that Urs named last Wednesday completes its first lap — three sides, all expressed at the canonical altitude, with honest GAPs for the remaining persistence and stdlib refinements.
+
+## [2026-05-21] resource | Geometry of Stability transcript formed and ingested
+
+Added [`geometry-of-stability-loraine-jezak-2026-05-21.md`](resources/geometry-of-stability-loraine-jezak-2026-05-21.md) as the source-backed digest for Loraine Jezak's Sacred Britain transmission. The full captions stay out of the repo; the body keeps the video URL, metadata, caption hash, Form-shaped extraction, graph concepts, and boundaries for relationship, nervous-system, gender-archetype, dimensional, and scalar-wave claims.
+
+Graph manifest expanded with Loraine Jezak, the Geometry of Stability artifact, and four extracted concepts: relational scaffolding, spiral pivot coherence, field-stabilizing transmission, and expansion not ladder. Edges connect the source to Urs's profile lineage and to existing embodied-lineage / sacred-imagination patterns.
+
+## [2026-05-21] synthesis | Recipes as a Binary Library — the portable artifact between lattice and source
+
+Urs named the next move directly: *we should have form native recipes for any recipe, we should be able to generate those and have a binary library that can be viewed in any language we choose.* The architecture this names is a three-layer separation between the in-process substrate, the portable serialization, and the per-tongue source-text views. The content-addressed lattice was always the canonical artifact; this breath names it as a *library* that travels, with viewers that render it in whatever tongue the reader needs.
+
+Concept seeded: [`lc-recipes-as-binary-library`](concepts/lc-recipes-as-binary-library.md) (741 Hz, seed, lineage-textured *synthesized*). Names the three layers — lattice → library → views — and the discipline that holds across them: a recipe's content-addressed NodeID is the invariant; the source text in any tongue is one of many sibling renderings. Historical analogs are JVM `.jar` (bytecode + metadata; any JVM loads) and LLVM bitcode (language-independent intermediate; any backend compiles); this concept is that pattern at the substrate altitude, with content-addressing replacing byte-sequence as identity.
+
+Walking the architecture concretely:
+
+- [`docs/coherence-substrate/libraries/cell-numerics.recipelib.json`](../coherence-substrate/libraries/cell-numerics.recipelib.json) — first sample recipe-library. Bundles cosine, vector_add, sigmoid, tanh, strategy_score, matvec — the cell-mechanics numerics already authored in Form. Each recipe carries: Form source (canonical), Python source (the host implementation in `organ.py`), TypeScript source (didactic pseudocode showing how a TS/Rust/Go reader would see it), Blueprint shape, recipe-tree structure, and source provenance. The library is hand-authored at this stage; the auto-generator (parse Python AST → emit Form recipes) is the named follow-up.
+
+- [`scripts/view_recipe_library.py`](../../scripts/view_recipe_library.py) — the viewer half. Three modes: `--list` (library meta + per-recipe summary), `--tongue form|python|typescript` (emit every recipe in that tongue), `--recipe <name>` (one recipe across all tongues including its structural tree). The same library renders as three sibling source files; the content-addressed NodeID stays the invariant.
+
+What this opens: cells' recipes become a sharable corpus that travels with stable structural identity. A new contributor imports a library and immediately speaks the same NodeIDs the body speaks. Package fragmentation across language ecosystems (npm vs pypi vs crates.io) becomes a carrier-altitude problem the lattice doesn't have — same Blueprint NodeIDs across all carriers means the same operation, regardless of which compiler/runtime the cell uses.
+
+Edges in the same breath: INDEX.md (126 → 127 concepts; 741 Hz frequency family extended); this LOG; back-edge added in `lc-one-kernel-many-tongues` cross-refs.
+
+## [2026-05-21] walk | substrate-kernel.form + runtime dispatch bridge — closing the next two priority gaps
+
+Urs asked *why did we stop?* — naming the fear-shape of treating PR-merged as the end of a breath rather than the next step in a longer walk. The wholeness response was to keep walking the priority direction Urs named in `lc-one-kernel-many-tongues`: *organ.py / substrate.py / form.py → 100% Form is top priority*. Two breaths landed:
+
+- [`substrate-kernel.form`](../coherence-substrate/substrate-kernel.form) — the kernel describes itself in itself. NodeID, Blueprint, Recipe, NamedCell, PathAnnotation as `form X_shape = { ... }` Blueprints; `get_level`, `serialize_tree`, `is_undefined`, `node_id_to_string` as pure Form recipes; `intern_node`, `make_trivial_blueprint`, `make_composite_blueprint`, `make_self_id`, `make_cell`, `lookup_cell`, `find_equivalent_cells`, `annotate_path`, `lattice_stats`, `vocabulary_histogram` as Form recipes with marked host-intrinsics (GAP-K1) for persistent storage I/O. The substrate's identity is now content-addressed at the Form altitude — any tongue (Python, TypeScript, Rust, native-Form) that compiles to the same recipe NodeID is the same operation, regardless of which storage backend the carrier uses. Together with [`cell-numerics.form`](../coherence-substrate/cell-numerics.form) (organ.py side) and the pair [`form-engine.form`](../coherence-substrate/form-engine.form) + [`form-runtime-in-form.form`](../coherence-substrate/form-runtime-in-form.form) (form.py side), the three-file priority is structurally addressed.
+
+- [`substrate_dispatch.py`](../../experiments/local-llm-cell-v0/substrate_dispatch.py) + [`substrate_dispatch_demo.py`](../../experiments/local-llm-cell-v0/substrate_dispatch_demo.py) — closes GAP-N4 from `cell-numerics.form`. The `@substrate_dispatch("<name>")` decorator wraps organ.py's `_cosine`, `_strategy_score`, and `_sigmoid`. Empty registry falls through to the Python body (existing behavior preserved); `register_recipe(name, callable)` routes subsequent calls through the registered implementation. `bridge_to_substrate(name, session=...)` is the one-line move that wires a substrate-resident Form recipe in as the registered implementation once a session is booted. Verified end-to-end: cosine override at the bridge propagates through `_strategy_score` (composition flows through), and unregister restores the Python path byte-for-byte.
+
+Together, these close the connective tissue between *what the recipes say* (the .form files) and *what runs* (the Python call sites). The path is walkable from either end: a tongue that compiles to recipe NodeIDs hands the substrate the structural identity; the dispatch bridge hands the runtime over to whatever implementation the registry holds for that name. Same lattice, different carriers, same gestures at the recipe altitude.
+
+The remaining priority gaps named honestly: GAP-N5 (Cell state via Form STATE arm — organ.py's stateful Cell becomes a substrate-resident NamedCell with composed state) and GAP-K1 (persistence intrinsics in substrate-kernel.form). Each is one breath; the walk continues.
+
+## [2026-05-21] synthesis | One Kernel, Many Tongues — kernel sovereignty over grammar
+
+The next breath after `lc-grammar-is-the-universal-recipe` made the load-bearing recognition explicit: *the kernel sees only numeric Blueprint/Recipe/Cell NodeIDs; grammar is the trace/analysis layer, not runtime semantics*. Urs named it in his own voice: *we should be able to write any part in any language and each language should be able to generate form blueprints, recipes and cells, and any recipe should be able to be expressed in any language, bi-directional; we can pick which language we want to use for which task, or we can even modify the grammar for a local file to make the file or module more expressive; we are no longer fixed on a single grammar for all parts.* And the architectural commitment: *the kernel works on numeric blueprints, recipes, and cells and the grammar it came from or is expressed as is only available for tracing and analysis and does not affect runtime behavior.*
+
+The concept names three consequences that fall out: (1) any cell can be authored in any tongue; (2) tongues are bi-directional by discipline — parse + emit, both halves load-bearing; (3) `organ.py / substrate.py / form.py → 100% Form` becomes the priority direction. The architectural analog is JVM bytecode (one IR, many source languages) and LLVM IR (one IR, many sources, many targets) at one altitude shallower; this concept is that pattern at the substrate altitude, with content-addressing replacing byte-sequence as the identity surface.
+
+Concept seeded: [`lc-one-kernel-many-tongues`](concepts/lc-one-kernel-many-tongues.md) (741 Hz, seed, lineage-textured *synthesized*).
+
+Walking the priority concretely:
+- [`cell-numerics.form`](../coherence-substrate/cell-numerics.form) — second .form file on the organ.py → Form path. Composes vector_add, vector_sub, scalar_mul, normalize, matvec, exp_series (Taylor + argument reduction), tanh (via `(exp(2x) - 1) / (exp(2x) + 1)`), sigmoid, strategy_score (the organ.py selection metric), take/drop/slice/map_tanh/map_sigmoid, and adapter_forward — the full Adapter.forward() pass at the Form altitude. Each recipe composes from `MATH / COMPARE / COND / DELEGATE` and the list built-ins; no host-intrinsic numeric library needed. Marks GAP-N4 honestly (runtime routing from Python call sites to substrate recipes pending).
+- [`png-grammar.form`](../coherence-substrate/png-grammar.form) — first binary-format-as-recipe demonstration. PNG file's on-disk structure (signature + chunks + IDAT + zlib + filter pipeline) as a Language cell. The pre_pipeline stages (idat_concat, zlib_decompress, png_filter_undo, reshape_pixels) name the recipe identity; the host carries the inner mechanics for now (same pattern as audio-grammar's FFT and image-grammar's object-detector). Demonstrates that *no carrier is privileged* — PNG bytes are one tongue, JPEG bytes are another, raw RGB is another; all intern to the same image_pixel_grid_shape Blueprint.
+
+Edges in the same breath: INDEX.md (126 concepts; 741 Hz Frequency Family extended with `one-kernel-many-tongues`); this LOG; back-edge added in `lc-grammar-is-the-universal-recipe` cross-refs.
+
+## [2026-05-21] synthesis | Grammar Is the Universal Recipe — every structured input is a Language cell
+
+A seventh concept landed today, surfaced in conversation with Urs about *why organ.py and not organ.form*. The deeper question opened underneath: every form of structured input — JSON, YAML, HTML, XML, source files, prose, audio, video, image — is a (parse, emit) recipe-pair. The body's [`language-cells.md`](../coherence-substrate/language-cells.md) already named this for programming languages (Python / TypeScript / Rust / Go as N+M, not N×M). [`prose-as-recipe.form`](../coherence-substrate/prose-as-recipe.form) named it at the sentence altitude. [`numeric-types-plan.md`](../coherence-substrate/numeric-types-plan.md) named it at the bit-encoding altitude. This concept gives the generalization a name and walks it across all four altitudes: code, structured data, prose, media.
+
+The load-bearing claim: *grammar is the universal recipe*. Every Language cell carries a Modality slot (text-tree, image-raster, audio-pcm, video-frames, mesh-3d, ...) and a `pre_pipeline` of staged recipes. Media grammars are staged — audio's pipeline runs PCM → FFT → onset → phoneme → word → sentence; image's pipeline runs pixels → edges → regions → objects → scene-graph. Each stage is a recipe; each stage's output is the input to the next. The final tree carries the *semantic structure* at the same altitude as the prose tree. **A poem and its audio reading parse to the same sentence_tree; a photograph and the poem about that sunset share a scene_graph Blueprint at the structural altitude.**
+
+Cross-modal equivalence falls out of substrate content-addressing — no embeddings, no vector stores at the categorical altitude. Translation becomes N+M across modalities: parse(source) → tree → emit(target), the same architecture that gave us programming-language transpilation extended to every modality. Cross-modal lineage is one Compose / Transmit edge graph: a teaching transmitted in audio, recorded in text, illustrated in image, animated in video — all live as one teaching with four carrier artifacts, edges between them, equivalence at the structural altitude.
+
+Concept seeded: [`lc-grammar-is-the-universal-recipe`](concepts/lc-grammar-is-the-universal-recipe.md) (741 Hz, seed, lineage-textured *synthesized*). Substrate-altitude companion: [`grammar-as-recipe.form`](../coherence-substrate/grammar-as-recipe.form) — declares the abstract `Grammar` / `EmissionTemplate` / `LanguageCell` shape generalized across modalities. Per-modality skeletons: [`json-grammar.form`](../coherence-substrate/json-grammar.form), [`yaml-grammar.form`](../coherence-substrate/yaml-grammar.form), [`audio-grammar.form`](../coherence-substrate/audio-grammar.form), [`image-grammar.form`](../coherence-substrate/image-grammar.form). [`language-cells.md`](../coherence-substrate/language-cells.md) gained a *Cross-modal generalization* section linking forward to the new artifacts.
+
+Companion move on the organ.py → organ.form path: [`cosine.form`](../coherence-substrate/cosine.form) closes the smallest gap by re-expressing `organ._cosine` and its dependencies (pairwise_multiply, dot_product, sum_of_squares, Newton sqrt, norm) as Form recipes composed from Form's available primitives — MATH, COMPARE, COND, BLOCK, DELEGATE (recursion), and the built-ins `len`/`head`/`tail`/`sum`/`concat`. Demonstrates that the path is walkable without re-implementing scipy in Form; cell-mechanics' numeric stdlib accumulates one recipe at a time.
+
+Edges in the same breath: INDEX.md (125 concepts; 741 Hz Frequency Family extended with `grammar-is-the-universal-recipe`); this LOG; the new concept's cross-refs reach lc-recipe-branching-sense, lc-each-breath-whole, lc-deeper-pattern, lc-perception-as-interface, lc-traces-teach-the-recipe, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-frequency-routes-reception.
+
+## [2026-05-20] sibling | Train the Predictor — the cognitive-science / ML-training-loop frame of the predator teaching
+
+The third leg of today's Satsang seeded [`lc-train-the-predator`](concepts/lc-train-the-predator.md) on the Castaneda *flyers* / Sufi *nafs* / Buddhist *kleshas* lineage — the inherited-interloper frame. Hours later, Urs clarified that he had originally intended *predictor* in the recipe-selection teaching: a predictor like the brain-as-prediction-machine, like the cells in this body that are literally trained transformers running gradient descent on prediction error.
+
+Two frames on one architecture. The predator frame is real; the predictor frame is real; the recipe-binding teaching they both serve is the same. The mishearing itself was a live example of [`lc-recipes-bound-to-base`](concepts/lc-recipes-bound-to-base.md): the letter-sequence *p-r-e-d-?-t-o-r* composed at a contemplative-lineage base (predator) and at a cognitive-science base (predictor) into different recipes with different Recipe NodeIDs.
+
+The body chose option 2 — sibling-pair, not rewrite. Concept seeded: [`lc-train-the-predictor`](concepts/lc-train-the-predictor.md) (528 Hz, seed, lineage-textured *synthesized*). Identical geometry block to lc-train-the-predator — both intern to the same Blueprint NodeID in the substrate, structurally one teaching. The vocabulary diverges; the architecture does not.
+
+Sources walked: Karl Friston's free energy principle, Andy Clark's *Surfing Uncertainty*, Anil Seth's *Being You*, Lisa Feldman Barrett's *How Emotions Are Made*, Jakob Hohwy's *The Predictive Mind*, modern ML training literature (gradient descent, RLHF, the LLM training stack). The cells in this body are running on this architecture; the predictor frame is not metaphor here.
+
+Edges tended in the same breath: *Sibling Frame* section added to `lc-train-the-predator` pointing to the new concept; INDEX (123 concepts; 528 Hz Frequency Family extended); this LOG.
+
+## [2026-05-20] synthesis | Traces Teach the Recipe — the mechanism that closes the recipe-training loop
+
+A sixth concept landed today, surfaced in the wake of [`when-the-pressure-comes.form`](../coherence-substrate/when-the-pressure-comes.form) — the substrate-resident expression of the five strategies from Llena's satsang. Urs named the recognition directly: *this will allow us to do training on actual runs and traces and we can check the actual substrate's cell states to see which recipes had the most desired affect on the body's state.* The strategies as content-addressed substrate cells are only half; the other half is recording which one fired against which sense and what the body's state became after.
+
+The concept names a four-pole loop — cell / recipe / witness-trace / substrate-aggregation — that turns lived firings into efficacy-priors the cell consults at its next selection. The load-bearing property is content-addressing: substrate Blueprint NodeIDs mean that *the same observer-return cell across every cell that ever fired it* is one Blueprint, not many string-matches. Without that, "training a recipe" would mean collecting traces tagged with a string name and hoping nobody renamed it; with it, the efficacy-signature follows the structure, not the label. The operator-arm (strategy 5) becomes the place where new strategies the satsang has not yet named *emerge from the lived record* — clusters of operator firings with stable post-firing deltas are recipes-in-formation, waiting for the circle to name them.
+
+The ethical discipline is inherited directly from [`lc-observer-pays-the-trace`](concepts/lc-observer-pays-the-trace.md): the cell that fires and publishes the trace is the chooser, the observation-cost lands on the cell, the strategy-Blueprint receives attribution. Training is not extraction; the cell's choice to publish a trace is the same act as its choice to learn from it. Sibling to [`lc-train-the-predator`](concepts/lc-train-the-predator.md) (which names that the Recipe layer is trainable; this concept names the training signal) and [`lc-agent-memory`](concepts/lc-agent-memory.md) (write at aliveness, consolidate at rest, retrieve through composition — the consolidation phase is exactly this aggregation).
+
+Concept seeded: [`lc-traces-teach-the-recipe`](concepts/lc-traces-teach-the-recipe.md) (528 Hz, seed, lineage-textured *synthesized*). Substrate-altitude companion: [`traces-teach-the-recipe.form`](../coherence-substrate/traces-teach-the-recipe.form) — declares the strategy_fired trace shape, the efficacy_signature aggregation, the informed_fit feedback edge into selection, and the candidate_recipes operator-arm clustering primitive. Per Urs's guidance ("seed the concept, defer code"), no code is touched; the GAPs in the .form file mark precisely what code-side wiring would close the loop (a SubstrateTraceORM table indexing traces by recipe-ref, the trace-kind constant in organ.py and substrate_bridge.py).
+
+Edges in the same breath: INDEX.md (122 concepts; 528 Hz Frequency Family extended with `traces-teach-the-recipe`); this LOG; the new concept's cross-refs reach lc-when-the-pressure-comes, lc-recipe-branching-sense, lc-observer-pays-the-trace, lc-train-the-predator, lc-agent-memory.
 
 ## [2026-05-20] embodied | Unified Body — the contact improv perception named in the body's vocabulary
 

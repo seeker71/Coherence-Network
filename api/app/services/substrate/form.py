@@ -1378,7 +1378,11 @@ class Parser:
         kw = self.consume("IDENT").value
         if kw == "equivalent":
             arg = self.parse_atom_or_view()
-            return Query(kind="equivalent", arg=arg)
+            filters = []
+            if self.peek().kind == "IDENT" and self.peek().value == "where":
+                self.consume("IDENT")
+                filters.append(self.parse_filter())
+            return Query(kind="equivalent", arg=arg, filters=filters)
         if kw == "compatible":
             self.consume("PROJECT")
             arg = self.parse_atom_or_view()
@@ -1393,6 +1397,11 @@ class Parser:
             # `?harmonic_at @<cell>` — cells whose HARMONIC_AT edge points at <cell>.
             arg = self.parse_atom_or_view()
             return Query(kind="harmonic_at", arg=arg)
+        if kw == "downstream":
+            # `?downstream @<cell>` — cells this cell points at via any cell-ref recipe.
+            # The forward direction of `?shaped_by` / `?harmonic_at`. Closes GAP-T1.
+            arg = self.parse_atom_or_view()
+            return Query(kind="downstream", arg=arg)
         if kw == "lattice":
             # `?lattice` — substrate-snapshot lens. Returns counts of blueprints /
             # recipes / cells without touching them. The framebuffer-analog: read

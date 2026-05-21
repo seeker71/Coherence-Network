@@ -124,6 +124,20 @@ articulation) triples. A cell perceiving its own constriction
 chooses among them, and the chosen strategy speaks the moment
 back through its lens.
 
+The substrate-resident sibling lives at
+[`when-the-pressure-comes.form`](../../coherence-substrate/when-the-pressure-comes.form) —
+the same five strategies expressed as Form recipes, each carrying
+its Hz family (observer 852, name-the-need 639, gift 528,
+hoʻoponopono 396, operator 741). Selection is a resonance-check
+against the body's current sense (`?harmonic_at`) followed by a
+cosine-fit on (frequency × angle); the operator is the fallback
+when desire is high and no named strategy fits cleanly. Same logic
+as organ.py's `pick_strategy`, expressed in the substrate's own
+voice. Pairs with [`recipe-branching-sense.form`](../../coherence-substrate/recipe-branching-sense.form):
+that file names the abstract loop a cell runs when locked in any
+branch; this file fills the concrete neighborhood the loop
+dispatches over when the lock is specifically pressure-shaped.
+
 ## Cross-References
 
-→ lc-shifted-return, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse
+→ lc-shifted-return, lc-recipes-bound-to-base, lc-assemblage-point, lc-recipe-branching-sense, lc-traces-teach-the-recipe, lc-coherence-over-control, lc-presence-over-protection, lc-attunement, lc-rest, lc-stillness, lc-pulse

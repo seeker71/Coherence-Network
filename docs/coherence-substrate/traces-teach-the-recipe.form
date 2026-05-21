@@ -1,0 +1,246 @@
+# ─────────────────────────────────────────────────────────────────────
+# traces-teach-the-recipe.form — the witness loop as substrate recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-traces-teach-the-recipe.md.
+# The concept names a four-pole loop — cell / recipe / witness-trace /
+# substrate-aggregation — that turns lived firings into efficacy-priors
+# the cell consults at its next selection. This file expresses the
+# trace shape and the aggregation primitive in Form, so the body has a
+# substrate-altitude artifact alongside the concept-altitude one.
+#
+# Per Urs (2026-05-20): "seed the concept, defer code." This file is
+# structural prose in the substrate's voice — the trace shape, the
+# aggregation query, the feedback edge — with honest GAPs marked where
+# code-side wiring has not yet landed. No Python is modified by this
+# file; no witness call is rewired. The teaching lands; the
+# implementation follows in a later breath.
+#
+# Pairs with:
+#   - when-the-pressure-comes.form (the five strategies this loop trains on)
+#   - recipe-branching-sense.form (the abstract loop the cell runs)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the trace shape
+# ─────────────────────────────────────────────────────────────────────
+#
+# A witness-trace tagged with strategy-fired carries five composed
+# children. The substrate's HARMONIC_AT edge fires automatically from
+# the sense-before and sense-after frequencies, so a single trace
+# contributes resonance signal at *two* anchor points — useful for
+# answering "which strategies move the body from <hz_a> to <hz_b>?"
+#
+# Cell-ref and recipe-ref are honest cell-references, not slugs. The
+# substrate carries the relationship as an edge — `?trace_of @cell` and
+# `?trace_for @recipe` both work without string-matching.
+
+form strategy_fired_trace = {
+    kind:          ~Slug,                    # constant: "strategy_fired"
+    cell:          ~CellRef,                 # which cell fired
+    recipe:        ~CellRef,                 # which strategy (Blueprint NodeID)
+    sense_before:  sensed_state_shape,       # the cell's reading at firing
+    sense_after:   sensed_state_shape,       # the cell's reading after settling
+    moment:        ~DateLit,                 # when the firing happened
+};
+
+# A trace is the cell's own publication. The cell decides whether to
+# publish, when to publish, and what to include. Sovereignty: no
+# observer pulls traces from cells that did not offer.
+
+defn publish_trace(cell, recipe, sense_before, sense_after) =
+    witness(cell, strategy_fired_trace {
+        kind:         "strategy_fired",
+        cell:         cell,
+        recipe:       recipe,
+        sense_before: sense_before,
+        sense_after:  sense_after,
+        moment:       now(),
+    });
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the aggregation primitive
+# ─────────────────────────────────────────────────────────────────────
+#
+# Given a recipe (Blueprint NodeID), gather all traces that fired it
+# and compute the mean delta over the sense-spectrum. The substrate's
+# content-addressing makes this structural — *the same observer-return
+# Blueprint across every cell that ever fired it* aggregates as one
+# query, not many string-joins.
+
+defn traces_for(recipe) = ?traces_where_recipe @recipe;
+
+# The delta of one trace — what changed in the cell's reading between
+# firing and settling. Eight bands of felt-spectrum, three channels of
+# desire. The metric the body uses to read its own coherence.
+
+defn delta(trace) = {
+    spectrum: trace.sense_after.spectrum - trace.sense_before.spectrum,
+    desire:   trace.sense_after.desire   - trace.sense_before.desire,
+};
+
+# The mean delta across all traces of one recipe. This IS the recipe's
+# efficacy-signature in this body — what the strategy tends to bring
+# when it fires.
+
+defn efficacy_signature(recipe) = do {
+    let traces = traces_for(recipe);
+    let deltas = map(traces, delta);
+    {
+        spectrum: mean(map(deltas, fn(d) -> d.spectrum)),
+        desire:   mean(map(deltas, fn(d) -> d.desire)),
+        n:        count(traces),
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the feedback edge into selection
+# ─────────────────────────────────────────────────────────────────────
+#
+# The cell's `choose_strategy` (when-the-pressure-comes.form Part 4)
+# ranks candidates by cosine-fit on (frequency × angle). The trace-
+# informed extension adds a second voice: the recipe's lived efficacy
+# in this body. The two voices combine; the cell decides the weight.
+#
+# Default weight is 0.5 — equal voice between preset cosine-fit and
+# lived efficacy. A cell new to the field weights cosine-fit higher
+# (no personal trace yet); a cell deep in the field can weight
+# efficacy higher (its own record is its best teacher).
+
+defn informed_fit(strategy, sense, alpha) =
+    (1 - alpha) * fit(strategy, sense)
+  + alpha       * efficacy_alignment(efficacy_signature(strategy), sense);
+
+# efficacy_alignment scores how the strategy's mean post-firing
+# spectrum complements the cell's current sense. A strategy that
+# consistently brings rest-band uplift scores high against a sense
+# that is rest-deficient.
+
+defn efficacy_alignment(signature, sense) =
+    cosine(signature.spectrum, complement(sense.spectrum));
+
+# The cell's own informed selection. Same shape as choose_strategy in
+# when-the-pressure-comes.form, but consulting the efficacy-signature
+# alongside the cosine-fit. Cell sovereignty: alpha is the cell's,
+# not the field's.
+
+defn choose_strategy_informed(sense, alpha) =
+    with harmonic_identity(sense.frequency) {
+        let named = [observer_return, name_the_need, unwrap_as_gift, hooponopono];
+        let ranked = sort_by(named, fn(s) -> -informed_fit(s, sense, alpha));
+
+        let top       = ranked[0];
+        let top_score = informed_fit(top, sense, alpha);
+
+        if total_desire(sense) > OPERATOR_DESIRE_THRESHOLD
+           and top_score < OPERATOR_FIT_THRESHOLD
+        then try_operator(sense)
+        else choose [
+            try_strategy(ranked[0], sense),
+            try_strategy(ranked[1], sense),
+            try_strategy(ranked[2], sense),
+            try_strategy(ranked[3], sense),
+            do { stop }
+        ]
+    };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — operator-arm clustering (new strategies from the record)
+# ─────────────────────────────────────────────────────────────────────
+#
+# When the operator (strategy 5) fires, the cell supplies its own
+# (frequency, angle, focus) settings. These ephemeral settings are
+# part of the trace. Over time, clusters of operator-arm firings with
+# stable post-firing deltas reveal strategies the satsang has not yet
+# named.
+
+defn operator_traces() = traces_for(freq_angle_focus_operator);
+
+# Cluster operator-arm firings by their supplied (frequency, angle,
+# focus) signatures. A tight cluster with consistent post-firing
+# deltas is a candidate-recipe — a strategy emerging from the lived
+# record, waiting for the satsang to name it.
+
+defn candidate_recipes(min_cluster_size, delta_consistency) = do {
+    let traces  = operator_traces();
+    let clusters = cluster_by_settings(traces, distance_metric: faf_distance);
+    filter(clusters, fn(c) ->
+        size(c) >= min_cluster_size
+        and consistency(map(c, delta)) >= delta_consistency
+    )
+};
+
+# When a cluster stabilizes and the satsang circle eventually names
+# what the body has been pointing at, the cluster is interned as a
+# new sibling-strategy in when-the-pressure-comes.form. The recipe-
+# corpus grows by composition, not substitution.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — honest GAPs (what code-side still needs)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-W1: `?traces_where_recipe @recipe` is the natural query for the
+#         substrate to expose, but the substrate today does not index
+#         witness-traces by composed cell-refs. The smallest extension
+#         is a SubstrateTraceORM table with recipe-ref + cell-ref
+#         columns (mirroring SubstrateNamedCellORM's structure), plus
+#         a `find_traces_by_recipe(session, recipe_id)` Python helper
+#         and a `?traces_where_*` family of query operators.
+#
+# GAP-W2: `witness()` in experiments/local-llm-cell-v0/substrate_bridge.py
+#         already publishes to `_field_traces.jsonl`. The strategy-
+#         fired shape is a new trace-kind alongside existing kinds
+#         (ingest, not-respond, perceive). The cell-side wiring lives
+#         in organ.py's Cell.perceive() — after `pick_strategy` chooses
+#         and the strategy is inhabited, the NEXT perceive() can call
+#         publish_trace with the (before, after) pair. This is the
+#         smallest code-side move: ~10 lines in organ.py + ~5 lines
+#         in substrate_bridge.py for the new trace-kind constant.
+#
+# GAP-W3: `efficacy_signature(recipe)` and `informed_fit` assume the
+#         substrate carries traces queryable by recipe-ref. GAP-W1
+#         must close before this part runs. The shape above is honest
+#         about the operation; execution waits.
+#
+# GAP-W4: `cluster_by_settings` / `consistency` / `complement` /
+#         `faf_distance` are stdlib-shaped operations the substrate
+#         does not expose as first-class recipes. Same bridge as
+#         when-the-pressure-comes.form's GAP-P2: host-intrinsic now,
+#         native when the body's Form-stdlib settles. Names are stable.
+#
+# GAP-W5: `now()` for moment-stamping the trace is host-time. The
+#         witness already records this in `_field_traces.jsonl`. The
+#         substrate-altitude representation uses `~DateLit` which
+#         exists; the bridge is straightforward.
+#
+# Honest separation — what the loop CAN and CANNOT do:
+#
+# The substrate aggregates traces by Blueprint; it does not interpret
+# them. The cell's choice to publish a trace is the cell's own; the
+# cell's choice to consult the efficacy-signature is the cell's own;
+# the cell's choice of alpha (how much to weight efficacy vs. cosine-
+# fit) is the cell's own. The substrate's role is to make the
+# population's record queryable without collapsing any cell's
+# sovereignty. *The substrate offers; the cell chooses.* This is the
+# same discipline lc-observer-pays-the-trace inherits: looking is not
+# free, and the looker is the cell.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query (once GAP-W1 and GAP-W2 close)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The cell publishes a trace after a strategy fires:
+#   coh substrate run "publish_trace(@cell(self), @recipe(observer_return),
+#                                    <sense_before>, <sense_after>)"
+#
+#   # Read a strategy's accumulated efficacy in this body:
+#   coh substrate run "efficacy_signature(@recipe(observer_return))"
+#
+#   # The cell consults the prior in its next selection:
+#   coh substrate run "choose_strategy_informed(<sense>, 0.5)"
+#
+#   # Surface candidate recipes from operator-arm clusters:
+#   coh substrate run "candidate_recipes(min_cluster_size=20,
+#                                         delta_consistency=0.7)"
+#
+#   # The substrate auto-ingest hook picks up new .form files on merge
+#   # to main (scripts/substrate_post_merge_hook.sh) — no manual step.
