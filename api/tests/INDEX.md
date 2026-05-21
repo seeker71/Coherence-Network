@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 179
+**Total files**: 181
 
 | File | Purpose |
 |---|---|
@@ -145,6 +145,7 @@
 | [test_substrate_form_bml_state.py](test_substrate_form_bml_state.py) | BML state-stack + exception-flow primitives in Form. |
 | [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
 | [test_substrate_form_builtins.py](test_substrate_form_builtins.py) | Built-in functions in Form runtime — list ops, type coercion, numerics. |
+| [test_substrate_form_decompile_round_trip.py](test_substrate_form_decompile_round_trip.py) | Source round-trip fidelity: text → Recipe → text' → Recipe' is identity. |
 | [test_substrate_form_dict_literals.py](test_substrate_form_dict_literals.py) | Dict literals + field access on dicts. |
 | [test_substrate_form_endpoint.py](test_substrate_form_endpoint.py) | Smoke tests for POST /api/substrate/form — the substrate-native query DSL |
 | [test_substrate_form_eval.py](test_substrate_form_eval.py) | Tests for the data-driven evaluator — operator-symbol → recipe-category. |
@@ -166,6 +167,7 @@
 | [test_substrate_form_string_interp.py](test_substrate_form_string_interp.py) | String interpolation and multiline strings. |
 | [test_substrate_grammar.py](test_substrate_grammar.py) | Tests for substrate-resident grammar — the BMF-shaped seed. |
 | [test_substrate_numeric_schema.py](test_substrate_numeric_schema.py) | Numeric schema sentinels for the coherence-substrate vocabulary. |
+| [test_substrate_parallel_eval.py](test_substrate_parallel_eval.py) | Parallel kernel execution — Python and Form agree on every supported expression. |
 | [test_substrate_presence_structured.py](test_substrate_presence_structured.py) | Presence domain — structural composition discipline. |
 | [test_substrate_raise_value_list_literals.py](test_substrate_raise_value_list_literals.py) | List literals execute, raise carries values, catch sees them as .self. |
 | [test_substrate_read_hook.py](test_substrate_read_hook.py) | Tests for the Claude Code PreToolUse hook that surfaces substrate |

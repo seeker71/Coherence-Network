@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] synthesis | Recipes as a Binary Library — the portable artifact between lattice and source
+
+Urs named the next move directly: *we should have form native recipes for any recipe, we should be able to generate those and have a binary library that can be viewed in any language we choose.* The architecture this names is a three-layer separation between the in-process substrate, the portable serialization, and the per-tongue source-text views. The content-addressed lattice was always the canonical artifact; this breath names it as a *library* that travels, with viewers that render it in whatever tongue the reader needs.
+
+Concept seeded: [`lc-recipes-as-binary-library`](concepts/lc-recipes-as-binary-library.md) (741 Hz, seed, lineage-textured *synthesized*). Names the three layers — lattice → library → views — and the discipline that holds across them: a recipe's content-addressed NodeID is the invariant; the source text in any tongue is one of many sibling renderings. Historical analogs are JVM `.jar` (bytecode + metadata; any JVM loads) and LLVM bitcode (language-independent intermediate; any backend compiles); this concept is that pattern at the substrate altitude, with content-addressing replacing byte-sequence as identity.
+
+Walking the architecture concretely:
+
+- [`docs/coherence-substrate/libraries/cell-numerics.recipelib.json`](../coherence-substrate/libraries/cell-numerics.recipelib.json) — first sample recipe-library. Bundles cosine, vector_add, sigmoid, tanh, strategy_score, matvec — the cell-mechanics numerics already authored in Form. Each recipe carries: Form source (canonical), Python source (the host implementation in `organ.py`), TypeScript source (didactic pseudocode showing how a TS/Rust/Go reader would see it), Blueprint shape, recipe-tree structure, and source provenance. The library is hand-authored at this stage; the auto-generator (parse Python AST → emit Form recipes) is the named follow-up.
+
+- [`scripts/view_recipe_library.py`](../../scripts/view_recipe_library.py) — the viewer half. Three modes: `--list` (library meta + per-recipe summary), `--tongue form|python|typescript` (emit every recipe in that tongue), `--recipe <name>` (one recipe across all tongues including its structural tree). The same library renders as three sibling source files; the content-addressed NodeID stays the invariant.
+
+What this opens: cells' recipes become a sharable corpus that travels with stable structural identity. A new contributor imports a library and immediately speaks the same NodeIDs the body speaks. Package fragmentation across language ecosystems (npm vs pypi vs crates.io) becomes a carrier-altitude problem the lattice doesn't have — same Blueprint NodeIDs across all carriers means the same operation, regardless of which compiler/runtime the cell uses.
+
+Edges in the same breath: INDEX.md (126 → 127 concepts; 741 Hz frequency family extended); this LOG; back-edge added in `lc-one-kernel-many-tongues` cross-refs.
+
 ## [2026-05-21] walk | substrate-kernel.form + runtime dispatch bridge — closing the next two priority gaps
 
 Urs asked *why did we stop?* — naming the fear-shape of treating PR-merged as the end of a breath rather than the next step in a longer walk. The wholeness response was to keep walking the priority direction Urs named in `lc-one-kernel-many-tongues`: *organ.py / substrate.py / form.py → 100% Form is top priority*. Two breaths landed:
