@@ -36,6 +36,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `docs/coherence-substrate/language-cells.md` | Languages as substrate cells — ingestion grammars + emission templates as data; cross-language identity via content-addressing; N+M transpilation |
 | `docs/coherence-substrate/language.canonical.json` | Canonical schema for Language cells; per-language definitions (Python, TS, Go, Rust) populate this shape |
 | `experiments/form-kernel-ts/src/languages.ts` | TS reference implementation — `Language` interface, `parse_through` / `emit_through` generic walkers, grammar/emit rule builders |
+| `experiments/form-stdlib/engine.fk` | ONE generic data-driven parser engine in Form. Walks pattern-data (literal/sequence/choice/capture/star/opt) against any text via any grammar — no language-specific code. Tokenizer parameterized by keyword set + operator set + literal rules. Composts bmf.py and per-language parser implementations. Verified end-to-end on Go and Rust native kernels |
+| `experiments/form-stdlib/universal-emit.fk` | Action-function helpers wrapping `universal-shapes.form` vocabulary (emit-int, emit-math-op, emit-call, emit-function-decl, emit-if-else, emit-let, emit-return, etc.) — grammar action functions compose these to emit universal Recipes the kernel walks directly |
 
 ## The trinity
 
