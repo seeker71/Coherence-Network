@@ -91,19 +91,62 @@ def dispatch_query(session: Session, q: "Query") -> "FormResult":  # noqa: F821
 def _handle_equivalent(session: Session, q):
     from app.services.substrate.form import FormResult, evaluate
     from app.services.substrate.kernel import find_equivalent_cells
+    from app.services.substrate.resonance import (
+        cell_resonance_signature,
+        hz_cell,
+    )
 
     target = evaluate(session, q.arg)
     if target.kind == "cell":
         cells = find_equivalent_cells(
             session, target.value.blueprint, exclude_name=target.value.name
         )
-        return FormResult("cells", cells)
-    if target.kind == "node_id":
+    elif target.kind == "node_id":
         cells = find_equivalent_cells(session, target.value)
-        return FormResult("cells", cells)
-    raise TypeError(
-        f"Form: ?equivalent expects cell or node_id, got {target.kind}"
-    )
+    else:
+        raise TypeError(
+            f"Form: ?equivalent expects cell or node_id, got {target.kind}"
+        )
+
+    # T2 closure: `where` filter support inside `?equivalent`.
+    # Currently supported filters:
+    #   where harmonic_at == @<hz>   — keep only cells whose signature
+    #                                   includes a HARMONIC_AT edge to <hz>
+    #   where domain == "<name>"     — keep only cells in this domain
+    for f in q.filters:
+        if f.field == "harmonic_at" and f.op == "==":
+            rhs = evaluate(session, f.value)
+            if rhs.kind == "node_id":
+                # Treat the NodeID as the target hz-cell's blueprint coordinate
+                target_db_id = rhs.value.instance
+            elif rhs.kind == "cell":
+                target_db_id = rhs.value.cell_id
+            else:
+                # Integer literal — resolve to hz_cell(value).
+                try:
+                    hz_value = int(rhs.value)
+                except (TypeError, ValueError):
+                    raise TypeError(
+                        f"Form: ?equivalent where harmonic_at == ... expects "
+                        f"NodeID, cell, or int, got {rhs.kind}"
+                    )
+                target_db_id = hz_cell(session, hz_value).cell_id
+            cells = [
+                c for c in cells
+                if c.cell_id is not None
+                and any(
+                    tgt == target_db_id
+                    for _verb, tgt in cell_resonance_signature(session, c.cell_id)
+                )
+            ]
+        elif f.field == "domain" and f.op == "==" and isinstance(f.value, str):
+            cells = [c for c in cells if c.domain == f.value]
+        else:
+            raise SyntaxError(
+                f"Form: ?equivalent does not support filter "
+                f"({f.field!r} {f.op!r})"
+            )
+    return FormResult("cells", cells)
 
 
 def _handle_compatible(session: Session, q):
@@ -200,6 +243,26 @@ def _handle_resonance_walk(session: Session, q):
     return FormResult("cells", cells)
 
 
+def _handle_downstream(session: Session, q):
+    """`?downstream @<cell>` — return cells this cell points at via any
+    cell-ref recipe. Closes GAP-T1 named in
+    docs/coherence-substrate/recipe-branching-sense.form.
+
+    Mirrors the resonance-walk pattern: source cell → set of touched cells.
+    The forward direction of `?shaped_by` / `?harmonic_at` — what did this
+    cell's projection influence?"""
+    from app.services.substrate.form import FormResult, evaluate
+    from app.services.substrate.kernel import find_downstream_cells
+
+    target = evaluate(session, q.arg)
+    if target.kind == "cell" and target.value.cell_id is not None:
+        cells = find_downstream_cells(session, target.value.cell_id)
+        return FormResult("cells", cells)
+    raise TypeError(
+        f"Form: ?downstream expects a cell, got {target.kind}"
+    )
+
+
 def _handle_cells(session: Session, q):
     """`?cells [|> @bp] [where ...]` — the most versatile query verb.
 
@@ -274,6 +337,7 @@ def _register_builtins() -> None:
     register_form_query("project", _handle_recipe_intent)
     register_form_query("shaped_by", _handle_resonance_walk)
     register_form_query("harmonic_at", _handle_resonance_walk)
+    register_form_query("downstream", _handle_downstream)
     register_form_query("cells", _handle_cells)
 
 

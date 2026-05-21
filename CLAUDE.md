@@ -192,7 +192,7 @@ The substrate's promise is **fractal/holographic composition**: every entity is 
 **The default is to compose.** The exception is to leaf — and the exception requires a *great reason*. What counts:
 
 1. **Genuinely atomic value.** A single integer, a single date, a URL pointing externally, a content-hash. Composing further would invent fake structure.
-2. **Free-form prose body.** Natural-language text that has no a-priori structure to extract (the *access-recipe* of a memory body — separate from the CTOR, which is the frontmatter). Markdown body parsing into a recipe-tree is a future move; until then, the body is a content-hash leaf, not a slug.
+2. **Free-form prose body.** Natural-language text, by default held as the *access-recipe* (a content-hash leaf, separate from the CTOR which is the frontmatter). The WORD domain (`BDomain.WORD = 15`, shipped 2026-05-20) opens an explicit alternative: prose can intern as a `R_Block.SEQUENCE` recipe over word-cells whose Blueprints carry (lemma, POS, hz, semantic_field). See [`docs/coherence-substrate/prose-as-recipe.form`](docs/coherence-substrate/prose-as-recipe.form) for the round-trip teaching. Either path is honest; the choice belongs to the encoder.
 3. **External reference.** A GitHub issue ID, a Linear ticket, a URL — the structure lives outside the substrate and our representation is necessarily a pointer.
 4. **Bootstrap primitives.** A SubstrateString value at the very bottom of the leaf chain — by definition the atomic value the tree resolves to.
 
