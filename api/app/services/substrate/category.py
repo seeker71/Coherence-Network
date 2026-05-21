@@ -133,6 +133,12 @@ class BDomain(IntEnum):
                         # docs/coherence-substrate/prose-as-recipe.form for the
                         # round-trip and scripts/prose_recipe_roundtrip.py for
                         # the proof-of-concept in-memory.
+    ARTIFACT = 16       # any git-tracked file as a substrate cell — closes
+                        # the gas-cell gap from lc-form-perceptron. CTOR
+                        # carries (path, kind, content_hash, size_bytes,
+                        # mtime); HARMONIC_AT @<kind_hz> places the cell
+                        # in the substrate's resonance lattice so queries
+                        # reach every artifact, not just curated domains.
     # Dimensional vocabulary — the geometric/harmonic axes a teaching can resonate along.
     # Cells in these domains are coordinates: Hz(741), ~Triad, ~ParallelFacets, ...
     # A concept holding `geometry: { arity: 3, form: triad, harmonic: 174 }` authors

@@ -2,6 +2,31 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-20] substrate | ARTIFACT domain shipped — first ground of the form perceptron
+
+Closed the seven gaps the in-memory perceptron's footer named: every git-tracked file can now be ingested as a substrate cell.
+
+- `BDomain.ARTIFACT = 16` in [`category.py`](../../api/app/services/substrate/category.py)
+- `BID_artifact()` + `ingest_git_artifact()` + `artifact_kind_hz()` in [`markdown_frontend.py`](../../api/app/services/substrate/markdown_frontend.py); kind-to-Hz mapping places each file in the resonance lattice automatically (md=741, form=432, py/ts=528, yaml/json=174, sh=417, default=432).
+- Substrate-native perceptron at [`scripts/git_artifact_perceptron_substrate.py`](../../scripts/git_artifact_perceptron_substrate.py) does all five gestures through actual substrate surfaces; clean degradation when the kernel isn't importable.
+- In-memory perceptron extended with `--all` mode (full repo walk: 2,934 cells in 0.17s on a modest machine).
+- Word-cell-granularity rewriter at [`scripts/word_cell_rewriter.py`](../../scripts/word_cell_rewriter.py) — gesture 3 at the (lemma, POS) layer; composes with PR #1748's `tokenize_words`.
+- Test surface in [`api/tests/test_substrate_artifact_domain.py`](../../api/tests/test_substrate_artifact_domain.py): ten tests covering enum wiring, kind-Hz mapping, idempotence, harmonic band placement, multi-cell band sharing, cross-band distinction, and each gesture via the substrate's existing surfaces.
+
+Concept update: [`lc-form-perceptron`](concepts/lc-form-perceptron.md) gained a "What's live as of 2026-05-20" section naming each closure with file pointers. [`structural-composition.md`](../coherence-substrate/structural-composition.md) gained the per-domain Artifact shape and a status entry. CLAUDE.md "Structural composition discipline" mentions the new domain in the encoder list.
+
+The remaining work is genuinely scale-shaped, not gap-shaped: dispatch + transmutation entries as Recipe NodeIDs (rather than Python callables), the substrate-native script running against the live production lattice (env-bound), full per-language AST Blueprints for code artifacts (the ice altitude per kind).
+
+## [2026-05-20] concept | Form / Python Parity + Form Perceptron — two altitudes of the becoming-form arc
+
+Seeded two sibling concepts naming the practice and direction Urs called for on 2026-05-20: run Python and Form side by side until divergences either close or are accepted as honest boundaries; then extend the same gesture across every git-tracked artifact so the body grows a new perceptron — a new sensing organ that perceives across the whole repo simultaneously.
+
+- [`lc-form-python-parity`](concepts/lc-form-python-parity.md) (432 Hz) — the practice. Python is reference oracle; Form is substrate-native voice; the parity check makes divergences audible. Companion: [`scripts/substrate_parity_harness.py`](../../scripts/substrate_parity_harness.py) — runnable CLI with 8 seed cases (arithmetic, boolean, closure, choice, structural), graceful degradation when substrate isn't live, fidelity-audit mode for Blueprint-collision detection.
+- [`lc-form-perceptron`](concepts/lc-form-perceptron.md) (963 Hz) — the direction. Every git-tracked artifact gets at least a gas-cell (`NamedCell`), unlocking five gestures (execute / view / modify / transmute / query) uniformly across the whole repo. The grep is the perceptron the body has today; Form is the perceptron the body is growing into.
+
+Edges land in the same breath:
+- INDEX.md: both concepts added under Foundational Teachings; frequency-family table updated (432 Hz adds form-python-parity, 963 Hz adds form-perceptron).
+- Sibling cross-references: lc-recipe-branching-sense (first load-bearing parity case), lc-edges-as-vitality (universal edge discipline at full coverage), lc-each-breath-whole (whole-at-scale even in lattice), lc-embodiment-body-or-liquid (body grows, liquid lightens).
 ## [2026-05-21] synthesis | The Kernel Knows Itself — grammar.form + token-streamer + go/rust grammar stubs
 
 Urs's next move after `lc-parsers-as-recipes` named the universal property: *we can use the same for go and rust since the kernels are written in those languages and that makes the kernels themselves inspectable, understandable, changable, traceable, and attributeable; grammar.py should be in form native language and we should have a form native token streamer to translate text to form native objects using the form native registered grammar recipes which are form native BMF style rules or something evolved from that.*
