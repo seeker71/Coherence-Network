@@ -37,8 +37,15 @@ pub use pointer::{
     is_pointer_tag, BoxPtr, Pointer, PointerKind, RcPtr, WeakPtr, CYCLE_TERMINATOR_RGB,
     POINTER_FOLLOW_CAP, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC, TAG_PTR_WEAK,
 };
-pub use render::FrameRgba;
-pub use snapshot::SnapshotThread;
+pub use render::{render_frame, FrameRgba};
+pub use snapshot::{snapshot_state, SnapshotThread};
+
+// Form-category renderer surface (feature-gated under `nodeid_render`).
+// Off by default so the default examples + smoke-test binaries stay lean.
+#[cfg(feature = "nodeid_render")]
+pub use render::{nodeid_category_palette, render_frame_by_nodeid};
+#[cfg(feature = "nodeid_render")]
+pub use snapshot::{capture_frame_by_nodeid, snapshot_state_full};
 
 /// Type tag = 0 means free slot.
 pub const TAG_FREE: u16 = 0x0000;
