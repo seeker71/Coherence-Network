@@ -1,0 +1,6 @@
+; sum_list.fk — sum the integers in a list via head/tail recursion
+; → 15 for input (list 1 2 3 4 5)
+(defn sum_list (xs)
+  (if (eq (len xs) 0)
+      0
+      (add (head xs) (sum_list (tail xs)))))

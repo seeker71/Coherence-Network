@@ -124,6 +124,76 @@ pub(crate) struct Kernel {
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
     natives: HashMap<NameID, NativeFn>,
+    // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
+    // Hooked at the top of walk() to record per-arm dispatch counts and
+    // choice success/failure rates. Per lc-native-kernel-binary's
+    // "tracing and observation pattern" — the body's own attestation of
+    // which arms are doing the work at any moment.
+    pub(crate) trace: Option<Trace>,
+}
+
+// Trace — per-arm dispatch counters + choice success/failure tracking.
+// Held inside Kernel so the walker can record without threading an extra
+// reference through every recursive call.
+#[derive(Default)]
+pub(crate) struct Trace {
+    pub(crate) total_walks: u64,
+    pub(crate) arm_counts: HashMap<u32, u64>,    // cat.ty → count
+    pub(crate) choice_attempts: u64,
+    pub(crate) choice_successes: u64,
+    pub(crate) choice_failures: u64,
+}
+
+impl Trace {
+    pub(crate) fn new() -> Self { Self::default() }
+
+    pub(crate) fn record(&mut self, arm_ty: u32) {
+        self.total_walks += 1;
+        *self.arm_counts.entry(arm_ty).or_insert(0) += 1;
+    }
+
+    pub(crate) fn record_choice_attempt(&mut self) { self.choice_attempts += 1; }
+    pub(crate) fn record_choice_success(&mut self) { self.choice_successes += 1; }
+    pub(crate) fn record_choice_failure(&mut self) { self.choice_failures += 1; }
+
+    pub(crate) fn arm_name(arm_ty: u32) -> &'static str {
+        match arm_ty {
+            RB_BLOCK => "BLOCK",
+            RB_COND => "COND",
+            RB_MATH => "MATH",
+            RB_COMPARE => "COMPARE",
+            RB_LOGIC => "LOGIC",
+            RB_IDENT => "IDENT",
+            RB_FNDEF => "FNDEF",
+            RB_FNCALL => "FNCALL",
+            _ => "OTHER",
+        }
+    }
+
+    pub(crate) fn to_json(&self) -> serde_json::Value {
+        let mut arms: Vec<serde_json::Value> = self
+            .arm_counts
+            .iter()
+            .map(|(ty, count)| {
+                serde_json::json!({
+                    "arm_ty":   ty,
+                    "arm_name": Self::arm_name(*ty),
+                    "count":    count,
+                })
+            })
+            .collect();
+        arms.sort_by_key(|v| std::cmp::Reverse(v["count"].as_u64().unwrap_or(0)));
+        serde_json::json!({
+            "total_walks":       self.total_walks,
+            "arms":              arms,
+            "choice_attempts":   self.choice_attempts,
+            "choice_successes":  self.choice_successes,
+            "choice_failures":   self.choice_failures,
+            "choice_success_rate": if self.choice_attempts > 0 {
+                (self.choice_successes as f64) / (self.choice_attempts as f64)
+            } else { 0.0 },
+        })
+    }
 }
 
 // Arena — the mutable-during-walk runtime state. Held as `&mut Arena`
@@ -177,6 +247,7 @@ impl Kernel {
             str_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
+            trace: None,
         };
         k.register_natives();
         k
@@ -507,6 +578,12 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
         return k.trivial_value(n);
     }
     let cat = k.category(n);
+    // Tracing hook: when k.trace is Some, record the arm dispatch. Pure
+    // counter increment — no allocation, no IO. Per lc-native-kernel-binary
+    // "tracing and observation pattern".
+    if let Some(t) = &mut k.trace {
+        t.record(cat.ty);
+    }
     let kids = k.children(n);
 
     match cat.ty {
@@ -1001,6 +1078,294 @@ fn run_bench() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Traced run — same as run_source but with the Trace counter enabled.
+// Used by the `trace` subcommand. Hot-path runs use the un-traced version.
+// ---------------------------------------------------------------------------
+
+fn run_source_traced(src: &str) -> (Value, Trace) {
+    let toks = tokenize_sexp(src);
+    let wrapped: String;
+    let toks = if count_top_level(&toks) == 1 {
+        toks
+    } else {
+        wrapped = format!("(do {})", src);
+        tokenize_sexp(&wrapped)
+    };
+    let mut k = Kernel::new();
+    k.trace = Some(Trace::new());
+    let (root, _) = read_sexp(&mut k, &toks, 0);
+    let mut a = Arena::new();
+    let env = a.new_frame(None);
+    let value = walk(&mut k, &mut a, root, env);
+    let trace = k.trace.take().unwrap_or_default();
+    (value, trace)
+}
+
+// ---------------------------------------------------------------------------
+// CLI subcommands — list / execute / query / trace / fetch
+// ---------------------------------------------------------------------------
+//
+// Parallels scripts/form_cli.py at the native binary altitude. The point
+// per lc-native-kernel-binary: end-to-end host-native kernel binaries that
+// can access I/O, binary form objects, substrate API, and network resources
+// — functionally equivalent to the Python runtime.
+
+const RECIPES_DIR: &str = "recipes";
+
+fn cli_help() {
+    println!(
+"form-kernel-rust — native macOS / Linux Form kernel binary
+
+Subcommands:
+  list <library.json>                  print library meta + recipes
+  execute <library.json> <recipe> [args...]   run a recipe natively
+  query <path>                         parse any file as a Form object tree
+  trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
+  fetch <url>                          GET a URL (network resource)
+
+Legacy modes (kept for backward compat):
+  <file.fk> [more.fk ...]              run .fk files
+  --expr \"<form-expression>\"          evaluate a Form expression
+  --bench                              benchmark run
+  --numeric-bench                      numeric kernel comparison");
+}
+
+fn cli_list(args: &[String]) -> i32 {
+    if args.is_empty() {
+        eprintln!("usage: form-kernel-rust list <library.json>");
+        return 2;
+    }
+    let path = &args[0];
+    let bytes = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => { eprintln!("read {}: {}", path, e); return 1; }
+    };
+    let lib: serde_json::Value = match serde_json::from_str(&bytes) {
+        Ok(v) => v,
+        Err(e) => { eprintln!("parse {}: {}", path, e); return 1; }
+    };
+    let meta = &lib["library_meta"];
+    println!("library: {}  v{}",
+             meta["name"].as_str().unwrap_or("?"),
+             meta["version"].as_str().unwrap_or("?"));
+    println!("  path: {}", path);
+    if let Some(langs) = lib["language_cells"].as_array() {
+        let names: Vec<String> = langs.iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect();
+        println!("  language_cells: {}", names.join(", "));
+    }
+    let recipes = lib["recipes"].as_array().cloned().unwrap_or_default();
+    println!("  recipes ({}):", recipes.len());
+    for r in &recipes {
+        let name = r["name"].as_str().unwrap_or("?");
+        let bp = &r["blueprint"];
+        let in_types: Vec<String> = bp["input_types"].as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+        let out_type = bp["output_type"].as_str().unwrap_or("?");
+        let hint = r["node_id_hint"].as_str().unwrap_or("?");
+        // Check if a .fk variant exists in the recipes/ directory
+        let fk_path = format!("{}/{}.fk", RECIPES_DIR, name);
+        let runnable = std::path::Path::new(&fk_path).exists();
+        let marker = if runnable { "▶" } else { "·" };
+        println!("    {} {:<18} ({}) → {}  @recipe({})",
+                 marker, name, in_types.join(", "), out_type, hint);
+    }
+    0
+}
+
+fn cli_execute(args: &[String]) -> i32 {
+    if args.len() < 2 {
+        eprintln!("usage: form-kernel-rust execute <library.json> <recipe> [arg-json ...]");
+        return 2;
+    }
+    let library_path = &args[0];
+    let recipe_name = &args[1];
+    let call_args = &args[2..];
+
+    // Verify the recipe exists in the library (for the @recipe() hint)
+    let lib_bytes = match fs::read_to_string(library_path) {
+        Ok(s) => s,
+        Err(e) => { eprintln!("read {}: {}", library_path, e); return 1; }
+    };
+    let lib: serde_json::Value = match serde_json::from_str(&lib_bytes) {
+        Ok(v) => v,
+        Err(e) => { eprintln!("parse {}: {}", library_path, e); return 1; }
+    };
+    let found = lib["recipes"].as_array()
+        .map(|rs| rs.iter().any(|r| r["name"].as_str() == Some(recipe_name.as_str())))
+        .unwrap_or(false);
+    if !found {
+        eprintln!("recipe '{}' not in library {}", recipe_name, library_path);
+        return 2;
+    }
+
+    // Load the .fk implementation. Today recipes live in
+    // experiments/form-kernel-rust/recipes/<name>.fk — hand-authored
+    // until the Form→fk auto-generator lands. Honest GAP-NK1.
+    let fk_path = format!("{}/{}.fk", RECIPES_DIR, recipe_name);
+    let fk_src = match fs::read_to_string(&fk_path) {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!(
+"form-kernel-rust: no .fk implementation for '{}'.
+
+The library declares the recipe; the Rust kernel needs an .fk source.
+Expected at: {}
+Today these are hand-authored. The Form→fk auto-generator (consuming
+tongue_caches.form from the library and emitting S-expression source)
+is named in lc-native-kernel-binary as the next breath.",
+                recipe_name, fk_path);
+            return 2;
+        }
+    };
+
+    // Build a call expression that wraps the recipe definition + invocation.
+    // Convention: the .fk file defines the recipe with `(defn recipe_name ...)`;
+    // we append a call form using the JSON-parsed args.
+    let mut argv_form = String::new();
+    for a in call_args {
+        // Each arg is JSON; convert to .fk syntax.
+        let v: serde_json::Value = match serde_json::from_str(a) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("parse arg {:?}: {}", a, e); return 2; }
+        };
+        argv_form.push(' ');
+        argv_form.push_str(&json_to_fk(&v));
+    }
+    let full_src = format!("{}\n({}{})", fk_src, recipe_name, argv_form);
+
+    let value = run_source(&full_src);
+    println!("{}", value.display());
+    0
+}
+
+fn json_to_fk(v: &serde_json::Value) -> String {
+    match v {
+        serde_json::Value::Null => "null".to_string(),
+        serde_json::Value::Bool(b) => if *b { "true".to_string() } else { "false".to_string() },
+        serde_json::Value::Number(n) => n.to_string(),
+        serde_json::Value::String(s) => format!("{:?}", s),
+        serde_json::Value::Array(xs) => {
+            let parts: Vec<String> = xs.iter().map(json_to_fk).collect();
+            format!("(list {})", parts.join(" "))
+        }
+        serde_json::Value::Object(_) => {
+            // Object → list-of-pairs would need a per-recipe convention;
+            // honest about the gap for now.
+            "null".to_string()
+        }
+    }
+}
+
+fn cli_query(args: &[String]) -> i32 {
+    if args.is_empty() {
+        eprintln!("usage: form-kernel-rust query <path>");
+        return 2;
+    }
+    let path = &args[0];
+    let text = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => { eprintln!("read {}: {}", path, e); return 1; }
+    };
+
+    let lang = if path.ends_with(".json") || path.ends_with(".recipelib.json") {
+        "json"
+    } else if path.ends_with(".fk") {
+        "fk"
+    } else {
+        "raw"
+    };
+
+    let tree = match lang {
+        "json" => match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("parse {}: {}", path, e); return 1; }
+        },
+        "fk" => {
+            // Parse via the kernel's reader, return a structural sketch.
+            // Full Form-object tree requires walking by_id with categories;
+            // a flat sketch is the first move.
+            let toks = tokenize_sexp(&text);
+            let mut k = Kernel::new();
+            let (root, _) = read_sexp(&mut k, &toks, 0);
+            serde_json::json!({
+                "source_tongue": "fk",
+                "source_path":   path,
+                "root_node_id":  format!("{}.{}.{}.{}", root.pkg, root.level, root.ty, root.inst),
+                "node_count":    k.by_id.len(),
+                "string_count":  k.strs.len(),
+            })
+        }
+        _ => serde_json::json!({
+            "source_tongue": "raw",
+            "source_path":   path,
+            "bytes":         text.len(),
+            "lines":         text.lines().count(),
+            "note":          "no Language cell wired for this extension yet",
+        }),
+    };
+    println!("{}", serde_json::to_string_pretty(&tree).unwrap());
+    0
+}
+
+fn cli_trace(args: &[String]) -> i32 {
+    if args.is_empty() {
+        eprintln!("usage: form-kernel-rust trace [--expr \"...\" | <file.fk>]");
+        return 2;
+    }
+    let src = if args[0] == "--expr" {
+        if args.len() < 2 { eprintln!("--expr requires an argument"); return 2; }
+        args[1].clone()
+    } else {
+        match fs::read_to_string(&args[0]) {
+            Ok(s) => s,
+            Err(e) => { eprintln!("read {}: {}", args[0], e); return 1; }
+        }
+    };
+
+    let start = Instant::now();
+    let (value, trace) = run_source_traced(&src);
+    let elapsed = start.elapsed();
+
+    let report = serde_json::json!({
+        "result":            value.display(),
+        "elapsed_us":        elapsed.as_micros(),
+        "elapsed_human":     format!("{:?}", elapsed),
+        "trace":             trace.to_json(),
+    });
+    println!("{}", serde_json::to_string_pretty(&report).unwrap());
+    0
+}
+
+fn cli_fetch(args: &[String]) -> i32 {
+    if args.is_empty() {
+        eprintln!("usage: form-kernel-rust fetch <url>");
+        return 2;
+    }
+    let url = &args[0];
+    match ureq::get(url).call() {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.into_string().unwrap_or_default();
+            let report = serde_json::json!({
+                "url":     url,
+                "status":  status,
+                "body":    body,
+                "bytes":   body.len(),
+            });
+            println!("{}", serde_json::to_string_pretty(&report).unwrap());
+            0
+        }
+        Err(e) => {
+            eprintln!("fetch {}: {}", url, e);
+            1
+        }
+    }
+}
+
 fn main() {
     // Override Rust's default panic handler so Form authors see a clean
     // "parse error at line X col Y: ..." message instead of Rust's internal
@@ -1016,37 +1381,44 @@ fn main() {
 
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
-        eprintln!("usage: form-kernel-rust <file.fk> [more.fk ...] | --expr \"...\" | --bench | --numeric-bench");
+        cli_help();
         std::process::exit(2);
     }
 
-    if args[0] == "--bench" {
-        run_bench();
-        return;
-    }
-
-    if args[0] == "--numeric-bench" {
-        formats::run_numeric_bench();
-        return;
-    }
-
-    let src = if args[0] == "--expr" {
-        if args.len() < 2 { eprintln!("--expr requires an argument"); std::process::exit(2); }
-        args[1].clone()
-    } else {
-        // Multiple files load sequentially into a shared top-level scope.
-        // Concatenation works because the kernel wraps multi-form input in
-        // an implicit do-block — definitions from earlier files become
-        // visible to later ones.
-        let mut parts = Vec::with_capacity(args.len());
-        for path in &args {
-            parts.push(fs::read_to_string(path).unwrap_or_else(|e| {
-                eprintln!("read {}: {}", path, e);
-                std::process::exit(1);
-            }));
+    let exit_code: i32 = match args[0].as_str() {
+        "--help" | "help" => { cli_help(); 0 }
+        "--bench" => { run_bench(); 0 }
+        "--numeric-bench" => { formats::run_numeric_bench(); 0 }
+        "list" => cli_list(&args[1..]),
+        "execute" => cli_execute(&args[1..]),
+        "query" => cli_query(&args[1..]),
+        "trace" => cli_trace(&args[1..]),
+        "fetch" => cli_fetch(&args[1..]),
+        _ => {
+            // Legacy: --expr or <file.fk> [more.fk ...]
+            let src = if args[0] == "--expr" {
+                if args.len() < 2 {
+                    eprintln!("--expr requires an argument");
+                    std::process::exit(2);
+                }
+                args[1].clone()
+            } else {
+                let mut parts = Vec::with_capacity(args.len());
+                for path in &args {
+                    match fs::read_to_string(path) {
+                        Ok(s) => parts.push(s),
+                        Err(e) => {
+                            eprintln!("read {}: {}", path, e);
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                parts.join("\n")
+            };
+            let result = run_source(&src);
+            println!("{}", result.display());
+            0
         }
-        parts.join("\n")
     };
-    let result = run_source(&src);
-    println!("{}", result.display());
+    std::process::exit(exit_code);
 }

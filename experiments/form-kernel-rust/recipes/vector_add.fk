@@ -1,0 +1,7 @@
+; vector_add.fk — element-wise add of two integer vectors
+; → [11, 22, 33] for input (list 1 2 3) (list 10 20 30)
+(defn vector_add (a b)
+  (if (eq (len a) 0)
+      (list)
+      (cons (add (head a) (head b))
+            (vector_add (tail a) (tail b)))))
