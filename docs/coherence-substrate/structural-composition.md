@@ -11,7 +11,7 @@ The substrate's promise is **fractal/holographic composition**: every entity is 
 A field may be left as a leaf (SubstrateString, integer, NodeID-as-external-reference, content-hash) only when one of these holds:
 
 1. **Genuinely atomic value** — single integer, single date, URL pointing externally, content-hash. Composing further would invent fake structure.
-2. **Free-form prose body** — natural-language text with no a-priori structure. Lives as the *access recipe*, separate from the CTOR.
+2. **Free-form prose body** — natural-language text, by default held as the *access recipe* (a content-hash leaf, separate from the CTOR). The WORD domain (`BDomain.WORD = 15`, shipped 2026-05-20) opens an explicit alternative: prose can intern as a `R_Block.SEQUENCE` recipe over word-cells when each lemma's frequency and POS are worth carrying. See [`prose-as-recipe.form`](prose-as-recipe.form) for the round-trip teaching. Either path is honest; the choice belongs to the encoder.
 3. **External reference** — the structure lives outside the substrate (GitHub issue, Linear ticket, external URL).
 4. **Bootstrap primitive** — the SubstrateString value at the very bottom of a leaf chain.
 

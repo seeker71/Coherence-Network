@@ -126,6 +126,13 @@ class BDomain(IntEnum):
     GUIDE = 12          # reader/practice guides derived from concept tissue
     LANGUAGE_VIEW = 13  # translated/localized views of canonical KB tissue
     KB_PAGE = 14        # non-concept vision-KB pages, indexes, maps, and sections
+    WORD = 15           # the smallest unit of KB content — a lexeme cell whose
+                        # Blueprint composes from (lemma, POS, hz, semantic_field).
+                        # Prose becomes substrate-walkable when sentences intern
+                        # as R_Block.SEQUENCE recipes over WORD cells. See
+                        # docs/coherence-substrate/prose-as-recipe.form for the
+                        # round-trip and scripts/prose_recipe_roundtrip.py for
+                        # the proof-of-concept in-memory.
     # Dimensional vocabulary — the geometric/harmonic axes a teaching can resonate along.
     # Cells in these domains are coordinates: Hz(741), ~Triad, ~ParallelFacets, ...
     # A concept holding `geometry: { arity: 3, form: triad, harmonic: 174 }` authors

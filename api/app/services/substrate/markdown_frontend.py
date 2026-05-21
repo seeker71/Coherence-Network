@@ -122,6 +122,17 @@ def BID_kb_page() -> NodeID:
     return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.KB_PAGE)
 
 
+def BID_word() -> NodeID:
+    """Trivial Word blueprint — the smallest unit of KB content.
+
+    A word-cell's Blueprint composes from (lemma, POS, hz, semantic_field).
+    Prose becomes substrate-walkable when sentences intern as R_Block.SEQUENCE
+    recipes over WORD cells — see docs/coherence-substrate/prose-as-recipe.form
+    for the round-trip teaching.
+    """
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.WORD)
+
+
 def RID_string_lit(inst: int) -> NodeID:
     return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
 
@@ -1392,6 +1403,137 @@ def ingest_task(
         intern_node(
             session, DOMAIN_RECIPE, realize_cat, [task_ref, idea_ref]
         )
+
+    return cell, blueprint_id, ctor_id
+
+
+# ---------------------------------------------------------------------------
+# WORD domain — lexeme cells for prose-as-recipe
+# ---------------------------------------------------------------------------
+#
+# A word is the smallest unit of KB content. Its Blueprint composes from
+# (lemma, POS, hz, semantic_field). Sentences then intern as R_Block.SEQUENCE
+# recipes over WORD cells — see docs/coherence-substrate/prose-as-recipe.form
+# for the round-trip teaching; scripts/prose_recipe_roundtrip.py for the
+# proof-of-concept with an in-memory stand-in.
+#
+# Cell name convention: `{lemma}.{POS}`. So "visible.ADJ" is distinct from
+# "visible.VERB" if one ever appeared. Names are query keys; identity stays
+# in the Blueprint NodeID.
+
+
+# A small body-known lexicon for the test sentence in prose-as-recipe.form
+# and the round-trip script. Real production tokenization (P1) replaces this
+# with a locale-aware tokenizer; this dictionary is the bridge until that
+# lands, and the fallback (P2) handles every other word.
+_WORD_LEXICON_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    # From "The choice point becomes visible." — the lc-recipe-branching-sense
+    # opening that the round-trip walks.
+    "the":        {"lemma": "the",        "pos": "DET",  "hz": 432, "field": "neutral"},
+    "choice":     {"lemma": "choice",     "pos": "NOUN", "hz": 741, "field": "consciousness"},
+    "point":      {"lemma": "point",      "pos": "NOUN", "hz": 741, "field": "consciousness"},
+    "becomes":    {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
+    "become":     {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
+    "visible":    {"lemma": "visible",    "pos": "ADJ",  "hz": 741, "field": "consciousness"},
+    "visibility": {"lemma": "visibility", "pos": "NOUN", "hz": 741, "field": "consciousness"},
+    "arrives":    {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
+    "arrive":     {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
+    "at":         {"lemma": "at",         "pos": "ADP",  "hz": 432, "field": "neutral"},
+    "of":         {"lemma": "of",         "pos": "ADP",  "hz": 432, "field": "neutral"},
+}
+
+
+def lemma_pos_key(lemma: str, pos: str) -> str:
+    """Cell-name convention for word-cells: `{lemma}.{POS}`.
+
+    Closes GAP-W2 from docs/coherence-substrate/prose-as-recipe.form.
+    """
+    return f"{lemma.lower()}.{pos.upper()}"
+
+
+def tokenize_words(text: str) -> List[Dict[str, Any]]:
+    """Locale-light tokenizer: split on whitespace, peel trailing punctuation.
+
+    Closes GAP-P1 in its smallest honest form. A real production tokenizer
+    (spaCy, stanza, or a per-locale lemmatizer) replaces this when more
+    languages and morphology depth are needed. For now: ASCII word + simple
+    punctuation, lookup against `_WORD_LEXICON_DEFAULTS` for known words,
+    fallback to a neutral entry (GAP-P2) for unknown words.
+
+    Returns a list of dicts: word entries carry
+    `{surface, lemma, pos, hz, field, kind="word"}`. Punctuation tokens
+    carry `{surface, kind="punct"}`.
+    """
+    import re
+
+    tokens: List[Dict[str, Any]] = []
+    for raw in re.findall(r"[A-Za-z]+|[\.\?,!;:]", text):
+        if re.match(r"[A-Za-z]+$", raw):
+            key = raw.lower()
+            base = _WORD_LEXICON_DEFAULTS.get(key)
+            if base is None:
+                # GAP-P2 fallback: unknown word lands at 432 Hz / neutral.
+                # The substrate stays honest about unknown-as-unknown.
+                base = {"lemma": key, "pos": "UNK", "hz": 432, "field": "neutral"}
+            tokens.append({"surface": raw, "kind": "word", **base})
+        else:
+            tokens.append({"surface": raw, "kind": "punct"})
+    return tokens
+
+
+def ingest_word_cell(
+    session: Session,
+    lemma: str,
+    pos: str,
+    hz: int,
+    semantic_field: str,
+    *,
+    surface: Optional[str] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Idempotent word-cell creation. Returns (cell, blueprint_id, ctor_id).
+
+    The Blueprint composes from the four axes (lemma, POS, hz, semantic_field);
+    two calls with the same arguments return the same cell via the kernel's
+    content-addressing. The `surface` argument carries the original-form
+    spelling (e.g. "becomes" while lemma="become") and is preserved on the
+    cell for round-trip emission.
+
+    Authors a HARMONIC_AT @<hz> resonance edge so the word participates in
+    the same dimensional lattice every concept already does — `cell
+    ?harmonic_at @741` returns word-cells alongside concepts.
+
+    Closes GAP-W1+W2 plus the encoder half of P1/P2 for the WORD domain
+    named in docs/coherence-substrate/prose-as-recipe.form.
+    """
+    from app.services.substrate.resonance import (
+        author_geometry_signature as _author_geometry,
+    )
+
+    frontmatter: Dict[str, Any] = {
+        "lemma": lemma,
+        "pos": pos,
+        "hz": hz,
+        "semantic_field": semantic_field,
+    }
+    if surface is not None:
+        frontmatter["surface"] = surface
+
+    name = lemma_pos_key(lemma, pos)
+    blueprint_id = frontmatter_to_blueprint(session, frontmatter, BID_word())
+    ctor_id = frontmatter_to_structured_ctor(session, frontmatter)
+    access_id = body_to_access_recipe(session, "", blueprint_id)
+    cell = make_cell(
+        session,
+        name=name,
+        domain="word",
+        blueprint=blueprint_id,
+        access=access_id,
+        ctor=ctor_id,
+        source_path=None,
+    )
+
+    # Resonance signature: the word fires at its harmonic.
+    _author_geometry(session, cell.cell_id, {}, arity_hz=int(hz))
 
     return cell, blueprint_id, ctor_id
 

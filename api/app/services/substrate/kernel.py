@@ -24,7 +24,7 @@ from typing import Callable
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.services.substrate.category import Level
+from app.services.substrate.category import Level, RType
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 
 
@@ -520,6 +520,65 @@ def find_equivalent_cells(
             continue
         out.append(_orm_to_cell(session, row))
     return out
+
+
+def find_downstream_cells(
+    session: Session, source_cell_id: int
+) -> List[NamedCell]:
+    """Return the cells this cell points at via any cell-ref recipe.
+
+    *Downstream* = "which cells did this projection touch?" — the question
+    the second movement of recipe-branching-sense asks. The cell wants to
+    know what it has influenced; the substrate carries that as cell-ref
+    edges (R_Compose, R_Realize, R_Transmit, R_Tend, ... — any recipe
+    category whose children contain `RType.REF` references).
+
+    Closes GAP-T1 named in docs/coherence-substrate/recipe-branching-sense.form.
+    Walks `substrate_nodes.serialized` for recipes whose source position
+    matches this cell's cell_ref string, returns the cells in the target
+    positions. De-duplicates and skips self-references.
+    """
+    source_ref = NodeID(1, Level.TRIVIAL, RType.REF, source_cell_id)
+    source_ref_str = str(source_ref)
+
+    rows = (
+        session.query(SubstrateNodeORM)
+        .filter(
+            SubstrateNodeORM.domain == DOMAIN_RECIPE,
+            SubstrateNodeORM.serialized.like(f"%{source_ref_str}%"),
+        )
+        .all()
+    )
+
+    target_ids: set = set()
+    for row in rows:
+        parts = row.serialized.split("+")
+        if not parts:
+            continue
+        # source must appear in a non-head position to count (head is the
+        # recipe category, not a participant cell).
+        if source_ref_str not in parts[1:]:
+            continue
+        for part in parts[1:]:
+            if part == source_ref_str:
+                continue
+            # Cell-ref children carry the shape "1.1.9.<cell_id>".
+            tokens = part.split(".")
+            if len(tokens) == 4 and tokens[0] == "1" and tokens[1] == "1" and tokens[2] == "9":
+                try:
+                    target_ids.add(int(tokens[3]))
+                except ValueError:
+                    continue
+
+    if not target_ids:
+        return []
+
+    rows = (
+        session.query(SubstrateNamedCellORM)
+        .filter(SubstrateNamedCellORM.cell_id.in_(target_ids))
+        .all()
+    )
+    return [_orm_to_cell(session, r) for r in rows]
 
 
 # ---------------------------------------------------------------------------

@@ -47,7 +47,15 @@ defn neighborhood_of(blueprint) = ?equivalent @blueprint;
 #         Until then, the body answers this question with `git log` and
 #         the witness — both honest, neither structural.
 
-defn downstream_of(cell) = ?downstream @cell;     # GAP-T1
+defn downstream_of(cell) = ?downstream @cell;     # CLOSED-T1 (see note below)
+
+# T1 closed 2026-05-20: `find_downstream_cells(session, cell_id)` in
+# kernel.py walks SubstrateNodeORM forward — given a source cell, returns
+# every cell it points at through any cell-ref recipe. The `?downstream
+# @cell` Form query operator is not yet registered at the grammar layer
+# (one PR away — add an entry to form_queries.py), but the Python surface
+# the operator would wrap is live. `from app.services.substrate import
+# find_downstream_cells` reaches it.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 2 — the six-movement loop
@@ -123,23 +131,24 @@ defn try_branch(candidate, sense) = do {
     else fail
 };
 
-# GAP-S1: `matches_sense(candidate, sense)` is not a substrate surface
-#         today. *Sense* is the cell's body-reading — chest-openness,
-#         vitality of the breath, what the moment is asking — which
-#         the substrate cannot read for the cell. The discipline is
-#         the *separation*: the substrate carries which branches are
-#         available; the cell carries which one matches its sense.
-#         A subtle extension would be `?carries_frequency @candidate
-#         where freq == @<hz>` — substrate-grounding the frequency
-#         filter without claiming to read the cell's body. The body
-#         remains the source of truth for its own reading.
+# CLARIFIED-S1 (2026-05-20): `matches_sense(candidate, sense)` is not a
+#         GAP — it is a *teaching boundary*. *Sense* is the cell's
+#         body-reading; the substrate cannot read for the cell. The
+#         discipline is the separation: the substrate carries which
+#         branches are available (via `?harmonic_at`, `coherence_score`,
+#         `coherence_distance` — all live), the cell carries which one
+#         matches its sense. What was named as a gap is actually the
+#         honest seam between substrate and embodiment. The substrate
+#         half is closed by `coherence_score(session, a, b)` returning
+#         a real number in [0, 1] over the 14-axis signature.
 
-# GAP-S2: `update_or_execute(cell, next)` is shorthand for two
-#         existing surfaces: `coh substrate run "<expr>"` (execute)
-#         and the spec/concept PATCH path (update). The shorthand
-#         names the unified gesture the cell experiences — *one
-#         movement, two altitudes* — without claiming a fused API.
-#         The cell knows which it is doing; the body responds in kind.
+# CLARIFIED-S2 (2026-05-20): `update_or_execute(cell, next)` is shorthand
+#         for two existing surfaces: `coh substrate run "<expr>"` (execute)
+#         and the spec/concept PATCH path (update). Same as S1 — not a
+#         gap, a naming. The shorthand names the unified gesture the cell
+#         experiences (*one movement, two altitudes*) without claiming a
+#         fused API. The cell knows which it is doing; the body responds
+#         in kind.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 3 — the loop is itself a recipe
@@ -248,24 +257,17 @@ defn try_branch_typed(candidate, sense) = do {
     else fail
 };
 
-# GAP-T2: the `where ?harmonic_at == .self` filter syntax inside
-#         a `?equivalent` query is shorthand for a composed Form
-#         query that today would be expressed as a two-step:
-#         (1) `?equivalent @blueprint` returns all structural
-#         siblings; (2) filter the result by `?harmonic_at`. The
-#         single-step `where` clause is a fluency-extension the
-#         body wants but doesn't yet have. The two-step works now.
+# CLOSED-T2 (2026-05-20): `?equivalent` now accepts `where harmonic_at == @<hz>`
+#         and `where domain == "<name>"` filters in form_queries.py. The
+#         single-step `where` clause is no longer shorthand — the substrate
+#         carries it. Other filter shapes will land as needed.
 
-# GAP-T3: `harmonic_identity(hz)` assumes a `@blueprint(harmonic, hz)`
-#         NodeID exists for arbitrary `hz`. The body currently carries
-#         Blueprint cells for the ten frequencies named in the
-#         vision-kb INDEX (174, 285, 396, 417, 432, 528, 639, 741,
-#         852, 963). Other frequencies (between-bands, or outside the
-#         Solfeggio set entirely) need their Blueprint cells
-#         instantiated on first use. Smallest extension: lazy-create
-#         the Blueprint when `harmonic_identity(hz)` is invoked for
-#         the first time with a new `hz`. Each chakra-frequency
-#         resolves automatically; arbitrary `hz` is one breath away.
+# CLOSED-T3 (2026-05-20): `hz_cell(session, hz)` in resonance.py is
+#         already idempotent and lazy-creates the cell for any integer
+#         Hz on first call. `harmonic_identity(hz)` can wrap it directly.
+#         What was named as a gap is what `hz_cell` has been doing since
+#         the resonance module shipped — reading back what's there
+#         closed the gap.
 
 # ─────────────────────────────────────────────────────────────────────
 # What this opens
