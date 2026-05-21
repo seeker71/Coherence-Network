@@ -856,6 +856,46 @@ export class Kernel {
       return lst[i] ?? { kind: "null" };
     });
     this.registerNative("empty", catListNat(), () => ({ kind: "list", list: [] }));
+    // Common Python builtins. Sibling-parity with Rust + Go.
+    this.registerNative("min", catMethod(), (_k, args) => {
+      const v = args[0];
+      if (v?.kind === "list") {
+        if (v.list.length === 0) throw new Error("min: empty list");
+        let best = (v.list[0] as { int: number }).int;
+        for (let i = 1; i < v.list.length; i++) {
+          const x = (v.list[i] as { int: number }).int;
+          if (x < best) best = x;
+        }
+        return { kind: "int", int: best };
+      }
+      return { kind: "int", int: argInt(args, 0) };
+    });
+    this.registerNative("max", catMethod(), (_k, args) => {
+      const v = args[0];
+      if (v?.kind === "list") {
+        if (v.list.length === 0) throw new Error("max: empty list");
+        let best = (v.list[0] as { int: number }).int;
+        for (let i = 1; i < v.list.length; i++) {
+          const x = (v.list[i] as { int: number }).int;
+          if (x > best) best = x;
+        }
+        return { kind: "int", int: best };
+      }
+      return { kind: "int", int: argInt(args, 0) };
+    });
+    this.registerNative("sum", catMethod(), (_k, args) => {
+      const v = args[0];
+      if (v?.kind === "list") {
+        let total = 0;
+        for (const e of v.list) total += (e as { int: number }).int ?? 0;
+        return { kind: "int", int: total };
+      }
+      return { kind: "int", int: 0 };
+    });
+    this.registerNative("abs", catMethod(), (_k, args) => {
+      const n = argInt(args, 0);
+      return { kind: "int", int: n < 0 ? -n : n };
+    });
     // range(n) / range(a,b) / range(a,b,s) — eager list of integers.
     // Matches CPython semantics. Sibling-parity with Rust + Go kernels.
     this.registerNative("range", catListNat(), (_k, args) => {
