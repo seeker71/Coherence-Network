@@ -668,6 +668,126 @@ defn py_call_rule = rule_shape {
     },
 };
 
+# ──────────────────────────── rule: py_subscript ──────────────────────
+#
+# Pattern: `value [ index ]`
+#   value := IDENT (v1; expression callees come later)
+#   index := expression
+#
+# Action: build py_subscript_shape { value, index }.
+# Closes the lst[i] gap surfaced in the python-trace demo (PR #1782).
+
+defn py_subscript_rule = rule_shape {
+    name:    "py_subscript",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "value", child: lit_ident() },
+            lit_op("["),
+            pattern_capture_shape { name: "index", child: ?rule py_expr_stmt },
+            lit_op("]"),
+        ],
+    },
+    action: defn py_subscript_action(captures, span) = do {
+        py_subscript_shape {
+            value: captures.value,
+            slice: captures.index,
+            ctx:   "load",
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_slice ──────────────────────────
+#
+# Pattern: `value [ start ? : end ? ]`
+#   (subset of full Python slicing — no step yet)
+#
+# Action: build py_slice_shape { value, lower, upper, step: null }.
+
+defn py_slice_rule = rule_shape {
+    name:    "py_slice",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "value", child: lit_ident() },
+            lit_op("["),
+            pattern_opt_shape {
+                child: pattern_capture_shape { name: "lower", child: ?rule py_expr_stmt },
+            },
+            lit_op(":"),
+            pattern_opt_shape {
+                child: pattern_capture_shape { name: "upper", child: ?rule py_expr_stmt },
+            },
+            lit_op("]"),
+        ],
+    },
+    action: defn py_slice_action(captures, span) = do {
+        py_slice_shape {
+            value: captures.value,
+            lower: captures.lower,
+            upper: captures.upper,
+            step:  null,
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_return ─────────────────────────
+#
+# Pattern: `return [ expr ]`
+#
+# Action: build py_return_shape { value }. Explicit return statement
+# inside a def body (vs the implicit-last-expression form the v1 def
+# rule shipped earlier).
+
+defn py_return_rule = rule_shape {
+    name:    "py_return",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("return"),
+            pattern_opt_shape {
+                child: pattern_capture_shape { name: "value", child: ?rule py_expr_stmt },
+            },
+        ],
+    },
+    action: defn py_return_action(captures, span) = do {
+        py_return_shape { value: captures.value }
+    },
+};
+
+# ──────────────────────────── rule: py_expr_stmt ──────────────────────
+#
+# Pattern: any expression as a top-level statement. v1 covers a small
+# subset (call, ident, int/float/string/bool literal). The full
+# expression grammar with precedence climbing lands as
+# py_expr_full_rule in a later breath — that's the largest single
+# Python construct (operators by precedence: `or` < `and` < `not` <
+# comparison < `|` < `^` < `&` < shift < `+ -` < `* / // % @` < unary
+# < `**` < await < primary).
+#
+# v1 is "any one of these primary alternatives" — enough for arguments,
+# return values, simple expressions. Composed expressions still flow
+# through the kernel's add/sub/mul/etc. arms at execution time.
+
+defn py_expr_stmt_rule = rule_shape {
+    name:    "py_expr_stmt",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            # The order matters — try the longer patterns first so the
+            # CHOICE arm's FAIL-unwind doesn't accidentally accept a
+            # prefix as a complete value.
+            py_call_rule.pattern,
+            py_subscript_rule.pattern,
+            py_slice_rule.pattern,
+            pattern_capture_shape { name: "ident_val", child: lit_ident() },
+            pattern_capture_shape { name: "int_val",   child: pattern_literal_shape { kind: "INT",    value: null } },
+            pattern_capture_shape { name: "float_val", child: pattern_literal_shape { kind: "FLOAT",  value: null } },
+            pattern_capture_shape { name: "str_val",   child: pattern_literal_shape { kind: "STRING", value: null } },
+            pattern_capture_shape { name: "true_lit",  child: lit_kw("true") },
+            pattern_capture_shape { name: "false_lit", child: lit_kw("false") },
+            pattern_capture_shape { name: "none_lit",  child: lit_kw("None") },
+        ],
+    },
+    action: defn py_expr_stmt_action(captures, span) = captures,
+};
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 5b — the Language cell binding
 # ─────────────────────────────────────────────────────────────────────
@@ -685,22 +805,23 @@ defn python_grammar = grammar_shape {
         py_function_def_rule,             # v1: positional args + single-expr body
         py_assign_rule,                   # v1: name = expr
         py_call_rule,                     # v1: ident(args)
+        py_subscript_rule,                # v1: ident[expr]
+        py_slice_rule,                    # v1: ident[expr?:expr?]
+        py_return_rule,                   # v1: return [expr]
+        py_expr_stmt_rule,                # v1: primary alternatives (call, ident, literal)
         # Pending Form expression (host bridge handles these until the
         # rule lands here as a concrete Form recipe). Each one is one
         # breath of work composing the same Pattern primitives.
         ?rule py_class_def,               # GAP-PY-CLASS
-        ?rule py_expr_stmt,               # GAP-PY-EXPR (full expression grammar)
+        ?rule py_expr_full,               # GAP-PY-EXPR (full precedence-climbing expression grammar)
         ?rule py_if,                      # GAP-PY-IF (statement form)
         ?rule py_for,                     # GAP-PY-FOR
         ?rule py_while,                   # GAP-PY-WHILE
-        ?rule py_return,                  # GAP-PY-RETURN (inside def bodies)
         ?rule py_lambda,                  # GAP-PY-LAMBDA
         ?rule py_with,                    # GAP-PY-WITH
         ?rule py_try,                     # GAP-PY-TRY
         ?rule py_raise,                   # GAP-PY-RAISE
         ?rule py_match,                   # GAP-PY-MATCH (PEP 634)
-        ?rule py_subscript,               # GAP-PY-SUBSCRIPT (lst[i])
-        ?rule py_slice,                   # GAP-PY-SLICE (lst[a:b])
         ?rule py_walrus,                  # GAP-PY-WALRUS (PEP 572)
     ],
     pre_pipeline:       [
