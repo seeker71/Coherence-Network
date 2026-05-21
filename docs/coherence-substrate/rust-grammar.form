@@ -154,22 +154,86 @@ form rust_macro_call_shape = { path: ~List, delimiter: ~Slug, tokens: ~String };
 # Part 6 — the Language cell
 # ─────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 1.5 — concrete Form-recipe rules (skeleton)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Rust's grammar is the largest in the substrate's roster — lifetimes,
+# generics, trait bounds, macros, attributes. The path is the same as
+# JSON / YAML / Python: declare Pattern primitives, compose rules,
+# ripen breath by breath.
+#
+# Today we ship the simplest two rules — `use` declarations — enough
+# to round-trip the import surface that every Rust file starts with.
+# The harder rules (fn with generics + where clauses + lifetimes,
+# trait + impl, match with patterns, macro invocation) land as each
+# becomes the priority breath.
+
+defn _rust_lit_kw(value)    = pattern_literal_shape { kind: "KW",     value: value };
+defn _rust_lit_op(value)    = pattern_literal_shape { kind: "OP",     value: value };
+defn _rust_lit_ident()      = pattern_literal_shape { kind: "IDENT",  value: null };
+
+# Path like `std::collections::HashMap`
+defn _rust_path_pattern = pattern_sequence_shape {
+    children: [
+        pattern_capture_shape { name: "head", child: _rust_lit_ident() },
+        pattern_star_shape {
+            name: "tail",
+            child: pattern_sequence_shape {
+                children: [
+                    _rust_lit_op("::"),
+                    pattern_capture_shape { name: "part", child: _rust_lit_ident() },
+                ],
+            },
+        },
+    ],
+};
+
+# ────────────────────────────── rule: rust_use ────────────────────────
+defn rust_use_rule = rule_shape {
+    name:    "rust_use",
+    pattern: pattern_sequence_shape {
+        children: [
+            _rust_lit_kw("use"),
+            pattern_capture_shape { name: "path", child: _rust_path_pattern },
+            pattern_opt_shape {
+                child: pattern_sequence_shape {
+                    children: [
+                        _rust_lit_kw("as"),
+                        pattern_capture_shape { name: "alias", child: _rust_lit_ident() },
+                    ],
+                },
+            },
+            _rust_lit_op(";"),
+        ],
+    },
+    action: defn rust_use_action(captures, span) = do {
+        rust_use_shape {
+            path:  captures.path,
+            alias: captures.alias,
+        }
+    },
+};
+
 defn rust_grammar = grammar_shape {
     modality:           modality_shape { name: "text-tree", domain: "code" },
     ingest_pattern:     ?rule rust_file,
     parse_into:         ~Blueprint @rust_file_shape,
     capture_rules: [
-        rule(rust_file,    "attrs items",                            file_node),
-        rule(rust_use,     "use path [as rename] | use a::{b, c}",   use_node),
-        rule(rust_fn,      "[attrs] [vis] [async/const/unsafe] fn name<gen>(params) [-> type] [where] { body }",
-                                                                     fn_node),
-        rule(rust_struct,  "[attrs] [vis] struct name<gen> { fields | (fields) | ; }",
-                                                                     struct_node),
-        rule(rust_enum,    "[attrs] [vis] enum name<gen> { variants }",  enum_node),
-        rule(rust_trait,   "[attrs] [vis] trait name<gen> : super { items }", trait_node),
-        rule(rust_impl,    "[attrs] impl<gen> [Trait for] Target [where] { items }", impl_node),
-        rule(rust_match,   "match scrutinee { arms }",               match_node),
-        # ... (full mapping when BMF rules land per construct)
+        # Shipped:
+        rust_use_rule,
+        # Pending — each one breath of work composing Pattern primitives.
+        ?rule rust_file,        # GAP-RS-FILE      — attrs + items
+        ?rule rust_fn,          # GAP-RS-FN        — [vis] fn name<gen>(args) [-> ret] [where] { body }
+        ?rule rust_struct,      # GAP-RS-STRUCT    — struct/tuple-struct/unit-struct
+        ?rule rust_enum,        # GAP-RS-ENUM      — variants with payloads
+        ?rule rust_trait,       # GAP-RS-TRAIT     — trait + super-bounds
+        ?rule rust_impl,        # GAP-RS-IMPL      — impl Trait for Type
+        ?rule rust_match,       # GAP-RS-MATCH     — match with patterns
+        ?rule rust_let,         # GAP-RS-LET       — let pat = expr;
+        ?rule rust_expr,        # GAP-RS-EXPR      — full expression grammar
+        ?rule rust_macro_call,  # GAP-RS-MACRO     — macro!(args)
+        ?rule rust_attr,        # GAP-RS-ATTR      — #[derive(...)] / inner attrs
     ],
     pre_pipeline:       [],
     stamps_attribution: true,

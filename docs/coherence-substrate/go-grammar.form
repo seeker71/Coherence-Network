@@ -94,25 +94,77 @@ form go_composite_lit_shape = { type_expr: ?~Recipe, elts: ~List };
 # Part 4 — the Language cell
 # ─────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 1.5 — concrete Form-recipe rules (skeleton)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Same shape as the Python and JSON grammars: Pattern primitives
+# composed into rule_shapes. Go is structurally smaller than Python
+# but has unique idioms (channels, goroutines, defer, multi-value
+# returns). Each lands as a separate rule.
+#
+# Today we ship the skeletal token-kind literals + the package and
+# import rules — enough to recognize a Go file's preamble. Function
+# and type declarations follow the same pattern as Python's; each
+# ripens breath by breath.
+
+defn _go_lit_kw(value)    = pattern_literal_shape { kind: "KW",     value: value };
+defn _go_lit_op(value)    = pattern_literal_shape { kind: "OP",     value: value };
+defn _go_lit_ident()      = pattern_literal_shape { kind: "IDENT",  value: null };
+defn _go_lit_str()        = pattern_literal_shape { kind: "STRING", value: null };
+
+# ────────────────────────────── rule: go_package ──────────────────────
+defn go_package_rule = rule_shape {
+    name:    "go_package",
+    pattern: pattern_sequence_shape {
+        children: [
+            _go_lit_kw("package"),
+            pattern_capture_shape { name: "name", child: _go_lit_ident() },
+        ],
+    },
+    action:  defn go_package_action(captures, span) = do {
+        go_package_shape { name: captures.name }
+    },
+};
+
+# ────────────────────────────── rule: go_import_single ────────────────
+defn go_import_single_rule = rule_shape {
+    name:    "go_import_single",
+    pattern: pattern_sequence_shape {
+        children: [
+            _go_lit_kw("import"),
+            pattern_capture_shape { name: "path", child: _go_lit_str() },
+        ],
+    },
+    action:  defn go_import_single_action(captures, span) = do {
+        go_import_shape { paths: [captures.path] }
+    },
+};
+
 defn go_grammar = grammar_shape {
     modality:           modality_shape { name: "text-tree", domain: "code" },
     ingest_pattern:     ?rule go_file,
     parse_into:         ~Blueprint @go_file_shape,
     capture_rules: [
-        rule(go_file,        "package … import … decls",          file_node),
-        rule(go_func_decl,   "func name(params) results { body }", fn_decl_node),
-        rule(go_type_decl,   "type name spec",                     type_decl_node),
-        rule(go_struct,      "struct { fields }",                  struct_node),
-        rule(go_interface,   "interface { methods }",              interface_node),
-        rule(go_var_decl,    "var | const names = values",         var_decl_node),
-        rule(go_if,          "if init; cond { body } [else …]",    if_node),
-        rule(go_for,         "for [init; cond; post] { body }",    for_node),
-        rule(go_range,       "for k, v := range expr { body }",    range_node),
-        rule(go_go,          "go call()",                          go_node),
-        rule(go_defer,       "defer call()",                       defer_node),
-        rule(go_chan_send,   "ch <- value",                        chan_send_node),
-        rule(go_chan_recv,   "<-ch",                               chan_recv_node),
-        # ... (full mapping in form_cli convert when the BMF rules land)
+        # Shipped:
+        go_package_rule,
+        go_import_single_rule,
+        # Pending — each is one ripening breath composing the same
+        # Pattern primitives. The `?rule` markers measure the
+        # bootstrap → destination distance directly.
+        ?rule go_file,          # GAP-GO-FILE       — top-level: package + imports + decls
+        ?rule go_func_decl,     # GAP-GO-FUNC       — func name(params) results { body }
+        ?rule go_type_decl,     # GAP-GO-TYPE       — type name spec
+        ?rule go_struct,        # GAP-GO-STRUCT     — struct { fields }
+        ?rule go_interface,     # GAP-GO-INTERFACE  — interface { methods }
+        ?rule go_var_decl,      # GAP-GO-VAR        — var | const names = values
+        ?rule go_if,            # GAP-GO-IF         — if init; cond { body } [else]
+        ?rule go_for,           # GAP-GO-FOR        — for [init; cond; post] { body }
+        ?rule go_range,         # GAP-GO-RANGE      — for k, v := range expr { body }
+        ?rule go_go,            # GAP-GO-GOROUTINE  — go call()
+        ?rule go_defer,         # GAP-GO-DEFER      — defer call()
+        ?rule go_chan_send,     # GAP-GO-CHAN-SEND  — ch <- value
+        ?rule go_chan_recv,     # GAP-GO-CHAN-RECV  — <-ch
     ],
     pre_pipeline:       [],
     stamps_attribution: true,
