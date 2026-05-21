@@ -138,6 +138,12 @@ type FrameId = u32;
 pub(crate) struct Kernel {
     by_shape: HashMap<ShapeKey, NodeID>,
     by_id: HashMap<NodeID, Recipe>,
+    // Source attribution side-map: NodeID → (file_name_id, line, col).
+    // Populated by `intern_node_at` for Recipes emitted from parser actions
+    // that carry source-location context. `node_source` reads back.
+    // The satsang-load-bearing surface: every cell's state is traceable
+    // back to the source line of the recipe that authored it.
+    source_attr: HashMap<NodeID, (NameID, u32, u32)>,
     strs: Vec<String>,
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
@@ -355,6 +361,7 @@ impl Kernel {
         let mut k = Self {
             by_shape: HashMap::new(),
             by_id: HashMap::new(),
+            source_attr: HashMap::new(),
             strs: Vec::new(),
             str_idx: HashMap::new(),
             next_inst: 1,
@@ -762,6 +769,44 @@ impl Kernel {
         // by direct NodeID equality. Sibling parity required across Go/TS.
         self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_nid() == args[1].as_nid())
+        });
+        // intern_node_at — intern a composite Recipe AND record its source
+        // attribution. Engine.fk's parser actions call this so every emitted
+        // Recipe carries (file, line, col) provenance. The satsang teaching:
+        // a cell's state can be traced back to the recipe lines that
+        // authored it — the practice of self-knowing.
+        //
+        // Args: (category, children, file_string, line_int, col_int)
+        // Returns: the interned NodeID (same as intern_node).
+        self.register_native("intern_node_at", cat_witness(), |k, _, args| {
+            let cat = args[0].as_nid();
+            let kids: Vec<NodeID> = match &args[1] {
+                Value::List(v) => v.iter().map(|x| x.as_nid()).collect(),
+                _ => Vec::new(),
+            };
+            let nid = k.intern(cat, kids);
+            let file_nid = k.intern_string(args[2].as_str());
+            let file_id = file_nid.inst;
+            let line = args[3].as_int() as u32;
+            let col = args[4].as_int() as u32;
+            k.source_attr.insert(nid, (file_id, line, col));
+            Value::Nid(nid)
+        });
+        // node_source — read back a Recipe's source attribution.
+        // Returns (list file_string line col) or empty list if none recorded.
+        self.register_native("node_source", cat_witness(), |k, _, args| {
+            let nid = args[0].as_nid();
+            match k.source_attr.get(&nid).copied() {
+                Some((file_id, line, col)) => {
+                    let file = k.strs[file_id as usize].clone();
+                    Value::List(vec![
+                        Value::Str(file),
+                        Value::Int(line as i64),
+                        Value::Int(col as i64),
+                    ])
+                }
+                None => Value::List(vec![]),
+            }
         });
         // walk_recipe — evaluate a NodeID in a fresh root frame. Returns
         // the value the recipe produces. Use case: Form code builds a

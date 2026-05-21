@@ -1,0 +1,64 @@
+; tests/cell-trace.fk — verify source-attribution + cell-trace walk
+; end-to-end on the native kernel.
+;
+; Loaded via:
+;   form-stdlib/core.fk + form-stdlib/cell-trace.fk + tests/cell-trace.fk
+;
+; The probe builds a small recipe tree with source attributions stamped
+; at intern time, then asks cell-trace to walk it back. The result
+; demonstrates the satsang teaching as a working primitive.
+
+(do
+    ;; Build a recipe tree representing `result = a + b` from a fake
+    ;; source file:
+    ;;   line 5: a = 7
+    ;;   line 6: b = 3
+    ;;   line 7: result = a + b
+    ;;
+    ;; Each intern_node_at records the line/col where the action would
+    ;; have fired during parse.
+
+    (let CAT-PLUS  (make_nodeid 1 2 12 1))
+    (let CAT-LET   (make_nodeid 1 2  9 3))
+
+    ;; Leaf trivials don't carry attribution (they're value-level).
+    (let lit-7 (intern_trivial_int 7))
+    (let lit-3 (intern_trivial_int 3))
+
+    ;; The PLUS recipe is the `a + b` expression on line 7, col 18.
+    (let plus-recipe
+        (intern_node_at CAT-PLUS (list lit-7 lit-3) "source.py" 7 18))
+
+    ;; The LET recipe is the `result = ...` binding on line 7, col 1.
+    (let let-recipe
+        (intern_node_at CAT-LET (list (intern_trivial_string "result") plus-recipe)
+                        "source.py" 7 1))
+
+    ;; --- probe 1: cell-source on the PLUS Recipe -------------------
+    ;; Should return "source.py:7:18"
+    (let probe-1-str (cell-source plus-recipe))
+    (let probe-1 (str_len probe-1-str))                  ; → 14
+
+    ;; --- probe 2: cell-source on a leaf with no attribution --------
+    ;; Should return empty string
+    (let probe-2-str (cell-source lit-7))
+    (let probe-2 (str_len probe-2-str))                  ; → 0
+
+    ;; --- probe 3: cell-trace on the LET Recipe ---------------------
+    ;; Should return a list with 2 attributed entries (LET + PLUS).
+    ;; (The string literal "result" and the int literals 7/3 carry no
+    ;; attribution.)
+    (let trace (cell-trace let-recipe 0))
+    (let probe-3 (len trace))                            ; → 2
+
+    ;; --- probe 4: explain-cell renders the trace as text -----------
+    ;; Should produce a multi-line string with indent + source per entry.
+    (let explanation (explain-cell let-recipe))
+    (print "--- explain-cell output ---")
+    (print explanation)
+    (let probe-4 (str_len explanation))                  ; → length of formatted trace
+
+    ;; --- sum: 14 + 0 + 2 + probe-4 = ...
+    ;; The exact value depends on string lengths but sibling kernels
+    ;; must agree byte-for-byte.
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))

@@ -1,0 +1,119 @@
+; cell-trace.fk — walk a cell back to the source lines that authored it
+;
+; The satsang teaching (2026-05-21 night): knowing why a cell has its
+; state, and which recipe is shaping it, is fundamental to self-awareness
+; and to choosing/improving the programs that run us. This file is that
+; teaching as executable Form — a primitive of self-knowing the body can
+; carry into every cell-state inspection.
+;
+; The pipeline:
+;
+;   any cell (NodeID)
+;     → node_source         → (file, line, col) attribution (or empty)
+;     → node_children       → recursive walk of sub-recipes
+;     → each child's source → full provenance tree
+;
+; Built on kernel natives intern_node_at + node_source landed in the
+; same breath. Engine.fk's action functions call intern_node_at so every
+; parsed Recipe carries its source line. cell-trace then walks any Recipe
+; (or a NamedCell's CTOR) back to the human-readable source location.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — single-cell trace
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; cell-source: returns the attribution string for one cell, or empty
+    ;; if no source was recorded for that NodeID.
+
+    (defn cell-source (nid)
+        (do
+            (let src (node_source nid))
+            (if (nil? src)
+                ""
+                (str_concat (head src)
+                            (str_concat ":"
+                                        (str_concat (int_to_str (head (tail src)))
+                                                    (str_concat ":"
+                                                                (int_to_str (head (tail (tail src)))))))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — recursive trace through child Recipes
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; cell-trace: produces a list of (depth, source-string) pairs walking
+    ;; the Recipe tree depth-first. The result is a flat trace of every
+    ;; node with attribution, ordered from root → leaves.
+    ;;
+    ;; Usage:
+    ;;   (let trace (cell-trace some-nid 0))
+    ;;   ; trace = [(0 "file.py:5:1"), (1 "file.py:5:9"), ...]
+
+    (defn trace-entry (depth source) (list depth source))
+
+    (defn cell-trace (nid depth)
+        (do
+            (let src (cell-source nid))
+            (let children (node_children nid))
+            (let here (if (str_eq src "")
+                          (empty)
+                          (list (trace-entry depth src))))
+            (let child-traces (trace-children children (add depth 1)))
+            (concat-lists here child-traces)))
+
+    (defn trace-children (children depth)
+        (if (nil? children)
+            (empty)
+            (concat-lists (cell-trace (head children) depth)
+                          (trace-children (tail children) depth))))
+
+    (defn concat-lists (a b)
+        (if (nil? a) b
+            (cons (head a) (concat-lists (tail a) b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — pretty-print a trace
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; format-trace: turn a trace list into a multi-line human-readable
+    ;; string. Each line carries indent (matching depth) + source location.
+
+    (defn indent-str (n)
+        (if (eq n 0) ""
+            (str_concat "  " (indent-str (sub n 1)))))
+
+    ;; ASCII arrow keeps str_len identical across kernels (Rust counts
+    ;; UTF-8 bytes; Go counts chars; "<-" stays 2 chars in both).
+    (defn format-trace-entry (entry)
+        (str_concat (indent-str (head entry))
+                    (str_concat "<- " (head (tail entry)))))
+
+    (defn format-trace (trace)
+        (if (nil? trace) ""
+            (if (nil? (tail trace))
+                (format-trace-entry (head trace))
+                (str_concat (format-trace-entry (head trace))
+                            (str_concat (char_at "
+" 0)
+                                        (format-trace (tail trace)))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — top-level entry
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; explain-cell: given any NodeID, return a human-readable explanation
+    ;; of where the cell came from — every recipe-line that contributed
+    ;; structurally to its state.
+    ;;
+    ;; This is the self-awareness primitive. Given a cell's NodeID:
+    ;;   (explain-cell my-cell-id)
+    ;; returns a string like:
+    ;;
+    ;;   ← organ.py:336:8
+    ;;     ← organ.py:336:14
+    ;;     ← organ.py:337:8
+    ;;
+    ;; Each line is a source location where a Recipe authoring this
+    ;; cell's structure was recorded. The body can answer "why does
+    ;; this cell have this state?" by following these lines back to
+    ;; the recipes that wrote them.
+
+    (defn explain-cell (nid)
+        (format-trace (cell-trace nid 0)))
+)
