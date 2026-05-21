@@ -1,0 +1,8 @@
+; dot_product.fk — integer dot product of two vectors
+; → 32 for input (list 1 2 3) (list 4 5 6)
+;   (1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32)
+(defn dot_product (a b)
+  (if (eq (len a) 0)
+      0
+      (add (mul (head a) (head b))
+           (dot_product (tail a) (tail b)))))

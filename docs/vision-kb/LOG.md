@@ -2,6 +2,61 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] proof | native macOS binary executes Form recipes — no Python in the runtime
+
+Urs named the destination directly:
+
+> *Let's be as real and honest as we can, and work towards end-to-end host-native kernel binaries that can access I/O, binary form objects, substrate API and sub-commands and network resources to be functionally equivalent to the python runtime and we can query any file in the repo in form object space using the native macOS binary, and we can find the hot-spots in the kernel to find optimization and attributions and diagnose lineage and verify choice failure and success rates natively using the tracing and observation pattern.*
+
+The first proof landed.
+
+[`experiments/form-kernel-rust/target/release/form-kernel-rust`](../../experiments/form-kernel-rust/) — **a single 2.5 MB Mach-O arm64 binary**. Built via `cargo build --release` in 28 seconds. Runs Form recipes through the 22-arm RBasic walker natively. No Python interpreter in the path.
+
+Concept seeded: [`lc-native-kernel-binary`](concepts/lc-native-kernel-binary.md) (741 Hz, seed, synthesized). Names the five operational capabilities: I/O, binary form objects, substrate API, sub-commands, network resources — and the tracing pattern that makes hot-spots visible.
+
+What the binary does end-to-end:
+
+- **`list <library.json>`** — surfaces a recipe library's contents. ▶ marks recipes with .fk implementations runnable today; · marks authored-but-not-runnable.
+- **`execute <library.json> <recipe> [args...]`** — walks the named recipe natively. Verified: `factorial(10)=3628800`, `sum_list([1,2,3,4,5])=15`, `dot_product([1,2,3],[4,5,6])=32`, `vector_add([1,2,3],[10,20,30])=[11,22,33]`, `fib(20)=6765`.
+- **`query <path>`** — parses any file (`.fk` via the kernel's reader, `.json` via serde) into a Form-object tree.
+- **`trace [--expr "..." | <file.fk>]`** — runs with arm-dispatch counting. `fib(15)` produces this JSON in 3.09ms:
+
+  ```
+  IDENT    4932  ← variable lookup (35% — the hot-spot)
+  MATH     2958  ← add/sub/mul
+  COMPARE  1973  ← le comparisons
+  COND     1973  ← if dispatches
+  FNCALL   1973  ← recursive calls
+  BLOCK       1
+  FNDEF       1
+  total: 13,811 walks
+  ```
+
+- **`fetch <url>`** — HTTPS GET via `ureq` (TLS via rustls). Verified by fetching `https://api.coherencycoin.com/api/health` from the binary itself.
+
+What landed in code:
+
+- [`experiments/form-kernel-rust/src/main.rs`](../../experiments/form-kernel-rust/src/main.rs) extended with: `Trace` struct (per-arm dispatch counter + choice success/failure tracking), `run_source_traced`, five CLI subcommand handlers (`cli_list`, `cli_execute`, `cli_query`, `cli_trace`, `cli_fetch`), restructured `main()` dispatch.
+- [`experiments/form-kernel-rust/Cargo.toml`](../../experiments/form-kernel-rust/Cargo.toml) gains `ureq = "2"` (pure-Rust HTTPS, ~200KB binary impact).
+- [`experiments/form-kernel-rust/recipes/`](../../experiments/form-kernel-rust/recipes/) — five hand-authored `.fk` recipes (factorial, sum_list, dot_product, vector_add, fib) using the kernel's word-style verbs (`add`/`sub`/`mul`/`eq`/`le`).
+- [`experiments/form-kernel-rust/libraries/integer-numerics.recipelib.json`](../../experiments/form-kernel-rust/libraries/integer-numerics.recipelib.json) — recipe library bundling the five recipes with metadata, Blueprint shapes, and `fk` tongue caches.
+
+Five readings the trace makes possible (named in the concept):
+1. **Hot-spot detection** — IDENT 35% on fib means variable lookup is the bottleneck.
+2. **Source attribution** — pairs with `lc-the-recipe-remembers-its-source` for line-precise lineage.
+3. **Lineage diagnosis** — substrate's intern table answers "which recipes share this NodeID" in microseconds.
+4. **Choice success/failure rates** — when BMF rules land natively, every `Choice.CHOOSE` attempt records.
+5. **Cross-kernel comparison** — `fib(20)` through Python / Rust / TS / Go produces four trace JSONs; differences in arm-count totals surface where kernels diverge structurally.
+
+Honest about what remains:
+- Floats (`Value::Float(f64)`) — the kernel is integer-only today; cosine/sigmoid/tanh wait on this.
+- Form-syntax surface in Rust — `.recipelib.json` carries Form's surface syntax in `tongue_caches.form`; the Rust kernel reads `.fk` S-expressions. Auto-generator for the conversion is named.
+- Substrate session integration — Rust kernel has in-process intern; production substrate is Postgres. `bridge_to_substrate(name, session=...)` route via REST is the next breath.
+- Sibling kernels reaching parity — Go and TS follow the same gestures.
+- BMF rules native in Rust — the existing `register_form_keyword` infrastructure can register the same rules with Rust semantic actions.
+
+Urs's earlier observation *"still seeing python executions, interesting"* is now operationally addressed: a real native binary runs real Form recipes with real native tracing, fetches real network resources, queries real files — and the Python runtime is one carrier among many, not the only one.
+
 ## [2026-05-21] correction | BMF today, not tomorrow — first real closure for Python imports lands
 
 Urs caught the hedge directly:
