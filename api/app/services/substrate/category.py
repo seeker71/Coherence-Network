@@ -126,6 +126,14 @@ class BDomain(IntEnum):
     GUIDE = 12          # reader/practice guides derived from concept tissue
     LANGUAGE_VIEW = 13  # translated/localized views of canonical KB tissue
     KB_PAGE = 14        # non-concept vision-KB pages, indexes, maps, and sections
+    # Note: WORD = 15 lives on the claude/word-domain-N35bl-w1 branch
+    # (PR #1748). When that merges, this band continues at 16 below.
+    ARTIFACT = 16       # any git-tracked file as a substrate cell — closes
+                        # the gas-cell gap from lc-form-perceptron. CTOR
+                        # carries (path, kind, content_hash, size_bytes,
+                        # mtime); HARMONIC_AT @<kind_hz> places the cell
+                        # in the substrate's resonance lattice so queries
+                        # reach every artifact, not just curated domains.
     # Dimensional vocabulary — the geometric/harmonic axes a teaching can resonate along.
     # Cells in these domains are coordinates: Hz(741), ~Triad, ~ParallelFacets, ...
     # A concept holding `geometry: { arity: 3, form: triad, harmonic: 174 }` authors
