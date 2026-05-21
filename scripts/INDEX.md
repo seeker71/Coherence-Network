@@ -4,10 +4,11 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 114
+**Total files**: 115
 
 | File | Purpose |
 |---|---|
+| [active_recipe_trace_index.py](active_recipe_trace_index.py) | !/usr/bin/env python3 |
 | [add_concurrency_notes.py](add_concurrency_notes.py) | !/usr/bin/env python3 |
 | [add_crosslinks.py](add_crosslinks.py) | !/usr/bin/env python3 |
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | !/usr/bin/env python3 |

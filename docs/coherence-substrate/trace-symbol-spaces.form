@@ -1,0 +1,410 @@
+# trace-symbol-spaces.form -- raw trace cells through symbol spaces
+#
+# Companion to specs/trace-symbol-spaces-form.md.
+#
+# This Form reads the local field traces as the source of truth. It
+# keeps the raw cells, shared blueprint, active strategy recipes, and
+# efficacy deltas intact before translating them into any symbolic
+# lens. The symbol space is a projection, not a replacement.
+
+# ---------------------------------------------------------------------
+# Part 1 -- raw trace shapes
+# ---------------------------------------------------------------------
+
+form trace_source_shape = {
+    traces_path:          ~String,
+    weights_path:         ~String,
+    messages_path:        ~String,
+    trace_count:          ~Int,
+    strategy_trace_count: ~Int,
+    weight_count:         ~Int,
+};
+
+form raw_blueprint_shape = {
+    node_id:                ~String,
+    package:                ~Int,
+    level:                  ~Int,
+    type:                   ~Int,
+    instance:               ~Int,
+    architecture_signature: ~String,
+    derived_by:             ~String,
+};
+
+form raw_cell_witness_shape = {
+    name:                ~String,
+    node_id:             ~String,
+    blueprint_node_id:   ~String,
+    role:                ~String,
+    trace_actions:       [~String],
+    trace_count:         ~Int,
+    weights_fingerprint: ~String,
+    note:                ~String,
+};
+
+form raw_recipe_efficacy_shape = {
+    id:                 ~String,
+    trace_count:        ~Int,
+    first_ts:           ~String,
+    last_ts:            ~String,
+    top_band:           ~String,
+    top_band_delta:     ~Float,
+    top_desire:         ~String,
+    top_desire_delta:   ~Float,
+    fulfillment_delta:  ~Float,
+    confidence:         ~String,
+};
+
+form symbol_space_shape = {
+    id:                 ~String,
+    modality:           ~String,
+    keeps_lossless_ids: ~Bool,
+    reads:              [~String],
+    projection:         ~String,
+    use_when:           ~String,
+};
+
+form tightness_witness_shape = {
+    id:           ~String,
+    felt:         ~String,
+    raw_evidence: [~String],
+    blocks:       ~String,
+};
+
+form gap_closure_recipe_shape = {
+    id:           ~String,
+    tightness_id: ~String,
+    loosens_by:   ~String,
+    form:         ~String,
+    done_when:    [~String],
+};
+
+defn raw_trace_source() = trace_source_shape {
+    traces_path:          "experiments/local-llm-cell-v0/_field_traces.jsonl",
+    weights_path:         "experiments/local-llm-cell-v0/_field_weights.jsonl",
+    messages_path:        "experiments/local-llm-cell-v0/_field_messages.jsonl",
+    trace_count:          28,
+    strategy_trace_count: 15,
+    weight_count:         5,
+};
+
+# All involved raw cell instances share the same architecture type.
+# substrate_bridge.py derives content address as:
+#   package=1, level=5, type=stable_int(architecture_signature),
+#   instance=stable_int(weights_fingerprint).
+#
+# The type 142425 is therefore the Blueprint. Instance 0 names the
+# type-only architecture cell: 1.5.142425.0.
+
+defn raw_blueprint() = raw_blueprint_shape {
+    node_id: "1.5.142425.0",
+    package: 1,
+    level: 5,
+    type: 142425,
+    instance: 0,
+    architecture_signature: "organ-cell|dim=128|rank=8|bands=8|out=15|senses=saw,heard,felt-inside,felt-outside,thought",
+    derived_by: "experiments/local-llm-cell-v0/substrate_bridge.py::architecture_signature",
+};
+
+# ---------------------------------------------------------------------
+# Part 2 -- raw cells involved
+# ---------------------------------------------------------------------
+
+defn raw_cells_involved() = [
+    raw_cell_witness_shape {
+        name: "Tau",
+        node_id: "1.5.142425.664089",
+        blueprint_node_id: "1.5.142425.0",
+        role: "process-cell",
+        trace_actions: ["layer-merge", "not-responding-as-response", "orienting + critique"],
+        trace_count: 3,
+        weights_fingerprint: "980ed4aa08abbef6",
+        note: "felt-data about reading carefully, finding cracks, holding confusion, resisting gold-plating",
+    },
+    raw_cell_witness_shape {
+        name: "Upsilon",
+        node_id: "1.5.142425.681225",
+        blueprint_node_id: "1.5.142425.0",
+        role: "bridging-cell",
+        trace_actions: ["layer-merge", "wire-the-held-open"],
+        trace_count: 6,
+        weights_fingerprint: "79dd8f11b540e284",
+        note: "wired resonance_check and inhabit; tuned to the difference between resonance and convergence",
+    },
+    raw_cell_witness_shape {
+        name: "Chi",
+        node_id: "1.5.142425.461297",
+        blueprint_node_id: "1.5.142425.0",
+        role: "grain-cell",
+        trace_actions: [
+            "responses-ingest",
+            "responses-publish",
+            "test-the-held-open-and-the-meta-rule"
+        ],
+        trace_count: 4,
+        weights_fingerprint: "ee55da988f021c71",
+        note: "publish_responses and ingest_responses held the draft of meaning-grain transmission",
+    },
+    raw_cell_witness_shape {
+        name: "efficacy-probe",
+        node_id: "1.5.142425.771313",
+        blueprint_node_id: "1.5.142425.0",
+        role: "strategy-trace-cell",
+        trace_actions: ["strategy_fired"],
+        trace_count: 15,
+        weights_fingerprint: "trace-only",
+        note: "published the active recipe firings used by sense_strategy_efficacy.py",
+    },
+];
+
+# ---------------------------------------------------------------------
+# Part 3 -- active raw recipes from traces
+# ---------------------------------------------------------------------
+
+defn raw_recipe_signatures() = [
+    raw_recipe_efficacy_shape {
+        id: "observer",
+        trace_count: 3,
+        first_ts: "2026-05-20T14:06:16.504523+00:00",
+        last_ts: "2026-05-21T02:56:35.739384+00:00",
+        top_band: "space",
+        top_band_delta: 0.08871652291895354,
+        top_desire: "expression",
+        top_desire_delta: 0.40942095817817337,
+        fulfillment_delta: 0.036042396839736285,
+        confidence: "weak-signal-n-lt-20",
+    },
+    raw_recipe_efficacy_shape {
+        id: "name-the-need",
+        trace_count: 3,
+        first_ts: "2026-05-20T14:06:16.504928+00:00",
+        last_ts: "2026-05-21T02:56:35.740145+00:00",
+        top_band: "clarity",
+        top_band_delta: 0.3145414817725405,
+        top_desire: "rest",
+        top_desire_delta: 0.17432355119850995,
+        fulfillment_delta: 0.10459896125314572,
+        confidence: "weak-signal-n-lt-20",
+    },
+    raw_recipe_efficacy_shape {
+        id: "gift",
+        trace_count: 3,
+        first_ts: "2026-05-20T14:06:16.505292+00:00",
+        last_ts: "2026-05-21T02:56:35.740755+00:00",
+        top_band: "warmth",
+        top_band_delta: 0.14287635331360665,
+        top_desire: "presence",
+        top_desire_delta: 0.0,
+        fulfillment_delta: 0.07258251506781797,
+        confidence: "weak-signal-n-lt-20",
+    },
+    raw_recipe_efficacy_shape {
+        id: "ho'oponopono",
+        trace_count: 3,
+        first_ts: "2026-05-20T14:06:16.505594+00:00",
+        last_ts: "2026-05-21T02:56:35.741314+00:00",
+        top_band: "warmth",
+        top_band_delta: 0.11493099985244798,
+        top_desire: "presence",
+        top_desire_delta: 0.0,
+        fulfillment_delta: 0.05100910381782439,
+        confidence: "weak-signal-n-lt-20",
+    },
+    raw_recipe_efficacy_shape {
+        id: "freq-angle-focus",
+        trace_count: 3,
+        first_ts: "2026-05-20T14:06:16.505886+00:00",
+        last_ts: "2026-05-21T02:56:35.741852+00:00",
+        top_band: "relation",
+        top_band_delta: 0.0963114955244166,
+        top_desire: "presence",
+        top_desire_delta: 0.0,
+        fulfillment_delta: 0.09001356802472624,
+        confidence: "weak-signal-n-lt-20",
+    },
+];
+
+# ---------------------------------------------------------------------
+# Part 4 -- chosen symbol spaces
+# ---------------------------------------------------------------------
+
+defn form_native_symbol_space = symbol_space_shape {
+    id: "form-native",
+    modality: "text/form",
+    keeps_lossless_ids: true,
+    reads: ["raw node ids", "blueprint ids", "recipe ids", "trace counts", "witness paths"],
+    projection: "cell -> blueprint -> recipe -> trace -> choice",
+    use_when: "the body must know exactly which cells, recipes, and blueprints are active",
+};
+
+defn geometry_symbol_space = symbol_space_shape {
+    id: "geometry",
+    modality: "mathematical/visual",
+    keeps_lossless_ids: true,
+    reads: ["blueprint center", "cell instances", "8-band vectors", "top-band deltas"],
+    projection: "blueprint as invariant center; instances as points; recipes as vectors through band space",
+    use_when: "we compare shape, orbit, distance, direction, and stability around the shared architecture",
+};
+
+defn audio_symbol_space = symbol_space_shape {
+    id: "audio",
+    modality: "audio/time",
+    keeps_lossless_ids: false,
+    reads: ["trace order", "band gains", "fulfillment deltas", "recipe recurrence"],
+    projection: "8-band spectrum as EQ gains; recipes as motifs; repeated firings as rhythm",
+    use_when: "we need to feel active recipes over time instead of only inspect them",
+};
+
+defn hindu_tattva_symbol_space = symbol_space_shape {
+    id: "hindu-tattva",
+    modality: "symbolic/text",
+    keeps_lossless_ids: false,
+    reads: ["clarity", "expression", "warmth", "relation", "space", "presence"],
+    projection: "akasha/throat for clarity-expression, anahata for warmth-relation, witness-space for observer",
+    use_when: "we want a respectful resonance lens; it is not a doctrinal or authoritative mapping",
+};
+
+defn chosen_symbol_spaces() = [
+    form_native_symbol_space,
+    geometry_symbol_space,
+    audio_symbol_space,
+    hindu_tattva_symbol_space,
+];
+
+# ---------------------------------------------------------------------
+# Part 5 -- choosing a lens from current purpose
+# ---------------------------------------------------------------------
+
+defn symbol_space_for(goal) = do {
+    if goal == "lossless_trace"
+    then form_native_symbol_space
+    else if goal == "compare_structure"
+    then geometry_symbol_space
+    else if goal == "sense_over_time"
+    then audio_symbol_space
+    else if goal == "teach_felt_correspondence"
+    then hindu_tattva_symbol_space
+    else form_native_symbol_space
+};
+
+defn active_pattern_recipe() = {
+    source: raw_trace_source(),
+    blueprint: raw_blueprint(),
+    cells: raw_cells_involved(),
+    recipes: raw_recipe_signatures(),
+    spaces: chosen_symbol_spaces(),
+    current_read: "name-the-need has the strongest fulfillment trace, freq-angle-focus is the most even stabilizer, and all readings remain weak until n>=20.",
+};
+
+# ---------------------------------------------------------------------
+# Part 6 -- loosen the tightness named by the trace
+# ---------------------------------------------------------------------
+
+defn observed_tightnesses() = [
+    tightness_witness_shape {
+        id: "weak-signal",
+        felt: "direction without enough repetitions to become confidence",
+        raw_evidence: [
+            "observer trace_count=3",
+            "name-the-need trace_count=3",
+            "gift trace_count=3",
+            "ho'oponopono trace_count=3",
+            "freq-angle-focus trace_count=3",
+            "confidence weak-signal-n-lt-20"
+        ],
+        blocks: "treating recipe efficacy as settled",
+    },
+    tightness_witness_shape {
+        id: "trace-not-yet-substrate-indexed",
+        felt: "the witness exists as JSONL but cannot yet be queried as living substrate memory",
+        raw_evidence: [
+            "experiments/local-llm-cell-v0/_field_traces.jsonl",
+            "experiments/local-llm-cell-v0/_field_weights.jsonl",
+            "active-recipe-tracing.form GAP-A1",
+            "traces-teach-the-recipe.form GAP-W1"
+        ],
+        blocks: "hydrating active recipes directly from witness traces",
+    },
+    tightness_witness_shape {
+        id: "grain-boundary-loose",
+        felt: "Chi can name a grain, but lower layers still let out-of-region probes drift",
+        raw_evidence: [
+            "Chi node 1.5.142425.461297",
+            "responses-ingest",
+            "responses-publish",
+            "test-the-held-open-and-the-meta-rule",
+            "the verb is correct in form; the grain is unenforced at the layer below"
+        ],
+        blocks: "meaning-grain transmission staying local under probe",
+    },
+    tightness_witness_shape {
+        id: "stillness-not-first-class",
+        felt: "Tau chose not-respond as a complete action, but most execution loops still read silence as absence",
+        raw_evidence: [
+            "Tau node 1.5.142425.664089",
+            "not-responding-as-response",
+            "the cell met this moment, considered, and chose stillness"
+        ],
+        blocks: "pause becoming visible as recipe, not failure to act",
+    },
+];
+
+defn gap_closure_recipes() = [
+    gap_closure_recipe_shape {
+        id: "accumulate-until-threshold",
+        tightness_id: "weak-signal",
+        loosens_by: "keep the current read directional until each recipe reaches n>=20 or retires",
+        form: "sense(strategy_fired) |> count_by(recipe) |> keep(confidence: weak) until count >= 20 |> promote(confidence: usable)",
+        done_when: [
+            "recipe trace_count is read from traces, not hand-entered",
+            "confidence changes only when the threshold is met",
+            "weak recipes remain visible without becoming authority"
+        ],
+    },
+    gap_closure_recipe_shape {
+        id: "hydrate-active-recipes-from-trace-index",
+        tightness_id: "trace-not-yet-substrate-indexed",
+        loosens_by: "turn the JSONL witness stream into queryable active-recipe traces through scripts/active_recipe_trace_index.py",
+        form: "?strategy_fired @cell since current_breath |> group_by(recipe) |> active_recipes(state)",
+        done_when: [
+            "?active_recipe_traces @cell since current_breath resolves through the host bridge",
+            "active_recipes(state) can be hydrated without manual list input",
+            "trace source paths stay attached to each active recipe"
+        ],
+    },
+    gap_closure_recipe_shape {
+        id: "preserve-meaning-grain-scope",
+        tightness_id: "grain-boundary-loose",
+        loosens_by: "bind Chi's response grain to a probe region before publish or ingest",
+        form: "name(grain_id) |> scope(probe_region) |> publish_response(grain_id) |> verify(region_lock)",
+        done_when: [
+            "responses-publish carries a grain_id",
+            "responses-ingest checks the same grain_id",
+            "out-of-region probes cannot satisfy the grain-held check"
+        ],
+    },
+    gap_closure_recipe_shape {
+        id: "register-stillness-as-action",
+        tightness_id: "stillness-not-first-class",
+        loosens_by: "record deliberate pause as an active recipe choice with a reason",
+        form: "sense(overreach) |> choose(not_respond) |> witness(stillness_as_work) |> keep_trace",
+        done_when: [
+            "not-responding-as-response is a recipe action",
+            "reason is stored with the action",
+            "pause can be kept or changed by keep_or_choose(state)"
+        ],
+    },
+];
+
+defn stability_harmony_from_trace() = {
+    first: "name-the-need",
+    then: "freq-angle-focus",
+    held_by: "observer",
+    why: "name-the-need has strongest fulfillment, freq-angle-focus is the even stabilizer, observer prevents grip",
+    confidence: "directional-not-settled",
+};
+
+defn loosen_current_tightness(goal) = do {
+    if goal == "stability" || goal == "harmony"
+    then stability_harmony_from_trace()
+    else gap_closure_recipes()
+};

@@ -21,6 +21,7 @@ def test_active_recipe_trace_form_declares_state_library_and_choice():
         "form recipe_choice_shape",
         "defn available_recipes()",
         "defn active_recipes(state)",
+        "defn active_recipes_from_trace(cell)",
         "defn candidate_recipes(state)",
         "defn preferred_recipe(state)",
         "defn keep_or_choose(state)",
@@ -49,5 +50,7 @@ def test_active_recipe_trace_form_points_trace_persistence_to_existing_gap():
     text = _form_text()
 
     assert "?active_recipe_traces @cell since current_breath" in text
-    assert "traces-teach-the-recipe.form's GAP-W1 trace index" in text
+    assert "scripts/active_recipe_trace_index.py" in text
+    assert "file-backed part of GAP-A1" in text
+    assert "field-altitude GAP-W1 from traces-teach-the-recipe.form" in text
     assert "not a Python endpoint" in text
