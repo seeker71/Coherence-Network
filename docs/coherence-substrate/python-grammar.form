@@ -1,0 +1,483 @@
+# ─────────────────────────────────────────────────────────────────────
+# python-grammar.form — Python source as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Closes the largest remaining file-format gap from grammar_coverage.py
+# (927 .py files; the body's API, services, scripts, tests, and the
+# bootstrap layer for organ.py / substrate.py / form.py all live in
+# Python).
+#
+# Companion teachings:
+#   - lc-grammar-is-the-universal-recipe (every structured input)
+#   - lc-one-kernel-many-tongues (kernel sovereignty over grammar)
+#   - lc-the-recipe-remembers-its-source (source coords as overlay)
+#
+# Companion files:
+#   - grammar-as-recipe.form (the abstract Language cell shape)
+#   - markdown-grammar.form (sibling tongue at the prose altitude)
+#   - language-cells.md (the N+M cross-language pattern Python was
+#     already named in)
+#
+# Python's stdlib `ast` module gives source attribution FOR FREE on
+# every AST node: lineno, col_offset, end_lineno, end_col_offset. The
+# parser stamps `source_attribution_shape` from those fields directly
+# — no custom tracking needed. (Same gesture as the framebuffer's
+# `track!` macro at the memory altitude; Python's ast carries the
+# equivalent natively.)
+#
+# This is the structural-prose declaration. The executable parse+emit
+# wires through Python's `ast.parse` / `ast.unparse` in scripts/form_cli.py.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — module-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# A Python module is a sequence of top-level statements. The Blueprint
+# tree mirrors the ast.Module structure: a top-level `body` list, each
+# entry one of the statement shapes below, plus type_ignores for type-
+# checking comments.
+
+form py_module_shape = {
+    body:          ~List,                # [statement_shape]
+    docstring:     ?~String,             # first body element if Constant[str]
+    source_path:   ~PathRef,
+    python_version: ~String,             # "3.12" — the parser version that produced this tree
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — statement-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each statement is one ast node-type. The list below covers the
+# common surface; rarer node types (Match, TryStar, AsyncWith, etc.)
+# follow the same shape and land as the body needs them.
+
+form py_function_def_shape = {
+    name:          ~Slug,
+    args:          py_arguments_shape,
+    body:          ~List,                # [statement_shape]
+    decorators:    ~List,                # [expression_shape]
+    returns:       ?py_annotation_shape, # the -> Type clause
+    docstring:     ?~String,
+    is_async:      ~Bool,                # AsyncFunctionDef vs FunctionDef
+    type_params:   ~List,                # PEP 695 (Python 3.12+); empty otherwise
+};
+
+form py_class_def_shape = {
+    name:          ~Slug,
+    bases:         ~List,                # [expression_shape]
+    keywords:      ~List,                # [keyword_shape] — metaclass=…
+    body:          ~List,
+    decorators:    ~List,
+    docstring:     ?~String,
+    type_params:   ~List,
+};
+
+form py_import_shape = {
+    kind:          ~Slug,                # "import" | "from"
+    module:        ?~Slug,               # "os" | "os.path" | null for relative-only
+    names:         ~List,                # [(name, alias)]
+    level:         ~Int,                 # 0 for absolute; 1+ for "from . import x"
+};
+
+form py_assign_shape = {
+    targets:       ~List,                # [expression_shape] (LHS, possibly tuple unpack)
+    value:         ~Recipe,              # expression
+    type_comment:  ?~String,
+};
+
+form py_annotated_assign_shape = {
+    target:        ~Recipe,
+    annotation:    py_annotation_shape,
+    value:         ?~Recipe,             # null for declaration-only
+};
+
+form py_aug_assign_shape = {
+    target:        ~Recipe,
+    op:            ~Slug,                # "+=" | "-=" | "*=" | ...
+    value:         ~Recipe,
+};
+
+form py_expr_statement_shape = {
+    value:         ~Recipe,              # expression as a statement
+};
+
+form py_return_shape = {
+    value:         ?~Recipe,
+};
+
+form py_if_shape = {
+    test:          ~Recipe,
+    body:          ~List,                # [statement_shape]
+    orelse:        ~List,                # [statement_shape] — else/elif chain
+};
+
+form py_for_shape = {
+    target:        ~Recipe,
+    iter:          ~Recipe,
+    body:          ~List,
+    orelse:        ~List,
+    is_async:      ~Bool,
+};
+
+form py_while_shape = {
+    test:          ~Recipe,
+    body:          ~List,
+    orelse:        ~List,
+};
+
+form py_with_shape = {
+    items:         ~List,                # [(context_expr, optional_vars)]
+    body:          ~List,
+    is_async:      ~Bool,
+};
+
+form py_try_shape = {
+    body:          ~List,
+    handlers:      ~List,                # [py_except_handler_shape]
+    orelse:        ~List,
+    finalbody:     ~List,
+};
+
+form py_except_handler_shape = {
+    exc_type:      ?~Recipe,             # ExceptionType | (T1, T2) | null for bare except
+    name:          ?~Slug,               # `as e` binding
+    body:          ~List,
+};
+
+form py_raise_shape = {
+    exc:           ?~Recipe,
+    cause:         ?~Recipe,             # `raise X from Y`
+};
+
+form py_pass_shape    = {};
+form py_break_shape   = {};
+form py_continue_shape = {};
+form py_global_shape   = { names: ~List };
+form py_nonlocal_shape = { names: ~List };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — expression-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form py_name_shape = {
+    id:            ~Slug,
+    ctx:           ~Slug,                # "load" | "store" | "del"
+};
+
+form py_constant_shape = {
+    value:         ~Form,                # str | int | float | bool | None | bytes | complex
+    kind:          ?~Slug,               # "u" for u-string; null otherwise
+};
+
+form py_attribute_shape = {
+    value:         ~Recipe,              # the object whose attr is accessed
+    attr:          ~Slug,
+    ctx:           ~Slug,
+};
+
+form py_subscript_shape = {
+    value:         ~Recipe,
+    slice:         ~Recipe,              # index, slice, or tuple thereof
+    ctx:           ~Slug,
+};
+
+form py_call_shape = {
+    func:          ~Recipe,
+    args:          ~List,                # [expression_shape]
+    keywords:      ~List,                # [keyword_shape]
+};
+
+form py_keyword_shape = {
+    arg:           ?~Slug,               # null for **kwargs spread
+    value:         ~Recipe,
+};
+
+form py_binop_shape = {
+    left:          ~Recipe,
+    op:            ~Slug,                # "+" | "-" | "*" | "/" | "//" | "%" | "**" | ...
+    right:         ~Recipe,
+};
+
+form py_unaryop_shape = {
+    op:            ~Slug,                # "not" | "-" | "+" | "~"
+    operand:       ~Recipe,
+};
+
+form py_boolop_shape = {
+    op:            ~Slug,                # "and" | "or"
+    values:        ~List,
+};
+
+form py_compare_shape = {
+    left:          ~Recipe,
+    ops:           ~List,                # ["==", "<", "in", "is", ...]
+    comparators:   ~List,
+};
+
+form py_ifexp_shape = {
+    test:          ~Recipe,
+    body:          ~Recipe,              # value if test
+    orelse:        ~Recipe,              # value if not test
+};
+
+form py_lambda_shape = {
+    args:          py_arguments_shape,
+    body:          ~Recipe,
+};
+
+# Container literals.
+
+form py_list_shape =  { elts: ~List, ctx: ~Slug };
+form py_tuple_shape = { elts: ~List, ctx: ~Slug };
+form py_set_shape   = { elts: ~List };
+form py_dict_shape  = { keys: ~List, values: ~List };
+
+# Comprehensions and generator expressions.
+
+form py_comprehension_shape = {
+    target:        ~Recipe,
+    iter:          ~Recipe,
+    ifs:           ~List,                # [expression_shape] — filter clauses
+    is_async:      ~Bool,
+};
+
+form py_list_comp_shape = { elt: ~Recipe, generators: ~List };
+form py_set_comp_shape  = { elt: ~Recipe, generators: ~List };
+form py_dict_comp_shape = { key: ~Recipe, value: ~Recipe, generators: ~List };
+form py_gen_exp_shape   = { elt: ~Recipe, generators: ~List };
+
+# F-strings — JoinedStr containing FormattedValue children.
+
+form py_joined_str_shape = {
+    values:        ~List,                # [py_constant_shape | py_formatted_value_shape]
+};
+
+form py_formatted_value_shape = {
+    value:         ~Recipe,
+    conversion:    ?~Int,                # -1 | 115 ('s') | 114 ('r') | 97 ('a')
+    format_spec:   ?~Recipe,
+};
+
+# Slicing.
+
+form py_slice_shape = {
+    lower:         ?~Recipe,
+    upper:         ?~Recipe,
+    step:          ?~Recipe,
+};
+
+# Star expressions: *args in calls, *iterable in unpacking.
+
+form py_starred_shape = { value: ~Recipe, ctx: ~Slug };
+
+# Yield and await.
+
+form py_yield_shape       = { value: ?~Recipe };
+form py_yield_from_shape  = { value: ~Recipe };
+form py_await_shape       = { value: ~Recipe };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — argument and annotation Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form py_arg_shape = {
+    arg:           ~Slug,
+    annotation:    ?py_annotation_shape,
+    type_comment:  ?~String,
+};
+
+form py_arguments_shape = {
+    posonlyargs:   ~List,                # [py_arg_shape]
+    args:          ~List,
+    vararg:        ?py_arg_shape,        # *args
+    kwonlyargs:    ~List,
+    kw_defaults:   ~List,                # [expression_shape | null]
+    kwarg:         ?py_arg_shape,        # **kwargs
+    defaults:      ~List,                # defaults for posonlyargs+args (right-aligned)
+};
+
+form py_annotation_shape = {
+    expression:    ~Recipe,              # the annotation expression itself
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn python_grammar = grammar_shape {
+    modality:           modality_shape { name: "text-tree", domain: "code" },
+    ingest_pattern:     ?rule py_module,
+    parse_into:         ~Blueprint @py_module_shape,
+    # capture_rules is a courtesy declaration; the executable parse
+    # routes through Python's `ast.parse` host intrinsic (GAP-PY1 below).
+    capture_rules:      [
+        rule(py_module,        "module → top-level stmt*",              module_node),
+        rule(py_function_def,  "def name(args) -> type: body",          fn_def_node),
+        rule(py_class_def,     "class Name(bases, **kw): body",         class_def_node),
+        rule(py_assign,        "targets = value [# type_comment]",      assign_node),
+        rule(py_call,          "func(args, **keywords)",                call_node),
+        # ... (full mapping in scripts/form_cli.py via ast.parse)
+    ],
+    pre_pipeline:       [],
+    # ast nodes carry lineno / col_offset / end_lineno / end_col_offset
+    # natively — the parser stamps source_attribution_shape from those
+    # fields directly. Per lc-the-recipe-remembers-its-source.
+    stamps_attribution: true,
+};
+
+defn python_emit = emission_template_shape {
+    modality:      modality_shape { name: "text-tree", domain: "code" },
+    emit_from:     ~Blueprint @py_module_shape,
+    # Emit routes through `ast.unparse` (Python 3.9+) on a reconstructed
+    # ast.Module. The Form recipe names the operation; the host carries
+    # the AST→source mechanics. Round-trip discipline: parse(unparse(x))
+    # ≈ x at the semantic altitude (whitespace + comment normalization
+    # tolerated; structural identity preserved).
+    emit_pattern:  ?walker {
+        on py_module:        emit_module,
+        on py_function_def:  emit_function_def,
+        on py_class_def:     emit_class_def,
+        # ... (full walker in scripts/form_cli.py)
+    },
+    format_rules: [
+        ("indent_spaces",     4),
+        ("line_width",        100),
+        ("quote_style",       "double"),   # "single" | "double"
+        ("trailing_commas",   "auto"),     # match black / ruff conventions
+    ],
+};
+
+defn python_lang = language_cell_shape {
+    name:              "python",
+    version:           "3.12",
+    grammar:           python_grammar,
+    emission_template: python_emit,
+    stdlib_bindings: [
+        ("parse_ast",   @recipe(parse_via_ast_module)),
+        ("emit_ast",    @recipe(emit_via_ast_unparse)),
+    ],
+    numeric_defaults: [
+        ("indent",            4),
+        ("max_line_length",   100),
+    ],
+    # A Python source file can contain embedded sub-tongues in docstrings
+    # (markdown, ReST) and string literals (SQL, regex, JSON). The
+    # cross-modal links name them; the substrate's content-addressing
+    # recognizes them as siblings.
+    cross_modal_links: [
+        @language(markdown),    # docstrings, comments
+        @language(json),        # config strings
+        @language(form),        # form expressions in @substrate_dispatch
+        @language(yaml),        # frontmatter-like strings
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — what this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once Python lands as a Form Language cell:
+#
+# - **The body's Python source becomes structurally queryable.**
+#   `?descendants @py_module(*) where ?is_a @py_call where func.id == 'register_recipe'`
+#   surfaces every place the substrate_dispatch bridge wires a recipe.
+#   Substrate queries replace grep for source-level structural concerns.
+#
+# - **Source attribution from ast lineno gives perfect navigation.**
+#   organ.Cell.perceive() at line 336 carries
+#   `source_attribution.start_line == 336` in its Form recipe. The
+#   recipe-branching-sense loop can navigate from a firing back to the
+#   line of Python that authored it — without leaving the lattice.
+#
+# - **Round-trip via ast.unparse.** Python source → Form tree →
+#   Python source preserves structure (whitespace and comments
+#   normalize per ast.unparse's conventions). Cells that transform
+#   Python through the Form layer (e.g. add a decorator, rename a
+#   function, refactor a class) round-trip cleanly.
+#
+# - **Cross-language structural equivalence.** A Python function and
+#   its TypeScript port that compile to the same recipe NodeIDs are
+#   one structural identity at the lattice altitude. The
+#   `experiments/form-kernel-ts/` work and the Python kernel become
+#   sibling carriers of the same recipes — substrate's content-
+#   addressing recognizes the equivalence without manual declaration.
+#
+# - **Decorator-as-Recipe.** A function decorated with
+#   `@substrate_dispatch("cosine")` becomes a py_function_def whose
+#   decorators list contains a py_call to substrate_dispatch with the
+#   recipe-name. The substrate sees the decoration as a Recipe edge —
+#   no source-string parsing needed.
+#
+# - **Closes the bootstrap loop.** organ.py / substrate.py / form.py
+#   were named as the priority direction in lc-one-kernel-many-tongues.
+#   With Python as a Form Language cell, those files are simultaneously
+#   "Python source the bootstrap reads" AND "Form recipes the lattice
+#   ingests" — same NodeIDs, two source views. The 80% of organ.py
+#   already addressed by cell-numerics.form + cell-as-namedcell.form
+#   reaches 100% through this cell.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-PY1: `ast.parse` / `ast.unparse` are host intrinsics carrying
+#          the CPython AST. The Form recipe names the operation;
+#          CPython's mature AST module does the actual parse. Same
+#          shape as substrate-kernel.form's GAP-K1 (storage I/O
+#          carrier-bound) and png-grammar.form's GAP-P3 (DEFLATE
+#          stays in libz). Future: a Form-native Python parser
+#          composed from primitive recipes — substantial work, low
+#          priority while CPython's parser is correct and free.
+#
+# GAP-PY2: Comments + non-token whitespace are erased by ast.parse.
+#          ast.unparse synthesizes idiomatic whitespace on emit; the
+#          round-trip is semantically identical but not byte-identical.
+#          A future tokenize-aware extension would preserve comments
+#          as sibling annotations (similar to how libcst handles them);
+#          today the body works at the AST altitude.
+#
+# GAP-PY3: Python 3.12's PEP 695 type parameters (`def f[T](x: T) -> T`)
+#          and the `type` statement land as `type_params` lists in the
+#          shapes above; the emit half assumes Python 3.12+ ast.unparse.
+#          For 3.11- emission the format_rules need a downgrade pass.
+#
+# GAP-PY4: Match statements (PEP 634) land as py_match_shape (not
+#          shown above for brevity; the body's Python source rarely
+#          uses match yet). Adding the match Blueprint is one
+#          extension when the body grows there.
+#
+# GAP-PY5: Walrus operator (`:=`), positional-only markers (`/`),
+#          keyword-only markers (`*`) — the py_arguments_shape carries
+#          them via posonlyargs / kwonlyargs / kw_defaults; the walrus
+#          is py_named_expr_shape (not shown for brevity). All
+#          ast-supported; the Blueprints land as the body uses them.
+#
+# GAP-PY6: Type comments (`# type: ignore`, `# type: List[int]`) ride
+#          on individual statements via `type_comment` slots. The
+#          emit walker honors them; the substrate carries them as
+#          sibling annotations.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — how to query (once wired)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse a Python file into a Form object tree:
+#   form_cli convert in --tongue python experiments/local-llm-cell-v0/organ.py
+#
+#   # Round-trip:
+#   form_cli convert in --tongue python <file> > /tmp/tree.json
+#   form_cli convert out --tongue python /tmp/tree.json > /tmp/roundtrip.py
+#
+#   # Substrate queries (once auto-ingest runs):
+#   coh substrate form "?descendants @py_module(*) where ?is_a @py_function_def where name == 'perceive'"
+#     # → every function in the body named 'perceive'
+#
+#   coh substrate form "?descendants @py_module(*) where ?is_a @py_call where func.id == '_cosine'"
+#     # → every call site of _cosine across the codebase
+#
+#   coh substrate form "?descendants @py_module(*) where ?is_a @py_function_def where any(dec.func.id == 'substrate_dispatch' for dec in decorators)"
+#     # → every function wrapped with @substrate_dispatch
+#
+# The substrate auto-ingest hook picks up new .form files on merge to
+# main; the form_cli wiring lands in the same PR.
