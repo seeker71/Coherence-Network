@@ -501,6 +501,173 @@ defn py_import_from_rule = rule_shape {
     },
 };
 
+# ──────────────────────── rule: py_function_def ───────────────────────
+#
+# Pattern: `def NAME ( params ) : body`
+#   params  := IDENT ( , IDENT )*        # positional-only for v1
+#   body    := one-line expression statement
+#
+# Action: build a py_function_def_shape { name, args, body, ... }.
+#
+# Honest GAP-PY-DEF-v1: this rule covers simple positional parameters
+# and a single-expression body (matches `def f(a, b): expr` and the
+# python_demo.py exemplars). Decorators, default arguments, *args,
+# **kwargs, return-type annotations (`-> Type`), PEP 695 type params
+# (`def f[T](x: T) -> T`), and multi-statement indented bodies land as
+# extensions in subsequent breaths. The v1 rule is real — it produces
+# Form objects parity-equivalent to lang-python.ts's def parsing for
+# the supported subset — but coverage is honestly partial.
+
+defn _param_list_pattern = pattern_choice_shape {
+    alternatives: [
+        # Empty param list — `def f():`
+        pattern_sequence_shape { children: [] },
+        # Non-empty — first then `, IDENT` zero+ times
+        pattern_sequence_shape {
+            children: [
+                pattern_capture_shape { name: "first", child: lit_ident() },
+                pattern_star_shape {
+                    name: "rest",
+                    child: pattern_sequence_shape {
+                        children: [
+                            lit_op(","),
+                            pattern_capture_shape { name: "entry", child: lit_ident() },
+                        ],
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+defn py_function_def_rule = rule_shape {
+    name:    "py_function_def",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("def"),
+            pattern_capture_shape { name: "name", child: lit_ident() },
+            lit_op("("),
+            pattern_capture_shape { name: "params", child: _param_list_pattern },
+            lit_op(")"),
+            lit_op(":"),
+            pattern_capture_shape { name: "body", child: ?rule py_expr_stmt },
+        ],
+    },
+    action: defn py_function_def_action(captures, span) = do {
+        let name = captures.name;
+        let params_caps = captures.params.captures;
+        let names = if params_caps.first == null then []
+            else do {
+                let parts = [params_caps.first];
+                for entry in (params_caps.rest ?? []):
+                    parts = parts + [entry.entry];
+                parts
+            };
+        py_function_def_shape {
+            name:        name,
+            args:        py_arguments_shape {
+                posonlyargs: [],
+                args:        names,
+                vararg:      null,
+                kwonlyargs:  [],
+                kw_defaults: [],
+                kwarg:       null,
+                defaults:    [],
+            },
+            body:        [captures.body],
+            decorators:  [],
+            returns:     null,
+            docstring:   null,
+            is_async:    false,
+            type_params: [],
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_assign ─────────────────────────
+#
+# Pattern: `target = value`
+#   target := IDENT     (single-name only for v1; tuple unpacking and
+#                        attribute/subscript targets land as extensions)
+#   value  := expression
+#
+# Action: build py_assign_shape { targets: [name], value, ... }.
+
+defn py_assign_rule = rule_shape {
+    name:    "py_assign",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "target", child: lit_ident() },
+            lit_op("="),
+            pattern_capture_shape { name: "value", child: ?rule py_expr_stmt },
+        ],
+    },
+    action: defn py_assign_action(captures, span) = do {
+        py_assign_shape {
+            targets: [captures.target],
+            value:   captures.value,
+            type_comment: null,
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_call ───────────────────────────
+#
+# Pattern: `func ( args )`
+#   func := IDENT (or dotted_name for method-style call.access; v1 keeps
+#                  it IDENT-only and routes dotted to py_method_call in
+#                  a later breath)
+#   args := expr (, expr)*
+#
+# Action: build py_call_shape { func, args, keywords }.
+
+defn _arg_list_pattern = pattern_choice_shape {
+    alternatives: [
+        pattern_sequence_shape { children: [] },
+        pattern_sequence_shape {
+            children: [
+                pattern_capture_shape { name: "first", child: ?rule py_expr_stmt },
+                pattern_star_shape {
+                    name: "rest",
+                    child: pattern_sequence_shape {
+                        children: [
+                            lit_op(","),
+                            pattern_capture_shape { name: "entry", child: ?rule py_expr_stmt },
+                        ],
+                    },
+                },
+            ],
+        },
+    ],
+};
+
+defn py_call_rule = rule_shape {
+    name:    "py_call",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "func", child: lit_ident() },
+            lit_op("("),
+            pattern_capture_shape { name: "args", child: _arg_list_pattern },
+            lit_op(")"),
+        ],
+    },
+    action: defn py_call_action(captures, span) = do {
+        let args_caps = captures.args.captures;
+        let arg_list = if args_caps.first == null then []
+            else do {
+                let parts = [args_caps.first];
+                for entry in (args_caps.rest ?? []):
+                    parts = parts + [entry.entry];
+                parts
+            };
+        py_call_shape {
+            func:     captures.func,
+            args:     arg_list,
+            keywords: [],
+        }
+    },
+};
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 5b — the Language cell binding
 # ─────────────────────────────────────────────────────────────────────
@@ -510,21 +677,23 @@ defn python_grammar = grammar_shape {
     ingest_pattern:     parse_loop,       # the Form recipe from grammar-as-recipe.form
     parse_into:         ~Blueprint @py_module_shape,
     capture_rules:      [
-        # Shipped as Form recipes:
+        # Shipped as Form recipes (the `?` markers dropped one breath at
+        # a time as each rule lands). The diff itself is the measure of
+        # bootstrap → destination distance.
         py_import_rule,
         py_import_from_rule,
+        py_function_def_rule,             # v1: positional args + single-expr body
+        py_assign_rule,                   # v1: name = expr
+        py_call_rule,                     # v1: ident(args)
         # Pending Form expression (host bridge handles these until the
         # rule lands here as a concrete Form recipe). Each one is one
         # breath of work composing the same Pattern primitives.
-        ?rule py_function_def,            # GAP-PY-DEF
         ?rule py_class_def,               # GAP-PY-CLASS
-        ?rule py_assign,                  # GAP-PY-ASSIGN
-        ?rule py_expr_stmt,               # GAP-PY-EXPR
-        ?rule py_if,                      # GAP-PY-IF
+        ?rule py_expr_stmt,               # GAP-PY-EXPR (full expression grammar)
+        ?rule py_if,                      # GAP-PY-IF (statement form)
         ?rule py_for,                     # GAP-PY-FOR
         ?rule py_while,                   # GAP-PY-WHILE
-        ?rule py_return,                  # GAP-PY-RETURN
-        ?rule py_call,                    # GAP-PY-CALL
+        ?rule py_return,                  # GAP-PY-RETURN (inside def bodies)
         ?rule py_lambda,                  # GAP-PY-LAMBDA
         ?rule py_with,                    # GAP-PY-WITH
         ?rule py_try,                     # GAP-PY-TRY
@@ -631,15 +800,17 @@ defn python_lang = language_cell_shape {
 # Part 7 — honest GAPs
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-PY1 (BMF closure 2026-05-21 / Form-recipe expression 2026-05-21):
-#          the import-statement family is now both BMF-parsed
-#          (experiments/local-llm-cell-v0/bmf.py) AND expressed as
-#          Form recipes (Part 5 above — py_import_rule and
-#          py_import_from_rule composed from pattern_*_shape primitives
-#          declared in grammar-as-recipe.form). The Form recipes are
-#          the destination; the host engine still carries execution
-#          until the kernel walker implements pattern_match natively
-#          (grammar-as-recipe.form GAP-G1).
+# GAP-PY1 (Form-recipe expression progressing 2026-05-21):
+#          The capture_rules list (Part 5b) measures the self-hosting
+#          distance directly. Today: 5 rules shipped as Form recipes
+#          (py_import, py_import_from, py_function_def v1, py_assign v1,
+#          py_call v1), 14 still marked `?rule py_X` pending their
+#          breath. Each ripening drops one `?` and grows the substrate
+#          surface by one Python construct.
+#
+#          The Form recipes are the destination; the host engine still
+#          carries execution until the kernel walker implements
+#          pattern_match natively (grammar-as-recipe.form GAP-G1).
 #          experiments/local-llm-cell-v0/bmf.py carries:
 #            - Tokenizer (char-by-char, not a regex-over-ast wrapper)
 #            - Pattern primitives: Literal / Capture / Sequence / Opt /
