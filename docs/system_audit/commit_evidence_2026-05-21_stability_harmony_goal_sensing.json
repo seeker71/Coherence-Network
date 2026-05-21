@@ -1,0 +1,114 @@
+{
+  "date": "2026-05-21",
+  "thread_branch": "codex/stability-harmony-sensing-organ-20260521",
+  "commit_scope": "Add goal-aware stability/harmony recipe output to the energy sensing organ.",
+  "files_owned": [
+    "api/app/routers/energy_sensing.py",
+    "api/app/services/energy_goal_recipe_service.py",
+    "api/tests/test_flow_vitality.py",
+    "specs/stability-harmony-goal-sensing.md",
+    "api/app/services/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-05-21_stability_harmony_goal_sensing.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_vitality.py::test_energy_invitations_and_fallback_witness_flow",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_vitality.py",
+      "cd api && /opt/homebrew/bin/ruff check app/routers/energy_sensing.py app/services/energy_goal_recipe_service.py tests/test_flow_vitality.py",
+      "python3 scripts/validate_spec_quality.py --file specs/stability-harmony-goal-sensing.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "cd /tmp/coherence-maintainability-origin-main && python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.origin_main_check.json --fail-on-regression",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_stability_harmony_goal_sensing.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The energy recommendation route now accepts current_goal, detects stability/harmony/coherence/steadiness goals through a service, and returns a stability-harmony form-language recipe plus a first-class goal invitation. Focused and file-level flow tests pass; ruff and spec quality are clean. The maintainability baseline was refreshed after a detached origin/main audit showed the same pre-existing counts as this branch. The full local PR guard returned ready_for_push=True and follow-through found no stale Codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A caller can ask /api/energy/recommend for stability or harmony as the current goal and receive a recipe-shaped response grounded in the Geometry of Stability concepts.",
+    "public_endpoints": [
+      "GET /api/energy/recommend"
+    ],
+    "test_flows": [
+      "ASGI flow: GET /api/energy/recommend without current_goal still returns invitations.",
+      "ASGI flow: GET /api/energy/recommend?current_goal=create%20stability%20and%20harmony returns goal_recipe.id=stability-harmony and a goal invitation linked to that recipe.",
+      "Validation flow: recipe form includes breathe(longer_exhale), Geometry of Stability source concepts, and no warning language."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is complete; final PR guard, CI, and deployment validation remain pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "specs/stability-harmony-goal-sensing.md"
+  ],
+  "task_ids": [
+    "stability-harmony-goal-sensing-20260521"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/routers/energy_sensing.py",
+    "api/app/services/energy_goal_recipe_service.py",
+    "api/tests/test_flow_vitality.py",
+    "specs/stability-harmony-goal-sensing.md",
+    "api/app/services/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md"
+  ],
+  "change_files": [
+    "api/app/routers/energy_sensing.py",
+    "api/app/services/energy_goal_recipe_service.py",
+    "api/tests/test_flow_vitality.py",
+    "specs/stability-harmony-goal-sensing.md",
+    "api/app/services/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
