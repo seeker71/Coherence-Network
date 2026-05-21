@@ -1,0 +1,1 @@
+(do (defn sq (n) (mul n n)) (defn sum_squares_plus_self (limit) (do (let total 0) (do (do (defn _for_0 (_remaining total) (if (eq (len _remaining) 0) total (do (let i (head _remaining)) (let total (add (add total (sq i)) i)) (_for_0 (tail _remaining) total)))) (let total (_for_0 (range limit) total))) total))) (sum_squares_plus_self 50))

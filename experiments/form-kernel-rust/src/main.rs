@@ -627,6 +627,29 @@ impl Kernel {
             } else { Value::Null }
         });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        // range(n)        → [0, 1, ..., n-1]
+        // range(a, b)     → [a, a+1, ..., b-1]
+        // range(a, b, s)  → [a, a+s, a+2s, ..., < b]
+        // Opens `for i in range(N):` end-to-end through the kernel —
+        // the most common Python loop idiom. Same semantics as CPython's
+        // range builtin (returning an eager list rather than a lazy
+        // iterator, which the kernel doesn't yet have iterators for).
+        self.register_native("range", cat_list_nat(), |_, _, args| {
+            let (start, stop, step) = match args.len() {
+                1 => (0i64, args[0].as_int(), 1i64),
+                2 => (args[0].as_int(), args[1].as_int(), 1i64),
+                _ => (args[0].as_int(), args[1].as_int(), args[2].as_int()),
+            };
+            if step == 0 { return Value::List(vec![]); }
+            let mut out = Vec::new();
+            let mut i = start;
+            if step > 0 {
+                while i < stop { out.push(Value::Int(i)); i += step; }
+            } else {
+                while i > stop { out.push(Value::Int(i)); i += step; }
+            }
+            Value::List(out)
+        });
         self.register_native("read_file", cat_call(), |_, _, args| {
             match fs::read_to_string(args[0].as_str()) {
                 Ok(s) => Value::Str(s),
