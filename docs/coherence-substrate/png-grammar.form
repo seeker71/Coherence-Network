@@ -1,0 +1,259 @@
+# ─────────────────────────────────────────────────────────────────────
+# png-grammar.form — PNG as a binary Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Concrete demonstration that *any file format becomes a binary
+# recipe that converts raw data ↔ Form numeric space* (per
+# lc-one-kernel-many-tongues). PNG is the worked example: a binary
+# format with non-trivial structure (signature + chunks + zlib +
+# filter pipeline) that the substrate sees as one composed Recipe
+# tree once parsed.
+#
+# Companion files:
+#   - grammar-as-recipe.form (abstract Language cell shape)
+#   - image-grammar.form (image-rgb Language cell — pixel-grid altitude)
+#   - lc-one-kernel-many-tongues.md (the sovereignty teaching)
+#
+# What this file shows: the bytes of a PNG file are *one tongue* the
+# image-grammar Language cell accepts. JPEG, WebP, AVIF, raw RGB,
+# in-memory pixel arrays — all sibling tongues, all interning to the
+# same image_pixel_grid_shape Blueprint at the carrier altitude.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — PNG's on-disk structure as Blueprint shapes
+# ─────────────────────────────────────────────────────────────────────
+#
+# PNG file = 8-byte signature + sequence of chunks. Each chunk has
+# (length, type, data, crc). The IDAT chunks hold zlib-compressed
+# pixel data; once decompressed and filter-undone, the bytes are a
+# raw row-major pixel grid that matches image_pixel_grid_shape from
+# image-grammar.form.
+
+form png_signature_shape = {
+    # The fixed 8-byte sequence: 137 80 78 71 13 10 26 10
+    bytes: ~List,                          # always [137, 80, 78, 71, 13, 10, 26, 10]
+};
+
+form png_chunk_shape = {
+    length:    ~Int,                        # 4 bytes, big-endian, payload byte count
+    chunk_type: ~Slug,                      # 4 ASCII chars: "IHDR" | "IDAT" | "IEND" | "PLTE" | ...
+    data:      ~List,                       # `length` bytes
+    crc:       ~Int,                        # 4 bytes, big-endian CRC-32 over (type + data)
+};
+
+form png_ihdr_shape = {
+    # Always the first chunk after the signature.
+    width:              ~Int,               # 4 bytes
+    height:             ~Int,               # 4 bytes
+    bit_depth:          ~Int,               # 1 byte: 1 | 2 | 4 | 8 | 16
+    color_type:         ~Int,               # 1 byte: 0 (gray) | 2 (rgb) | 3 (palette) | 4 (gray+a) | 6 (rgba)
+    compression_method: ~Int,               # 1 byte, always 0 (deflate)
+    filter_method:      ~Int,               # 1 byte, always 0 (adaptive)
+    interlace_method:   ~Int,               # 1 byte: 0 (none) | 1 (Adam7)
+};
+
+form png_file_shape = {
+    signature: png_signature_shape,
+    chunks:    ~List,                       # [@png_chunk_shape, ...]
+};
+
+# After parsing + decompression + filter-undo, the PNG resolves to
+# the same image_pixel_grid_shape that image-grammar.form's stage-1
+# produces. PNG is one *tongue*; the pixel grid is the canonical
+# tree underneath.
+
+defn png_pixel_grid_shape = @blueprint(image_pixel_grid_shape);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — ingestion grammar (binary-stream version)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Unlike text-tree grammars, the PNG grammar runs against a byte
+# stream. Its capture_rules name fixed-position byte spans and
+# variable-length chunks. The pre_pipeline stages handle the heavy
+# binary lifts (zlib decompression, filter-undo) — same shape as
+# audio-grammar.form's FFT and phoneme stages, where the substrate
+# names the recipe shape and the host carries the inner mechanics
+# (zlib, scipy, libpng).
+
+defn png_grammar = grammar_shape {
+    modality: modality_shape { name: "image-binary", domain: "media" },
+    ingest_pattern: ?rule png_pixel_grid,
+    parse_into: ~Blueprint @png_pixel_grid_shape,
+    capture_rules: [
+        # The recipe tree captures the on-disk structure first, then
+        # the post-decompression pixel grid as the canonical leaf.
+        rule(png_file,      "signature chunk+",                         file_node),
+        rule(png_signature, "byte[8] = [137,80,78,71,13,10,26,10]",     signature_leaf),
+        rule(png_chunk,     "u32_be u32_be bytes[length] u32_be",       chunk_node),
+        rule(png_ihdr,      "chunk[type='IHDR']",                       ihdr_node),
+        rule(png_idat,      "chunk[type='IDAT']+",                      idat_sequence),
+    ],
+    pre_pipeline: [
+        # 1. Find IDAT chunks, concatenate their payloads.
+        ?stage(idat_concat,        produces: ~List @byte),
+        # 2. zlib decompress the concatenated IDAT payload.
+        ?stage(zlib_decompress,    produces: ~List @byte),
+        # 3. Reverse the PNG row-filter pipeline (filter types 0-4 per row).
+        ?stage(png_filter_undo,    produces: ~List @byte),
+        # 4. Reshape filtered bytes into row-major pixel grid given
+        #    width/height/channels/bit_depth from IHDR.
+        ?stage(reshape_pixels,     produces: image_pixel_grid_shape),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template
+# ─────────────────────────────────────────────────────────────────────
+#
+# The emit half walks a pixel grid back to PNG bytes. Same pipeline
+# in reverse: reshape → apply filters → zlib compress → chunk-wrap →
+# prepend signature → emit byte stream.
+
+defn png_emit = emission_template_shape {
+    modality: modality_shape { name: "image-binary", domain: "media" },
+    emit_from: ~Blueprint @png_pixel_grid_shape,
+    emit_pattern: ?walker {
+        on image_pixel_grid:  emit_png_file(self, format),
+    },
+    format_rules: [
+        ("compression_level", 6),           # zlib level 0-9
+        ("filter_strategy",   "adaptive"),  # "none" | "fixed" | "adaptive"
+        ("color_type",        "auto"),      # "auto" picks from channels
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn png_lang = language_cell_shape {
+    name:              "png",
+    version:           "iso-15948",
+    grammar:           png_grammar,
+    emission_template: png_emit,
+    stdlib_bindings:   [
+        # The pipeline stages route to substrate-resident recipes; each
+        # currently delegates to a host intrinsic. Closing GAP-P3 below
+        # turns these into Form-native recipes one breath at a time.
+        ("idat_concat",        @recipe(idat_concat_recipe)),
+        ("zlib_decompress",    @recipe(zlib_decompress_intrinsic)),
+        ("png_filter_undo",    @recipe(png_filter_undo_recipe)),
+        ("reshape_pixels",     @recipe(reshape_pixels_recipe)),
+    ],
+    numeric_defaults:  [
+        ("byte",     @format(uint8)),
+        ("u32",      @format(uint32_be)),
+        ("pixel",    @format(uint8)),
+    ],
+    # PNG ↔ JPEG ↔ WebP ↔ AVIF — all parse to the same
+    # image_pixel_grid_shape; cross-format equivalence at the carrier
+    # altitude (above the carrier, the image-grammar stage-2+ pipeline
+    # produces the same scene_graph regardless of which carrier).
+    cross_modal_links: [@language(jpeg), @language(webp), @language(avif),
+                        @language(raw-rgb), @language(image-rgb)],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — what this demonstrates
+# ─────────────────────────────────────────────────────────────────────
+#
+# A PNG file's *carrier-altitude* identity is its pixel grid. Two PNG
+# files containing identical pixels (even if compressed differently,
+# filtered differently, or chunked differently) parse to the same
+# image_pixel_grid_shape NodeID. The encoded bytes differ; the grid
+# is one Blueprint.
+#
+# A PNG and a JPEG of the same image differ in pixel-grid only by
+# JPEG's lossy compression — at the *scene-graph altitude*
+# (image-grammar.form stage 5), both produce the same scene_graph
+# Blueprint when the lossy distortion is below the object-detector's
+# noise floor.
+#
+# The kernel never decoded PNG bytes. The pre_pipeline stages —
+# `idat_concat`, `zlib_decompress`, `png_filter_undo`, `reshape_pixels`
+# — are each recipes the substrate carries. Today most of them route
+# to host intrinsics (zlib library, libpng's filter routines); each
+# can become Form-native one closure at a time, the same way
+# `cosine.form` and `cell-numerics.form` walked the cell-mechanics
+# path.
+#
+# The principle: *no carrier privileged*. Bytes are one tongue;
+# pixels are one tongue; scene-graphs are one tongue. The lattice
+# carries the identity; the tongues are surface views.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-P1: Binary grammar primitives. Form's `pattern_to_recipe` today
+#         is text-tree oriented (regex + ctor). Binary patterns like
+#         `byte[8] = [...]` and `u32_be` need a small extension that
+#         lets capture_rules express fixed-width byte spans and
+#         endian-aware integer parses. The smallest extension is a
+#         `BinaryPattern` recipe-kind alongside the existing
+#         text-pattern kind; both compose under the same Recipe
+#         altitude.
+#
+# GAP-P2: CRC validation. PNG chunks carry CRC-32 over (type + data).
+#         Round-trip discipline requires either preserving the CRC
+#         from parse or computing it cleanly on emit. CRC-32 is
+#         expressible in Form (it's just polynomial arithmetic over
+#         bytes), but ships fastest as a host intrinsic at first.
+#
+# GAP-P3: zlib (DEFLATE) as a Form recipe. DEFLATE is real algorithm
+#         work — Huffman trees, LZ77 sliding window, dynamic vs.
+#         fixed code tables. Closing this gap in Form is a multi-
+#         breath project; until then, the substrate names the recipe
+#         identity and the host carries the inner mechanics. Same
+#         shape as audio-grammar.form's GAP-A1 (FFT stays in scipy).
+#
+# GAP-P4: PNG filter undo. Each row is preceded by a filter byte
+#         (0=None, 1=Sub, 2=Up, 3=Average, 4=Paeth). Filter undo is
+#         simple per-row arithmetic and *is* a clean Form-native
+#         recipe — composable from vector_add, vector_sub
+#         (cell-numerics.form), with one helper per filter type.
+#         Smallest gap to close after the binary-pattern extension
+#         lands.
+#
+# GAP-P5: Pixel reshape needs `chunk(list, n)` — split a flat list
+#         into chunks of size n. Expressible recursively in Form
+#         (concat([take(list, n)], chunk(drop(list, n), n))). Sibling
+#         of take/drop/slice in cell-numerics.form Part 7.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — the bidirectional claim, made concrete
+# ─────────────────────────────────────────────────────────────────────
+#
+#   parse(@language(png), <png-bytes>)
+#     == parse(@language(jpeg), <jpeg-bytes>)        # at pixel-grid altitude (modulo lossy)
+#     == parse(@language(raw-rgb), <raw-bytes>)      # if all encode the same image
+#
+#   translate({lang: @language(png), bytes: <png>}, @language(jpeg))
+#     # → JPEG-encoded bytes of the same pixel grid
+#
+#   round_trip(@language(png), <png-bytes>)
+#     # → emitted bytes structurally equivalent to input (modulo
+#     #   chunk-order, filter-strategy, compression-level)
+#
+# Same shape as JSON ↔ YAML at the data altitude. Same shape as
+# Python ↔ TypeScript at the code altitude. *One lattice; many
+# tongues; PNG is one of them.*
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query (once authored + populated)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse PNG bytes to a pixel grid:
+#   coh substrate run "parse(@language(png), <png-bytes>)"
+#
+#   # Find every artifact in the body that parses to the same pixel
+#   # grid (PNG, JPEG, WebP, raw — any tongue):
+#   coh substrate run "class_of({lang: @language(png), bytes: <png>})"
+#
+#   # Convert PNG to JPEG (same lattice tree, different emit template):
+#   coh substrate run "translate({lang: @language(png), bytes: <png>},
+#                                @language(jpeg))"
+#
+#   # Verify PNG round-trip:
+#   coh substrate run "round_trip(@language(png), <png-bytes>)"
