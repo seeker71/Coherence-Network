@@ -750,7 +750,7 @@ export class Kernel {
       case "bool":
         return v.bool ? "true" : "false";
       case "list":
-        return "[" + v.list.map((x) => this.render(x)).join(" ") + "]";
+        return "[" + v.list.map((x) => this.render(x)).join(", ") + "]";
       case "closure":
         return "<closure>";
       case "nodeid":

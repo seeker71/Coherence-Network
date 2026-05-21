@@ -70,12 +70,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  const path = args[0];
-  if (path === undefined) {
+  const paths = args;
+  if (paths.length === 0) {
     console.error("missing source file");
     process.exit(2);
   }
-  const src = await readFile(path, "utf8");
+  const src = (
+    await Promise.all(paths.map((path) => readFile(path, "utf8")))
+  ).join("\n");
   const node = readAll(k, src);
   const value = walk(k, node, frame);
   console.log(k.render(value));
