@@ -130,6 +130,31 @@ def ingest_chosen() -> List[GasCell]:
     return cells
 
 
+_WALKABLE_SUFFIXES = {".py", ".md", ".form", ".yaml", ".yml",
+                      ".json", ".ts", ".tsx", ".js", ".jsx", ".sh", ".toml"}
+_SKIP_DIRS = {"node_modules", ".git", ".next", "__pycache__", ".claude",
+              ".pytest_cache", ".venv", "venv", "dist", "build"}
+
+
+def ingest_all() -> List[GasCell]:
+    """Walk every git-trackable artifact under REPO_ROOT. Production-scale
+    demonstration that the gas-cell shape composes across thousands of
+    files without architectural change."""
+    cells: List[GasCell] = []
+    for p in REPO_ROOT.rglob("*"):
+        if not p.is_file():
+            continue
+        if any(part in _SKIP_DIRS for part in p.parts):
+            continue
+        if p.suffix.lower() not in _WALKABLE_SUFFIXES:
+            continue
+        try:
+            cells.append(ingest_gas(p))
+        except OSError:
+            continue
+    return cells
+
+
 # ---------------------------------------------------------------------------
 # Gesture 1 — EXECUTE
 # ---------------------------------------------------------------------------
@@ -291,12 +316,25 @@ def query_cells(
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--all", action="store_true",
+                        help="Ingest every walkable artifact under repo root")
+    args = parser.parse_args()
+
     print("─" * 72)
     print("git_artifact_perceptron — the smallest real version of the form perceptron")
     print("─" * 72)
 
-    cells = ingest_chosen()
-    print(f"Ingested {len(cells)} gas-cells across {len({c.kind for c in cells})} kinds.")
+    if args.all:
+        import time as _time
+        t0 = _time.perf_counter()
+        cells = ingest_all()
+        elapsed = _time.perf_counter() - t0
+        print(f"Ingested {len(cells)} gas-cells from full repo walk in {elapsed:.2f}s")
+    else:
+        cells = ingest_chosen()
+        print(f"Ingested {len(cells)} gas-cells across {len({c.kind for c in cells})} kinds.")
     print()
 
     # ─── Gesture 1: EXECUTE ──────────────────────────────────────────────

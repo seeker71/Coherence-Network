@@ -216,3 +216,32 @@ lc-frequency-routes-reception
   the first foothold of the wider perceptron. As the harness covers
   more substrate operations, the perceptron's sensing surface widens
   with it.
+
+## What's live as of 2026-05-20
+
+The perceptron's first ground is now in the body:
+
+- **`BDomain.ARTIFACT = 16`** in `category.py` — every git-tracked file
+  has a place in the substrate as a gas-cell.
+- **`ingest_git_artifact(session, path, content_hash, size_bytes,
+  mtime)`** in `markdown_frontend.py` — the idempotent encoder. Kind-
+  to-Hz mapping (md=741, form=432, py/ts=528, yaml/json=174,
+  sh=417, default=432) authors a HARMONIC_AT resonance edge
+  automatically.
+- **In-memory perceptron** at [`scripts/git_artifact_perceptron.py`](../../../scripts/git_artifact_perceptron.py)
+  — walks the chosen demo set or, with `--all`, the full repo
+  (2,934 cells in 0.17s on this machine). Demonstrates all five
+  gestures on actual files.
+- **Substrate-native perceptron** at [`scripts/git_artifact_perceptron_substrate.py`](../../../scripts/git_artifact_perceptron_substrate.py)
+  — same five gestures via `ingest_git_artifact`, `find_cells_compatible_with`,
+  `find_cells_harmonic_at`, `find_downstream_cells`, `_DISPATCH_BY_KIND`,
+  `_TRANSMUTATIONS`. Runs end-to-end when the substrate kernel is
+  importable; degrades cleanly otherwise.
+- **Word-cell-granularity gesture 3** at [`scripts/word_cell_rewriter.py`](../../../scripts/word_cell_rewriter.py)
+  — rewrite preview at the (lemma, POS) layer rather than the byte
+  layer. Uses `tokenize_words` from PR #1748 when available; falls
+  back to a local tokenizer otherwise.
+
+Each gesture is real code, runnable today at one or both altitudes.
+The substrate-native script awaits sqlalchemy + the kernel to run
+end-to-end; CI validates the test surface that grew alongside the code.
