@@ -755,6 +755,14 @@ impl Kernel {
         self.register_native("node_value", cat_witness(), |k, _, args| {
             k.trivial_value(args[0].as_nid())
         });
+        // node_eq — compare two NodeIDs structurally without coercing to int.
+        // The kernel's `eq` (RCMP_EQ) does as_int on both operands, which
+        // panics on NodeIDs. node_eq closes that gap so Form code (like
+        // emit-engine.fk's lookup-template) can dispatch on Recipe category
+        // by direct NodeID equality. Sibling parity required across Go/TS.
+        self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
+            Value::Bool(args[0].as_nid() == args[1].as_nid())
+        });
         // walk_recipe — evaluate a NodeID in a fresh root frame. Returns
         // the value the recipe produces. Use case: Form code builds a
         // recipe via intern_node, then walks it to get the runtime result.

@@ -50,12 +50,17 @@
     (defn template-cat (entry)  (head entry))
     (defn template-fn  (entry)  (head (tail entry)))
 
+    ;; Wraps the found function in a single-element list so callers can
+    ;; use the standard (nil? result) check — closures aren't lists and
+    ;; `len` on a closure doesn't return 0, so unwrapped function values
+    ;; would defeat the nil? sentinel for "not found." Empty list = miss;
+    ;; (list fn) = hit, unwrap via (head result).
     (defn lookup-template (templates cat)
         (if (nil? templates) (empty)
             (do
                 (let entry (head templates))
-                (if (eq (template-cat entry) cat)
-                    (template-fn entry)
+                (if (node_eq (template-cat entry) cat)
+                    (list (template-fn entry))
                     (lookup-template (tail templates) cat)))))
 
     ;; ──────────────────────────────────────────────────────────────────
@@ -82,18 +87,16 @@
     (defn emit-recipe (r templates)
         (do
             (let children (node_children r))
-            ;; Leaf first — skip template lookup entirely for trivials.
-            ;; (Avoids invoking eq on NodeIDs, which the Rust kernel
-            ;; currently coerces to int. node_eq as a kernel native
-            ;; would lift this — the kernel-extension lesson surfaces.)
             (if (nil? children)
                 (emit-leaf r)
                 (do
                     (let cat (node_category r))
-                    (let tmpl-fn (lookup-template templates cat))
-                    (if (nil? tmpl-fn)
+                    (let tmpl-result (lookup-template templates cat))
+                    (if (nil? tmpl-result)
                         (emit-default-composite children templates)
-                        (tmpl-fn (emit-children children templates)))))))
+                        (do
+                            (let tmpl-fn (head tmpl-result))
+                            (tmpl-fn (emit-children children templates))))))))
 
     ;; Trivial leaf: kernel's node_value returns the underlying primitive.
     ;; int_to_str passes strings through and converts ints. For

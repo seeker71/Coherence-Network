@@ -40,17 +40,28 @@
             (list CAT-DIVIDE   arith-divide)))
 
     ;; --- probe 1: trivial leaf emits its value ---------------------
-    ;; intern_trivial_int 42 → Recipe with node_value=42, no children
-    ;; encode → "42"; str_to_int "42" → 42
-    (let r1 (intern_trivial_int 42))
-    (let probe-1 (str_to_int (encode r1 arith-templates)))   ; → 42
+    (let probe-1 (str_to_int (encode (intern_trivial_int 42) arith-templates)))  ; → 42
 
-    ;; --- probe 2: another trivial leaf at a different value --------
-    (let probe-2 (str_to_int (encode (intern_trivial_int 100) arith-templates)))  ; → 100
+    ;; --- probe 2: composite Recipe via template (with node_eq now) -
+    ;; (intern_node CAT-PLUS (list (trivial 7) (trivial 3))) → "7 + 3"
+    (let r2 (intern_node CAT-PLUS
+                          (list (intern_trivial_int 7)
+                                (intern_trivial_int 3))))
+    (let s2 (encode r2 arith-templates))                      ; → "7 + 3"
+    (let probe-2 (str_len s2))                                ; → 5
 
-    ;; --- probe 3: yet another --------------------------------------
-    (let probe-3 (str_to_int (encode (intern_trivial_int 14) arith-templates)))   ; → 14
+    ;; --- probe 3: nested composite (5 * (4 + 6)) ------------------
+    (let r3 (intern_node CAT-MULTIPLY
+                          (list (intern_trivial_int 5)
+                                (intern_node CAT-PLUS
+                                              (list (intern_trivial_int 4)
+                                                    (intern_trivial_int 6))))))
+    (let s3 (encode r3 arith-templates))                      ; → "5 * 4 + 6"
+    (let probe-3 (str_len s3))                                ; → 9
 
-    ;; --- sum the probes (sibling kernels must agree on every digit) -
-    ;; 42 + 100 + 14 = 156
-    (add probe-1 (add probe-2 probe-3)))
+    ;; --- probe 4: another trivial ---------------------------------
+    (let probe-4 (str_to_int (encode (intern_trivial_int 100) arith-templates)))  ; → 100
+
+    ;; --- sum (sibling kernels agree) -------------------------------
+    ;; 42 + 5 + 9 + 100 = 156
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))

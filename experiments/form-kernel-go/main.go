@@ -795,6 +795,13 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("node_value", catWitness(), func(k *Kernel, args []Value) Value {
 		return k.trivialValue(args[0].Nid)
 	})
+	// node_eq — compare two NodeIDs structurally. Sibling to Rust's node_eq.
+	// Form code (emit-engine.fk lookup-template) uses this for category
+	// dispatch — the kernel's `eq` (RCMP_EQ) coerces operands via as_int,
+	// which panics on NodeIDs; node_eq closes that gap.
+	k.registerNative("node_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)
