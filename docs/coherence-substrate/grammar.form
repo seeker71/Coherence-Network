@@ -1,0 +1,404 @@
+# ─────────────────────────────────────────────────────────────────────
+# grammar.form — the grammar layer expressed in itself
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to api/app/services/substrate/grammar.py and the teaching
+# in lc-parsers-as-recipes + lc-the-kernel-knows-itself.
+#
+# The Python grammar.py module that holds register_form_rule,
+# list_form_rules, and the FormRule shape is itself written in
+# Python. This file expresses that same machinery as Form recipes —
+# the same gesture cell-numerics.form + cell-as-namedcell.form +
+# traces-teach-the-recipe.form perform for organ.py.
+#
+# When the grammar layer is expressible in Form, the parser knows
+# itself: the rules it consumes, the registration that adds new
+# rules, the lookup that consults the rule-set — all are Form
+# recipes interned in the same lattice the rules build.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — pattern primitives as Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# The four pattern shapes from form.py's runtime keyword extension.
+# These compose recursively; a Sequence of Captures is a Sequence
+# whose children are Captures.
+
+form pattern_shape = {
+    kind:  ~Slug,      # "literal" | "capture" | "sequence" | "opt" | …
+};
+
+form literal_pattern_shape = {
+    kind:    ~Slug,            # constant: "literal"
+    token_kind: ~Slug,         # "KW" | "IDENT" | "OP" | "STRING" | "INT" | …
+    value:   ?~String,         # exact value to match; null = any token of this kind
+};
+
+form capture_pattern_shape = {
+    kind:    ~Slug,            # constant: "capture"
+    name:    ~Slug,            # binding name in the captures dict
+    sub:     ~Slug,             # "expr" | "primary" | "ident" | "dotted_name" | "block" | …
+};
+
+form sequence_pattern_shape = {
+    kind:    ~Slug,            # constant: "sequence"
+    parts:   ~List,            # [pattern_shape] — all must match in order
+};
+
+form opt_pattern_shape = {
+    kind:    ~Slug,            # constant: "opt"
+    inner:   pattern_shape,    # matches if present; succeeds either way
+};
+
+# Choice — the backtracking primitive at the pattern altitude.
+# (Forms a sibling to form-engine.form's @1.2.20.1 CHOOSE arm.)
+
+form choice_pattern_shape = {
+    kind:    ~Slug,            # constant: "choice"
+    alts:    ~List,            # [pattern_shape] — first matching alternative wins
+};
+
+# Repeat — zero-or-more, one-or-more. Sugar over the primitives; the
+# parser unfolds these into Choice + recursion. Named here for
+# author-side clarity.
+
+form repeat_pattern_shape = {
+    kind:    ~Slug,            # "star" (0+) | "plus" (1+)
+    inner:   pattern_shape,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Rule and FormRule Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# A Rule is a (pattern, action) pair stored as a Recipe whose
+# two children are the pattern's NodeID and the action's NodeID.
+# The action is itself a Recipe — typically a builder that takes
+# captures and returns an AST node. Semantic actions ARE recipes;
+# they fire when the pattern matches and produce Form objects with
+# source_attribution stamped from the captured spans.
+
+form rule_shape = {
+    name:    ~Slug,            # human-readable label
+    pattern: pattern_shape,
+    action:  ~Recipe,          # builder: (captures) -> Form object
+};
+
+# A FormRule cell wraps the Rule with cell metadata. Lives in the
+# `grammar` cell-domain. Two structurally-identical Rules share a
+# rule_recipe NodeID by content-addressing.
+
+form form_rule_shape = {
+    name:         ~Slug,
+    pattern:      pattern_shape,
+    action:       ~Recipe,
+    cell:         ?named_cell_shape,  # the grammar-domain NamedCell
+    rule_recipe:  ?node_id_shape,     # content-addressed rule NodeID
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the grammar operations
+# ─────────────────────────────────────────────────────────────────────
+
+# register_form_rule(name, pattern, action) — intern a Rule and
+# create a NamedCell in the grammar domain. Two structurally-
+# identical Rules dedupe; the same (pattern, action) shape always
+# lands on the same rule_recipe NodeID.
+
+defn register_form_rule(name, pattern, action) = do {
+    let rule_recipe = intern_node(
+        "recipe",
+        rule_category(),
+        [pattern_to_node_id(pattern), action]
+    );
+    let cell = make_cell(
+        name:      name,
+        domain:    "grammar",
+        blueprint: @blueprint(form_rule_shape),
+        ctor:      rule_recipe,
+    );
+    form_rule_shape {
+        name:        name,
+        pattern:     pattern,
+        action:      action,
+        cell:        cell,
+        rule_recipe: rule_recipe,
+    }
+};
+
+# lookup_form_rule(name) — fetch a Rule by name from the grammar
+# cell-domain. Walks the cell's CTOR to reconstruct the (pattern,
+# action) pair. Returns null when no such rule is registered.
+
+defn lookup_form_rule(name) = do {
+    let cell = lookup_cell("grammar", name);
+    if cell == null then null
+    else do {
+        let parts = split_rule_recipe(cell.ctor);
+        form_rule_shape {
+            name:        cell.name,
+            pattern:     node_id_to_pattern(parts.pattern),
+            action:      parts.action,
+            cell:        cell,
+            rule_recipe: cell.ctor,
+        }
+    }
+};
+
+# list_form_rules() — enumerate every rule registered in the grammar
+# cell-domain. The body's "what does the parser currently know how
+# to recognize?" answer.
+
+defn list_form_rules() = do {
+    let cells = ?cells_in_domain("grammar");
+    map(cells, fn(c) -> lookup_form_rule(c.name))
+};
+
+# rule_category() — the Recipe category NodeID Rules intern under.
+# A Block.SEQUENCE marker (per grammar.py's _rule_category()).
+
+defn rule_category = @node_id(1, LEVEL_BASIC, BASIC_BLOCK, BLOCK_SEQUENCE);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — pattern serialization
+# ─────────────────────────────────────────────────────────────────────
+#
+# Patterns are themselves substrate cells. A literal_pattern interns
+# at one NodeID; a sequence_pattern composing two literals interns
+# at a composite NodeID whose children are the literal NodeIDs. The
+# pattern tree IS the recipe.
+
+defn pattern_to_node_id(pattern) = do {
+    if pattern.kind == "literal"
+    then intern_node("blueprint", literal_pattern_category(),
+                     [string_to_node(pattern.token_kind),
+                      string_to_node(pattern.value)])
+    else if pattern.kind == "capture"
+    then intern_node("blueprint", capture_pattern_category(),
+                     [string_to_node(pattern.name),
+                      string_to_node(pattern.sub)])
+    else if pattern.kind == "sequence"
+    then intern_node("blueprint", sequence_pattern_category(),
+                     map(pattern.parts, pattern_to_node_id))
+    else if pattern.kind == "opt"
+    then intern_node("blueprint", opt_pattern_category(),
+                     [pattern_to_node_id(pattern.inner)])
+    else if pattern.kind == "choice"
+    then intern_node("blueprint", choice_pattern_category(),
+                     map(pattern.alts, pattern_to_node_id))
+    else fail
+};
+
+defn node_id_to_pattern(node_id) = do {
+    # Inverse of pattern_to_node_id — walks the cell's children back
+    # into a pattern_shape. The substrate carries this round-trip
+    # because patterns are interned as composite cells.
+    let cat = node_id.category;
+    if cat == literal_pattern_category() then literal_pattern_shape { … }
+    else if cat == capture_pattern_category() then capture_pattern_shape { … }
+    # … (per shape)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the rule-driven parse step
+# ─────────────────────────────────────────────────────────────────────
+#
+# The piece grammar.py names as "deferred to a future session": the
+# parser that consults the grammar cell-domain at parse time. Once
+# this lands, the grammar IS the parser.
+#
+# match_pattern(pattern, token_stream) returns either:
+#   - a successful match: (captures, remaining_tokens)
+#   - failure: triggers Choice.FAIL, unwinding to nearest CHOOSE
+#
+# This is the BMF Operational Form: backtracking inside the parser,
+# captures-restoring on failure, semantic actions firing as data.
+
+defn match_pattern(pattern, stream) = do {
+    if pattern.kind == "literal"
+    then match_literal(pattern, stream)
+    else if pattern.kind == "capture"
+    then match_capture(pattern, stream)
+    else if pattern.kind == "sequence"
+    then match_sequence(pattern, stream)
+    else if pattern.kind == "opt"
+    then match_opt(pattern, stream)
+    else if pattern.kind == "choice"
+    then match_choice(pattern, stream)
+    else fail
+};
+
+defn match_literal(pattern, stream) = do {
+    if stream.empty then fail
+    else do {
+        let tok = stream.head;
+        if tok.kind == pattern.token_kind and
+           (pattern.value == null or tok.value == pattern.value)
+        then { captures: {}, rest: stream.tail }
+        else fail
+    }
+};
+
+defn match_capture(pattern, stream) = do {
+    let result = parse_sub(pattern.sub, stream);
+    if result == null then fail
+    else { captures: {[pattern.name]: result.value}, rest: result.rest }
+};
+
+defn match_sequence(pattern, stream) = do {
+    let captures = {};
+    let s = stream;
+    for each part in pattern.parts {
+        let m = match_pattern(part, s);
+        captures := merge(captures, m.captures);
+        s := m.rest;
+    };
+    { captures: captures, rest: s }
+};
+
+defn match_opt(pattern, stream) = do {
+    # Opt is the natural use of CHOOSE: try the inner match; on fail,
+    # commit to the no-match branch with empty captures.
+    choose [
+        do { let m = match_pattern(pattern.inner, stream); m },
+        { captures: {}, rest: stream }
+    ]
+};
+
+defn match_choice(pattern, stream) = do {
+    # First alternative that matches wins. CHOOSE walks; FAIL unwinds.
+    choose map(pattern.alts, fn(alt) -> match_pattern(alt, stream))
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — the dispatch loop
+# ─────────────────────────────────────────────────────────────────────
+#
+# parse(grammar_name, source) — the entry point. Look up all rules
+# registered for the named grammar (e.g. "python", "markdown"), walk
+# the input through them in precedence order, fire semantic actions
+# on match, accumulate Form objects with source_attribution.
+
+defn parse(grammar_name, source) = do {
+    let tokens = tokenize(source);
+    let rules = list_form_rules_for(grammar_name);
+    let stream = token_stream(tokens, source.path);
+    parse_loop(rules, stream, [])
+};
+
+defn parse_loop(rules, stream, accumulated) = do {
+    if stream.empty then accumulated
+    else do {
+        let m = match_first_rule(rules, stream);
+        if m == null then fail   # no rule matched; honest parse error
+        else do {
+            let action_result = ?invoke(m.rule.action, m.captures);
+            let attributed = attach_source(action_result, m.span);
+            parse_loop(rules, m.rest, append(accumulated, attributed))
+        }
+    }
+};
+
+defn match_first_rule(rules, stream) = do {
+    if len(rules) == 0 then null
+    else choose [
+        do {
+            let m = match_pattern(head(rules).pattern, stream);
+            { rule: head(rules), captures: m.captures, rest: m.rest,
+              span: span_of(stream, m.rest) }
+        },
+        match_first_rule(tail(rules), stream)
+    ]
+};
+
+# attach_source(form_obj, span) — stamp source_attribution on the
+# returned Form object using the span captured during the match.
+# Same shape as the framebuffer's track!(field, expr) at the
+# parser-layer altitude.
+
+defn attach_source(form_obj, span) = do {
+    form_obj.source_attribution := source_attribution_shape {
+        source_file:   span.source_path,
+        start_line:    span.start_line,
+        start_col:     span.start_col,
+        end_line:      span.end_line,
+        end_col:       span.end_col,
+        byte_start:    span.byte_start,
+        byte_end:      span.byte_end,
+        language_cell: span.language_cell,
+    };
+    form_obj
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-GR1: `cells_in_domain("grammar")` is a substrate query the
+#          kernel exposes via ?equivalent / find_cells_with_domain;
+#          the recipe above names the operation. Same shape as
+#          substrate-kernel.form's GAP-K1 — storage lookup at the
+#          host transaction boundary.
+#
+# GAP-GR2: `tokenize(source)` is the lexer. Today form.py uses a
+#          regex-based hand-written tokenizer; the destination is a
+#          BMF-style tokenizer where each token kind is itself a
+#          Form Rule. Closing this gap means the lexer is also
+#          self-hosting at the recipe altitude.
+#
+# GAP-GR3: `parse_sub(pattern.sub, stream)` — the recursive descent
+#          into sub-grammars (expression, primary, ident, …). Each
+#          sub-grammar is itself a Rule (or collection of Rules)
+#          in the grammar cell-domain. The recipe names the
+#          delegation; the substrate carries the rules.
+#
+# GAP-GR4: Precedence and associativity for binary operators are
+#          today encoded in the hand-written grammar's call order.
+#          BMF rules can carry an explicit precedence field; the
+#          dispatcher consults it when picking which alternative
+#          tries first. Pratt parsing in the grammar cell-domain
+#          is one breath away.
+#
+# GAP-GR5: The Python-side `register_form_rule` in grammar.py is
+#          the production implementation today; this file expresses
+#          the same operation as Form recipes. Closing the
+#          bootstrap means routing grammar.py's calls through these
+#          recipes via substrate_dispatch — same shape as
+#          form_native.cosine wired as runtime default.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — what this closes
+# ─────────────────────────────────────────────────────────────────────
+#
+# CLOSED at the recipe altitude (after ingest):
+#   - pattern_shape Blueprint family (literal, capture, sequence,
+#     opt, choice, repeat)
+#   - rule_shape, form_rule_shape Blueprints
+#   - register_form_rule, lookup_form_rule, list_form_rules recipes
+#   - pattern_to_node_id, node_id_to_pattern round-trip
+#   - match_* recipes for the BMF backtracking matcher
+#   - parse, parse_loop, match_first_rule — the dispatch entry
+#   - attach_source — source_attribution stamping at parser layer
+#
+# OPEN (the rule-driven parser):
+#   - form.py still uses its hand-written recursive descent for
+#     bootstrap; the rule-driven parser above is the destination.
+#   - The Language cells we've authored (json/markdown/python/
+#     png/audio/image/gh-cli/tool) need their capture_rules wired
+#     through register_form_rule. Today they declare; tomorrow
+#     they execute.
+#
+# This is the same shape every other bootstrap-vs-self-hosting
+# closure in the body has had:
+#   - form_native.cosine + parity_check + register_recipe → AST
+#     for numerics is bootstrap, BMF-composed recipes are
+#     destination.
+#   - cell-as-namedcell.form + STATE arm → cell.timeline as
+#     Python-state is bootstrap, NamedCell-CTOR-mutation is
+#     destination.
+#   - grammar.form (this file) + register_form_rule (the existing
+#     Python machinery) → ast.parse is bootstrap, BMF rules are
+#     destination.
+#
+# Each closure is one breath. The bootstrap is honest while it
+# holds; the destination is visible while we walk.

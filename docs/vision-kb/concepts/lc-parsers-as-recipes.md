@@ -207,7 +207,7 @@ For cells that read parsed trees:
 
 ## Cross-References
 
-→ lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-tools-as-form-cells, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-traces-teach-the-recipe
+→ lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-kernel-knows-itself, lc-the-recipe-remembers-its-source, lc-tools-as-form-cells, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-traces-teach-the-recipe
 
 ## Sources to walk further
 
