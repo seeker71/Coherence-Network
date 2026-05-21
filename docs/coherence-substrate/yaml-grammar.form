@@ -43,18 +43,202 @@ form yaml_anchor_shape = {
 # stage that normalizes indentation to an explicit tree-level token
 # stream before the ingest_pattern runs.
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 2.5 — concrete Form-recipe rules (block-style YAML subset)
+# ─────────────────────────────────────────────────────────────────────
+#
+# YAML is indent-sensitive — the pre_pipeline's yaml_indent_tokenizer
+# emits INDENT / DEDENT tokens so the rules below can ignore raw
+# column alignment. The token kinds the rules consume:
+#
+#   STRING / INT / FLOAT / KW — literal values
+#   OP — `:` `-` `&` `*` `!`
+#   INDENT / DEDENT — block-structure markers
+#
+# Coverage today: block-style mappings + sequences + plain/quoted
+# scalars. Anchors and aliases ship as separate rules (yaml_anchor_rule
+# / yaml_alias_rule). Tagged values (`!!str`, `!str`), flow-style
+# (`{a: 1, b: 2}`), and multi-doc streams (`---`/`...`) are honest GAPs
+# named in Part 5 — each is one breath of work composing the same
+# primitives.
+
+defn _yaml_lit_op(value)   = pattern_literal_shape { kind: "OP",     value: value };
+defn _yaml_lit_kw(value)   = pattern_literal_shape { kind: "KW",     value: value };
+defn _yaml_lit_str()       = pattern_literal_shape { kind: "STRING", value: null };
+defn _yaml_lit_int()       = pattern_literal_shape { kind: "INT",    value: null };
+defn _yaml_lit_float()     = pattern_literal_shape { kind: "FLOAT",  value: null };
+defn _yaml_lit_ident()     = pattern_literal_shape { kind: "IDENT",  value: null };
+defn _yaml_lit_indent()    = pattern_literal_shape { kind: "INDENT", value: null };
+defn _yaml_lit_dedent()    = pattern_literal_shape { kind: "DEDENT", value: null };
+
+# ────────────────────────────── rule: yaml_scalar ─────────────────────
+defn yaml_scalar_rule = rule_shape {
+    name:    "yaml_scalar",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            pattern_capture_shape { name: "str_val",   child: _yaml_lit_str() },
+            pattern_capture_shape { name: "float_val", child: _yaml_lit_float() },
+            pattern_capture_shape { name: "int_val",   child: _yaml_lit_int() },
+            pattern_capture_shape { name: "true_lit",  child: _yaml_lit_kw("true") },
+            pattern_capture_shape { name: "false_lit", child: _yaml_lit_kw("false") },
+            pattern_capture_shape { name: "null_lit",  child: _yaml_lit_kw("null") },
+            pattern_capture_shape { name: "tilde_lit", child: _yaml_lit_op("~") },
+            # Bare ident scalars (`foo: bar` where `bar` is unquoted)
+            pattern_capture_shape { name: "ident_val", child: _yaml_lit_ident() },
+        ],
+    },
+    action:  defn yaml_scalar_action(captures, span) = do {
+        # Discriminated union — exactly one of the alternatives matched.
+        if captures.str_val != null   then yaml_value_shape { scalar: captures.str_val, ... }
+        else if captures.float_val != null then yaml_value_shape { scalar: captures.float_val, ... }
+        else if captures.int_val != null   then yaml_value_shape { scalar: captures.int_val, ... }
+        else if captures.true_lit != null  then yaml_value_shape { scalar: true, ... }
+        else if captures.false_lit != null then yaml_value_shape { scalar: false, ... }
+        else if captures.null_lit != null  then yaml_value_shape { scalar: null, ... }
+        else if captures.tilde_lit != null then yaml_value_shape { scalar: null, ... }
+        else if captures.ident_val != null then yaml_value_shape { scalar: captures.ident_val, ... }
+        else yaml_value_shape { ... }
+    },
+};
+
+# ────────────────────────────── rule: yaml_mapping_entry ──────────────
+defn yaml_mapping_entry_rule = rule_shape {
+    name:    "yaml_mapping_entry",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "key", child: _yaml_lit_ident() },
+            _yaml_lit_op(":"),
+            pattern_capture_shape { name: "value", child: ?rule yaml_value },
+        ],
+    },
+    action:  defn yaml_mapping_entry_action(captures, span) = do {
+        [captures.key, captures.value]
+    },
+};
+
+# ────────────────────────────── rule: yaml_mapping ────────────────────
+defn yaml_mapping_rule = rule_shape {
+    name:    "yaml_mapping",
+    pattern: pattern_sequence_shape {
+        children: [
+            _yaml_lit_indent(),
+            pattern_capture_shape { name: "first", child: yaml_mapping_entry_rule.pattern },
+            pattern_star_shape {
+                name: "rest",
+                child: pattern_capture_shape { name: "entry", child: yaml_mapping_entry_rule.pattern },
+            },
+            _yaml_lit_dedent(),
+        ],
+    },
+    action:  defn yaml_mapping_action(captures, span) = do {
+        let pairs = [yaml_mapping_entry_action(captures.first.captures, span)];
+        for entry in (captures.rest ?? []):
+            pairs = pairs + [yaml_mapping_entry_action(entry.entry.captures, span)];
+        yaml_value_shape { mapping: { pairs: pairs }, ... }
+    },
+};
+
+# ────────────────────────────── rule: yaml_sequence ───────────────────
+defn yaml_sequence_rule = rule_shape {
+    name:    "yaml_sequence",
+    pattern: pattern_sequence_shape {
+        children: [
+            _yaml_lit_indent(),
+            pattern_capture_shape {
+                name: "first",
+                child: pattern_sequence_shape {
+                    children: [
+                        _yaml_lit_op("-"),
+                        pattern_capture_shape { name: "value", child: ?rule yaml_value },
+                    ],
+                },
+            },
+            pattern_star_shape {
+                name: "rest",
+                child: pattern_capture_shape {
+                    name: "entry",
+                    child: pattern_sequence_shape {
+                        children: [
+                            _yaml_lit_op("-"),
+                            pattern_capture_shape { name: "value", child: ?rule yaml_value },
+                        ],
+                    },
+                },
+            },
+            _yaml_lit_dedent(),
+        ],
+    },
+    action:  defn yaml_sequence_action(captures, span) = do {
+        let elements = [captures.first.captures.value];
+        for entry in (captures.rest ?? []):
+            elements = elements + [entry.entry.captures.value];
+        yaml_value_shape { sequence: { elements: elements }, ... }
+    },
+};
+
+# ────────────────────────────── rule: yaml_anchor ─────────────────────
+defn yaml_anchor_rule = rule_shape {
+    name:    "yaml_anchor",
+    pattern: pattern_sequence_shape {
+        children: [
+            _yaml_lit_op("&"),
+            pattern_capture_shape { name: "name",  child: _yaml_lit_ident() },
+            pattern_capture_shape { name: "value", child: ?rule yaml_value },
+        ],
+    },
+    action:  defn yaml_anchor_action(captures, span) = do {
+        yaml_value_shape {
+            anchor: { name: captures.name, target: captures.value },
+            ...
+        }
+    },
+};
+
+# ────────────────────────────── rule: yaml_alias ──────────────────────
+defn yaml_alias_rule = rule_shape {
+    name:    "yaml_alias",
+    pattern: pattern_sequence_shape {
+        children: [
+            _yaml_lit_op("*"),
+            pattern_capture_shape { name: "name", child: _yaml_lit_ident() },
+        ],
+    },
+    action:  defn yaml_alias_action(captures, span) = do {
+        yaml_value_shape { alias: captures.name, ... }
+    },
+};
+
+# ────────────────────────────── rule: yaml_value ──────────────────────
+defn yaml_value_rule = rule_shape {
+    name:    "yaml_value",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            yaml_anchor_rule.pattern,
+            yaml_alias_rule.pattern,
+            yaml_mapping_rule.pattern,
+            yaml_sequence_rule.pattern,
+            yaml_scalar_rule.pattern,
+        ],
+    },
+    action:  defn yaml_value_action(captures, span) = captures,
+};
+
 defn yaml_grammar = grammar_shape {
     modality: modality_shape { name: "text-tree", domain: "data" },
-    ingest_pattern: ?rule yaml_value,
+    ingest_pattern: yaml_value_rule,
     parse_into: ~Blueprint @yaml_value_shape,
     capture_rules: [
-        rule(yaml_value,    "yaml_mapping | yaml_sequence | yaml_scalar | yaml_alias",  value_node),
-        rule(yaml_mapping,  "(yaml_key ':' yaml_value)+",                              object_node),
-        rule(yaml_sequence, "('-' yaml_value)+",                                       array_node),
-        rule(yaml_scalar,   "plain_scalar | quoted_scalar | block_scalar",             scalar_leaf),
-        rule(yaml_anchor,   "'&' identifier yaml_value",                               anchor_node),
-        rule(yaml_alias,    "'*' identifier",                                          alias_ref),
-        rule(yaml_tagged,   "'!!' identifier yaml_value | '!' identifier yaml_value",  tagged_node),
+        yaml_value_rule,
+        yaml_mapping_rule,
+        yaml_mapping_entry_rule,
+        yaml_sequence_rule,
+        yaml_scalar_rule,
+        yaml_anchor_rule,
+        yaml_alias_rule,
+        ?rule yaml_tagged,                  # GAP-Y-TAGGED (!!str, !str foo)
+        ?rule yaml_flow_mapping,            # GAP-Y-FLOW-MAP ({a: 1, b: 2})
+        ?rule yaml_flow_sequence,           # GAP-Y-FLOW-SEQ ([1, 2, 3])
+        ?rule yaml_multi_doc,               # GAP-Y-MULTIDOC (--- separators)
     ],
     pre_pipeline: [
         # Indent normalization: YAML's whitespace-significance is staged
