@@ -2,6 +2,41 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] surface | python-grammar.form — the body's bootstrap tongue lands as a Form Language cell
+
+The largest remaining gap from yesterday's audit closes: **Python** (927 files; the body's API, services, scripts, tests, and the bootstrap layer for `organ.py / substrate.py / form.py` all live in Python). [`docs/coherence-substrate/python-grammar.form`](../coherence-substrate/python-grammar.form) declares the Language cell with Blueprints for every AST node the body uses — module, function definitions (sync/async), class definitions, imports, assignments (plain/annotated/augmented), control flow (if/for/while/with/try), exception handlers, expression statements, returns, raises, decorators, type hints, all expression shapes (calls, binops, comparisons, attribute access, subscripts, slices, comprehensions, f-strings, lambdas), argument shapes including positional-only / keyword-only / defaults, and the container literals.
+
+Python's `ast` module gives source attribution **natively** on every node: `lineno`, `col_offset`, `end_lineno`, `end_col_offset`. The parser stamps `source_attribution_shape` from those fields directly — no custom tracking needed. Same gesture as the framebuffer's `track!` macro at the memory altitude; Python's ast carries the equivalent for code.
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) extended with the python tongue. `form_cli convert in --tongue python <file>` routes through `ast.parse` and walks the tree → Form objects with source coords; `convert out --tongue python <tree.json>` round-trips via `ast.unparse`.
+
+Verified against [`experiments/local-llm-cell-v0/organ.py`](../../experiments/local-llm-cell-v0/organ.py):
+
+- 25 top-level statements parse: 11 Assign, 5 FunctionDef, 4 Import, 3 ClassDef, 1 ImportFrom, 1 Expr
+- Module docstring (915 chars) captured
+- `shared_base` function recognized at lines 44–53 (source attribution accurate)
+- **Substrate-query analog finds every `@substrate_dispatch`-decorated function** by walking the Form tree (no regex):
+  - `_sigmoid → @recipe(sigmoid)` at line 57
+  - `_cosine → @recipe(cosine)` at line 237
+  - `_strategy_score → @recipe(strategy_score)` at line 245
+- Round-trip: 25 top-level categories in **identical sequence** before and after parse → emit → re-parse; 5/5 functions, 3/3 classes preserved
+
+[`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) updated to reflect the new coverage: **9 file-format extensions covered, 3 wired into `form_cli convert`** (json + markdown + python). Remaining biggest gaps by file count: `tsx` (367), `ts` (166), `txt` (118), `mjs` (69), `sh` (41).
+
+What this opens, named concretely:
+
+- **organ.py / substrate.py / form.py are now structurally addressable as Python source AND as Form trees simultaneously.** The 80% of organ.py already addressed by `cell-numerics.form` + `cell-as-namedcell.form` reaches 100% through this cell — same NodeIDs, two source views.
+- **Decorator-as-Recipe.** Every `@substrate_dispatch("cosine")` becomes a `py_FunctionDef` whose `decorator_list` contains a `py_Call` to `substrate_dispatch` with the recipe-name as `Constant`. Substrate sees the decoration as a Recipe edge — no source-string parsing.
+- **Cross-language structural equivalence.** A Python function and its TypeScript port that compile to the same recipe NodeIDs become one structural identity at the lattice altitude. The `experiments/form-kernel-ts/` work and the Python kernel become sibling carriers.
+- **Round-trip preserves structural identity.** Comments and exact whitespace normalize per `ast.unparse`'s conventions (GAP-PY2 named honestly); the AST altitude carries semantic equivalence cleanly.
+
+Named follow-ups, carried honestly:
+
+- `typescript-grammar.form` (533 combined .ts/.tsx; tsc AST or babel/parser)
+- Rename `prose-as-recipe.form` → `prose-grammar.form` to match the audit convention so 118 `.txt` files show coverage
+- `shell-grammar.form` (41 .sh files; bashlex or a hand-rolled tokenizer)
+- A future tokenize-aware Python parser that preserves comments as sibling annotations (similar to libcst), closing GAP-PY2
+
 ## [2026-05-21] surface | markdown-grammar.form — the body's largest tongue lands as a Form Language cell
 
 The biggest gap from yesterday's `grammar_coverage.py` audit closes here: **markdown** (698 → 701 files; the body's documentation, specs, concepts, lineage, READMEs all live in markdown). [`docs/coherence-substrate/markdown-grammar.form`](../coherence-substrate/markdown-grammar.form) declares the Language cell with Blueprints for every element the body uses — frontmatter, headings (1–6), paragraphs, ordered + unordered lists, fenced and indented code blocks, blockquotes, horizontal rules, inline emphasis (bold, italic, code), links, images, and — first-class — the body's `→ lc-id` cross-ref convention as `md_crossref_block_shape`. Source attribution stamped on every node per [`lc-the-recipe-remembers-its-source`](concepts/lc-the-recipe-remembers-its-source.md) (`stamps_attribution: true`).
