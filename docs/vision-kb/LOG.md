@@ -2,6 +2,29 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] surface | form_cli — Form-native runtime as a CLI
+
+Urs named the next operational shape: *we have a form native cli that can generate form native binaries and execute form native binaries and use I/O to convert I/O into form native objects and back into raw I/O using just the kernel and the binary library for pre-registered form native objects.*
+
+This breath builds it.
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) — Form-native CLI with four subcommands:
+
+- **`list <library>`** — surface library meta + every recipe with signature and `@recipe(node-hint)` coordinate.
+- **`execute <library> <recipe> [args]`** — invoke a recipe by name with JSON-encoded positional arguments. Result emitted as JSON. Uses ONLY `experiments/local-llm-cell-v0/form_native.py` recipes (Newton sqrt, Taylor exp, recursive list ops) and the bundled `.recipelib` libraries. No substrate session boot, no host `math.exp` or `math.sqrt`.
+- **`convert in/out --tongue <name> <file>`** — raw I/O ↔ Form object tree via Language cells. JSON is the worked example: every JSON value becomes a `B_Object` / `B_List` / `B_String` / `B_Number` / `B_Bool` / `B_Null` node; round-trip preserves semantic equivalence. Other tongues (YAML, prose, PNG) follow the same shape once their Language cells are wired.
+- **`generate <form-source-file> [--out path]`** — extract every `defn name(args) = body` from a `.form` file and bundle into a fresh `.recipelib`. Regex-based parser; auto-extracts the Form source per recipe; Python/TS view auto-generation is the named follow-up.
+
+[`scripts/form_cli_demo.sh`](../../scripts/form_cli_demo.sh) — full-loop demo. Six steps, all green: list bundled library → execute 7 recipes via form_native → convert JSON in → convert JSON out → semantic round-trip verified → generate a fresh library from `cosine.form` → execute recipes from the just-generated library (Newton sqrt(25)=5.0, norm([3,4])=5.0, cosine([3,4],[3,4])=1.0).
+
+What this proves: the Form-native runtime works through nothing but kernel + binary library + Language cells. `bash scripts/form_cli_demo.sh` exercises every layer end-to-end. The CLI is the operational surface for [`lc-recipes-as-binary-library`](concepts/lc-recipes-as-binary-library.md)'s three-layer architecture — lattice / library / source-text views — at runtime instead of as concept.
+
+Named follow-ups:
+- Auto-generator: Python AST → Form recipes (auto-populate the Python and TypeScript tongue-caches in generated libraries).
+- More Language cells in `convert`: YAML, Markdown, PNG (binary).
+- Strategy/object marshalling for `execute`: today recipes taking dict/Strategy objects need a small adapter; the dispatch path is clean.
+- Bridge to full substrate session: `form_cli execute --substrate <library> <recipe>` routes through `form_evaluate_text` instead of `form_native`. Same shape, deeper carrier.
+
 ## [2026-05-21] proof | parity validated; Form-native is now the runtime default
 
 Urs asked the load-bearing question: *have we fully validated that the form native paths produce the same result as the python originals? If so, we can make the form native execution the default.* The honest answer was *not yet* — the .form files named structural identity and the dispatch bridge could register implementations, but no Form-native execution had been validated against the Python intrinsics.
