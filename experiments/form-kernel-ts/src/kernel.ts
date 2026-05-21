@@ -437,6 +437,14 @@ export class Kernel {
   // subcommand. Sibling-parity with Go/Rust kernels.
   trace?: Trace;
 
+  // Optional per-CTOR dispatch counter for Language-cell evaluators
+  // (lang-python.ts, lang-go.ts, lang-rust.ts) that have their own
+  // dispatch loop rather than going through `walk()`. The python-trace
+  // subcommand sets this; evalNode bumps the count for each constructor
+  // (CTOR.module, CTOR.def_, CTOR.while_, ...) it dispatches through.
+  // Surfaces the structural shape of evaluated Python at its own altitude.
+  ctorCounts?: Map<string, number>;
+
   constructor() {
     this.registerNatives();
   }
