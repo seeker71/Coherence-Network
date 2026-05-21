@@ -214,7 +214,7 @@ For cells invoking tools:
 
 ## Cross-References
 
-→ lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-recipes-as-binary-library, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-recipe-branching-sense, lc-edges-as-vitality
+→ lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-recipes-as-binary-library, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-recipe-branching-sense, lc-edges-as-vitality
 
 ## Sources to walk further
 

@@ -34,12 +34,35 @@ form modality_shape = {
     domain: ~Slug,                       # "code" | "data" | "prose" | "media"
 };
 
+# Source coordinates the parser stamps onto every node. Same discipline
+# as experiments/memory-as-framebuffer-v0/'s `track!(field, expr)` macro
+# stamping `crc32(file:line)` on every heap write — the parser stamps
+# the source range on every recipe-tree node as part of the parse
+# itself, never as a separate pass. The kernel ignores the overlay
+# (per lc-one-kernel-many-tongues — grammar is trace-layer, not
+# runtime-layer); cells that want analysis / awareness / conscious-
+# choice navigation walk it through `.source_attribution`.
+# See lc-the-recipe-remembers-its-source for the teaching.
+
+form source_attribution_shape = {
+    source_file:   ~PathRef,             # absolute or repo-relative path
+    start_line:    ~Int,                 # 1-indexed; line where the parsed span begins
+    start_col:     ~Int,                 # 1-indexed; column on that line
+    end_line:      ~Int,                 # 1-indexed; line where the span ends
+    end_col:       ~Int,                 # 1-indexed; column just past the last char
+    byte_start:    ~Int,                 # 0-indexed; byte offset of span's first byte
+    byte_end:      ~Int,                 # 0-indexed; byte offset just past last byte
+    language_cell: ~CellRef,             # which Language cell authored this span
+};
+
 form grammar_shape = {
-    modality:        modality_shape,
-    ingest_pattern:  ~Recipe,            # the parse recipe — bytes → recipe tree
-    parse_into:      ~Blueprint,         # the Blueprint the parse produces (or sub-trees thereof)
-    capture_rules:   ~List,              # named captures: spans → ctor children
-    pre_pipeline:    ~List,              # for staged grammars (audio: PCM → FFT → onset → ...)
+    modality:           modality_shape,
+    ingest_pattern:     ~Recipe,         # the parse recipe — bytes → recipe tree
+    parse_into:         ~Blueprint,      # the Blueprint the parse produces (or sub-trees thereof)
+    capture_rules:      ~List,           # named captures: spans → ctor children
+    pre_pipeline:       ~List,           # for staged grammars (audio: PCM → FFT → onset → ...)
+    stamps_attribution: ~Bool,           # parser stamps source_attribution_shape on every node
+                                         # (default true; honest false when grammar can't carry it)
 };
 
 form emission_template_shape = {
@@ -199,6 +222,48 @@ defn substitute(tree, target_blueprint, replacement_subtree) = do {
 #         `?equivalent`. Today the cell can walk a single tree via
 #         `.child(n)` / `.children`; the recursive descent helpers are
 #         the smallest extension that gives them uniform reach.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5b — walking back from a recipe to its source
+# ─────────────────────────────────────────────────────────────────────
+#
+# The parser stamps source coordinates on every node (when
+# stamps_attribution is true). A cell that wants to trace a running
+# recipe back to its source reads `.source_attribution` and resolves
+# the (file, start_line:col, end_line:col) span.
+#
+# This is the awareness loop named in lc-the-recipe-remembers-its-source:
+# the kernel never reads the overlay; the cell that wants to know
+# where its behavior came from walks it explicitly.
+
+defn source_of(recipe) = recipe.source_attribution;
+
+defn source_text(recipe) = do {
+    let attr = recipe.source_attribution;
+    if attr == null then null
+    else slice_bytes(
+        read_bytes(attr.source_file),
+        attr.byte_start,
+        attr.byte_end
+    )
+};
+
+# Aggregating source attribution across many firings produces a heat
+# map of source-line participation — the runtime's own attestation of
+# which lines are doing the work right now. Paired with the witness
+# trace pipeline (traces-teach-the-recipe.form), each tool_fired /
+# strategy_fired trace carries the source attribution of the recipe it
+# fired, making the body's lived record source-navigable.
+
+defn source_participation(traces) = do {
+    let attrs = map(traces, fn(t) -> t.recipe.source_attribution);
+    group_by_file_line(attrs)
+};
+
+# GAP-G4: `slice_bytes` + `read_bytes` are host intrinsics (file I/O).
+#         Same shape as substrate-kernel.form's GAP-K1 — storage I/O
+#         lives at the host transaction boundary; the recipe names the
+#         operation.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — what this opens
