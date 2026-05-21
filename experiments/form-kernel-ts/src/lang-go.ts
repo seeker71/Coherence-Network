@@ -182,14 +182,14 @@ function registerGoStdlib(k: Kernel): void {
   // most return calls structurally, so this native is only hit if an
   // un-lowered recipe is walked directly.
   if (!k.natives.has(k.internName("return"))) {
-    k.natives.set(k.internName("return"), (_kk, args) => {
+    k.setNative("return", (_kk, args) => {
       throw new GoReturn(args[0] ?? { kind: "null" });
     });
   }
   // Slice literal native — skips the leading element-type marker and
   // returns a plain list of evaluated items. Lets `[]int64{1,2,3}` walk.
   if (!k.natives.has(k.internName("__slice_literal__"))) {
-    k.natives.set(k.internName("__slice_literal__"), (_kk, args) => {
+    k.setNative("__slice_literal__", (_kk, args) => {
       // args[0] is the element-type string trivial; skip it.
       return { kind: "list", list: args.slice(1) };
     });
@@ -198,13 +198,13 @@ function registerGoStdlib(k: Kernel): void {
   // yet). Returns null when walked; round-trip emit re-renders the
   // `recv.field` shape.
   if (!k.natives.has(k.internName("__field__"))) {
-    k.natives.set(k.internName("__field__"), () => ({ kind: "null" }));
+    k.setNative("__field__", () => ({ kind: "null" }));
   }
   // Struct literal marker — returns the field-name → value pairs as a
   // list, leading with the type-name string. Walker semantics are
   // structural, not behavioral; sufficient for v0.
   if (!k.natives.has(k.internName("__struct_literal__"))) {
-    k.natives.set(k.internName("__struct_literal__"), (_kk, args) => ({
+    k.setNative("__struct_literal__", (_kk, args) => ({
       kind: "list",
       list: args.slice(),
     }));
@@ -212,7 +212,7 @@ function registerGoStdlib(k: Kernel): void {
   // FP literal marker — string-tagged float kept as a str value in v0
   // since the kernel has no native FP trivial.
   if (!k.natives.has(k.internName("__fp_literal__"))) {
-    k.natives.set(k.internName("__fp_literal__"), (_kk, args) => args[0] ?? { kind: "null" });
+    k.setNative("__fp_literal__", (_kk, args) => args[0] ?? { kind: "null" });
   }
   // `__fn_body__(body-thunk)` — invoked at function entry. We need a way
   // to defer the body's evaluation so we can wrap it in try/catch. The
@@ -230,7 +230,7 @@ function registerGoStdlib(k: Kernel): void {
   // `make([]T, n)` returns a list of n null entries. `make` ignores the
   // type-recipe argument at runtime (type lives in the recipe, not the value).
   if (!k.natives.has(k.internName("make"))) {
-    k.natives.set(k.internName("make"), (_kk, args) => {
+    k.setNative("make", (_kk, args) => {
       // Accept (typeName, n) or just (n).
       let n = 0;
       for (let i = args.length - 1; i >= 0; i--) {
@@ -245,7 +245,7 @@ function registerGoStdlib(k: Kernel): void {
     });
   }
   if (!k.natives.has(k.internName("append"))) {
-    k.natives.set(k.internName("append"), (_kk, args) => {
+    k.setNative("append", (_kk, args) => {
       const first = args[0];
       const base = first?.kind === "list" ? [...first.list] : [];
       for (let i = 1; i < args.length; i++) {
@@ -255,7 +255,7 @@ function registerGoStdlib(k: Kernel): void {
     });
   }
   if (!k.natives.has(k.internName("cap"))) {
-    k.natives.set(k.internName("cap"), (_kk, args) => {
+    k.setNative("cap", (_kk, args) => {
       const v = args[0];
       if (v?.kind === "list") return { kind: "int", int: v.list.length };
       if (v?.kind === "str") return { kind: "int", int: v.str.length };
@@ -265,7 +265,7 @@ function registerGoStdlib(k: Kernel): void {
   // fmt.Println — qualified name interned literally; parser routes "fmt.Println"
   // as a single identifier so the native lookup works without a module system.
   if (!k.natives.has(k.internName("fmt.Println"))) {
-    k.natives.set(k.internName("fmt.Println"), (kk, args) => {
+    k.setNative("fmt.Println", (kk, args) => {
       const parts = args.map((a) => renderForPrint(kk, a));
       process.stdout.write(parts.join(" ") + "\n");
       return { kind: "null" };
@@ -275,7 +275,7 @@ function registerGoStdlib(k: Kernel): void {
   // For string-from-bytes / runes we keep the simple Go semantic: string(i)
   // returns the UTF-8 representation of code point i; string(s) is identity.
   if (!k.natives.has(k.internName("string"))) {
-    k.natives.set(k.internName("string"), (_kk, args) => {
+    k.setNative("string", (_kk, args) => {
       const v = args[0];
       if (v?.kind === "str") return v;
       if (v?.kind === "int") return { kind: "str", str: String.fromCodePoint(v.int) };

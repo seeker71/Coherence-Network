@@ -153,11 +153,11 @@ function callNative(
   nameID: number,
   args: Value[],
 ): Value {
-  const fn = k.natives.get(nameID);
-  if (fn === undefined) {
+  const ne = k.natives.get(nameID);
+  if (ne === undefined) {
     throw new Error(`no such native: name#${nameID}`);
   }
-  return fn(k, args);
+  return ne.fn(k, args);
 }
 
 function valueAsInt(v: Value): number {

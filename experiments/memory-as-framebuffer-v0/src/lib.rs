@@ -1,12 +1,23 @@
 //! memory-as-framebuffer v0 — the heap as a recordable framebuffer.
 //!
 //! A 256x256 grid of 16-byte cells (1MB) holds `Tracked<T>` values for nine
-//! primitive types. A parallel u32 plane stores `crc32(file:line)` for each
-//! cell's last write. A snapshot thread renders both planes to RGBA frames
-//! at 60 fps and pipes them to ffmpeg, producing an mp4 of the heap breathing.
+//! primitive types. Two parallel planes record provenance per cell:
+//!   - **source plane** (`Vec<u32>`): `crc32(file:line)` of the last write.
+//!   - **substrate plane** (`Vec<NodeID>`): the substrate NodeID of the
+//!     Blueprint/Recipe/Cell that authored the write — zeros when no
+//!     attribution was passed (`Tracked::new`), populated when the writer
+//!     calls `Tracked::new_with_nodeid` / `track_node!`.
+//!
+//! A snapshot thread renders the data plane (and optionally the NodeID
+//! plane, color-coded by Blueprint category) to RGBA frames at 60 fps and
+//! pipes them to ffmpeg. The kernel attribution work (RBasic categories on
+//! every native, alongside the FNCALL arm) means a kernel-driven mutator
+//! has the NodeID at hand — the visualizer can then show hot-spots, recipe
+//! clusters, and Blueprint interactions in real time.
 //!
 //! Single mutator thread + one internal snapshot thread. v0 does not include
-//! pointer windows, 3D, LOD, navigation, or substrate integration.
+//! pointer windows, 3D, LOD, navigation, or substrate integration beyond
+//! the structural NodeID stamp recorded here.
 
 pub mod allocator;
 pub mod capture;
@@ -91,10 +102,42 @@ impl TrackedPrimitive for bool {
     }
 }
 
-/// The global framebuffer (data plane + provenance plane + snapshot thread + ffmpeg pipe).
+/// NodeID — the 4-tuple substrate coordinate (package, level, type, instance)
+/// of a Blueprint, Recipe, or NamedCell. The framebuffer records this per
+/// cell so the visualizer can color by Blueprint category, cluster by
+/// Recipe identity, and resolve back to the substrate at render time.
+///
+/// Identical layout to the form-kernel-rust/go/ts NodeID structs and to
+/// `api/app/services/substrate/kernel.py`. Carried as plain data here — no
+/// substrate dependency at the framebuffer altitude.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct NodeID {
+    pub pkg: u32,
+    pub level: u32,
+    pub ty: u32,
+    pub inst: u32,
+}
+
+impl NodeID {
+    /// True when this NodeID carries no Blueprint attribution. Cells that
+    /// were written via the un-attributed `Tracked::new` path carry this
+    /// sentinel in the substrate plane.
+    pub fn is_undefined(self) -> bool {
+        self.pkg == 0 && self.level == 0 && self.ty == 0 && self.inst == 0
+    }
+}
+
+/// The global framebuffer (data plane + two provenance planes + snapshot
+/// thread + ffmpeg pipe).
+///
+/// - `data`: 1 MB grid of 16-byte cells (the heap as a coordinate space).
+/// - `provenance`: source-location plane — `crc32(file:line)` per cell.
+/// - `nodeid_plane`: substrate-attribution plane — NodeID per cell.
+///   Zeros when the writer didn't pass a NodeID.
 pub struct Framebuffer {
     pub data: Mutex<SlabFramebuffer>,
-    pub provenance: Mutex<Vec<u32>>, // length = NUM_CELLS
+    pub provenance: Mutex<Vec<u32>>,             // length = NUM_CELLS
+    pub nodeid_plane: Mutex<Vec<NodeID>>,        // length = NUM_CELLS
     snapshot: Mutex<Option<SnapshotThread>>,
 }
 
@@ -103,6 +146,7 @@ impl Framebuffer {
         Self {
             data: Mutex::new(SlabFramebuffer::new()),
             provenance: Mutex::new(vec![0u32; NUM_CELLS]),
+            nodeid_plane: Mutex::new(vec![NodeID::default(); NUM_CELLS]),
             snapshot: Mutex::new(None),
         }
     }
@@ -336,6 +380,62 @@ impl<T: TrackedPrimitive> Tracked<T> {
             prov_plane[self.handle.index() as usize] = prov;
         }
     }
+
+    /// Allocate a cell and stamp the substrate NodeID of the Blueprint /
+    /// Recipe / NamedCell that authored this write. The source-location
+    /// plane still records the call-site file:line. Use this constructor
+    /// from kernel-driven mutators that have the NodeID at hand — Form
+    /// recipes walking through the rust/go/ts kernels know exactly which
+    /// category fired (see `native_blueprint` in those kernels).
+    #[track_caller]
+    pub fn new_with_nodeid(value: T, nodeid: NodeID) -> Self {
+        let caller = std::panic::Location::caller();
+        let prov = compute_and_register_prov(caller.file(), caller.line());
+
+        let fb = framebuffer();
+        let handle = {
+            let mut data = fb.data.lock().unwrap();
+            let h = data.alloc_cell(T::TAG);
+            let mut payload = [0u8; 14];
+            value.write_payload(&mut payload);
+            data.write_payload(h, &payload);
+            h
+        };
+        {
+            let mut prov_plane = fb.provenance.lock().unwrap();
+            prov_plane[handle.index() as usize] = prov;
+        }
+        {
+            let mut nid_plane = fb.nodeid_plane.lock().unwrap();
+            nid_plane[handle.index() as usize] = nodeid;
+        }
+
+        Tracked {
+            handle,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Write a new value AND stamp both the source location and the
+    /// substrate NodeID. Used by the `track_node!` macro.
+    pub fn write_with_nodeid(&mut self, value: T, file: &str, line: u32, nodeid: NodeID) {
+        let prov = compute_and_register_prov(file, line);
+        let fb = framebuffer();
+        {
+            let mut data = fb.data.lock().unwrap();
+            let mut payload = [0u8; 14];
+            value.write_payload(&mut payload);
+            data.write_payload(self.handle, &payload);
+        }
+        {
+            let mut prov_plane = fb.provenance.lock().unwrap();
+            prov_plane[self.handle.index() as usize] = prov;
+        }
+        {
+            let mut nid_plane = fb.nodeid_plane.lock().unwrap();
+            nid_plane[self.handle.index() as usize] = nodeid;
+        }
+    }
 }
 
 impl<T: TrackedPrimitive> Drop for Tracked<T> {
@@ -347,6 +447,9 @@ impl<T: TrackedPrimitive> Drop for Tracked<T> {
             }
             if let Ok(mut prov) = fb.provenance.lock() {
                 prov[self.handle.index() as usize] = 0;
+            }
+            if let Ok(mut nid) = fb.nodeid_plane.lock() {
+                nid[self.handle.index() as usize] = NodeID::default();
             }
         }
     }
@@ -362,4 +465,28 @@ macro_rules! track {
         let __value = $expr;
         $field.write_with_provenance(__value, file!(), line!());
     }};
+}
+
+/// Write `expr` into a `Tracked<T>` field, stamping both the source
+/// location and the substrate NodeID of the Blueprint/Recipe/Cell that
+/// authored the write.
+///
+/// Usage: `track_node!(my_field, new_value, my_nodeid)` where
+/// `my_field: &mut Tracked<T>`, `new_value: T`, and `my_nodeid: NodeID`.
+#[macro_export]
+macro_rules! track_node {
+    ($field:expr, $expr:expr, $nodeid:expr) => {{
+        let __value = $expr;
+        $field.write_with_nodeid(__value, file!(), line!(), $nodeid);
+    }};
+}
+
+/// Snapshot the NodeID plane. Returns one entry per cell. Cells that
+/// weren't written with a NodeID stamp carry the default (zeros).
+pub fn snapshot_nodeid_plane() -> Vec<NodeID> {
+    let fb = framebuffer();
+    fb.nodeid_plane
+        .lock()
+        .map(|p| p.clone())
+        .unwrap_or_else(|_| vec![NodeID::default(); NUM_CELLS])
 }

@@ -32,6 +32,7 @@
 - **Web**: Next.js 15 + shadcn/ui in `web/`
 - **Graph DB**: Neo4j — **Relational DB**: PostgreSQL
 - **Tests**: `api/tests/` — flow-centric, fast (seconds, not minutes)
+- **Kernels**: [`kernels/README.md`](kernels/README.md) — Rust, Go, TypeScript form-kernels are the core execution engine (sources still under `experiments/form-kernel-*/` until coordinated move). Sibling parity verified by `experiments/form-kernel-validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. See [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the Python → kernel → framebuffer arc.
 
 ## Workflow
 

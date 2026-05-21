@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 110
+**Total files**: 114
 
 | File | Purpose |
 |---|---|
@@ -54,6 +54,8 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
 | [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
 | [generate_work_visuals.py](generate_work_visuals.py) | !/usr/bin/env python3 |
+| [git_artifact_perceptron.py](git_artifact_perceptron.py) | !/usr/bin/env python3 |
+| [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | !/usr/bin/env python3 |
 | [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
@@ -95,6 +97,7 @@
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
+| [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
@@ -116,5 +119,6 @@
 | [viewport_audit.py](viewport_audit.py) | !/usr/bin/env python3 |
 | [wander.py](wander.py) | !/usr/bin/env python3 |
 | [wellness_check.py](wellness_check.py) | !/usr/bin/env python3 |
+| [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | !/usr/bin/env python3 |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | !/usr/bin/env python3 |

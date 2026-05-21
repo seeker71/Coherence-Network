@@ -1630,7 +1630,7 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
         } else {
           const nat = k.natives.get(nameID);
           if (nat !== undefined) {
-            return nat(k, argVals);
+            return nat.fn(k, argVals);
           }
           // Built-in fallbacks
           const builtin = builtinByName(k.nameStr(nameID));

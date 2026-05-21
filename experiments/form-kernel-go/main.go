@@ -20,9 +20,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,11 +43,16 @@ const (
 	LevelBasic   uint32 = 2
 
 	// RBasic — aligned with api/app/services/substrate/category.py
-	RBasicBlock   uint32 = 9
-	RBasicCond    uint32 = 11
-	RBasicMath    uint32 = 12
-	RBasicCompare uint32 = 13
-	RBasicLogic   uint32 = 14
+	RBasicUndefined uint32 = 0
+	RBasicWitness   uint32 = 6  // substrate self-attestation
+	RBasicBlock     uint32 = 9
+	RBasicCall      uint32 = 10 // invoke external effect (I/O, tool)
+	RBasicCond      uint32 = 11
+	RBasicMath      uint32 = 12
+	RBasicCompare   uint32 = 13
+	RBasicLogic     uint32 = 14
+	RBasicAccess    uint32 = 15 // read property / field
+	RBasicMethod    uint32 = 27 // transform on a cell-like value
 	// Kernel-demo additions (extending RBasic for self-hosting needs)
 	RBasicFnDef  uint32 = 31
 	RBasicFnCall uint32 = 32
@@ -98,6 +105,97 @@ type Recipe struct {
 // hot path.
 type NameID uint32
 
+// NativeEntry — a native's function plus the Form category it expresses.
+// Carries Blueprint attribution into the kernel: when the walker dispatches
+// through a native, the trace records the category alongside the FNCALL
+// arm, so reasoning about which Form-shapes did the work reaches inside
+// the host-language layer. UNDEFINED marks natives whose Form attribution
+// hasn't been settled yet — honest, not omitted.
+type NativeEntry struct {
+	Category NodeID
+	Fn       NativeFn
+}
+
+// Trace — per-arm dispatch counters. Held inside Kernel so the walker can
+// record without threading an extra reference through every recursive call.
+// Mirrors the Rust kernel's trace structure for sibling-kernel parity.
+type Trace struct {
+	TotalWalks      uint64
+	ArmCounts       map[uint32]uint64 // cat.Type → count
+	ChoiceAttempts  uint64
+	ChoiceSuccesses uint64
+	ChoiceFailures  uint64
+}
+
+func newTrace() *Trace {
+	return &Trace{ArmCounts: make(map[uint32]uint64)}
+}
+
+func (t *Trace) record(armTy uint32) {
+	t.TotalWalks++
+	t.ArmCounts[armTy]++
+}
+
+// armName — label categories in the trace JSON. Walker arms + native
+// Blueprint-attribution categories. Mirrors Rust kernel's Trace::arm_name.
+func armName(armTy uint32) string {
+	switch armTy {
+	case RBasicBlock:
+		return "BLOCK"
+	case RBasicCond:
+		return "COND"
+	case RBasicMath:
+		return "MATH"
+	case RBasicCompare:
+		return "COMPARE"
+	case RBasicLogic:
+		return "LOGIC"
+	case RBasicIdent:
+		return "IDENT"
+	case RBasicFnDef:
+		return "FNDEF"
+	case RBasicFnCall:
+		return "FNCALL"
+	case RBasicList:
+		return "LIST"
+	case RBasicWitness:
+		return "WITNESS"
+	case RBasicCall:
+		return "CALL"
+	case RBasicAccess:
+		return "ACCESS"
+	case RBasicMethod:
+		return "METHOD"
+	default:
+		return "OTHER"
+	}
+}
+
+func (t *Trace) toJSON() map[string]interface{} {
+	type armRec struct {
+		ArmTy   uint32 `json:"arm_ty"`
+		ArmName string `json:"arm_name"`
+		Count   uint64 `json:"count"`
+	}
+	arms := make([]armRec, 0, len(t.ArmCounts))
+	for ty, c := range t.ArmCounts {
+		arms = append(arms, armRec{ArmTy: ty, ArmName: armName(ty), Count: c})
+	}
+	sort.Slice(arms, func(i, j int) bool { return arms[i].Count > arms[j].Count })
+	rate := 0.0
+	if t.ChoiceAttempts > 0 {
+		rate = float64(t.ChoiceSuccesses) / float64(t.ChoiceAttempts)
+	}
+	return map[string]interface{}{
+		"total_walks":          t.TotalWalks,
+		"arms":                 arms,
+		"choice_attempts":      t.ChoiceAttempts,
+		"choice_successes":     t.ChoiceSuccesses,
+		"choice_failures":      t.ChoiceFailures,
+		"choice_success_rate":  rate,
+	}
+}
+
 // Kernel — the running substrate.
 type Kernel struct {
 	byHash  map[uint64]NodeID
@@ -105,7 +203,10 @@ type Kernel struct {
 	strs    []string
 	strIdx  map[string]NameID
 	next    uint32
-	natives map[NameID]NativeFn
+	natives map[NameID]NativeEntry
+	// Optional tracing — nil for hot-path runs, set for trace subcommand.
+	// Per lc-native-kernel-binary's "tracing and observation pattern."
+	Trace *Trace
 }
 
 func NewKernel() *Kernel {
@@ -114,7 +215,7 @@ func NewKernel() *Kernel {
 		byID:    make(map[NodeID]Recipe),
 		strIdx:  make(map[string]NameID),
 		next:    1,
-		natives: make(map[NameID]NativeFn),
+		natives: make(map[NameID]NativeEntry),
 	}
 	k.registerNatives()
 	return k
@@ -347,13 +448,23 @@ func (f *Frame) Lookup(name NameID) (Value, bool) {
 type NativeFn func(k *Kernel, args []Value) Value
 
 // registerNative — central registration point. The string name is
-// interned once into a NameID; runtime dispatch is u32-keyed.
-func (k *Kernel) registerNative(name string, fn NativeFn) {
-	k.natives[k.internName(name)] = fn
+// interned once into a NameID; runtime dispatch is u32-keyed. Each
+// native carries the Form category it expresses (Blueprint attribution).
+func (k *Kernel) registerNative(name string, category NodeID, fn NativeFn) {
+	k.natives[k.internName(name)] = NativeEntry{Category: category, Fn: fn}
 }
 
 func (k *Kernel) registerNatives() {
-	k.registerNative("print", func(_ *Kernel, args []Value) Value {
+	// Blueprint attribution discipline (mirrors Rust kernel):
+	//   catCall      — invoke external effect (I/O, tool)
+	//   catAccess    — read property / field
+	//   catMethod    — transform on a cell-like value
+	//   catCompare   — equality / ordering
+	//   catListNat   — construct/destructure a List
+	//   catWitness   — substrate self-attestation (intern, walk, lookup)
+	//   catUndefined — honest "no Form category settled yet"
+
+	k.registerNative("print", catCall(), func(_ *Kernel, args []Value) Value {
 		for i, a := range args {
 			if i > 0 {
 				fmt.Print(" ")
@@ -364,59 +475,59 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNull}
 	})
 	// String ops
-	k.registerNative("str_len", func(_ *Kernel, args []Value) Value {
+	k.registerNative("str_len", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VInt, Int: int64(len(args[0].Str))}
 	})
-	k.registerNative("substring", func(_ *Kernel, args []Value) Value {
+	k.registerNative("substring", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str[args[1].Int:args[2].Int]}
 	})
-	k.registerNative("char_at", func(_ *Kernel, args []Value) Value {
+	k.registerNative("char_at", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: string(args[0].Str[args[1].Int])}
 	})
-	k.registerNative("str_concat", func(_ *Kernel, args []Value) Value {
+	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
 	})
-	k.registerNative("str_eq", func(_ *Kernel, args []Value) Value {
+	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
 	})
-	k.registerNative("int_to_str", func(_ *Kernel, args []Value) Value {
+	k.registerNative("int_to_str", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: strconv.FormatInt(args[0].Int, 10)}
 	})
-	k.registerNative("str_to_int", func(_ *Kernel, args []Value) Value {
+	k.registerNative("str_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
 		n, _ := strconv.ParseInt(args[0].Str, 10, 64)
 		return Value{Kind: VInt, Int: n}
 	})
-	k.registerNative("ord", func(_ *Kernel, args []Value) Value {
+	k.registerNative("ord", catAccess(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].Str) == 0 {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: int64(args[0].Str[0])}
 	})
 	// List ops
-	k.registerNative("list", func(_ *Kernel, args []Value) Value {
+	k.registerNative("list", catListNat(), func(_ *Kernel, args []Value) Value {
 		out := make([]Value, len(args))
 		copy(out, args)
 		return Value{Kind: VList, List: out}
 	})
-	k.registerNative("cons", func(_ *Kernel, args []Value) Value {
+	k.registerNative("cons", catListNat(), func(_ *Kernel, args []Value) Value {
 		out := make([]Value, 0, len(args[1].List)+1)
 		out = append(out, args[0])
 		out = append(out, args[1].List...)
 		return Value{Kind: VList, List: out}
 	})
-	k.registerNative("head", func(_ *Kernel, args []Value) Value {
+	k.registerNative("head", catListNat(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].List) == 0 {
 			return Value{Kind: VNull}
 		}
 		return args[0].List[0]
 	})
-	k.registerNative("tail", func(_ *Kernel, args []Value) Value {
+	k.registerNative("tail", catListNat(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].List) == 0 {
 			return Value{Kind: VList, List: []Value{}}
 		}
 		return Value{Kind: VList, List: args[0].List[1:]}
 	})
-	k.registerNative("len", func(_ *Kernel, args []Value) Value {
+	k.registerNative("len", catAccess(), func(_ *Kernel, args []Value) Value {
 		switch args[0].Kind {
 		case VList:
 			return Value{Kind: VInt, Int: int64(len(args[0].List))}
@@ -425,14 +536,14 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
-	k.registerNative("nth", func(_ *Kernel, args []Value) Value {
+	k.registerNative("nth", catAccess(), func(_ *Kernel, args []Value) Value {
 		return args[0].List[args[1].Int]
 	})
-	k.registerNative("empty", func(_ *Kernel, _ []Value) Value {
+	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
 	})
 	// File I/O
-	k.registerNative("read_file", func(_ *Kernel, args []Value) Value {
+	k.registerNative("read_file", catCall(), func(_ *Kernel, args []Value) Value {
 		b, err := os.ReadFile(args[0].Str)
 		if err != nil {
 			return Value{Kind: VNull}
@@ -441,13 +552,11 @@ func (k *Kernel) registerNatives() {
 	})
 
 	// --- Substrate write surface ----------------------------------------
-	// Form code holds NodeIDs as values (VNodeID) and uses these natives to
-	// construct recipes. Closes form-runtime-in-form gaps W1-W3 (intern_node,
-	// intern_trivial, full read surface from Form). With these, templates
-	// (Breath 2) become expressible — Form code can BUILD recipes from
-	// pattern matches, not just walk pre-existing ones.
+	// All attributed as WITNESS — the substrate attesting to its own
+	// structure. Form code holds NodeIDs as values (VNodeID) and uses
+	// these natives to construct recipes.
 
-	k.registerNative("make_nodeid", func(_ *Kernel, args []Value) Value {
+	k.registerNative("make_nodeid", catWitness(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: NodeID{
 			Pkg:   uint32(args[0].Int),
 			Level: uint32(args[1].Int),
@@ -455,14 +564,13 @@ func (k *Kernel) registerNatives() {
 			Inst:  uint32(args[3].Int),
 		}}
 	})
-	k.registerNative("intern_trivial_int", func(k *Kernel, args []Value) Value {
+	k.registerNative("intern_trivial_int", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internTrivialInt(args[0].Int)}
 	})
-	k.registerNative("intern_trivial_string", func(k *Kernel, args []Value) Value {
+	k.registerNative("intern_trivial_string", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internString(args[0].Str)}
 	})
-	k.registerNative("intern_node", func(k *Kernel, args []Value) Value {
-		// args[0]: category as VNodeID; args[1]: children as VList of VNodeIDs
+	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
 		cat := args[0].Nid
 		kids := make([]NodeID, len(args[1].List))
 		for i, c := range args[1].List {
@@ -470,10 +578,10 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VNodeID, Nid: k.intern(cat, kids)}
 	})
-	k.registerNative("node_category", func(k *Kernel, args []Value) Value {
+	k.registerNative("node_category", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.category(args[0].Nid)}
 	})
-	k.registerNative("node_children", func(k *Kernel, args []Value) Value {
+	k.registerNative("node_children", catWitness(), func(k *Kernel, args []Value) Value {
 		kids := k.children(args[0].Nid)
 		out := make([]Value, len(kids))
 		for i, c := range kids {
@@ -481,23 +589,32 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
-	k.registerNative("node_value", func(k *Kernel, args []Value) Value {
+	k.registerNative("node_value", catWitness(), func(k *Kernel, args []Value) Value {
 		return k.trivialValue(args[0].Nid)
 	})
-	// walk_recipe — evaluate a NodeID in a fresh root frame. Returns the
-	// value the recipe produces. Use case: Form code builds a recipe via
-	// intern_node, then walks it to get the runtime result.
-	k.registerNative("walk_recipe", func(k *Kernel, args []Value) Value {
+	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)
 	})
 
+	// native_blueprint — read a native's Form category from inside Form.
+	// Returns the category NodeID (level=2, ty=RBasic, inst=instance) or
+	// VNull if the name isn't bound to a native.
+	k.registerNative("native_blueprint", catWitness(), func(k *Kernel, args []Value) Value {
+		idx, ok := k.strIdx[args[0].Str]
+		if !ok {
+			return Value{Kind: VNull}
+		}
+		ne, ok := k.natives[idx]
+		if !ok {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: ne.Category}
+	})
+
 	// --- Debug / inspection -----------------------------------------------
-	// `trace` — print-and-return. Drop into any Form expression to inspect
-	// a value mid-computation without breaking control flow. Output goes
-	// to stderr so it doesn't pollute the result on stdout.
-	//   (let result (trace (filter even? xs)))   ; prints the filtered list
-	k.registerNative("trace", func(_ *Kernel, args []Value) Value {
+	// `trace` — print-and-return. No Form category claimed; debug surface.
+	k.registerNative("trace", catUndefined(), func(_ *Kernel, args []Value) Value {
 		if len(args) >= 2 {
 			fmt.Fprintf(os.Stderr, "[trace %s] %s\n", args[0].Str, args[1].String())
 			return args[1]
@@ -506,6 +623,12 @@ func (k *Kernel) registerNatives() {
 		return args[0]
 	})
 }
+
+// Category constructors for native attribution live further down alongside
+// catMath/catCompare/catBlock/etc. The reader-side helpers already cover
+// catCompare(inst), catBlock(inst), etc.; the native-attribution helpers
+// (catCall, catWitness, catAccess, catMethod, catListNat, catUndefined)
+// are defined in the same block to keep them together.
 
 // ---------------------------------------------------------------------------
 // Walker — full RBasic dispatch
@@ -520,6 +643,12 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 	// header pointing to the table's backing array — zero-copy access.
 	r := k.recipeAt(n)
 	cat, kids := r.Category, r.Children
+
+	// Tracing hook: when k.Trace is set, record the arm dispatch. Pure
+	// counter increment — no allocation, no IO. Per lc-native-kernel-binary.
+	if k.Trace != nil {
+		k.Trace.record(cat.Type)
+	}
 
 	switch cat.Type {
 	case RBasicMath:
@@ -616,13 +745,20 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 	case RBasicFnCall:
 		name := k.identID(kids[0])
 		// Native takes priority unless user shadowed with a closure
-		if fn, ok := k.natives[name]; ok {
+		if ne, ok := k.natives[name]; ok {
 			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
 				args := make([]Value, len(kids)-1)
 				for i := 1; i < len(kids); i++ {
 					args[i-1] = k.walk(kids[i], env)
 				}
-				return fn(k, args)
+				// Native Blueprint attribution — record the Form category
+				// the native expresses alongside the FNCALL arm already
+				// recorded above. The kernel knows itself even when the
+				// call leaves Form-land.
+				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
+					k.Trace.record(ne.Category.Type)
+				}
+				return ne.Fn(k, args)
 			}
 		}
 		v, ok := env.Lookup(name)
@@ -949,6 +1085,17 @@ func catIdent() NodeID              { return NodeID{1, LevelBasic, RBasicIdent, 
 func catFnDef() NodeID              { return NodeID{1, LevelBasic, RBasicFnDef, 1} }
 func catFnCall() NodeID             { return NodeID{1, LevelBasic, RBasicFnCall, 1} }
 
+// Native-attribution category constructors. Each names the Form-shape a
+// native expresses; the walker records them in the trace when the native
+// fires. Mirrors Rust kernel's cat_call / cat_witness / cat_access /
+// cat_method / cat_list_nat / cat_undefined.
+func catCall() NodeID      { return NodeID{1, LevelBasic, RBasicCall, 1} }
+func catWitness() NodeID   { return NodeID{1, LevelBasic, RBasicWitness, 1} }
+func catAccess() NodeID    { return NodeID{1, LevelBasic, RBasicAccess, 1} }
+func catMethod() NodeID    { return NodeID{1, LevelBasic, RBasicMethod, 1} }
+func catListNat() NodeID   { return NodeID{1, LevelBasic, RBasicList, 1} }
+func catUndefined() NodeID { return NodeID{1, LevelBasic, RBasicUndefined, 0} }
+
 // ---------------------------------------------------------------------------
 // Main — entry point
 // ---------------------------------------------------------------------------
@@ -956,7 +1103,7 @@ func catFnCall() NodeID             { return NodeID{1, LevelBasic, RBasicFnCall,
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --expr \"...\" | --bench | --numeric-bench")
+		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --expr \"...\" | --bench | --numeric-bench | trace ...")
 		os.Exit(2)
 	}
 
@@ -968,6 +1115,10 @@ func main() {
 	if args[0] == "--numeric-bench" {
 		runNumericBench()
 		return
+	}
+
+	if args[0] == "trace" {
+		os.Exit(cliTrace(args[1:]))
 	}
 
 	var src string
@@ -1035,6 +1186,72 @@ func main() {
 	env := NewFrame(nil)
 	result := k.walk(root, env)
 	fmt.Println(result.String())
+}
+
+// cliTrace — run with arm-dispatch tracing enabled. Emits a JSON report
+// with the result, elapsed time, and the per-arm dispatch counts including
+// native Blueprint attribution. Sibling-parity with the Rust kernel's
+// trace subcommand.
+func cliTrace(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "usage: form-kernel-go trace [--expr \"...\" | <file.fk>]")
+		return 2
+	}
+	var src string
+	if args[0] == "--expr" {
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "--expr requires an argument")
+			return 2
+		}
+		src = args[1]
+	} else {
+		b, err := os.ReadFile(args[0])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "read %s: %v\n", args[0], err)
+			return 1
+		}
+		src = string(b)
+	}
+
+	k := NewKernel()
+	k.Trace = newTrace()
+	toks := tokenizeSexp(src)
+	wrapped := "(do " + src + ")"
+	if len(toks) > 0 && toks[0].kind == "LPAREN" {
+		depth := 0
+		topLevelCount := 0
+		for _, t := range toks {
+			if t.kind == "LPAREN" {
+				if depth == 0 {
+					topLevelCount++
+				}
+				depth++
+			} else if t.kind == "RPAREN" {
+				depth--
+			} else if depth == 0 {
+				topLevelCount++
+			}
+		}
+		if topLevelCount == 1 {
+			wrapped = src
+		}
+	}
+	toks = tokenizeSexp(wrapped)
+	root, _ := k.readSexpr(toks, 0)
+	env := NewFrame(nil)
+	start := time.Now()
+	result := k.walk(root, env)
+	elapsed := time.Since(start)
+
+	report := map[string]interface{}{
+		"result":        result.String(),
+		"elapsed_us":    elapsed.Microseconds(),
+		"elapsed_human": elapsed.String(),
+		"trace":         k.Trace.toJSON(),
+	}
+	out, _ := json.MarshalIndent(report, "", "  ")
+	fmt.Println(string(out))
+	return 0
 }
 
 // --- Native implementations — same recursive shape as the Form versions.
