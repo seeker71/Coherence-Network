@@ -193,6 +193,14 @@ Witness events are structurally simple — `(presence, action, evidence_url, tim
 
 Tasks are workflow units — `(idea_id, status, context, witness)`. Status is the load-bearing typed enumeration; idea_id is a cell-ref to the idea cell; context is itself a small structured payload that varies per task type and would need its own per-context-type shape design.
 
+### Artifact (any git-tracked file)
+
+Every file under git becomes a substrate cell at the *gas* altitude: `(path, kind, content_hash, size_bytes, mtime)`. Path is a PathRef leaf (great-reason #1: external reference); kind is a typed-token reference to a kind-cell (md / form / py / yaml / ...); content_hash is a substrate-resident string; size_bytes is an integer leaf; mtime is a DateLit leaf. The body's kind-to-Hz mapping (md=741, form=432, py=528, yaml=174, sh=417, default=432) authors a HARMONIC_AT resonance edge so artifacts participate in every `?harmonic_at` query alongside concepts.
+
+Gas (this CTOR) is the minimum participation. *Water* adds operational recipes — e.g. for `.py` files a call-graph recipe, for `.yml` workflows the steps as a sequential recipe. *Ice* adds Blueprints whose structure captures content shape — e.g. AST Blueprints for code, JSON-schema Blueprints for configs. Each altitude is its own breath; the gas-cell exists from the first ingest.
+
+See [`lc-form-perceptron`](../vision-kb/concepts/lc-form-perceptron.md) for the wider direction (whole repo as one queryable lattice) and [`scripts/git_artifact_perceptron_substrate.py`](../../scripts/git_artifact_perceptron_substrate.py) for the substrate-native demonstration.
+
 ## Common building blocks
 
 These are the substrate-side primitives every domain reuses:
@@ -238,5 +246,6 @@ After each domain's encoder ships:
 - ✓ Witness encoder shipped — [`ingest_witness_event(session, presence, action, evidence_url, timestamp)`](../../api/app/services/substrate/markdown_frontend.py). Programmatic (not file-based — witness events are runtime records). Builds a structured cell with composed CTOR (presence as cell-ref, action / evidence_url / timestamp as substrate-resident leaves) and authors a `R_Basic.WITNESS` edge from presence → evidence. Cell name `{presence}-{timestamp}` makes re-ingest content-addressed idempotent.
 - ✓ Task encoder shipped — [`ingest_task(session, idea_id, status, context, task_id)`](../../api/app/services/substrate/markdown_frontend.py). Programmatic. Builds a structured cell with composed CTOR (`idea_id` as cell-ref, `status` as substrate-string, `context` as a recursively-composed recipe-tree) and authors a `R_Realize.REALIZE` edge from task → idea.
 - ☐ Re-ingest pass for the 44 memory cells + 128 specs + 17 ideas + 114 concepts already in the substrate — **production lattice now structured as of 2026-05-17**: 128 specs + 17 ideas + 115 concepts + 59 presences re-ingested with structured encoders (recipes 28→3,862). Memory cells remain local (memory dir not on VPS by design). Lineage cells, witness events, and task events arrive structured via their new encoders.
+- ✓ Artifact encoder shipped (2026-05-20) — [`ingest_git_artifact(session, path, content_hash, size_bytes, mtime)`](../../api/app/services/substrate/markdown_frontend.py) and `BDomain.ARTIFACT = 16`. Every git-tracked file can become a cell at the gas altitude with one call; kind-to-Hz mapping places it in the resonance lattice automatically. Production-scale walk: 2,934 cells from full repo in 0.17s (in-memory gas-only); substrate-native version awaits the live kernel.
 
 Each ☐ is its own breath. Naming the path here is the practice; closing each gap is its own session.

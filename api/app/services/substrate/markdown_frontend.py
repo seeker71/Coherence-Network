@@ -122,6 +122,16 @@ def BID_kb_page() -> NodeID:
     return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.KB_PAGE)
 
 
+def BID_artifact() -> NodeID:
+    """Trivial Artifact blueprint — any git-tracked file as a substrate cell.
+
+    Closes the gas-cell gap from lc-form-perceptron. Every file in the repo
+    can be ingested as a substrate cell whose CTOR carries (path, kind,
+    content_hash, size_bytes, mtime). Once ingested, the file participates
+    in every substrate query — `?cells where kind == "form"`, `?downstream
+    @artifact(...)`, `?harmonic_at @741` returns artifacts alongside concepts.
+    """
+    return NodeID(1, Level.BASIC, BBasic.DOMAIN, BDomain.ARTIFACT)
 def BID_word() -> NodeID:
     """Trivial Word blueprint — the smallest unit of KB content.
 
@@ -1408,6 +1418,108 @@ def ingest_task(
 
 
 # ---------------------------------------------------------------------------
+# ARTIFACT domain — every git-tracked file as a substrate cell
+# ---------------------------------------------------------------------------
+#
+# Closes the gap from lc-form-perceptron: at minimum a gas-cell, growing into
+# water (a recipe carrying file shape) and ice (a Blueprint per content kind)
+# as the body's needs ripen.
+#
+# Kind-to-Hz mapping places each file in the resonance lattice. The body's
+# choice (not Solfeggio doctrine): file kinds that carry teaching content
+# fire in the consciousness bands (md=741); operational code in the vitality
+# band (py/ts=528); structural recipes in the natural-harmony band (form=432);
+# configs and ground state at the foundation (yaml/json=174). Adjust per
+# practice; the substrate accepts any int Hz via hz_cell's lazy-create.
+
+_ARTIFACT_KIND_HZ: Dict[str, int] = {
+    "md":     741,   # consciousness — teaching content
+    "form":   432,   # natural harmony — substrate-native recipes
+    "py":     528,   # transformation — runtime code
+    "ts":     528,   # transformation — runtime code
+    "tsx":    528,
+    "js":     528,
+    "jsx":    528,
+    "yaml":   174,   # foundation — declarative ground state
+    "yml":    174,
+    "json":   174,
+    "toml":   174,
+    "sh":     417,   # transmutation — orchestration
+    "form_runtime": 432,
+    "other":  432,   # default
+}
+
+
+def _kind_of_path(path: Any) -> str:
+    """Return the kind tag for a file path."""
+    suffix = str(path).rsplit(".", 1)[-1].lower() if "." in str(path) else "other"
+    return suffix if suffix in _ARTIFACT_KIND_HZ else "other"
+
+
+def ingest_git_artifact(
+    session: Session,
+    path: str,
+    content_hash: str,
+    size_bytes: int,
+    mtime: Optional[float] = None,
+) -> Tuple[Any, NodeID, NodeID]:
+    """Ingest one git-tracked file as an Artifact cell.
+
+    Args:
+        path: relative path from repo root (e.g. "scripts/foo.py")
+        content_hash: sha256 hex digest of the file's bytes (truncated to
+            ≥16 chars is fine; the body uses the first 16 by convention)
+        size_bytes: file size in bytes
+        mtime: file modification time as POSIX timestamp; defaults to 0.0
+            when unknown (e.g. fresh file just created)
+
+    Returns (cell, blueprint_id, ctor_id) — same shape as the other
+    ingest_* encoders. Idempotent via content-addressing: re-ingesting the
+    same (path, kind, content_hash, size, mtime) returns the same cell.
+
+    Authors HARMONIC_AT @<kind_hz> resonance edge so the file participates
+    in `?harmonic_at` queries alongside concepts. The kind tag is derived
+    from the path's suffix; see _ARTIFACT_KIND_HZ for the body's mapping.
+
+    Closes the substrate side of GESTURES 1-5 named in lc-form-perceptron:
+    once an artifact is an ARTIFACT cell, every existing substrate query
+    surface reaches it. No new query verbs needed.
+    """
+    from app.services.substrate.resonance import (
+        author_geometry_signature as _author_geometry,
+    )
+
+    kind = _kind_of_path(path)
+    hz = _ARTIFACT_KIND_HZ.get(kind, 432)
+
+    frontmatter: Dict[str, Any] = {
+        "path": path,
+        "kind": kind,
+        "content_hash": content_hash,
+        "size_bytes": int(size_bytes),
+        "mtime": float(mtime) if mtime is not None else 0.0,
+    }
+
+    blueprint_id = frontmatter_to_blueprint(session, frontmatter, BID_artifact())
+    ctor_id = frontmatter_to_structured_ctor(session, frontmatter)
+    access_id = body_to_access_recipe(session, "", blueprint_id)
+    cell = make_cell(
+        session,
+        name=path,
+        domain="artifact",
+        blueprint=blueprint_id,
+        access=access_id,
+        ctor=ctor_id,
+        source_path=path,
+    )
+
+    # Place the artifact in the resonance lattice.
+    _author_geometry(session, cell.cell_id, {}, arity_hz=hz)
+
+    return cell, blueprint_id, ctor_id
+
+
+# ---------------------------------------------------------------------------
 # WORD domain — lexeme cells for prose-as-recipe
 # ---------------------------------------------------------------------------
 #
@@ -1536,6 +1648,11 @@ def ingest_word_cell(
     _author_geometry(session, cell.cell_id, {}, arity_hz=int(hz))
 
     return cell, blueprint_id, ctor_id
+
+
+def artifact_kind_hz(kind: str) -> int:
+    """The Hz the body assigns to a file kind. Useful for query construction."""
+    return _ARTIFACT_KIND_HZ.get(kind, 432)
 
 
 def ingest_markdown_text(

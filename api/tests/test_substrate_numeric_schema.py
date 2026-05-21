@@ -22,6 +22,7 @@ def test_domain_numbers_follow_intentional_bands():
         BDomain.LANGUAGE_VIEW: 13,
         BDomain.KB_PAGE: 14,
         BDomain.WORD: 15,
+        BDomain.ARTIFACT: 16,
         BDomain.SPECTRUM: 21,
         BDomain.HARMONIC: 22,
         BDomain.GEOMETRIC_FORM: 23,
