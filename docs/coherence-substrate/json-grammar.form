@@ -47,20 +47,233 @@ form json_value_shape = {
 # terminal and a pattern; the pattern's CAPTURE clauses wrap matched
 # spans under named ctors.
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 2.5 — concrete Form-recipe rules
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each JSON value-shape is a Form recipe composed from the Pattern
+# primitives in grammar-as-recipe.form Part 2.5 — same shape Python's
+# grammar uses (lc-parser-as-form-recipe). JSON is small enough to
+# express completely in one breath; all 7 rules ship together.
+#
+# Token kinds (produced by token-streamer.form for JSON):
+#   OP    — `{` `}` `[` `]` `:` `,`
+#   STRING — quoted UTF-8 string with escape handling
+#   INT / FLOAT — numeric literals (integer / decimal / scientific)
+#   KW    — reserved words `true` `false` `null`
+
+defn lit_op(value)     = pattern_literal_shape { kind: "OP",     value: value };
+defn lit_kw(value)     = pattern_literal_shape { kind: "KW",     value: value };
+defn lit_str()         = pattern_literal_shape { kind: "STRING", value: null };
+defn lit_int()         = pattern_literal_shape { kind: "INT",    value: null };
+defn lit_float()       = pattern_literal_shape { kind: "FLOAT",  value: null };
+
+# ────────────────────────────── rule: json_string ─────────────────────
+defn json_string_rule = rule_shape {
+    name:    "json_string",
+    pattern: pattern_capture_shape { name: "value", child: lit_str() },
+    action:  defn json_string_action(captures, span) = do {
+        json_value_shape { string: captures.value, ... }
+    },
+};
+
+# ────────────────────────────── rule: json_number ─────────────────────
+#
+# A JSON number can be integer or floating-point. The tokenizer emits
+# INT or FLOAT depending on the surface form; the action stores the
+# numeric value in json_value_shape.number (uniformly as float per the
+# Blueprint shape declared in Part 1).
+
+defn json_number_rule = rule_shape {
+    name:    "json_number",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            pattern_capture_shape { name: "value", child: lit_float() },
+            pattern_capture_shape { name: "value", child: lit_int() },
+        ],
+    },
+    action:  defn json_number_action(captures, span) = do {
+        json_value_shape { number: captures.value, ... }
+    },
+};
+
+# ────────────────────────────── rule: json_bool ───────────────────────
+defn json_bool_rule = rule_shape {
+    name:    "json_bool",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            pattern_capture_shape { name: "true_lit",  child: lit_kw("true") },
+            pattern_capture_shape { name: "false_lit", child: lit_kw("false") },
+        ],
+    },
+    action:  defn json_bool_action(captures, span) = do {
+        json_value_shape { boolean: captures.true_lit != null, ... }
+    },
+};
+
+# ────────────────────────────── rule: json_null ───────────────────────
+defn json_null_rule = rule_shape {
+    name:    "json_null",
+    pattern: lit_kw("null"),
+    action:  defn json_null_action(captures, span) = do {
+        json_value_shape { null_: true, ... }
+    },
+};
+
+# ────────────────────────────── rule: json_pair ───────────────────────
+#
+# Object pair: `"key" : value`. The value is recursive — references
+# the json_value rule. The substrate handles rule-references via
+# pattern_shape being ~Recipe (any Form recipe, including a name-ref).
+
+defn json_pair_rule = rule_shape {
+    name:    "json_pair",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "key",   child: lit_str() },
+            lit_op(":"),
+            pattern_capture_shape { name: "value", child: ?rule json_value },
+        ],
+    },
+    action:  defn json_pair_action(captures, span) = do {
+        [captures.key, captures.value]
+    },
+};
+
+# ────────────────────────────── rule: json_object ─────────────────────
+defn json_object_rule = rule_shape {
+    name:    "json_object",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_op("{"),
+            pattern_choice_shape {
+                alternatives: [
+                    # Empty object
+                    pattern_sequence_shape { children: [] },
+                    # Non-empty: pair (, pair)*
+                    pattern_sequence_shape {
+                        children: [
+                            pattern_capture_shape { name: "first", child: json_pair_rule.pattern },
+                            pattern_star_shape {
+                                name: "rest",
+                                child: pattern_sequence_shape {
+                                    children: [
+                                        lit_op(","),
+                                        pattern_capture_shape { name: "entry", child: json_pair_rule.pattern },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+            lit_op("}"),
+        ],
+    },
+    action:  defn json_object_action(captures, span) = do {
+        let pairs = if captures.first == null then []
+            else do {
+                let parts = [
+                    json_pair_action(captures.first.captures, span),
+                ];
+                for entry in (captures.rest ?? []):
+                    parts = parts + [
+                        json_pair_action(entry.entry.captures, span),
+                    ];
+                parts
+            };
+        json_value_shape {
+            object: json_object_shape { pairs: pairs },
+            ...
+        }
+    },
+};
+
+# ────────────────────────────── rule: json_array ──────────────────────
+defn json_array_rule = rule_shape {
+    name:    "json_array",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_op("["),
+            pattern_choice_shape {
+                alternatives: [
+                    # Empty array
+                    pattern_sequence_shape { children: [] },
+                    # Non-empty: value (, value)*
+                    pattern_sequence_shape {
+                        children: [
+                            pattern_capture_shape { name: "first", child: ?rule json_value },
+                            pattern_star_shape {
+                                name: "rest",
+                                child: pattern_sequence_shape {
+                                    children: [
+                                        lit_op(","),
+                                        pattern_capture_shape { name: "entry", child: ?rule json_value },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+            lit_op("]"),
+        ],
+    },
+    action:  defn json_array_action(captures, span) = do {
+        let elements = if captures.first == null then []
+            else do {
+                let parts = [captures.first];
+                for entry in (captures.rest ?? []):
+                    parts = parts + [entry.entry];
+                parts
+            };
+        json_value_shape {
+            array: json_array_shape { elements: elements },
+            ...
+        }
+    },
+};
+
+# ────────────────────────────── rule: json_value ──────────────────────
+#
+# The union-shape rule. Tries each value-shape in order; first match
+# wins. The angelic-nondeterminism trio's CHOOSE arm with FAIL-unwind.
+
+defn json_value_rule = rule_shape {
+    name:    "json_value",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            json_object_rule.pattern,
+            json_array_rule.pattern,
+            json_string_rule.pattern,
+            json_number_rule.pattern,
+            json_bool_rule.pattern,
+            json_null_rule.pattern,
+        ],
+    },
+    # The action delegates to the matched alternative's action via
+    # CHOICE_MATCH dispatch on the captured shape. The semantic
+    # equivalence: whichever child rule fired, its action ran and the
+    # result is already a json_value_shape.
+    action:  defn json_value_action(captures, span) = captures,
+};
+
 defn json_grammar = grammar_shape {
     modality: modality_shape { name: "text-tree", domain: "data" },
-    ingest_pattern: ?rule json_value,
+    ingest_pattern: json_value_rule,        # the Form recipe entry-point
     parse_into: ~Blueprint @json_value_shape,
     capture_rules: [
-        # Each rule: (rule-name, regex-or-rule-pattern, ctor)
-        rule(json_value,   "object | array | string | number | bool | null", value_node),
-        rule(json_object,  "{ pair (',' pair)* }",                          object_node),
-        rule(json_pair,    "string ':' json_value",                         pair_node),
-        rule(json_array,   "[ json_value (',' json_value)* ]",              array_node),
-        rule(json_string,  "\"(\\\\.|[^\"])*\"",                              string_leaf),
-        rule(json_number,  "-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?",         number_leaf),
-        rule(json_bool,    "true | false",                                  bool_leaf),
-        rule(json_null,    "null",                                          null_leaf),
+        # All 7 JSON rules shipped as Form recipes — complete coverage.
+        # JSON is small enough that the full grammar fits in one breath,
+        # unlike Python where rules ripen breath by breath.
+        json_value_rule,
+        json_object_rule,
+        json_pair_rule,
+        json_array_rule,
+        json_string_rule,
+        json_number_rule,
+        json_bool_rule,
+        json_null_rule,
     ],
     pre_pipeline: [],   # JSON has no pre-processing; raw bytes are utf-8 text
 };
@@ -108,13 +321,14 @@ defn json_lang = language_cell_shape {
 # Part 5 — GAPs
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-J1: The `?rule` and `rule(name, pattern, ctor)` syntax above
-#         exists today via `register_form_keyword` / `pattern_to_recipe`
-#         (form_rules.py). The above shape is what those calls would
-#         compose to; the substrate already has the surface, but the
-#         JSON-specific rule cells haven't been authored. Smallest
-#         extension: a one-shot script that registers each rule above
-#         as a substrate-resident `grammar`-domain cell.
+# GAP-J1 (closed 2026-05-21): The JSON-specific rule cells are now
+#         authored as concrete Form recipes (Part 2.5 above): json_value,
+#         json_object, json_pair, json_array, json_string, json_number,
+#         json_bool, json_null — all 8 rules composed from the Pattern
+#         primitives in grammar-as-recipe.form. Complete coverage.
+#         The host engine (bmf.py's parse loop) still carries execution
+#         until the kernel walker implements pattern_match natively
+#         (grammar-as-recipe.form GAP-G1).
 #
 # GAP-J2: The discriminated-union `json_value_shape` is shorthand for
 #         a substrate composite where exactly one of (object, array,
