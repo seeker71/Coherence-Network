@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 182
+**Total files**: 184
 
 | File | Purpose |
 |---|---|
@@ -137,6 +137,7 @@
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |
 | [test_substrate.py](test_substrate.py) | Flow-centric tests for the coherence-substrate. |
+| [test_substrate_artifact_domain.py](test_substrate_artifact_domain.py) | Tests for the ARTIFACT domain — git-tracked files as substrate cells. |
 | [test_substrate_auto_reactive.py](test_substrate_auto_reactive.py) | Auto-firing reactive subscriptions. |
 | [test_substrate_concept_structured.py](test_substrate_concept_structured.py) | Concept domain — structured composition discipline. |
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
@@ -180,6 +181,7 @@
 | [test_substrate_strings.py](test_substrate_strings.py) | Tests for the substrate string-table — cross-process-stable interning. |
 | [test_substrate_structured_ctor.py](test_substrate_structured_ctor.py) | Structural composition discipline — the new structured CTOR encoder. |
 | [test_substrate_vocabulary_commute.py](test_substrate_vocabulary_commute.py) | `?vocabulary` lens + commutative resonance edges. |
+| [test_substrate_word_domain.py](test_substrate_word_domain.py) | Tests for the WORD domain — prose-as-recipe encoder + tokenizer + lookup. |
 | [test_super_idea_rollup.py](test_super_idea_rollup.py) | Tests for super-idea rollup criteria (spec: super-idea-rollup-criteria). |
 | [test_sync_kb_to_db.py](test_sync_kb_to_db.py) | _no top-of-file purpose_ |
 | [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |
