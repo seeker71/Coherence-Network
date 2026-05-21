@@ -20,9 +20,9 @@ RS_BIN="$RS_DIR/target/release/form-kernel-rust"
 
 # --- build compiled sibling kernels if stale -----------------------------
 build_go() {
-    if [[ ! -x "$GO_BIN" || "$GO_DIR/main.go" -nt "$GO_BIN" ]]; then
+    if [[ ! -x "$GO_BIN" || "$GO_DIR/main.go" -nt "$GO_BIN" || "$GO_DIR/numeric_bench.go" -nt "$GO_BIN" ]]; then
         echo "  building go kernel..." >&2
-        (cd "$GO_DIR" && go build -o bin-go main.go)
+        (cd "$GO_DIR" && go build -o bin-go .)
     fi
 }
 build_rs() {

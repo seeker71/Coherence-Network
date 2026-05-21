@@ -1,0 +1,92 @@
+{
+  "date": "2026-05-21",
+  "thread_branch": "codex/native-kernel-dogfood",
+  "commit_scope": "Move grammar/parser dogfood proof into executable Form source and keep Go, Rust, and TypeScript sibling kernels in parity.",
+  "files_owned": [
+    "experiments/form-samples/native-kernel-dogfood.fk",
+    "experiments/form-samples/README.md",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-kernel-ts/src/main.ts",
+    "experiments/form-kernel-ts/src/kernel.ts",
+    "docs/system_audit/commit_evidence_2026-05-21_native_kernel_dogfood.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "go run . ../form-samples/native-kernel-dogfood.fk (from experiments/form-kernel-go)",
+      "cargo run --quiet --manifest-path experiments/form-kernel-rust/Cargo.toml -- experiments/form-samples/native-kernel-dogfood.fk",
+      "npx --yes tsx experiments/form-kernel-ts/src/main.ts experiments/form-samples/native-kernel-dogfood.fk",
+      "cd experiments && ./form-kernel-validate.sh form-samples/native-kernel-dogfood.fk",
+      "cd experiments && ./form-kernel-validate.sh",
+      "cd experiments/form-kernel-ts && npm install",
+      "cd experiments/form-kernel-ts && npm run check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_native_kernel_dogfood.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The dogfood contract now lives in experiments/form-samples/native-kernel-dogfood.fk as Form data and Form functions. Go, Rust, and TypeScript each evaluate it to 1. The full sibling validator builds Go as a package, runs all 13 .fk sample and stdlib workloads, and reports 13 ok, 0 divergent. TypeScript now reads multiple .fk files like Go/Rust and renders lists with the shared comma-separated display."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deployment attempted for this native kernel proof change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is complete; CI and PR checks remain pending."
+  },
+  "idea_ids": [
+    "form-native-kernel-dogfood"
+  ],
+  "spec_ids": [
+    "form-native-grammar-contract"
+  ],
+  "task_ids": [
+    "native-kernel-dogfood-20260521"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "kernel-dogfood-correction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "experiments/form-samples/native-kernel-dogfood.fk",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-kernel-ts/src/main.ts",
+    "experiments/form-kernel-ts/src/kernel.ts"
+  ],
+  "change_files": [
+    "experiments/form-samples/native-kernel-dogfood.fk",
+    "experiments/form-samples/README.md",
+    "experiments/form-kernel-validate.sh",
+    "experiments/form-kernel-ts/src/main.ts",
+    "experiments/form-kernel-ts/src/kernel.ts"
+  ],
+  "change_intent": "process_only"
+}

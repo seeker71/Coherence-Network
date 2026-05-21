@@ -9,6 +9,7 @@ Real `.fk` source files in Form's S-expression bootstrap syntax. The Go, Rust, a
 | [`closure.fk`](closure.fk) | Closure captures defining frame, called later with different arg | `15` |
 | [`list-sum.fk`](list-sum.fk) | Native `list`/`head`/`tail`/`len` + recursion over a list | `15` |
 | [`string-walk.fk`](string-walk.fk) | Char-by-char string scan (`char_at`, `ord`) — shape Form-on-top's lexer will use | `5` |
+| [`native-kernel-dogfood.fk`](native-kernel-dogfood.fk) | Form-level contract that grammar/parser proof uses Go, Rust, or TypeScript kernels, not Python bridges | `1` |
 
 ```bash
 # Run any sample through a sibling kernel
