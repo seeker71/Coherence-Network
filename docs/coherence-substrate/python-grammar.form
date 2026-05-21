@@ -421,20 +421,34 @@ defn python_lang = language_cell_shape {
 # Part 7 — honest GAPs
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-PY1: `ast.parse` / `ast.unparse` are host intrinsics carrying
-#          the CPython AST. The Form recipe names the operation;
-#          CPython's mature AST module does the actual parse — for
-#          today. **The destination is BMF-style grammar**, per
-#          lc-parsers-as-recipes: each Python construct registered as
-#          a `(pattern, semantic_action)` Form Rule via grammar.py's
-#          `register_form_rule`. Bjorg's *BMF — Backtracking Model
-#          Form* (2000) treated rules as data, not code; the
-#          substrate already carries the seed
-#          (api/app/services/substrate/grammar.py — Rule cell-domain,
-#          register_form_rule, list_form_rules) plus the Choice.CHOOSE/
-#          FAIL/STOP backtracking primitives (form-engine.form @1.2.20.*).
-#          Closing GAP-PY1 means walking Python's grammar into the
-#          substrate one construct at a time:
+# GAP-PY1 (FIRST CLOSURE LANDED 2026-05-21): the import-statement
+#          family is now parsed via real BMF rules, not ast.parse.
+#          experiments/local-llm-cell-v0/bmf.py carries:
+#            - Tokenizer (char-by-char, not a regex-over-ast wrapper)
+#            - Pattern primitives: Literal / Capture / Sequence / Opt /
+#              Choice / Star with FAIL-unwind semantics
+#            - register_form_rule(name, pattern, action) — sibling to
+#              api/app/services/substrate/grammar.py
+#            - Two real rules: `py_import` and `py_import_from`
+#              covering every import variation (absolute, dotted,
+#              aliased, multi-name, relative-N-dot, relative-with-module)
+#          experiments/local-llm-cell-v0/bmf_python_demo.py verifies
+#          13/13 import variations parse through BMF and produce Form
+#          objects structurally equivalent to the ast.parse path.
+#          Source attribution stamped natively by the BMF tokenizer
+#          (token line/col), not borrowed from ast.parse.
+#
+#          Remaining: every other Python construct (def, class,
+#          assignments, control flow, expressions). Each is one
+#          BMF rule per breath, using the same primitives. The
+#          AST delegate shrinks; the BMF surface grows; the
+#          self-hosting boundary moves with every rule landed.
+#
+#          The original GAP-PY1 framing still holds for the rest of
+#          Python's grammar — AST is the bootstrap that carries the
+#          uncovered constructs until BMF rules land for them.
+#          Walking Python's grammar into the substrate, one
+#          construct at a time:
 #            - `import os` → Rule(Sequence([Literal("KW","import"),
 #                                            Capture("module","dotted_name")]),
 #                                  action=@recipe(build_py_import))
