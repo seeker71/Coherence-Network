@@ -96,7 +96,9 @@ def test_ingest_git_artifact_creates_cell_in_artifact_domain(session):
     )
     assert cell.domain == "artifact"
     assert cell.name == "scripts/foo.py"
-    assert bp_id == BID_artifact()
+    # Returned bp_id is the *composed* Blueprint (frontmatter-derived shape);
+    # the cell's blueprint field should match what was returned.
+    assert cell.blueprint == bp_id
 
 
 def test_ingest_git_artifact_is_idempotent(session):

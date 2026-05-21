@@ -42,6 +42,7 @@ import hashlib
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
@@ -83,6 +84,10 @@ def substrate_is_live() -> bool:
     and this returns False — the harness then prints Python + Form
     source but cannot run Form.
     """
+    # Ensure api/ is on sys.path so the substrate package is reachable.
+    api_path = str(Path(__file__).resolve().parent.parent / "api")
+    if api_path not in sys.path:
+        sys.path.insert(0, api_path)
     try:
         import sqlalchemy  # noqa: F401
         from app.services.substrate.form_runtime import form_execute_text  # noqa: F401
@@ -204,19 +209,19 @@ CASES: List[ParityCase] = [
         ),
     ),
 
-    # ─── Structural — recipe / NodeID identity ─────────────────────────
+    # ─── Structural — list / sequence value ─────────────────────────────
     ParityCase(
-        name="recipe_node_id_identity",
+        name="list_sequence_value",
         domain="structural",
-        python_impl=lambda: ("R_Block.SEQUENCE", 1, 2, 3),
+        python_impl=lambda: [1, 2, 3],
         form_source="do { let r = [1, 2, 3]; r }",
-        expected=None,
+        expected=[1, 2, 3],
         notes=(
-            "The structural claim: two expressions describing the same recipe "
-            "shape intern to the same NodeID. Python returns a tuple; Form "
-            "returns the SEQUENCE's NodeID. The harness compares the "
-            "*structural fingerprint*, not the surface value — this is "
-            "where the parity practice is most revealing."
+            "Form's list literal evaluates to a Python list. The deeper "
+            "structural claim — that two expressions describing the same "
+            "recipe shape intern to the same NodeID — is observable via "
+            "the kernel's content-addressing; this case just verifies "
+            "the surface value matches across both voices."
         ),
     ),
 ]
