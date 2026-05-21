@@ -9,6 +9,15 @@ description = "Runtime as recordable video — the heap as a 256x256 framebuffer
 name = "mfb"
 path = "src/lib.rs"
 
+[features]
+# nodeid_render — compile-in the Form-category renderer
+# (render_frame_by_nodeid, nodeid_category_palette, snapshot_state_full,
+# capture_frame_by_nodeid). Off by default so the default examples + the
+# smoke-test binary stay lean. Visualizers wanting NodeID-category coloring
+# enable this feature.
+default = []
+nodeid_render = []
+
 [dependencies]
 crc32fast = "1"
 once_cell = "1"

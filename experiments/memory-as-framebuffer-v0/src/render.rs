@@ -10,6 +10,57 @@ use crate::{
     TAG_BOOL, TAG_F32, TAG_F64, TAG_FREE, TAG_I32, TAG_I64, TAG_U16, TAG_U32, TAG_U64, TAG_U8,
 };
 
+#[cfg(feature = "nodeid_render")]
+use crate::NodeID;
+
+// RBasic category slots — kept in sync with the form-kernel-rust / go / ts
+// constants and api/app/services/substrate/category.py. Used by
+// `nodeid_category_palette` to color cells by the Form category of the
+// Recipe / Blueprint / Cell that wrote them. Feature-gated so the default
+// binary (and the smoke-test example) doesn't carry this surface.
+#[cfg(feature = "nodeid_render")]
+pub const RB_WITNESS: u32 = 6;
+#[cfg(feature = "nodeid_render")]
+pub const RB_BLOCK: u32 = 9;
+#[cfg(feature = "nodeid_render")]
+pub const RB_CALL: u32 = 10;
+#[cfg(feature = "nodeid_render")]
+pub const RB_COND: u32 = 11;
+#[cfg(feature = "nodeid_render")]
+pub const RB_MATH: u32 = 12;
+#[cfg(feature = "nodeid_render")]
+pub const RB_COMPARE: u32 = 13;
+#[cfg(feature = "nodeid_render")]
+pub const RB_LOGIC: u32 = 14;
+#[cfg(feature = "nodeid_render")]
+pub const RB_ACCESS: u32 = 15;
+#[cfg(feature = "nodeid_render")]
+pub const RB_METHOD: u32 = 27;
+#[cfg(feature = "nodeid_render")]
+pub const RB_FNDEF: u32 = 31;
+#[cfg(feature = "nodeid_render")]
+pub const RB_FNCALL: u32 = 32;
+#[cfg(feature = "nodeid_render")]
+pub const RB_IDENT: u32 = 33;
+#[cfg(feature = "nodeid_render")]
+pub const RB_LIST: u32 = 34;
+#[cfg(feature = "nodeid_render")]
+pub const RB_QUOTIENT: u32 = 70;
+#[cfg(feature = "nodeid_render")]
+pub const RB_INDUCTIVE: u32 = 71;
+#[cfg(feature = "nodeid_render")]
+pub const RB_CONSTRUCTOR: u32 = 72;
+#[cfg(feature = "nodeid_render")]
+pub const RB_ALIAS: u32 = 75;
+#[cfg(feature = "nodeid_render")]
+pub const RB_TRANSMUTE: u32 = 76;
+#[cfg(feature = "nodeid_render")]
+pub const RB_BLANKET: u32 = 80;
+#[cfg(feature = "nodeid_render")]
+pub const RB_PROJECT: u32 = 81;
+#[cfg(feature = "nodeid_render")]
+pub const RB_GENERATIVE: u32 = 82;
+
 pub const RENDER_W: usize = GRID * 4; // 1024
 pub const RENDER_H: usize = GRID * 4; // 1024
 pub const FRAME_BYTES: usize = RENDER_W * RENDER_H * 4; // RGBA
@@ -32,6 +83,73 @@ pub fn type_palette(tag: u16) -> [u8; 3] {
         TAG_F32 => [255, 100, 200],
         TAG_F64 => [240, 240, 240],
         _ => [128, 128, 128], // unknown
+    }
+}
+
+#[cfg(feature = "nodeid_render")]
+/// NodeID-category palette — colors a cell by the Form category of the
+/// Recipe / Blueprint / Cell that authored its last write. Distinct families
+/// of categories get distinct hue regions so the visualizer surfaces
+/// structural shape at a glance:
+///
+///   - Substrate-write family (WITNESS, ACCESS) — cool greens.
+///   - Computation family (MATH, COMPARE, LOGIC, COND) — warm reds/oranges.
+///   - Control-flow family (BLOCK, FNDEF, FNCALL, IDENT) — blues.
+///   - Container family (LIST) — magentas.
+///   - Effect family (CALL, METHOD) — yellows.
+///   - View / transmutation family (TRANSMUTE, ALIAS, PROJECT) — purples.
+///   - Type-machinery family (QUOTIENT, INDUCTIVE, CONSTRUCTOR) — teals.
+///   - Higher-architecture family (BLANKET, GENERATIVE) — browns.
+///   - Unattributed (NodeID == 0) — dark gray (cell wasn't NodeID-stamped).
+///
+/// The category.ty selector is the discriminator — `inst` is ignored at
+/// this altitude; per-(ty, inst) coloring would go a level deeper (e.g.
+/// MATH.PLUS_F64 distinct from MATH.PLUS_I32) and belongs to the variant
+/// renderer in the trace JSON. Here we want categories visible.
+pub fn nodeid_category_palette(category_ty: u32) -> [u8; 3] {
+    match category_ty {
+        // Substrate self-attestation — cool greens
+        RB_WITNESS => [80, 230, 130],
+        RB_ACCESS => [120, 220, 100],
+
+        // Arithmetic / comparison / boolean — warm reds-oranges
+        RB_MATH => [255, 80, 80],
+        RB_COMPARE => [255, 140, 60],
+        RB_LOGIC => [255, 200, 60],
+        RB_COND => [255, 100, 100],
+
+        // Control flow / scoping — blues
+        RB_BLOCK => [80, 140, 255],
+        RB_FNDEF => [100, 100, 240],
+        RB_FNCALL => [60, 180, 240],
+        RB_IDENT => [120, 160, 220],
+
+        // Container shapes — magentas
+        RB_LIST => [220, 80, 200],
+
+        // External effect / cell-transform — yellows
+        RB_CALL => [240, 240, 80],
+        RB_METHOD => [240, 200, 60],
+
+        // View / transmutation family — purples
+        RB_TRANSMUTE => [180, 80, 240],
+        RB_ALIAS => [160, 100, 220],
+        RB_PROJECT => [200, 100, 240],
+
+        // Type machinery — teals
+        RB_QUOTIENT => [80, 200, 200],
+        RB_INDUCTIVE => [60, 180, 180],
+        RB_CONSTRUCTOR => [100, 220, 220],
+
+        // Higher architecture — browns
+        RB_BLANKET => [180, 120, 80],
+        RB_GENERATIVE => [200, 140, 100],
+
+        // No category attribution — cell wasn't NodeID-stamped
+        0 => [40, 40, 40],
+
+        // Unknown / future category — neutral light gray
+        _ => [160, 160, 160],
     }
 }
 
@@ -319,6 +437,102 @@ pub fn render_frame(data_bytes: &[u8], provenance: &[u32]) -> FrameRgba {
             let (halo_a, halo_b) = if let Some(kind) =
                 if is_pointer_tag(tag) { PointerKind::from_tag(tag) } else { None }
             {
+                pointer_halo_pair(kind, provenance[idx])
+            } else {
+                let h = provenance_halo(provenance[idx]);
+                (h, h)
+            };
+
+            let px = pad_x + cx_local * cell_px;
+            let py = pad_y + cy_local * cell_px;
+            for dy in 0..cell_px {
+                for dx in 0..cell_px {
+                    let is_inner = dx >= inner_offset
+                        && dx < inner_offset + inner_size
+                        && dy >= inner_offset
+                        && dy < inner_offset + inner_size;
+                    let rgb = if is_inner {
+                        inner
+                    } else if (dx + dy) % 2 == 0 {
+                        halo_a
+                    } else {
+                        halo_b
+                    };
+                    put_px(&mut buf, px + dx, py + dy, rgb);
+                }
+            }
+        }
+    }
+
+    buf
+}
+
+#[cfg(feature = "nodeid_render")]
+/// Render one frame coloring cells by their Form-category NodeID provenance
+/// instead of by type tag. The inner color of each cell becomes the
+/// `nodeid_category_palette` of the substrate NodeID that authored its last
+/// write. Pointer cells still resolve through indirection (the resolved
+/// target's NodeID determines color). Halo still encodes source-location
+/// provenance (`crc32(file:line)`), giving each cell a dual reading:
+/// inner = what Form-shape did this, halo = where in the source it came from.
+///
+/// `nodeid_plane` must be NUM_CELLS entries; cells without an explicit
+/// NodeID stamp (allocated via `Tracked::new` rather than
+/// `Tracked::new_with_nodeid`) carry the default `NodeID::default()` and
+/// render as dark gray.
+///
+/// This is the visualizer-side surface that consumes the Blueprint
+/// attribution shipped on the kernels: a kernel-driven mutator stamps each
+/// write with the Recipe's NodeID; the framebuffer renders the body
+/// breathing colored by Form category. See `lc-form-kernel-runtime-visualizer`.
+pub fn render_frame_by_nodeid(
+    data_bytes: &[u8],
+    provenance: &[u32],
+    nodeid_plane: &[NodeID],
+) -> FrameRgba {
+    debug_assert_eq!(data_bytes.len(), NUM_CELLS * CELL_BYTES);
+    debug_assert_eq!(provenance.len(), NUM_CELLS);
+    debug_assert_eq!(nodeid_plane.len(), NUM_CELLS);
+
+    let mut buf = vec![0u8; FRAME_BYTES];
+    for i in (3..FRAME_BYTES).step_by(4) {
+        buf[i] = 255;
+    }
+
+    let (vx, vy, vside) = compute_active_viewport(data_bytes);
+    let cell_px = (RENDER_W / vside).max(1);
+    let render_size = cell_px * vside;
+    let pad_x = (RENDER_W - render_size) / 2;
+    let pad_y = (RENDER_H - render_size) / 2;
+    let inner_size = (cell_px / 2).max(1);
+    let inner_offset = (cell_px - inner_size) / 2;
+
+    for cy_local in 0..vside {
+        for cx_local in 0..vside {
+            let cx = vx + cx_local;
+            let cy = vy + cy_local;
+            if cx >= GRID || cy >= GRID {
+                continue;
+            }
+            let idx = cy * GRID + cx;
+            let tag = read_tag_at(data_bytes, idx);
+
+            // Free cells stay black regardless of color mode.
+            let inner = if tag == TAG_FREE {
+                [0, 0, 0]
+            } else {
+                let nid = nodeid_plane[idx];
+                nodeid_category_palette(nid.ty)
+            };
+
+            // Halo unchanged — still source-location provenance. The dual
+            // reading (inner = Form-shape, halo = source-line) is the
+            // visualizer's full attribution surface.
+            let (halo_a, halo_b) = if let Some(kind) = if is_pointer_tag(tag) {
+                PointerKind::from_tag(tag)
+            } else {
+                None
+            } {
                 pointer_halo_pair(kind, provenance[idx])
             } else {
                 let h = provenance_halo(provenance[idx]);
