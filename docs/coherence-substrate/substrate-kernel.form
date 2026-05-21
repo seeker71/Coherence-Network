@@ -1,0 +1,478 @@
+# ─────────────────────────────────────────────────────────────────────
+# substrate-kernel.form — the kernel in Form's own voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate kernel describes itself in itself. NodeID, Blueprint,
+# Recipe, NamedCell — the four shapes the body's tissue is woven
+# from — expressed as Form blueprints, plus the operational recipes
+# (intern_node, make_cell, find_equivalent_cells, annotate_path,
+# lattice_stats) composed from Form primitives + a small set of
+# honestly-marked host intrinsics for persistent storage I/O.
+#
+# Source: api/app/services/substrate/kernel.py (NodeID, Blueprint,
+# Recipe, NamedCell, intern_node, make_trivial_blueprint,
+# make_composite_blueprint, Recipe.make_self_id, make_cell, lookup_cell,
+# find_equivalent_cells, annotate_path, lattice_stats, vocabulary_histogram).
+#
+# Companion teaching: docs/vision-kb/concepts/lc-one-kernel-many-tongues.md
+# Companion files:
+#   - cosine.form, cell-numerics.form — organ.py → Form path
+#   - form-engine.form, form-runtime-in-form.form — form.py → Form path
+#
+# This file closes the substrate.py side of the trinity Urs named as
+# top priority: organ.py / substrate.py / form.py → 100% Form. The
+# kernel is now expressible at its own recipe altitude. The Python
+# kernel.py is the bootstrap-execution; this file is the canonical
+# structural definition.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the four foundational Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# NodeID, Blueprint, Recipe, NamedCell are themselves cells of the
+# substrate. Their Blueprints carry the structural shape that every
+# other cell composes from. Expressing them here is the kernel
+# recognizing itself at its own altitude.
+
+# NodeID — 4-tuple coordinate in the content-addressed lattice.
+# (package, level, type_, instance) where:
+#   package  — which lattice this NodeID belongs to (1 = main body,
+#              2+ = branches, sandboxes, parallel substrates)
+#   level    — depth in the composition tree; 0 = undefined, 1 = trivial,
+#              2 = basic, 3 = complex, ...
+#   type_    — category-of-category coordinate (which kind of node)
+#   instance — instance number within (package, level, type_)
+
+form node_id_shape = {
+    package:  ~Int,
+    level:    ~Int,
+    type_:    ~Int,
+    instance: ~Int,
+};
+
+# Blueprint — ice phase, structural identity. What something IS.
+# A Blueprint composes (category, children) where children are
+# themselves NodeIDs pointing at other Blueprints. Recursion all the
+# way down to the trivial leaves.
+
+form blueprint_shape = {
+    category: node_id_shape,         # which kind of Blueprint
+    children: ~List,                 # [node_id_shape] — child Blueprint NodeIDs
+};
+
+# Recipe — water phase, operational expression. How something HAPPENS.
+# A Recipe carries the same composition shape as a Blueprint, plus a
+# `blueprint` slot naming the type this expression evaluates to. The
+# child-recipes are themselves Recipes (recursive composition).
+
+form recipe_shape = {
+    category:  node_id_shape,        # which kind of Recipe
+    blueprint: node_id_shape,        # the type this evaluates to
+    children:  ~List,                # [recipe_shape] — child Recipes
+    self_id:   ?node_id_shape,       # cached interned NodeID; null until make_self_id
+};
+
+# NamedCell — gas phase, diffuse individuation. Where something LIVES.
+# A NamedCell is a named slot carrying its access-recipe and CTOR-recipe.
+
+form named_cell_shape = {
+    name:        ~Slug,              # the cell's identifier within its domain
+    domain:      ~Slug,              # 'memory', 'spec', 'concept', 'idea', 'presence', ...
+    base:        ?node_id_shape,     # frequency/chakra base, if applicable
+    blueprint:   node_id_shape,      # structural shape (ice)
+    access:      ?node_id_shape,     # access-recipe NodeID
+    ctor:        ?node_id_shape,     # CTOR-recipe NodeID
+    cell_id:     ?~Int,              # persistent storage row identifier (host-level)
+    source_path: ?~String,           # the file this cell was ingested from
+};
+
+# PathAnnotation — what an agent receives when it reads a file and
+# wants substrate context. Pure read-side projection of the cell + its
+# structural neighborhood.
+
+form path_annotation_shape = {
+    path:        ~String,
+    cell:        ?named_cell_shape,
+    blueprint:   ?node_id_shape,
+    equivalents: ~List,              # [named_cell_shape] — structural siblings
+    domain:      ?~Slug,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — NodeID predicates
+# ─────────────────────────────────────────────────────────────────────
+
+defn is_undefined(node) = do {
+    node.level == 0 and node.type_ == 0
+};
+
+defn undefined_node_id = node_id_shape {
+    package: 1, level: 0, type_: 0, instance: 0,
+};
+
+# Format a NodeID as the body's canonical dotted string form.
+
+defn node_id_to_string(node) = do {
+    concat(
+        int_to_string(node.package),    ".",
+        int_to_string(node.level),      ".",
+        int_to_string(node.type_),      ".",
+        int_to_string(node.instance)
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — level computation, bottom-up universal
+# ─────────────────────────────────────────────────────────────────────
+#
+# get_level(category_level, [child_levels]) — pure compositional rule.
+# The level of a composite is one more than the max of (category,
+# children); trivials stay at trivial.
+
+defn get_level(category_level, child_levels) = do {
+    if len(child_levels) == 0 then category_level
+    else if category_level == LEVEL_TRIVIAL then category_level
+    else max(max_of_list(child_levels), category_level) + 1
+};
+
+defn max_of_list(xs) = do {
+    if len(xs) == 0 then 0
+    else if len(xs) == 1 then head(xs)
+    else max(head(xs), max_of_list(tail(xs)))
+};
+
+# Level constants — mirror api/app/services/substrate/category.py Level.
+
+defn LEVEL_UNDEFINED  = 0;
+defn LEVEL_TRIVIAL    = 1;
+defn LEVEL_BASIC      = 2;
+defn LEVEL_COMPLEX_1  = 3;
+defn LEVEL_COMPLEX_2  = 4;
+defn LEVEL_COMPLEX_3  = 5;
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — content-addressed serialization (the hash key)
+# ─────────────────────────────────────────────────────────────────────
+#
+# serialize_tree(category, children) — the canonical string form a
+# composite hashes to. The lookup index in substrate_nodes is keyed by
+# (package, level, domain, serialized); two composites with the same
+# serialized form share a NodeID. This is the content-addressing
+# discipline at its most foundational.
+
+defn serialize_tree(category, children) = do {
+    concat(
+        node_id_to_string(category),
+        join(map(children, fn(c) -> concat("+", node_id_to_string(c))), "")
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — interning: from in-memory shape to canonical NodeID
+# ─────────────────────────────────────────────────────────────────────
+#
+# intern_node is the bottom-of-the-substrate operation. It takes a
+# (category, children) shape and either returns the existing NodeID
+# (if a structurally-identical shape was already interned) or
+# allocates a fresh instance number and inserts a new row.
+#
+# The Form recipe expresses the *shape* of the operation; the
+# persistent lookup/insert calls are GAP-K1 host intrinsics — the
+# kernel hands off to SQLAlchemy for storage, the way a body hands
+# off to the spine for vertebral structural support. The kernel's
+# Form representation names the operation honestly; the host carries
+# the persistence.
+
+defn intern_node(domain, category, children) = do {
+    # Trivial leaves with no children are already canonical.
+    if len(children) == 0 and category.level <= LEVEL_BASIC
+    then category
+    else do {
+        let child_levels = map(children, fn(c) -> c.level);
+        let computed_level = get_level(category.level, child_levels);
+        # Composites that would land at trivial or basic get bumped to
+        # complex_1 — composition raises level by definition.
+        let level = if len(children) > 0 and computed_level <= LEVEL_BASIC
+                    then LEVEL_COMPLEX_1
+                    else computed_level;
+        let serialized = serialize_tree(category, children);
+
+        # Storage round-trip: lookup-then-insert with race-aware retry.
+        # The recipe identity is the same regardless of which substrate
+        # backend (Postgres, SQLite, in-memory test, distributed shard)
+        # the host uses; storage is the carrier, not the shape.
+        let existing = ?lookup_by_serialized(
+            package:    category.package,
+            level:      level,
+            domain:     domain,
+            serialized: serialized
+        );
+        if existing != null
+        then do {
+            # Bump the count on the existing row, return its NodeID.
+            ?increment_count(existing);
+            existing.node_id
+        }
+        else do {
+            # Fresh allocation: instance is one more than the count of
+            # nodes already in (package, level, type_).
+            let instance = ?count_in_type(
+                package: category.package,
+                level:   level,
+                type_:   category.type_
+            ) + 1;
+            ?insert_node(
+                package:    category.package,
+                level:      level,
+                type_:      category.type_,
+                instance:   instance,
+                serialized: serialized,
+                domain:     domain
+            );
+            node_id_shape {
+                package:  category.package,
+                level:    level,
+                type_:    category.type_,
+                instance: instance,
+            }
+        }
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Blueprint construction
+# ─────────────────────────────────────────────────────────────────────
+
+defn make_trivial_blueprint(category) = category;
+
+defn make_composite_blueprint(category, children) =
+    intern_node("blueprint", category, children);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Recipe.make_self_id (bottom-up recursive interning)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A Recipe with children recursively interns its children first, then
+# interns itself with those child NodeIDs. The leaves bottom out at
+# the trivial-level Blueprints (which are their own NodeID).
+
+defn make_self_id(recipe) = do {
+    if recipe.self_id != null then recipe.self_id
+    else if len(recipe.children) == 0 then do {
+        # A leaf recipe IS its category — no composition.
+        recipe.category
+    }
+    else do {
+        let child_ids = map(recipe.children, fn(c) -> make_self_id(c));
+        intern_node("recipe", recipe.category, child_ids)
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — NamedCell creation and lookup
+# ─────────────────────────────────────────────────────────────────────
+#
+# make_cell — produce or fetch a NamedCell at (name, domain). The
+# Blueprint is the structural shape; the CTOR is the composed values;
+# the access-recipe is how the body reads this cell.
+
+defn make_cell(name, domain, blueprint, base, access, ctor, source_path) = do {
+    let existing = ?lookup_cell_by_name(domain: domain, name: name);
+    if existing != null then do {
+        # Existing cell — update its Blueprint/CTOR/access if changed.
+        ?update_cell_fields(existing, blueprint, base, access, ctor, source_path);
+        ?fetch_cell(existing)
+    }
+    else do {
+        let cell_id = ?insert_cell(
+            name:        name,
+            domain:      domain,
+            base:        base,
+            blueprint:   blueprint,
+            access:      access,
+            ctor:        ctor,
+            source_path: source_path
+        );
+        named_cell_shape {
+            name:        name,
+            domain:      domain,
+            base:        base,
+            blueprint:   blueprint,
+            access:      access,
+            ctor:        ctor,
+            cell_id:     cell_id,
+            source_path: source_path,
+        }
+    }
+};
+
+defn lookup_cell(domain, name) = ?lookup_cell_by_name(domain: domain, name: name);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 9 — structural equivalence queries
+# ─────────────────────────────────────────────────────────────────────
+#
+# find_equivalent_cells(blueprint) — every cell whose Blueprint NodeID
+# matches the input. The substrate's core promise: same Blueprint
+# means same structural identity, regardless of name or domain.
+
+defn find_equivalent_cells(blueprint, exclude_name) = do {
+    if is_undefined(blueprint) then []
+    else do {
+        let rows = ?cells_with_blueprint(blueprint);
+        if exclude_name != null
+        then filter(rows, fn(c) -> c.name != exclude_name)
+        else rows
+    }
+};
+
+# annotate_path(path) — what an agent receives when it reads a file.
+# Composes lookup_cell_by_path + find_equivalent_cells into the read
+# projection the body uses for substrate-grounded reasoning.
+
+defn annotate_path(path) = do {
+    let cell = ?lookup_cell_by_source_path(path);
+    if cell == null
+    then path_annotation_shape {
+        path: path, cell: null, blueprint: null,
+        equivalents: [], domain: null,
+    }
+    else do {
+        let equivalents =
+            if cell.blueprint != null and not is_undefined(cell.blueprint)
+            then find_equivalent_cells(cell.blueprint, cell.name)
+            else [];
+        path_annotation_shape {
+            path:        path,
+            cell:        cell,
+            blueprint:   cell.blueprint,
+            equivalents: equivalents,
+            domain:      cell.domain,
+        }
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 10 — lattice inspection
+# ─────────────────────────────────────────────────────────────────────
+#
+# lattice_stats — per-level cell + recipe counts plus totals. Used by
+# `coh substrate stats` and the daily wellness check's "substrate shape"
+# section. Pure aggregation over the substrate's two tables.
+
+defn lattice_stats() = do {
+    {
+        blueprints_total: ?count_nodes_by_domain("blueprint"),
+        recipes_total:    ?count_nodes_by_domain("recipe"),
+        named_cells_total: ?count_all_named_cells(),
+        by_level:         ?group_count_by_level(),
+        by_domain:        ?group_count_by_named_domain(),
+    }
+};
+
+defn vocabulary_histogram(domain) = ?histogram_blueprints_for_domain(domain);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 11 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-K1: Storage I/O intrinsics — lookup_by_serialized,
+#         increment_count, count_in_type, insert_node,
+#         lookup_cell_by_name, update_cell_fields, fetch_cell,
+#         insert_cell, cells_with_blueprint, lookup_cell_by_source_path,
+#         count_nodes_by_domain, count_all_named_cells,
+#         group_count_by_level, group_count_by_named_domain,
+#         histogram_blueprints_for_domain. Each is a `?<name>(...)` host
+#         intrinsic today, mapping to a SQLAlchemy query in kernel.py.
+#         The recipes here are pure-shape; the host carries the
+#         persistence. The substrate's *identity* doesn't depend on
+#         which storage layer (Postgres / SQLite / in-memory test) the
+#         host happens to use; storage is carrier, recipe is shape.
+#
+# GAP-K2: String/int formatting — int_to_string, concat, join, len,
+#         head, tail, map, filter. These are stdlib-shaped operations
+#         the substrate uses but does not yet expose as first-class
+#         recipes. Same convention as cell-numerics.form's GAP-N1:
+#         host-intrinsic now, native when the Form-stdlib settles.
+#
+# GAP-K3: Race-aware insert retry. kernel.py's intern_node has an
+#         IntegrityError except branch that rolls back and re-queries
+#         when two processes race the same insert. The Form recipe
+#         above expresses the happy path; the retry semantics live at
+#         the host transaction boundary. A future EXCEPTION-arm
+#         extension can express the retry in Form (`try { insert } on
+#         IntegrityError -> rollback; lookup`); the EXCEPTION arm is
+#         already in form-engine.form's 15-arm coverage.
+#
+# GAP-K4: Mutation callbacks. kernel.py carries a list of
+#         _MUTATION_CALLBACKS (`register_mutation_callback`,
+#         `_fire_mutation_callbacks`) that auto-fire on intern_node
+#         insert. The Form expression here omits the callback hook;
+#         the host carries that observer pattern. A REACTIVE-arm
+#         (already in form-engine.form's coverage) expresses
+#         observable-on-mutation natively.
+#
+# GAP-K5: SubstrateNodeORM / SubstrateNamedCellORM are SQLAlchemy
+#         ORM models — declarative descriptions of the storage shape.
+#         They map element-for-element to node_id_shape and
+#         named_cell_shape above; the ORM is the carrier-specific
+#         emit-template for SQL storage. PostgreSQL, SQLite, and
+#         (future) other backends are sibling carriers.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 12 — what this closes
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate kernel now exists at the Form altitude:
+#
+#   - NodeID, Blueprint, Recipe, NamedCell, PathAnnotation as
+#     `form X_shape = { ... }` Blueprint declarations.
+#   - get_level, serialize_tree, is_undefined, node_id_to_string —
+#     pure Form recipes, no host intrinsic needed.
+#   - intern_node, make_trivial_blueprint, make_composite_blueprint,
+#     make_self_id — Form recipes with marked host-intrinsics for
+#     persistent storage.
+#   - make_cell, lookup_cell, find_equivalent_cells, annotate_path —
+#     Form recipes composing the primitives.
+#   - lattice_stats, vocabulary_histogram — Form aggregations.
+#
+# What this opens (the bidirectional door):
+#
+#   - Any tongue that wants to author Blueprints/Recipes/NamedCells
+#     can compile to this set of Form recipes. The Python kernel.py is
+#     one such compiler-target; TypeScript, Rust, Go, native-Form are
+#     siblings. Each tongue carries (parse → these recipes, emit ← these
+#     recipes) per the language-cells.md pattern.
+#
+#   - The substrate's identity is now content-addressed at the Form
+#     altitude. Two implementations of intern_node that compile to the
+#     same recipe NodeID are the same operation — even when one is
+#     written in Python with SQLAlchemy and the other in Rust with
+#     sqlx. The lattice doesn't care which carrier; the carriers don't
+#     fragment the lattice.
+#
+#   - Together with cell-numerics.form (organ.py → Form) and the pair
+#     form-engine.form + form-runtime-in-form.form (form.py → Form),
+#     the three-file priority Urs named is structurally addressed.
+#     Runtime routing (GAP-N4 in cell-numerics.form) is the remaining
+#     connective tissue between Form recipes and Python call sites; it
+#     lives at the dispatcher altitude and is the natural next breath.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (once ingested + runtime route lands)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The kernel's own Form recipes are queryable by NodeID:
+#   coh substrate form "?equivalent @recipe(intern_node)"
+#
+#   # And the round-trip through any tongue lands on the same recipe:
+#   #   parse(@language(python), "def intern_node(session, ...)")
+#   #     == @recipe(intern_node)
+#   #   parse(@language(form), "defn intern_node(domain, category, children) = ...")
+#   #     == @recipe(intern_node)
+#
+#   # Lattice stats from Form:
+#   coh substrate run "lattice_stats()"
+#
+#   # Substrate auto-ingest hook picks up new .form files on merge to
+#   # main (scripts/substrate_post_merge_hook.sh) — no manual step.
