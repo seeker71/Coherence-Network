@@ -41,6 +41,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `experiments/form-stdlib/emit-engine.fk` | ONE generic Recipe → text/bytes encoder, symmetric to engine.fk. Walks Recipe tree, dispatches on category to template-fn, recursively emits children. Together with engine.fk forms the universal codec primitive — source languages AND binary formats use the same pair |
 | `docs/coherence-substrate/kernel-minimality-audit.md` | 2026-05-22 audit: 25 truly-primitive natives + 9 composable. Identifies which kernel surface can compost via core.fk equivalents. Dispatch arms honestly minimal; JIT vector for typed specialization noted as later breath |
 | `experiments/form-stdlib/cell-trace.fk` | The satsang-load-bearing primitive: walk any cell back to the source lines that authored it. Built on intern_node_at + node_source kernel natives. explain-cell renders human-readable provenance. The practice of self-knowing: every cell's state is traceable to the recipe lines that wrote it |
+| `experiments/form-stdlib/grammars/markdown.fk` | Markdown parser + emit in pure Form. ATX headings, paragraphs, fenced code blocks → universal DOC-* Recipes with per-block source attribution. Most-used format in this repo (thousands of .md files) |
+| `experiments/form-stdlib/grammars/json.fk` | JSON parser in pure Form. Objects, arrays, strings, numbers, bools, null → universal data Recipes with source attribution at the line/col of each composite. Sibling parity Go+Rust |
 
 ## The trinity
 
