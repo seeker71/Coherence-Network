@@ -198,6 +198,57 @@ impl Trace {
         }
     }
 
+    /// Variant name — readable label for an (arm_ty, arm_inst) pair.
+    /// Returns "MATH.PLUS", "COMPARE.LE", "BLOCK.LET", etc. For arms
+    /// without a known inst encoding, returns just the bare arm name.
+    /// Symmetric with TS / Go variant naming so trace JSONs read the
+    /// same way across kernels.
+    pub(crate) fn arm_variant_name(arm_ty: u32, arm_inst: u32) -> String {
+        let base = Self::arm_name(arm_ty);
+        let variant = match arm_ty {
+            RB_MATH => match arm_inst {
+                RMATH_PLUS => "PLUS",
+                RMATH_MINUS => "MINUS",
+                RMATH_MULTIPLY => "MUL",
+                RMATH_DIVIDE => "DIV",
+                RMATH_MODULO => "MOD",
+                _ => "",
+            },
+            RB_COMPARE => match arm_inst {
+                RCMP_EQ => "EQ",
+                RCMP_NE => "NE",
+                RCMP_LT => "LT",
+                RCMP_LE => "LE",
+                RCMP_GT => "GT",
+                RCMP_GE => "GE",
+                _ => "",
+            },
+            RB_LOGIC => match arm_inst {
+                RLOG_AND => "AND",
+                RLOG_OR => "OR",
+                RLOG_NOT => "NOT",
+                _ => "",
+            },
+            RB_COND => match arm_inst {
+                RCOND_IF => "IF",
+                RCOND_IF_ELSE => "IF_ELSE",
+                _ => "",
+            },
+            RB_BLOCK => match arm_inst {
+                RBLK_DO => "DO",
+                RBLK_SEQ => "SEQ",
+                RBLK_LET => "LET",
+                _ => "",
+            },
+            _ => "",
+        };
+        if variant.is_empty() {
+            base.to_string()
+        } else {
+            format!("{}.{}", base, variant)
+        }
+    }
+
     pub(crate) fn to_json(&self) -> serde_json::Value {
         // Per-(ty, inst) records — preserves typed-numeric distribution.
         let mut variants: Vec<serde_json::Value> = self
@@ -205,10 +256,11 @@ impl Trace {
             .iter()
             .map(|((ty, inst), count)| {
                 serde_json::json!({
-                    "arm_ty":   ty,
-                    "arm_inst": inst,
-                    "arm_name": Self::arm_name(*ty),
-                    "count":    count,
+                    "arm_ty":           ty,
+                    "arm_inst":         inst,
+                    "arm_name":         Self::arm_name(*ty),
+                    "arm_variant_name": Self::arm_variant_name(*ty, *inst),
+                    "count":            count,
                 })
             })
             .collect();

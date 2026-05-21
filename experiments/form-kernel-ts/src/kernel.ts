@@ -256,6 +256,79 @@ export class Trace {
     }
   }
 
+  /// Variant name — readable label for an (arm_ty, arm_inst) pair.
+  /// Returns "MATH.PLUS", "COMPARE.LE", "BLOCK.LET", etc. For MATH in
+  /// the TS kernel the inst encodes (width<<4)|op, so the variant becomes
+  /// "MATH.PLUS_I32" / "MATH.MINUS_F64" etc. Sibling-parity with the
+  /// Rust + Go kernels for the basic (width=0) cases.
+  static armVariantName(armTy: number, armInst: number): string {
+    const base = Trace.armName(armTy);
+    let variant = "";
+    switch (armTy) {
+      case RBasic.MATH: {
+        const width = (armInst >> 4) & 0xf;
+        const op = armInst & 0xf;
+        let opName = "";
+        switch (op) {
+          case RMath.PLUS: opName = "PLUS"; break;
+          case RMath.MINUS: opName = "MINUS"; break;
+          case RMath.MUL: opName = "MUL"; break;
+          case RMath.DIV: opName = "DIV"; break;
+          case RMath.MOD: opName = "MOD"; break;
+        }
+        if (!opName) break;
+        const widthName = (() => {
+          switch (width) {
+            case RMathWidth.I32: return ""; // default; matches Rust/Go bare names
+            case RMathWidth.I8: return "I8";
+            case RMathWidth.I16: return "I16";
+            case RMathWidth.I64: return "I64";
+            case RMathWidth.U8: return "U8";
+            case RMathWidth.U16: return "U16";
+            case RMathWidth.U32: return "U32";
+            case RMathWidth.U64: return "U64";
+            case RMathWidth.F32: return "F32";
+            case RMathWidth.F64: return "F64";
+            default: return "";
+          }
+        })();
+        variant = widthName ? `${opName}_${widthName}` : opName;
+        break;
+      }
+      case RBasic.COMPARE:
+        switch (armInst) {
+          case RCmp.EQ: variant = "EQ"; break;
+          case RCmp.NE: variant = "NE"; break;
+          case RCmp.LT: variant = "LT"; break;
+          case RCmp.LE: variant = "LE"; break;
+          case RCmp.GT: variant = "GT"; break;
+          case RCmp.GE: variant = "GE"; break;
+        }
+        break;
+      case RBasic.LOGIC:
+        switch (armInst) {
+          case RLogic.AND: variant = "AND"; break;
+          case RLogic.OR: variant = "OR"; break;
+          case RLogic.NOT: variant = "NOT"; break;
+        }
+        break;
+      case RBasic.COND:
+        switch (armInst) {
+          case RCond.IF_THEN: variant = "IF"; break;
+          case RCond.IF_THEN_ELSE: variant = "IF_ELSE"; break;
+        }
+        break;
+      case RBasic.BLOCK:
+        switch (armInst) {
+          case RBlock.DO: variant = "DO"; break;
+          case RBlock.SEQUENCE: variant = "SEQ"; break;
+          case RBlock.LET: variant = "LET"; break;
+        }
+        break;
+    }
+    return variant ? `${base}.${variant}` : base;
+  }
+
   toJSON(): Record<string, unknown> {
     // Per-(ty, inst) records — preserves typed-numeric distribution.
     const variants = Array.from(this.armCounts.entries())
@@ -265,6 +338,7 @@ export class Trace {
           arm_ty: ty,
           arm_inst: inst,
           arm_name: Trace.armName(ty),
+          arm_variant_name: Trace.armVariantName(ty, inst),
           count,
         };
       })
