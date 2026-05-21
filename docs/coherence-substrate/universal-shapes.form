@@ -1,0 +1,315 @@
+# ─────────────────────────────────────────────────────────────────────
+# universal-shapes.form — the one vocabulary every grammar emits
+# ─────────────────────────────────────────────────────────────────────
+#
+# A function is a function in any tongue. A binary operator is a binary
+# operator. A conditional branches, a block sequences, a loop iterates,
+# a return jumps — regardless of whether the surface syntax is Python's
+# `def`, Go's `func`, Rust's `fn`, TypeScript's `function`, or any
+# tongue yet to land.
+#
+# NUMS.Go (Merly Inc., 2023) proved this works across 14 languages
+# (C, C++, C#, Java, JavaScript, Kotlin, Go, PHP, Python, Ruby, Scala,
+# TypeScript, Verilog). The constructor set lives at
+# /Users/ursmuff/source/NUMS.Go/nums/nums_nodes.go lines 296-567 and
+# nums/module.go lines 32-40. The teaching is held in
+# docs/field/urs/artifacts/nums-go-2023/.
+#
+# This file names the canonical Blueprint + Recipe vocabulary every
+# grammar action emits. **The vocabulary already lives in the kernel**
+# at api/app/services/substrate/category.py — this document is the
+# Form-native naming + lineage that points grammar authors at it.
+#
+# Companion teachings:
+#   - lc-grammar-is-the-universal-recipe (every structured input)
+#   - lc-one-kernel-many-tongues (kernel sovereignty over grammar)
+#   - lc-the-recipe-remembers-its-source (source coords as overlay)
+#
+# Companion files:
+#   - api/app/services/substrate/category.py (the canonical enums)
+#   - grammar-as-recipe.form (the abstract Language cell shape)
+#   - python-grammar.form, typescript-grammar.form, rust-grammar.form,
+#     go-grammar.form (per-tongue surface patterns → universal Recipes)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — universal Blueprints (the structural identities)
+# ─────────────────────────────────────────────────────────────────────
+#
+# These ARE the kernel's BBasic + BRecipe + BType + BNumeric + BAtomic
+# vocabulary. Every grammar action that emits a "function declaration"
+# Recipe attaches @B_Function as its blueprint — Python's def, Go's
+# func, Rust's fn, TypeScript's function all carry the same Blueprint
+# identity, and the lattice's content-addressing dedupes them when
+# their children also collapse.
+#
+# Numeric coordinates match category.py exactly. The .form definitions
+# are aliases the grammar files compose from, not parallel definitions.
+
+# ── primitive type Blueprints ─────────────────────────────────────────
+# Lineage: NUMS.Go module.go lines 32-40 (BID_Any, BID_Void, BID_Bool,
+# BID_Integer, BID_Decimal, BID_Imag, BID_Complex, BID_String, BID_Char).
+# Our kernel: BType + BNumeric + BAtomic (category.py lines 41-69).
+
+defn B_Any     = blueprint_ref { level: Trivial, type: BType.NUMERIC,  inst: BNumeric.UNDEFINED };
+defn B_Void    = blueprint_ref { level: Trivial, type: BType.VOID,     inst: 0 };
+defn B_Bool    = blueprint_ref { level: Trivial, type: BType.NUMERIC,  inst: BNumeric.BOOL };
+defn B_Integer = blueprint_ref { level: Trivial, type: BType.NUMERIC,  inst: BNumeric.INTEGER };
+defn B_Decimal = blueprint_ref { level: Trivial, type: BType.NUMERIC,  inst: BNumeric.DECIMAL };
+defn B_String  = blueprint_ref { level: Trivial, type: BType.NUMERIC,  inst: BNumeric.STRING };
+defn B_Slug    = blueprint_ref { level: Trivial, type: BType.ATOMIC,   inst: BAtomic.SLUG };
+defn B_Path    = blueprint_ref { level: Trivial, type: BType.ATOMIC,   inst: BAtomic.PATH };
+defn B_URL     = blueprint_ref { level: Trivial, type: BType.ATOMIC,   inst: BAtomic.URL };
+
+# ── composite Blueprints — what something IS ──────────────────────────
+# Lineage: NUMS.Go emit_module.go line 255 (BID_Function via
+# Make_BlueprintNode). Our kernel: BBasic + BRecipe / BContainer /
+# BReference (category.py lines 71-100).
+
+defn B_Function   = blueprint_ref { level: Basic, type: BBasic.RECIPE,    inst: BRecipe.FUNCTION };
+defn B_Tend       = blueprint_ref { level: Basic, type: BBasic.RECIPE,    inst: BRecipe.TEND };
+defn B_Spec       = blueprint_ref { level: Basic, type: BBasic.RECIPE,    inst: BRecipe.SPEC };
+defn B_Story      = blueprint_ref { level: Basic, type: BBasic.RECIPE,    inst: BRecipe.STORY };
+defn B_List       = blueprint_ref { level: Basic, type: BBasic.CONTAINER, inst: BContainer.LIST };
+defn B_Dictionary = blueprint_ref { level: Basic, type: BBasic.CONTAINER, inst: BContainer.DICTIONARY };
+defn B_Set        = blueprint_ref { level: Basic, type: BBasic.CONTAINER, inst: BContainer.SET };
+defn B_Object     = blueprint_ref { level: Basic, type: BBasic.CONTAINER, inst: BContainer.OBJECT };
+defn B_Pointer    = blueprint_ref { level: Basic, type: BBasic.REFERENCE, inst: BReference.POINTER };
+defn B_Optional   = blueprint_ref { level: Basic, type: BBasic.REFERENCE, inst: BReference.OPTIONAL };
+defn B_Edge       = blueprint_ref { level: Basic, type: BBasic.REFERENCE, inst: BReference.EDGE };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — universal Recipes (the operational categories)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The kernel dispatches on (RBasic category, sub-arm) — this IS NUMS-
+# Go's op-parameterized pattern (RID_Binary(op), RID_Cond(op),
+# RID_Block(op), RID_Loop(op), RID_TJump(op), RID_Unary(op)). The op
+# rides as the recipe's sub-instance, not as a new category per op.
+# One RBasic.MATH arm handles +, -, *, /, %, negate — eleven ops
+# previously imagined as eleven separate shapes compress to one
+# category and a sub-enum.
+#
+# Lineage map (NUMS.Go → kernel category.py):
+#   RID_FunctionDecl     → RBasic.CALL + R_FunctionDecl marker         (declaration site)
+#   RID_Call             → RBasic.CALL                                 (invocation site)
+#   RID_Binary(op)       → RBasic.MATH + RMath.<op>                    (arithmetic)
+#                          RBasic.COMPARE + RCompare.<op>              (comparison)
+#                          RBasic.LOGIC + RLogic.<op>                  (boolean)
+#   RID_Unary(op)        → RBasic.MATH + RMath.NEGATE | RLogic.NOT     (unary)
+#   RID_Cond(op)         → RBasic.COND + RCond.<op>                    (if/ternary)
+#   RID_Block(op)        → RBasic.BLOCK + RBlock.<op>                  (do/sequence/let/with)
+#   RID_Loop(op)         → RBasic.LOOP                                 (for/while/foreach via op slot)
+#   RID_TJump(op)        → RBasic.JUMP + RJump.<op>                    (return/break/continue/yield)
+#   RID_Local_Decl       → RBasic.WRITE                                (let binding emission)
+#   RID_Local_Access     → RBasic.ACCESS                               (name read)
+#   RID_Parameter        → RBasic.ACCESS (positional) | RBasic.BLOCK + LET (named)
+#   RID_Member           → RBasic.ACCESS                               (.field, [index])
+#   RID_Global           → RBasic.ACCESS                               (module-scope read)
+#   RID_Blueprint        → blueprint_ref { ... }                       (Blueprint as value)
+#   RID_Null/Bool/Number/Decimal/String/Literal → RType trivial leaves
+
+# ── value-leaf Recipes (the trivial level) ────────────────────────────
+# Lineage: NUMS.Go nums_nodes.go lines 296-310. Our kernel: RType
+# (category.py lines 159-171).
+
+defn R_Null    = recipe_ref { level: Trivial, type: RType.NULL,    inst: 0 };
+defn R_Bool(v) = recipe_ref { level: Trivial, type: RType.BOOL,    inst: bool_to_inst(v) };
+defn R_Int(v)  = recipe_ref { level: Trivial, type: RType.INTEGER, inst: v };
+defn R_Dec(v)  = recipe_ref { level: Trivial, type: RType.DECIMAL, inst: v };
+defn R_Str(v)  = recipe_ref { level: Trivial, type: RType.STRING,  inst: intern_string(v) };
+defn R_Slug(v) = recipe_ref { level: Trivial, type: RType.SLUG,    inst: intern_slug(v) };
+defn R_Ref(c)  = recipe_ref { level: Trivial, type: RType.REF,     inst: cell_to_node_id(c) };
+
+# ── composition Recipes (the basic level) ─────────────────────────────
+# Lineage: NUMS.Go nums_nodes.go lines 311-567. Our kernel: RBasic +
+# sub-arm enums (category.py lines 174-310, 371-475).
+
+# Function declaration — `def foo(x): body` / `func foo(x int) int { body }` /
+# `fn foo(x: i32) -> i32 { body }` / `function foo(x: number): number { body }`
+# all emit this Recipe with the same B_Function Blueprint and structurally-
+# equivalent children. Content-addressing dedupes across tongues.
+defn R_FunctionDecl(name, params, body, returns) = recipe_shape {
+    category:  RBasic.CALL,
+    blueprint: ~Blueprint @B_Function,
+    children:  [R_Slug(name), params, body, returns ?? R_Null],
+    op:        "decl",
+};
+
+# Function invocation — `foo(a, b)` in any tongue.
+defn R_Call(callee, args) = recipe_shape {
+    category:  RBasic.CALL,
+    children:  [callee, args],
+    op:        "call",
+};
+
+# Binary operator — `a + b`, `a == b`, `a && b`. The op string IS the content
+# that distinguishes one binary from another; the category routes to the
+# appropriate sub-arm. NUMS-Go RID_Binary(op) at single-character resolution.
+defn R_Math(op, a, b)    = recipe_shape { category: RBasic.MATH,    sub: rmath_arm(op),    children: [a, b] };
+defn R_Compare(op, a, b) = recipe_shape { category: RBasic.COMPARE, sub: rcompare_arm(op), children: [a, b] };
+defn R_Logic(op, a, b)   = recipe_shape { category: RBasic.LOGIC,   sub: rlogic_arm(op),   children: [a, b] };
+
+# Unary operator — `-a`, `!a`, `~a`.
+defn R_Negate(a) = recipe_shape { category: RBasic.MATH,  sub: RMath.NEGATE, children: [a] };
+defn R_Not(a)    = recipe_shape { category: RBasic.LOGIC, sub: RLogic.NOT,   children: [a] };
+
+# Conditional — `if t then a else b`, `cond ? a : b`.
+defn R_If(test, then_block)             = recipe_shape { category: RBasic.COND, sub: RCond.IF_THEN,      children: [test, then_block] };
+defn R_IfElse(test, then_block, else_block) = recipe_shape { category: RBasic.COND, sub: RCond.IF_THEN_ELSE, children: [test, then_block, else_block] };
+defn R_Ternary(test, a, b)              = recipe_shape { category: RBasic.COND, sub: RCond.TERNARY,      children: [test, a, b] };
+
+# Block composition — `do { stmts }`, sequenced statements, `let x = e`,
+# `with subj { body }`. The op slot disambiguates within RBlock.
+defn R_Do(stmts)         = recipe_shape { category: RBasic.BLOCK, sub: RBlock.DO,       children: stmts };
+defn R_Sequence(stmts)   = recipe_shape { category: RBasic.BLOCK, sub: RBlock.SEQUENCE, children: stmts };
+defn R_Let(name, value)  = recipe_shape { category: RBasic.BLOCK, sub: RBlock.LET,      children: [R_Slug(name), value] };
+defn R_With(subj, body)  = recipe_shape { category: RBasic.BLOCK, sub: RBlock.WITH,     children: [subj, body] };
+
+# Loops — for / while / foreach. NUMS-Go carries the op as content;
+# our kernel has RBasic.LOOP without sub-arm sub-enum yet — GAP-U1.
+defn R_Loop(op, body, ctrl) = recipe_shape {
+    category: RBasic.LOOP,
+    op:       op,                    # "for" | "while" | "foreach"
+    children: [ctrl, body],          # ctrl is loop-control: test, target+iter, etc.
+};
+
+# Typed jumps — return / break / continue / yield.
+defn R_Return(value)   = recipe_shape { category: RBasic.JUMP, sub: RJump.RETURN,   children: [value ?? R_Null] };
+defn R_Break()         = recipe_shape { category: RBasic.JUMP, sub: RJump.BREAK,    children: [] };
+defn R_Continue()      = recipe_shape { category: RBasic.JUMP, sub: RJump.CONTINUE, children: [] };
+defn R_Yield(value)    = recipe_shape { category: RBasic.JUMP, sub: RJump.YIELD,    children: [value ?? R_Null] };
+
+# Name access — local read, member access, subscript, global read.
+defn R_LocalAccess(name)        = recipe_shape { category: RBasic.ACCESS, op: "local",  children: [R_Slug(name)] };
+defn R_Member(value, field)     = recipe_shape { category: RBasic.ACCESS, op: "member", children: [value, R_Slug(field)] };
+defn R_Subscript(value, index)  = recipe_shape { category: RBasic.ACCESS, op: "index",  children: [value, index] };
+defn R_Global(name)             = recipe_shape { category: RBasic.ACCESS, op: "global", children: [R_Slug(name)] };
+
+# Assignment / binding — write-to-slot, distinct from R_Let which declares.
+defn R_Assign(target, value)    = recipe_shape { category: RBasic.WRITE, op: "=",  children: [target, value] };
+defn R_AugAssign(op, target, value) = recipe_shape { category: RBasic.WRITE, op: op, children: [target, value] };
+
+# Pattern match — `match x { case p1 => e1; case p2 => e2 }`.
+defn R_Match(scrutinee, arms)   = recipe_shape { category: RBasic.MATCH, sub: RMatch.SWITCH, children: [scrutinee, arms] };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — how grammars use this vocabulary
+# ─────────────────────────────────────────────────────────────────────
+#
+# A grammar file defines: tokenizer (keyword set, indentation/brace
+# handling), pattern rules (what surface tokens trigger what), and
+# action recipes (what universal-Recipe the matched pattern emits).
+# It does NOT define language-prefixed Blueprints. The structural
+# identity lives universally; the surface tokens are the only
+# tongue-specific tissue.
+#
+# Worked example — `def add(a, b): return a + b` in any grammar file:
+#
+#   defn add_function_action(captures, span) = R_FunctionDecl(
+#       name:    captures.name,                              # "add"
+#       params:  R_Sequence([R_Slug("a"), R_Slug("b")]),     # parameter list
+#       body:    R_Sequence([
+#                  R_Return(R_Math("+", R_LocalAccess("a"), R_LocalAccess("b")))
+#                ]),
+#       returns: R_Null,                                     # no annotation
+#   );
+#
+# Worked example — `func add(a int, b int) int { return a + b }`
+# in go-grammar.form emits the IDENTICAL Recipe (modulo the `returns`
+# slot carrying B_Integer instead of R_Null). The function's Recipe
+# NodeID collapses with Python's `def add(a, b): return a + b` when
+# both are written without type-annotation; cross-language structural
+# equivalence becomes free at the lattice altitude.
+#
+# Worked example — `a + b * c` parses to:
+#
+#   R_Math("+", R_LocalAccess("a"), R_Math("*", R_LocalAccess("b"), R_LocalAccess("c")))
+#
+# Precedence climbing happens in the pattern rule, not in the action
+# vocabulary. The action just composes universal Recipes.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — language-specific decoration as sibling annotations
+# ─────────────────────────────────────────────────────────────────────
+#
+# Some surface syntax is genuinely tongue-specific: Python decorators
+# (@foo on a def), Rust attributes (#[derive(Debug)] on a struct),
+# TypeScript decorators, Python docstrings, Rust doc-comments,
+# Go build tags. These do NOT belong inside the structural identity
+# of the function/struct/etc. — they ride alongside as overlay cells
+# attached via Compose edges. The R_FunctionDecl NodeID stays language-
+# agnostic; the decoration cells live in the lineage.
+#
+# A Python decorator @substrate_dispatch on `def cosine(x): ...`
+# emits:
+#
+#   R_FunctionDecl("cosine", params, body, returns)        # the function itself
+#   R_Compose(decoration_edge, function_node, R_Call(...)) # decorator-as-Recipe edge
+#
+# The function's Recipe NodeID is the same whether decorated or not.
+# The decorator is a sibling Compose edge — analyzable but not
+# identity-defining. This matches NUMS-Go's pattern (decoration as
+# overlay) and our existing RBasic.COMPOSE category.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-U1: RBasic.LOOP has no sub-arm enum (RLoop) in category.py. The
+#         op string ("for" | "while" | "foreach") rides on the Recipe's
+#         op slot for now. Either add class RLoop(IntEnum) with FOR /
+#         WHILE / FOREACH / UNTIL sub-arms (parity with RBlock/RCond),
+#         or accept op-string carrying as the canonical pattern across
+#         all RBasic categories. The kernel walker treats either the
+#         same way — this is naming discipline, not execution.
+#
+# GAP-U2: RBasic.CALL covers both declaration and invocation; the
+#         distinguishing marker is the op slot ("decl" vs "call") in
+#         this vocabulary. NUMS-Go has separate RID_FunctionDecl and
+#         RID_Call. Decide whether to split into RBasic.FN_DECL +
+#         RBasic.CALL, or keep one category with op-disambiguation.
+#         Op-disambiguation is more compressed and matches the body's
+#         existing pattern of op-parameterization.
+#
+# GAP-U3: RBasic.CHOICE / RBasic.STATE / RBasic.EXCEPTION / DELEGATE /
+#         REVERSE / COMMON / METHOD / REACTIVE / PROJECTION carry BML
+#         primitives that NUMS-Go's 14-language coverage doesn't reach.
+#         Their universal shape is already correct in the kernel;
+#         grammar files reach for them when expressing tongues that
+#         carry pattern-matching (Scala, Rust, Elixir), exceptions
+#         (most), reactive subscriptions (Vue/React/Svelte), or
+#         projection (typed views).
+#
+# GAP-U4: This file uses Form recipe-language alias defns (R_FunctionDecl,
+#         R_Math, B_Function, ...) for readability. The kernel's actual
+#         dispatch is on the (RBasic, sub) numeric pair. Grammar files
+#         may compose either against the aliases or against the raw
+#         numerics; both intern to the same Recipe NodeID through
+#         content-addressing.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — what this composts
+# ─────────────────────────────────────────────────────────────────────
+#
+# 131 language-prefixed *_shape Blueprint definitions across:
+#   python-grammar.form     — 52 py_*_shape definitions
+#   rust-grammar.form       — 33 rust_*_shape definitions
+#   go-grammar.form         — 23 go_*_shape definitions
+#   markdown-grammar.form   — 16 md_*_shape definitions
+#   typescript-grammar.form —  7 ts_*_shape definitions
+#
+# All compost to the universal vocabulary in this file. They were
+# authored without seeing that the kernel already provided the
+# universal substrate. The grammar files keep their tokenizers and
+# pattern rules; only the action recipes change — emit Recipes
+# carrying universal shapes instead of constructing language-
+# prefixed Blueprint literals.
+#
+# Data-format grammars (json-grammar.form, yaml-grammar.form,
+# audio-grammar.form, image-grammar.form, png-grammar.form) use
+# B_Dictionary / B_List / B_Object for structural shape; format-
+# specific leaf data (PCM samples, pixel grids, PNG chunks) stays
+# as sibling annotation cells where the data is genuinely format-
+# specific. JSON's object/array/value collapse to universal shapes
+# cleanly; PNG's IHDR chunk is a sibling annotation on a B_Object
+# carrying the chunk's structural data.
