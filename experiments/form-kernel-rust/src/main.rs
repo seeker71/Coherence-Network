@@ -53,6 +53,7 @@ const RB_COMPARE: u32 = 13;
 const RB_LOGIC: u32 = 14;
 const RB_ACCESS: u32 = 15;     // read a property / field
 const RB_METHOD: u32 = 27;     // method on a cell-like value
+const RB_TRANSMUTE: u32 = 76;  // present value through Blueprint without changing identity
 // Kernel-demo additions
 const RB_FNDEF: u32 = 31;
 const RB_FNCALL: u32 = 32;
@@ -149,13 +150,15 @@ pub(crate) struct Kernel {
     pub(crate) trace: Option<Trace>,
 }
 
-// Trace — per-arm dispatch counters + choice success/failure tracking.
+// Trace — per-(arm, inst) dispatch counters + choice success/failure tracking.
 // Held inside Kernel so the walker can record without threading an extra
-// reference through every recursive call.
+// reference through every recursive call. Storing (ty, inst) instead of
+// just ty surfaces typed-numeric distribution — MATH.PLUS_F64 (inst=0x91)
+// becomes distinguishable from MATH.PLUS_I32 (inst=0x01) in the report.
 #[derive(Default)]
 pub(crate) struct Trace {
     pub(crate) total_walks: u64,
-    pub(crate) arm_counts: HashMap<u32, u64>,    // cat.ty → count
+    pub(crate) arm_counts: HashMap<(u32, u32), u64>,    // (cat.ty, cat.inst) → count
     pub(crate) choice_attempts: u64,
     pub(crate) choice_successes: u64,
     pub(crate) choice_failures: u64,
@@ -164,9 +167,9 @@ pub(crate) struct Trace {
 impl Trace {
     pub(crate) fn new() -> Self { Self::default() }
 
-    pub(crate) fn record(&mut self, arm_ty: u32) {
+    pub(crate) fn record(&mut self, arm_ty: u32, arm_inst: u32) {
         self.total_walks += 1;
-        *self.arm_counts.entry(arm_ty).or_insert(0) += 1;
+        *self.arm_counts.entry((arm_ty, arm_inst)).or_insert(0) += 1;
     }
 
     pub(crate) fn record_choice_attempt(&mut self) { self.choice_attempts += 1; }
@@ -190,26 +193,49 @@ impl Trace {
             RB_CALL => "CALL",
             RB_ACCESS => "ACCESS",
             RB_METHOD => "METHOD",
+            RB_TRANSMUTE => "TRANSMUTE",
             _ => "OTHER",
         }
     }
 
     pub(crate) fn to_json(&self) -> serde_json::Value {
-        let mut arms: Vec<serde_json::Value> = self
+        // Per-(ty, inst) records — preserves typed-numeric distribution.
+        let mut variants: Vec<serde_json::Value> = self
             .arm_counts
             .iter()
-            .map(|(ty, count)| {
+            .map(|((ty, inst), count)| {
                 serde_json::json!({
                     "arm_ty":   ty,
+                    "arm_inst": inst,
                     "arm_name": Self::arm_name(*ty),
                     "count":    count,
                 })
             })
             .collect();
+        variants.sort_by_key(|v| std::cmp::Reverse(v["count"].as_u64().unwrap_or(0)));
+
+        // Per-ty aggregate — kept for backward compatibility with consumers
+        // that want the coarser shape (the previous trace JSON form).
+        let mut by_ty: HashMap<u32, u64> = HashMap::new();
+        for ((ty, _), count) in &self.arm_counts {
+            *by_ty.entry(*ty).or_insert(0) += count;
+        }
+        let mut arms: Vec<serde_json::Value> = by_ty
+            .into_iter()
+            .map(|(ty, count)| {
+                serde_json::json!({
+                    "arm_ty":   ty,
+                    "arm_name": Self::arm_name(ty),
+                    "count":    count,
+                })
+            })
+            .collect();
         arms.sort_by_key(|v| std::cmp::Reverse(v["count"].as_u64().unwrap_or(0)));
+
         serde_json::json!({
             "total_walks":       self.total_walks,
-            "arms":              arms,
+            "arms":              arms,        // aggregated by ty (backward-compatible)
+            "variants":          variants,    // full (ty, inst) granularity
             "choice_attempts":   self.choice_attempts,
             "choice_successes":  self.choice_successes,
             "choice_failures":   self.choice_failures,
@@ -635,9 +661,10 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
     let cat = k.category(n);
     // Tracing hook: when k.trace is Some, record the arm dispatch. Pure
     // counter increment — no allocation, no IO. Per lc-native-kernel-binary
-    // "tracing and observation pattern".
+    // "tracing and observation pattern". Records (ty, inst) so typed-numeric
+    // distribution (MATH.PLUS_F64 vs MATH.PLUS_I32) stays distinguishable.
     if let Some(t) = &mut k.trace {
-        t.record(cat.ty);
+        t.record(cat.ty, cat.inst);
     }
     let kids = k.children(n);
 
@@ -731,7 +758,7 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                     // mechanism.
                     if ne.category.ty != RB_UNDEFINED {
                         if let Some(t) = &mut k.trace {
-                            t.record(ne.category.ty);
+                            t.record(ne.category.ty, ne.category.inst);
                         }
                     }
                     return (ne.func)(k, a, &args);
@@ -769,7 +796,17 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
             }
             Value::List(out)
         }
-        _ => panic!("walk: no arm for category {:?}", cat),
+        // Structural passthrough — categories the walker can't yet execute
+        // (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
+        // PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
+        // VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
+        // records their attribution. Walking returns the NodeID itself so
+        // downstream structural reasoning continues. Sibling-parity with
+        // TS kernel's behavior. The honest stance: "this kernel knows the
+        // shape exists but cannot yet execute its semantics; the substrate
+        // identity is preserved." Replaces the prior panic — kernels are
+        // no longer fragile in face of recipes from richer dialects.
+        _ => Value::Nid(n),
     }
 }
 
@@ -1010,6 +1047,7 @@ fn cat_witness() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_WITNESS
 fn cat_access() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_ACCESS, inst: 1 } }
 fn cat_method() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_METHOD, inst: 1 } }
 fn cat_list_nat() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_LIST, inst: 1 } }
+fn cat_transmute() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_TRANSMUTE, inst: 1 } }
 fn cat_undefined() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_UNDEFINED, inst: 0 } }
 
 // ---------------------------------------------------------------------------
