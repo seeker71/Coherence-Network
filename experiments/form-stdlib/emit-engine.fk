@@ -1,0 +1,143 @@
+; emit-engine.fk — the symmetric Recipe → text/bytes encoder
+;
+; Sibling to engine.fk (which is text/bytes → Recipe via grammar data).
+; Together they are the universal codec primitive: ONE pair of engines,
+; every format. Source languages (Python/TS/Rust/Go), data formats
+; (JSON/YAML/Markdown), binary formats (PNG/audio/image/video) all drop
+; in as DATA — parse rules for the decode direction, emit templates for
+; the encode direction.
+;
+; Composts (in subsequent breaths, once per-language templates exist):
+;   - lang-python.ts / lang-rust.ts / lang-go.ts / lang-typescript.ts
+;     emission halves (these contain both parse + emit; emit half goes
+;     to per-language emit-templates.fk)
+;   - any host-language pretty-printer / code-generator
+;
+; The core abstraction:
+;
+;   emit(recipe, templates) → bytes
+;
+;   templates = (list (cat-nodeid template-fn) ...)
+;   template-fn = (defn (children-emitted) → string)
+;
+; The engine walks the Recipe tree, looks up the template for each
+; node's category, recursively emits children, then invokes the template
+; function with the list of emitted children to produce the output for
+; that node. Trivial leaves use the kernel's node_value passthrough.
+;
+; Built on kernel natives: node_category, node_children, node_value,
+; int_to_str, str_concat, plus stdlib primitives from core.fk (map,
+; foldl, etc.).
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — template lookup table
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Templates are a list of (cat-nodeid template-fn) pairs. The engine
+    ;; looks up the function for each Recipe's category and invokes it
+    ;; with the emitted-children list. Per-language emit files build
+    ;; these tables via:
+    ;;
+    ;;   (let python-templates
+    ;;     (list
+    ;;       (list R_MATH_PLUS    py-emit-plus)
+    ;;       (list R_COND_IF_ELSE py-emit-if-else)
+    ;;       (list R_FN_DECL      py-emit-function-decl)
+    ;;       ...))
+    ;;
+    ;; where each py-emit-* is a (defn name (children-emitted) → string).
+
+    (defn template-cat (entry)  (head entry))
+    (defn template-fn  (entry)  (head (tail entry)))
+
+    (defn lookup-template (templates cat)
+        (if (nil? templates) (empty)
+            (do
+                (let entry (head templates))
+                (if (eq (template-cat entry) cat)
+                    (template-fn entry)
+                    (lookup-template (tail templates) cat)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — emit-children: recursive emission of child Recipes
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each child Recipe is independently emitted, accumulating the
+    ;; resulting strings into a list. The template function arranges
+    ;; them into the final form.
+
+    (defn emit-children (children templates)
+        (if (nil? children) (empty)
+            (cons (emit-recipe (head children) templates)
+                  (emit-children (tail children) templates))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — emit-recipe: walk one Recipe, return emitted string
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Dispatch:
+    ;;   - composite Recipe (has children) → look up template, recurse
+    ;;   - trivial leaf (no children, has value) → emit the value
+    ;;   - unknown category with children but no template → emit children
+    ;;     joined with spaces (sensible default for un-templated shapes)
+
+    (defn emit-recipe (r templates)
+        (do
+            (let children (node_children r))
+            ;; Leaf first — skip template lookup entirely for trivials.
+            ;; (Avoids invoking eq on NodeIDs, which the Rust kernel
+            ;; currently coerces to int. node_eq as a kernel native
+            ;; would lift this — the kernel-extension lesson surfaces.)
+            (if (nil? children)
+                (emit-leaf r)
+                (do
+                    (let cat (node_category r))
+                    (let tmpl-fn (lookup-template templates cat))
+                    (if (nil? tmpl-fn)
+                        (emit-default-composite children templates)
+                        (tmpl-fn (emit-children children templates)))))))
+
+    ;; Trivial leaf: kernel's node_value returns the underlying primitive.
+    ;; int_to_str passes strings through and converts ints. For
+    ;; per-format encoders that need richer leaf handling (escaping,
+    ;; quoting, binary serialization), templates can wrap leaves via
+    ;; explicit lookup on the trivial categories.
+    (defn emit-leaf (r)
+        (int_to_str (node_value r)))
+
+    ;; Default emission for composites without a registered template:
+    ;; concatenate children with space separators. This keeps the engine
+    ;; productive even with partial template tables (during migration of
+    ;; a language).
+    (defn emit-default-composite (children templates)
+        (do
+            (let parts (emit-children children templates))
+            (join-strings parts " ")))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — string joining helpers
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn join-strings (xs sep)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat sep
+                                        (join-strings (tail xs) sep))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — top-level entry: encode a Recipe with an emit table
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The full pipeline (paired with engine.fk):
+    ;;
+    ;;   text + grammar
+    ;;     → engine.fk parse        → Recipe-tree
+    ;;     → emit-engine.fk encode  → text
+    ;;
+    ;; Round-trip identity: parse-then-emit reproduces the canonical
+    ;; surface form of the source. Whitespace and comment preservation
+    ;; rides as sibling annotation cells (separate from structural
+    ;; identity). The Recipe NodeID stays the same across round-trips,
+    ;; which is the property cross-language transpilation depends on.
+
+    (defn encode (recipe templates)
+        (emit-recipe recipe templates))
+)

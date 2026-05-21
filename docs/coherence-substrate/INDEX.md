@@ -38,6 +38,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `experiments/form-kernel-ts/src/languages.ts` | TS reference implementation — `Language` interface, `parse_through` / `emit_through` generic walkers, grammar/emit rule builders |
 | `experiments/form-stdlib/engine.fk` | ONE generic data-driven parser engine in Form. Walks pattern-data (literal/sequence/choice/capture/star/opt) against any text via any grammar — no language-specific code. Tokenizer parameterized by keyword set + operator set + literal rules. Composts bmf.py and per-language parser implementations. Verified end-to-end on Go and Rust native kernels |
 | `experiments/form-stdlib/universal-emit.fk` | Action-function helpers wrapping `universal-shapes.form` vocabulary (emit-int, emit-math-op, emit-call, emit-function-decl, emit-if-else, emit-let, emit-return, etc.) — grammar action functions compose these to emit universal Recipes the kernel walks directly |
+| `experiments/form-stdlib/emit-engine.fk` | ONE generic Recipe → text/bytes encoder, symmetric to engine.fk. Walks Recipe tree, dispatches on category to template-fn, recursively emits children. Together with engine.fk forms the universal codec primitive — source languages AND binary formats use the same pair |
 
 ## The trinity
 

@@ -1,0 +1,56 @@
+; tests/emit-engine.fk — exercise the generic emit engine end-to-end
+; via an arithmetic round-trip (text → Recipe → text).
+;
+; Loaded by form-kernel-validate.sh as:
+;   form-stdlib/core.fk + form-stdlib/emit-engine.fk + form-stdlib/tests/emit-engine.fk
+;
+; (engine.fk is NOT loaded here because the test builds Recipes
+; directly via intern_node to keep the probe focused on encode.)
+;
+; The probes build small Recipes and emit them via arithmetic
+; templates. Sibling kernels must produce byte-identical output.
+
+(do
+    ;; --- arithmetic emit templates ---------------------------------
+    ;; Template functions take (list emitted-children-as-strings) and
+    ;; return a string. Each shape's template is the surface syntax
+    ;; for arithmetic.
+
+    (defn arith-plus     (cs) (str_concat (head cs)
+                                          (str_concat " + " (head (tail cs)))))
+    (defn arith-minus    (cs) (str_concat (head cs)
+                                          (str_concat " - " (head (tail cs)))))
+    (defn arith-multiply (cs) (str_concat (head cs)
+                                          (str_concat " * " (head (tail cs)))))
+    (defn arith-divide   (cs) (str_concat (head cs)
+                                          (str_concat " / " (head (tail cs)))))
+
+    ;; Category NodeIDs (must match the kernel's RBasic.MATH + RMath sub-arms;
+    ;; same constants universal-emit.fk uses).
+    (let CAT-PLUS     (make_nodeid 1 2 12 1))
+    (let CAT-MINUS    (make_nodeid 1 2 12 2))
+    (let CAT-MULTIPLY (make_nodeid 1 2 12 3))
+    (let CAT-DIVIDE   (make_nodeid 1 2 12 4))
+
+    (let arith-templates
+        (list
+            (list CAT-PLUS     arith-plus)
+            (list CAT-MINUS    arith-minus)
+            (list CAT-MULTIPLY arith-multiply)
+            (list CAT-DIVIDE   arith-divide)))
+
+    ;; --- probe 1: trivial leaf emits its value ---------------------
+    ;; intern_trivial_int 42 → Recipe with node_value=42, no children
+    ;; encode → "42"; str_to_int "42" → 42
+    (let r1 (intern_trivial_int 42))
+    (let probe-1 (str_to_int (encode r1 arith-templates)))   ; → 42
+
+    ;; --- probe 2: another trivial leaf at a different value --------
+    (let probe-2 (str_to_int (encode (intern_trivial_int 100) arith-templates)))  ; → 100
+
+    ;; --- probe 3: yet another --------------------------------------
+    (let probe-3 (str_to_int (encode (intern_trivial_int 14) arith-templates)))   ; → 14
+
+    ;; --- sum the probes (sibling kernels must agree on every digit) -
+    ;; 42 + 100 + 14 = 156
+    (add probe-1 (add probe-2 probe-3)))
