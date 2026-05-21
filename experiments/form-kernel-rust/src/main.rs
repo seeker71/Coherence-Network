@@ -43,11 +43,16 @@ pub(crate) const LEVEL_TRIVIAL: u32 = 1;
 pub(crate) const LEVEL_BASIC: u32 = 2;
 
 // RBasic — aligned with api/app/services/substrate/category.py
+const RB_UNDEFINED: u32 = 0;
+const RB_WITNESS: u32 = 6;     // substrate self-attestation
 const RB_BLOCK: u32 = 9;
+const RB_CALL: u32 = 10;       // invoke external effect (I/O, tool)
 const RB_COND: u32 = 11;
 const RB_MATH: u32 = 12;
 const RB_COMPARE: u32 = 13;
 const RB_LOGIC: u32 = 14;
+const RB_ACCESS: u32 = 15;     // read a property / field
+const RB_METHOD: u32 = 27;     // method on a cell-like value
 // Kernel-demo additions
 const RB_FNDEF: u32 = 31;
 const RB_FNCALL: u32 = 32;
@@ -103,6 +108,18 @@ struct ShapeKey {
 // optimization is undone). Future breath: restore via Cow or split tables.
 type NativeFn = fn(&mut Kernel, &mut Arena, &[Value]) -> Value;
 
+// NativeEntry — a native's function plus the Form category it expresses.
+// Carries Blueprint attribution into the kernel: when the walker dispatches
+// through a native, the trace records the category alongside the FNCALL
+// arm, so reasoning about which Form-shapes did the work reaches inside
+// the host-language layer. UNDEFINED is the honest marker for natives
+// whose Form attribution hasn't been settled yet.
+#[derive(Copy, Clone)]
+struct NativeEntry {
+    category: NodeID,
+    func: NativeFn,
+}
+
 // NameID — interned identifier handle. The same u32 used to encode a name
 // trivial's NodeID instance is what every runtime name-lookup compares.
 // String comparison happens once, at parse time, never in the hot path.
@@ -123,7 +140,7 @@ pub(crate) struct Kernel {
     strs: Vec<String>,
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
-    natives: HashMap<NameID, NativeFn>,
+    natives: HashMap<NameID, NativeEntry>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
     // choice success/failure rates. Per lc-native-kernel-binary's
@@ -166,6 +183,13 @@ impl Trace {
             RB_IDENT => "IDENT",
             RB_FNDEF => "FNDEF",
             RB_FNCALL => "FNCALL",
+            RB_LIST => "LIST",
+            // Native-Blueprint attribution categories — recorded
+            // alongside FNCALL when a native fires.
+            RB_WITNESS => "WITNESS",
+            RB_CALL => "CALL",
+            RB_ACCESS => "ACCESS",
+            RB_METHOD => "METHOD",
             _ => "OTHER",
         }
     }
@@ -415,13 +439,26 @@ struct Frame {
 // ---------------------------------------------------------------------------
 
 impl Kernel {
-    fn register_native(&mut self, name: &str, f: NativeFn) {
+    fn register_native(&mut self, name: &str, category: NodeID, f: NativeFn) {
         let id = self.intern_string(name).inst;
-        self.natives.insert(id, f);
+        self.natives.insert(id, NativeEntry { category, func: f });
     }
 
     fn register_natives(&mut self) {
-        self.register_native("print", |_, _, args| {
+        // Blueprint attribution discipline:
+        //   cat_call()      — invoke external effect (I/O, tool)
+        //   cat_access()    — read a property / field (length, index, byte)
+        //   cat_method()    — transform on a cell-like value (string build, format)
+        //   cat_compare()   — equality / ordering
+        //   cat_list_nat()  — construct or destructure a List
+        //   cat_witness()   — substrate self-attestation (intern, walk, lookup)
+        //   cat_undefined() — honest "no Form category settled yet"
+        //
+        // The category rides on each NativeEntry; the walker records it in
+        // the trace when the native fires. The kernel knows itself from
+        // inside, not only at its Form surface.
+
+        self.register_native("print", cat_call(), |_, _, args| {
             for (i, a) in args.iter().enumerate() {
                 if i > 0 { print!(" "); }
                 print!("{}", a.display());
@@ -429,72 +466,72 @@ impl Kernel {
             println!();
             Value::Null
         });
-        self.register_native("str_len", |_, _, args| {
+        self.register_native("str_len", cat_access(), |_, _, args| {
             Value::Int(args[0].as_str().len() as i64)
         });
-        self.register_native("substring", |_, _, args| {
+        self.register_native("substring", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             let a = args[1].as_int() as usize;
             let b = args[2].as_int() as usize;
             Value::Str(s[a..b].to_string())
         });
-        self.register_native("char_at", |_, _, args| {
+        self.register_native("char_at", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             let i = args[1].as_int() as usize;
             Value::Str((s.as_bytes()[i] as char).to_string())
         });
-        self.register_native("str_concat", |_, _, args| {
+        self.register_native("str_concat", cat_method(), |_, _, args| {
             let mut s = args[0].as_str().to_string();
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
-        self.register_native("str_eq", |_, _, args| {
+        self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_str() == args[1].as_str())
         });
-        self.register_native("int_to_str", |_, _, args| {
+        self.register_native("int_to_str", cat_method(), |_, _, args| {
             Value::Str(args[0].as_int().to_string())
         });
-        self.register_native("str_to_int", |_, _, args| {
+        self.register_native("str_to_int", cat_method(), |_, _, args| {
             Value::Int(args[0].as_str().parse().unwrap_or(0))
         });
-        self.register_native("ord", |_, _, args| {
+        self.register_native("ord", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             if s.is_empty() { Value::Int(-1) } else { Value::Int(s.as_bytes()[0] as i64) }
         });
-        self.register_native("list", |_, _, args| {
+        self.register_native("list", cat_list_nat(), |_, _, args| {
             Value::List(args.to_vec())
         });
-        self.register_native("cons", |_, _, args| {
+        self.register_native("cons", cat_list_nat(), |_, _, args| {
             let mut out = vec![args[0].clone()];
             if let Value::List(rest) = &args[1] {
                 out.extend(rest.iter().cloned());
             }
             Value::List(out)
         });
-        self.register_native("head", |_, _, args| {
+        self.register_native("head", cat_list_nat(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 xs.first().cloned().unwrap_or(Value::Null)
             } else { Value::Null }
         });
-        self.register_native("tail", |_, _, args| {
+        self.register_native("tail", cat_list_nat(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 Value::List(if xs.is_empty() { vec![] } else { xs[1..].to_vec() })
             } else { Value::Null }
         });
-        self.register_native("len", |_, _, args| {
+        self.register_native("len", cat_access(), |_, _, args| {
             match &args[0] {
                 Value::List(xs) => Value::Int(xs.len() as i64),
                 Value::Str(s) => Value::Int(s.len() as i64),
                 _ => Value::Int(0),
             }
         });
-        self.register_native("nth", |_, _, args| {
+        self.register_native("nth", cat_access(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 xs[args[1].as_int() as usize].clone()
             } else { Value::Null }
         });
-        self.register_native("empty", |_, _, _| Value::List(vec![]));
-        self.register_native("read_file", |_, _, args| {
+        self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        self.register_native("read_file", cat_call(), |_, _, args| {
             match fs::read_to_string(args[0].as_str()) {
                 Ok(s) => Value::Str(s),
                 Err(_) => Value::Null,
@@ -506,9 +543,10 @@ impl Kernel {
         // natives to construct recipes. Closes form-runtime-in-form gaps
         // W1-W3. With these, templates (Breath 2) become expressible —
         // Form code can BUILD recipes from pattern matches, not just walk
-        // pre-existing ones.
+        // pre-existing ones. All attributed as WITNESS — the substrate
+        // attesting to its own structure.
 
-        self.register_native("make_nodeid", |_, _, args| {
+        self.register_native("make_nodeid", cat_witness(), |_, _, args| {
             Value::Nid(NodeID {
                 pkg: args[0].as_int() as u32,
                 level: args[1].as_int() as u32,
@@ -516,14 +554,14 @@ impl Kernel {
                 inst: args[3].as_int() as u32,
             })
         });
-        self.register_native("intern_trivial_int", |k, _, args| {
+        self.register_native("intern_trivial_int", cat_witness(), |k, _, args| {
             Value::Nid(k.intern_trivial_int(args[0].as_int()))
         });
-        self.register_native("intern_trivial_string", |k, _, args| {
+        self.register_native("intern_trivial_string", cat_witness(), |k, _, args| {
             let s = args[0].as_str().to_string();
             Value::Nid(k.intern_string(&s))
         });
-        self.register_native("intern_node", |k, _, args| {
+        self.register_native("intern_node", cat_witness(), |k, _, args| {
             // args[0]: category as Nid; args[1]: children as List of Nids
             let cat = args[0].as_nid();
             let kids: Vec<NodeID> = match &args[1] {
@@ -532,23 +570,38 @@ impl Kernel {
             };
             Value::Nid(k.intern(cat, kids))
         });
-        self.register_native("node_category", |k, _, args| {
+        self.register_native("node_category", cat_witness(), |k, _, args| {
             Value::Nid(k.category(args[0].as_nid()))
         });
-        self.register_native("node_children", |k, _, args| {
+        self.register_native("node_children", cat_witness(), |k, _, args| {
             let kids = k.children(args[0].as_nid());
             Value::List(kids.into_iter().map(Value::Nid).collect())
         });
-        self.register_native("node_value", |k, _, args| {
+        self.register_native("node_value", cat_witness(), |k, _, args| {
             k.trivial_value(args[0].as_nid())
         });
         // walk_recipe — evaluate a NodeID in a fresh root frame. Returns
         // the value the recipe produces. Use case: Form code builds a
         // recipe via intern_node, then walks it to get the runtime result.
-        self.register_native("walk_recipe", |k, _, args| {
+        self.register_native("walk_recipe", cat_witness(), |k, _, args| {
             let mut sub_arena = Arena::new();
             let env = sub_arena.new_frame(None);
             walk(k, &mut sub_arena, args[0].as_nid(), env)
+        });
+
+        // native_blueprint — read a native's Form category from inside Form.
+        // Returns the category NodeID (level=2, ty=RBasic, inst=instance) or
+        // Null if the name isn't bound to a native. Makes attribution legible
+        // from Form code: `(native_blueprint "intern_node")` → @1.2.6.1.
+        self.register_native("native_blueprint", cat_witness(), |k, _, args| {
+            let s = args[0].as_str();
+            match k.str_idx.get(s).copied() {
+                Some(name_id) => match k.natives.get(&name_id) {
+                    Some(ne) => Value::Nid(ne.category),
+                    None => Value::Null,
+                },
+                None => Value::Null,
+            }
         });
 
         // --- Debug / inspection -----------------------------------------
@@ -557,7 +610,9 @@ impl Kernel {
         // Output goes to stderr so it doesn't pollute the result on stdout.
         //   (let result (trace (filter even? xs)))
         //   (trace "label" value)   ; with a label prefix
-        self.register_native("trace", |_, _, args| {
+        // No Form category claimed — `trace` is a debug surface, honest
+        // about being outside the structural vocabulary.
+        self.register_native("trace", cat_undefined(), |_, _, args| {
             if args.len() >= 2 {
                 eprintln!("[trace {}] {}", args[0].as_str(), args[1].display());
                 args[1].clone()
@@ -660,16 +715,26 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
         }
         RB_FNCALL => {
             let name = k.ident_id(kids[0]);
-            // Native takes priority unless user shadowed. Copy the fn pointer
+            // Native takes priority unless user shadowed. Copy the entry
             // out so the natives-map borrow releases before we call &mut k.
-            let nf_opt = k.natives.get(&name).copied();
-            if let Some(nf) = nf_opt {
+            let ne_opt = k.natives.get(&name).copied();
+            if let Some(ne) = ne_opt {
                 if a.lookup(env, name).is_none() {
                     let mut args = Vec::with_capacity(kids.len() - 1);
                     for arg in &kids[1..] {
                         args.push(walk(k, a, *arg, env));
                     }
-                    return nf(k, a, &args);
+                    // Native Blueprint attribution — record the Form
+                    // category the native expresses alongside the FNCALL
+                    // arm already recorded above. Trace now reflects the
+                    // structural shape of the work, not just the dispatch
+                    // mechanism.
+                    if ne.category.ty != RB_UNDEFINED {
+                        if let Some(t) = &mut k.trace {
+                            t.record(ne.category.ty);
+                        }
+                    }
+                    return (ne.func)(k, a, &args);
                 }
             }
             let callee = a
@@ -934,6 +999,18 @@ fn cat_block(inst: u32) -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_
 fn cat_ident() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_IDENT, inst: 1 } }
 fn cat_fndef() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_FNDEF, inst: 1 } }
 fn cat_fncall() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_FNCALL, inst: 1 } }
+
+// Native-attribution category constructors. Each names the Form-shape
+// a native expresses; the walker records them in the trace when the
+// native fires. inst:1 is the "generic instance" — when a native maps
+// to a specific RBasic subop (e.g. str_eq → COMPARE.EQ), use the
+// already-existing cat_compare(RCMP_EQ) instead.
+fn cat_call() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_CALL, inst: 1 } }
+fn cat_witness() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_WITNESS, inst: 1 } }
+fn cat_access() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_ACCESS, inst: 1 } }
+fn cat_method() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_METHOD, inst: 1 } }
+fn cat_list_nat() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_LIST, inst: 1 } }
+fn cat_undefined() -> NodeID { NodeID { pkg: 1, level: LEVEL_BASIC, ty: RB_UNDEFINED, inst: 0 } }
 
 // ---------------------------------------------------------------------------
 // Main
