@@ -27,7 +27,12 @@ export interface EmitFkOptions {
   source_comments?: boolean;
 }
 
+// Counter for synthesized helper names (`_while_N`, `_for_N`). Reset
+// at each emitFk call so output is deterministic across runs.
+let whileCounter = 0;
+
 export function emitFk(k: Kernel, tree: NodeID, opts: EmitFkOptions = {}): string {
+  whileCounter = 0;
   return emit(k, tree, opts);
 }
 
@@ -196,6 +201,123 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       const value = emit(k, kids[0]!, opts);
       const slice = emit(k, kids[1]!, opts);
       return `(nth ${value} ${slice})`;
+    }
+
+    // ── while-loop via accumulator-passing recursion ──────────
+    // Python:                Kernel (Form-native equivalent):
+    //   i = 0                (let i 0)
+    //   while i < N:         (defn _while_K (i) (if (lt i N) (_while_K (add i 1)) i))
+    //       i = i + 1        (let i (_while_K i))
+    //
+    // The kernel has no LOOP arm — recursion IS the loop in Form-native.
+    // The transformation:
+    //   1. Scan the loop body for `name = expr` assignments — these
+    //      are the "loop variables" the iteration mutates.
+    //   2. Generate a helper recipe `_while_<counter>` taking those
+    //      variables as params.
+    //   3. The helper body: `(if cond (_while_K new_v1 new_v2 ...)
+    //      (return-state))` where new_v_i is the RHS of v_i's
+    //      assignment in the body.
+    //   4. Initial call passes the current bindings of the loop vars.
+    //
+    // Restrictions today:
+    //   - Body statements must be (a) assignments to loop vars, or
+    //     (b) other expression-statements / side-effects that run
+    //     before each recursive call.
+    //   - All loop vars must be already bound in the enclosing scope
+    //     (the assignments inside the loop are re-binds, not first
+    //     definitions).
+    //   - Single-var loops first; multi-var lands when needed.
+    case CTOR.while_: {
+      // children: [cond-node, body-node]
+      const cond = emit(k, kids[0]!, opts);
+      const bodyNode = kids[1]!;
+      const bodyCtor = capturedCtor(k, bodyNode);
+      const bodyKids =
+        bodyCtor === CTOR.block ? capturedChildren(k, bodyNode) : [bodyNode];
+
+      // Collect loop-mutated variables in order of first assignment.
+      const loopVars: string[] = [];
+      const loopVarSet = new Set<string>();
+      const sideEffects: NodeID[] = [];
+      const nextValues = new Map<string, NodeID>();
+
+      for (const stmt of bodyKids) {
+        if (capturedCtor(k, stmt) === CTOR.assign) {
+          const aKids = capturedChildren(k, stmt);
+          const targetName = emitIdent(k, aKids[0]!);
+          if (!loopVarSet.has(targetName)) {
+            loopVars.push(targetName);
+            loopVarSet.add(targetName);
+          }
+          nextValues.set(targetName, aKids[1]!);
+        } else {
+          sideEffects.push(stmt);
+        }
+      }
+
+      if (loopVars.length === 0) {
+        throw new Error(
+          "emitFk: while-loop has no assigned loop variables — would loop forever. " +
+            "Need at least one `var = expr` in the body to progress the iteration.",
+        );
+      }
+
+      // Generate a unique helper name. Counter lives in the closure.
+      const helperName = `_while_${whileCounter++}`;
+
+      // Build the recursive-call args. Each loop var's next value is
+      // either its updated expression or its identity (if not reassigned
+      // — shouldn't happen but defensive).
+      const nextArgs = loopVars.map((v) => {
+        const nv = nextValues.get(v);
+        return nv !== undefined ? emit(k, nv, opts) : v;
+      });
+
+      // Body: side-effects sequenced before the recursive call,
+      // wrapped in a (do ...) when there are multiple statements.
+      // The kernel's nested (do ...) returns the last value, which is
+      // the recursive call's result — matching while-loop's "return
+      // the post-loop state" semantics.
+      const sideEffectStrs = sideEffects.map((s) => emit(k, s, opts));
+      const recCall =
+        nextArgs.length === 0
+          ? `(${helperName})`
+          : `(${helperName} ${nextArgs.join(" ")})`;
+      const trueBranch =
+        sideEffectStrs.length === 0
+          ? recCall
+          : `(do ${sideEffectStrs.join(" ")} ${recCall})`;
+
+      // The "else" branch — when cond is false — returns the current
+      // state. For a single loop var, return that var's value. For
+      // multi-var, wrap in (list ...) — callers must destructure (or
+      // we return only the first var for now).
+      const elseBranch =
+        loopVars.length === 1
+          ? loopVars[0]!
+          : `(list ${loopVars.join(" ")})`;
+
+      // Helper definition + invocation. The invocation passes the
+      // current bindings of the loop vars (which the enclosing scope
+      // already has). For multi-var loops, destructure the returned
+      // list back into the individual names so subsequent code reads
+      // the updated values.
+      const helperDef =
+        `(defn ${helperName} (${loopVars.join(" ")}) (if ${cond} ${trueBranch} ${elseBranch}))`;
+      let helperCall: string;
+      if (loopVars.length === 1) {
+        helperCall = `(let ${loopVars[0]} (${helperName} ${loopVars[0]}))`;
+      } else {
+        const resultName = `_while_${whileCounter}_result`;
+        const destructure = loopVars
+          .map((v, i) => `(let ${v} (nth ${resultName} ${i}))`)
+          .join(" ");
+        helperCall =
+          `(let ${resultName} (${helperName} ${loopVars.join(" ")})) ` +
+          destructure;
+      }
+      return `(do ${helperDef} ${helperCall})`;
     }
 
     default:
