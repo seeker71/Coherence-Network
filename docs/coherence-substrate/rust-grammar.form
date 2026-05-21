@@ -1,0 +1,276 @@
+# ─────────────────────────────────────────────────────────────────────
+# rust-grammar.form — Rust source as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Stub Language cell for Rust. The Rust kernel at
+# experiments/form-kernel-rust/ and the framebuffer crate at
+# experiments/memory-as-framebuffer-v0/ become inspectable through
+# this Language cell once the BMF rules land
+# (per lc-the-kernel-knows-itself).
+#
+# Skeleton — Blueprints for Rust's core constructs, with delegate-
+# to-host (syn crate) for the executable parse today. The destination,
+# per lc-parsers-as-recipes, is each Rust construct as a BMF Form
+# Rule registered via register_form_rule.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — crate-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form rust_file_shape = {
+    attrs:       ~List,                      # [rust_attr_shape] — #![…] crate-level
+    items:       ~List,                      # [item_shape]
+    source_path: ~PathRef,
+};
+
+form rust_attr_shape = {
+    is_inner:    ~Bool,                      # #! vs #
+    path:        ~List,                      # [~Slug] — e.g. ["derive"], ["cfg"]
+    args:        ?~Recipe,                   # the (…) contents
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — item-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form rust_use_shape = {
+    path:        ~List,                      # [~Slug] — path components
+    rename:      ?~Slug,                     # `as foo`
+    leaves:      ?~List,                     # for grouped imports `use a::{b, c}`
+};
+
+form rust_fn_shape = {
+    name:        ~Slug,
+    is_async:    ~Bool,
+    is_const:    ~Bool,
+    is_unsafe:   ~Bool,
+    vis:         ~Slug,                      # "private" | "pub" | "pub(crate)" | …
+    params:      ~List,                      # [rust_param_shape]
+    return_type: ?rust_type_shape,
+    body:        ?~List,                     # [statement_shape]; null for trait fn sig
+    where_clauses: ~List,
+    type_params: ~List,                      # generics
+    attrs:       ~List,                      # decorators (#[derive], #[cfg], …)
+};
+
+form rust_struct_shape = {
+    name:        ~Slug,
+    vis:         ~Slug,
+    fields:      ~List,                      # named | tuple | unit
+    kind:        ~Slug,                      # "named" | "tuple" | "unit"
+    type_params: ~List,
+    where_clauses: ~List,
+    attrs:       ~List,
+};
+
+form rust_enum_shape = {
+    name:        ~Slug,
+    vis:         ~Slug,
+    variants:    ~List,                      # [rust_variant_shape]
+    type_params: ~List,
+    attrs:       ~List,
+};
+
+form rust_trait_shape = {
+    name:        ~Slug,
+    vis:         ~Slug,
+    items:       ~List,                      # [rust_trait_item_shape]
+    supertraits: ~List,
+    type_params: ~List,
+    attrs:       ~List,
+};
+
+form rust_impl_shape = {
+    type_expr:   rust_type_shape,            # the impl Target
+    trait_ref:   ?rust_type_shape,           # for trait impls: impl Trait for Target
+    items:       ~List,                      # [item_shape]
+    type_params: ~List,
+    where_clauses: ~List,
+    attrs:       ~List,
+};
+
+form rust_mod_shape = {
+    name:        ~Slug,
+    vis:         ~Slug,
+    items:       ?~List,                     # null for `mod foo;` (external file)
+    attrs:       ~List,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — type expression Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form rust_type_shape = {
+    kind:        ~Slug,                      # "path" | "ref" | "ptr" | "slice" |
+                                             # "array" | "tuple" | "fn" | "trait_object"
+    detail:      ~Recipe,                    # kind-specific Blueprint
+};
+
+form rust_path_type_shape  = { segments: ~List };
+form rust_ref_type_shape   = { lifetime: ?~Slug, mutable: ~Bool, inner: rust_type_shape };
+form rust_tuple_type_shape = { elts: ~List };
+form rust_fn_type_shape    = { params: ~List, return_type: ?rust_type_shape };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — pattern Blueprints (Rust's match patterns)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Rust's pattern language is one of the language's distinctive
+# features — first-class match patterns at variable bindings, in
+# function parameters, in if-let, etc. The pattern Blueprints
+# carry that:
+
+form rust_pattern_shape = {
+    kind:        ~Slug,    # "lit" | "ident" | "tuple" | "struct" | "enum_variant" |
+                           # "ref" | "or" | "range" | "wildcard" | "rest"
+    detail:      ~Recipe,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — expression and statement Blueprints (illustrative subset)
+# ─────────────────────────────────────────────────────────────────────
+
+form rust_let_shape       = { pattern: rust_pattern_shape, ty: ?rust_type_shape, value: ?~Recipe };
+form rust_if_shape        = { cond: ~Recipe, then_branch: ~List, else_branch: ?~Recipe };
+form rust_if_let_shape    = { pattern: rust_pattern_shape, scrutinee: ~Recipe, then_branch: ~List, else_branch: ?~Recipe };
+form rust_match_shape     = { scrutinee: ~Recipe, arms: ~List };
+form rust_match_arm_shape = { pattern: rust_pattern_shape, guard: ?~Recipe, body: ~Recipe };
+form rust_for_shape       = { pattern: rust_pattern_shape, iter: ~Recipe, body: ~List };
+form rust_while_shape     = { cond: ~Recipe, body: ~List };
+form rust_loop_shape      = { body: ~List, label: ?~Slug };
+form rust_break_shape     = { value: ?~Recipe, label: ?~Slug };
+
+form rust_call_shape      = { func: ~Recipe, args: ~List };
+form rust_method_call_shape = { receiver: ~Recipe, method: ~Slug, type_args: ~List, args: ~List };
+form rust_field_shape     = { receiver: ~Recipe, field: ~Slug };
+form rust_binop_shape     = { op: ~Slug, left: ~Recipe, right: ~Recipe };
+form rust_unaryop_shape   = { op: ~Slug, operand: ~Recipe };  # -, !, &, &mut, *
+form rust_ref_shape       = { mutable: ~Bool, inner: ~Recipe };
+form rust_try_shape       = { inner: ~Recipe };                # expr?
+form rust_block_shape     = { stmts: ~List, trailing_expr: ?~Recipe };
+form rust_macro_call_shape = { path: ~List, delimiter: ~Slug, tokens: ~String };  # println!, vec!, etc.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn rust_grammar = grammar_shape {
+    modality:           modality_shape { name: "text-tree", domain: "code" },
+    ingest_pattern:     ?rule rust_file,
+    parse_into:         ~Blueprint @rust_file_shape,
+    capture_rules: [
+        rule(rust_file,    "attrs items",                            file_node),
+        rule(rust_use,     "use path [as rename] | use a::{b, c}",   use_node),
+        rule(rust_fn,      "[attrs] [vis] [async/const/unsafe] fn name<gen>(params) [-> type] [where] { body }",
+                                                                     fn_node),
+        rule(rust_struct,  "[attrs] [vis] struct name<gen> { fields | (fields) | ; }",
+                                                                     struct_node),
+        rule(rust_enum,    "[attrs] [vis] enum name<gen> { variants }",  enum_node),
+        rule(rust_trait,   "[attrs] [vis] trait name<gen> : super { items }", trait_node),
+        rule(rust_impl,    "[attrs] impl<gen> [Trait for] Target [where] { items }", impl_node),
+        rule(rust_match,   "match scrutinee { arms }",               match_node),
+        # ... (full mapping when BMF rules land per construct)
+    ],
+    pre_pipeline:       [],
+    stamps_attribution: true,
+};
+
+defn rust_emit = emission_template_shape {
+    modality:     modality_shape { name: "text-tree", domain: "code" },
+    emit_from:    ~Blueprint @rust_file_shape,
+    emit_pattern: ?walker { ... },               # walks the Form tree, emits rustfmt-style source
+    format_rules: [
+        ("indent_spaces",  4),
+        ("max_line_width", 100),
+        ("trailing_comma", "vertical"),
+    ],
+};
+
+defn rust_lang = language_cell_shape {
+    name:              "rust",
+    version:           "1.82",
+    grammar:           rust_grammar,
+    emission_template: rust_emit,
+    stdlib_bindings: [
+        # Bootstrap: delegate to `syn` crate (or proc_macro2 + quote)
+        # for parsing today. Destination per lc-parsers-as-recipes:
+        # each Rust construct as a BMF Form Rule.
+        ("parse_via_host", @recipe(rust_parse_via_syn_crate)),
+        ("emit_via_host",  @recipe(rust_emit_via_prettyplease_or_quote)),
+    ],
+    numeric_defaults: [
+        ("indent",          "    "),         # 4 spaces, per rustfmt
+        ("max_line_length", 100),
+    ],
+    cross_modal_links: [
+        @language(form),         # form expressions in proc macros (when added)
+        @language(markdown),     # /// rustdoc comments
+        @language(json),         # config strings, derive_serde
+        @language(toml),         # Cargo.toml
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — what this enables (paired with form-kernel-rust + framebuffer)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two Rust artifacts the body already holds:
+#   - experiments/form-kernel-rust/ — the Rust port of the substrate
+#     kernel
+#   - experiments/memory-as-framebuffer-v0/ — the body's direct
+#     ancestor for source-attribution-as-overlay
+#     (lc-the-recipe-remembers-its-source)
+#
+# Both become inspectable through rust-grammar:
+#
+#   form_cli convert in --tongue rust \
+#       experiments/form-kernel-rust/src/lib.rs
+#     → Form object tree with rust_file_shape root, every
+#       function/struct/impl as its own Blueprint subtree,
+#       source_attribution stamped from syn's Span data.
+#
+# Then queries like:
+#
+#   ?equivalent
+#     @recipe(parse(@language(python),
+#                   read_bytes("api/app/services/substrate/kernel.py")))
+#     @recipe(parse(@language(rust),
+#                   read_bytes("experiments/form-kernel-rust/src/lib.rs")))
+#
+# answer cross-kernel structural alignment as substrate truth, per
+# lc-the-kernel-knows-itself. The framebuffer's track! macro
+# becomes inspectable as a rust_macro_call_shape; its provenance-
+# stamping discipline becomes structurally visible.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-RS1: `rust_parse_via_syn_crate` is the host-intrinsic bootstrap.
+#          The `syn` crate carries Rust's AST in Rust itself — already
+#          well-typed and source-aware (each node has a `proc_macro2::Span`
+#          with line/col). Carrier options: invoke a small Rust tool
+#          via subprocess that serializes syn's tree to JSON, or
+#          eventually a Form-native Rust parser composed from BMF rules.
+#          Bootstrap is honest; BMF is the destination.
+#
+# GAP-RS2: Macros (`println!`, `vec!`, `format!`, derives) — the Form
+#          shape carries them as rust_macro_call_shape with the raw
+#          token text. Expanding macros (which can produce arbitrary
+#          Rust) is a separate concern; today the tree carries the
+#          call site, not the expansion.
+#
+# GAP-RS3: Lifetimes and bounds — the shapes above show `where_clauses`
+#          and `type_params` lists; the full lifetime + trait-bound
+#          grammar is rich. Skeleton carries the slots; the precise
+#          structure lands when the BMF rules do.
+#
+# GAP-RS4: Unsafe blocks — `unsafe { … }` is a first-class expression.
+#          Shape carried as rust_block_shape with an `is_unsafe` flag
+#          (not shown above for brevity); the block parses normally,
+#          the flag rides along.
+#
+# GAP-RS5: Async-await — `async fn`, `.await` expressions. The
+#          rust_fn_shape carries `is_async`; await expressions land
+#          as a kind of unaryop or dedicated rust_await_shape. The
+#          body holds the choice for the breath that wires the rules.
