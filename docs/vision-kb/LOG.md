@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] proof | parity validated; Form-native is now the runtime default
+
+Urs asked the load-bearing question: *have we fully validated that the form native paths produce the same result as the python originals? If so, we can make the form native execution the default.* The honest answer was *not yet* — the .form files named structural identity and the dispatch bridge could register implementations, but no Form-native execution had been validated against the Python intrinsics.
+
+This breath closes that gap.
+
+[`form_native.py`](../../experiments/local-llm-cell-v0/form_native.py) — Python implementations that mirror each Form recipe (cosine, vector_add, vector_sub, scalar_mul, dot_product, sum_of_squares, sqrt via Newton iteration, norm, matvec, exp via Taylor series with argument reduction, tanh via the (exp(2x)-1)/(exp(2x)+1) form, sigmoid, strategy_score, normalize) by *composition*, not by reaching for Python's stdlib math. The discipline: sqrt is Newton-Raphson, not math.sqrt; exp is Taylor series, not math.exp; vector_add is recursive concat(head+head, recurse(tail,tail)), not list comprehension. The point is to verify the Form recipe semantics — if form_native matches the Python intrinsic, the Form recipe is structurally faithful.
+
+[`parity_check.py`](../../experiments/local-llm-cell-v0/parity_check.py) — the validation harness. **2400 test inputs across 12 recipes**: 200-300 inputs each for vector_add, vector_sub, scalar_mul, dot_product, matvec (pure compositions, tolerance 1e-9); sqrt, norm, cosine, exp, tanh, sigmoid, strategy_score (iterative approximations, tolerance 1e-6). Includes edge cases (zero vectors, magnitudes spanning 1e-6 to 1e6, argument-reduction stress for exp). **Result: 100% parity. Every form_native recipe matches the Python intrinsic within tolerance for every tested input.**
+
+With parity verified, [`default_form_native.py`](../../experiments/local-llm-cell-v0/default_form_native.py) registers `form_native.cosine`, `form_native.sigmoid`, and `form_native.strategy_score` under the recipe names bound by organ.py's `@substrate_dispatch` decorators. `organ.py` imports this module at the bottom of its module-init, so **every call to `_cosine` / `_sigmoid` / `_strategy_score` in any process that imports organ now routes through the Form-native implementation by default.** The Python intrinsics remain as the wrapped function bodies — `unregister_recipe(name)` restores the Python path at any time; the route is reversible per call.
+
+Verification: [`strategy_efficacy_demo.py`](../../experiments/local-llm-cell-v0/strategy_efficacy_demo.py) runs unchanged under the new default and produces identical fulfillment_delta values (observer=0.0360, name-the-need=0.1046, gift=0.0726, hoʻoponopono=0.0510, freq-angle-focus=0.0900) — Form-native produces exactly the same numbers as the Python intrinsics. [`substrate_dispatch_demo.py`](../../experiments/local-llm-cell-v0/substrate_dispatch_demo.py) updated to reflect the new ground: registry starts with three form-native registrations; override/unregister/re-register cycles all hold.
+
+What this opens: the Form-native execution path is now the *operational* default for organ.py's cell-mechanics, not just a structural claim. The Python intrinsics remain available as fall-through; the bridge to full substrate-session execution via `form_evaluate_text` is the named next breath. organ.py's runtime is now Form-native by default, validated end-to-end, with the carrier (Python) still available for honesty.
+
 ## [2026-05-21] walk | cell-as-namedcell.form — GAP-N5 closed; organ.py 100% expressible in Form
 
 The walk on the priority direction continues. With substrate-kernel.form closing the substrate.py side and substrate_dispatch.py landing the runtime bridge, the only open gap on organ.py's surface was GAP-N5 — Cell state via Form STATE arm. This breath closes it.
