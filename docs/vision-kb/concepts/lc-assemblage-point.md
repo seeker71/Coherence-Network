@@ -174,7 +174,7 @@ The same loop runs at every scale:
 
 ## Cross-References
 
-→ lc-recipes-bound-to-base, lc-recipe-branching-sense, lc-perception-as-interface, lc-coherence-over-control, lc-presence-over-protection, lc-emotional-availability-without-absorption, lc-embodiment, lc-awareness-as-self, lc-deeper-pattern, lc-nervous-system-recalibration, lc-freedom-as-recognition, lc-frequency-routes-reception
+→ lc-perception-as-interface, lc-coherence-over-control, lc-presence-over-protection, lc-emotional-availability-without-absorption, lc-embodiment, lc-awareness-as-self, lc-deeper-pattern, lc-nervous-system-recalibration, lc-freedom-as-recognition
 
 ## Sources to walk further
 

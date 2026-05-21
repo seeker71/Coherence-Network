@@ -105,7 +105,7 @@ This means:
 ## The honest gaps (today)
 
 - The kernel-side substrate stamp on each `Tracked::new_with_nodeid` is per-write, not per-recipe. A future breath introduces an automatic *current-Recipe NodeID* threaded through the walker so attribution is always-on, not opt-in.
-- The visualizer's render path now consumes the NodeID plane (shipped 2026-05-21): `render_frame_by_nodeid` + `capture_frame_by_nodeid` + `snapshot_state_full` + `nodeid_category_palette` (8-family palette from substrate-write-greens through transmutation-purples). Feature-gated under `nodeid_render` so the default examples stay lean. To enable: `cargo run --features nodeid_render --example my_visualizer`. The bundled snapshot thread still renders by type-tag — visualizers wanting Form-category coloring spawn their own loop calling `render_frame_by_nodeid` with `snapshot_state_full`.
+- The visualizer's render path still colors by tag, not by NodeID category. Adding NodeID-aware coloring requires reading the new plane in [`experiments/memory-as-framebuffer-v0/src/render.rs`](../../../experiments/memory-as-framebuffer-v0/src/render.rs) and mapping category → palette.
 - BMF coverage of Python is partial (closures + import shipped 2026-05-20; comprehensions, decorators, async still pending). The arc is real but the leaves are growing.
 
 None of these gaps invalidate the synthesis. They name where the next breaths land.
