@@ -27,9 +27,15 @@ export interface EmitFkOptions {
   source_comments?: boolean;
 }
 
-// Counter for synthesized helper names (`_while_N`, `_for_N`). Reset
-// at each emitFk call so output is deterministic across runs.
+// Counter for synthesized helper names (`_while_N`, `_for_N`,
+// `_lambda_N`). Reset at each emitFk call so output is deterministic.
 let whileCounter = 0;
+
+// Lifted lambda definitions — collected during emit, prepended to the
+// module's top-level (do ...) before the body runs. Lambdas are
+// expression-level in Python but the kernel's defn binds names at
+// statement-level; lifting puts the defn where the kernel can see it.
+let liftedDefns: string[] = [];
 
 // Does this node end with a `return` (somewhere along all paths)?
 // Used by emitDefBody to decide whether an if-statement's then-branch
@@ -191,7 +197,18 @@ function collectAssignTargets(k: Kernel, n: NodeID, out: string[], seen: Set<str
 
 export function emitFk(k: Kernel, tree: NodeID, opts: EmitFkOptions = {}): string {
   whileCounter = 0;
-  return emit(k, tree, opts);
+  liftedDefns = [];
+  const body = emit(k, tree, opts);
+  // If any lambdas got lifted, prepend their defns inside the outer
+  // (do ...). For a single-stmt module we still need to wrap.
+  if (liftedDefns.length === 0) return body;
+  const isBareDo = body.startsWith("(do ") && body.endsWith(")");
+  if (isBareDo) {
+    // Splice into the existing do-block: insert lifted defns right after "(do "
+    const inner = body.slice(4, body.length - 1); // strip "(do " and ")"
+    return `(do ${liftedDefns.join(" ")} ${inner})`;
+  }
+  return `(do ${liftedDefns.join(" ")} ${body})`;
 }
 
 function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
@@ -316,6 +333,20 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       return `(defn ${name} (${paramNames.join(" ")}) ${body})`;
     }
 
+    case CTOR.lambda_: {
+      // children: [params-node, body-node]
+      // Lift to a module-level defn with a synthetic name. The body
+      // is a single expression (lambda's defining shape); emit it
+      // directly (not via emitDefBody which would CPS-transform).
+      const paramNodes = capturedChildren(k, kids[0]!);
+      const paramNames = paramNodes.map((p: NodeID) => emitIdent(k, p));
+      const body = emit(k, kids[1]!, opts);
+      const name = `_lambda_${whileCounter++}`;
+      liftedDefns.push(`(defn ${name} (${paramNames.join(" ")}) ${body})`);
+      // The lambda expression evaluates to the closure value — referencing
+      // the lifted name does that lookup at the call site.
+      return name;
+    }
     case CTOR.call: {
       // children: [callee-node, args-node]
       const calleeNode = kids[0]!;
