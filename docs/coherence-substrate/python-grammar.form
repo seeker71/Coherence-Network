@@ -788,6 +788,189 @@ defn py_expr_stmt_rule = rule_shape {
     action: defn py_expr_stmt_action(captures, span) = captures,
 };
 
+# ──────────────────────────── rule: py_if ─────────────────────────────
+#
+# Pattern: `if cond : body [ elif cond : body ]* [ else : body ]?`
+#
+# Action: build py_if_shape { test, body, orelse }. Multiple elif arms
+# lower into nested py_if_shape with the next condition as the orelse's
+# single statement — the canonical ast.parse representation.
+
+defn _py_indent()  = pattern_literal_shape { kind: "INDENT", value: null };
+defn _py_dedent()  = pattern_literal_shape { kind: "DEDENT", value: null };
+
+# A block-body: INDENT, one+ statements, DEDENT. For v1 we accept a
+# single statement (matching the existing py_function_def_rule body
+# shape). Multi-statement bodies land alongside the full expression
+# grammar.
+defn _py_block_body = pattern_sequence_shape {
+    children: [
+        _py_indent(),
+        pattern_capture_shape { name: "stmt", child: ?rule py_expr_stmt },
+        _py_dedent(),
+    ],
+};
+
+defn py_if_rule = rule_shape {
+    name:    "py_if",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("if"),
+            pattern_capture_shape { name: "test", child: ?rule py_expr_stmt },
+            lit_op(":"),
+            pattern_capture_shape { name: "body", child: _py_block_body },
+            # Zero or more elif clauses
+            pattern_star_shape {
+                name: "elifs",
+                child: pattern_sequence_shape {
+                    children: [
+                        lit_kw("elif"),
+                        pattern_capture_shape { name: "test",  child: ?rule py_expr_stmt },
+                        lit_op(":"),
+                        pattern_capture_shape { name: "body",  child: _py_block_body },
+                    ],
+                },
+            },
+            # Optional else
+            pattern_opt_shape {
+                child: pattern_sequence_shape {
+                    children: [
+                        lit_kw("else"),
+                        lit_op(":"),
+                        pattern_capture_shape { name: "else_body", child: _py_block_body },
+                    ],
+                },
+            },
+        ],
+    },
+    action: defn py_if_action(captures, span) = do {
+        # Lower elif chain into nested orelse.
+        let final_else = if captures.else_body != null
+            then [captures.else_body]
+            else [];
+        let chain = final_else;
+        # Walk elifs in reverse, wrapping each into the chain.
+        let elifs = captures.elifs ?? [];
+        for elif_ in reverse(elifs):
+            chain = [py_if_shape {
+                test:   elif_.test,
+                body:   [elif_.body],
+                orelse: chain,
+            }];
+        py_if_shape {
+            test:   captures.test,
+            body:   [captures.body],
+            orelse: chain,
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_for ────────────────────────────
+#
+# Pattern: `for target in iter : body [ else : else_body ]?`
+# Action: build py_for_shape { target, iter, body, orelse }.
+
+defn py_for_rule = rule_shape {
+    name:    "py_for",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("for"),
+            pattern_capture_shape { name: "target", child: lit_ident() },
+            lit_kw("in"),
+            pattern_capture_shape { name: "iter",   child: ?rule py_expr_stmt },
+            lit_op(":"),
+            pattern_capture_shape { name: "body",   child: _py_block_body },
+            pattern_opt_shape {
+                child: pattern_sequence_shape {
+                    children: [
+                        lit_kw("else"),
+                        lit_op(":"),
+                        pattern_capture_shape { name: "else_body", child: _py_block_body },
+                    ],
+                },
+            },
+        ],
+    },
+    action: defn py_for_action(captures, span) = do {
+        py_for_shape {
+            target: captures.target,
+            iter:   captures.iter,
+            body:   [captures.body],
+            orelse: if captures.else_body != null then [captures.else_body] else [],
+            is_async: false,
+            type_comment: null,
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_while ──────────────────────────
+#
+# Pattern: `while cond : body [ else : else_body ]?`
+# Action: build py_while_shape { test, body, orelse }.
+
+defn py_while_rule = rule_shape {
+    name:    "py_while",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("while"),
+            pattern_capture_shape { name: "test", child: ?rule py_expr_stmt },
+            lit_op(":"),
+            pattern_capture_shape { name: "body", child: _py_block_body },
+            pattern_opt_shape {
+                child: pattern_sequence_shape {
+                    children: [
+                        lit_kw("else"),
+                        lit_op(":"),
+                        pattern_capture_shape { name: "else_body", child: _py_block_body },
+                    ],
+                },
+            },
+        ],
+    },
+    action: defn py_while_action(captures, span) = do {
+        py_while_shape {
+            test:   captures.test,
+            body:   [captures.body],
+            orelse: if captures.else_body != null then [captures.else_body] else [],
+        }
+    },
+};
+
+# ──────────────────────────── rule: py_raise ──────────────────────────
+#
+# Pattern: `raise [ exc [ from cause ]? ]?`
+# Action: build py_raise_shape { exc, cause }.
+
+defn py_raise_rule = rule_shape {
+    name:    "py_raise",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("raise"),
+            pattern_opt_shape {
+                child: pattern_sequence_shape {
+                    children: [
+                        pattern_capture_shape { name: "exc",   child: ?rule py_expr_stmt },
+                        pattern_opt_shape {
+                            child: pattern_sequence_shape {
+                                children: [
+                                    lit_kw("from"),
+                                    pattern_capture_shape { name: "cause", child: ?rule py_expr_stmt },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+    },
+    action: defn py_raise_action(captures, span) = do {
+        py_raise_shape {
+            exc:   captures.exc,
+            cause: captures.cause,
+        }
+    },
+};
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 5b — the Language cell binding
 # ─────────────────────────────────────────────────────────────────────
@@ -809,18 +992,18 @@ defn python_grammar = grammar_shape {
         py_slice_rule,                    # v1: ident[expr?:expr?]
         py_return_rule,                   # v1: return [expr]
         py_expr_stmt_rule,                # v1: primary alternatives (call, ident, literal)
+        py_if_rule,                       # v1: if/elif/else statement form
+        py_for_rule,                      # v1: for target in iter: body [else]
+        py_while_rule,                    # v1: while cond: body [else]
+        py_raise_rule,                    # v1: raise [exc [from cause]]
         # Pending Form expression (host bridge handles these until the
         # rule lands here as a concrete Form recipe). Each one is one
         # breath of work composing the same Pattern primitives.
         ?rule py_class_def,               # GAP-PY-CLASS
         ?rule py_expr_full,               # GAP-PY-EXPR (full precedence-climbing expression grammar)
-        ?rule py_if,                      # GAP-PY-IF (statement form)
-        ?rule py_for,                     # GAP-PY-FOR
-        ?rule py_while,                   # GAP-PY-WHILE
         ?rule py_lambda,                  # GAP-PY-LAMBDA
         ?rule py_with,                    # GAP-PY-WITH
-        ?rule py_try,                     # GAP-PY-TRY
-        ?rule py_raise,                   # GAP-PY-RAISE
+        ?rule py_try,                     # GAP-PY-TRY (paired with handler/finally)
         ?rule py_match,                   # GAP-PY-MATCH (PEP 634)
         ?rule py_walrus,                  # GAP-PY-WALRUS (PEP 572)
     ],
