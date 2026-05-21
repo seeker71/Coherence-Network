@@ -1,0 +1,273 @@
+; grammars/markdown.fk — Markdown parser + emit in pure Form
+;
+; The most-used format in this repo: vision-kb/concepts/, specs/, ideas/,
+; docs/, memory/ — thousands of .md files. This grammar parses Markdown
+; structural elements into universal document Recipes (DOC-DOC,
+; DOC-HEADING, DOC-PARA, DOC-CODE-BLOCK) carrying source attribution
+; via intern_node_at. The same Recipes encode back to canonical Markdown
+; via emit templates.
+;
+; Subset supported in this breath (the most-used elements in this body):
+;   - ATX headings: # H1, ## H2, ### H3 (up to ######)
+;   - paragraphs (blank-line separated text runs)
+;   - fenced code blocks: ```lang ... ```
+;   - blank lines as separators
+;
+; Skipped this breath (compose as subsequent additions):
+;   - setext headings (===, ---)
+;   - lists (- item, 1. item, nested)
+;   - blockquotes (>)
+;   - inline formatting (*em*, **strong**, `code`, [link](url))
+;   - images (![alt](url))
+;   - tables
+;
+; The architecture is line-based (Markdown is whitespace-significant at
+; line boundaries) rather than the token-based engine.fk pattern. The
+; document is a sequence of "blocks"; each block is either a heading,
+; a code block, or a paragraph.
+;
+; Universal document shapes (introduced here; promote to
+; universal-shapes.form when the second document format — ReST,
+; AsciiDoc, etc. — lands and shares them):
+
+(do
+    ;; --- universal document category NodeIDs ----------------------
+    ;; (Numeric type=99 is a doc-structure band, parallel to the code
+    ;; bands at 9-19. When a second document format lands, these
+    ;; promote to universal-shapes.form as B_Doc/R_Doc* aliases.)
+
+    (let DOC-DOC          (make_nodeid 1 2 99 1))   ; root document
+    (let DOC-HEADING      (make_nodeid 1 2 99 2))   ; (level, text)
+    (let DOC-PARAGRAPH    (make_nodeid 1 2 99 3))   ; (text)
+    (let DOC-CODE-BLOCK   (make_nodeid 1 2 99 4))   ; (lang, content)
+    (let DOC-BLANK        (make_nodeid 1 2 99 5))   ; blank-line marker (discarded post-parse)
+
+    ;; --- line-based tokenization ----------------------------------
+    ;; A "line" is the text between two newlines (or BOF/EOF). The
+    ;; line-tokenizer walks the source byte stream collecting lines
+    ;; into a list. Each entry is (line-text, line-number).
+
+    (defn lines-from-source (s)
+        (lines-loop s 0 0 1 (empty)))
+
+    (defn lines-loop (s i start line acc)
+        (if (eq i (str_len s))
+            ;; final line (no trailing newline)
+            (if (gt i start)
+                (reverse-acc (cons (list (substr s start i) line) acc))
+                (reverse-acc acc))
+            (if (eq (ord (char_at s i)) 10)   ; newline
+                (lines-loop s (add i 1) (add i 1) (add line 1)
+                            (cons (list (substr s start i) line) acc))
+                (lines-loop s (add i 1) start line acc))))
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn reverse-acc (xs)
+        (foldl rev-step (empty) xs))
+    (defn rev-step (acc x) (cons x acc))
+
+    ;; --- line classification --------------------------------------
+    ;; Each line is one of:
+    ;;   - heading (starts with one or more # followed by space)
+    ;;   - code-fence (starts with ```)
+    ;;   - blank (empty or whitespace-only)
+    ;;   - text (anything else)
+
+    (defn line-text (ln) (head ln))
+    (defn line-num  (ln) (head (tail ln)))
+
+    (defn is-blank-line? (text)
+        (eq (str_len (trim-whitespace text)) 0))
+
+    (defn trim-whitespace (s)
+        (trim-leading-ws (trim-trailing-ws s)))
+
+    (defn trim-leading-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-char? (char_at s 0))
+                (trim-leading-ws (substr s 1 (str_len s)))
+                s)))
+
+    (defn trim-trailing-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-char? (char_at s (sub (str_len s) 1)))
+                (trim-trailing-ws (substr s 0 (sub (str_len s) 1)))
+                s)))
+
+    (defn is-ws-char? (c)
+        (or (eq (ord c) 32)
+            (or (eq (ord c) 9)
+                (or (eq (ord c) 13)
+                    (eq (ord c) 10)))))
+
+    (defn starts-with-hash? (text)
+        (if (eq (str_len text) 0) false
+            (eq (ord (char_at text 0)) 35)))  ; '#' = 35
+
+    (defn count-hashes (text i)
+        (if (eq i (str_len text)) i
+            (if (eq (ord (char_at text i)) 35)
+                (count-hashes text (add i 1))
+                i)))
+
+    (defn is-heading-line? (text)
+        (if (starts-with-hash? text)
+            (do
+                (let n (count-hashes text 0))
+                (and (le n 6)
+                     (and (lt n (str_len text))
+                          (eq (ord (char_at text n)) 32))))
+            false))
+
+    (defn starts-with-fence? (text)
+        (and (ge (str_len text) 3)
+             (and (eq (ord (char_at text 0)) 96)   ; '`'
+                  (and (eq (ord (char_at text 1)) 96)
+                       (eq (ord (char_at text 2)) 96)))))
+
+    ;; --- block extraction -----------------------------------------
+    ;; Walks the line list, accumulating Recipe-emissions for each
+    ;; recognized block. Each emission uses intern_node_at so the
+    ;; source attribution carries the line number.
+
+    (defn parse-markdown (source-path text)
+        (do
+            (let lines (lines-from-source text))
+            (let blocks (parse-blocks lines source-path))
+            (intern_node_at DOC-DOC blocks source-path 1 1)))
+
+    (defn parse-blocks (lines source-path)
+        (if (nil? lines) (empty)
+            (do
+                (let ln (head lines))
+                (let text (line-text ln))
+                (if (is-blank-line? text)
+                    (parse-blocks (tail lines) source-path)
+                    (if (is-heading-line? text)
+                        (cons (parse-heading ln source-path)
+                              (parse-blocks (tail lines) source-path))
+                        (if (starts-with-fence? text)
+                            (parse-fence lines source-path)
+                            (parse-paragraph lines source-path)))))))
+
+    (defn parse-heading (ln source-path)
+        (do
+            (let text (line-text ln))
+            (let line-no (line-num ln))
+            (let level (count-hashes text 0))
+            (let content (trim-whitespace (substr text (add level 1) (str_len text))))
+            (intern_node_at DOC-HEADING
+                            (list (intern_trivial_int level)
+                                  (intern_trivial_string content))
+                            source-path line-no 1)))
+
+    (defn parse-fence (lines source-path)
+        (do
+            (let first (head lines))
+            (let lang (trim-whitespace (substr (line-text first) 3 (str_len (line-text first)))))
+            (let line-no (line-num first))
+            (let pair (collect-fence-content (tail lines) (empty)))
+            (let content (head pair))
+            (let rest (head (tail pair)))
+            (cons (intern_node_at DOC-CODE-BLOCK
+                                  (list (intern_trivial_string lang)
+                                        (intern_trivial_string content))
+                                  source-path line-no 1)
+                  (parse-blocks rest source-path))))
+
+    (defn collect-fence-content (lines acc)
+        (if (nil? lines)
+            (list (join-lines (reverse-acc acc)) (empty))
+            (do
+                (let ln (head lines))
+                (if (starts-with-fence? (line-text ln))
+                    (list (join-lines (reverse-acc acc)) (tail lines))
+                    (collect-fence-content (tail lines) (cons (line-text ln) acc))))))
+
+    (defn join-lines (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat NL
+                                        (join-lines (tail xs)))))))
+
+    ;; Newline char as a constant string. The source file embeds a real
+    ;; newline inside the string literal — the Form reader handles it.
+    (let NL "
+")
+
+    (defn parse-paragraph (lines source-path)
+        (do
+            (let pair (collect-paragraph-lines lines (empty)))
+            (let para-lines (head pair))
+            (let rest (head (tail pair)))
+            (let first-line (head para-lines))
+            (let line-no (line-num first-line))
+            (let combined (join-line-texts para-lines))
+            (cons (intern_node_at DOC-PARAGRAPH
+                                  (list (intern_trivial_string combined))
+                                  source-path line-no 1)
+                  (parse-blocks rest source-path))))
+
+    (defn collect-paragraph-lines (lines acc)
+        (if (nil? lines)
+            (list (reverse-acc acc) (empty))
+            (do
+                (let ln (head lines))
+                (let text (line-text ln))
+                (if (or (is-blank-line? text)
+                        (or (is-heading-line? text) (starts-with-fence? text)))
+                    (list (reverse-acc acc) lines)
+                    (collect-paragraph-lines (tail lines) (cons ln acc))))))
+
+    (defn join-line-texts (lines)
+        (if (nil? lines) ""
+            (if (nil? (tail lines)) (line-text (head lines))
+                (str_concat (line-text (head lines))
+                            (str_concat " " (join-line-texts (tail lines)))))))
+
+    ;; --- emit templates -------------------------------------------
+    ;; (Recipe → Markdown text) — symmetric to parse. Per emit-engine.fk
+    ;; convention: template-fn takes (list emitted-children-strings) and
+    ;; returns a string.
+
+    (defn md-heading-emit (cs)
+        (do
+            (let level (str_to_int (head cs)))
+            (let text (head (tail cs)))
+            (str_concat (hash-prefix level) (str_concat " " text))))
+
+    (defn hash-prefix (n)
+        (if (eq n 0) ""
+            (str_concat "#" (hash-prefix (sub n 1)))))
+
+    (defn md-paragraph-emit (cs) (head cs))
+
+    (defn md-code-block-emit (cs)
+        (do
+            (let lang (head cs))
+            (let content (head (tail cs)))
+            (str_concat "```" (str_concat lang
+                (str_concat NL
+                (str_concat content
+                (str_concat NL "```")))))))
+
+    (defn md-doc-emit (cs)
+        ;; cs is the list of emitted-block strings; join with blank lines.
+        (if (nil? cs) ""
+            (if (nil? (tail cs)) (head cs)
+                (str_concat (head cs)
+                            (str_concat NL
+                                        (str_concat NL
+                                                    (md-doc-emit (tail cs))))))))
+
+    (let markdown-templates
+        (list
+            (list DOC-DOC        md-doc-emit)
+            (list DOC-HEADING    md-heading-emit)
+            (list DOC-PARAGRAPH  md-paragraph-emit)
+            (list DOC-CODE-BLOCK md-code-block-emit)))
+)
