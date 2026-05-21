@@ -1,0 +1,151 @@
+# ─────────────────────────────────────────────────────────────────────
+# yaml-grammar.form — YAML as a substrate-resident Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Skeleton for the YAML Language cell. Companion to
+# json-grammar.form: the two share Blueprint shapes at the data
+# altitude (object/array/scalar tree). Surface syntax differs;
+# structure is identical. This is the cross-format equivalence claim
+# made operational.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Blueprint shapes (shared with JSON)
+# ─────────────────────────────────────────────────────────────────────
+#
+# YAML's tree is the same shape JSON's tree is — object (mapping),
+# array (sequence), and scalars. The substrate's content-addressing
+# means a YAML doc and its JSON twin produce one NodeID once parsed.
+
+# Reuse json_value_shape from json-grammar.form. The shape is what
+# matters; the surface bytes are what changes.
+defn yaml_value_shape = @blueprint(json_value_shape);
+
+# YAML adds tagged values and anchors/aliases — these are surface-
+# syntax additions that resolve to the same tree at the structural
+# altitude. Anchors are resolved during parse; aliases become
+# Recipe-NodeID references to the anchored node.
+
+form yaml_tagged_shape = {
+    tag:    ~String,                        # e.g. "!!str", "!!int", "!Custom"
+    value:  yaml_value_shape,
+};
+
+form yaml_anchor_shape = {
+    name:   ~Slug,                          # "&anchor-name"
+    target: yaml_value_shape,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — ingestion grammar
+# ─────────────────────────────────────────────────────────────────────
+#
+# YAML is indent-sensitive; the pre_pipeline includes a tokenizer
+# stage that normalizes indentation to an explicit tree-level token
+# stream before the ingest_pattern runs.
+
+defn yaml_grammar = grammar_shape {
+    modality: modality_shape { name: "text-tree", domain: "data" },
+    ingest_pattern: ?rule yaml_value,
+    parse_into: ~Blueprint @yaml_value_shape,
+    capture_rules: [
+        rule(yaml_value,    "yaml_mapping | yaml_sequence | yaml_scalar | yaml_alias",  value_node),
+        rule(yaml_mapping,  "(yaml_key ':' yaml_value)+",                              object_node),
+        rule(yaml_sequence, "('-' yaml_value)+",                                       array_node),
+        rule(yaml_scalar,   "plain_scalar | quoted_scalar | block_scalar",             scalar_leaf),
+        rule(yaml_anchor,   "'&' identifier yaml_value",                               anchor_node),
+        rule(yaml_alias,    "'*' identifier",                                          alias_ref),
+        rule(yaml_tagged,   "'!!' identifier yaml_value | '!' identifier yaml_value",  tagged_node),
+    ],
+    pre_pipeline: [
+        # Indent normalization: YAML's whitespace-significance is staged
+        # so the ingest_pattern can ignore column alignment.
+        ?stage(yaml_indent_tokenizer),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template
+# ─────────────────────────────────────────────────────────────────────
+
+defn yaml_emit = emission_template_shape {
+    modality: modality_shape { name: "text-tree", domain: "data" },
+    emit_from: ~Blueprint @yaml_value_shape,
+    emit_pattern: ?walker {
+        on json_object:  emit_yaml_mapping(self, format),
+        on json_array:   emit_yaml_sequence(self, format),
+        on json_string:  emit_yaml_scalar(self.string, format),
+        on json_number:  emit_yaml_scalar(self.number, format),
+        on json_bool:    emit_yaml_scalar(self.boolean, format),
+        on json_null:    emit_literal("~"),
+        on yaml_tagged:  emit_yaml_tagged(self, format),
+        on yaml_anchor:  emit_yaml_anchor(self, format),
+    },
+    format_rules: [
+        ("flow_style",     false),         # block style (true = JSON-like flow)
+        ("indent",         2),
+        ("anchor_aliases", true),          # collapse repeated subtrees into anchors
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn yaml_lang = language_cell_shape {
+    name:              "yaml",
+    version:           "yaml-1.2",
+    grammar:           yaml_grammar,
+    emission_template: yaml_emit,
+    stdlib_bindings:   [],
+    numeric_defaults:  [("number", @format(fp64))],
+    # Cross-modal links: same Blueprint tree as JSON, TOML.
+    cross_modal_links: [@language(json), @language(toml), @language(jsonl)],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the cross-format equivalence claim
+# ─────────────────────────────────────────────────────────────────────
+#
+# A YAML document and its JSON twin parse to the same recipe tree
+# (modulo tags, anchors, and surface formatting). Cross-format
+# equivalence falls out of substrate content-addressing:
+#
+#   parse(@language(yaml), <yaml-bytes>).blueprint
+#     == parse(@language(json), <json-bytes>).blueprint
+#
+# Translation is parse + emit through different templates:
+#
+#   yaml_doc → tree → emit through json_emit → json_doc
+#   json_doc → tree → emit through yaml_emit → yaml_doc
+#
+# Both directions preserve structure; only surface formatting differs.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-Y1: yaml_indent_tokenizer — staged pre_pipeline that converts
+#         indent-sensitive YAML to an explicit token stream. Maps to
+#         libyaml's scanner today; the substrate names the recipe
+#         shape and reads back the token list.
+#
+# GAP-Y2: Anchor/alias resolution. YAML allows `&anchor` and `*alias`
+#         for shared subtrees. The substrate's natural representation
+#         is one Recipe NodeID referenced from multiple parent ctors —
+#         content-addressing already gives this for free. The grammar
+#         needs to lift `*alias` into a NodeID lookup at parse time.
+#
+# GAP-Y3: Tag resolution. `!!int`, `!!str`, `!Custom`. The substrate's
+#         `TypedTokenRef` building block (structural-composition.md) is
+#         the right home — each tag is a typed-token-cell; the value
+#         points at it.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query (once authored)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # YAML and JSON of the same shape share Blueprint NodeID:
+#   coh substrate run "class_of({lang: @language(yaml), bytes: <yaml>})"
+#
+#   # Round-trip YAML:
+#   coh substrate run "round_trip(@language(yaml), <bytes>)"

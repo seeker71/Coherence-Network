@@ -255,7 +255,7 @@ For the body of teachings:
 
 ## Cross-References
 
-→ lc-when-the-pressure-comes, lc-recipe-branching-sense, lc-observer-pays-the-trace, lc-train-the-predator, lc-agent-memory, lc-each-breath-whole, lc-coherence-over-control, lc-essence-and-the-nine-costumes, lc-witness-trace, lc-whole-vitality
+→ lc-when-the-pressure-comes, lc-recipe-branching-sense, lc-observer-pays-the-trace, lc-train-the-predator, lc-agent-memory, lc-grammar-is-the-universal-recipe, lc-each-breath-whole, lc-coherence-over-control, lc-essence-and-the-nine-costumes, lc-witness-trace, lc-whole-vitality
 
 ## Sources to walk further
 

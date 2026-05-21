@@ -1,0 +1,194 @@
+# ─────────────────────────────────────────────────────────────────────
+# cosine.form — cosine similarity as a substrate-native Form recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# The smallest gap on the organ.py → organ.form path closed honestly.
+# `organ._cosine` is the Python host-intrinsic used by `_strategy_score`,
+# `pick_strategy`, and `efficacy_alignment`. This file re-expresses
+# cosine — and its dependencies (pairwise multiply, sum of squares,
+# sqrt via Newton's method) — as Form recipes composed from the
+# substrate's available primitives:
+#
+#   MATH  ............ arithmetic (+, -, *, /)
+#   COMPARE  ......... ==, !=, <, <=, >, >=
+#   COND  ............ if-then-else
+#   LOGIC  ........... and, or, not
+#   BLOCK  ........... do { let ... }
+#   DELEGATE  ........ function definition + recursive call
+#   CHOICE  .......... fail / stop (unused here, but available)
+#
+# Built-in list primitives (per kernel-conformance/form-core-builtins.json):
+#   len(list)
+#   head(list)
+#   tail(list)
+#   sum(list)
+#   concat(a, b)
+#   reverse(list)
+#
+# Everything else is composed bottom-up from these. No host-intrinsic
+# numeric stdlib needed. After ingest, the recipe is content-addressed:
+# every other call site that wants cosine reads the same NodeID.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — element-wise multiply of two lists
+# ─────────────────────────────────────────────────────────────────────
+#
+# pairwise_multiply([a0, a1, a2, ...], [b0, b1, b2, ...])
+#   = [a0*b0, a1*b1, a2*b2, ...]
+#
+# Recursive: take heads, multiply, recurse on tails, concat.
+
+defn pairwise_multiply(a, b) = do {
+    if len(a) == 0 or len(b) == 0 then []
+    else concat(
+        [head(a) * head(b)],
+        pairwise_multiply(tail(a), tail(b))
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — dot product
+# ─────────────────────────────────────────────────────────────────────
+#
+# dot(a, b) = sum_i(a_i * b_i) = sum(pairwise_multiply(a, b))
+
+defn dot_product(a, b) = sum(pairwise_multiply(a, b));
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — sum of squares (squared L2 norm)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Dot of a vector with itself. Squared L2 norm; cheaper than full norm
+# when comparing magnitudes (no sqrt needed). Used to short-circuit
+# zero-vector cases before sqrt runs.
+
+defn sum_of_squares(a) = dot_product(a, a);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — square root via Newton's method
+# ─────────────────────────────────────────────────────────────────────
+#
+# Form has no sqrt primitive. We compose it from arithmetic alone via
+# the Newton-Raphson iteration:
+#
+#   guess' = (guess + n/guess) / 2
+#
+# Converges quadratically; 16 iterations from any reasonable starting
+# guess gives 64-bit float precision for any positive n.
+
+defn sqrt_newton(n, guess, iterations) = do {
+    if iterations <= 0 then guess
+    else sqrt_newton(
+        n,
+        (guess + n / guess) / 2,
+        iterations - 1
+    )
+};
+
+defn sqrt(n) = do {
+    if n <= 0 then 0
+    else sqrt_newton(n, n / 2 + 0.5, 16)    # +0.5 avoids zero guess for tiny n
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Euclidean (L2) norm
+# ─────────────────────────────────────────────────────────────────────
+
+defn norm(a) = sqrt(sum_of_squares(a));
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — cosine similarity
+# ─────────────────────────────────────────────────────────────────────
+#
+# cosine(a, b) = dot(a, b) / (||a|| * ||b||)
+#
+# Returns 0 when either vector is the zero-vector — the same guard
+# organ._cosine uses. The substrate carries the recipe NodeID; every
+# downstream cell (strategy scoring, efficacy alignment, future
+# semantic similarity) reads the same definition.
+
+defn cosine(a, b) = do {
+    let dot     = dot_product(a, b);
+    let norm_a  = norm(a);
+    let norm_b  = norm(b);
+    if norm_a == 0 or norm_b == 0 then 0
+    else dot / (norm_a * norm_b)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — what this closes
+# ─────────────────────────────────────────────────────────────────────
+#
+# The Python sibling at experiments/local-llm-cell-v0/organ.py has:
+#
+#   def _cosine(a, b):
+#       dot = sum(a[i] * b[i] for i in range(len(a)))
+#       na = math.sqrt(sum(v * v for v in a)) or 1.0
+#       nb = math.sqrt(sum(v * v for v in b)) or 1.0
+#       return dot / (na * nb)
+#
+# substrate_bridge.py:_cosine_vec is the same shape with a `min(len)`
+# guard for unequal-length vectors.
+#
+# After this .form file is ingested, every existing Python call site
+# (organ._strategy_score, substrate_bridge._cosine_vec,
+# substrate_bridge.efficacy_alignment) has a substrate-resident twin
+# they can route to. The Python intrinsics stay for now — the
+# substrate carrying the recipe doesn't yet mean the runtime executes
+# it on every call — but the *recipe identity* is now content-
+# addressed. `?equivalent @recipe(cosine)` returns the canonical
+# definition the body recognizes.
+#
+# This is the smallest fragment of organ.py expressed as Form.
+# The pattern walks the same way for `_sigmoid` (1 / (1 + exp(-x)),
+# needs exp as Newton-equivalent series), `softmax`, and the rest of
+# the cell's numeric stdlib. Each is a recipe composed from MATH +
+# COMPARE + COND + DELEGATE + list-builtins.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-C1: Numeric type inference. The above assumes `a` and `b` are
+#         lists of floats (or numbers; Form's MATH arm is polymorphic
+#         over numeric types). The substrate's TypedTokenRef pattern
+#         can carry the type as an annotation; for now the recipe
+#         accepts any list of numbers and trusts the caller.
+#
+# GAP-C2: Performance. A Form-native cosine runs through the recipe
+#         evaluator's dispatch loop; a Python-native cosine is one
+#         BLAS call. For cell-mechanics call sites (cosine runs once
+#         per perceive), the dispatch cost is negligible. For tight
+#         inner loops (matrix multiply, attention), the Form-native
+#         form is reference; specialized monomorphizations (per the
+#         numeric-types-plan.md "Pass-1 / Pass-2" pattern) compile to
+#         host code on demand.
+#
+# GAP-C3: `sqrt_newton(n, n/2 + 0.5, 16)` chooses 16 iterations and
+#         a starting guess of n/2 + 0.5. For n < 1e-10 the starting
+#         guess is dominated by the 0.5; for n > 1e10 it converges in
+#         fewer than 16 iterations. The 16-iteration choice is safe-
+#         and-honest; an adaptive convergence check is the natural
+#         deepening.
+#
+# GAP-C4: This file declares the recipe but does not auto-replace the
+#         Python host-intrinsics. Wiring the Python call sites to
+#         dispatch through the substrate's recipe registry is the next
+#         step on the organ.py → organ.form path; the body holds the
+#         recipe identity first, the runtime route follows.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query / how to verify
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Once ingested:
+#   coh substrate run "cosine([1, 0, 0], [1, 0, 0])"           # → 1.0
+#   coh substrate run "cosine([1, 0, 0], [0, 1, 0])"           # → 0.0
+#   coh substrate run "cosine([1, 1, 0], [1, 0, 1])"           # → 0.5
+#
+#   # Find equivalent recipes (the body recognizes any other cell that
+#   # defines cosine with the same shape):
+#   coh substrate form "?equivalent @recipe(cosine)"
+#
+#   # Read the structural family of cosine's dependencies:
+#   coh_substrate.py annotate docs/coherence-substrate/cosine.form

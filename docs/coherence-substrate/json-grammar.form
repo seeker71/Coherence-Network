@@ -1,0 +1,144 @@
+# ─────────────────────────────────────────────────────────────────────
+# json-grammar.form — JSON as a substrate-resident Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Skeleton for the JSON Language cell. Companion to
+# docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md and
+# docs/coherence-substrate/grammar-as-recipe.form.
+#
+# JSON is the simplest non-trivial structured-data Language: object /
+# array / string / number / boolean / null. The Blueprint tree the
+# grammar produces is the same tree YAML, TOML, and most config formats
+# produce — surface syntax differs, structure is shared. This is where
+# cross-format equivalence first becomes visible.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Blueprint shapes the grammar produces
+# ─────────────────────────────────────────────────────────────────────
+#
+# JSON's grammar parses into a tree of these Blueprints. Two JSON
+# documents whose values match structurally share Recipe NodeIDs by
+# content-addressing.
+
+form json_object_shape = {
+    pairs: ~List,                          # [(key-string, value-recipe), ...]
+};
+
+form json_array_shape = {
+    elements: ~List,                       # [value-recipe, value-recipe, ...]
+};
+
+form json_value_shape = {
+    # The discriminated union — exactly one of these is set per node.
+    object:  json_object_shape | ~Null,
+    array:   json_array_shape  | ~Null,
+    string:  ~String           | ~Null,
+    number:  ~Float            | ~Null,
+    boolean: ~Bool             | ~Null,
+    null_:   ~Bool             | ~Null,    # true when the JSON value is null
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — ingestion grammar
+# ─────────────────────────────────────────────────────────────────────
+#
+# Grammar rules in Form follow `pattern_to_recipe` (see
+# form-language.md "Rule-driven parser"). Each rule names a non-
+# terminal and a pattern; the pattern's CAPTURE clauses wrap matched
+# spans under named ctors.
+
+defn json_grammar = grammar_shape {
+    modality: modality_shape { name: "text-tree", domain: "data" },
+    ingest_pattern: ?rule json_value,
+    parse_into: ~Blueprint @json_value_shape,
+    capture_rules: [
+        # Each rule: (rule-name, regex-or-rule-pattern, ctor)
+        rule(json_value,   "object | array | string | number | bool | null", value_node),
+        rule(json_object,  "{ pair (',' pair)* }",                          object_node),
+        rule(json_pair,    "string ':' json_value",                         pair_node),
+        rule(json_array,   "[ json_value (',' json_value)* ]",              array_node),
+        rule(json_string,  "\"(\\\\.|[^\"])*\"",                              string_leaf),
+        rule(json_number,  "-?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?",         number_leaf),
+        rule(json_bool,    "true | false",                                  bool_leaf),
+        rule(json_null,    "null",                                          null_leaf),
+    ],
+    pre_pipeline: [],   # JSON has no pre-processing; raw bytes are utf-8 text
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template
+# ─────────────────────────────────────────────────────────────────────
+#
+# The walker that turns a json_value_shape tree back into UTF-8 bytes.
+# Two emission styles share one template; `format_rules` selects.
+
+defn json_emit = emission_template_shape {
+    modality: modality_shape { name: "text-tree", domain: "data" },
+    emit_from: ~Blueprint @json_value_shape,
+    emit_pattern: ?walker {
+        on json_object:  emit_object(self, format),
+        on json_array:   emit_array(self, format),
+        on json_string:  emit_string(self.string),
+        on json_number:  emit_number(self.number),
+        on json_bool:    emit_bool(self.boolean),
+        on json_null:    emit_literal("null"),
+    },
+    format_rules: [
+        ("indent",       2),               # spaces per nesting level (or null = compact)
+        ("sort_keys",    false),
+        ("ensure_ascii", false),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn json_lang = language_cell_shape {
+    name:              "json",
+    version:           "rfc-8259",
+    grammar:           json_grammar,
+    emission_template: json_emit,
+    stdlib_bindings:   [],                  # JSON has no executable stdlib
+    numeric_defaults:  [("number", @format(fp64))],
+    cross_modal_links: [@language(yaml), @language(toml), @language(jsonl)],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-J1: The `?rule` and `rule(name, pattern, ctor)` syntax above
+#         exists today via `register_form_keyword` / `pattern_to_recipe`
+#         (form_rules.py). The above shape is what those calls would
+#         compose to; the substrate already has the surface, but the
+#         JSON-specific rule cells haven't been authored. Smallest
+#         extension: a one-shot script that registers each rule above
+#         as a substrate-resident `grammar`-domain cell.
+#
+# GAP-J2: The discriminated-union `json_value_shape` is shorthand for
+#         a substrate composite where exactly one of (object, array,
+#         string, number, boolean, null) is set. Form's existing
+#         CHOICE primitive can express this; explicit translation
+#         pending.
+#
+# GAP-J3: Round-trip discipline: `emit(parse(bytes)) ≈ bytes` modulo
+#         whitespace, key ordering when `sort_keys=false`, and number
+#         formatting. The equivalence relation is per-format and lives
+#         in `structural_equivalent(modality, a, b)` from
+#         grammar-as-recipe.form (GAP-G2 there). Trivial to author
+#         once GAP-J1 closes.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query (once authored)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse a JSON document:
+#   coh substrate run "parse(@language(json), <bytes>)"
+#
+#   # Find every artifact that parses to the same tree (JSON ⇔ YAML ⇔ ...):
+#   coh substrate run "class_of({lang: @language(json), bytes: <doc>})"
+#
+#   # Translate JSON to YAML (same tree, different emit template):
+#   coh substrate run "translate({lang: @language(json), bytes: <doc>},
+#                                @language(yaml))"

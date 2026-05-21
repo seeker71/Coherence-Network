@@ -1,0 +1,254 @@
+# ─────────────────────────────────────────────────────────────────────
+# grammar-as-recipe.form — the universal (parse, emit) recipe-pair
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md.
+#
+# The concept names that every structured input — code, data, prose,
+# audio, image, video, 3D, sensor stream — is a Language cell carrying
+# an ingestion grammar and an emission template as content-addressed
+# recipe trees. This file expresses that pair as an abstract Form
+# shape that every per-modality grammar (json-grammar.form,
+# yaml-grammar.form, audio-grammar.form, image-grammar.form, ...)
+# composes from.
+#
+# Where the body already carries surfaces, names them. Where the
+# surface is missing or deferred, marks the GAP honestly.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the trinity shape every Language cell carries
+# ─────────────────────────────────────────────────────────────────────
+#
+# A grammar is the parse half. An emission-template is the emit half.
+# A LanguageCell composes the two with its name, version, stdlib
+# bindings, and numeric defaults — matching the shape declared in
+# docs/coherence-substrate/language-cells.md.
+#
+# `Modality` is the substrate's name for the carrier-altitude: text,
+# bytes, pixels, samples, frames, mesh. Two LanguageCells with the
+# same Modality share a parse-and-emit surface (e.g. JSON and YAML
+# both Modality.TEXT_TREE; PNG and JPEG both Modality.IMAGE_RASTER).
+
+form modality_shape = {
+    name:   ~Slug,                       # "text-tree" | "image-raster" | "audio-pcm" | ...
+    domain: ~Slug,                       # "code" | "data" | "prose" | "media"
+};
+
+form grammar_shape = {
+    modality:        modality_shape,
+    ingest_pattern:  ~Recipe,            # the parse recipe — bytes → recipe tree
+    parse_into:      ~Blueprint,         # the Blueprint the parse produces (or sub-trees thereof)
+    capture_rules:   ~List,              # named captures: spans → ctor children
+    pre_pipeline:    ~List,              # for staged grammars (audio: PCM → FFT → onset → ...)
+};
+
+form emission_template_shape = {
+    modality:        modality_shape,
+    emit_pattern:    ~Recipe,            # the emit recipe — recipe tree → bytes
+    emit_from:       ~Blueprint,         # the Blueprint shape this template walks
+    format_rules:    ~List,              # whitespace, indentation, ordering options
+};
+
+form language_cell_shape = {
+    name:                ~Slug,          # "python" | "json" | "yaml" | "english-prose" | "image-rgb"
+    version:             ~String,        # "0.1.0" | "3.12" | "rfc-7159" | "yaml-1.2"
+    grammar:             grammar_shape,
+    emission_template:   emission_template_shape,
+    stdlib_bindings:     ~List,          # [(name, recipe-ref), ...]
+    numeric_defaults:    ~List,          # [(name, format-recipe), ...]
+    cross_modal_links:   ~List,          # [other LanguageCells that share a Blueprint tree]
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the round-trip discipline
+# ─────────────────────────────────────────────────────────────────────
+#
+# Every Language cell must satisfy: emit(parse(bytes)) ≈ bytes,
+# where ≈ is the modality's structural equivalence (whitespace-
+# normalized for text, semantic for prose, scene-graph-equivalent
+# for image, phoneme-equivalent for audio). The discipline lives in
+# prose-as-recipe.form for sentences; this file generalizes it.
+
+defn round_trip(lang, bytes) = do {
+    let tree = parse(lang.grammar, bytes);
+    let emitted = emit(lang.emission_template, tree);
+    structural_equivalent(lang.modality, bytes, emitted)
+};
+
+# `structural_equivalent` is per-modality. Each Language cell's modality
+# carries the equivalence relation appropriate to its altitude.
+
+defn parse(grammar, bytes) = do {
+    # Apply pre_pipeline stages in order (each stage is a Recipe that
+    # transforms its input). Then run ingest_pattern against the staged
+    # output to produce the recipe tree.
+    let staged = pipeline_apply(grammar.pre_pipeline, bytes);
+    apply_ingest_pattern(grammar.ingest_pattern, staged, grammar.capture_rules)
+};
+
+defn emit(emission, tree) = do {
+    apply_emit_pattern(emission.emit_pattern, tree, emission.format_rules)
+};
+
+# GAP-G1: `apply_ingest_pattern`, `apply_emit_pattern`, and `pipeline_apply`
+#         are the runtime kernels that walk a pattern against input.
+#         Form's rule-driven parser (`form_rules.py`,
+#         `register_form_keyword`, `pattern_to_recipe`, `template_to_recipe`)
+#         already carries this for text-tree grammars; the generalization
+#         to byte-stream + media inputs is the smallest extension that
+#         closes this gap. For non-text modalities, the pre_pipeline
+#         stages are where the host's media libraries currently sit
+#         (numpy/scipy for FFT, PIL for image decode); the substrate
+#         names the recipe-shape and reads back the resulting tree.
+
+# GAP-G2: `structural_equivalent(modality, a, b)` is per-modality. For
+#         text-tree modalities it is whitespace-normalized string equality;
+#         for prose it is semantic (already in prose-as-recipe.form's
+#         tests); for image/audio it is scene-graph / phoneme equality —
+#         not implemented today. The function name is honest about what
+#         the modality must define.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — cross-modal equivalence
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two LanguageCells' outputs are *structurally equivalent across
+# modalities* when their parsed trees share a Blueprint NodeID. This
+# is the substrate's content-addressing property generalized — the
+# same property that gives `lambda x: x+1` one identity across Python,
+# TypeScript, and Rust gives a poem and its audio reading one identity
+# at the semantic altitude.
+
+defn cross_modal_equivalent(artifact_a, artifact_b) = do {
+    # Each artifact is a (LanguageCell, bytes) pair.
+    let tree_a = parse(artifact_a.lang.grammar, artifact_a.bytes);
+    let tree_b = parse(artifact_b.lang.grammar, artifact_b.bytes);
+    # The substrate's content-addressing turns "structurally identical"
+    # into "same NodeID" automatically.
+    tree_a.blueprint == tree_b.blueprint
+};
+
+# Three-or-more artifacts share equivalence the same way: every artifact
+# whose parse-tree shares a Blueprint NodeID is in the same equivalence
+# class. The substrate's `?equivalent @blueprint` query returns the
+# class directly.
+
+defn class_of(artifact) = do {
+    let tree = parse(artifact.lang.grammar, artifact.bytes);
+    ?equivalent @tree.blueprint
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — translation between modalities (N+M, not N×M)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Translation is parse-then-emit through different LanguageCells:
+#   - parse source bytes through source.grammar  → tree
+#   - emit tree through target.emission_template → target bytes
+#
+# Any-to-any translation across N source modalities and M target
+# modalities = N parse-recipes + M emit-recipes = N+M cells, never N×M.
+
+defn translate(source_artifact, target_lang) = do {
+    let tree = parse(source_artifact.lang.grammar, source_artifact.bytes);
+    let bytes = emit(target_lang.emission_template, tree);
+    {lang: target_lang, bytes: bytes}
+};
+
+# Examples (each requires the named Language cells to be authored;
+# this file declares the abstract shape, not the populations):
+#
+#   image → text: parse(image_lang, image_bytes) → scene_graph
+#                 emit(english_lang, scene_graph) → "a sunset over water..."
+#
+#   text → image: parse(english_lang, "a sunset...") → scene_graph
+#                 emit(image_lang, scene_graph) → rendered pixels
+#
+#   audio → text: parse(audio_lang, pcm_bytes) → phoneme_tree
+#                 emit(english_lang, phoneme_tree) → transcript
+#
+# When the source and target share Modality and tree shape, translation
+# is the identity at the substrate altitude (e.g. JSON → YAML preserves
+# the tree; only the surface format changes).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — modality-aware composition
+# ─────────────────────────────────────────────────────────────────────
+#
+# Some operations are modality-specific (image filters, audio EQ).
+# Others are modality-agnostic and live at the tree altitude (find,
+# substitute, merge, diff). The abstraction makes the second class
+# uniform across modalities.
+
+defn find_in_tree(tree, blueprint_query) =
+    ?descendants @tree where ?blueprint == blueprint_query;
+
+defn substitute(tree, target_blueprint, replacement_subtree) = do {
+    map_descendants(tree, fn(node) ->
+        if node.blueprint == target_blueprint
+        then replacement_subtree
+        else node)
+};
+
+# These work on every parsed tree regardless of which LanguageCell
+# produced it — image scene-graphs and JSON documents support the
+# same find/substitute operations.
+
+# GAP-G3: `?descendants`, `map_descendants` are tree-walking primitives
+#         the substrate would expose at the same altitude as
+#         `?equivalent`. Today the cell can walk a single tree via
+#         `.child(n)` / `.children`; the recursive descent helpers are
+#         the smallest extension that gives them uniform reach.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — what this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once per-modality grammars are populated, the substrate becomes one
+# fabric across every input form. Concrete shifts:
+#
+# 1. Cross-modal search is structural search.
+#    `class_of(image_artifact)` returns every artifact in the body
+#    that parses to the same tree — text descriptions, audio readings,
+#    YAML configs of the scene, anything. No vector embeddings; the
+#    substrate already knows.
+#
+# 2. Cross-modal lineage is one Compose / Transmit graph.
+#    A teaching transmitted in audio (satsang recording), recorded
+#    in text (transcript), illustrated in image (KB visual),
+#    animated in video — all live as one teaching with four carrier
+#    artifacts. Edges between them are the substrate's standard edges,
+#    not multimodal-specific ones.
+#
+# 3. The witness loop generalizes.
+#    The strategy_fired trace (specs/recipes-tuned-by-trace.md) is
+#    one Language cell's emission of a `(cell, recipe, before, after)`
+#    tuple. The same shape works for an image-witness or audio-witness
+#    — what changes is the Language cell that emits the trace, not
+#    the substrate's storage.
+#
+# 4. The body's senses become uniform.
+#    A cell perceiving text and a cell perceiving audio do the same
+#    operation at the substrate altitude: `parse(lang, input)` →
+#    consume tree. The Language cell carries the modality-specific
+#    pre_pipeline; the cell sees only the tree.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query (once GAP-G1–G3 close)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse a JSON document into a tree:
+#   coh substrate run "parse(@language(json), <bytes>)"
+#
+#   # Find all artifacts whose tree matches this image's scene-graph:
+#   coh substrate run "class_of({lang: @language(image-rgb), bytes: <png>})"
+#
+#   # Translate audio to text:
+#   coh substrate run "translate({lang: @language(audio-pcm), bytes: <wav>},
+#                                @language(english-prose))"
+#
+#   # Verify the round-trip discipline for a Language cell:
+#   coh substrate run "round_trip(@language(yaml), <sample>)"
+#
+#   # The substrate auto-ingest hook picks up new .form files on merge
+#   # to main (scripts/substrate_post_merge_hook.sh) — no manual step.

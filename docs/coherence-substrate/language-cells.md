@@ -282,3 +282,67 @@ cells. The same content-addressed lattice that gave us cross-kernel
 agreement on formats and cross-target reach on codegen now gives us
 cross-language agreement on program structure. One body, three
 expressions of the same architectural move.
+
+## Cross-modal generalization — grammar beyond programming languages
+
+The shape above ships first for *programming languages* (Python /
+TypeScript / Rust / Go). The deeper claim — named in
+[`lc-grammar-is-the-universal-recipe`](../vision-kb/concepts/lc-grammar-is-the-universal-recipe.md)
+— is that **any structured input is a Language cell**. The same
+trinity (ingestion grammar, emission template, stdlib bindings)
+generalizes across four altitudes:
+
+| Altitude | Modality | Example Language cells | Tree the grammar produces |
+|---|---|---|---|
+| Code | text-tree | python, typescript, rust, go, rpn | AST: lambdas, ops, calls, types |
+| Structured data | text-tree | json, jsonl, yaml, html, xml, toml, csv | Object / array / scalar tree |
+| Prose | text-tree | english-prose, markdown, docstring | Sentence / paragraph / link tree (see [`prose-as-recipe.form`](prose-as-recipe.form)) |
+| Media | image-raster / audio-pcm / video-frames / mesh-3d | image-rgb, audio-pcm, video-h264, glb-mesh | Scene-graph / phoneme-prosody / frame-sequence / mesh-graph |
+
+Each Language cell carries a `Modality` slot (text-tree, image-raster,
+audio-pcm, etc.) and a `pre_pipeline` of staged recipes — relevant
+mostly to media, where raw bytes need feature-extraction before the
+ingestion grammar can run. The abstract shape lives in
+[`grammar-as-recipe.form`](grammar-as-recipe.form); per-modality
+skeletons live in [`json-grammar.form`](json-grammar.form),
+[`yaml-grammar.form`](yaml-grammar.form),
+[`audio-grammar.form`](audio-grammar.form), and
+[`image-grammar.form`](image-grammar.form).
+
+What this earns at the cross-modal altitude:
+
+- **Cross-modal equivalence comes for free.** Two artifacts —
+  text and audio, JSON and YAML, image and scene-graph — whose
+  grammars produce the same recipe tree share a Blueprint NodeID.
+  The substrate's `?equivalent` query is the surface for cross-
+  modal search; no embeddings, no vector stores at the categorical
+  altitude.
+- **Translation is N+M across modalities.** parse(source) → tree →
+  emit(target). The same architecture programming-language
+  transpilation uses now spans every modality.
+- **Cross-modal lineage is one edge graph.** A teaching transmitted
+  in audio, recorded in text, illustrated in image, animated in
+  video — all live as one set of substrate cells connected by the
+  body's standard `Transmit` / `Compose` edges.
+
+What this costs honestly:
+
+- **Media grammars are staged.** Audio ingestion includes FFT /
+  onset / phoneme stages that live in the host's signal-processing
+  libraries today; the substrate's role is to name the recipe
+  shape and read back the resulting tree, not to re-implement
+  scipy in Form. The `pre_pipeline` slot is where this lands
+  honestly.
+- **Round-trip discipline is per-modality.** Whitespace-normalized
+  string equality for text-tree; semantic equality for prose;
+  scene-graph / phoneme equality for media. The discipline holds
+  at the modality's natural altitude, not below.
+- **Per-modality grammars are accumulation work.** Each skeleton
+  is small; each population (full JSON grammar, full image scene-
+  graph extractor) is real engineering. The N+M architecture is the
+  payoff after the populations land.
+
+The bet is the same as the original Language-cells move: the
+substrate's content-addressed lattice is the *universal medium*;
+grammars are how any modality enters it. Once a few per-modality
+populations ship, the body has one fabric across every input form.
