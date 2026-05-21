@@ -5,19 +5,22 @@
 //   tsx src/main.ts --bench
 //   tsx src/main.ts path/to/file.fk
 
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { resolve as pathResolve, basename } from "node:path";
 import { Frame, Kernel, Trace, walk } from "./kernel.ts";
 import { readAll, readForm } from "./reader.ts";
 import { runBench } from "./bench.ts";
 import { compileNode } from "./compiler.ts";
 import { runNumericBench } from "./numeric-bench.ts";
 import { evalPython, parsePython } from "./lang-python.ts";
+import { emitFk } from "./lang-python-fk.ts";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0) {
     console.error(
-      "usage: tsx src/main.ts (--expr <expr> | --bench | --compiled <expr> | trace [--expr <expr> | <file.fk>] | python-trace <file.py> | <file.fk>)",
+      "usage: tsx src/main.ts (--expr <expr> | --bench | --compiled <expr> | trace ... | python-trace <file.py> | python-compile <file.py> [out.fk|-] | python-run <file.py> | <file.fk>)",
     );
     process.exit(2);
   }
@@ -39,6 +42,16 @@ async function main(): Promise<void> {
 
   if (args[0] === "python-trace") {
     await runPythonTrace(args.slice(1));
+    return;
+  }
+
+  if (args[0] === "python-compile") {
+    await runPythonCompile(args.slice(1));
+    return;
+  }
+
+  if (args[0] === "python-run") {
+    await runPythonRun(args.slice(1));
     return;
   }
 
@@ -176,6 +189,96 @@ async function runPythonTrace(args: string[]): Promise<void> {
     trace: k.trace.toJSON(),
   };
   console.log(JSON.stringify(report, null, 2));
+}
+
+// runPythonCompile — parse Python source through BMF, emit .fk source the
+// native form-kernel-rust binary can execute. The compilation step that
+// closes the Python → Form → kernel pipeline. By default writes to a
+// sibling .fk file; an explicit output path overrides.
+//
+//   tsx src/main.ts python-compile foo.py            → foo.fk
+//   tsx src/main.ts python-compile foo.py out.fk     → out.fk
+//   tsx src/main.ts python-compile foo.py -          → stdout
+async function runPythonCompile(args: string[]): Promise<void> {
+  if (args.length === 0) {
+    console.error("usage: tsx src/main.ts python-compile <file.py> [out.fk|-]");
+    process.exit(2);
+  }
+  const inPath = args[0]!;
+  const outArg = args[1];
+  const src = await readFile(inPath, "utf8");
+
+  const k = new Kernel();
+  const tree = parsePython(k, src);
+  const fk = emitFk(k, tree);
+
+  if (outArg === "-") {
+    process.stdout.write(fk + "\n");
+    return;
+  }
+  const outPath =
+    outArg ??
+    (inPath.endsWith(".py")
+      ? inPath.slice(0, -3) + ".fk"
+      : inPath + ".fk");
+  await writeFile(outPath, fk + "\n", "utf8");
+  console.error(`form-kernel-ts: wrote ${outPath} (${fk.length} bytes of .fk)`);
+}
+
+// runPythonRun — full Python → kernel pipeline. Parses Python, emits .fk,
+// invokes the native form-kernel-rust binary on the emitted source. The
+// end-to-end claim: no Python runtime in the execution path; only the
+// kernel native binary walks the recipe tree.
+//
+//   tsx src/main.ts python-run foo.py
+//
+// Locates the form-kernel-rust binary at
+//   experiments/form-kernel-rust/target/release/form-kernel-rust
+// (build it first with `cd experiments/form-kernel-rust && cargo build --release`).
+async function runPythonRun(args: string[]): Promise<void> {
+  if (args.length === 0) {
+    console.error("usage: tsx src/main.ts python-run <file.py>");
+    process.exit(2);
+  }
+  const inPath = args[0]!;
+  const src = await readFile(inPath, "utf8");
+
+  // Compile in-memory.
+  const k = new Kernel();
+  const tree = parsePython(k, src);
+  const fk = emitFk(k, tree);
+
+  // Write to a temp .fk next to the source so the native binary can
+  // read it. Keeping it on disk (rather than piping stdin) makes the
+  // recipe inspectable after the run — useful for debugging.
+  const fkPath = inPath.endsWith(".py")
+    ? inPath.slice(0, -3) + ".fk"
+    : inPath + ".fk";
+  await writeFile(fkPath, fk + "\n", "utf8");
+
+  // Locate the native binary. Walks up from cwd looking for the kernel.
+  const kernelPath = pathResolve(
+    process.cwd(),
+    "../form-kernel-rust/target/release/form-kernel-rust",
+  );
+
+  // Spawn the native binary and forward its output.
+  const child = spawn(kernelPath, [fkPath], {
+    stdio: ["ignore", "inherit", "inherit"],
+  });
+  const exitCode = await new Promise<number>((resolveCode) => {
+    child.on("close", (code) => resolveCode(code ?? 1));
+    child.on("error", (err) => {
+      console.error(`python-run: failed to spawn ${kernelPath}: ${err.message}`);
+      console.error(
+        "Build the kernel first: cd experiments/form-kernel-rust && cargo build --release",
+      );
+      resolveCode(127);
+    });
+  });
+  process.exit(exitCode);
+  // Silence unused-import lint if basename isn't used elsewhere.
+  void basename;
 }
 
 main().catch((err: unknown) => {
