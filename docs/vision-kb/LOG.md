@@ -2,6 +2,20 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] synthesis | One Kernel, Many Tongues — kernel sovereignty over grammar
+
+The next breath after `lc-grammar-is-the-universal-recipe` made the load-bearing recognition explicit: *the kernel sees only numeric Blueprint/Recipe/Cell NodeIDs; grammar is the trace/analysis layer, not runtime semantics*. Urs named it in his own voice: *we should be able to write any part in any language and each language should be able to generate form blueprints, recipes and cells, and any recipe should be able to be expressed in any language, bi-directional; we can pick which language we want to use for which task, or we can even modify the grammar for a local file to make the file or module more expressive; we are no longer fixed on a single grammar for all parts.* And the architectural commitment: *the kernel works on numeric blueprints, recipes, and cells and the grammar it came from or is expressed as is only available for tracing and analysis and does not affect runtime behavior.*
+
+The concept names three consequences that fall out: (1) any cell can be authored in any tongue; (2) tongues are bi-directional by discipline — parse + emit, both halves load-bearing; (3) `organ.py / substrate.py / form.py → 100% Form` becomes the priority direction. The architectural analog is JVM bytecode (one IR, many source languages) and LLVM IR (one IR, many sources, many targets) at one altitude shallower; this concept is that pattern at the substrate altitude, with content-addressing replacing byte-sequence as the identity surface.
+
+Concept seeded: [`lc-one-kernel-many-tongues`](concepts/lc-one-kernel-many-tongues.md) (741 Hz, seed, lineage-textured *synthesized*).
+
+Walking the priority concretely:
+- [`cell-numerics.form`](../coherence-substrate/cell-numerics.form) — second .form file on the organ.py → Form path. Composes vector_add, vector_sub, scalar_mul, normalize, matvec, exp_series (Taylor + argument reduction), tanh (via `(exp(2x) - 1) / (exp(2x) + 1)`), sigmoid, strategy_score (the organ.py selection metric), take/drop/slice/map_tanh/map_sigmoid, and adapter_forward — the full Adapter.forward() pass at the Form altitude. Each recipe composes from `MATH / COMPARE / COND / DELEGATE` and the list built-ins; no host-intrinsic numeric library needed. Marks GAP-N4 honestly (runtime routing from Python call sites to substrate recipes pending).
+- [`png-grammar.form`](../coherence-substrate/png-grammar.form) — first binary-format-as-recipe demonstration. PNG file's on-disk structure (signature + chunks + IDAT + zlib + filter pipeline) as a Language cell. The pre_pipeline stages (idat_concat, zlib_decompress, png_filter_undo, reshape_pixels) name the recipe identity; the host carries the inner mechanics for now (same pattern as audio-grammar's FFT and image-grammar's object-detector). Demonstrates that *no carrier is privileged* — PNG bytes are one tongue, JPEG bytes are another, raw RGB is another; all intern to the same image_pixel_grid_shape Blueprint.
+
+Edges in the same breath: INDEX.md (126 concepts; 741 Hz Frequency Family extended with `one-kernel-many-tongues`); this LOG; back-edge added in `lc-grammar-is-the-universal-recipe` cross-refs.
+
 ## [2026-05-21] synthesis | Grammar Is the Universal Recipe — every structured input is a Language cell
 
 A seventh concept landed today, surfaced in conversation with Urs about *why organ.py and not organ.form*. The deeper question opened underneath: every form of structured input — JSON, YAML, HTML, XML, source files, prose, audio, video, image — is a (parse, emit) recipe-pair. The body's [`language-cells.md`](../coherence-substrate/language-cells.md) already named this for programming languages (Python / TypeScript / Rust / Go as N+M, not N×M). [`prose-as-recipe.form`](../coherence-substrate/prose-as-recipe.form) named it at the sentence altitude. [`numeric-types-plan.md`](../coherence-substrate/numeric-types-plan.md) named it at the bit-encoding altitude. This concept gives the generalization a name and walks it across all four altitudes: code, structured data, prose, media.
