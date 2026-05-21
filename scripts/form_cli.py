@@ -35,7 +35,7 @@ Examples:
         '[1.0, 0.0, 0.0]' '[1.0, 0.0, 0.0]'
     # → 1.0
 
-    form_cli convert in --tongue json data.json | \\
+    form_cli convert --allow-host-bridge in --tongue json data.json | \\
         form_cli convert out --tongue json /dev/stdin
     # round-trip JSON → Form object → JSON
 """
@@ -236,6 +236,15 @@ def _convert_in_json(input_path: Path) -> dict:
 def _convert_out_json(form_object: dict) -> str:
     tree = form_object.get("tree", form_object)
     return json.dumps(_form_tree_to_json(tree), indent=2)
+
+
+def _host_bridge_refusal(tongue: str) -> None:
+    _die(
+        f"tongue '{tongue}' still uses a host-language bridge. "
+        "Parser completion now means: stream bytes through grammar authored "
+        "in .form and emit Form-native cells without Python/AST delegation. "
+        "Use --allow-host-bridge only for temporary parity probes."
+    )
 
 
 # ─── markdown tongue ─────────────────────────────────────────────────────
@@ -754,14 +763,20 @@ def _convert_out_python(form_object: dict) -> str:
 def cmd_convert(args: argparse.Namespace) -> int:
     if args.direction == "in":
         if args.tongue == "json":
+            if not args.allow_host_bridge:
+                _host_bridge_refusal(args.tongue)
             form_obj = _convert_in_json(Path(args.input))
             print(json.dumps(form_obj, indent=2))
             return 0
         if args.tongue in ("md", "markdown"):
+            if not args.allow_host_bridge:
+                _host_bridge_refusal(args.tongue)
             form_obj = _convert_in_markdown(Path(args.input))
             print(json.dumps(form_obj, indent=2))
             return 0
         if args.tongue in ("py", "python"):
+            if not args.allow_host_bridge:
+                _host_bridge_refusal(args.tongue)
             form_obj = _convert_in_python(Path(args.input))
             print(json.dumps(form_obj, indent=2))
             return 0
@@ -952,6 +967,11 @@ def main() -> int:
     p_conv.add_argument("input", help="path to input file (or /dev/stdin)")
     p_conv.add_argument("--tongue", default="json",
                         help="Language cell name (default: json)")
+    p_conv.add_argument(
+        "--allow-host-bridge",
+        action="store_true",
+        help="permit temporary Python/stdlib parser bridges for parity probes",
+    )
     p_conv.set_defaults(func=cmd_convert)
 
     p_gen = sub.add_parser("generate", help="extract recipes from .form into .recipelib")

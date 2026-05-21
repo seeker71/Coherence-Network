@@ -14,10 +14,11 @@ Two modes:
                           path (or '— gap'), and wiring status
   --gaps               — only the extensions with no Form grammar yet
 
-The wiring column tracks whether the grammar is also reachable through
-`form_cli convert --tongue <name>` today (json is wired; the rest
-are .form skeletons named in their files but not yet plumbed into the
-CLI's tongue dispatch).
+The bridge column tracks whether `form_cli convert --allow-host-bridge`
+can still parse the tongue through a temporary host-language bridge.
+That bridge is useful for parity probes, but it is not Form-native
+completion. Use `scripts/form_native_grammar_contract.py` for the
+stricter BMF stream-to-cell contract.
 """
 
 from __future__ import annotations
@@ -31,9 +32,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GRAMMARS_DIR = REPO_ROOT / "docs" / "coherence-substrate"
 
-# Map known file-extension → (grammar_filename, language_cell_name).
-# A nil grammar_filename means "no Form grammar yet". A nil cli_tongue
-# means "grammar exists but not wired into form_cli convert yet".
+# Map known file-extension → (grammar_filename, host_bridge_name).
+# A nil grammar_filename means "no Form grammar yet". A nil host bridge
+# means no temporary `form_cli convert --allow-host-bridge` path exists.
 EXTENSION_MAP = {
     "json":  ("json-grammar.form",   "json"),
     "yaml":  ("yaml-grammar.form",   None),
@@ -102,7 +103,7 @@ def _classify(ext: str, counts: Counter, existing: set[str]) -> dict:
         "count":           n,
         "grammar":         grammar if grammar_present else None,
         "grammar_named":   grammar,         # named in the map, may not exist yet
-        "cli_wired":       cli_tongue,
+        "host_bridge":      cli_tongue,
         "unknown":         ext not in EXTENSION_MAP,
     }
 
@@ -115,7 +116,7 @@ def print_summary(counts: Counter, existing: set[str]) -> None:
         rows.append(_classify(ext, counts, existing))
 
     ext_w = max(6, max((len(r["ext"]) for r in rows), default=6))
-    print(f"{'ext':<{ext_w}}  {'count':>6}  {'grammar':<32}  {'cli wired':<12}  status")
+    print(f"{'ext':<{ext_w}}  {'count':>6}  {'grammar':<32}  {'host bridge':<12}  status")
     print("-" * (ext_w + 6 + 32 + 12 + 14 + 6))
     for r in rows:
         if r["grammar"]:
@@ -127,15 +128,15 @@ def print_summary(counts: Counter, existing: set[str]) -> None:
         else:
             status = "gap"
         grammar = r["grammar"] or "—"
-        cli = r["cli_wired"] or "—"
+        cli = r["host_bridge"] or "—"
         print(f"{r['ext']:<{ext_w}}  {r['count']:>6}  {grammar:<32}  {cli:<12}  {status}")
 
     covered = sum(1 for r in rows if r["grammar"])
     gaps = sum(1 for r in rows if not r["grammar"])
     print()
     print(f"summary: {covered} extensions covered by a .form grammar, "
-          f"{gaps} gaps. {sum(1 for r in rows if r['cli_wired'])} wired "
-          f"into form_cli convert.")
+          f"{gaps} gaps. {sum(1 for r in rows if r['host_bridge'])} temporary "
+          f"host bridge(s).")
 
 
 def print_gaps(counts: Counter, existing: set[str]) -> None:

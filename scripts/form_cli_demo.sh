@@ -45,7 +45,7 @@ echo "$SEP"
 cat > "$TMPDIR/input.json" <<EOF
 {"name": "test", "values": [1, 2.5, "three", true, null], "nested": {"depth": 1}}
 EOF
-python3 scripts/form_cli.py convert in --tongue json "$TMPDIR/input.json" > "$TMPDIR/form_obj.json"
+python3 scripts/form_cli.py convert --allow-host-bridge in --tongue json "$TMPDIR/input.json" > "$TMPDIR/form_obj.json"
 echo "  category at top of tree:" \
      "$(python3 -c "import json; d=json.load(open('$TMPDIR/form_obj.json')); print(d['tree']['category'])")"
 echo "  child count:" \
