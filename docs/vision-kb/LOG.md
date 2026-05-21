@@ -2,6 +2,26 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] foundation | parser-as-Form-recipe — Pattern CTORs + py_import as Form
+
+Urs named the destination directly when reviewing the python-trace demo:
+
+> *the parser is in .ts? the grammar needs to be in form with a form recipe.
+>  we don't want a demo, we want the real thing, with full end-to-end
+>  support for the full language.*
+
+The python-trace work had landed real Python (24,022 CTOR dispatches) running through the BMF parser through the kernel evaluator with full Blueprint attribution. The work was real; the architecture was not — the parser lived in TypeScript (~2000 LOC of hand-written `lang-python.ts`) and Python (`bmf.py`'s engine + one rule).
+
+Concept seeded: [`lc-parser-as-form-recipe`](concepts/lc-parser-as-form-recipe.md) (741 Hz, synthesized) — names the full bootstrap-to-self-hosting path and the discipline of one rule per breath. Companion file pieces shipped:
+
+- **`grammar-as-recipe.form` Part 2.5** — Pattern primitives as Form Blueprints: `pattern_literal_shape`, `pattern_sequence_shape`, `pattern_star_shape`, `pattern_opt_shape`, `pattern_choice_shape`, `pattern_capture_shape`. The substrate vocabulary every per-language grammar composes its rules from.
+- **`grammar-as-recipe.form` Parts 2.6–2.7** — `pattern_match` recipe + per-primitive match helpers + `rule_shape` + `rule_apply` + `parse_loop` as Form recipes. The engine's structural intent named at the substrate altitude; host engine still carries execution until the kernel walker implements `pattern_match` natively (GAP-G1).
+- **`python-grammar.form` Part 5** — `py_import_rule` and `py_import_from_rule` expressed as concrete Form recipes composed from those primitives. Replaces the prior abstract `rule(py_import, ...)` placeholder. Two of fifteen Python rules now substrate-resident as Form.
+
+The capture_rules list in `python-grammar.form` names every remaining construct (`?rule py_function_def`, `?rule py_class_def`, `?rule py_assign`, `?rule py_subscript`, `?rule py_slice`, etc.) — each marked with `?` until its breath ripens. The self-hosting boundary is now visibly measurable: count the rules without `?`.
+
+This is foundation work. The next breaths walk one rule at a time toward full Python coverage. Then the engine itself migrates from `bmf.py` to a Form recipe walked by the Rust kernel binary. Then the bootstrap retires.
+
 ## [2026-05-21] synthesis | Form-kernel runtime visualizer — Python on Form, memory as a body
 
 Urs named the synthesis:
