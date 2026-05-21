@@ -2,6 +2,56 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] correction | BMF today, not tomorrow — first real closure for Python imports lands
+
+Urs caught the hedge directly:
+
+> *Why BMF tomorrow, what are we waiting for? If there is a dependency reason, yes; if it is just avoiding work, then let's get to it. Still seeing python executions, interesting.*
+
+Two truthful observations. The first ("BMF tomorrow") was the fear-shape — there was no dependency reason, just unspoken avoidance. The second ("still seeing python executions") is the deeper architectural truth: form-native-as-default still routes through CPython underneath; the move past that is routing execution through the TS / Rust / Go kernels (the second move; named in this PR's follow-ups, not done in this breath).
+
+For the first move — *get to it now* — this breath closes the first construct: **Python `import` statements parse through real BMF rules, no `ast.parse` in the path.**
+
+[`experiments/local-llm-cell-v0/bmf.py`](../../experiments/local-llm-cell-v0/bmf.py) — built from scratch, no `ast` delegation:
+- **Tokenizer** that walks source character-by-character (not regex over ast tokens). PY_KEYWORDS set, IDENT/KW/OP/STRING/INT/NEWLINE/EOF classifications, source-coord tracking per token (line/col/byte-start/byte-end).
+- **Pattern primitives**: `Literal` / `Capture` / `Sequence` / `Opt` / `Choice` / `Star`. Each `match(stream)` returns `MatchResult` or the `FAIL` sentinel.
+- **FAIL-unwind semantics**: when a pattern fails, captures discard cleanly; the surrounding `Choice` walks to the next alternative. Bjorg's BMF (2000) discipline at the parser layer.
+- **`register_form_rule(name, pattern, action)`** — in-process sibling to `api/app/services/substrate/grammar.py`'s same-named function.
+- **Two real rules**: `py_import` (covering `import x`, `import x.y.z`, `import x as y`, `import a, b, c as d`) and `py_import_from` (covering `from x import y`, `from x.y import z`, `from x import y as z`, `from x import y, z`, `from . import x`, `from .. import x`, `from .package import x`).
+- **Source attribution stamped natively** at the parser layer — from the BMF tokenizer's line/col tracking, not borrowed from `ast.parse`. Per `lc-the-recipe-remembers-its-source`.
+
+[`experiments/local-llm-cell-v0/bmf_python_demo.py`](../../experiments/local-llm-cell-v0/bmf_python_demo.py) — parity verification:
+
+```
+bmf_python_demo — real BMF rules vs ast.parse reference
+================================================================
+  ✓ import os                                  → py_Import  (line 1, col 1)
+  ✓ import os.path                             → py_Import  (line 1, col 1)
+  ✓ import os as oss                           → py_Import  (line 1, col 1)
+  ✓ import os, sys, json                       → py_Import  (line 1, col 1)
+  ✓ import os.path, sys.argv as args           → py_Import  (line 1, col 1)
+  ✓ from os import path                        → py_ImportFrom  (line 1, col 1)
+  ✓ from os.path import join                   → py_ImportFrom  (line 1, col 1)
+  ✓ from os import path as p                   → py_ImportFrom  (line 1, col 1)
+  ✓ from os import path, sep                   → py_ImportFrom  (line 1, col 1)
+  ✓ from os import path as p, sep as s         → py_ImportFrom  (line 1, col 1)
+  ✓ from . import x                            → py_ImportFrom  (line 1, col 1)
+  ✓ from .. import x                           → py_ImportFrom  (line 1, col 1)
+  ✓ from .package import x                     → py_ImportFrom  (line 1, col 1)
+
+13/13 import variations parity-checked
+BMF rules running in BMF semantics (Choice/Capture/Sequence/Star
+with FAIL-unwind); ast.parse only in the reference path.
+```
+
+13 import variations parse through BMF and produce Form objects structurally equivalent to the `ast.parse` path. The reference path uses `ast.parse` *only as a checker*; the BMF path uses *only* its own tokenizer + matcher.
+
+[`python-grammar.form`](../coherence-substrate/python-grammar.form) GAP-PY1 updated to **FIRST CLOSURE LANDED** status. The framing for the rest of Python's grammar still holds — AST is the bootstrap for the constructs that don't yet have BMF rules — but the bootstrap is now visibly shrinking.
+
+The second move Urs named ("still seeing python executions") is the architectural follow-up: routing execution through the TS / Rust / Go kernels via `bridge_to_substrate(name, session=...)` so the lattice's recipes run outside CPython entirely. The kernels exist (`experiments/form-kernel-{ts,rust,go}/`); wiring them through `form_cli execute --kernel <ts|rust|go>` is the next breath. Named honestly; not snuck into this PR.
+
+Walking the remaining Python constructs (def, class, assignments, control flow, expressions) is one BMF rule per breath, using the same primitives. The AST delegate shrinks; the BMF surface grows; the self-hosting boundary moves with every rule landed.
+
 ## [2026-05-21] synthesis | The Kernel Knows Itself — grammar.form + token-streamer + go/rust grammar stubs
 
 Urs's next move after `lc-parsers-as-recipes` named the universal property: *we can use the same for go and rust since the kernels are written in those languages and that makes the kernels themselves inspectable, understandable, changable, traceable, and attributeable; grammar.py should be in form native language and we should have a form native token streamer to translate text to form native objects using the form native registered grammar recipes which are form native BMF style rules or something evolved from that.*
