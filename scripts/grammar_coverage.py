@@ -39,7 +39,7 @@ EXTENSION_MAP = {
     "yaml":  ("yaml-grammar.form",   None),
     "yml":   ("yaml-grammar.form",   None),
     "form":  (None,                  None),   # the substrate's own tongue
-    "md":    (None,                  None),
+    "md":    ("markdown-grammar.form", "markdown"),
     "py":    (None,                  None),
     "ts":    (None,                  None),
     "tsx":   (None,                  None),
