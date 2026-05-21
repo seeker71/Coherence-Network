@@ -124,6 +124,246 @@ defn emit(emission, tree) = do {
 #         (numpy/scipy for FFT, PIL for image decode); the substrate
 #         names the recipe-shape and reads back the resulting tree.
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 2.5 — Pattern primitives as Form Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# Bjorg's BMF lineage (2000 thesis) declares grammar rules as
+# (pattern, semantic_action) pairs where the pattern is composed from
+# six primitives with FAIL-unwind semantics. These primitives are the
+# Form vocabulary every per-language grammar (python-grammar.form,
+# json-grammar.form, ...) composes its rules from.
+#
+# Until now they have lived as host classes in
+# experiments/local-llm-cell-v0/bmf.py (Literal, Sequence, Star, Opt,
+# Choice, Capture — Python dataclasses with .match(stream) methods).
+# This section names them as Form Blueprint shapes — substrate-resident,
+# content-addressed, walkable through any kernel that implements the
+# `pattern_match` recipe. The host engine becomes the bootstrap; the
+# Form definitions become the destination.
+#
+# Companion teaching: lc-parsers-as-recipes — *grammar rules are first-
+# class Recipes, not C/JS/Rust code embedded in a host parser binary.*
+
+form pattern_literal_shape = {
+    # Match a single token by kind, optionally also by value. Examples:
+    #   Literal("KW", "import")    — keyword "import"
+    #   Literal("IDENT")           — any identifier
+    #   Literal("OP", ".")         — the dot operator
+    kind:   ~Slug,                       # "KW" | "IDENT" | "OP" | "STRING" | "INT" | "NEWLINE"
+    value:  ?~String,                    # optional literal value to match
+};
+
+form pattern_sequence_shape = {
+    # Match each child pattern in order. Fails if any child fails;
+    # the partial advance unwinds atomically (FAIL semantics).
+    children: ~List,                     # [pattern_shape]
+};
+
+form pattern_star_shape = {
+    # Match the child pattern zero or more times. Greedy: keeps
+    # matching until the inner pattern fails, then succeeds with
+    # however many matches were collected. Captures land under `name`.
+    name:    ~Slug,                      # capture name for the collected matches
+    child:   ~Recipe,                    # pattern_shape — the repeated unit
+};
+
+form pattern_opt_shape = {
+    # Match the child pattern zero or one time. Always succeeds; the
+    # capture is null when the child didn't match. Sibling to Star
+    # with upper-bound 1.
+    child:   ~Recipe,                    # pattern_shape
+};
+
+form pattern_choice_shape = {
+    # Try each alternative in order. First success wins; only fails
+    # when every alternative fails. The angelic-nondeterminism trio's
+    # CHOOSE arm — BML's foundational nondeterminism primitive.
+    alternatives: ~List,                 # [pattern_shape]
+};
+
+form pattern_capture_shape = {
+    # Wrap a child pattern and name its match in the captures dict.
+    # The action recipe receives `captures[name]` after the rule
+    # matches. Capture is the pattern that makes parse-output addressable.
+    name:    ~Slug,                      # capture key
+    child:   ~Recipe,                    # pattern_shape — what to capture
+};
+
+# A pattern is one of the six primitive shapes above, or a reference to
+# a named sub-pattern (for recursive grammars). The substrate sees
+# patterns as a recursive tree of these CTORs.
+form pattern_shape = ~Recipe;
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2.6 — the match recipe — pattern × stream → match-result
+# ─────────────────────────────────────────────────────────────────────
+#
+# `pattern_match` is the Form recipe that walks a pattern tree against
+# a token stream. Today the host engine implementation lives in
+# bmf.py's `match()` methods on each Pattern class. As Form-execution
+# matures (Rust kernel reaches walker parity, BMF rules ship for token
+# decoding), this recipe replaces the host engine.
+
+form match_result_shape = {
+    captures:    ~Dict,                  # {name: matched-value-or-sub-captures}
+    rest:        ~Recipe,                # token_stream_shape advanced past matched tokens
+    span_start:  ~Recipe,                # token_shape — first token consumed
+    span_end:    ~Recipe,                # token_shape — last token consumed
+};
+
+# FAIL is the sentinel returned when a pattern doesn't match. The
+# angelic-nondeterminism trio's FAIL arm. Subsequent Choice alternatives
+# try after a FAIL; Sequence unwinds atomically on FAIL.
+form match_fail_shape = {
+    reason:     ~String,                 # human-readable failure note (for debugging)
+};
+
+defn pattern_match(pattern, stream) = do {
+    # Dispatch on the pattern's CTOR. Each primitive's match semantics
+    # below names the Form expression of bmf.py's hand-coded match()
+    # methods.
+    match pattern:
+        @pattern_literal       -> match_literal(pattern, stream),
+        @pattern_sequence      -> match_sequence(pattern.children, stream),
+        @pattern_star          -> match_star(pattern.name, pattern.child, stream),
+        @pattern_opt           -> match_opt(pattern.child, stream),
+        @pattern_choice        -> match_choice(pattern.alternatives, stream),
+        @pattern_capture       -> match_capture(pattern.name, pattern.child, stream),
+};
+
+# Each helper below is one recipe; together they are the parse engine.
+# They compose the kernel's BLOCK / COND / CHOICE arms with the
+# pattern_* CTOR dispatch above. The recipes name the structural intent;
+# the host engine carries the execution semantics until the kernel walker
+# implements them natively.
+
+defn match_literal(p, stream) = do {
+    let tok = stream.head;
+    if tok.kind != p.kind then @match_fail("kind mismatch")
+    else if p.value != null and tok.value != p.value then @match_fail("value mismatch")
+    else match_result_shape {
+        captures: {},
+        rest: stream.tail,
+        span_start: tok,
+        span_end: tok,
+    }
+};
+
+defn match_sequence(children, stream) = do {
+    # Each child must match in order. The captures accumulate; the
+    # stream advances. Any child's FAIL unwinds the whole sequence.
+    fold(children, match_result_shape { captures: {}, rest: stream, ... },
+         fn(acc, child) -> do {
+             let m = pattern_match(child, acc.rest);
+             if m == @match_fail then m
+             else match_result_shape {
+                 captures: merge(acc.captures, m.captures),
+                 rest: m.rest,
+                 span_start: acc.span_start ?? m.span_start,
+                 span_end: m.span_end,
+             }
+         })
+};
+
+defn match_choice(alternatives, stream) = do {
+    # Try each alternative; first match wins. FAIL only if all fail.
+    # Per angelic-assembler.txt's CHOOSE arm.
+    for alt in alternatives:
+        let m = pattern_match(alt, stream);
+        if m != @match_fail then return m;
+    @match_fail("no alternative matched")
+};
+
+defn match_star(name, child, stream) = do {
+    # Match child zero or more times. Always succeeds.
+    let collected = [];
+    let cur = stream;
+    while true:
+        let m = pattern_match(child, cur);
+        if m == @match_fail then break;
+        collected = collected + [m.captures];
+        cur = m.rest;
+    match_result_shape {
+        captures: { name: collected },
+        rest: cur,
+        ...
+    }
+};
+
+defn match_opt(child, stream) = do {
+    let m = pattern_match(child, stream);
+    if m == @match_fail
+    then match_result_shape { captures: {}, rest: stream, ... }
+    else m
+};
+
+defn match_capture(name, child, stream) = do {
+    let m = pattern_match(child, stream);
+    if m == @match_fail then m
+    else match_result_shape {
+        captures: { name: { captures: m.captures, ... } },
+        rest: m.rest,
+        span_start: m.span_start,
+        span_end: m.span_end,
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2.7 — the rule recipe — (pattern, action) → Form object
+# ─────────────────────────────────────────────────────────────────────
+
+form rule_shape = {
+    # A rule pairs a pattern with a semantic action recipe. The action
+    # receives the captures and the source span and produces the Form
+    # object (typically a CTOR application that builds a node of the
+    # grammar's target Blueprint).
+    name:    ~Slug,                      # rule's identifier
+    pattern: ~Recipe,                    # pattern_shape tree
+    action:  ~Recipe,                    # (captures, span) → Form object
+};
+
+defn rule_apply(rule, stream) = do {
+    let m = pattern_match(rule.pattern, stream);
+    if m == @match_fail then m
+    else do {
+        let span = make_span(m.span_start, m.span_end, stream.source_path);
+        let obj = apply(rule.action, m.captures, span);
+        # Stamp source_attribution as part of the parse — same gesture
+        # as the framebuffer's track! macro stamping crc32(file:line).
+        let obj_with_attr = with_field(obj, "source_attribution", span);
+        match_result_shape {
+            captures: { result: obj_with_attr },
+            rest: m.rest,
+            span_start: m.span_start,
+            span_end: m.span_end,
+        }
+    }
+};
+
+# `parse_loop` walks a stream against a list of rules until EOF. First
+# match wins per statement; no rule matched is a structural failure.
+defn parse_loop(rules, stream) = do {
+    let results = [];
+    let cur = stream;
+    while not cur.empty:
+        if cur.head.kind == "NEWLINE" then do {
+            cur = cur.tail;
+            continue;
+        };
+        let matched = false;
+        for rule in rules:
+            let m = rule_apply(rule, cur);
+            if m != @match_fail then do {
+                results = results + [m.captures.result];
+                cur = m.rest;
+                matched = true;
+                break;
+            };
+        if not matched then raise @parse_error(cur.head);
+    results
+};
+
 # GAP-G2: `structural_equivalent(modality, a, b)` is per-modality. For
 #         text-tree modalities it is whitespace-normalized string equality;
 #         for prose it is semantic (already in prose-as-recipe.form's

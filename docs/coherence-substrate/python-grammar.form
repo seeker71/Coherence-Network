@@ -298,21 +298,241 @@ form py_annotation_shape = {
 };
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 5 — the Language cell
+# Part 5 — concrete Form-recipe rules
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each Python construct is expressed as a Form recipe composed from the
+# Pattern primitives declared in grammar-as-recipe.form Part 2.5
+# (pattern_literal_shape, pattern_sequence_shape, pattern_star_shape,
+# pattern_opt_shape, pattern_choice_shape, pattern_capture_shape).
+#
+# The host-side parse engine (experiments/local-llm-cell-v0/bmf.py) is
+# the bootstrap; these recipes are the destination. Every additional
+# Python construct lands here as another rule_shape composing the same
+# primitives — *not* as a Python class wrapper. The self-hosting
+# boundary moves with every rule landed.
+#
+# Status: py_import + py_import_from shipped 2026-05-21 (both as Form
+# recipes here AND as host-engine rules in bmf.py for parity). Every
+# other construct (def, class, assign, expressions, control flow) is
+# named in capture_rules with rule_shape == null until its breath lands.
+
+# ──────────────────────────── helpers: tokens by kind ─────────────────
+
+defn lit_kw(value)    = pattern_literal_shape { kind: "KW",     value: value };
+defn lit_op(value)    = pattern_literal_shape { kind: "OP",     value: value };
+defn lit_ident()      = pattern_literal_shape { kind: "IDENT",  value: null };
+
+# ────────────────────────── helper: dotted_name a.b.c ─────────────────
+
+defn dotted_name_pattern = pattern_sequence_shape {
+    children: [
+        pattern_capture_shape { name: "head", child: lit_ident() },
+        pattern_star_shape {
+            name: "tail",
+            child: pattern_sequence_shape {
+                children: [
+                    lit_op("."),
+                    pattern_capture_shape { name: "part", child: lit_ident() },
+                ],
+            },
+        },
+    ],
+};
+
+# Semantic action recipe: captures → dotted-name string.
+defn dotted_name_to_string_action(captures) = do {
+    let head = captures.head;
+    let parts = [head];
+    for entry in (captures.tail ?? []):
+        parts = parts + [entry.part];
+    join(parts, ".")
+};
+
+# ────────────────────────── helper: import alias ──────────────────────
+#
+# `alias` is `dotted_name [as IDENT]`. Captures `name` (dotted) and
+# optional `alias` (single IDENT).
+
+defn import_alias_pattern = pattern_sequence_shape {
+    children: [
+        pattern_capture_shape { name: "name", child: dotted_name_pattern },
+        pattern_opt_shape {
+            child: pattern_sequence_shape {
+                children: [
+                    lit_kw("as"),
+                    pattern_capture_shape { name: "alias", child: lit_ident() },
+                ],
+            },
+        },
+    ],
+};
+
+# ───────────────────────────── rule: py_import ────────────────────────
+#
+# Pattern: `import alias (, alias)*`
+# Action:  build a py_import_shape { kind: "import", names: [...] }
+
+defn py_import_rule = rule_shape {
+    name:    "py_import",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("import"),
+            pattern_capture_shape {
+                name: "aliases",
+                child: pattern_sequence_shape {
+                    children: [
+                        pattern_capture_shape { name: "first", child: import_alias_pattern },
+                        pattern_star_shape {
+                            name: "rest",
+                            child: pattern_sequence_shape {
+                                children: [
+                                    lit_op(","),
+                                    pattern_capture_shape {
+                                        name: "entry",
+                                        child: import_alias_pattern,
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+    },
+    action: defn py_import_action(captures, span) = do {
+        let aliases_caps = captures.aliases.captures;
+        let entries = [aliases_caps.first];
+        for entry in (aliases_caps.rest ?? []):
+            entries = entries + [entry.entry];
+        let names = [];
+        for entry in entries:
+            let name_str = dotted_name_to_string_action(entry.captures.name.captures);
+            names = names + [{
+                name:   name_str,
+                asname: entry.captures.alias,
+            }];
+        py_import_shape {
+            kind:   "import",
+            module: null,
+            names:  names,
+            level:  0,
+        }
+    },
+};
+
+# ──────────────────────── rule: py_import_from ────────────────────────
+#
+# Pattern: `from (.*) [dotted_name] import (alias (, alias)* | * )`
+# Action:  build a py_import_shape { kind: "from", module: ..., level: N, names: [...] }
+
+defn py_import_from_rule = rule_shape {
+    name:    "py_import_from",
+    pattern: pattern_sequence_shape {
+        children: [
+            lit_kw("from"),
+            # Relative dots: 0+ "." OPs (each becomes a level increment).
+            pattern_star_shape {
+                name: "dots",
+                child: pattern_capture_shape { name: "dot", child: lit_op(".") },
+            },
+            # Optional module (may be absent in `from . import x`).
+            pattern_opt_shape {
+                child: pattern_capture_shape { name: "module", child: dotted_name_pattern },
+            },
+            lit_kw("import"),
+            # Names: either '*' or a sequence of import aliases.
+            pattern_choice_shape {
+                alternatives: [
+                    pattern_capture_shape { name: "star", child: lit_op("*") },
+                    pattern_capture_shape {
+                        name: "aliases",
+                        child: pattern_sequence_shape {
+                            children: [
+                                pattern_capture_shape {
+                                    name: "first",
+                                    child: import_alias_pattern,
+                                },
+                                pattern_star_shape {
+                                    name: "rest",
+                                    child: pattern_sequence_shape {
+                                        children: [
+                                            lit_op(","),
+                                            pattern_capture_shape {
+                                                name: "entry",
+                                                child: import_alias_pattern,
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        ],
+    },
+    action: defn py_import_from_action(captures, span) = do {
+        let level = len(captures.dots ?? []);
+        let module = if captures.module == null
+            then null
+            else dotted_name_to_string_action(captures.module.captures);
+        let names = if captures.star != null then [{ name: "*", asname: null }]
+            else do {
+                let aliases_caps = captures.aliases.captures;
+                let entries = [aliases_caps.first];
+                for entry in (aliases_caps.rest ?? []):
+                    entries = entries + [entry.entry];
+                let result = [];
+                for entry in entries:
+                    let name_str = dotted_name_to_string_action(entry.captures.name.captures);
+                    result = result + [{
+                        name:   name_str,
+                        asname: entry.captures.alias,
+                    }];
+                result
+            };
+        py_import_shape {
+            kind:   "from",
+            module: module,
+            names:  names,
+            level:  level,
+        }
+    },
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5b — the Language cell binding
 # ─────────────────────────────────────────────────────────────────────
 
 defn python_grammar = grammar_shape {
     modality:           modality_shape { name: "text-tree", domain: "code" },
-    ingest_pattern:     ?rule py_module,
+    ingest_pattern:     parse_loop,       # the Form recipe from grammar-as-recipe.form
     parse_into:         ~Blueprint @py_module_shape,
     capture_rules:      [
-        rule(py_module,        "module → top-level stmt*",              module_node),
-        rule(py_function_def,  "def name(args) -> type: body",          fn_def_node),
-        rule(py_class_def,     "class Name(bases, **kw): body",         class_def_node),
-        rule(py_assign,        "targets = value [# type_comment]",      assign_node),
-        rule(py_call,          "func(args, **keywords)",                call_node),
-        # Each additional Python construct lands here as a BMF rule,
-        # not as a host parser delegation.
+        # Shipped as Form recipes:
+        py_import_rule,
+        py_import_from_rule,
+        # Pending Form expression (host bridge handles these until the
+        # rule lands here as a concrete Form recipe). Each one is one
+        # breath of work composing the same Pattern primitives.
+        ?rule py_function_def,            # GAP-PY-DEF
+        ?rule py_class_def,               # GAP-PY-CLASS
+        ?rule py_assign,                  # GAP-PY-ASSIGN
+        ?rule py_expr_stmt,               # GAP-PY-EXPR
+        ?rule py_if,                      # GAP-PY-IF
+        ?rule py_for,                     # GAP-PY-FOR
+        ?rule py_while,                   # GAP-PY-WHILE
+        ?rule py_return,                  # GAP-PY-RETURN
+        ?rule py_call,                    # GAP-PY-CALL
+        ?rule py_lambda,                  # GAP-PY-LAMBDA
+        ?rule py_with,                    # GAP-PY-WITH
+        ?rule py_try,                     # GAP-PY-TRY
+        ?rule py_raise,                   # GAP-PY-RAISE
+        ?rule py_match,                   # GAP-PY-MATCH (PEP 634)
+        ?rule py_subscript,               # GAP-PY-SUBSCRIPT (lst[i])
+        ?rule py_slice,                   # GAP-PY-SLICE (lst[a:b])
+        ?rule py_walrus,                  # GAP-PY-WALRUS (PEP 572)
     ],
     pre_pipeline:       [
         ?stage(token_stream, produces: ~List @token_shape),
@@ -411,8 +631,15 @@ defn python_lang = language_cell_shape {
 # Part 7 — honest GAPs
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-PY1 (FIRST CLOSURE LANDED 2026-05-21): the import-statement
-#          family is now parsed via real BMF rules.
+# GAP-PY1 (BMF closure 2026-05-21 / Form-recipe expression 2026-05-21):
+#          the import-statement family is now both BMF-parsed
+#          (experiments/local-llm-cell-v0/bmf.py) AND expressed as
+#          Form recipes (Part 5 above — py_import_rule and
+#          py_import_from_rule composed from pattern_*_shape primitives
+#          declared in grammar-as-recipe.form). The Form recipes are
+#          the destination; the host engine still carries execution
+#          until the kernel walker implements pattern_match natively
+#          (grammar-as-recipe.form GAP-G1).
 #          experiments/local-llm-cell-v0/bmf.py carries:
 #            - Tokenizer (char-by-char, not a regex-over-ast wrapper)
 #            - Pattern primitives: Literal / Capture / Sequence / Opt /
