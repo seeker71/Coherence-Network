@@ -25,6 +25,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `scripts/coh_form.py` | Form-only CLI (superseded; `coh_substrate.py form` is the active entry) |
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
 | `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
+| `docs/coherence-substrate/universal-shapes.form` | The one Blueprint+Recipe vocabulary every grammar emits — names the existing kernel categories (BBasic.RECIPE+BRecipe.FUNCTION = B_Function; RBasic.MATH+RMath.* = R_Binary(op); etc.) as canonical, with NUMS.Go lineage. Composts 131 language-prefixed `*_shape` Blueprints across grammar files |
 | `docs/coherence-substrate/form-engine.form` | The recipe-evaluator in Form's own voice — 15/15 RBasic dispatch arms self-hosted |
 | `docs/coherence-substrate/form-runtime-in-form.form` | Companion to form-engine — walks lexer / parser / evaluator / registries / substrate-write in Form, names the 15 surface gaps to full self-hosting |
 | `docs/coherence-substrate/active-recipe-tracing.form` | Active recipe state, available recipe library, and keep-or-choose relation from current_state to desired_state |
