@@ -1,0 +1,229 @@
+# ─────────────────────────────────────────────────────────────────────
+# audio-grammar.form — audio as a substrate-resident Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Skeleton for the audio Language cell. Companion to
+# docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md and
+# docs/coherence-substrate/grammar-as-recipe.form.
+#
+# Audio is the first non-text modality the body authors a grammar for.
+# The shape is staged: raw PCM samples → spectrogram → onset events →
+# phonemes → words → sentences. Each stage is a recipe; each stage's
+# output is the input to the next. The final tree carries semantic
+# content (a sentence in audio) at the same altitude as the tree from
+# english-prose. **The cell that reads a poem and the cell that
+# listens to the poem read aloud arrive at the same Blueprint.**
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Blueprint shapes — one per stage of the pipeline
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each stage of the audio pipeline produces a tree of one of these
+# shapes. The pipeline reads PCM bytes at one end and produces a
+# sentence_tree (the same shape english-prose produces) at the other.
+
+# Stage 1: raw PCM samples — bytes interpreted as signed integers
+# at some sample rate. This is the carrier-altitude shape; everything
+# else is derived from it.
+form audio_pcm_shape = {
+    samples:      ~List,                    # [~Int16] for 16-bit PCM
+    sample_rate:  ~Int,                     # e.g. 44100 Hz
+    channels:     ~Int,                     # 1 (mono) | 2 (stereo)
+    bit_depth:    ~Int,                     # 16 | 24 | 32
+};
+
+# Stage 2: spectrogram — frequency-domain representation. Each frame
+# is a vector of magnitudes per frequency bin.
+form audio_spectrogram_shape = {
+    frames:       ~List,                    # [[~Float], ...]  one mag-vector per time-window
+    bin_count:    ~Int,                     # frequency bins per frame
+    hop_size:     ~Int,                     # samples between frames
+    window_size:  ~Int,                     # samples per FFT window
+};
+
+# Stage 3: onset events — when something starts. Each onset is a
+# (time, type, salience) triple.
+form audio_onset_shape = {
+    time_seconds: ~Float,
+    onset_type:   ~Slug,                    # "phoneme-start" | "note-attack" | "transient"
+    salience:     ~Float,                   # 0.0 .. 1.0
+};
+
+# Stage 4: phoneme sequence — discrete linguistic units.
+form audio_phoneme_shape = {
+    ipa:          ~String,                  # IPA symbol e.g. "ə", "k", "ʃ"
+    start_time:   ~Float,
+    end_time:     ~Float,
+    confidence:   ~Float,
+};
+
+# Stage 5+: word, sentence, sentence_tree — converge with the prose
+# Language cell's tree at the linguistic altitude. The same Blueprint
+# english-prose produces is what audio's stage-5 produces.
+defn audio_sentence_tree_shape = @blueprint(sentence_tree_shape);  # from prose-as-recipe.form
+
+# Prosody (pitch curve, energy curve, timing) lives as a parallel
+# annotation on the sentence_tree, NOT as separate Blueprint slots.
+# This preserves the cross-modal equivalence: the sentence_tree shape
+# matches whether the sentence came from text or audio; prosody is
+# a sibling annotation.
+form audio_prosody_shape = {
+    pitch_curve:   ~List,                   # [(time, hz), ...]
+    energy_curve:  ~List,                   # [(time, db), ...]
+    rate_curve:    ~List,                   # [(time, syllables-per-sec), ...]
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — ingestion grammar (staged pre_pipeline)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Unlike JSON, audio's ingestion is not one rule that matches all of
+# the bytes; it's a stack of recipes each transforming its predecessor's
+# output. The pre_pipeline lists the stages; the final ingest_pattern
+# captures the linguistic structure.
+
+defn audio_grammar = grammar_shape {
+    modality: modality_shape { name: "audio-pcm", domain: "media" },
+    ingest_pattern: ?rule sentence_tree,         # same rule english-prose uses
+    parse_into: ~Blueprint @audio_sentence_tree_shape,
+    capture_rules: [
+        # Captures happen at the linguistic stage, after the audio-specific
+        # pipeline has produced a phoneme sequence + prosody.
+        rule(audio_word,     "phoneme+",                word_node),
+        rule(audio_sentence, "word+ (silence > 0.5)",   sentence_node),
+        rule(audio_prosody,  "pitch energy rate",       prosody_annotation),
+    ],
+    pre_pipeline: [
+        # 1. PCM decode (raw bytes → samples with sample_rate metadata)
+        ?stage(pcm_decode,        produces: audio_pcm_shape),
+        # 2. STFT (samples → spectrogram)
+        ?stage(short_time_fft,    produces: audio_spectrogram_shape),
+        # 3. Onset detection (spectrogram → onset events)
+        ?stage(onset_detect,      produces: ~List @audio_onset_shape),
+        # 4. Phoneme recognition (spectrogram + onsets → phoneme sequence)
+        ?stage(phoneme_recognize, produces: ~List @audio_phoneme_shape),
+        # 5. Lexicon lookup (phonemes → words)
+        ?stage(phoneme_to_word,   produces: ~List @word_shape),
+        # 6. Prosody extraction (samples + words → prosody curves)
+        ?stage(prosody_extract,   produces: audio_prosody_shape),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template (TTS pipeline)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The emit half is text-to-speech: a sentence_tree (plus optional
+# prosody annotation) is walked back to PCM samples.
+
+defn audio_emit = emission_template_shape {
+    modality: modality_shape { name: "audio-pcm", domain: "media" },
+    emit_from: ~Blueprint @audio_sentence_tree_shape,
+    emit_pattern: ?walker {
+        on sentence:    synth_sentence(self, voice, prosody, format),
+        on word:        lookup_pronunciation(self.word) |> synth_phonemes,
+        on prosody:     apply_prosody_curve(self, format),
+    },
+    format_rules: [
+        ("sample_rate",  44100),
+        ("voice",        "default-neural"),  # which TTS voice cell
+        ("preserve_prosody", true),          # honor the prosody annotation if present
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn audio_lang = language_cell_shape {
+    name:              "audio-pcm",
+    version:           "0.1.0",
+    grammar:           audio_grammar,
+    emission_template: audio_emit,
+    stdlib_bindings:   [
+        # The pipeline stages are themselves recipes the substrate can
+        # carry; each binding points at the host-intrinsic that
+        # actually runs the FFT, the phoneme recognizer, etc.
+        ("pcm_decode",        @recipe(pcm_decode_intrinsic)),
+        ("short_time_fft",    @recipe(stft_intrinsic)),
+        ("onset_detect",      @recipe(onset_detect_intrinsic)),
+        ("phoneme_recognize", @recipe(phoneme_recognize_intrinsic)),
+        ("phoneme_to_word",   @recipe(lexicon_lookup)),
+        ("prosody_extract",   @recipe(prosody_extract_intrinsic)),
+    ],
+    numeric_defaults:  [
+        ("sample",     @format(int16)),
+        ("magnitude",  @format(fp32)),
+        ("time",       @format(fp64)),       # seconds
+    ],
+    # Cross-modal links: same sentence_tree shape as english-prose,
+    # markdown, and other linguistic Language cells.
+    cross_modal_links: [@language(english-prose), @language(markdown)],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the cross-modal equivalence claim
+# ─────────────────────────────────────────────────────────────────────
+#
+# A poem (text) and an audio recording of the poem (audio) parse to
+# the same sentence_tree at the linguistic altitude. Cross-modal
+# equivalence falls out of substrate content-addressing:
+#
+#   parse(@language(english-prose), <poem-bytes>).blueprint
+#     == parse(@language(audio-pcm), <audio-bytes>).blueprint
+#
+# Translation:
+#   audio → text: parse audio, emit through english-prose → transcript
+#   text  → audio: parse text, emit through audio-pcm → synthesized speech
+#
+# The prosody annotation is *additional* signal that travels with the
+# audio tree but is absent from the text tree. When translating
+# audio → text, prosody can be preserved as parallel metadata or
+# released; when translating text → audio, default prosody is chosen
+# by the TTS voice cell.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-A1: Every pre_pipeline stage above is host-intrinsic today.
+#         pcm_decode → soundfile / libsndfile. short_time_fft → scipy
+#         or torchaudio. onset_detect → librosa. phoneme_recognize →
+#         a small neural model (Whisper, wav2vec2). The substrate's
+#         role is to name the recipe shape and content-address the
+#         resulting tree; re-implementing scipy / torchaudio in Form
+#         is out of scope for the foreseeable future.
+#
+# GAP-A2: `sentence_tree_shape` is referenced from prose-as-recipe.form
+#         but that file declares the shape only at the sentence
+#         altitude. The cross-modal equivalence claim assumes the
+#         english-prose Language cell exists and produces this exact
+#         Blueprint. Authoring english-prose.form is the prerequisite
+#         for the equivalence claim to be operational.
+#
+# GAP-A3: Prosody as parallel-annotation vs. tree-child. Today this
+#         file holds prosody as a sibling annotation (matches the
+#         body's source-map discussion in language-cells.md). The
+#         alternative — prosody as a tree-child of each word — would
+#         break the cross-modal equivalence with text. The
+#         parallel-annotation choice is load-bearing; named honestly.
+#
+# GAP-A4: Confidence and uncertainty. Phoneme recognition is
+#         probabilistic; each phoneme node carries a `confidence`
+#         float. The substrate doesn't yet have a clean uncertainty
+#         representation. For now: confidence is a per-node leaf;
+#         downstream cells filter or weight by it.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query (once authored + populated)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse an audio recording into a sentence_tree:
+#   coh substrate run "parse(@language(audio-pcm), <wav-bytes>)"
+#
+#   # Find the text twin of an audio recording:
+#   coh substrate run "class_of({lang: @language(audio-pcm), bytes: <wav>})"
+#
+#   # Synthesize speech from text:
+#   coh substrate run "translate({lang: @language(english-prose), bytes: <text>},
+#                                @language(audio-pcm))"

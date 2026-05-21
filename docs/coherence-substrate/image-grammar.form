@@ -1,0 +1,210 @@
+# ─────────────────────────────────────────────────────────────────────
+# image-grammar.form — image as a substrate-resident Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Skeleton for the image Language cell. Sibling to
+# audio-grammar.form: both are media-modality grammars with staged
+# pre_pipelines that lift raw bytes through intermediate features into
+# a semantic tree the substrate can content-address.
+#
+# An image is decomposed: raw pixels → edge map → region segmentation
+# → object detection → scene graph. Each stage produces a recipe tree;
+# the final scene_graph carries the image's structural meaning at the
+# altitude where two photos of the same sunset (taken by different
+# cameras) share Blueprint NodeIDs.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Blueprint shapes — one per stage
+# ─────────────────────────────────────────────────────────────────────
+
+# Stage 1: pixel grid — raw carrier.
+form image_pixel_grid_shape = {
+    width:    ~Int,
+    height:   ~Int,
+    channels: ~Int,                         # 3 (RGB) | 4 (RGBA) | 1 (grayscale)
+    bit_depth: ~Int,                        # 8 | 16
+    pixels:   ~List,                        # row-major flat array of bytes
+};
+
+# Stage 2: edge map — derivative of intensity. Sparse representation.
+form image_edge_map_shape = {
+    edges:    ~List,                        # [(x, y, gradient_magnitude, gradient_angle), ...]
+    width:    ~Int,
+    height:   ~Int,
+};
+
+# Stage 3: region segmentation — connected regions of similar color/texture.
+form image_region_shape = {
+    region_id:     ~Int,
+    pixels:        ~List,                   # [(x, y), ...]   the region's footprint
+    mean_color:    ~List,                   # [r, g, b]
+    centroid:      ~List,                   # [x, y]
+    bounding_box:  ~List,                   # [x0, y0, x1, y1]
+};
+
+# Stage 4: object detection — recognized objects with class labels.
+form image_object_shape = {
+    object_class:  ~Slug,                   # "person" | "tree" | "sun" | "horizon" | ...
+    confidence:    ~Float,
+    bounding_box:  ~List,                   # [x0, y0, x1, y1]
+    region_refs:   ~List,                   # cell-refs to the regions composing this object
+    attributes:    ~List,                   # [(key, value), ...]  e.g. ("color", "orange")
+};
+
+# Stage 5: scene graph — the semantic structure. Objects + spatial /
+# relational edges between them. THIS is the Blueprint that cross-modal
+# equivalence lives at — a poem about a sunset and a photograph of the
+# same sunset both parse to this shape.
+form image_scene_graph_shape = {
+    objects:    ~List,                      # [@image_object_shape]
+    relations:  ~List,                      # [(subject-ref, predicate, object-ref), ...]
+    scene_kind: ~Slug | ~Null,              # "landscape" | "portrait" | "interior" | ...
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — ingestion grammar (staged pre_pipeline)
+# ─────────────────────────────────────────────────────────────────────
+
+defn image_grammar = grammar_shape {
+    modality: modality_shape { name: "image-raster", domain: "media" },
+    ingest_pattern: ?rule scene_graph,
+    parse_into: ~Blueprint @image_scene_graph_shape,
+    capture_rules: [
+        rule(image_scene,    "object+ relation*",         scene_node),
+        rule(image_object,   "class bbox region_refs",    object_node),
+        rule(image_relation, "subject predicate object",  relation_edge),
+    ],
+    pre_pipeline: [
+        # 1. Decode (PNG/JPEG/WebP/AVIF bytes → pixel grid)
+        ?stage(image_decode,         produces: image_pixel_grid_shape),
+        # 2. Edge detection (pixel grid → edge map)
+        ?stage(edge_detect,          produces: image_edge_map_shape),
+        # 3. Region segmentation (pixel grid + edges → regions)
+        ?stage(region_segment,       produces: ~List @image_region_shape),
+        # 4. Object detection (pixel grid + regions → objects)
+        ?stage(object_detect,        produces: ~List @image_object_shape),
+        # 5. Relation extraction (objects → spatial/semantic relations)
+        ?stage(relation_extract,     produces: ~List @relation_shape),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template (image generation)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The emit half is image synthesis: a scene_graph is walked back into
+# pixels. This is what diffusion-from-scene-graph and neural scene
+# rendering do; the substrate names the recipe shape, the host runs
+# the model.
+
+defn image_emit = emission_template_shape {
+    modality: modality_shape { name: "image-raster", domain: "media" },
+    emit_from: ~Blueprint @image_scene_graph_shape,
+    emit_pattern: ?walker {
+        on image_scene:    render_scene(self, style, format),
+        on image_object:   place_object(self, canvas, style),
+        on image_relation: enforce_relation(self, canvas),
+    },
+    format_rules: [
+        ("width",       1024),
+        ("height",      1024),
+        ("style",       "photographic"),    # "photographic" | "illustration" | "diagram"
+        ("format",      "png"),             # "png" | "jpeg" | "webp"
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn image_lang = language_cell_shape {
+    name:              "image-rgb",
+    version:           "0.1.0",
+    grammar:           image_grammar,
+    emission_template: image_emit,
+    stdlib_bindings:   [
+        ("image_decode",     @recipe(image_decode_intrinsic)),
+        ("edge_detect",      @recipe(canny_edge_detect)),
+        ("region_segment",   @recipe(felzenszwalb_segment)),
+        ("object_detect",    @recipe(object_detect_intrinsic)),
+        ("relation_extract", @recipe(relation_extract_intrinsic)),
+        ("render_scene",     @recipe(diffusion_render_intrinsic)),
+    ],
+    numeric_defaults:  [
+        ("pixel_channel", @format(uint8)),
+        ("coordinate",    @format(fp32)),
+        ("confidence",    @format(fp32)),
+    ],
+    # Cross-modal links: same scene_graph shape as 3D, video frames,
+    # and the linguistic descriptions in english-prose.
+    cross_modal_links: [@language(english-prose), @language(glb-mesh), @language(video-h264)],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — the cross-modal equivalence claim
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two photographs of the same sunset, taken by different cameras at
+# different resolutions, parse to scene_graphs with the same Blueprint
+# NodeID at the structural altitude — "sky + horizon + sun + foreground"
+# composition is one shape regardless of the carrier bytes.
+#
+# A poem describing the sunset parses (through english-prose) to a
+# sentence_tree that *also* references the scene_graph shape via its
+# nominal references ("sun setting over the horizon"). The mapping
+# between the linguistic tree and the visual scene_graph is what
+# enables:
+#
+#   image → text: parse image to scene_graph, walk to english-prose
+#   text  → image: parse text to scene_graph (via nominal extraction),
+#                  walk to image-rgb
+#
+# Two images and one text describing both share a Blueprint at the
+# scene-graph altitude when they describe the same scene. The
+# substrate's `?equivalent @blueprint` query is the cross-modal search.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-I1: Every pre_pipeline stage is host-intrinsic. image_decode →
+#         Pillow / OpenCV. edge_detect → OpenCV Canny / scipy. Object
+#         detection → a neural model (YOLO, DETR, OWL-ViT). Relation
+#         extraction → a scene-graph model. The substrate names the
+#         recipe shape; the host runs the model.
+#
+# GAP-I2: scene_graph_shape is named here but is shared with
+#         video-h264.form (frame-level), glb-mesh.form (3D scene), and
+#         english-prose.form (nominal references). Authoring all four
+#         and verifying they reference one Blueprint is the
+#         cross-modal-equivalence proof. Until then, the equivalence is
+#         a claim, not a demonstration.
+#
+# GAP-I3: Style / rendering parameters live in format_rules. A photo
+#         and an illustration of the same scene share scene_graph but
+#         differ in `style`. The cross-modal equivalence holds at the
+#         scene-graph altitude; surface style is a sibling annotation.
+#         (Same shape as audio-grammar.form's prosody annotation.)
+#
+# GAP-I4: Confidence per object. Object detectors return per-detection
+#         confidence floats. Same uncertainty-representation gap as
+#         audio-grammar's GAP-A4 — confidence as a per-node leaf for now.
+#
+# GAP-I5: Spatial relations. "Above", "left-of", "in-front-of",
+#         "holding", "looking-at" — each is a typed-token cell in the
+#         substrate. The vocabulary needs to be authored as a small
+#         enumeration (~30 spatial relations + ~20 semantic ones).
+
+# ─────────────────────────────────────────────────────────────────────
+# How to query (once authored + populated)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse an image into a scene graph:
+#   coh substrate run "parse(@language(image-rgb), <png-bytes>)"
+#
+#   # Find every artifact (image, text, 3D scene) describing the same scene:
+#   coh substrate run "class_of({lang: @language(image-rgb), bytes: <png>})"
+#
+#   # Translate text → image:
+#   coh substrate run "translate({lang: @language(english-prose), bytes: <text>},
+#                                @language(image-rgb))"
