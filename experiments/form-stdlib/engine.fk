@@ -1,0 +1,414 @@
+; engine.fk — the generic data-driven parsing engine
+;
+; One engine. Every tongue. Grammars drop in as DATA — token config +
+; parse rules + action functions — and this engine walks any of them
+; against any text, emitting universal Recipes (R_FunctionDecl, R_Math,
+; R_Call, R_Cond, R_Block, R_Loop, R_Jump from universal-shapes.form)
+; the kernel evaluates directly.
+;
+; Composts:
+;   - experiments/local-llm-cell-v0/bmf.py (643 lines, Python bootstrap)
+;   - per-language parser code (lang-python.ts, lang-rust.ts, ...)
+;   - 131 language-prefixed *_shape Blueprints across grammar files
+;
+; Surface vocabulary (the only language-specific tissue stays in
+; per-tongue grammar.fk files):
+;
+;   pattern primitives (data trees walked recursively):
+;     (list "literal" kind value)         ; match one token; value=nil means any
+;     (list "sequence" p1 p2 ... pn)      ; match in order, accumulate captures
+;     (list "choice" p1 p2 ... pn)        ; try each, first match wins, FAIL-unwind
+;     (list "capture" name pattern)       ; match pattern, bind result to name
+;     (list "star" pattern)               ; match zero or more
+;     (list "opt" pattern)                ; match zero or one
+;
+;   match result (success or fail sentinel):
+;     (list "match" captures rest)        ; captures = list of (name value) pairs
+;     (list "fail" reason)
+;
+;   grammar shape (the data each per-tongue file produces):
+;     (list (list "tokens" token-rules) (list "rules" parse-rules))
+;
+;   parse rule shape:
+;     (list rule-name pattern action-fn)
+;       action-fn: (captures) → universal-Recipe (interned NodeID)
+;
+; Built on form-stdlib/core.fk primitives (cons, head, tail, len, nil?,
+; map, foldl, etc.) and kernel natives (intern_node, intern_trivial_*,
+; make_nodeid, str_eq, str_concat, char_at, ord, str_len, str_to_int).
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — capture environment (name → value)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Captures are a list of (list name value) pairs. Action functions
+    ;; pull captured sub-trees by name via cap-get. The engine merges
+    ;; captures from sub-patterns via cap-merge.
+
+    (defn cap-empty (_x) (empty))
+    (defn cap-pair (name value) (list name value))
+    (defn cap-name (p) (head p))
+    (defn cap-value (p) (head (tail p)))
+
+    (defn cap-get (caps name)
+        (if (nil? caps) (empty)
+            (if (str_eq (cap-name (head caps)) name)
+                (cap-value (head caps))
+                (cap-get (tail caps) name))))
+
+    (defn cap-set (caps name value)
+        (cons (cap-pair name value) caps))
+
+    (defn cap-merge (a b)
+        (if (nil? b) a
+            (cap-merge (cons (head b) a) (tail b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — match result shape
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Every pattern-match returns either:
+    ;;   (list "match" captures rest-stream)
+    ;;   (list "fail" reason-string)
+    ;; Sequence unwinds atomically on first FAIL. Choice tries alternatives.
+
+    (defn mk-match (caps rest) (list "match" caps rest))
+    (defn mk-fail  (reason)    (list "fail"  reason))
+
+    (defn match? (r) (str_eq (head r) "match"))
+    (defn fail?  (r) (str_eq (head r) "fail"))
+
+    (defn match-caps (r) (head (tail r)))
+    (defn match-rest (r) (head (tail (tail r))))
+    (defn fail-reason (r) (head (tail r)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — token stream helpers
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A stream is just a list of tokens. Token = (list kind value).
+    ;; Empty stream = (list (list "EOF" "")) by convention.
+
+    (defn tok-kind (t) (head t))
+    (defn tok-val  (t) (head (tail t)))
+    (defn mk-tok (k v) (list k v))
+
+    (defn stream-empty? (s)
+        (if (nil? s) true
+            (str_eq (tok-kind (head s)) "EOF")))
+
+    (defn stream-head (s)
+        (if (nil? s) (mk-tok "EOF" "") (head s)))
+
+    (defn stream-tail (s)
+        (if (nil? s) (empty) (tail s)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — pattern dispatch (the engine's core)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walks a pattern data-tree against a stream. Tag-dispatched. Each
+    ;; primitive has one match-* helper. Recursive on sub-patterns.
+    ;; This is grammar-as-recipe.form's `pattern_match` in executable form.
+
+    (defn pattern-tag (p) (head p))
+
+    (defn match-pattern (p stream)
+        (do
+            (let tag (pattern-tag p))
+            (if (str_eq tag "literal")  (match-literal  p stream)
+            (if (str_eq tag "sequence") (match-sequence (tail p) stream (cap-empty 0))
+            (if (str_eq tag "choice")   (match-choice   (tail p) stream)
+            (if (str_eq tag "capture")  (match-capture  (head (tail p)) (head (tail (tail p))) stream)
+            (if (str_eq tag "star")     (match-star     (head (tail p)) stream (empty))
+            (if (str_eq tag "opt")      (match-opt      (head (tail p)) stream)
+                (mk-fail (str_concat "unknown pattern: " tag))))))))))
+
+    ;; --- match-literal: one token of given kind (optionally value) ----
+    (defn match-literal (p stream)
+        (do
+            (let want-kind  (head (tail p)))
+            (let want-value (head (tail (tail p))))
+            (let tok (stream-head stream))
+            (if (str_eq (tok-kind tok) want-kind)
+                (if (str_eq want-value "")
+                    (mk-match (cap-empty 0) (stream-tail stream))
+                    (if (str_eq (tok-val tok) want-value)
+                        (mk-match (cap-empty 0) (stream-tail stream))
+                        (mk-fail (str_concat "value mismatch: expected " want-value))))
+                (mk-fail (str_concat "kind mismatch: expected " want-kind)))))
+
+    ;; --- match-sequence: each child must match in order ---------------
+    (defn match-sequence (children stream acc-caps)
+        (if (nil? children)
+            (mk-match acc-caps stream)
+            (do
+                (let m (match-pattern (head children) stream))
+                (if (fail? m) m
+                    (match-sequence (tail children)
+                                    (match-rest m)
+                                    (cap-merge acc-caps (match-caps m)))))))
+
+    ;; --- match-choice: first alternative that matches wins ------------
+    ;; FAIL-unwind: each failed alternative leaves the stream untouched
+    ;; for the next try; only success consumes input.
+    (defn match-choice (alternatives stream)
+        (if (nil? alternatives)
+            (mk-fail "no alternative matched")
+            (do
+                (let m (match-pattern (head alternatives) stream))
+                (if (match? m) m
+                    (match-choice (tail alternatives) stream)))))
+
+    ;; --- match-capture: bind sub-pattern's result to a name -----------
+    ;; Captures the matched sub-tree under the given name. If the
+    ;; sub-pattern itself had captures, they're preserved as a nested
+    ;; structure under the name.
+    (defn match-capture (name child stream)
+        (do
+            (let m (match-pattern child stream))
+            (if (fail? m) m
+                (mk-match (cap-set (match-caps m) name (capture-value m stream))
+                          (match-rest m)))))
+
+    ;; What to bind under a capture name:
+    ;;   - if the sub-pattern is a literal, bind the matched token's value
+    ;;   - otherwise, bind the sub-tree's nested captures
+    (defn capture-value (m original-stream)
+        (do
+            (let consumed (stream-head original-stream))
+            (if (nil? (match-caps m))
+                (tok-val consumed)
+                (match-caps m))))
+
+    ;; --- match-star: zero or more repetitions -------------------------
+    ;; Collects each iteration's captures into a list under "items".
+    ;; Always succeeds (zero matches is success with empty list).
+    (defn match-star (child stream collected)
+        (do
+            (let m (match-pattern child stream))
+            (if (fail? m)
+                (mk-match (cap-set (cap-empty 0) "items" collected) stream)
+                (match-star child
+                            (match-rest m)
+                            (cons (match-caps m) collected)))))
+
+    ;; --- match-opt: zero or one ---------------------------------------
+    (defn match-opt (child stream)
+        (do
+            (let m (match-pattern child stream))
+            (if (fail? m) (mk-match (cap-empty 0) stream) m)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — rule application
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A rule pairs a pattern with an action function. The action takes
+    ;; the matched captures and returns a universal Recipe (interned
+    ;; NodeID). The engine wraps action invocation so any rule slots
+    ;; into the same parse loop.
+    ;;
+    ;; Rule shape: (list rule-name pattern action-fn)
+
+    (defn rule-name    (r) (head r))
+    (defn rule-pattern (r) (head (tail r)))
+    (defn rule-action  (r) (head (tail (tail r))))
+
+    (defn apply-rule (rule stream)
+        (do
+            (let m (match-pattern (rule-pattern rule) stream))
+            (if (fail? m) m
+                (do
+                    (let action (rule-action rule))
+                    (let recipe (action (match-caps m)))
+                    (mk-match (cap-set (cap-empty 0) "result" recipe)
+                              (match-rest m))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 6 — parse loop: drive the engine to EOF
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Try each rule in order against the current stream position. First
+    ;; match wins. Accumulate emitted Recipes into a top-level sequence.
+    ;; Unmatched token at EOF advance is a structural failure.
+
+    (defn try-rules (rules stream)
+        (if (nil? rules)
+            (mk-fail "no rule matched")
+            (do
+                (let m (apply-rule (head rules) stream))
+                (if (match? m) m
+                    (try-rules (tail rules) stream)))))
+
+    ;; Top-level helpers so we can pass them by name (no inline lambdas).
+    (defn rev-step (acc x) (cons x acc))
+
+    (defn reverse-list (xs)
+        (foldl rev-step (empty) xs))
+
+    (defn parse-loop (rules stream collected)
+        (if (stream-empty? stream)
+            (reverse-list collected)
+            (do
+                (let m (try-rules rules stream))
+                (if (fail? m)
+                    ;; honest failure surface: print first failing token and
+                    ;; return what we collected so the caller can see partial
+                    ;; progress; the kernel's failure path takes over from here.
+                    (do
+                        (let bad (stream-head stream))
+                        (print (str_concat "parse-error at token "
+                                           (str_concat (tok-kind bad)
+                                                       (str_concat " value=" (tok-val bad)))))
+                        (reverse-list collected))
+                    (parse-loop rules
+                                (match-rest m)
+                                (cons (cap-get (match-caps m) "result") collected))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 7 — grammar shape + top-level parse entry
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Grammar = (list (list "tokens" token-config) (list "rules" parse-rules))
+    ;; The engine pulls token-config and parse-rules out and runs them.
+    ;; token-config goes to the generic tokenizer (Part 8); parse-rules
+    ;; go to parse-loop. The full pipeline:
+    ;;
+    ;;   text + grammar
+    ;;     → tokenize-with-config (Part 8)  → token-list
+    ;;     → parse-loop                     → list-of-recipes
+    ;;     → wrap-as-program                → root Recipe (R_Block.SEQUENCE)
+
+    (defn grammar-section (grammar name)
+        (if (nil? grammar) (empty)
+            (if (str_eq (head (head grammar)) name)
+                (head (tail (head grammar)))
+                (grammar-section (tail grammar) name))))
+
+    (defn grammar-tokens (g) (grammar-section g "tokens"))
+    (defn grammar-rules  (g) (grammar-section g "rules"))
+
+    (defn parse (text grammar)
+        (do
+            (let tokens (tokenize-with-config text (grammar-tokens grammar)))
+            (let recipes (parse-loop (grammar-rules grammar) tokens (empty)))
+            (wrap-program recipes)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 8 — generic tokenizer
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Token-config is a list of token-rule entries. Each entry names a
+    ;; classification + matcher. Per-tongue grammars supply their own
+    ;; keyword set, operator set, literal rules.
+    ;;
+    ;; Token-config shape:
+    ;;   (list
+    ;;     (list "whitespace"  (list 32 9 10 13))          ; codepoints to skip
+    ;;     (list "keywords"    (list "def" "if" "return")) ; identifier values that become KW tokens
+    ;;     (list "operators"   (list (list "==" "EQEQ") (list "+" "PLUS") ...))
+    ;;     (list "digit-kind"  "INT")                       ; emit kind for digit runs
+    ;;     (list "ident-kind"  "IDENT")                     ; emit kind for ident runs
+    ;;     (list "string-kind" "STRING"))                   ; emit kind for "..." runs
+    ;;
+    ;; Indentation-as-tokens (Python) is opt-in via:
+    ;;     (list "indent"      true)                        ; emit INDENT/DEDENT at newlines
+
+    (defn token-config-lookup (cfg name default)
+        (if (nil? cfg) default
+            (if (str_eq (head (head cfg)) name)
+                (head (tail (head cfg)))
+                (token-config-lookup (tail cfg) name default))))
+
+    (defn is-ws-cp (cp ws-set)
+        (if (nil? ws-set) false
+            (if (eq cp (head ws-set)) true
+                (is-ws-cp cp (tail ws-set)))))
+
+    (defn is-digit-cp (cp)
+        (and (ge cp 48) (le cp 57)))
+
+    (defn is-alpha-cp (cp)
+        (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+                (eq cp 95))))
+
+    (defn is-ident-cont-cp (cp)
+        (or (is-alpha-cp cp) (is-digit-cp cp)))
+
+    ;; Top-level char predicates so they can be passed as values to scan-while.
+    (defn is-digit-char (c) (is-digit-cp (ord c)))
+    (defn is-alpha-char (c) (is-alpha-cp (ord c)))
+    (defn is-ident-cont-char (c) (is-ident-cont-cp (ord c)))
+
+    (defn scan-while-cfg (s i pred)
+        (if (eq i (str_len s)) i
+            (if (pred (char_at s i)) (scan-while-cfg s (add i 1) pred)
+                i)))
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn classify-ident (value keywords)
+        (if (nil? keywords) (mk-tok "IDENT" value)
+            (if (str_eq value (head keywords)) (mk-tok "KW" value)
+                (classify-ident value (tail keywords)))))
+
+    (defn try-operator (s i ops)
+        ;; Try longest-match-first: ops list is pre-sorted by length descending.
+        (if (nil? ops) (empty)
+            (do
+                (let op-entry (head ops))
+                (let op-text (head op-entry))
+                (let op-kind (head (tail op-entry)))
+                (let op-len (str_len op-text))
+                (if (and (le (add i op-len) (str_len s))
+                         (str_eq (substr s i (add i op-len)) op-text))
+                    (list (mk-tok op-kind op-text) (add i op-len))
+                    (try-operator s i (tail ops))))))
+
+    (defn next-token (s i cfg)
+        (if (eq i (str_len s))
+            (list (mk-tok "EOF" "") i)
+            (do
+                (let ws-set (token-config-lookup cfg "whitespace" (list 32 9 10 13)))
+                (let c (char_at s i))
+                (let cp (ord c))
+                (if (is-ws-cp cp ws-set)
+                    (next-token s (add i 1) cfg)
+                    (if (is-digit-cp cp)
+                        (do
+                            (let end (scan-while-cfg s i is-digit-char))
+                            (list (mk-tok (token-config-lookup cfg "digit-kind" "INT")
+                                          (substr s i end)) end))
+                        (if (is-alpha-cp cp)
+                            (do
+                                (let end (scan-while-cfg s i is-ident-cont-char))
+                                (let value (substr s i end))
+                                (let keywords (token-config-lookup cfg "keywords" (empty)))
+                                (list (classify-ident value keywords) end))
+                            (do
+                                (let ops (token-config-lookup cfg "operators" (empty)))
+                                (let op-try (try-operator s i ops))
+                                (if (nil? op-try)
+                                    (list (mk-tok "ERROR" c) (add i 1))
+                                    op-try))))))))
+
+    (defn tokenize-with-config-loop (s i cfg)
+        (do
+            (let pair (next-token s i cfg))
+            (let tok (head pair))
+            (let next-i (head (tail pair)))
+            (if (str_eq (tok-kind tok) "EOF")
+                (list tok)
+                (cons tok (tokenize-with-config-loop s next-i cfg)))))
+
+    (defn tokenize-with-config (text cfg)
+        (tokenize-with-config-loop text 0 cfg))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 9 — wrap parsed recipes as a program (R_Block.SEQUENCE)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The parse-loop returns a list of top-level Recipes. Wrap them in
+    ;; one R_Block.SEQUENCE so the kernel can evaluate the whole program
+    ;; in one walk.
+
+    (let BLOCK-SEQ-CAT (make_nodeid 1 2 9 2))   ; RBasic.BLOCK + RBlock.SEQUENCE
+
+    (defn wrap-program (recipes)
+        (intern_node BLOCK-SEQ-CAT recipes))
+)

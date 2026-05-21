@@ -1,0 +1,197 @@
+; universal-emit.fk — action helpers that emit universal Recipes
+;
+; Grammar action functions call these to build universal-shapes.form
+; Recipes from captured sub-trees. Every per-tongue grammar.fk file
+; uses the same helpers; the only language-specific code is the
+; pattern + action wiring in the grammar itself.
+;
+; Each helper takes already-built Recipe NodeIDs as children and
+; calls intern_node to produce a composite. The NodeID returned IS
+; the universal Recipe — the kernel can walk it directly.
+;
+; Lineage: docs/coherence-substrate/universal-shapes.form names the
+; canonical kernel vocabulary; this file is the .fk-callable wrapper.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Category NodeIDs — the kernel dispatch arms we emit into
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Format: (make_nodeid pkg level type inst)
+    ;;   pkg=1   network package
+    ;;   level=2 basic-level composition (Level.BASIC)
+    ;;   type   RBasic enum value
+    ;;   inst   sub-arm enum value (RMath.PLUS = 1, etc.)
+    ;;
+    ;; Matches api/app/services/substrate/category.py constants exactly.
+
+    ;; RBasic.MATH (12) + RMath sub-arms
+    (let UE-MATH-PLUS     (make_nodeid 1 2 12 1))
+    (let UE-MATH-MINUS    (make_nodeid 1 2 12 2))
+    (let UE-MATH-MULTIPLY (make_nodeid 1 2 12 3))
+    (let UE-MATH-DIVIDE   (make_nodeid 1 2 12 4))
+    (let UE-MATH-MODULO   (make_nodeid 1 2 12 5))
+    (let UE-MATH-NEGATE   (make_nodeid 1 2 12 6))
+
+    ;; RBasic.COMPARE (13) + RCompare sub-arms
+    (let UE-COMPARE-EQUAL         (make_nodeid 1 2 13 1))
+    (let UE-COMPARE-NOT-EQUAL     (make_nodeid 1 2 13 2))
+    (let UE-COMPARE-LESS          (make_nodeid 1 2 13 3))
+    (let UE-COMPARE-LESS-EQUAL    (make_nodeid 1 2 13 4))
+    (let UE-COMPARE-GREATER       (make_nodeid 1 2 13 5))
+    (let UE-COMPARE-GREATER-EQUAL (make_nodeid 1 2 13 6))
+
+    ;; RBasic.LOGIC (14) + RLogic sub-arms
+    (let UE-LOGIC-AND (make_nodeid 1 2 14 1))
+    (let UE-LOGIC-OR  (make_nodeid 1 2 14 2))
+    (let UE-LOGIC-NOT (make_nodeid 1 2 14 3))
+
+    ;; RBasic.COND (11) + RCond sub-arms
+    (let UE-COND-IF-THEN      (make_nodeid 1 2 11 1))
+    (let UE-COND-IF-THEN-ELSE (make_nodeid 1 2 11 2))
+    (let UE-COND-TERNARY      (make_nodeid 1 2 11 3))
+
+    ;; RBasic.BLOCK (9) + RBlock sub-arms
+    (let UE-BLOCK-DO       (make_nodeid 1 2 9 1))
+    (let UE-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
+    (let UE-BLOCK-LET      (make_nodeid 1 2 9 3))
+    (let UE-BLOCK-WITH     (make_nodeid 1 2 9 4))
+
+    ;; RBasic.JUMP (18) + RJump sub-arms
+    (let UE-JUMP-RETURN   (make_nodeid 1 2 18 1))
+    (let UE-JUMP-BREAK    (make_nodeid 1 2 18 2))
+    (let UE-JUMP-CONTINUE (make_nodeid 1 2 18 3))
+    (let UE-JUMP-YIELD    (make_nodeid 1 2 18 4))
+
+    ;; RBasic.CALL (10) — function declaration AND invocation; op slot
+    ;; in the children distinguishes (first child is op marker)
+    (let UE-CALL (make_nodeid 1 2 10 1))
+
+    ;; RBasic.ACCESS (15) — name access, member, subscript, global
+    (let UE-ACCESS-LOCAL  (make_nodeid 1 2 15 1))
+    (let UE-ACCESS-MEMBER (make_nodeid 1 2 15 2))
+    (let UE-ACCESS-INDEX  (make_nodeid 1 2 15 3))
+    (let UE-ACCESS-GLOBAL (make_nodeid 1 2 15 4))
+
+    ;; RBasic.WRITE (16) — assignment
+    (let UE-WRITE-ASSIGN (make_nodeid 1 2 16 1))
+
+    ;; Identifier/literal markers used by parser.fk
+    (let UE-IDENT-CAT (make_nodeid 1 2 33 1))
+    (let UE-FNDEF-CAT (make_nodeid 1 2 31 1))
+    (let UE-FNCALL-CAT (make_nodeid 1 2 32 1))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Universal Recipe constructors (the action-fn vocabulary)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each emit-* returns an interned NodeID. Children are themselves
+    ;; NodeIDs (already-emitted Recipes or trivial leaves). Compose by
+    ;; calling these from within action functions.
+
+    ;; --- value leaves ------------------------------------------------
+    (defn emit-int (s)
+        (intern_trivial_int (str_to_int s)))
+
+    (defn emit-string (s)
+        (intern_trivial_string s))
+
+    (defn emit-bool (s)
+        (if (str_eq s "true") (make_nodeid 1 1 3 1) (make_nodeid 1 1 3 0)))
+
+    (defn emit-ident (name)
+        (intern_node UE-IDENT-CAT (list (intern_trivial_string name))))
+
+    ;; --- arithmetic / comparison / logic (op-parameterized) ----------
+    (defn emit-math-op (op left right)
+        (do
+            (let cat
+                (if (str_eq op "+") UE-MATH-PLUS
+                (if (str_eq op "-") UE-MATH-MINUS
+                (if (str_eq op "*") UE-MATH-MULTIPLY
+                (if (str_eq op "/") UE-MATH-DIVIDE
+                (if (str_eq op "%") UE-MATH-MODULO
+                    UE-MATH-PLUS))))))
+            (intern_node cat (list left right))))
+
+    (defn emit-compare-op (op left right)
+        (do
+            (let cat
+                (if (str_eq op "==") UE-COMPARE-EQUAL
+                (if (str_eq op "!=") UE-COMPARE-NOT-EQUAL
+                (if (str_eq op "<")  UE-COMPARE-LESS
+                (if (str_eq op "<=") UE-COMPARE-LESS-EQUAL
+                (if (str_eq op ">")  UE-COMPARE-GREATER
+                (if (str_eq op ">=") UE-COMPARE-GREATER-EQUAL
+                    UE-COMPARE-EQUAL)))))))
+            (intern_node cat (list left right))))
+
+    (defn emit-logic-op (op left right)
+        (do
+            (let cat
+                (if (str_eq op "&&") UE-LOGIC-AND
+                (if (str_eq op "||") UE-LOGIC-OR
+                    UE-LOGIC-AND)))
+            (intern_node cat (list left right))))
+
+    (defn emit-negate (x)
+        (intern_node UE-MATH-NEGATE (list x)))
+
+    (defn emit-not (x)
+        (intern_node UE-LOGIC-NOT (list x)))
+
+    ;; --- conditional -------------------------------------------------
+    (defn emit-if (test then-block)
+        (intern_node UE-COND-IF-THEN (list test then-block)))
+
+    (defn emit-if-else (test then-block else-block)
+        (intern_node UE-COND-IF-THEN-ELSE (list test then-block else-block)))
+
+    ;; --- block composition -------------------------------------------
+    (defn emit-sequence (stmts)
+        (intern_node UE-BLOCK-SEQUENCE stmts))
+
+    (defn emit-do (stmts)
+        (intern_node UE-BLOCK-DO stmts))
+
+    (defn emit-let (name value)
+        (intern_node UE-BLOCK-LET
+                     (list (intern_trivial_string name) value)))
+
+    ;; --- jumps -------------------------------------------------------
+    (defn emit-return (value)
+        (intern_node UE-JUMP-RETURN (list value)))
+
+    (defn emit-break ()
+        (intern_node UE-JUMP-BREAK (empty)))
+
+    (defn emit-continue ()
+        (intern_node UE-JUMP-CONTINUE (empty)))
+
+    (defn emit-yield (value)
+        (intern_node UE-JUMP-YIELD (list value)))
+
+    ;; --- function declaration + call ---------------------------------
+    ;; A function declaration: (CALL "decl" name params body)
+    ;; A function call:        (CALL "call" callee args)
+    ;; The op marker in children distinguishes; both go to RBasic.CALL.
+
+    (defn emit-function-decl (name params body)
+        (intern_node UE-FNDEF-CAT
+                     (list (intern_trivial_string name) params body)))
+
+    (defn emit-call (callee args)
+        (intern_node UE-FNCALL-CAT (cons callee args)))
+
+    ;; --- name access / assignment ------------------------------------
+    (defn emit-local-access (name)
+        (intern_node UE-ACCESS-LOCAL (list (intern_trivial_string name))))
+
+    (defn emit-member (value field)
+        (intern_node UE-ACCESS-MEMBER
+                     (list value (intern_trivial_string field))))
+
+    (defn emit-subscript (value index)
+        (intern_node UE-ACCESS-INDEX (list value index)))
+
+    (defn emit-assign (target value)
+        (intern_node UE-WRITE-ASSIGN (list target value)))
+)
