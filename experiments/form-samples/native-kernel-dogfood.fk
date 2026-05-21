@@ -1,0 +1,23 @@
+; native-kernel-dogfood.fk — grammar/parser proof belongs to native kernels.
+; The contract is Form data plus Form functions. The proof command is the
+; sibling gate: cd experiments && ./form-kernel-validate.sh
+;
+; Expected output: 1. A Python bridge name in the allowed kernel set returns 0.
+(do
+    (defn contains-str (xs needle)
+        (if (eq (len xs) 0)
+            0
+            (if (str_eq (head xs) needle)
+                1
+                (contains-str (tail xs) needle))))
+    (let proof-kernels (list "go" "rust" "typescript"))
+    (let forbidden-carriers (list "python" "form_cli.py" "ast"))
+    (if (and
+            (and
+                (eq (len proof-kernels) 3)
+                (eq (contains-str proof-kernels "python") 0))
+            (and
+                (eq (contains-str forbidden-carriers "form_cli.py") 1)
+                (eq (contains-str forbidden-carriers "ast") 1)))
+        1
+        0))
