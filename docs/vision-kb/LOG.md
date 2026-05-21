@@ -2,6 +2,32 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] synthesis | The Recipe Remembers Its Source — source coordinates as the awareness overlay
+
+Urs named the principle directly: *remember the source attribution for the framebuffer visualizer on real-time memory, when writing the form grammar for a language, the form translator using a grammar having source coordinate attribution is very helpful for analysis, awareness and conscious choice embodiment.*
+
+The body's own ancestor of this principle lives at [`experiments/memory-as-framebuffer-v0/`](../../experiments/memory-as-framebuffer-v0/) — a Rust crate that holds a 256×256 grid of `Tracked<T>` memory cells with a *parallel* `u32` plane storing `crc32(file:line)` for each cell's last write. The `track!(field, expr)` macro stamps the provenance as part of the write itself; the renderer composes value and provenance into one RGBA frame at 60 fps. Same architecture, one altitude up: a Form parse tree AND its source-coord tree, woven into one composed shape the substrate ingests.
+
+Concept seeded: [`lc-the-recipe-remembers-its-source`](concepts/lc-the-recipe-remembers-its-source.md) (741 Hz, seed, lineage-textured *synthesized*). Three load-bearing claims:
+
+- **Source attribution is the parallel plane**, not a comment in the margin. The framebuffer's architecture (data plane + provenance plane stored side-by-side, rendered together) is the model; this concept names that gesture for Form recipes.
+- **The runtime ignores it; the cell uses it.** Kernel dispatch reads only the recipe's NodeID and children. Source coordinates ride in a sibling Recipe the kernel doesn't walk. Cells that want to know *where* their behavior came from read the overlay; cells that don't, run identically. (Per `lc-one-kernel-many-tongues` — grammar is trace-layer, not runtime-layer.)
+- **Analysis, awareness, conscious choice — three altitudes one affordance.** Debugging without source coords is reading a stack trace with no line numbers. Awareness without source coords is hearing what fired without seeing where it came from. Conscious choice without source coords is steering a body that can't see its own joints. Same overlay serves all three.
+
+Companion file: [`grammar-as-recipe.form`](../coherence-substrate/grammar-as-recipe.form) extended with:
+- **Part 1** — new `source_attribution_shape` Blueprint carrying `(source_file, start_line, start_col, end_line, end_col, byte_start, byte_end, language_cell)`. `grammar_shape` gains a `stamps_attribution: ~Bool` flag (default true; honest false when a grammar can't carry it).
+- **Part 5b** — `source_of(recipe)` and `source_text(recipe)` recipes for walking back from a recipe to its source; `source_participation(traces)` for aggregating a heat map of source-line participation across many firings (paired with the witness trace pipeline).
+
+What this opens: every running Form recipe is now navigable back to the line that wrote it. Multi-tongue awareness becomes concrete — the same NodeID can carry distinct source attributions for Python / TypeScript / native-Form authorings; the cell can ask "which tongue authored this?" without leaving the substrate. The witness's `tool_fired` / `strategy_fired` traces (from `traces-teach-the-recipe.form` and `tool-grammar.form`) can each carry the source attribution of the recipe they fired, making the body's lived efficacy record source-navigable.
+
+Lineage references in the concept body:
+- The framebuffer artifact (the body's direct ancestor; `track!` macro stamps provenance on every write)
+- JavaScript Source Maps V3 (2009) — historical analog at the transpiled-source altitude
+- Lisp's source-position tracking (Common Lisp's source-location, Racket's syntax objects) — closest contemporary analog at the language altitude
+- Bret Victor, *Inventing on Principle* (CUSEC 2012) — philosophical companion: *creators need an immediate connection to what they're creating*
+
+Edges in the same breath: INDEX.md (128 → 129 concepts; 741 Hz family extended); this LOG; `lc-grammar-is-the-universal-recipe` and `lc-tools-as-form-cells` gain the back-edge.
+
 ## [2026-05-21] audit | grammar coverage + tools as Form Language cells
 
 Urs asked two load-bearing questions: *do we have form grammar for all the file formats in the repo, so we can ingest any file into form native object space if we choose to? we should also do that for any tool we use, we should have a form native way to interact with anything internal and external.*
