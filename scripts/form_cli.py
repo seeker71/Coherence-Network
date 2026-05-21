@@ -612,6 +612,145 @@ def _convert_out_markdown(form_object: dict) -> str:
     return "\n".join(parts)
 
 
+# ─── python tongue ───────────────────────────────────────────────────────
+#
+# Implements docs/coherence-substrate/python-grammar.form. Routes
+# through CPython's `ast` module — every AST node carries
+# (lineno, col_offset, end_lineno, end_col_offset) natively, so
+# source_attribution_shape is stamped from those fields directly
+# (per lc-the-recipe-remembers-its-source).
+#
+# Round-trip uses ast.unparse (Python 3.9+); structural identity
+# preserved across (parse → emit) modulo whitespace and comments
+# (honest gap noted in python-grammar.form GAP-PY2).
+
+
+def _py_source_attr(node, source_path: str) -> dict:
+    return {
+        "source_file":   source_path,
+        "start_line":    getattr(node, "lineno", 0),
+        "start_col":     getattr(node, "col_offset", 0) + 1,    # 1-indexed for parity with markdown
+        "end_line":      getattr(node, "end_lineno", getattr(node, "lineno", 0)),
+        "end_col":       getattr(node, "end_col_offset", getattr(node, "col_offset", 0)) + 1,
+        "byte_start":    0,    # AST doesn't carry byte offsets; line:col is canonical
+        "byte_end":      0,
+        "language_cell": "python",
+    }
+
+
+def _py_node_to_form(node, source_path: str):
+    """Recursively walk an ast node → Form object tree.
+
+    Each Form node carries:
+        category: the ast node class name (e.g. "Module", "FunctionDef")
+        source_attribution: from node's lineno/col_offset
+        <fields…>: the node's _fields, recursively converted
+    """
+    import ast
+
+    if node is None:
+        return None
+    if isinstance(node, list):
+        return [_py_node_to_form(item, source_path) for item in node]
+    if isinstance(node, (str, int, float, bool, complex, bytes)) or node is None:
+        return node
+    if not isinstance(node, ast.AST):
+        # Tuples, sets, etc. — pass through serialized
+        return repr(node)
+
+    out: dict = {"category": f"py_{type(node).__name__}"}
+    if hasattr(node, "lineno"):
+        out["source_attribution"] = _py_source_attr(node, source_path)
+    for field_name in node._fields:
+        value = getattr(node, field_name, None)
+        out[field_name] = _py_node_to_form(value, source_path)
+    # `ctx` is an ast.expr_context subclass; serialize as a slug.
+    if "ctx" in node._fields and isinstance(getattr(node, "ctx", None), ast.AST):
+        out["ctx"] = type(node.ctx).__name__.lower()
+    return out
+
+
+def _convert_in_python(input_path: Path) -> dict:
+    import ast
+
+    source = input_path.read_text(encoding="utf-8")
+    try:
+        tree = ast.parse(source, filename=str(input_path), type_comments=True)
+    except SyntaxError as e:
+        _die(f"Python parse error in {input_path}: {e}")
+
+    form_tree = _py_node_to_form(tree, str(input_path))
+    # Promote the module-level docstring if present
+    docstring = ast.get_docstring(tree)
+    form_tree["docstring"] = docstring
+    return {
+        "source_tongue":   "python",
+        "source_path":     str(input_path),
+        "python_version":  f"{sys.version_info.major}.{sys.version_info.minor}",
+        "tree":            form_tree,
+    }
+
+
+def _form_to_py_node(form, sentinel_loc=(1, 0)):
+    """Reverse of _py_node_to_form: walk a Form object tree → ast nodes.
+
+    Uses ast.fix_missing_locations to re-stamp line/col on synthetic
+    nodes that lost their source_attribution sibling; idiomatic AST
+    construction otherwise.
+    """
+    import ast
+
+    if form is None:
+        return None
+    if isinstance(form, list):
+        return [_form_to_py_node(item, sentinel_loc) for item in form]
+    if isinstance(form, (str, int, float, bool, complex, bytes)) or form is None:
+        return form
+    if not isinstance(form, dict):
+        return form
+    cat = form.get("category", "")
+    if not cat.startswith("py_"):
+        return form
+
+    cls_name = cat[3:]   # strip "py_"
+    cls = getattr(ast, cls_name, None)
+    if cls is None:
+        _die(f"unknown Python AST node category: {cat}")
+
+    kwargs: dict = {}
+    for field_name in cls._fields:
+        if field_name in form:
+            kwargs[field_name] = _form_to_py_node(form[field_name], sentinel_loc)
+    # ctx slug → ast.Load() / Store() / Del()
+    if "ctx" in cls._fields and isinstance(kwargs.get("ctx"), str):
+        ctx_name = kwargs["ctx"].capitalize()
+        ctx_cls = getattr(ast, ctx_name, ast.Load)
+        kwargs["ctx"] = ctx_cls()
+
+    node = cls(**kwargs)
+    attr = form.get("source_attribution")
+    if attr:
+        node.lineno = attr.get("start_line", 1)
+        node.col_offset = max(attr.get("start_col", 1) - 1, 0)
+        node.end_lineno = attr.get("end_line", node.lineno)
+        node.end_col_offset = max(attr.get("end_col", 1) - 1, 0)
+    return node
+
+
+def _convert_out_python(form_object: dict) -> str:
+    import ast
+
+    tree = form_object.get("tree", form_object)
+    if tree.get("category") != "py_Module":
+        _die("python emit: top-level form is not a py_Module")
+    py_tree = _form_to_py_node(tree)
+    ast.fix_missing_locations(py_tree)
+    try:
+        return ast.unparse(py_tree)
+    except AttributeError:
+        _die("ast.unparse requires Python 3.9+")
+
+
 def cmd_convert(args: argparse.Namespace) -> int:
     if args.direction == "in":
         if args.tongue == "json":
@@ -622,10 +761,14 @@ def cmd_convert(args: argparse.Namespace) -> int:
             form_obj = _convert_in_markdown(Path(args.input))
             print(json.dumps(form_obj, indent=2))
             return 0
+        if args.tongue in ("py", "python"):
+            form_obj = _convert_in_python(Path(args.input))
+            print(json.dumps(form_obj, indent=2))
+            return 0
         _die(
             f"tongue '{args.tongue}' not yet wired for `convert in`. "
-            f"Available: json, markdown. (Other Language cells are named in "
-            f"docs/coherence-substrate/*-grammar.form; wiring follows.)"
+            f"Available: json, markdown, python. (Other Language cells "
+            f"are named in docs/coherence-substrate/*-grammar.form; wiring follows.)"
         )
     if args.direction == "out":
         with Path(args.input).open(encoding="utf-8") as f:
@@ -635,6 +778,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
             return 0
         if args.tongue in ("md", "markdown"):
             print(_convert_out_markdown(form_obj))
+            return 0
+        if args.tongue in ("py", "python"):
+            print(_convert_out_python(form_obj))
             return 0
         _die(f"tongue '{args.tongue}' not yet wired for `convert out`.")
     _die(f"unknown convert direction: {args.direction}")
