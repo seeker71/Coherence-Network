@@ -856,6 +856,29 @@ export class Kernel {
       return lst[i] ?? { kind: "null" };
     });
     this.registerNative("empty", catListNat(), () => ({ kind: "list", list: [] }));
+    // range(n) / range(a,b) / range(a,b,s) — eager list of integers.
+    // Matches CPython semantics. Sibling-parity with Rust + Go kernels.
+    this.registerNative("range", catListNat(), (_k, args) => {
+      let start = 0, stop = 0, step = 1;
+      if (args.length === 1) {
+        stop = argInt(args, 0);
+      } else if (args.length === 2) {
+        start = argInt(args, 0);
+        stop = argInt(args, 1);
+      } else {
+        start = argInt(args, 0);
+        stop = argInt(args, 1);
+        step = argInt(args, 2);
+      }
+      const out: Value[] = [];
+      if (step === 0) return { kind: "list", list: out };
+      if (step > 0) {
+        for (let i = start; i < stop; i += step) out.push({ kind: "int", int: i });
+      } else {
+        for (let i = start; i > stop; i += step) out.push({ kind: "int", int: i });
+      }
+      return { kind: "list", list: out };
+    });
     // File I/O
     this.registerNative("read_file", catCall(), (_k, args) => {
       try {

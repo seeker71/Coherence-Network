@@ -18,6 +18,7 @@ PARITY_FILES=(
     "examples/python_assign_demo.py"
     "examples/python_imperative_demo.py"
     "examples/python_substrate_demo.py"
+    "examples/python_range_demo.py"
 )
 
 # Locate the native binary.
