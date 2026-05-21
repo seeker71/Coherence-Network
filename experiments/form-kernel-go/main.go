@@ -314,18 +314,30 @@ type Kernel struct {
 	strIdx  map[string]NameID
 	next    uint32
 	natives map[NameID]NativeEntry
+	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
+	// intern_node_at; read by node_source. The satsang-load-bearing
+	// surface: every cell's state traceable to the source line that
+	// authored it. The practice of self-knowing.
+	sourceAttr map[NodeID]sourceLoc
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
 }
 
+type sourceLoc struct {
+	FileID NameID
+	Line   uint32
+	Col    uint32
+}
+
 func NewKernel() *Kernel {
 	k := &Kernel{
-		byHash:  make(map[uint64]NodeID),
-		byID:    make(map[NodeID]Recipe),
-		strIdx:  make(map[string]NameID),
-		next:    1,
-		natives: make(map[NameID]NativeEntry),
+		byHash:     make(map[uint64]NodeID),
+		byID:       make(map[NodeID]Recipe),
+		strIdx:     make(map[string]NameID),
+		sourceAttr: make(map[NodeID]sourceLoc),
+		next:       1,
+		natives:    make(map[NameID]NativeEntry),
 	}
 	k.registerNatives()
 	return k
@@ -801,6 +813,40 @@ func (k *Kernel) registerNatives() {
 	// which panics on NodeIDs; node_eq closes that gap.
 	k.registerNative("node_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+	})
+	// intern_node_at — intern composite + record source attribution.
+	// Engine.fk's parser actions call this so every emitted Recipe carries
+	// (file, line, col) provenance. The satsang teaching: every cell's
+	// state is traceable back to the recipe lines that authored it.
+	// Args: (category, children, file_string, line_int, col_int)
+	k.registerNative("intern_node_at", catWitness(), func(k *Kernel, args []Value) Value {
+		cat := args[0].Nid
+		kidsV := args[1].List
+		kids := make([]NodeID, len(kidsV))
+		for i, c := range kidsV {
+			kids[i] = c.Nid
+		}
+		nid := k.intern(cat, kids)
+		fileNid := k.internString(args[2].Str)
+		fileID := NameID(fileNid.Inst)
+		line := uint32(args[3].Int)
+		col := uint32(args[4].Int)
+		k.sourceAttr[nid] = sourceLoc{FileID: fileID, Line: line, Col: col}
+		return Value{Kind: VNodeID, Nid: nid}
+	})
+	// node_source — read back a Recipe's source attribution.
+	// Returns (list file_string line col) or empty list if none recorded.
+	k.registerNative("node_source", catWitness(), func(k *Kernel, args []Value) Value {
+		loc, ok := k.sourceAttr[args[0].Nid]
+		if !ok {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		file := k.strs[loc.FileID]
+		return Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: file},
+			{Kind: VInt, Int: int64(loc.Line)},
+			{Kind: VInt, Int: int64(loc.Col)},
+		}}
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
