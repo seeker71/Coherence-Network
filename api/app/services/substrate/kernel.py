@@ -24,7 +24,7 @@ from typing import Callable
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.services.substrate.category import Level
+from app.services.substrate.category import Level, RType
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 
 

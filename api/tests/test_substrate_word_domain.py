@@ -129,7 +129,8 @@ def test_ingest_word_cell_creates_word_in_word_domain(session):
     )
     assert cell.domain == "word"
     assert cell.name == "choice.NOUN"
-    assert bp_id == BID_word()
+    # Returned bp_id is the *composed* Blueprint; cell.blueprint matches it.
+    assert cell.blueprint == bp_id
 
 
 def test_ingest_word_cell_is_idempotent(session):
@@ -228,7 +229,7 @@ def test_equivalent_with_harmonic_at_filter(session):
 
     Closes GAP-T2 named in docs/coherence-substrate/recipe-branching-sense.form.
     """
-    from app.services.substrate.form import recipe_eval_text
+    from app.services.substrate.form_runtime import form_execute_text as recipe_eval_text
     # Two 741-Hz words with the same Blueprint shape (both NOUN/consciousness)
     # plus one 417-Hz word that shares structural shape but different Hz.
     ingest_word_cell(
@@ -245,15 +246,15 @@ def test_equivalent_with_harmonic_at_filter(session):
     result = recipe_eval_text(
         session, '?equivalent @word(choice.NOUN) where domain == "word"',
     )
-    # ?equivalent excludes the anchor cell by name; we should see point + threshold.
-    assert result.kind == "cells"
-    names = {c.name for c in result.value}
+    # form_execute_text returns the value directly (list of cells).
+    # ?equivalent excludes the anchor cell by name.
+    names = {c.name for c in result}
     assert "choice.NOUN" not in names
 
 
 def test_equivalent_where_harmonic_at_filters_by_hz(session):
     """The harmonic_at filter narrows by frequency Blueprint."""
-    from app.services.substrate.form import recipe_eval_text
+    from app.services.substrate.form_runtime import form_execute_text as recipe_eval_text
     ingest_word_cell(
         session, lemma="choice", pos="NOUN", hz=741, semantic_field="consciousness",
     )
@@ -267,20 +268,18 @@ def test_equivalent_where_harmonic_at_filters_by_hz(session):
     # excluded as the anchor; threshold.NOUN is filtered out by Hz).
     result = recipe_eval_text(
         session,
-        '?equivalent @word(choice.NOUN) where harmonic_at == @spectrum(741)',
+        '?equivalent @word(choice.NOUN) where harmonic_at == @spectrum("Hz-741")',
     )
-    assert result.kind == "cells"
-    names = {c.name for c in result.value}
+    names = {c.name for c in result}
     assert "threshold.NOUN" not in names
 
 
 def test_downstream_query_returns_cells(session):
     """`?downstream @<cell>` returns the cells the source projection touched."""
-    from app.services.substrate.form import recipe_eval_text
+    from app.services.substrate.form_runtime import form_execute_text as recipe_eval_text
     word, _, _ = ingest_word_cell(
         session, lemma="choice", pos="NOUN", hz=741, semantic_field="consciousness",
     )
     result = recipe_eval_text(session, f'?downstream @word(choice.NOUN)')
-    assert result.kind == "cells"
-    domains = {c.domain for c in result.value}
+    domains = {c.domain for c in result}
     assert "spectrum" in domains  # the HARMONIC_AT target
