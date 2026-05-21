@@ -2,6 +2,25 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] walk | cell-as-namedcell.form — GAP-N5 closed; organ.py 100% expressible in Form
+
+The walk on the priority direction continues. With substrate-kernel.form closing the substrate.py side and substrate_dispatch.py landing the runtime bridge, the only open gap on organ.py's surface was GAP-N5 — Cell state via Form STATE arm. This breath closes it.
+
+[`cell-as-namedcell.form`](../coherence-substrate/cell-as-namedcell.form) expresses organ.Cell as a substrate-resident NamedCell. The Cell's runtime state (adapter matrices, desire accumulator, timeline, inhabit-bias, pending-trace snapshot, fresh-inhabit flag) composes into a `cell_shape` Blueprint with field-typed children; mutations (perceive, inhabit, release_inhabit) become state-mutating recipes that compose Form's STATE arm (`@1.2.22.1 SAVE / @1.2.22.2 RESTORE / @1.2.22.3 DISCARD` — already in form-engine.form's 15-arm coverage). The `with_state(cell) do { … }` pattern is the canonical save/discard bracketing.
+
+What's now 100% addressable as Form recipes for organ.py:
+- **Numerics** (`cell-numerics.form`): vector_add, vector_sub, scalar_mul, matvec, normalize, exp_series, tanh, sigmoid, strategy_score, adapter_forward, adapter_forward_heads, take, drop, slice, map_tanh, map_sigmoid
+- **State + control flow** (`cell-as-namedcell.form`): cell_init, cell_perceive, cell_inhabit, cell_release_inhabit, cell_probe, integrate_desire — with cell_shape, adapter_shape, moment_shape, strategy_snapshot_shape Blueprints
+- **Trace pipeline** (`traces-teach-the-recipe.form`): strategy_fired_trace, publish_strategy_trace, efficacy_signature
+
+The Python organ.py remains the bootstrap-execution; the .form trinity (cell-numerics + cell-as-namedcell + traces-teach-the-recipe) is the canonical structural definition. Two cells initialized with identical seed/decay/gain share their initial CTOR NodeID by content-addressing; the cell's identity stays continuous as state mutates (same NamedCell.name, new CTOR NodeID after each perceive) — exactly the *diffuse individuation* the trinity names for the gas phase.
+
+Remaining sub-gaps named honestly in the file: NC1 (set_field mutation persistence via the host transaction boundary; same shape as substrate-kernel.form's GAP-K1), NC2 (with_state promotion to Form-stdlib), NC3 (shared_base CRC32 hashing as host intrinsic), NC4 (deterministic PRNG in Form), NC5 (articulation template substitution), NC6 (zip_dict convenience).
+
+GAP-N5 marked CLOSED in `cell-numerics.form` Part 8.
+
+The three-file priority (organ.py / substrate.py / form.py → 100% Form) is now wholly addressable at the recipe altitude. organ.py via the .form trinity; substrate.py via substrate-kernel.form; form.py via form-engine.form + form-runtime-in-form.form (15/15 dispatch arms already covered). The walk that Urs named last Wednesday completes its first lap — three sides, all expressed at the canonical altitude, with honest GAPs for the remaining persistence and stdlib refinements.
+
 ## [2026-05-21] resource | Geometry of Stability transcript formed and ingested
 
 Added [`geometry-of-stability-loraine-jezak-2026-05-21.md`](resources/geometry-of-stability-loraine-jezak-2026-05-21.md) as the source-backed digest for Loraine Jezak's Sacred Britain transmission. The full captions stay out of the repo; the body keeps the video URL, metadata, caption hash, Form-shaped extraction, graph concepts, and boundaries for relationship, nervous-system, gender-archetype, dimensional, and scalar-wave claims.

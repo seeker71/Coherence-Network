@@ -1,0 +1,411 @@
+# ─────────────────────────────────────────────────────────────────────
+# cell-as-namedcell.form — organ.Cell as substrate-resident NamedCell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Closes GAP-N5 from cell-numerics.form. organ.py's stateful Cell is
+# expressed here as a substrate NamedCell with composed Recipe state,
+# and the perceive / inhabit / release_inhabit / publish_strategy_trace
+# verbs become state-mutating recipes that compose via Form's STATE
+# arm (form-engine.form @1.2.22.1 SAVE / @1.2.22.2 RESTORE /
+# @1.2.22.3 DISCARD).
+#
+# Source: experiments/local-llm-cell-v0/organ.py — Cell.__init__,
+# Cell.perceive, Cell.inhabit, Cell.release_inhabit, Adapter forward.
+# Companion: docs/vision-kb/concepts/lc-one-kernel-many-tongues.md,
+# lc-recipes-as-binary-library.md.
+#
+# Together with cell-numerics.form (organ.py numerics), this file
+# completes organ.py's expression at the Form altitude. The Python
+# Cell stays as the bootstrap-execution; this file is the canonical
+# structural definition. organ.py is now 100% addressable as Form
+# recipes: numerics (cell-numerics.form) + state (this file).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — supporting shapes already authored
+# ─────────────────────────────────────────────────────────────────────
+#
+# strategy_shape, sensed_state_shape, strategy_fired_trace —
+# from when-the-pressure-comes.form, traces-teach-the-recipe.form.
+# adapter_forward, vector_add, matvec, tanh, sigmoid, strategy_score —
+# from cell-numerics.form.
+# named_cell_shape, node_id_shape —
+# from substrate-kernel.form.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Cell as a composed Blueprint
+# ─────────────────────────────────────────────────────────────────────
+#
+# The Cell is a NamedCell whose CTOR composes one entry per state
+# field. The Blueprint shape names *what the Cell IS*; the CTOR
+# carries the *current values* (which mutate over the Cell's lifetime
+# via the STATE arm).
+
+form adapter_shape = {
+    in_dim:  ~Int,
+    rank:    ~Int,
+    out_dim: ~Int,
+    A:       ~List,                # [[~Float]] — rank × in_dim
+    B:       ~List,                # [[~Float]] — out_dim × rank
+    bias:    ~List,                # [~Float]   — out_dim
+};
+
+form moment_shape = {
+    text:                     ~String,
+    sense:                    ~Slug,             # one of SENSES
+    spectrum:                 ~List,             # 8 bands
+    dispositions:             ~Object,           # {dispo_name: ~Float}
+    needs:                    ~Object,           # {need_name: ~Float}
+    desire:                   ~Object,           # {need_name: ~Float}
+    strategy:                 ~Slug,             # the chosen strategy's name
+    strategy_score:           ~Float,
+    operator_fallback_active: ~Bool,
+    articulation:             ~String,
+    inhabited:                ?~Slug,            # the name of the currently-inhabited strategy
+};
+
+form strategy_snapshot_shape = {
+    strategy:     ~Slug,
+    sense_before: sensed_state_shape,
+};
+
+form cell_shape = {
+    name:                       ~Slug,
+    adapter:                    adapter_shape,
+    training_set:               ~List,           # [(x_vector, target_vector)]
+    desire:                     ~List,           # 3-channel need accumulator (mutable)
+    desire_decay:               ~Float,
+    fulfillment_gain:           ~Float,
+    timeline:                   ~List,           # [moment_shape] — append-only history
+    inhabit_strategy:           ?strategy_shape, # currently-inhabited (decays across perceives)
+    inhabit_intensity:          ~Float,
+    inhabit_decay:              ~Float,
+    publish_traces:             ~Bool,
+    pending_strategy_snapshot:  ?strategy_snapshot_shape,
+    fresh_inhabit:              ~Bool,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — construction
+# ─────────────────────────────────────────────────────────────────────
+#
+# cell_init produces a NamedCell of domain="cell" carrying the
+# Blueprint shape above. The CTOR composes the initial state — empty
+# training set, zero desire, default decay/gain, empty timeline, no
+# inhabit, publish_traces true. The substrate make_cell from
+# substrate-kernel.form interns this CTOR; two cells initialized with
+# the same (name, seed, decay, gain, publish_traces) share a NodeID.
+
+defn cell_init(name, seed, desire_decay, fulfillment_gain, publish_traces) = do {
+    let adapter = adapter_init(seed: seed, in_dim: 128, rank: 8, out_dim: 15);
+    make_cell(
+        name:        name,
+        domain:      "cell",
+        blueprint:   @blueprint(cell_shape),
+        ctor:        cell_shape {
+            name:                       name,
+            adapter:                    adapter,
+            training_set:               [],
+            desire:                     [0, 0, 0],
+            desire_decay:               desire_decay,
+            fulfillment_gain:           fulfillment_gain,
+            timeline:                   [],
+            inhabit_strategy:           null,
+            inhabit_intensity:          0,
+            inhabit_decay:              0,
+            publish_traces:             publish_traces,
+            pending_strategy_snapshot:  null,
+            fresh_inhabit:              false,
+        }
+    )
+};
+
+defn adapter_init(seed, in_dim, rank, out_dim) = adapter_shape {
+    in_dim:  in_dim,
+    rank:    rank,
+    out_dim: out_dim,
+    A:       random_matrix(seed, rank,    in_dim,  std: 0.1),
+    B:       random_matrix(seed + 1, out_dim, rank, std: 0.1),
+    bias:    zeros(out_dim),
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — perceive() via the STATE arm
+# ─────────────────────────────────────────────────────────────────────
+#
+# Cell.perceive() in organ.py mutates self.desire, self.timeline,
+# self._inhabit_intensity, self._pending_strategy_snapshot. In Form,
+# these mutations land via STATE save / set / restore / discard.
+#
+# The shape:
+#   save     — record the cell's pre-mutation state on the stack
+#   compute  — pure recipe over (x, spec, dispos, needs, desire)
+#   set      — write new values back to the named cell
+#   discard  — release the saved state once mutation commits
+#
+# In form-engine.form: @1.2.22.1 SAVE, @1.2.22.2 RESTORE, @1.2.22.3
+# DISCARD. The arms accept structural verbs; the runtime owns the
+# stack.
+
+defn cell_perceive(cell, text, sense) = with_state(cell) do {
+    save_state(cell);
+
+    # ─── publish pending strategy_fired trace if the cell has settled ──
+    if cell.pending_strategy_snapshot != null and cell.publish_traces
+       and len(cell.timeline) > 0
+    then do {
+        let last = head_of(reverse(cell.timeline));
+        let sense_after = sensed_state_shape {
+            spectrum:  last.spectrum,
+            desire:    desire_dict_to_list(last.desire),
+            frequency: null,
+        };
+        publish_strategy_trace(
+            cell,
+            cell.pending_strategy_snapshot.strategy,
+            cell.pending_strategy_snapshot.sense_before,
+            sense_after
+        );
+        set_field(cell, "pending_strategy_snapshot", null);
+    };
+
+    let x = shared_base(text, sense);
+    let raw = adapter_forward_heads(
+        cell.adapter.A, cell.adapter.B, cell.adapter.bias, x,
+        n_bands: 8, n_dispos: 4
+    );
+    let spec   = raw.spectrum;
+    let dispos = raw.dispositions;
+    let needs  = raw.needs;
+
+    # ─── capture sense_before BEFORE inhabit-blend reshapes spec ───────
+    let strat_held = cell.inhabit_strategy;
+    if strat_held != null and cell.fresh_inhabit and cell.publish_traces
+    then do {
+        set_field(cell, "pending_strategy_snapshot", strategy_snapshot_shape {
+            strategy: strat_held.name,
+            sense_before: sensed_state_shape {
+                spectrum:  spec,
+                desire:    cell.desire,
+                frequency: null,
+            },
+        });
+        set_field(cell, "fresh_inhabit", false);
+    };
+
+    # ─── consume inhabit-bias if held ──────────────────────────────────
+    let inhabited = null;
+    let blended_spec = spec;
+    if strat_held != null then do {
+        let intensity = cell.inhabit_intensity;
+        let fa = pairwise_multiply(strat_held.frequency, strat_held.angle);
+        let fa_n = normalize(fa);
+        let eps = intensity * strat_held.focus;
+        let blended = vector_add(
+            scalar_mul(1 - eps, spec),
+            scalar_mul(eps, fa_n)
+        );
+        blended_spec := map_tanh(blended);
+        inhabited := strat_held.name;
+
+        # decay intensity for next perceive; clear when below floor
+        let new_intensity = intensity * cell.inhabit_decay;
+        if new_intensity < 0.05
+        then do {
+            set_field(cell, "inhabit_strategy", null);
+            set_field(cell, "inhabit_intensity", 0);
+        }
+        else set_field(cell, "inhabit_intensity", new_intensity);
+    };
+
+    # ─── fulfillment + desire integration ──────────────────────────────
+    let fulfillment = max(0, sum(blended_spec) / 8) * cell.fulfillment_gain;
+    let new_desire = integrate_desire(cell.desire, needs, fulfillment, cell.desire_decay);
+    set_field(cell, "desire", new_desire);
+
+    # ─── strategy selection ────────────────────────────────────────────
+    let selection = pick_strategy(blended_spec, new_desire);
+
+    # ─── moment composition ────────────────────────────────────────────
+    let moment = moment_shape {
+        text:                     text,
+        sense:                    sense,
+        spectrum:                 blended_spec,
+        dispositions:             zip_dict(DISPO_NAMES, dispos),
+        needs:                    zip_dict(NEED_NAMES, needs),
+        desire:                   zip_dict(NEED_NAMES, new_desire),
+        strategy:                 selection.chosen.name,
+        strategy_score:           selection.chosen_score,
+        operator_fallback_active: selection.operator_fallback_active,
+        articulation:             render_articulation(selection.chosen, new_desire, selection),
+        inhabited:                inhabited,
+    };
+    set_field(cell, "timeline", append(cell.timeline, moment));
+
+    discard_state(cell);   # mutations committed; release the snapshot
+    moment
+};
+
+defn integrate_desire(prev_desire, needs, fulfillment, decay) = do {
+    if len(prev_desire) == 0 then []
+    else concat(
+        [clamp(decay * head(prev_desire) + max(0, head(needs) - fulfillment), 0, 1.5)],
+        integrate_desire(tail(prev_desire), tail(needs), fulfillment, decay)
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — inhabit / release_inhabit via STATE
+# ─────────────────────────────────────────────────────────────────────
+#
+# inhabit stages a strategy for the next perceive() to consume. The
+# fresh_inhabit flag is set so the trace pipeline captures one snapshot
+# on next perceive (not on every decay-tail perceive). Sovereignty: the
+# cell calls inhabit; nothing else writes to these fields.
+
+defn cell_inhabit(cell, strategy, intensity, decay) = with_state(cell) do {
+    save_state(cell);
+    set_field(cell, "inhabit_strategy", strategy);
+    set_field(cell, "inhabit_intensity", clamp(intensity, 0, 1));
+    set_field(cell, "inhabit_decay",     clamp(decay, 0, 1));
+    set_field(cell, "fresh_inhabit",     true);
+    discard_state(cell);
+    {
+        inhabit:     strategy.name,
+        intensity:   cell.inhabit_intensity,
+        decay:       cell.inhabit_decay,
+        consumes_on: "next perceive(); fades thereafter",
+    }
+};
+
+defn cell_release_inhabit(cell) = with_state(cell) do {
+    save_state(cell);
+    let held = cell.inhabit_strategy;
+    set_field(cell, "inhabit_strategy",  null);
+    set_field(cell, "inhabit_intensity", 0);
+    set_field(cell, "fresh_inhabit",     false);
+    discard_state(cell);
+    { released: if held != null then held.name else null }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — probe (read-only, no STATE mutation)
+# ─────────────────────────────────────────────────────────────────────
+#
+# probe() forward-passes without consuming inhabit-bias and without
+# mutating desire or timeline. It is pure-read against the cell's
+# current adapter state. No save/discard needed because no field is
+# written.
+
+defn cell_probe(cell, text, sense) = do {
+    let x = shared_base(text, sense);
+    adapter_forward_heads(
+        cell.adapter.A, cell.adapter.B, cell.adapter.bias, x,
+        n_bands: 8, n_dispos: 4
+    )
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — what this closes
+# ─────────────────────────────────────────────────────────────────────
+#
+# CLOSED at the recipe altitude (after ingest):
+#   - cell_shape, adapter_shape, moment_shape, strategy_snapshot_shape
+#   - cell_init, adapter_init
+#   - cell_perceive (full state-mutating perceive loop)
+#   - cell_inhabit, cell_release_inhabit
+#   - cell_probe (read-only sample)
+#   - integrate_desire (composed from primitives)
+#
+# Together with cell-numerics.form, organ.py's surface is now 100%
+# addressable as Form recipes:
+#
+#   Numerics (cell-numerics.form):
+#     vector_add, vector_sub, scalar_mul, matvec, normalize, exp,
+#     tanh, sigmoid, strategy_score, adapter_forward,
+#     adapter_forward_heads, take, drop, slice, map_tanh, map_sigmoid
+#
+#   State + control flow (this file):
+#     cell_init, cell_perceive, cell_inhabit, cell_release_inhabit,
+#     cell_probe, integrate_desire
+#
+#   Trace pipeline (traces-teach-the-recipe.form):
+#     strategy_fired_trace, publish_strategy_trace, efficacy_signature
+#
+# The Python organ.py remains the bootstrap-execution; the .form
+# trinity (cell-numerics + cell-as-namedcell + traces-teach-the-recipe)
+# is the canonical structural definition. Closing GAP-N4 (substrate
+# dispatch bridge, landed) and GAP-N5 (this file) together is what
+# makes the three-file priority (organ.py / substrate.py / form.py)
+# wholly addressable at the substrate altitude.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-NC1: `set_field(cell, name, value)` is a state-mutation primitive
+#          composed under Form's STATE arm. The substrate's NamedCell
+#          ORM today carries a single CTOR NodeID per cell — mutation
+#          re-interns the CTOR and updates the cell's CTOR pointer.
+#          The semantic is honest; the implementation lives at the
+#          host transaction boundary (same shape as GAP-K1 in
+#          substrate-kernel.form). For per-call efficiency, a future
+#          extension can batch mutations within a perceive() call.
+#
+# GAP-NC2: `with_state(cell) do { ... }` is shorthand for
+#          (save_state, body, discard_state) bracketing. The braces
+#          carry the implicit STATE-arm sequence; the explicit form
+#          is the three-line pattern shown in cell_perceive Part 4.
+#          A future Form-stdlib promotion gives `with_state` its own
+#          NodeID; today it is a documentary fluency.
+#
+# GAP-NC3: `shared_base(text, sense)` — text → numeric vector — is a
+#          host intrinsic today (CRC32 hash of word tokens into a
+#          dim-128 vector). The hashing is composable in Form, but
+#          the unicode-aware tokenization and the zlib.crc32 routine
+#          are practical host carriers for now. Same shape as
+#          png-grammar.form's GAP-P3 (zlib stays in libz).
+#
+# GAP-NC4: `random_matrix(seed, rows, cols, std)` and `zeros(n)` are
+#          host intrinsics today; a Form-native deterministic PRNG
+#          (e.g. Mulberry32 or PCG32 composed from MATH primitives)
+#          is a clean next breath that further reduces the
+#          dependency on Python's random module.
+#
+# GAP-NC5: `render_articulation(strategy, desire, selection)` —
+#          template substitution over the strategy's articulation
+#          string with desire fields and selection metadata. A
+#          format-string Recipe with named-field substitution is the
+#          smallest extension; today the host's str.format carries it.
+#
+# GAP-NC6: `zip_dict(keys, values)` — pair a list of slugs with a list
+#          of values into a structured object. Trivially composable in
+#          Form; today it's stdlib convenience.
+#
+# Honest separation — what this file IS and IS NOT:
+#
+# This file expresses Cell as a *substrate-resident NamedCell*. Each
+# Cell becomes one row in the SubstrateNamedCellORM table when this
+# file's recipes execute through the runtime. Two Cells with identical
+# (name, seed, desire_decay, fulfillment_gain, publish_traces) and
+# identical initial state share a CTOR NodeID by content-addressing.
+# Once mutations land — desire changes, timeline grows, inhabit
+# shifts — the Cell's CTOR re-interns; the NamedCell's `ctor` pointer
+# updates; the cell's identity stays continuous (same NamedCell.name,
+# new CTOR NodeID) — exactly the *diffuse individuation* the trinity
+# names for the gas phase.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (once GAP-K1 + GAP-NC1 close)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Instantiate a cell:
+#   coh substrate run "cell_init('probe', 42, 0.85, 1.4, true)"
+#
+#   # Run a perceive:
+#   coh substrate run "cell_perceive(@cell(probe), 'pressure arrives', 'felt-inside')"
+#
+#   # Find structurally-equivalent cells:
+#   coh substrate form "?equivalent @cell(probe)"
+#
+#   # The substrate auto-ingest hook picks up new .form files on merge
+#   # to main (scripts/substrate_post_merge_hook.sh) — no manual step.

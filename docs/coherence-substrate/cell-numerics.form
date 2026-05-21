@@ -295,14 +295,18 @@ defn adapter_forward_heads(A, B, bias, x, n_bands, n_dispos) = do {
 #         is booted. Verified end-to-end by
 #         experiments/local-llm-cell-v0/substrate_dispatch_demo.py.
 #
-# GAP-N5: organ.py's Cell carries runtime state (`self.desire`,
-#         `self.timeline`, `self._inhabit_strategy`). State-carrying
-#         cells map cleanly to substrate NamedCells (the *gas* phase
-#         of the trinity), but the perceive() loop that mutates them
-#         needs to express state via Form's STATE primitive
-#         (save/restore/discard via ExecutionContext.state_stack —
-#         already a Form arm). Translation is straightforward; the
-#         shape is named, the implementation pending.
+# GAP-N5 (CLOSED 2026-05-21): Cell state expressed as substrate
+#         NamedCell. cell-as-namedcell.form names the cell_shape,
+#         adapter_shape, moment_shape, strategy_snapshot_shape
+#         Blueprints; cell_init, cell_perceive, cell_inhabit,
+#         cell_release_inhabit, cell_probe as state-mutating recipes
+#         that compose Form's STATE arm (form-engine.form @1.2.22.1
+#         SAVE / @1.2.22.2 RESTORE / @1.2.22.3 DISCARD). Together
+#         with this file (numerics) and traces-teach-the-recipe.form
+#         (trace pipeline), organ.py's surface is now 100% addressable
+#         as Form recipes. Remaining sub-gaps (NC1–NC6) are stdlib
+#         and host-intrinsic refinements named honestly in the
+#         companion file.
 
 # ─────────────────────────────────────────────────────────────────────
 # How to verify (once ingested)
