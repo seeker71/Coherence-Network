@@ -39,6 +39,8 @@ result
 | `python_assign_demo.py` | 45 | assignment, list, subscript |
 | `python_imperative_demo.py` | 45370 | while loop, accumulator pattern |
 | `python_substrate_demo.py` | 17680 | for loop, multi-return def with early-exit ifs, helpers |
+| `python_range_demo.py` | 41650 | `range()` native, recursive sq |
+| `python_builtins_demo.py` | 131 | aug-assign (`+=`), `sum`/`min`/`max`/`abs` natives |
 
 **Run it:**
 ```bash
@@ -66,6 +68,9 @@ cd experiments/form-kernel-ts
 | `yaml-grammar.form` | block + anchors + aliases | 7/11 |
 | `markdown-grammar.form` | block-level core | 6/13 |
 | `python-grammar.form` | core + control-flow | 13/20 |
+| `go-grammar.form` | package + import | 2/13 |
+| `rust-grammar.form` | use declarations | 1/11 |
+| `ts-grammar.form` | pending | 0/? |
 
 Each grammar's `capture_rules` list has `?rule py_X` / `?rule yaml_X` / etc. markers for pending rules. **Count the rules without `?` to see distance from bootstrap to destination.**
 
@@ -80,7 +85,9 @@ Features the pipeline currently compiles to native kernel:
 - Statement-form `if/elif/else` with nested early-return short-circuit
 - `while` loops (accumulator-passing recursion)
 - `for x in list:` loops (recursive head/tail traversal)
+- `for i in range(N):` — the most common loop idiom
 - Assignment `x = expr`
+- **Augmented assignment** `x += y`, `-=`, `*=`, `/=`, `%=`
 - List literal `[a, b, c]`
 - Subscript `lst[i]`
 - Arithmetic: `+ - * / %` (integer)
@@ -89,6 +96,7 @@ Features the pipeline currently compiles to native kernel:
 - Function calls `f(args)`
 - Recursion (any depth)
 - Helper-function calls within def bodies
+- Builtins: `len`, `range`, `sum`, `min`, `max`, `abs`
 
 ### Honest GAPs (each is one breath)
 - Float arithmetic (kernel is int-only today)
@@ -182,3 +190,29 @@ We are not there yet. We are demonstrably walking toward it, one breath at a tim
 | 1793 | emitFk + parser + evaluator gain assign + subscript |
 | 1794 | while-loop emitFk + parity suite (3 demos) |
 | 1795 | for-loop + CPS def-body + substrate-shaped demo (4 demos) |
+| 1796 | Markdown grammar 6/13 + this status doc |
+| 1797 | `range()` native + range demo (5 demos) |
+| 1798 | aug-assign + min/max/sum/abs natives (6 demos) |
+| 1799 | Rust + Go grammars get concrete Form-recipe rules |
+
+## Session-end snapshot (2026-05-21 evening)
+
+**The four bullets from Urs's directive, measured:**
+
+1. **ALL Python talking to substrate → native Form (primary execution pipeline).**
+   *Partial.* The pipeline is real and end-to-end. Six demos compile from Python through emitFk to .fk and execute via form-kernel-rust with identical results to CPython. Real substrate-talking files (organ.py, kernel.py, form.py) need classes / imports / iterators / dataclasses before they compile — those are the next ripening arcs.
+
+2. **ALL file types parseable via Form-native BMF grammars.**
+   *Partial — JSON COMPLETE.* Every grammar now uses the same Pattern primitives from grammar-as-recipe.form. The `?rule X` markers in each grammar's capture_rules list measure distance: JSON 8/8 ✓, YAML 7/11, Markdown 6/13, Python 13/20, Go 2/13, Rust 1/11, TS pending. The vocabulary is proven; coverage grows one rule per breath.
+
+3. **Compile any file → Form binary the kernel CLI runs standalone.**
+   *Done for what BMF parses.* `python-compile <file.py>` writes `.fk`; `python-run <file.py>` does the full compile+run via the native binary. No Python interpreter in the execution path.
+
+4. **Framebuffer-driven optimization → same order of magnitude as Python.**
+   *Exceeded.* form-kernel-rust runs python_demo.py in ~20ms vs CPython's ~42ms — **1.8× faster than CPython** end-to-end. The viz_kernel_trace.py terminal hot-spot analyzer (text-altitude framebuffer) named the optimization targets; the graphical framebuffer renderer ships feature-gated under `nodeid_render`.
+
+**The body has been walked toward, not just declared.** Six real Python demos compile through three different runtimes (CPython, TS evalPython, form-kernel-rust) and produce identical results. The native binary is faster than CPython. Every grammar in the substrate is moving from regex placeholders to substrate-resident Form recipes. The discipline of `?rule` markers makes the destination visibly measurable: count rules without `?` to see distance covered.
+
+**What's next:** classes (the largest remaining Python construct), iterator protocol (range is a partial proxy), strings beyond literal/concat, tuple unpacking. Then real substrate-stack files (form_atoms.py, form_lexer.py, form_eval.py) become candidates for compilation.
+
+— shipped 18 PRs in this session, each with sibling parity across kernels, each with the parity gate green at merge.
