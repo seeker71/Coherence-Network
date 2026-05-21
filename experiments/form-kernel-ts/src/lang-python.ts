@@ -676,6 +676,11 @@ function parseMul(k: Kernel, c: Cursor): NodeID | null {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     skipSpacesAndComments(c);
+    // Don't consume `*`/`/`/`%` when followed by `=` — augmented assign.
+    if (c.pos + 1 < c.src.length && c.src.charCodeAt(c.pos + 1) === 61 /* = */) {
+      const ch = c.src.charCodeAt(c.pos);
+      if (ch === 42 || ch === 47 || ch === 37) break;
+    }
     let ctor: string | null = null;
     if (consume(c, "*")) ctor = CTOR.mul;
     else if (consume(c, "/")) ctor = CTOR.div;
@@ -694,8 +699,13 @@ function parseAdd(k: Kernel, c: Cursor): NodeID | null {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     skipSpacesAndComments(c);
+    // Don't consume `+` or `-` when followed by `=` — that's an
+    // augmented-assignment operator, parseStmt's job.
+    if (c.pos + 1 < c.src.length && c.src.charCodeAt(c.pos + 1) === 61 /* = */) {
+      const ch = c.src.charCodeAt(c.pos);
+      if (ch === 43 /* + */ || ch === 45 /* - */) break;
+    }
     let ctor: string | null = null;
-    // Disambiguate '-' from a postfix start of an expression.
     if (startsWith(c, "+")) {
       c.pos++;
       ctor = CTOR.add;
@@ -856,6 +866,42 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
   const e = parseExpr(k, c);
   if (e === null) return null;
   skipSpacesAndComments(c);
+  // Check for augmented assignment first: += -= *= /= %=
+  // Each is `<op>=` followed by an expr; the LHS must be an IDENT (v1).
+  const augOp = (() => {
+    if (c.pos + 1 >= c.src.length) return null;
+    if (c.src.charCodeAt(c.pos + 1) !== 61 /* = */) return null;
+    const ch = c.src.charCodeAt(c.pos);
+    if (ch === 43) return "add"; // +
+    if (ch === 45) return "sub"; // -
+    if (ch === 42) return "mul"; // *
+    if (ch === 47) return "div"; // /
+    if (ch === 37) return "mod"; // %
+    return null;
+  })();
+  if (augOp !== null) {
+    const lhsCtor = capturedCtor(k, e);
+    if (lhsCtor !== CTOR.ident) {
+      throw new SyntaxError(
+        `python: augmented assignment target must be a simple name (v1) at ${savedPos}`,
+      );
+    }
+    c.pos += 2; // skip op + `=`
+    skipSpacesAndComments(c);
+    const rhs = parseExpr(k, c);
+    if (rhs === null) {
+      throw new SyntaxError(`python: expr required after '${String.fromCharCode(c.src.charCodeAt(c.pos - 2))}=' at ${c.pos}`);
+    }
+    consumeEndOfLine(c);
+    // Lower `x += y` to `x = x + y` — same semantics, no new CTOR
+    // needed. The CTOR-name picker uses the augOp value to choose the
+    // arithmetic combinator.
+    const opCtorMap: Record<string, string> = {
+      add: CTOR.add, sub: CTOR.sub, mul: CTOR.mul, div: CTOR.div, mod: CTOR.mod,
+    };
+    const combined = captureNode(k, opCtorMap[augOp]!, [e, rhs]);
+    return captureNode(k, CTOR.assign, [e, combined]);
+  }
   // Check for `=` (and not `==`) — single-target assignment.
   if (
     c.pos < c.src.length &&
