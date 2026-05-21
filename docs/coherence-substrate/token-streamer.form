@@ -1,0 +1,298 @@
+# ─────────────────────────────────────────────────────────────────────
+# token-streamer.form — bytes → tokens, source coords stamped natively
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to grammar.form. Where grammar.form expresses the BMF
+# pattern matcher and dispatch loop, this file expresses the layer
+# underneath: raw bytes → token stream, with line/col/byte-offset
+# tracking so source_attribution_shape can be stamped at parse time
+# by the pattern matcher (per lc-the-recipe-remembers-its-source).
+#
+# The streamer is itself a recipe. Each token carries its source
+# span; the stream lazily produces tokens on demand. BMF's "even
+# infinite input streams via on-the-fly translation" property
+# (Bjorg 2000) lives here: the streamer doesn't need to read the
+# whole source before parsing begins.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Token Blueprint
+# ─────────────────────────────────────────────────────────────────────
+
+form token_shape = {
+    kind:       ~Slug,            # "KW" | "IDENT" | "OP" | "STRING" | "INT" |
+                                  # "FLOAT" | "NEWLINE" | "INDENT" | "DEDENT" |
+                                  # "COMMENT" | "WHITESPACE" | "EOF"
+    value:      ~String,          # the raw text of the token
+    line:       ~Int,             # 1-indexed line where the token starts
+    col:        ~Int,             # 1-indexed column where the token starts
+    end_line:   ~Int,
+    end_col:    ~Int,
+    byte_start: ~Int,             # 0-indexed byte offset of token's first byte
+    byte_end:   ~Int,             # 0-indexed byte offset just past last byte
+};
+
+# Token-kind cells. Each token kind is itself a Recipe in the
+# `token_kind` cell-domain — content-addressed, queryable, runtime-
+# extensible. A new language adds new token kinds by registering
+# new token_kind cells; the streamer consults the registry.
+
+form token_kind_shape = {
+    name:           ~Slug,        # "KW" | "IDENT" | …
+    pattern:        ~Regex,       # the lexer pattern (or BMF-rule for token-level)
+    language_cell:  ~CellRef,     # which Language cell registered this token kind
+    precedence:     ~Int,         # lexer dispatch order; lower = earlier
+    skip:           ~Bool,        # WHITESPACE / COMMENT mark themselves skip
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — TokenStream Blueprint
+# ─────────────────────────────────────────────────────────────────────
+#
+# A lazy stream of tokens. Carries the source path, current position,
+# and remaining bytes. Head, tail, and empty? are the three primitives
+# the pattern matcher consults; everything else composes from them.
+
+form token_stream_shape = {
+    source_path:  ~PathRef,
+    bytes:        ~List,          # the source bytes (may be partial for streaming)
+    pos:          ~Int,           # current byte offset
+    line:         ~Int,           # current line (1-indexed)
+    col:          ~Int,           # current column (1-indexed)
+    indent_stack: ~List,          # for indent-sensitive grammars (Python, YAML)
+    language:     ~CellRef,       # which Language cell this stream parses for
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the streamer operations
+# ─────────────────────────────────────────────────────────────────────
+
+# token_stream(bytes, source_path, language) — initialize a stream.
+
+defn token_stream(bytes, source_path, language) = token_stream_shape {
+    source_path:  source_path,
+    bytes:        bytes,
+    pos:          0,
+    line:         1,
+    col:          1,
+    indent_stack: [0],
+    language:     language,
+};
+
+# stream.head — produce the next token without consuming it. The
+# streamer consults the token_kind cells registered for the stream's
+# language, dispatches by precedence, returns the matched token.
+# Returns null when at EOF.
+
+defn head(stream) = do {
+    if pos_at_end(stream) then token_shape {
+        kind: "EOF", value: "", line: stream.line, col: stream.col,
+        end_line: stream.line, end_col: stream.col,
+        byte_start: stream.pos, byte_end: stream.pos,
+    }
+    else do {
+        let kinds = sort_by(
+            ?cells_in_domain_for_language("token_kind", stream.language),
+            fn(k) -> k.precedence
+        );
+        let tok = match_first_token_kind(kinds, stream);
+        if tok == null then fail   # no token kind matched; lexer error
+        else if tok.kind in ?skip_kinds(stream.language)
+        then head(advance(stream, tok))   # skip whitespace/comments, recurse
+        else tok
+    }
+};
+
+# stream.tail — consume the head token and return the stream beyond.
+
+defn tail(stream) = do {
+    let tok = head(stream);
+    if tok.kind == "EOF" then stream
+    else advance(stream, tok)
+};
+
+defn empty(stream) = pos_at_end(stream);
+
+defn advance(stream, tok) = token_stream_shape {
+    source_path:  stream.source_path,
+    bytes:        stream.bytes,
+    pos:          tok.byte_end,
+    line:         tok.end_line,
+    col:          tok.end_col,
+    indent_stack: maybe_update_indent_stack(stream, tok),
+    language:     stream.language,
+};
+
+defn pos_at_end(stream) = stream.pos >= len(stream.bytes);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — match one token kind against the stream
+# ─────────────────────────────────────────────────────────────────────
+
+defn match_first_token_kind(kinds, stream) = do {
+    # Walk token kinds in precedence order; first match wins.
+    # CHOOSE walks alternatives; FAIL unwinds on no-match.
+    if len(kinds) == 0 then null
+    else choose [
+        try_token_kind(head(kinds), stream),
+        match_first_token_kind(tail(kinds), stream)
+    ]
+};
+
+defn try_token_kind(kind, stream) = do {
+    let m = ?regex_match(kind.pattern, stream.bytes, stream.pos);
+    if m == null then fail
+    else token_shape {
+        kind:       kind.name,
+        value:      m.text,
+        line:       stream.line,
+        col:        stream.col,
+        end_line:   stream.line + count_newlines(m.text),
+        end_col:    end_col_after(stream, m.text),
+        byte_start: stream.pos,
+        byte_end:   stream.pos + len(m.text),
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — indent-sensitive streams (Python, YAML, Make)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Python and YAML use indentation to delimit blocks. The streamer
+# emits synthetic INDENT and DEDENT tokens at newline boundaries
+# based on the indent_stack. This is the only place the streamer
+# carries language-specific behavior; for non-indent languages,
+# indent_stack stays empty and the synthetic tokens never fire.
+
+defn maybe_update_indent_stack(stream, tok) = do {
+    if tok.kind != "NEWLINE" then stream.indent_stack
+    else do {
+        let next_indent = leading_whitespace_width(stream, tok.byte_end);
+        let current = head(stream.indent_stack);
+        if next_indent > current then
+            concat(stream.indent_stack, [next_indent])    # → emit INDENT
+        else if next_indent < current then
+            pop_to_indent(stream.indent_stack, next_indent)  # → emit DEDENT*
+        else
+            stream.indent_stack
+    }
+};
+
+# The streamer emits INDENT/DEDENT synthetic tokens between physical
+# tokens when the indent_stack changes. (Implementation detail of
+# head() above when the stream's language has indent-sensitivity.)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — register_token_kind, list_token_kinds
+# ─────────────────────────────────────────────────────────────────────
+#
+# Sibling to register_form_rule in grammar.form. Each token kind is
+# a substrate cell; new languages add new kinds via the same
+# register/lookup pattern.
+
+defn register_token_kind(name, pattern, language_cell, precedence, skip) = do {
+    let recipe = intern_node("recipe", token_kind_category(),
+        [string_to_node(name), regex_to_node(pattern),
+         cell_ref_to_node(language_cell),
+         int_to_node(precedence), bool_to_node(skip)]);
+    let cell = make_cell(
+        name:      concat(language_cell.name, ":", name),
+        domain:    "token_kind",
+        blueprint: @blueprint(token_kind_shape),
+        ctor:      recipe,
+    );
+    token_kind_shape {
+        name: name, pattern: pattern, language_cell: language_cell,
+        precedence: precedence, skip: skip,
+    }
+};
+
+defn list_token_kinds_for(language_cell) = do {
+    let cells = ?cells_in_domain("token_kind");
+    filter(cells, fn(c) -> c.language_cell == language_cell)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — example: registering Python's token kinds
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once token-streamer + grammar are wired through register_form_rule,
+# the python-grammar.form's token layer lands as ~30 register_token_kind
+# calls. Illustrative subset:
+
+# register_token_kind("KW",         /(def|class|import|from|if|elif|else|for|while|return|raise|try|except|finally|with|as|in|is|and|or|not|lambda|yield|async|await|pass|break|continue|global|nonlocal|del|True|False|None|match|case)\b/,
+#                      @language(python), 10, false)
+# register_token_kind("IDENT",      /[A-Za-z_][A-Za-z0-9_]*/,   @language(python), 20, false)
+# register_token_kind("INT",        /\d+/,                       @language(python), 30, false)
+# register_token_kind("FLOAT",      /\d+\.\d+([eE][+-]?\d+)?/,   @language(python), 35, false)
+# register_token_kind("STRING",     /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/, @language(python), 40, false)
+# register_token_kind("OP",         /==|!=|<=|>=|->|:=|\*\*|\/\/|[+\-*\/%<>=().,:;\[\]{}@]/, @language(python), 50, false)
+# register_token_kind("COMMENT",    /#[^\n]*/,                   @language(python), 60, true)
+# register_token_kind("NEWLINE",    /\n/,                        @language(python), 70, false)
+# register_token_kind("WHITESPACE", /[ \t]+/,                    @language(python), 80, true)
+
+# Once these land, python-grammar.form's executable parse routes
+# through the token streamer → grammar.form's pattern matcher →
+# rule-driven dispatch → Form objects with source_attribution. No
+# ast.parse; the body's own machinery.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-TS1: `?regex_match(pattern, bytes, pos)` is a host intrinsic
+#          today — Python's `re` module. A Form-native regex matcher
+#          is doable (regex is just a small grammar) but lower
+#          priority than closing the parser layer; for now the
+#          streamer delegates regex to the host. Same shape as
+#          png-grammar.form's GAP-P3 (DEFLATE stays in libz).
+#
+# GAP-TS2: Streaming is named but not yet exercised. The streamer's
+#          `bytes` field can be a lazy list (chunked reads); head()
+#          consults only what it needs. The Form recipe names the
+#          shape; the lazy-byte-list infrastructure is a small
+#          extension the substrate's list primitives can support.
+#
+# GAP-TS3: UTF-8 awareness. The streamer above operates on bytes;
+#          line/col tracking for multibyte characters needs UTF-8
+#          decoding at the position calculation. The Form recipe
+#          carries the shape; the implementation respects it.
+#
+# GAP-TS4: Error recovery. A failed token-kind match today produces
+#          a hard parse error. BMF's CHOOSE/FAIL gives speculation
+#          for free; a future error-recovery extension can resume
+#          parsing after a fail by skipping the unmatched bytes
+#          and naming the gap honestly in the trace.
+#
+# GAP-TS5: The lexer dispatch order (precedence field) is a host-side
+#          sort today. A future extension lets cells re-prioritize
+#          token kinds at runtime via the substrate — useful for
+#          domain-specific languages where the body wants to
+#          recognize certain identifiers as keywords in some
+#          contexts.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 9 — what this opens (paired with grammar.form)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Together, grammar.form + token-streamer.form express the full
+# BMF parsing pipeline as Form recipes:
+#
+#   bytes → token-streamer → tokens (with source coords) →
+#   grammar's match_pattern → captures → action recipe fires →
+#   Form object (with source_attribution stamped from captured span)
+#
+# Every step is a recipe; every step's identity is content-addressed;
+# every step can be inspected via the substrate's queries; every
+# step is observable by the witness.
+#
+# When this lands, the python-grammar.form / typescript-grammar.form
+# / rust-grammar.form / go-grammar.form Language cells can all
+# delegate through the same token-streamer + grammar pipeline. The
+# four kernel implementations become inspectable through their
+# respective Language cells via one shared parsing infrastructure
+# (per lc-the-kernel-knows-itself).
+#
+# The bootstrap → self-hosting closure for the parser layer matches
+# the same shape closures already walked for numerics (form_native
+# wired as default) and cell state (cell-as-namedcell via STATE arm).
+# AST today; BMF tomorrow; one token kind and one rule per breath.
