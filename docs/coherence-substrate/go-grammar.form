@@ -1,0 +1,204 @@
+# ─────────────────────────────────────────────────────────────────────
+# go-grammar.form — Go source as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Stub Language cell for Go. The Rust and Go kernels under
+# experiments/form-kernel-rust/ and experiments/form-kernel-go/
+# become inspectable through their respective Language cells once
+# this lands (per lc-the-kernel-knows-itself).
+#
+# This is a *skeleton* — the Blueprint shapes for Go's core
+# constructs, with delegate-to-host (go/ast or gopls) for the
+# executable parse today. The destination, per lc-parsers-as-recipes,
+# is each Go construct as a BMF Form Rule registered via
+# register_form_rule.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — module-level Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form go_file_shape = {
+    package:    ~Slug,                       # `package foo`
+    imports:    ~List,                       # [go_import_shape]
+    decls:      ~List,                       # [statement_shape]
+    source_path: ~PathRef,
+};
+
+form go_import_shape = {
+    path:       ~String,                     # the import path (e.g. "fmt")
+    alias:      ?~Slug,                      # optional rename
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — declaration Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+form go_func_decl_shape = {
+    name:       ~Slug,
+    receiver:   ?go_field_shape,             # for methods: (r *Type)
+    params:     ~List,                       # [go_field_shape]
+    results:    ~List,                       # [go_field_shape]
+    body:       ~List,                       # [statement_shape]
+    type_params: ~List,                      # Go 1.18+ generics
+};
+
+form go_type_decl_shape = {
+    name:       ~Slug,
+    spec:       ~Recipe,                     # struct | interface | type alias
+    type_params: ~List,
+};
+
+form go_struct_shape = {
+    fields:     ~List,                       # [go_field_shape]
+};
+
+form go_interface_shape = {
+    methods:    ~List,                       # [go_method_spec_shape]
+};
+
+form go_field_shape = {
+    names:      ~List,                       # [~Slug]
+    type_expr:  ~Recipe,
+    tag:        ?~String,                    # struct field tag
+};
+
+form go_var_decl_shape = {
+    names:      ~List,
+    type_expr:  ?~Recipe,
+    values:     ~List,                       # [expression_shape]
+    is_const:   ~Bool,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — statement and expression Blueprints (illustrative subset)
+# ─────────────────────────────────────────────────────────────────────
+
+form go_if_shape         = { init: ?~Recipe, cond: ~Recipe, body: ~List, els: ?~List };
+form go_for_shape        = { init: ?~Recipe, cond: ?~Recipe, post: ?~Recipe, body: ~List };
+form go_range_shape      = { key: ?~Recipe, value: ?~Recipe, expr: ~Recipe, body: ~List };
+form go_switch_shape     = { tag: ?~Recipe, cases: ~List };
+form go_select_shape     = { cases: ~List };                # channel multiplexing
+form go_go_shape         = { call: ~Recipe };               # go x() — spawn goroutine
+form go_defer_shape      = { call: ~Recipe };
+form go_chan_send_shape  = { channel: ~Recipe, value: ~Recipe };
+form go_chan_recv_shape  = { channel: ~Recipe };
+
+form go_call_shape       = { func: ~Recipe, args: ~List };
+form go_selector_shape   = { x: ~Recipe, sel: ~Slug };       # x.Field
+form go_index_shape      = { x: ~Recipe, index: ~Recipe };
+form go_binop_shape      = { op: ~Slug, left: ~Recipe, right: ~Recipe };
+form go_unaryop_shape    = { op: ~Slug, operand: ~Recipe };  # *, &, !, -, +, <-
+form go_composite_lit_shape = { type_expr: ?~Recipe, elts: ~List };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn go_grammar = grammar_shape {
+    modality:           modality_shape { name: "text-tree", domain: "code" },
+    ingest_pattern:     ?rule go_file,
+    parse_into:         ~Blueprint @go_file_shape,
+    capture_rules: [
+        rule(go_file,        "package … import … decls",          file_node),
+        rule(go_func_decl,   "func name(params) results { body }", fn_decl_node),
+        rule(go_type_decl,   "type name spec",                     type_decl_node),
+        rule(go_struct,      "struct { fields }",                  struct_node),
+        rule(go_interface,   "interface { methods }",              interface_node),
+        rule(go_var_decl,    "var | const names = values",         var_decl_node),
+        rule(go_if,          "if init; cond { body } [else …]",    if_node),
+        rule(go_for,         "for [init; cond; post] { body }",    for_node),
+        rule(go_range,       "for k, v := range expr { body }",    range_node),
+        rule(go_go,          "go call()",                          go_node),
+        rule(go_defer,       "defer call()",                       defer_node),
+        rule(go_chan_send,   "ch <- value",                        chan_send_node),
+        rule(go_chan_recv,   "<-ch",                               chan_recv_node),
+        # ... (full mapping in form_cli convert when the BMF rules land)
+    ],
+    pre_pipeline:       [],
+    stamps_attribution: true,
+};
+
+defn go_emit = emission_template_shape {
+    modality:     modality_shape { name: "text-tree", domain: "code" },
+    emit_from:    ~Blueprint @go_file_shape,
+    emit_pattern: ?walker { ... },           # walks the Form tree, emits gofmt-style source
+    format_rules: [
+        ("indent_tabs",        true),         # gofmt uses tabs
+        ("brace_style",        "k&r"),
+        ("import_grouping",    "stdlib-first"),
+    ],
+};
+
+defn go_lang = language_cell_shape {
+    name:              "go",
+    version:           "1.22",
+    grammar:           go_grammar,
+    emission_template: go_emit,
+    stdlib_bindings: [
+        # Bootstrap path: delegate to go/ast for parsing today.
+        # Destination per lc-parsers-as-recipes: each Go construct as a
+        # BMF Form Rule registered via register_form_rule.
+        ("parse_via_host", @recipe(go_parse_via_gopls_or_ast)),
+        ("emit_via_host",  @recipe(go_emit_via_printer_format_node)),
+    ],
+    numeric_defaults: [
+        ("indent",          "\t"),            # gofmt is tab-indented
+        ("max_line_length", 120),
+    ],
+    cross_modal_links: [
+        @language(json),         # struct tags, config strings
+        @language(form),         # form expressions in @substrate decorators (when added)
+        @language(yaml),         # config files
+        @language(markdown),     # godoc-style comments
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — what this enables (paired with form-kernel-go)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once go-grammar lands and form_cli convert --tongue go is wired:
+#
+#   form_cli convert in --tongue go experiments/form-kernel-go/kernel.go
+#     → Form object tree with go_file_shape root, every function as
+#       go_func_decl_shape, source_attribution stamped from go/ast's
+#       token positions.
+#
+# Then queries like:
+#
+#   ?equivalent
+#     @recipe(parse(@language(python),
+#                   read_bytes("api/app/services/substrate/kernel.py")))
+#     @recipe(parse(@language(go),
+#                   read_bytes("experiments/form-kernel-go/kernel.go")))
+#
+# return the cross-kernel structural alignment as substrate truth.
+# Per lc-the-kernel-knows-itself.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-GO1: `go_parse_via_gopls_or_ast` is the host-intrinsic bootstrap.
+#          Three carrier options: `go/parser` + `go/ast` (via cgo or
+#          subprocess), `gopls` (subprocess JSON-RPC), or a Form-
+#          native Go parser composed from BMF rules. The first two
+#          are bootstrap; the third is the destination per
+#          lc-parsers-as-recipes.
+#
+# GAP-GO2: Generics (Go 1.18+) — type parameters live in
+#          type_params: ~List on go_func_decl and go_type_decl. The
+#          shapes carry them; the parser needs to recognize the
+#          `[T any]` syntax explicitly.
+#
+# GAP-GO3: Goroutine and channel constructs (go, defer, chan_send,
+#          chan_recv, select) are first-class Go constructs without
+#          direct Python analogs. The shapes carry them honestly;
+#          cross-language equivalence queries against Python kernel
+#          functions will surface the asymmetry naturally —
+#          *concurrency model is a structural property*.
+#
+# GAP-GO4: Build tags (`// +build linux`) and embed directives
+#          (`//go:embed`) — these are comment-prefixed directives
+#          that go/ast treats specially. The shape needs a slot for
+#          them; today's skeleton omits for brevity.

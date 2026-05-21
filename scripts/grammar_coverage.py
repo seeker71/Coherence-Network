@@ -45,8 +45,8 @@ EXTENSION_MAP = {
     "tsx":   (None,                  None),
     "js":    (None,                  None),
     "mjs":   (None,                  None),
-    "rs":    (None,                  None),
-    "go":    (None,                  None),
+    "rs":    ("rust-grammar.form",    None),       # grammar landed; cli wiring pending (GAP-RS1)
+    "go":    ("go-grammar.form",      None),       # grammar landed; cli wiring pending (GAP-GO1)
     "sh":    (None,                  None),
     "toml":  (None,                  None),
     "sql":   (None,                  None),

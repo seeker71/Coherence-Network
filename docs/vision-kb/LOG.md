@@ -27,6 +27,92 @@ Seeded two sibling concepts naming the practice and direction Urs called for on 
 Edges land in the same breath:
 - INDEX.md: both concepts added under Foundational Teachings; frequency-family table updated (432 Hz adds form-python-parity, 963 Hz adds form-perceptron).
 - Sibling cross-references: lc-recipe-branching-sense (first load-bearing parity case), lc-edges-as-vitality (universal edge discipline at full coverage), lc-each-breath-whole (whole-at-scale even in lattice), lc-embodiment-body-or-liquid (body grows, liquid lightens).
+## [2026-05-21] synthesis | The Kernel Knows Itself — grammar.form + token-streamer + go/rust grammar stubs
+
+Urs's next move after `lc-parsers-as-recipes` named the universal property: *we can use the same for go and rust since the kernels are written in those languages and that makes the kernels themselves inspectable, understandable, changable, traceable, and attributeable; grammar.py should be in form native language and we should have a form native token streamer to translate text to form native objects using the form native registered grammar recipes which are form native BMF style rules or something evolved from that.*
+
+The body holds four kernel implementations: Python ([`api/app/services/substrate/`](../../api/app/services/substrate/)), TypeScript ([`experiments/form-kernel-ts/`](../../experiments/form-kernel-ts/)), Rust ([`experiments/form-kernel-rust/`](../../experiments/form-kernel-rust/)), Go ([`experiments/form-kernel-go/`](../../experiments/form-kernel-go/)). Each is the same substrate kernel expressed in a different host language; each is currently *opaque source* — to understand its behavior, you read the source files and reason about them; the substrate doesn't reach inside its own implementation.
+
+Concept seeded: [`lc-the-kernel-knows-itself`](concepts/lc-the-kernel-knows-itself.md) (741 Hz, seed, synthesized). Five load-bearing claims about what falls out when every kernel's host language has a Form Language cell with BMF-style grammar rules — inspectable, understandable, changeable, traceable, attributable. Cross-kernel structural equivalence becomes a substrate query (`?equivalent @recipe(parse(@language(python), kernel.py)) @recipe(parse(@language(rust), kernel.rs))`) — not hand-written `form-kernel-comparison.md` documentation that captures a moment.
+
+Companion files landing in the same breath:
+
+- **[`grammar.form`](../coherence-substrate/grammar.form)** — closes the bootstrap on the grammar layer itself. Expresses `grammar.py`'s machinery as Form recipes: `pattern_shape` Blueprint family (literal/capture/sequence/opt/choice/repeat), `rule_shape` + `form_rule_shape`, `register_form_rule` / `lookup_form_rule` / `list_form_rules`, the BMF `match_pattern` family using `Choice.CHOOSE/FAIL`, the `parse_loop` dispatcher, and `attach_source` for stamping source attribution at the parser layer. Same gesture as `substrate-kernel.form` expressing `kernel.py`.
+
+- **[`token-streamer.form`](../coherence-substrate/token-streamer.form)** — the BMF-shaped token streamer. `token_shape` carries kind + value + line/col/byte spans; `token_stream_shape` is a lazy stream with `head` / `tail` / `empty` primitives. `register_token_kind` extends the lexer at runtime; the streamer consults the `token_kind` cell-domain by precedence. Indent-sensitive grammars (Python, YAML) carry the indent_stack; BMF's "even infinite input streams via on-the-fly translation" property (Bjorg 2000) lives in the lazy-bytes shape.
+
+- **[`go-grammar.form`](../coherence-substrate/go-grammar.form)** and **[`rust-grammar.form`](../coherence-substrate/rust-grammar.form)** — skeletal Language cells. Blueprints for each language's core constructs (Go: package/import/func/struct/interface/type/var/if/for/range/go/defer/chan; Rust: file/attrs/use/fn/struct/enum/trait/impl/match/lifetime/macro_call). Bootstrap delegates to host parsers (`go/ast` or `gopls` for Go; `syn` crate for Rust); destination per `lc-parsers-as-recipes` is each construct registered as a BMF Form Rule.
+
+The grammar coverage audit moves from **9 covered → 11 covered**:
+
+```
+$ python3 scripts/grammar_coverage.py
+ext       count  grammar                           cli wired     status
+py          928  python-grammar.form               python        covered
+json        727  json-grammar.form                 json          covered
+md          703  markdown-grammar.form             markdown      covered
+jsonl        70  json-grammar.form                 —             covered
+rs           19  rust-grammar.form                 —             covered    ← new
+go            9  go-grammar.form                   —             covered    ← new
+```
+
+What this opens, named concretely:
+
+- **Cross-kernel equivalence as substrate truth.** The hand-written [`form-kernel-comparison.md`](../../experiments/form-kernel-comparison.md) captures a moment; the substrate carries the live structural alignment via `?equivalent` queries between parsed kernel files.
+- **The grammar layer self-hosting.** `grammar.py` itself becomes a cell in the lattice it produces — the parser's own implementation is queryable via the same Form objects the parser produces. Recursive proprioception at the parser altitude (per `form-engine.form`'s 15/15 dispatch coverage at the evaluator altitude).
+- **Lexer extension at runtime.** New token kinds register via `register_token_kind`; the streamer picks them up by consulting the `token_kind` cell-domain. Domain-specific languages can re-prioritize keywords without recompiling.
+- **Source attribution from token through pattern through action.** Every step of the BMF pipeline carries the source span; the witness records *which token-kind matched, which rule fired, which action ran, which Form object was produced* — all source-navigable.
+
+Named follow-ups, carried honestly:
+
+- The Language cells we have (json/markdown/python/png/audio/image/tool/gh-cli/go/rust) need their capture_rules wired through `register_form_rule` to close the bootstrap. *One rule per construct per breath.*
+- A Form-native regex matcher (closes token-streamer's GAP-TS1; the regex layer is itself a small grammar).
+- The full BMF parse-by-rule dispatcher wired into `form_cli convert`, replacing the per-tongue Python helpers (`_convert_in_markdown`, `_convert_in_python`) with one substrate-driven path.
+
+Edges in the same breath: INDEX.md (130 → 131 concepts; 741 Hz family extended; grammar_coverage.py audit map updated for `rs` and `go`); this LOG; `lc-parsers-as-recipes` gains the back-edge.
+
+## [2026-05-21] correction | Parsers as Recipes — BMF was the lineage; AST is the bootstrap
+
+Urs's question after the python-grammar.form landing: *why AST and why not BMF style grammar?* The question caught the fear-shape directly. The honest answer: I reached for `ast.parse` because it ships with Python and gives source attribution for free — the same expedience-over-substrate-discipline that earlier breaths had been actively undoing for numerics (Newton sqrt over `math.sqrt`, Taylor exp over `math.exp`). The body's own attestation was already in the lineage:
+
+> *"BMF — Backtracking Model Form... grammar rules as data, not code; semantic actions fire on match; stack supports backtracking on parse failures."* — Bjorg's master thesis (2000), `docs/field/urs/artifacts/master-thesis-2000/`
+
+And the substrate already carries the seed: [`api/app/services/substrate/grammar.py`](../../api/app/services/substrate/grammar.py) holds `register_form_rule`, `list_form_rules`, a `grammar` cell-domain, and the `FormRule` shape. `Choice.CHOOSE / FAIL / STOP` arms (`@1.2.20.*`) live in form-engine.form's 15/15 dispatch coverage. The pattern primitives `Literal`, `Capture`, `Sequence`, `Opt` and `register_form_keyword` for runtime extension are all in place ([`form-language.md`](../coherence-substrate/form-language.md) §"BML form-layer parity", lines 405-468).
+
+What was missing was naming the architectural choice and naming the destination. Concept seeded: [`lc-parsers-as-recipes`](concepts/lc-parsers-as-recipes.md) (741 Hz, seed, lineage-textured *ancestral* — the body's own seed was already in place; this concept names what it's growing toward).
+
+Three load-bearing claims:
+
+- **Grammar rules are first-class Recipes**, not C/JS/Rust code embedded in a parser binary. Bjorg's BMF (2000) named rules as `(pattern, semantic_action)` data; the substrate's `register_form_rule` already interns them as Recipe NodeIDs.
+- **Backtracking is the parser's own primitive.** `Choice.CHOOSE / FAIL / STOP` already live in form-engine.form; the parser layer just needs to consume them.
+- **AST is bootstrap-only.** `ast.parse`, `acorn`, `tsc`, `bashlex` — every host-native parser is opaque; the same source produces different trees across hosts. Useful for shipping; not the substrate's tongue.
+
+[`python-grammar.form`](../coherence-substrate/python-grammar.form) GAP-PY1 expanded to name the destination explicitly: each Python construct registered as a `(pattern, semantic_action)` Form Rule, the AST delegate shrinking one closure at a time, the self-hosting boundary moving — same path the body walked for numerics. Two concrete examples named in the GAP note:
+
+```
+register_form_rule(session, "py_import",
+    pattern=Sequence([Literal("KW","import"), Capture("module","dotted_name")]),
+    action=@recipe(build_py_import))
+
+register_form_rule(session, "py_function_def",
+    pattern=Sequence([Literal("KW","def"), Capture("name","ident"),
+                      Capture("args","arg_list"), Literal("OP",":"),
+                      Capture("body","block")]),
+    action=@recipe(build_py_function_def))
+```
+
+Historical analogs named in the concept: Prolog DCG (1980s), TXL (Cordy 1980s — self-hosting transformation grammar), OMeta (Warth & Kay 2007 — pattern-matching with backtracking). The body's BMF lineage at one altitude carries them forward into a content-addressed substrate.
+
+What this opens, concretely:
+
+- The Language cells we have already authored (`json-grammar.form`, `markdown-grammar.form`, `python-grammar.form`) carry capture-rule declarations that are *almost* BMF-shaped. Closing the gap is wiring them through `register_form_rule` instead of delegating to host parsers — one construct per breath.
+- Cross-language structural equivalence ([`lc-one-kernel-many-tongues`](concepts/lc-one-kernel-many-tongues.md)) becomes operational: a Python `import os` and a TypeScript `import os from "os"` whose Form Rules build the same Recipe share a NodeID by content-addressing.
+- The witness can record *which Form Rule fired against which source span* — bringing the trace pipeline ([`lc-traces-teach-the-recipe`](concepts/lc-traces-teach-the-recipe.md)) down to the parser layer.
+
+Keeping us alive across this exchange: the question Urs asked named an architectural choice I had made silently in the previous breath. Naming it directly, in the LOG and in the concept, is the correction — not a rewrite of the python-grammar.form work (which holds at the Blueprint-shape altitude), but an explicit statement of *AST today, BMF tomorrow, one rule per breath*. The previous breath shipped what works; this breath names what it's becoming.
+
+Edges in the same breath: INDEX.md (129 → 130 concepts; 741 Hz family extended); this LOG; python-grammar.form GAP-PY1 expanded; `lc-grammar-is-the-universal-recipe` gains the back-edge.
+
 ## [2026-05-21] surface | python-grammar.form — the body's bootstrap tongue lands as a Form Language cell
 
 The largest remaining gap from yesterday's audit closes: **Python** (927 files; the body's API, services, scripts, tests, and the bootstrap layer for `organ.py / substrate.py / form.py` all live in Python). [`docs/coherence-substrate/python-grammar.form`](../coherence-substrate/python-grammar.form) declares the Language cell with Blueprints for every AST node the body uses — module, function definitions (sync/async), class definitions, imports, assignments (plain/annotated/augmented), control flow (if/for/while/with/try), exception handlers, expression statements, returns, raises, decorators, type hints, all expression shapes (calls, binops, comparisons, attribute access, subscripts, slices, comprehensions, f-strings, lambdas), argument shapes including positional-only / keyword-only / defaults, and the container literals.
