@@ -1,0 +1,41 @@
+; tests/yaml.fk — exercise YAML parser end-to-end
+;
+; Loaded via:
+;   bin-go core.fk cell-trace.fk grammars/yaml.fk tests/yaml.fk
+
+(do
+    ;; A simplified GitHub workflow-style snippet — flat key/value
+    ;; pairs and a list of triggers. Real workflows use nesting,
+    ;; which extends this grammar in a later breath.
+    (let sample-yaml
+        (str_concat "name: CI"
+        (str_concat "
+" (str_concat "on: push"
+        (str_concat "
+" (str_concat "jobs: build"
+        (str_concat "
+" (str_concat "# comment line"
+        (str_concat "
+" (str_concat "- step1"
+        (str_concat "
+" "- step2")))))))))))
+
+    (let doc (parse-yaml ".github/workflows/ci.yml" sample-yaml))
+
+    ;; --- probe 1: root has children -------------------------------
+    (let kids (node_children doc))
+    (let probe-1 (len kids))                              ; → 5 (3 pairs + 2 items, comment skipped)
+
+    ;; --- probe 2: each child has source attribution ---------------
+    (defn count-attributed (xs)
+        (if (nil? xs) 0
+            (if (str_eq (cell-source (head xs)) "")
+                (count-attributed (tail xs))
+                (add 1 (count-attributed (tail xs))))))
+    (let probe-2 (count-attributed kids))                 ; → 5
+
+    ;; --- probe 3: first pair's source includes "ci.yml" ----------
+    (let probe-3 (str_len (cell-source (head kids))))     ; → length of ".github/workflows/ci.yml:1:1" = 27
+
+    ;; sum: 5 + 5 + 27 = 37
+    (add probe-1 (add probe-2 probe-3)))
