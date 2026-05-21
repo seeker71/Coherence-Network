@@ -4,11 +4,12 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 181
+**Total files**: 182
 
 | File | Purpose |
 |---|---|
 | [conftest.py](conftest.py) | Pytest configuration and fixtures. |
+| [test_active_recipe_tracing_form.py](test_active_recipe_tracing_form.py) | Proof that active recipe tracing lives in Form. |
 | [test_agent_control_plane.py](test_agent_control_plane.py) | _no top-of-file purpose_ |
 | [test_agent_execute_endpoint.py](test_agent_execute_endpoint.py) | Tests for the agent-execution-lifecycle-hooks spec |
 | [test_agent_integration_api.py](test_agent_integration_api.py) | Tests for the agent-orchestration-api spec |

@@ -1,0 +1,180 @@
+# active-recipe-tracing.form -- recipe state, library, and choice in Form
+#
+# Companion to specs/active-recipe-tracing-form.md.
+#
+# This is the substrate-native version of the movement Urs named on
+# 2026-05-21: the body can trace which recipes are active now, read a
+# library of available recipes, and choose whether to keep the active
+# recipe or select a different one from current_state -> desired_state.
+#
+# The important boundary: this is not a Python endpoint. Python may
+# later host execution, persistence, or UI transport. The recipe logic
+# lives here first as Form.
+
+# ---------------------------------------------------------------------
+# Part 1 -- state shapes
+# ---------------------------------------------------------------------
+
+form recipe_state_shape = {
+    current_state:   ~String,       # e.g. "resting with dissonance"
+    desired_state:   ~String,       # e.g. "stability", "connection"
+    active_recipes:  [~CellRef],    # recipes already firing in this body
+    sensed_at:       ~DateLit,
+};
+
+form recipe_cell_shape = {
+    id:              ~String,
+    desired_states:  [~String],
+    form:            ~String,
+    source_concepts: [~String],
+};
+
+form recipe_choice_shape = {
+    action:          ~String,       # keep_active_recipe | choose_recipe
+    recipe:          ~CellRef,
+    reason:          ~String,
+    trace:           [~String],
+};
+
+defn recipe_state(current_state, desired_state, active_recipes) =
+    recipe_state_shape {
+        current_state:  current_state,
+        desired_state:  desired_state,
+        active_recipes: active_recipes,
+        sensed_at:      now(),
+    };
+
+# ---------------------------------------------------------------------
+# Part 2 -- library of available recipes
+# ---------------------------------------------------------------------
+
+defn stability_harmony_recipe = recipe_cell_shape {
+    id:              "stability-harmony",
+    desired_states:  ["stability", "harmony", "coherence", "calm", "steady"],
+    form:            "sense(field) |> notice(pattern) |> pause() |> breathe(longer_exhale) |> choose(response_without_control) |> transmit(steadiness)",
+    source_concepts: [
+        "concept:relational-scaffolding",
+        "concept:spiral-pivot-coherence",
+        "concept:field-stabilizing-transmission",
+        "concept:expansion-not-ladder",
+    ],
+};
+
+defn connection_density_recipe = recipe_cell_shape {
+    id:              "connection-density",
+    desired_states:  ["connection", "linked", "graph", "relationship", "weaving"],
+    form:            "sense(sparse_edges) |> choose(two_related_nodes) |> link() |> witness(brightening)",
+    source_concepts: ["concept:edges-as-vitality"],
+};
+
+defn attention_flow_recipe = recipe_cell_shape {
+    id:              "attention-flow",
+    desired_states:  ["attention", "readers", "flow", "visibility", "circulation"],
+    form:            "sense(quiet_attention) |> invite(reader) |> receive(view) |> witness(circulation)",
+    source_concepts: ["concept:living-signal-layer"],
+};
+
+defn external_listening_recipe = recipe_cell_shape {
+    id:              "external-listening",
+    desired_states:  ["external", "world", "signal", "skin", "federation"],
+    form:            "sense(world_skin) |> collect(signal) |> compare(field) |> invite(next_contact)",
+    source_concepts: ["concept:source-artifact-sensing"],
+};
+
+defn available_recipes() = [
+    stability_harmony_recipe,
+    connection_density_recipe,
+    attention_flow_recipe,
+    external_listening_recipe,
+];
+
+# ---------------------------------------------------------------------
+# Part 3 -- active recipes
+# ---------------------------------------------------------------------
+#
+# The active set is the recipes already firing in the state. A caller
+# can pass them explicitly, or a future host can hydrate them from
+# witness traces. The Form contract is the same in both cases: active
+# means "already firing now", not "recommended someday".
+
+defn active_recipes(state) = state.active_recipes;
+
+defn recipe_is_active(state, recipe) =
+    contains(active_recipes(state), recipe);
+
+# GAP-A1: active_recipes_from_trace(cell)
+#
+# The natural substrate query is:
+#
+#   ?active_recipe_traces @cell since current_breath
+#
+# It should read witness traces whose kind is "recipe_active" or
+# "strategy_fired" and whose effect has not been retired. That query
+# belongs next to traces-teach-the-recipe.form's GAP-W1 trace index.
+# Until that trace index exists, the state receives active_recipes as
+# a composed child.
+
+# ---------------------------------------------------------------------
+# Part 4 -- choose from current state to desired state
+# ---------------------------------------------------------------------
+
+defn recipe_matches_desired(recipe, desired_state) =
+    contains(recipe.desired_states, desired_state);
+
+defn candidate_recipes(state) =
+    filter(available_recipes(), fn(recipe) ->
+        recipe_matches_desired(recipe, state.desired_state)
+    );
+
+defn preferred_recipe(state) = do {
+    let candidates = candidate_recipes(state);
+    if count(candidates) > 0
+    then candidates[0]
+    else stability_harmony_recipe
+};
+
+defn keep_or_choose(state) = do {
+    let preferred = preferred_recipe(state);
+
+    if recipe_is_active(state, preferred)
+    then recipe_choice_shape {
+        action: "keep_active_recipe",
+        recipe: preferred,
+        reason: "The active recipe already matches desired_state.",
+        trace: [
+            "sense current_state",
+            "read active_recipes",
+            "desired_state matches active recipe",
+            "keep"
+        ],
+    }
+    else recipe_choice_shape {
+        action: "choose_recipe",
+        recipe: preferred,
+        reason: "Desired_state points to a different available recipe.",
+        trace: [
+            "sense current_state",
+            "read active_recipes",
+            "scan available_recipes",
+            "choose preferred recipe"
+        ],
+    }
+};
+
+# ---------------------------------------------------------------------
+# Part 5 -- canonical examples
+# ---------------------------------------------------------------------
+
+defn example_keep_stability() =
+    keep_or_choose(recipe_state(
+        "resting with dissonance",
+        "stability",
+        [stability_harmony_recipe],
+    ));
+
+defn example_choose_connection() =
+    keep_or_choose(recipe_state(
+        "resting with dissonance",
+        "connection",
+        [stability_harmony_recipe],
+    ));
