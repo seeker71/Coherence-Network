@@ -53,6 +53,7 @@ const (
 	RBasicLogic     uint32 = 14
 	RBasicAccess    uint32 = 15 // read property / field
 	RBasicMethod    uint32 = 27 // transform on a cell-like value
+	RBasicTransmute uint32 = 76 // present value through Blueprint without changing identity
 	// Kernel-demo additions (extending RBasic for self-hosting needs)
 	RBasicFnDef  uint32 = 31
 	RBasicFnCall uint32 = 32
@@ -116,24 +117,34 @@ type NativeEntry struct {
 	Fn       NativeFn
 }
 
-// Trace — per-arm dispatch counters. Held inside Kernel so the walker can
-// record without threading an extra reference through every recursive call.
-// Mirrors the Rust kernel's trace structure for sibling-kernel parity.
+// armKey — (ty, inst) tuple key for trace dispatch counters. Storing the
+// inst alongside ty surfaces typed-numeric distribution — MATH.PLUS_F64
+// (inst=0x91) becomes distinguishable from MATH.PLUS_I32 (inst=0x01) in
+// the report.
+type armKey struct {
+	Ty   uint32
+	Inst uint32
+}
+
+// Trace — per-(arm, inst) dispatch counters. Held inside Kernel so the
+// walker can record without threading an extra reference through every
+// recursive call. Mirrors the Rust kernel's trace structure for sibling-
+// kernel parity.
 type Trace struct {
 	TotalWalks      uint64
-	ArmCounts       map[uint32]uint64 // cat.Type → count
+	ArmCounts       map[armKey]uint64 // (cat.Type, cat.Inst) → count
 	ChoiceAttempts  uint64
 	ChoiceSuccesses uint64
 	ChoiceFailures  uint64
 }
 
 func newTrace() *Trace {
-	return &Trace{ArmCounts: make(map[uint32]uint64)}
+	return &Trace{ArmCounts: make(map[armKey]uint64)}
 }
 
-func (t *Trace) record(armTy uint32) {
+func (t *Trace) record(armTy uint32, armInst uint32) {
 	t.TotalWalks++
-	t.ArmCounts[armTy]++
+	t.ArmCounts[armKey{Ty: armTy, Inst: armInst}]++
 }
 
 // armName — label categories in the trace JSON. Walker arms + native
@@ -166,29 +177,55 @@ func armName(armTy uint32) string {
 		return "ACCESS"
 	case RBasicMethod:
 		return "METHOD"
+	case RBasicTransmute:
+		return "TRANSMUTE"
 	default:
 		return "OTHER"
 	}
 }
 
 func (t *Trace) toJSON() map[string]interface{} {
+	type variantRec struct {
+		ArmTy   uint32 `json:"arm_ty"`
+		ArmInst uint32 `json:"arm_inst"`
+		ArmName string `json:"arm_name"`
+		Count   uint64 `json:"count"`
+	}
 	type armRec struct {
 		ArmTy   uint32 `json:"arm_ty"`
 		ArmName string `json:"arm_name"`
 		Count   uint64 `json:"count"`
 	}
-	arms := make([]armRec, 0, len(t.ArmCounts))
-	for ty, c := range t.ArmCounts {
+
+	// Per-(ty, inst) records — preserves typed-numeric distribution.
+	variants := make([]variantRec, 0, len(t.ArmCounts))
+	for k, c := range t.ArmCounts {
+		variants = append(variants, variantRec{
+			ArmTy: k.Ty, ArmInst: k.Inst, ArmName: armName(k.Ty), Count: c,
+		})
+	}
+	sort.Slice(variants, func(i, j int) bool { return variants[i].Count > variants[j].Count })
+
+	// Per-ty aggregate — kept for backward compatibility with consumers
+	// that want the coarser shape.
+	byTy := make(map[uint32]uint64)
+	for k, c := range t.ArmCounts {
+		byTy[k.Ty] += c
+	}
+	arms := make([]armRec, 0, len(byTy))
+	for ty, c := range byTy {
 		arms = append(arms, armRec{ArmTy: ty, ArmName: armName(ty), Count: c})
 	}
 	sort.Slice(arms, func(i, j int) bool { return arms[i].Count > arms[j].Count })
+
 	rate := 0.0
 	if t.ChoiceAttempts > 0 {
 		rate = float64(t.ChoiceSuccesses) / float64(t.ChoiceAttempts)
 	}
 	return map[string]interface{}{
 		"total_walks":          t.TotalWalks,
-		"arms":                 arms,
+		"arms":                 arms,        // aggregated by ty (backward-compatible)
+		"variants":             variants,    // full (ty, inst) granularity
 		"choice_attempts":      t.ChoiceAttempts,
 		"choice_successes":     t.ChoiceSuccesses,
 		"choice_failures":      t.ChoiceFailures,
@@ -646,8 +683,9 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 
 	// Tracing hook: when k.Trace is set, record the arm dispatch. Pure
 	// counter increment — no allocation, no IO. Per lc-native-kernel-binary.
+	// Records (ty, inst) so typed-numeric distribution stays distinguishable.
 	if k.Trace != nil {
-		k.Trace.record(cat.Type)
+		k.Trace.record(cat.Type, cat.Inst)
 	}
 
 	switch cat.Type {
@@ -756,7 +794,7 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 				// recorded above. The kernel knows itself even when the
 				// call leaves Form-land.
 				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
-					k.Trace.record(ne.Category.Type)
+					k.Trace.record(ne.Category.Type, ne.Category.Inst)
 				}
 				return ne.Fn(k, args)
 			}
@@ -786,7 +824,14 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		return Value{Kind: VList, List: out}
 	}
 
-	panic(fmt.Sprintf("walk: no arm for category %v", cat))
+	// Structural passthrough — categories the walker can't yet execute
+	// (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
+	// PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
+	// VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
+	// records their attribution. Walking returns the NodeID itself so
+	// downstream structural reasoning continues. Sibling-parity with
+	// the Rust + TS kernels.
+	return Value{Kind: VNodeID, Nid: n}
 }
 
 func truthy(v Value) bool {
@@ -1094,6 +1139,7 @@ func catWitness() NodeID   { return NodeID{1, LevelBasic, RBasicWitness, 1} }
 func catAccess() NodeID    { return NodeID{1, LevelBasic, RBasicAccess, 1} }
 func catMethod() NodeID    { return NodeID{1, LevelBasic, RBasicMethod, 1} }
 func catListNat() NodeID   { return NodeID{1, LevelBasic, RBasicList, 1} }
+func catTransmute() NodeID { return NodeID{1, LevelBasic, RBasicTransmute, 1} }
 func catUndefined() NodeID { return NodeID{1, LevelBasic, RBasicUndefined, 0} }
 
 // ---------------------------------------------------------------------------

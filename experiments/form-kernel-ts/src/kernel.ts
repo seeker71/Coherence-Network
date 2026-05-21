@@ -78,6 +78,10 @@ export const RBasic = {
   PROOF: 73,            // #20 — propositions-as-types (Curry-Howard)
   INFERENCE: 74,        // #20 — inference rules + applications
   ALIAS: 75,            // #8  — compile-time bindings (substrate cells)
+  TRANSMUTE: 76,        // present value through Blueprint without changing identity
+                        //       (typed-numeric casts, generic→specific views,
+                        //        object-as-primitive narrowings). Distinct from
+                        //        PROJECT (spatial) and METHOD (cell-transform).
   BLANKET: 80,          // #25 — Markov blanket (cell boundary recipe)
   PROJECT: 81,          // #28 — holographic PROJECT operation
   GENERATIVE: 82,       // #26 — generative model recipes (per-cell)
@@ -201,18 +205,35 @@ export interface NativeEntry {
   readonly fn: NativeFn;
 }
 
-// Trace — per-arm dispatch counters. Sibling-parity with the Go and Rust
-// kernels' Trace structures. Hot path stays free when trace is undefined.
+// Trace — per-(arm, inst) dispatch counters. Sibling-parity with the Go and
+// Rust kernels' Trace structures. Hot path stays free when trace is
+// undefined. Storing (ty, inst) instead of just ty surfaces typed-numeric
+// distribution — MATH.PLUS_F64 becomes distinguishable from MATH.PLUS_I32
+// in the report.
 export class Trace {
   totalWalks = 0;
+  // Key: encoded as (ty << 32) | inst — JS Map handles this as a number key.
+  // Since JS numbers are doubles (53-bit mantissa), this is safe for any
+  // u32 ty + u32 inst combination that fits in 53 bits (well beyond our use).
   armCounts = new Map<number, number>();
   choiceAttempts = 0;
   choiceSuccesses = 0;
   choiceFailures = 0;
 
-  record(armTy: number): void {
+  private static encodeKey(ty: number, inst: number): number {
+    // ty * 2^32 + inst — fits in JS number safely for our slot ranges.
+    return ty * 0x100000000 + inst;
+  }
+  private static decodeKey(k: number): { ty: number; inst: number } {
+    const ty = Math.floor(k / 0x100000000);
+    const inst = k - ty * 0x100000000;
+    return { ty, inst };
+  }
+
+  record(armTy: number, armInst: number): void {
     this.totalWalks++;
-    this.armCounts.set(armTy, (this.armCounts.get(armTy) ?? 0) + 1);
+    const k = Trace.encodeKey(armTy, armInst);
+    this.armCounts.set(k, (this.armCounts.get(k) ?? 0) + 1);
   }
 
   static armName(armTy: number): string {
@@ -230,21 +251,43 @@ export class Trace {
       case RBasic.CALL: return "CALL";
       case RBasic.ACCESS: return "ACCESS";
       case RBasic.METHOD: return "METHOD";
+      case RBasic.TRANSMUTE: return "TRANSMUTE";
       default: return "OTHER";
     }
   }
 
   toJSON(): Record<string, unknown> {
-    const arms = Array.from(this.armCounts.entries())
+    // Per-(ty, inst) records — preserves typed-numeric distribution.
+    const variants = Array.from(this.armCounts.entries())
+      .map(([k, count]) => {
+        const { ty, inst } = Trace.decodeKey(k);
+        return {
+          arm_ty: ty,
+          arm_inst: inst,
+          arm_name: Trace.armName(ty),
+          count,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    // Per-ty aggregate — backward-compatible coarser shape.
+    const byTy = new Map<number, number>();
+    for (const [k, count] of this.armCounts) {
+      const { ty } = Trace.decodeKey(k);
+      byTy.set(ty, (byTy.get(ty) ?? 0) + count);
+    }
+    const arms = Array.from(byTy.entries())
       .map(([armTy, count]) => ({
         arm_ty: armTy,
         arm_name: Trace.armName(armTy),
         count,
       }))
       .sort((a, b) => b.count - a.count);
+
     return {
       total_walks: this.totalWalks,
-      arms,
+      arms,        // aggregated by ty (backward-compatible)
+      variants,    // full (ty, inst) granularity
       choice_attempts: this.choiceAttempts,
       choice_successes: this.choiceSuccesses,
       choice_failures: this.choiceFailures,
@@ -274,6 +317,9 @@ export function catMethod(): NodeID {
 }
 export function catListNat(): NodeID {
   return { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: 1 };
+}
+export function catTransmute(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.TRANSMUTE, inst: 1 };
 }
 export function catCompareEq(): NodeID {
   return { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.EQ };
@@ -805,12 +851,17 @@ export class Kernel {
     this.registerNative("make_float32", catWitness(), (k, args) => k.boxValue(k.internTrivialFloat32(argFloat(args, 0))));
     this.registerNative("make_float64", catWitness(), (k, args) => k.boxValue(k.internTrivialFloat64(argFloat(args, 0))));
 
-    // Width-conversion casts (operate on values — METHOD-shape transforms)
-    this.registerNative("i64", catMethod(), (_k, args) => ({ kind: "i64", bigint: argBigInt(args, 0) }));
-    this.registerNative("u64", catMethod(), (_k, args) => ({ kind: "u64", bigint: argBigInt(args, 0) }));
-    this.registerNative("f32", catMethod(), (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
-    this.registerNative("f64", catMethod(), (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
-    this.registerNative("i32", catMethod(), (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
+    // Width-conversion casts — TRANSMUTE: present a value through a different
+    // numeric Blueprint without changing its underlying identity. Same content
+    // viewed through a different width. The canonical example the user named
+    // for typed numerics: a recipe declares "a number"; at the call site the
+    // specific type is recorded; a cast presents the value through a different
+    // Blueprint while preserving identity through content-addressing.
+    this.registerNative("i64", catTransmute(), (_k, args) => ({ kind: "i64", bigint: argBigInt(args, 0) }));
+    this.registerNative("u64", catTransmute(), (_k, args) => ({ kind: "u64", bigint: argBigInt(args, 0) }));
+    this.registerNative("f32", catTransmute(), (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
+    this.registerNative("f64", catTransmute(), (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
+    this.registerNative("i32", catTransmute(), (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
 
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
@@ -1012,9 +1063,10 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
 
   // Tracing hook: when k.trace is set, record arm dispatch. Pure
   // counter increment — no allocation, no IO. Sibling-parity with the
-  // Rust and Go kernels.
+  // Rust and Go kernels. Records (ty, inst) so typed-numeric
+  // distribution stays distinguishable.
   if (k.trace !== undefined) {
-    k.trace.record(cat.type);
+    k.trace.record(cat.type, cat.inst);
   }
 
   switch (cat.type) {
@@ -1076,10 +1128,16 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
     case RBasic.TILE:
     case RBasic.PARALLELIZE:
     case RBasic.VECTORIZE:
+    case RBasic.TRANSMUTE:
       // Higher-architecture recipes — walking returns the NodeID itself,
       // letting downstream code reason structurally without crashing on
       // recipes whose semantics are interpreted by their own module
       // (blanket.ts, project.ts, generative.ts, proof.ts, vector.ts, parallel.ts).
+      // TRANSMUTE follows the same passthrough pattern: the substrate
+      // identity of the value is preserved through the cast/view; consumers
+      // that want the concrete cast semantics can use the typed-numeric
+      // natives (i32, i64, f32, f64, u64, ...) which already carry the
+      // TRANSMUTE Blueprint attribution in the trace.
       return { kind: "nodeid", nodeid: node };
     default:
       throw new Error(`walk: unsupported RBasic type ${cat.type}`);
@@ -1631,7 +1689,7 @@ function walkFnCall(
       // native expresses alongside the FNCALL arm. The kernel knows
       // itself even when the call leaves Form-land.
       if (k.trace !== undefined && ne.category.type !== RBasic.UNDEFINED) {
-        k.trace.record(ne.category.type);
+        k.trace.record(ne.category.type, ne.category.inst);
       }
       return ne.fn(k, args);
     }

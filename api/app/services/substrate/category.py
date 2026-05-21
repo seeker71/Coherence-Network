@@ -288,6 +288,22 @@ class RBasic(IntEnum):
     # `inductive-ref` is the self-ref sentinel (the inductive's type-name
     # trivial). The walker materializes a `ctor` Value from a value-shape.
     CONSTRUCTOR = 72
+    # TRANSMUTE — present a value through a Blueprint shape without changing
+    # its underlying identity. Distinct from PROJECT (spatial — "render the
+    # cell through a coordinate function") and METHOD (transform — "produce
+    # a new value from the cell"). TRANSMUTE is typological: same content,
+    # viewed through a different Blueprint. The canonical examples are
+    # typed-numeric casts (i32 → f64), object-as-primitive views (JSON
+    # object presented as one of its scalar fields), generic-to-specific
+    # narrowings (the "object" declared in a JSON/YAML/markdown/DB-schema
+    # shape, resolved at runtime to a typed Blueprint). Shape:
+    # `TRANSMUTE[source-recipe, target-blueprint-ref]`. The walker returns
+    # the source value cast/viewed through the target Blueprint identity;
+    # the trace records TRANSMUTE so generic-vs-absolute view operations
+    # surface as their own band. Reserved 2026-05-21 in the discussion of
+    # how generic types ("a number", "an object") get specialized at
+    # runtime via the kernel's content-addressing discipline.
+    TRANSMUTE = 76
 
 
 # ---------------------------------------------------------------------------
