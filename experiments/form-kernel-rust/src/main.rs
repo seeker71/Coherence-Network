@@ -627,6 +627,40 @@ impl Kernel {
             } else { Value::Null }
         });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        // min / max / sum — common Python builtins applied to a list.
+        // sum returns the integer sum; min/max return the smallest/largest
+        // int element. All three handle empty lists honestly (sum=0,
+        // min/max panic with a clear message matching CPython's TypeError).
+        self.register_native("min", cat_method(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if xs.is_empty() { panic!("min: empty list"); }
+                let mut best = xs[0].as_int();
+                for v in &xs[1..] { let x = v.as_int(); if x < best { best = x; } }
+                return Value::Int(best);
+            }
+            Value::Int(args[0].as_int())
+        });
+        self.register_native("max", cat_method(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if xs.is_empty() { panic!("max: empty list"); }
+                let mut best = xs[0].as_int();
+                for v in &xs[1..] { let x = v.as_int(); if x > best { best = x; } }
+                return Value::Int(best);
+            }
+            Value::Int(args[0].as_int())
+        });
+        self.register_native("sum", cat_method(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                let mut total: i64 = 0;
+                for v in xs { total += v.as_int(); }
+                return Value::Int(total);
+            }
+            Value::Int(0)
+        });
+        self.register_native("abs", cat_method(), |_, _, args| {
+            let n = args[0].as_int();
+            Value::Int(if n < 0 { -n } else { n })
+        });
         // range(n)        → [0, 1, ..., n-1]
         // range(a, b)     → [a, a+1, ..., b-1]
         // range(a, b, s)  → [a, a+s, a+2s, ..., < b]

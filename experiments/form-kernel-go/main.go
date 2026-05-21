@@ -652,6 +652,45 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
 	})
+	// Common Python builtins applied to lists. Sibling-parity with
+	// Rust + TS kernels. Honest error messages on empty lists.
+	k.registerNative("min", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) == 1 && args[0].Kind == VList {
+			xs := args[0].List
+			if len(xs) == 0 { panic("min: empty list") }
+			best := xs[0].Int
+			for i := 1; i < len(xs); i++ {
+				if xs[i].Int < best { best = xs[i].Int }
+			}
+			return Value{Kind: VInt, Int: best}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
+	k.registerNative("max", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) == 1 && args[0].Kind == VList {
+			xs := args[0].List
+			if len(xs) == 0 { panic("max: empty list") }
+			best := xs[0].Int
+			for i := 1; i < len(xs); i++ {
+				if xs[i].Int > best { best = xs[i].Int }
+			}
+			return Value{Kind: VInt, Int: best}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
+	k.registerNative("sum", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VList {
+			var total int64
+			for _, v := range args[0].List { total += v.Int }
+			return Value{Kind: VInt, Int: total}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	k.registerNative("abs", catMethod(), func(_ *Kernel, args []Value) Value {
+		n := args[0].Int
+		if n < 0 { n = -n }
+		return Value{Kind: VInt, Int: n}
+	})
 	// range(n) / range(a,b) / range(a,b,s) — eager list of integers.
 	// Matches CPython semantics for `for i in range(N):`.
 	// Sibling-parity with the Rust + TS kernels.
