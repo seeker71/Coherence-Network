@@ -238,15 +238,393 @@ def _convert_out_json(form_object: dict) -> str:
     return json.dumps(_form_tree_to_json(tree), indent=2)
 
 
+# ─── markdown tongue ─────────────────────────────────────────────────────
+#
+# Implements docs/coherence-substrate/markdown-grammar.form.
+# Source attribution stamped on every parsed node (per
+# lc-the-recipe-remembers-its-source).
+
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+_HR_RE = re.compile(r"^\s{0,3}([\*\-_])\s*\1\s*\1[\s\1]*$")
+_FENCE_RE = re.compile(r"^\s{0,3}```\s*([a-zA-Z0-9_+\-]*)\s*$")
+_FENCE_CLOSE_RE = re.compile(r"^\s{0,3}```\s*$")
+_UL_RE = re.compile(r"^(\s*)([\-*+])\s+(.*)$")
+_OL_RE = re.compile(r"^(\s*)(\d+)\.\s+(.*)$")
+_BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)$")
+_CROSSREF_RE = re.compile(r"^→\s+([a-z][a-z0-9-]*(?:\s*,\s*[a-z][a-z0-9-]*)*)\s*$")
+_FRONTMATTER_DELIM_RE = re.compile(r"^---\s*$")
+
+
+def _attr(source_path: str, start_line: int, end_line: int,
+          start_col: int = 1, end_col: int = 1,
+          byte_start: int = 0, byte_end: int = 0,
+          language_cell: str = "markdown") -> dict:
+    return {
+        "source_file":   source_path,
+        "start_line":    start_line,
+        "start_col":     start_col,
+        "end_line":      end_line,
+        "end_col":       end_col,
+        "byte_start":    byte_start,
+        "byte_end":      byte_end,
+        "language_cell": language_cell,
+    }
+
+
+def _md_inline(text: str) -> list[dict]:
+    """Parse inline markdown into a list of inline-shape nodes.
+
+    Handles **bold**, *italic*, `code`, [text](url), ![alt](url). Leaves
+    unmatched text as md_text_inline_shape leaves. Recursive composition
+    is honest about the simple-regex limit (GAP-M2 in grammar file).
+    """
+    if not text:
+        return []
+    nodes: list[dict] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        # image
+        if text[i:i+2] == "![":
+            end = text.find("]", i + 2)
+            if end != -1 and text[end:end+2] == "](":
+                close = text.find(")", end + 2)
+                if close != -1:
+                    nodes.append({
+                        "category": "md_image",
+                        "alt": text[i+2:end],
+                        "url": text[end+2:close],
+                    })
+                    i = close + 1
+                    continue
+        # link
+        if text[i] == "[":
+            end = text.find("]", i + 1)
+            if end != -1 and text[end:end+2] == "](":
+                close = text.find(")", end + 2)
+                if close != -1:
+                    inner = text[i+1:end]
+                    nodes.append({
+                        "category": "md_link",
+                        "text": _md_inline(inner),
+                        "url": text[end+2:close],
+                    })
+                    i = close + 1
+                    continue
+        # bold (**…**)
+        if text[i:i+2] == "**":
+            end = text.find("**", i + 2)
+            if end != -1:
+                nodes.append({
+                    "category": "md_emphasis_bold",
+                    "inlines": _md_inline(text[i+2:end]),
+                })
+                i = end + 2
+                continue
+        # italic (*…*) — but not if followed by * (covered above)
+        if text[i] == "*" and (i + 1 < n) and text[i+1] != "*":
+            end = text.find("*", i + 1)
+            if end != -1 and (end + 1 >= n or text[end+1] != "*"):
+                nodes.append({
+                    "category": "md_emphasis_italic",
+                    "inlines": _md_inline(text[i+1:end]),
+                })
+                i = end + 1
+                continue
+        # inline code (`…`)
+        if text[i] == "`":
+            end = text.find("`", i + 1)
+            if end != -1:
+                nodes.append({
+                    "category": "md_code_inline",
+                    "text": text[i+1:end],
+                })
+                i = end + 1
+                continue
+        # plain text — accumulate until next special char
+        start = i
+        while i < n and text[i] not in "*`[!":
+            i += 1
+        if start == i:    # we matched a special-char prefix that didn't pair; consume it as text
+            i += 1
+        nodes.append({"category": "md_text_inline", "text": text[start:i]})
+    return nodes
+
+
+def _md_parse_blocks(lines: list[str], source_path: str,
+                     start_line_offset: int = 0) -> list[dict]:
+    """Parse a list of markdown lines into block-level Form nodes."""
+    blocks: list[dict] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        line_no = i + 1 + start_line_offset
+
+        # Blank line — skip
+        if not line.strip():
+            i += 1
+            continue
+
+        # Heading
+        m = _HEADING_RE.match(line)
+        if m:
+            blocks.append({
+                "category": "md_heading",
+                "level": len(m.group(1)),
+                "text": _md_inline(m.group(2)),
+                "source_attribution": _attr(source_path, line_no, line_no),
+            })
+            i += 1
+            continue
+
+        # Horizontal rule
+        if _HR_RE.match(line):
+            blocks.append({
+                "category": "md_horizontal_rule",
+                "marker": line.strip(),
+                "source_attribution": _attr(source_path, line_no, line_no),
+            })
+            i += 1
+            continue
+
+        # Cross-ref (body convention)
+        m = _CROSSREF_RE.match(line)
+        if m:
+            targets = [t.strip() for t in m.group(1).split(",")]
+            blocks.append({
+                "category": "md_crossref_block",
+                "targets": targets,
+                "source_attribution": _attr(source_path, line_no, line_no),
+            })
+            i += 1
+            continue
+
+        # Fenced code block
+        m = _FENCE_RE.match(line)
+        if m:
+            language = m.group(1) or None
+            start_line = line_no
+            i += 1
+            content_lines: list[str] = []
+            while i < len(lines) and not _FENCE_CLOSE_RE.match(lines[i]):
+                content_lines.append(lines[i])
+                i += 1
+            end_line = i + 1 + start_line_offset
+            if i < len(lines):
+                i += 1   # consume closing fence
+            blocks.append({
+                "category": "md_code_block",
+                "fence": "fenced",
+                "language": language,
+                "content": "\n".join(content_lines),
+                "source_attribution": _attr(source_path, start_line, end_line),
+            })
+            continue
+
+        # Blockquote
+        if _BLOCKQUOTE_RE.match(line):
+            start_line = line_no
+            inner: list[str] = []
+            while i < len(lines) and _BLOCKQUOTE_RE.match(lines[i]):
+                inner.append(_BLOCKQUOTE_RE.match(lines[i]).group(1))
+                i += 1
+            end_line = i + start_line_offset
+            blocks.append({
+                "category": "md_blockquote",
+                "blocks": _md_parse_blocks(inner, source_path, start_line - 1),
+                "source_attribution": _attr(source_path, start_line, end_line),
+            })
+            continue
+
+        # Unordered list
+        if _UL_RE.match(line):
+            start_line = line_no
+            items: list[dict] = []
+            while i < len(lines):
+                m = _UL_RE.match(lines[i])
+                if not m:
+                    break
+                items.append({
+                    "category": "md_list_item",
+                    "marker": m.group(2),
+                    "contents": [{
+                        "category": "md_paragraph",
+                        "inlines": _md_inline(m.group(3)),
+                    }],
+                    "source_attribution": _attr(source_path, i + 1 + start_line_offset,
+                                                i + 1 + start_line_offset),
+                })
+                i += 1
+            blocks.append({
+                "category": "md_list",
+                "ordered": False,
+                "tight": True,
+                "items": items,
+                "source_attribution": _attr(source_path, start_line, i + start_line_offset),
+            })
+            continue
+
+        # Ordered list
+        if _OL_RE.match(line):
+            start_line = line_no
+            items = []
+            while i < len(lines):
+                m = _OL_RE.match(lines[i])
+                if not m:
+                    break
+                items.append({
+                    "category": "md_list_item",
+                    "marker": f"{m.group(2)}.",
+                    "contents": [{
+                        "category": "md_paragraph",
+                        "inlines": _md_inline(m.group(3)),
+                    }],
+                    "source_attribution": _attr(source_path, i + 1 + start_line_offset,
+                                                i + 1 + start_line_offset),
+                })
+                i += 1
+            blocks.append({
+                "category": "md_list",
+                "ordered": True,
+                "tight": True,
+                "items": items,
+                "source_attribution": _attr(source_path, start_line, i + start_line_offset),
+            })
+            continue
+
+        # Paragraph — consume until blank line or next block-level start
+        start_line = line_no
+        para_lines = [line]
+        i += 1
+        while i < len(lines):
+            nxt = lines[i]
+            if not nxt.strip():
+                break
+            if (_HEADING_RE.match(nxt) or _HR_RE.match(nxt)
+                    or _FENCE_RE.match(nxt) or _UL_RE.match(nxt)
+                    or _OL_RE.match(nxt) or _BLOCKQUOTE_RE.match(nxt)
+                    or _CROSSREF_RE.match(nxt)):
+                break
+            para_lines.append(nxt)
+            i += 1
+        end_line = i + start_line_offset
+        blocks.append({
+            "category": "md_paragraph",
+            "inlines": _md_inline(" ".join(para_lines)),
+            "source_attribution": _attr(source_path, start_line, end_line),
+        })
+
+    return blocks
+
+
+def _convert_in_markdown(input_path: Path) -> dict:
+    text = input_path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+    source_path = str(input_path)
+
+    # Frontmatter detection
+    frontmatter = None
+    start_idx = 0
+    if lines and _FRONTMATTER_DELIM_RE.match(lines[0]):
+        for j in range(1, len(lines)):
+            if _FRONTMATTER_DELIM_RE.match(lines[j]):
+                raw = "\n".join(lines[1:j])
+                frontmatter = {
+                    "category": "md_frontmatter",
+                    "delimiter": "yaml",
+                    "raw_text": raw,
+                    "source_attribution": _attr(source_path, 1, j + 1),
+                }
+                start_idx = j + 1
+                break
+
+    blocks = _md_parse_blocks(lines[start_idx:], source_path, start_idx)
+
+    return {
+        "source_tongue": "markdown",
+        "source_path": source_path,
+        "tree": {
+            "category": "md_document",
+            "frontmatter": frontmatter,
+            "blocks": blocks,
+            "source_attribution": _attr(source_path, 1, len(lines)),
+        },
+    }
+
+
+def _md_emit_inlines(inlines: list[dict]) -> str:
+    out: list[str] = []
+    for n in inlines:
+        cat = n.get("category")
+        if cat == "md_text_inline":
+            out.append(n.get("text", ""))
+        elif cat == "md_emphasis_bold":
+            out.append("**" + _md_emit_inlines(n.get("inlines", [])) + "**")
+        elif cat == "md_emphasis_italic":
+            out.append("*" + _md_emit_inlines(n.get("inlines", [])) + "*")
+        elif cat == "md_code_inline":
+            out.append("`" + n.get("text", "") + "`")
+        elif cat == "md_link":
+            out.append("[" + _md_emit_inlines(n.get("text", [])) + "](" + n.get("url", "") + ")")
+        elif cat == "md_image":
+            out.append("![" + n.get("alt", "") + "](" + n.get("url", "") + ")")
+    return "".join(out)
+
+
+def _md_emit_block(block: dict) -> str:
+    cat = block.get("category")
+    if cat == "md_heading":
+        return "#" * block.get("level", 1) + " " + _md_emit_inlines(block.get("text", [])) + "\n"
+    if cat == "md_paragraph":
+        return _md_emit_inlines(block.get("inlines", [])) + "\n"
+    if cat == "md_horizontal_rule":
+        return block.get("marker", "---") + "\n"
+    if cat == "md_code_block":
+        lang = block.get("language") or ""
+        return f"```{lang}\n{block.get('content', '')}\n```\n"
+    if cat == "md_blockquote":
+        inner = "".join(_md_emit_block(b) for b in block.get("blocks", []))
+        return "\n".join("> " + ln for ln in inner.rstrip("\n").split("\n")) + "\n"
+    if cat == "md_list":
+        out: list[str] = []
+        for idx, item in enumerate(block.get("items", []), 1):
+            marker = item.get("marker", "-")
+            if block.get("ordered"):
+                marker = f"{idx}."
+            body = "".join(_md_emit_block(c) for c in item.get("contents", [])).rstrip("\n")
+            out.append(f"{marker} {body}")
+        return "\n".join(out) + "\n"
+    if cat == "md_crossref_block":
+        return "→ " + ", ".join(block.get("targets", [])) + "\n"
+    return ""
+
+
+def _convert_out_markdown(form_object: dict) -> str:
+    tree = form_object.get("tree", form_object)
+    if tree.get("category") != "md_document":
+        return ""
+    parts: list[str] = []
+    fm = tree.get("frontmatter")
+    if fm is not None:
+        parts.append("---\n" + fm.get("raw_text", "") + "\n---\n")
+    for b in tree.get("blocks", []):
+        parts.append(_md_emit_block(b))
+    return "\n".join(parts)
+
+
 def cmd_convert(args: argparse.Namespace) -> int:
     if args.direction == "in":
         if args.tongue == "json":
             form_obj = _convert_in_json(Path(args.input))
             print(json.dumps(form_obj, indent=2))
             return 0
+        if args.tongue in ("md", "markdown"):
+            form_obj = _convert_in_markdown(Path(args.input))
+            print(json.dumps(form_obj, indent=2))
+            return 0
         _die(
             f"tongue '{args.tongue}' not yet wired for `convert in`. "
-            f"Available: json. (Other Language cells are named in "
+            f"Available: json, markdown. (Other Language cells are named in "
             f"docs/coherence-substrate/*-grammar.form; wiring follows.)"
         )
     if args.direction == "out":
@@ -254,6 +632,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
             form_obj = json.load(f)
         if args.tongue == "json":
             print(_convert_out_json(form_obj))
+            return 0
+        if args.tongue in ("md", "markdown"):
+            print(_convert_out_markdown(form_obj))
             return 0
         _die(f"tongue '{args.tongue}' not yet wired for `convert out`.")
     _die(f"unknown convert direction: {args.direction}")
