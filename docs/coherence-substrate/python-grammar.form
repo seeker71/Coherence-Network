@@ -423,12 +423,34 @@ defn python_lang = language_cell_shape {
 #
 # GAP-PY1: `ast.parse` / `ast.unparse` are host intrinsics carrying
 #          the CPython AST. The Form recipe names the operation;
-#          CPython's mature AST module does the actual parse. Same
-#          shape as substrate-kernel.form's GAP-K1 (storage I/O
-#          carrier-bound) and png-grammar.form's GAP-P3 (DEFLATE
-#          stays in libz). Future: a Form-native Python parser
-#          composed from primitive recipes — substantial work, low
-#          priority while CPython's parser is correct and free.
+#          CPython's mature AST module does the actual parse — for
+#          today. **The destination is BMF-style grammar**, per
+#          lc-parsers-as-recipes: each Python construct registered as
+#          a `(pattern, semantic_action)` Form Rule via grammar.py's
+#          `register_form_rule`. Bjorg's *BMF — Backtracking Model
+#          Form* (2000) treated rules as data, not code; the
+#          substrate already carries the seed
+#          (api/app/services/substrate/grammar.py — Rule cell-domain,
+#          register_form_rule, list_form_rules) plus the Choice.CHOOSE/
+#          FAIL/STOP backtracking primitives (form-engine.form @1.2.20.*).
+#          Closing GAP-PY1 means walking Python's grammar into the
+#          substrate one construct at a time:
+#            - `import os` → Rule(Sequence([Literal("KW","import"),
+#                                            Capture("module","dotted_name")]),
+#                                  action=@recipe(build_py_import))
+#            - `def name(args): body` → Rule(Sequence([Literal("KW","def"),
+#                                                       Capture("name","ident"),
+#                                                       Capture("args","arg_list"),
+#                                                       Literal("OP",":"),
+#                                                       Capture("body","block")]),
+#                                              action=@recipe(build_py_function_def))
+#          As rules land in the grammar cell-domain, the AST delegate
+#          shrinks. The self-hosting boundary moves; the bootstrap
+#          becomes vestigial. Same path the body has walked for every
+#          other host intrinsic — Newton sqrt instead of math.sqrt,
+#          Taylor exp instead of math.exp, form_native.cosine wired
+#          as runtime default. AST today; BMF tomorrow; one rule
+#          per breath.
 #
 # GAP-PY2: Comments + non-token whitespace are erased by ast.parse.
 #          ast.unparse synthesizes idiomatic whitespace on emit; the
