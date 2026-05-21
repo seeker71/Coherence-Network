@@ -82,10 +82,14 @@ def substrate_session():
         find_cells_compatible_with,
         find_equivalent_cells,
     )
-    from app.services.substrate.kernel import (
-        find_downstream_cells,
-        lookup_cell,
-    )
+    from app.services.substrate.kernel import lookup_cell
+    # find_downstream_cells ships in PR #1748; gracefully fall back
+    # when this script runs before that merge.
+    try:
+        from app.services.substrate.kernel import find_downstream_cells
+    except ImportError:
+        def find_downstream_cells(_session, _cell_id):  # type: ignore
+            return []
     from app.services.substrate.orm import (
         SubstrateNamedCellORM,
         SubstrateNodeORM,

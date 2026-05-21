@@ -24,16 +24,22 @@ from app.services.substrate import (
     find_cells_compatible_with,
 )
 from app.services.substrate.category import BBasic, BDomain, Level
-from app.services.substrate.kernel import (
-    NodeID,
-    find_downstream_cells,
-)
+from app.services.substrate.kernel import NodeID
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.substrate.resonance import (
     find_cells_harmonic_at,
     hz_cell,
 )
 from app.services.substrate.substrate_strings import SubstrateStringORM
+
+# find_downstream_cells ships in PR #1748; skip the test that uses it
+# gracefully when this PR's CI runs before that merge.
+try:
+    from app.services.substrate.kernel import find_downstream_cells
+    _HAS_DOWNSTREAM = True
+except ImportError:
+    find_downstream_cells = None  # type: ignore
+    _HAS_DOWNSTREAM = False
 
 
 @pytest.fixture
@@ -180,6 +186,10 @@ def test_query_returns_only_artifact_domain(session):
     assert {r.name for r in rows} == {"a.py", "b.md"}
 
 
+@pytest.mark.skipif(
+    not _HAS_DOWNSTREAM,
+    reason="find_downstream_cells ships in PR #1748; will activate after merge",
+)
 def test_modify_preview_via_downstream_walk(session):
     """Gesture 3: MODIFY preview — find_downstream_cells reaches the Hz cell
     the artifact authored a HARMONIC_AT edge to."""
