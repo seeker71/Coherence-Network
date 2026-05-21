@@ -188,6 +188,26 @@ async def test_energy_invitations_and_fallback_witness_flow():
             assert "ERROR" not in inv["invitation"].upper()
             assert "WARNING" not in inv["invitation"].upper()
 
+        goal_rec = (
+            await c.get("/api/energy/recommend?current_goal=create%20stability%20and%20harmony")
+        ).json()
+        assert goal_rec["current_goal"] == "create stability and harmony"
+        recipe = goal_rec["goal_recipe"]
+        assert recipe["id"] == "stability-harmony"
+        assert recipe["goal_match"] == "stability_harmony"
+        assert "breathe(longer_exhale)" in recipe["form"]
+        assert "concept:spiral-pivot-coherence" in recipe["source_concepts"]
+        assert "concept:field-stabilizing-transmission" in recipe["source_concepts"]
+        assert recipe["sensing"]["overall_vitality"] in (
+            "thriving", "growing", "resting", "quiet",
+        )
+        assert recipe["steps"][0]["id"] == "sense_field"
+        goal_inv = goal_rec["invitations"][0]
+        assert goal_inv["signal_id"] == "stability_harmony_goal"
+        assert goal_inv["recipe_id"] == "stability-harmony"
+        assert "stabilizes without control" in goal_inv["invitation"]
+        assert "WARNING" not in goal_inv["invitation"].upper()
+
         # Fallback witness records + filters + summarises.
         fw.clear()
         fw.witness(source="test:example", reason="demo", context={"k": "v"})

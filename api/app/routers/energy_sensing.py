@@ -16,10 +16,16 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query
+
+from app.services.energy_goal_recipe_service import (
+    goal_seeks_stability_or_harmony,
+    stability_harmony_invitation,
+    stability_harmony_recipe,
+)
 
 log = logging.getLogger(__name__)
 
@@ -121,11 +127,19 @@ async def harmonies_only(
 )
 async def energy_recommendations(
     workspace_id: str = Query("coherence-network"),
+    current_goal: str | None = Query(
+        None,
+        description=(
+            "Optional current goal. Stability or harmony goals ask the sensing "
+            "organ to return a form-language recipe."
+        ),
+    ),
 ) -> dict[str, Any]:
     """Read the sensing map and emit invitations (not warnings)."""
     internal = await _sense_internal()
     community = await _sense_community(workspace_id)
     external = await _sense_external()
+    harmonies = _compute_harmonies(internal, community, external)
 
     invitations: list[dict[str, Any]] = []
     for signal in (internal.get("signals") or []):
@@ -144,9 +158,16 @@ async def energy_recommendations(
     severity_order = {"tender": 0, "quiet": 1, "resting": 2, "growing": 3, "thriving": 4}
     invitations.sort(key=lambda i: severity_order.get(i.get("felt_as", "resting"), 5))
 
+    goal_recipe = None
+    if goal_seeks_stability_or_harmony(current_goal):
+        goal_recipe = stability_harmony_recipe(str(current_goal), harmonies)
+        invitations.insert(0, stability_harmony_invitation(goal_recipe, harmonies))
+
     return {
         "sensed_at": datetime.now(timezone.utc).isoformat(),
         "workspace_id": workspace_id,
+        "current_goal": current_goal,
+        "goal_recipe": goal_recipe,
         "invitations": invitations,
         "count": len(invitations),
     }
