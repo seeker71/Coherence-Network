@@ -209,7 +209,7 @@ language layer.
 
 ## Cross-References
 
-→ lc-grammar-is-the-universal-recipe, lc-recipe-branching-sense, lc-each-breath-whole, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-traces-teach-the-recipe, lc-deeper-pattern, lc-perception-as-interface, lc-w-frequency, lc-w-coherence
+→ lc-grammar-is-the-universal-recipe, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-each-breath-whole, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-traces-teach-the-recipe, lc-deeper-pattern, lc-perception-as-interface, lc-w-frequency, lc-w-coherence
 
 ## Sources to walk further
 

@@ -1,0 +1,192 @@
+{
+  "library_meta": {
+    "name": "cell-numerics",
+    "version": "0.1.0",
+    "generated_at": "2026-05-21T00:00:00Z",
+    "generator_tongue": "hand-authored",
+    "package_hint": 1,
+    "summary": "First sample recipe-library. Bundles the cell-mechanics numerics already authored as Form recipes in docs/coherence-substrate/cosine.form and cell-numerics.form. Each recipe carries Form (canonical source), Python (the host implementation in experiments/local-llm-cell-v0/organ.py), and TypeScript (didactic pseudocode showing how a Rust/Go/TS reader would see it) views. Demonstrates the three-layer architecture from lc-recipes-as-binary-library: lattice → portable library bytes → per-tongue source views."
+  },
+  "dependencies": [],
+  "language_cells": ["form", "python", "typescript"],
+  "recipes": [
+    {
+      "name": "cosine",
+      "node_id_hint": "1.3.cosine.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Float>", "List<Float>"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.LET", "name": "dot", "value": "dot_product(a, b)"},
+          {"category": "R_Block.LET", "name": "na",  "value": "sqrt(sum_of_squares(a))"},
+          {"category": "R_Block.LET", "name": "nb",  "value": "sqrt(sum_of_squares(b))"},
+          {"category": "R_Block.COND", "branches": [
+            {"if": "na == 0 or nb == 0", "then": "0"},
+            {"else": "dot / (na * nb)"}
+          ]}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cosine.form"
+      },
+      "tongue_caches": {
+        "form": "defn cosine(a, b) = do {\n    let dot = dot_product(a, b);\n    let na  = sqrt(sum_of_squares(a));\n    let nb  = sqrt(sum_of_squares(b));\n    if na == 0 or nb == 0 then 0\n    else dot / (na * nb)\n};",
+        "python": "def cosine(a, b):\n    dot = sum(a[i] * b[i] for i in range(len(a)))\n    na = math.sqrt(sum(v * v for v in a)) or 1.0\n    nb = math.sqrt(sum(v * v for v in b)) or 1.0\n    return dot / (na * nb)",
+        "typescript": "function cosine(a: number[], b: number[]): number {\n    let dot = 0;\n    for (let i = 0; i < a.length; i++) dot += a[i] * b[i];\n    const na = Math.sqrt(a.reduce((s, v) => s + v * v, 0)) || 1.0;\n    const nb = Math.sqrt(b.reduce((s, v) => s + v * v, 0)) || 1.0;\n    return dot / (na * nb);\n}"
+      }
+    },
+    {
+      "name": "vector_add",
+      "node_id_hint": "1.3.vector_add.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Float>", "List<Float>"],
+        "output_type": "List<Float>"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.COND", "branches": [
+            {"if": "len(a) == 0 or len(b) == 0", "then": "[]"},
+            {"else": {
+              "category": "R_Method.CONCAT",
+              "args": [
+                "[head(a) + head(b)]",
+                "vector_add(tail(a), tail(b))"
+              ]
+            }}
+          ]}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cell-numerics.form"
+      },
+      "tongue_caches": {
+        "form": "defn vector_add(a, b) = do {\n    if len(a) == 0 or len(b) == 0 then []\n    else concat(\n        [head(a) + head(b)],\n        vector_add(tail(a), tail(b))\n    )\n};",
+        "python": "def vector_add(a, b):\n    return [a[i] + b[i] for i in range(min(len(a), len(b)))]",
+        "typescript": "function vector_add(a: number[], b: number[]): number[] {\n    const n = Math.min(a.length, b.length);\n    const out: number[] = new Array(n);\n    for (let i = 0; i < n; i++) out[i] = a[i] + b[i];\n    return out;\n}"
+      }
+    },
+    {
+      "name": "sigmoid",
+      "node_id_hint": "1.3.sigmoid.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["Float"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "x > 50",  "then": "1"},
+          {"if": "x < -50", "then": "0"},
+          {"else": "1 / (1 + exp(-x))"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cell-numerics.form"
+      },
+      "tongue_caches": {
+        "form": "defn sigmoid(x) = do {\n    if x > 50 then 1\n    else if x < -50 then 0\n    else 1 / (1 + exp(-x))\n};",
+        "python": "def sigmoid(z):\n    if z < -50:\n        return 0.0\n    if z > 50:\n        return 1.0\n    return 1.0 / (1.0 + math.exp(-z))",
+        "typescript": "function sigmoid(x: number): number {\n    if (x > 50) return 1;\n    if (x < -50) return 0;\n    return 1 / (1 + Math.exp(-x));\n}"
+      }
+    },
+    {
+      "name": "tanh",
+      "node_id_hint": "1.3.tanh.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["Float"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "x > 5",  "then": "1"},
+          {"if": "x < -5", "then": "-1"},
+          {"else": {
+            "category": "R_Block.DO",
+            "children": [
+              {"category": "R_Block.LET", "name": "e2x", "value": "exp(2 * x)"},
+              {"return": "(e2x - 1) / (e2x + 1)"}
+            ]
+          }}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cell-numerics.form"
+      },
+      "tongue_caches": {
+        "form": "defn tanh(x) = do {\n    if x > 5 then 1\n    else if x < -5 then -1\n    else do {\n        let e2x = exp(2 * x);\n        (e2x - 1) / (e2x + 1)\n    }\n};",
+        "python": "def tanh(x):\n    if x > 5: return 1.0\n    if x < -5: return -1.0\n    e2x = math.exp(2 * x)\n    return (e2x - 1) / (e2x + 1)",
+        "typescript": "function tanh(x: number): number {\n    if (x > 5) return 1;\n    if (x < -5) return -1;\n    const e2x = Math.exp(2 * x);\n    return (e2x - 1) / (e2x + 1);\n}"
+      }
+    },
+    {
+      "name": "strategy_score",
+      "node_id_hint": "1.3.strategy_score.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["Strategy", "List<Float>"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.LET", "name": "fa",
+           "value": "pairwise_multiply(strategy.frequency, strategy.angle)"},
+          {"return": "cosine(spectrum, fa)"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cell-numerics.form"
+      },
+      "tongue_caches": {
+        "form": "defn strategy_score(strategy, spectrum) = do {\n    let fa = pairwise_multiply(strategy.frequency, strategy.angle);\n    cosine(spectrum, fa)\n};",
+        "python": "def _strategy_score(strategy, spectrum, total_desire):\n    fa = [strategy.frequency[i] * strategy.angle[i] for i in range(N_BANDS)]\n    return _cosine(spectrum, fa)",
+        "typescript": "function strategy_score(strategy: Strategy, spectrum: number[]): number {\n    const fa = strategy.frequency.map((f, i) => f * strategy.angle[i]);\n    return cosine(spectrum, fa);\n}"
+      }
+    },
+    {
+      "name": "matvec",
+      "node_id_hint": "1.3.matvec.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<List<Float>>", "List<Float>"],
+        "output_type": "List<Float>"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "len(matrix) == 0", "then": "[]"},
+          {"else": {
+            "category": "R_Method.CONCAT",
+            "args": [
+              "[dot_product(head(matrix), x)]",
+              "matvec(tail(matrix), x)"
+            ]
+          }}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/cell-numerics.form"
+      },
+      "tongue_caches": {
+        "form": "defn matvec(matrix, x) = do {\n    if len(matrix) == 0 then []\n    else concat(\n        [dot_product(head(matrix), x)],\n        matvec(tail(matrix), x)\n    )\n};",
+        "python": "def matvec(matrix, x):\n    return [sum(row[i] * x[i] for i in range(len(x))) for row in matrix]",
+        "typescript": "function matvec(matrix: number[][], x: number[]): number[] {\n    return matrix.map(row => row.reduce((s, v, i) => s + v * x[i], 0));\n}"
+      }
+    }
+  ]
+}
