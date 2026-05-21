@@ -46,6 +46,8 @@
             "docs/vision-kb/resources/orion-architect-sovereign-ai-2026-05-06.md",
             "https://www.youtube.com/watch?v=jn7IYfn3Aa8",
             "docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+            "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+            "docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md",
             "web/content/people/urs/en.tsx"
           ],
           "not_special_case_ui": true
@@ -352,6 +354,100 @@
         "extraction_method": "youtube_caption_digest",
         "ingestion_policy": "summary_and_extracted_concepts_only"
       }
+    },
+    {
+      "kind": "manual",
+      "id": "interested-person:loraine-jezak",
+      "type": "interested-person",
+      "name": "Loraine Jezak",
+      "description": "Sacred Britain speaker whose Geometry of Stability talk frames relational survival adaptations as intelligent scaffolding, then maps collapse, recognition, breath, coherence, and non-controlling transmission as a path from reactive identity toward field-stabilizing presence.",
+      "properties": {
+        "domains": ["relational-coherence", "nervous-system", "geometry", "embodied-lineage"],
+        "keywords": ["loraine-jezak", "geometry-of-stability", "relational-scaffolding", "coherence", "breath-pivot"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "source_requested_profile_context_with_claim_boundaries",
+        "claim_boundary": "Relationship, nervous-system, gender-archetype, and dimensional language is stored as source-attributed teaching material, not as universal clinical or biological fact."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "type": "artifact",
+      "name": "Loraine Jezak | Geometry of Stability | Sacred Britain Expedition",
+      "description": "YouTube video on the Robert Edward Grant channel featuring Loraine Jezak on relational scaffolding, nervous-system spirals, recognition, breath, coherence as stabilizing field condition, and expansion beyond static identity models.",
+      "properties": {
+        "artifact_kind": "youtube_video",
+        "canonical_url": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "short_url": "https://youtu.be/PPDK8N2FFMw",
+        "channel": "Robert Edward Grant",
+        "featuring": "Loraine Jezak",
+        "upload_date": "2026-05-20",
+        "duration_seconds": 3139,
+        "caption_sha256": "6826d908c8c45972590c69d0648b44c8238a16b4746395e322cd25b1e7e0a200",
+        "domains": ["relational-coherence", "nervous-system", "breathwork", "field-sensing", "new-earth"],
+        "keywords": ["relational-scaffolding", "spiral", "recognition", "breath-pivot", "scalar-transmission", "expansion-not-ladder"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only",
+        "claim_boundary": "The ingest stores summary, hash, and extracted concepts only; full captions remain outside the repository."
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:relational-scaffolding",
+      "type": "concept",
+      "name": "Relational Scaffolding",
+      "description": "A source-attributed concept from Loraine Jezak's talk: early emotional environments shape intelligent survival adaptations around the nervous system, and those adaptations can later be recognized without treating the person as broken.",
+      "properties": {
+        "domains": ["relationships", "nervous-system", "pattern-recognition"],
+        "keywords": ["scaffolding", "preverbal-foundation", "survival-adaptation", "not-broken-patterned"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:spiral-pivot-coherence",
+      "type": "concept",
+      "name": "Spiral Pivot Coherence",
+      "description": "The moment a reactive relational spiral becomes visible while it is happening, breath can widen perception enough for recognition, choice, and coherence to replace defending, correcting, withdrawing, or counterattacking.",
+      "properties": {
+        "domains": ["coherence", "breathwork", "relationships", "choice"],
+        "keywords": ["spiral", "recognition", "pause", "long-exhale", "choice", "coherence"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:field-stabilizing-transmission",
+      "type": "concept",
+      "name": "Field-Stabilizing Transmission",
+      "description": "A relational state where one person's steadiness changes the conditions in which tension occurs without controlling, convincing, or fixing the other person; stability becomes transmissive through presence.",
+      "properties": {
+        "domains": ["field-sensing", "coherence", "relationships", "transmission"],
+        "keywords": ["transmission", "stability", "entrainment", "no-force", "scalar-field", "presence"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "concept:expansion-not-ladder",
+      "type": "concept",
+      "name": "Expansion Not Ladder",
+      "description": "A non-hierarchical growth frame from the talk: old patterns still return, but each return can widen capacity, loosen static identity, and move from self-improvement hierarchy toward moment-by-moment expansion.",
+      "properties": {
+        "domains": ["growth", "identity", "coherence", "expansion"],
+        "keywords": ["not-a-ladder", "expansion", "identity", "moment-awareness", "capacity"],
+        "source_artifact_id": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "extraction_method": "youtube_caption_digest",
+        "ingestion_policy": "summary_and_extracted_concepts_only"
+      }
     }
   ],
   "gatherings": [],
@@ -652,6 +748,123 @@
       "created_by": "profile-contribution-manifest",
       "properties": {
         "source_document": "https://www.youtube.com/watch?v=jn7IYfn3Aa8"
+      }
+    },
+    {
+      "from_id": "contributor:seeker71",
+      "to_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "type": "inspires",
+      "strength": 0.82,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "source-request"
+      }
+    },
+    {
+      "from_id": "interested-person:loraine-jezak",
+      "to_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "speaker"
+      }
+    },
+    {
+      "from_id": "interested-person:robert-edward-grant",
+      "to_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "type": "inspires",
+      "strength": 0.74,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "publisher-host-context"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "to_id": "concept:relational-scaffolding",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "to_id": "concept:spiral-pivot-coherence",
+      "type": "inspires",
+      "strength": 0.9,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "to_id": "concept:field-stabilizing-transmission",
+      "type": "inspires",
+      "strength": 0.86,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "artifact:youtube-geometry-of-stability-loraine-jezak-sacred-britain",
+      "to_id": "concept:expansion-not-ladder",
+      "type": "inspires",
+      "strength": 0.8,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw",
+        "attribution_role": "extracted-concept"
+      }
+    },
+    {
+      "from_id": "concept:relational-scaffolding",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.78,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw"
+      }
+    },
+    {
+      "from_id": "concept:spiral-pivot-coherence",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.82,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw"
+      }
+    },
+    {
+      "from_id": "concept:field-stabilizing-transmission",
+      "to_id": "concept:embodied-lineage-as-source",
+      "type": "extends",
+      "strength": 0.8,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw"
+      }
+    },
+    {
+      "from_id": "concept:expansion-not-ladder",
+      "to_id": "concept:sacred-imagination-as-perception",
+      "type": "extends",
+      "strength": 0.7,
+      "created_by": "profile-contribution-manifest",
+      "properties": {
+        "source_document": "https://www.youtube.com/watch?v=PPDK8N2FFMw"
       }
     }
   ]
