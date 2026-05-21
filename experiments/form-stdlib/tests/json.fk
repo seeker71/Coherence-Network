@@ -1,0 +1,30 @@
+; tests/json.fk — exercise JSON parser end-to-end
+;
+; Loaded via:
+;   bin-go core.fk cell-trace.fk grammars/json.fk tests/json.fk
+
+(do
+    (let sample-json "{\"name\": \"Coherence Network\", \"version\": 1, \"layers\": [\"substrate\", \"kernel\", \"engine\"]}")
+
+    (let root (parse-json "config.json" sample-json))
+
+    ;; --- probe 1: root is an object (has pair children) -----------
+    (let kids (node_children root))
+    (let probe-1 (len kids))                              ; → 3 (name, version, layers)
+
+    ;; --- probe 2: root has source attribution ---------------------
+    (let probe-2 (str_len (cell-source root)))            ; → length of "config.json:1:1" = 15
+
+    ;; --- probe 3: first pair has source attribution ---------------
+    (let first-pair (head kids))
+    (let probe-3 (str_len (cell-source first-pair)))      ; → 15 (same line)
+
+    ;; --- probe 4: nested array parses correctly -------------------
+    (let third-pair (head (tail (tail kids))))
+    (let third-pair-kids (node_children third-pair))
+    (let layers-array (head (tail third-pair-kids)))      ; the value side of the pair
+    (let layer-kids (node_children layers-array))
+    (let probe-4 (len layer-kids))                        ; → 3 (substrate, kernel, engine)
+
+    ;; sum: 3 + 15 + 15 + 3 = 36
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))

@@ -1,0 +1,225 @@
+; grammars/json.fk — JSON parser + emit in pure Form
+;
+; JSON's structural elements map cleanly to universal data shapes:
+;   object → B_Dictionary recipe with (key, value) children
+;   array  → B_List recipe with element children
+;   string → trivial string
+;   number → trivial int (decimals to follow when float-trivial lands)
+;   bool   → trivial bool
+;   null   → trivial null
+;
+; The tokenizer is character-based (JSON has no whitespace significance
+; beyond separating tokens). Tokens: LBRACE, RBRACE, LBRACK, RBRACK,
+; COLON, COMMA, STRING (quoted), NUMBER, TRUE, FALSE, NULL.
+;
+; Each emitted Recipe carries source attribution via intern_node_at so
+; cell-trace can walk a JSON-derived cell back to the line/col where
+; its structure was authored.
+
+(do
+    ;; --- universal data category NodeIDs --------------------------
+    ;; Reuse the kernel's existing BContainer + RType arms where
+    ;; possible; JSON-specific composites use the doc-structure band
+    ;; (type=99) until promoted to universal-shapes.form.
+
+    (let JSON-OBJECT (make_nodeid 1 2 99 10))   ; map: list of (key, value) pairs
+    (let JSON-ARRAY  (make_nodeid 1 2 99 11))   ; sequence of values
+    (let JSON-PAIR   (make_nodeid 1 2 99 12))   ; (key-string, value)
+    (let JSON-NULL   (make_nodeid 1 2 99 13))   ; null literal
+
+    ;; --- char-based tokenizer -------------------------------------
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn is-ws-cp (cp)
+        (or (eq cp 32)
+            (or (eq cp 9)
+                (or (eq cp 10) (eq cp 13)))))
+
+    (defn is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
+    (defn is-digit-or-minus-cp (cp)
+        (or (is-digit-cp cp) (eq cp 45)))   ; '-' = 45
+
+    (defn skip-ws (s i)
+        (if (eq i (str_len s)) i
+            (if (is-ws-cp (ord (char_at s i)))
+                (skip-ws s (add i 1))
+                i)))
+
+    (defn count-line (s i target-i line)
+        ;; Walks from 0 to target-i counting newlines for line attribution.
+        (if (ge i target-i) line
+            (if (eq (ord (char_at s i)) 10)
+                (count-line s (add i 1) target-i (add line 1))
+                (count-line s (add i 1) target-i line))))
+
+    ;; tok = (list kind value start-i)
+    (defn tok-kind  (t) (head t))
+    (defn tok-val   (t) (head (tail t)))
+    (defn tok-start (t) (head (tail (tail t))))
+
+    (defn mk-tok (k v i) (list k v i))
+
+    (defn next-token (s i)
+        (do
+            (let i (skip-ws s i))
+            (if (eq i (str_len s))
+                (mk-tok "EOF" "" i)
+                (do
+                    (let c (char_at s i))
+                    (let cp (ord c))
+                    (if (eq cp 123) (mk-tok "LBRACE" "{" i)
+                    (if (eq cp 125) (mk-tok "RBRACE" "}" i)
+                    (if (eq cp 91)  (mk-tok "LBRACK" "[" i)
+                    (if (eq cp 93)  (mk-tok "RBRACK" "]" i)
+                    (if (eq cp 58)  (mk-tok "COLON"  ":" i)
+                    (if (eq cp 44)  (mk-tok "COMMA"  "," i)
+                    (if (eq cp 34)  (scan-string s i)
+                    (if (is-digit-or-minus-cp cp) (scan-number s i)
+                    (if (eq cp 116) (scan-literal s i "true" "TRUE")
+                    (if (eq cp 102) (scan-literal s i "false" "FALSE")
+                    (if (eq cp 110) (scan-literal s i "null" "NULL")
+                        (mk-tok "ERROR" c i))))))))))))))))
+
+    (defn scan-string (s i)
+        ;; consume from i+1 until next unescaped quote; return (STRING content next-i)
+        (scan-string-loop s (add i 1) i))
+
+    (defn scan-string-loop (s j start)
+        (if (eq j (str_len s))
+            (mk-tok "STRING" (substr s (add start 1) j) start)
+            (if (eq (ord (char_at s j)) 34)   ; closing quote
+                (mk-tok "STRING" (substr s (add start 1) j) start)
+                (scan-string-loop s (add j 1) start))))
+
+    (defn scan-string-end-pos (s i)
+        ;; Returns position AFTER the closing quote.
+        (scan-string-end-loop s (add i 1)))
+
+    (defn scan-string-end-loop (s j)
+        (if (eq j (str_len s)) j
+            (if (eq (ord (char_at s j)) 34) (add j 1)
+                (scan-string-end-loop s (add j 1)))))
+
+    (defn scan-number (s i)
+        (mk-tok "NUMBER" (substr s i (scan-number-end s i)) i))
+
+    (defn scan-number-end (s i)
+        ;; Walks digits/minus/dot until non-numeric.
+        (if (eq i (str_len s)) i
+            (do
+                (let cp (ord (char_at s i)))
+                (if (or (is-digit-cp cp) (or (eq cp 45) (eq cp 46)))
+                    (scan-number-end s (add i 1))
+                    i))))
+
+    (defn scan-literal (s i word kind)
+        ;; Match exact word at position i.
+        (mk-tok kind word i))
+
+    (defn token-end (s tok)
+        ;; Compute the position AFTER a token. Used to advance the stream.
+        (do
+            (let k (tok-kind tok))
+            (let i (tok-start tok))
+            (if (str_eq k "STRING")  (scan-string-end-pos s i)
+            (if (str_eq k "NUMBER")  (scan-number-end s i)
+            (if (str_eq k "TRUE")    (add i 4)
+            (if (str_eq k "FALSE")   (add i 5)
+            (if (str_eq k "NULL")    (add i 4)
+            (if (str_eq k "EOF")     i
+                (add i 1)))))))))   ; single-char tokens
+
+    ;; --- recursive descent ----------------------------------------
+    ;; Each parse-* returns (recipe, next-pos). Source path threads
+    ;; through for attribution.
+
+    (defn mk-pair-r (r p) (list r p))
+    (defn pair-r (p) (head p))
+    (defn pair-pos (p) (head (tail p)))
+
+    (defn parse-value (s i source-path)
+        (do
+            (let tok (next-token s i))
+            (let kind (tok-kind tok))
+            (if (str_eq kind "STRING")
+                (mk-pair-r (intern_trivial_string (tok-val tok)) (token-end s tok))
+            (if (str_eq kind "NUMBER")
+                (mk-pair-r (intern_trivial_int (str_to_int (tok-val tok))) (token-end s tok))
+            (if (str_eq kind "TRUE")
+                (mk-pair-r (intern_trivial_int 1) (token-end s tok))
+            (if (str_eq kind "FALSE")
+                (mk-pair-r (intern_trivial_int 0) (token-end s tok))
+            (if (str_eq kind "NULL")
+                (mk-pair-r (intern_node_at JSON-NULL (empty) source-path
+                                            (count-line s 0 (tok-start tok) 1) 1)
+                            (token-end s tok))
+            (if (str_eq kind "LBRACE")
+                (parse-object s (token-end s tok) source-path (tok-start tok))
+            (if (str_eq kind "LBRACK")
+                (parse-array s (token-end s tok) source-path (tok-start tok))
+                (mk-pair-r (intern_trivial_int 0) (add i 1)))))))))))
+
+    (defn parse-array (s i source-path start-pos)
+        (do
+            (let line-no (count-line s 0 start-pos 1))
+            (let tok (next-token s i))
+            (if (str_eq (tok-kind tok) "RBRACK")
+                (mk-pair-r (intern_node_at JSON-ARRAY (empty) source-path line-no 1)
+                           (token-end s tok))
+                (parse-array-elements s i source-path line-no (empty)))))
+
+    (defn parse-array-elements (s i source-path line-no acc)
+        (do
+            (let pr (parse-value s i source-path))
+            (let acc2 (cons (pair-r pr) acc))
+            (let after (pair-pos pr))
+            (let tok (next-token s after))
+            (if (str_eq (tok-kind tok) "COMMA")
+                (parse-array-elements s (token-end s tok) source-path line-no acc2)
+                (if (str_eq (tok-kind tok) "RBRACK")
+                    (mk-pair-r (intern_node_at JSON-ARRAY (reverse-acc acc2)
+                                                source-path line-no 1)
+                                (token-end s tok))
+                    (mk-pair-r (intern_node_at JSON-ARRAY (reverse-acc acc2)
+                                                source-path line-no 1)
+                                after)))))
+
+    (defn parse-object (s i source-path start-pos)
+        (do
+            (let line-no (count-line s 0 start-pos 1))
+            (let tok (next-token s i))
+            (if (str_eq (tok-kind tok) "RBRACE")
+                (mk-pair-r (intern_node_at JSON-OBJECT (empty) source-path line-no 1)
+                           (token-end s tok))
+                (parse-object-pairs s i source-path line-no (empty)))))
+
+    (defn parse-object-pairs (s i source-path line-no acc)
+        (do
+            (let key-tok (next-token s i))
+            (let key (intern_trivial_string (tok-val key-tok)))
+            (let after-key (token-end s key-tok))
+            (let colon (next-token s after-key))
+            (let after-colon (token-end s colon))
+            (let val-pr (parse-value s after-colon source-path))
+            (let val (pair-r val-pr))
+            (let after-val (pair-pos val-pr))
+            (let pair (intern_node_at JSON-PAIR (list key val) source-path
+                                       (count-line s 0 (tok-start key-tok) 1) 1))
+            (let acc2 (cons pair acc))
+            (let next-tok (next-token s after-val))
+            (if (str_eq (tok-kind next-tok) "COMMA")
+                (parse-object-pairs s (token-end s next-tok) source-path line-no acc2)
+                (mk-pair-r (intern_node_at JSON-OBJECT (reverse-acc acc2)
+                                            source-path line-no 1)
+                            (token-end s next-tok)))))
+
+    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+    (defn rev-step (acc x) (cons x acc))
+
+    ;; --- top-level entry ------------------------------------------
+    (defn parse-json (source-path text)
+        (pair-r (parse-value text 0 source-path)))
+)
