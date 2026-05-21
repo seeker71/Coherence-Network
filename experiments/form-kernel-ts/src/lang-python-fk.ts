@@ -173,6 +173,31 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       return parts.length === 0 ? "(list)" : `(list ${parts.join(" ")})`;
     }
 
+    // ── assignment ─────────────────────────────────────────────
+    // Python `x = expr` compiles to kernel `(let x expr)`. The
+    // kernel's LET binds in the enclosing block; subsequent `(let x
+    // ...)` re-bindings shadow within the same block. For top-level
+    // module assignments and intra-function single-shot bindings this
+    // matches Python's semantics. Augmented assignment (`x += y`),
+    // tuple unpacking, and attribute/subscript targets need richer
+    // lowering — honest gaps for follow-up breaths.
+    case "assign": {
+      // children: [target-ident-node, value-node]
+      const target = emitIdent(k, kids[0]!);
+      const value = emit(k, kids[1]!, opts);
+      return `(let ${target} ${value})`;
+    }
+
+    // ── subscript ─────────────────────────────────────────────
+    // Python `lst[i]` → kernel `(nth lst i)` using the existing nth
+    // native. Closes the lst[i] gap the python_demo had to avoid.
+    case "subscript": {
+      // children: [value-node, slice-node]
+      const value = emit(k, kids[0]!, opts);
+      const slice = emit(k, kids[1]!, opts);
+      return `(nth ${value} ${slice})`;
+    }
+
     default:
       throw new Error(
         `emitFk: unsupported Python CTOR '${ctor}' — needs grammar/kernel work to compile`,

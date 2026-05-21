@@ -105,6 +105,8 @@ export const CTOR = {
   while_: "while",
   lambda_: "lambda",
   expr_stmt: "expr-stmt",
+  assign: "assign",
+  subscript: "subscript",
   // Function/lambda params
   params: "params",
   param: "param",
@@ -587,6 +589,21 @@ function parsePostfix(k: Kernel, c: Cursor): NodeID | null {
       node = captureNode(k, CTOR.call, [node, args]);
       continue;
     }
+    if (peek(c) === "[") {
+      // Subscript: value[index]. v1 covers the simple-index case;
+      // slicing (`a[i:j]`) lands as a separate postfix when CTOR.slice
+      // is wired into evalNode + emitFk.
+      c.pos++;
+      skipSpacesAndComments(c);
+      const idx = parseExpr(k, c);
+      if (idx === null) {
+        throw new SyntaxError(`python: expected index after '[' at ${c.pos}`);
+      }
+      skipSpacesAndComments(c);
+      expect(c, "]");
+      node = captureNode(k, CTOR.subscript, [node, idx]);
+      continue;
+    }
     if (peek(c) === ".") {
       // Attribute or method call
       const savedDot = c.pos;
@@ -831,9 +848,38 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
   if (peekKeyword(c, "while")) return parseWhileStmt(k, c, lineIndent);
   if (peekKeyword(c, "return")) return parseReturn(k, c);
 
-  // Expression statement
+  // Expression statement OR assignment.
+  // Lookahead: parse an expression, then check for `=` (single-target
+  // assignment). If `=` follows an IDENT-only LHS, this is an assignment;
+  // otherwise it's an expression statement.
+  const savedPos = c.pos;
   const e = parseExpr(k, c);
   if (e === null) return null;
+  skipSpacesAndComments(c);
+  // Check for `=` (and not `==`) — single-target assignment.
+  if (
+    c.pos < c.src.length &&
+    c.src.charCodeAt(c.pos) === 61 /* = */ &&
+    c.src.charCodeAt(c.pos + 1) !== 61 /* not == */
+  ) {
+    // Confirm LHS is a target Python permits (IDENT-only for v1).
+    const lhsCtor = capturedCtor(k, e);
+    if (lhsCtor === CTOR.ident) {
+      c.pos++; // skip `=`
+      skipSpacesAndComments(c);
+      const value = parseExpr(k, c);
+      if (value === null) {
+        throw new SyntaxError(`python: expr required after '=' at ${c.pos}`);
+      }
+      consumeEndOfLine(c);
+      return captureNode(k, CTOR.assign, [e, value]);
+    }
+    // Subscript/attribute target — fall through; lhs already
+    // consumed, value not yet known. For v1, treat as unsupported.
+    throw new SyntaxError(
+      `python: assignment target must be a simple name (v1) at ${savedPos}`,
+    );
+  }
   consumeEndOfLine(c);
   return captureNode(k, CTOR.expr_stmt, [e]);
 }
@@ -1604,6 +1650,37 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
     case CTOR.return_: {
       const v = evalNode(k, kids[0]!, env);
       throw new ReturnSignal(v);
+    }
+    case CTOR.assign: {
+      // children: [target-ident-node, value-node]. v1 target is always
+      // CTOR.ident; richer targets (tuple unpack, attribute, subscript)
+      // would dispatch here with their own assignment lowering.
+      const target = kids[0]!;
+      const value = evalNode(k, kids[1]!, env);
+      const targetCtor = capturedCtor(k, target);
+      if (targetCtor !== CTOR.ident) {
+        throw new Error(
+          `python: assignment target must be a simple name (got ${targetCtor})`,
+        );
+      }
+      const nameID = capturedChildren(k, target)[0]!.inst;
+      envBind(env, nameID, value);
+      return { kind: "null" };
+    }
+    case CTOR.subscript: {
+      // children: [value-node, index-node]. Python lst[i] semantics.
+      const v = evalNode(k, kids[0]!, env);
+      const i = evalNode(k, kids[1]!, env);
+      if (v.kind === "list" && i.kind === "int") {
+        const item = v.list[i.int];
+        return item ?? { kind: "null" };
+      }
+      if (v.kind === "str" && i.kind === "int") {
+        return { kind: "str", str: v.str[i.int] ?? "" };
+      }
+      throw new Error(
+        `python: subscript requires list or str on LHS and int index`,
+      );
     }
     case CTOR.def_: {
       const nameNode = kids[0]!;
