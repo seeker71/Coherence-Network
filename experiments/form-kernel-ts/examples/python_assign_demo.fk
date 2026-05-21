@@ -1,1 +1,1 @@
-(do (defn add (a b) (add a b)) (let result (add 10 20)) (let xs (list 1 2 3 4 5)) (let total (add (add (add (add (nth xs 0) (nth xs 1)) (nth xs 2)) (nth xs 3)) (nth xs 4))) (add result total))
+(do (defn add (a b) (_plus a b)) (let result (add 10 20)) (let xs (list 1 2 3 4 5)) (let total (_plus (_plus (_plus (_plus (nth xs 0) (nth xs 1)) (nth xs 2)) (nth xs 3)) (nth xs 4))) (_plus result total))

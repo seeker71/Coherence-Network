@@ -21,6 +21,7 @@ PARITY_FILES=(
     "examples/python_range_demo.py"
     "examples/python_builtins_demo.py"
     "examples/python_lambda_demo.py"
+    "examples/python_string_demo.py"
 )
 
 # Locate the native binary.

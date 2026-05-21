@@ -691,6 +691,29 @@ func (k *Kernel) registerNatives() {
 		if n < 0 { n = -n }
 		return Value{Kind: VInt, Int: n}
 	})
+	// Polymorphic `+` for Python: int+int=add, str+str=concat,
+	// list+list=concat. Sibling-parity with Rust + TS kernels.
+	k.registerNative("_plus", catMethod(), func(_ *Kernel, args []Value) Value {
+		a, b := args[0], args[1]
+		if a.Kind == VInt && b.Kind == VInt {
+			return Value{Kind: VInt, Int: a.Int + b.Int}
+		}
+		if a.Kind == VStr && b.Kind == VStr {
+			return Value{Kind: VStr, Str: a.Str + b.Str}
+		}
+		if a.Kind == VStr && b.Kind == VInt {
+			return Value{Kind: VStr, Str: a.Str + strconv.FormatInt(b.Int, 10)}
+		}
+		if a.Kind == VInt && b.Kind == VStr {
+			return Value{Kind: VStr, Str: strconv.FormatInt(a.Int, 10) + b.Str}
+		}
+		if a.Kind == VList && b.Kind == VList {
+			out := append([]Value{}, a.List...)
+			out = append(out, b.List...)
+			return Value{Kind: VList, List: out}
+		}
+		panic("_plus: unsupported operand types")
+	})
 	// range(n) / range(a,b) / range(a,b,s) — eager list of integers.
 	// Matches CPython semantics for `for i in range(N):`.
 	// Sibling-parity with the Rust + TS kernels.

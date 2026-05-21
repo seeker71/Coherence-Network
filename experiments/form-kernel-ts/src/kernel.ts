@@ -896,6 +896,18 @@ export class Kernel {
       const n = argInt(args, 0);
       return { kind: "int", int: n < 0 ? -n : n };
     });
+    // Polymorphic `+` for Python: int+int=add, str+str=concat,
+    // str+int / int+str = concat-via-stringify, list+list=concat.
+    this.registerNative("_plus", catMethod(), (_k, args) => {
+      const a = args[0];
+      const b = args[1];
+      if (a?.kind === "int" && b?.kind === "int") return { kind: "int", int: a.int + b.int };
+      if (a?.kind === "str" && b?.kind === "str") return { kind: "str", str: a.str + b.str };
+      if (a?.kind === "str" && b?.kind === "int") return { kind: "str", str: a.str + String(b.int) };
+      if (a?.kind === "int" && b?.kind === "str") return { kind: "str", str: String(a.int) + b.str };
+      if (a?.kind === "list" && b?.kind === "list") return { kind: "list", list: [...a.list, ...b.list] };
+      throw new Error(`_plus: unsupported operand types`);
+    });
     // range(n) / range(a,b) / range(a,b,s) — eager list of integers.
     // Matches CPython semantics. Sibling-parity with Rust + Go kernels.
     this.registerNative("range", catListNat(), (_k, args) => {

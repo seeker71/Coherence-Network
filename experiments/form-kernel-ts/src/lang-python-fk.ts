@@ -170,6 +170,23 @@ function emitBlockInDefBody(
     : `(do ${sideEffectStrs.join(" ")} ${outerRest})`;
 }
 
+// Detect any string literal anywhere in a subtree. Used to decide
+// whether to use the polymorphic `_plus` native (string dispatch) or
+// the faster kernel-native `add` (pure int).
+function containsStringLiteral(k: Kernel, n: NodeID): boolean {
+  if (n.level === Level.TRIVIAL) {
+    return n.type === Triv.STRING;
+  }
+  const ctor = capturedCtor(k, n);
+  if (ctor === CTOR.str_literal) return true;
+  // Don't recurse INTO def/lambda — they're separate scopes.
+  if (ctor === CTOR.def_ || ctor === CTOR.lambda_) return false;
+  for (const c of capturedChildren(k, n)) {
+    if (containsStringLiteral(k, c)) return true;
+  }
+  return false;
+}
+
 // Recursively collect assignment-target names from any node in a
 // subtree. Used by while/for emitters to find all loop-mutated
 // variables, including those nested inside if-statements, blocks,
@@ -255,7 +272,18 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
     }
 
     // ── arithmetic ─────────────────────────────────────────────
-    case CTOR.add: return `(add ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
+    case CTOR.add: {
+      // Python `+` is overloaded: int+int → arithmetic; str+str → concat;
+      // list+list → concat. emitFk can't always determine operand types
+      // (variables, function returns). When the expression tree CONTAINS
+      // a string literal anywhere, we route to the polymorphic `_plus`
+      // kernel native that dispatches at runtime. Pure-numeric trees
+      // stay on the faster kernel-native MATH.PLUS arm.
+      const polymorphicNeeded =
+        containsStringLiteral(k, kids[0]!) || containsStringLiteral(k, kids[1]!);
+      const op = polymorphicNeeded ? "_plus" : "add";
+      return `(${op} ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
+    }
     case CTOR.sub: return `(sub ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
     case CTOR.mul: return `(mul ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
     case CTOR.div: return `(div ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;

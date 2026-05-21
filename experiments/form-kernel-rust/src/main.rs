@@ -661,6 +661,28 @@ impl Kernel {
             let n = args[0].as_int();
             Value::Int(if n < 0 { -n } else { n })
         });
+        // Polymorphic `+` for Python compilation: int+int→add,
+        // str+str→concat, list+list→concat. The compile-time emitter
+        // can't always determine operand types (variables, function
+        // returns); _plus dispatches at runtime instead.
+        self.register_native("_plus", cat_method(), |_, _, args| {
+            match (&args[0], &args[1]) {
+                (Value::Int(a), Value::Int(b)) => Value::Int(a + b),
+                (Value::Str(a), Value::Str(b)) => {
+                    let mut s = a.clone(); s.push_str(b); Value::Str(s)
+                }
+                (Value::Str(a), Value::Int(b)) => {
+                    let mut s = a.clone(); s.push_str(&b.to_string()); Value::Str(s)
+                }
+                (Value::Int(a), Value::Str(b)) => {
+                    let mut s = a.to_string(); s.push_str(b); Value::Str(s)
+                }
+                (Value::List(a), Value::List(b)) => {
+                    let mut out = a.clone(); out.extend(b.iter().cloned()); Value::List(out)
+                }
+                _ => panic!("_plus: unsupported operand types"),
+            }
+        });
         // range(n)        → [0, 1, ..., n-1]
         // range(a, b)     → [a, a+1, ..., b-1]
         // range(a, b, s)  → [a, a+s, a+2s, ..., < b]
