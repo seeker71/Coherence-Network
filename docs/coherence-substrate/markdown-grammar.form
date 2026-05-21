@@ -123,29 +123,172 @@ form md_crossref_block_shape = {
 # Part 2 — the Language cell
 # ─────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────
+# Part 1.5 — concrete Form-recipe rules (block-level subset)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Markdown is line-oriented at the block level. The pre_pipeline's
+# md_line_tokenizer emits one token per logical block — HEADING with
+# (level, text), FENCE_OPEN/CLOSE, BLOCKQUOTE_LINE, LIST_ITEM (with
+# marker + content), HORIZONTAL_RULE, PARAGRAPH_LINE, BLANK, EOF. The
+# rules below match against that token stream. Inline parsing
+# (bold/italic/code/link/image) is a sibling pass over each block's
+# text body; ships in a later breath as the inline-tokenizer Form
+# recipe lands.
+
+defn _md_lit_op(value)   = pattern_literal_shape { kind: "OP",     value: value };
+defn _md_lit_str()       = pattern_literal_shape { kind: "STRING", value: null };
+defn _md_lit_int()       = pattern_literal_shape { kind: "INT",    value: null };
+defn _md_lit_ident()     = pattern_literal_shape { kind: "IDENT",  value: null };
+defn _md_tok(kind)       = pattern_literal_shape { kind: kind,     value: null };
+
+# ────────────────────────────── rule: md_heading ──────────────────────
+defn md_heading_rule = rule_shape {
+    name:    "md_heading",
+    pattern: pattern_capture_shape { name: "heading", child: _md_tok("HEADING") },
+    action:  defn md_heading_action(captures, span) = do {
+        md_heading_shape {
+            level: captures.heading.level,
+            text:  captures.heading.text,
+        }
+    },
+};
+
+# ────────────────────────────── rule: md_paragraph ────────────────────
+defn md_paragraph_rule = rule_shape {
+    name:    "md_paragraph",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "first", child: _md_tok("PARAGRAPH_LINE") },
+            pattern_star_shape {
+                name: "continuation",
+                child: pattern_capture_shape { name: "line", child: _md_tok("PARAGRAPH_LINE") },
+            },
+        ],
+    },
+    action:  defn md_paragraph_action(captures, span) = do {
+        let lines = [captures.first.text];
+        for cont in (captures.continuation ?? []):
+            lines = lines + [cont.line.text];
+        md_paragraph_shape {
+            inlines: lines,   # raw lines; inline parsing happens in a second pass
+        }
+    },
+};
+
+# ────────────────────────────── rule: md_code_fenced ──────────────────
+defn md_code_fenced_rule = rule_shape {
+    name:    "md_code_fenced",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "fence_open", child: _md_tok("FENCE_OPEN") },
+            pattern_star_shape {
+                name: "lines",
+                child: pattern_capture_shape { name: "line", child: _md_tok("CODE_LINE") },
+            },
+            _md_tok("FENCE_CLOSE"),
+        ],
+    },
+    action:  defn md_code_fenced_action(captures, span) = do {
+        let body = [];
+        for entry in (captures.lines ?? []):
+            body = body + [entry.line.text];
+        md_code_block_shape {
+            language: captures.fence_open.language,
+            code:     join(body, "\n"),
+        }
+    },
+};
+
+# ────────────────────────────── rule: md_horizontal_rule ──────────────
+defn md_horizontal_rule_rule = rule_shape {
+    name:    "md_horizontal_rule",
+    pattern: _md_tok("HORIZONTAL_RULE"),
+    action:  defn md_hr_action(captures, span) = md_hr_shape { },
+};
+
+# ────────────────────────────── rule: md_blockquote ───────────────────
+defn md_blockquote_rule = rule_shape {
+    name:    "md_blockquote",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "first", child: _md_tok("BLOCKQUOTE_LINE") },
+            pattern_star_shape {
+                name: "continuation",
+                child: pattern_capture_shape { name: "line", child: _md_tok("BLOCKQUOTE_LINE") },
+            },
+        ],
+    },
+    action:  defn md_blockquote_action(captures, span) = do {
+        let lines = [captures.first.text];
+        for cont in (captures.continuation ?? []):
+            lines = lines + [cont.line.text];
+        md_blockquote_shape { lines: lines }
+    },
+};
+
+# ────────────────────────────── rule: md_list ─────────────────────────
+defn md_list_rule = rule_shape {
+    name:    "md_list",
+    pattern: pattern_sequence_shape {
+        children: [
+            pattern_capture_shape { name: "first", child: _md_tok("LIST_ITEM") },
+            pattern_star_shape {
+                name: "rest",
+                child: pattern_capture_shape { name: "item", child: _md_tok("LIST_ITEM") },
+            },
+        ],
+    },
+    action:  defn md_list_action(captures, span) = do {
+        let items = [captures.first];
+        for entry in (captures.rest ?? []):
+            items = items + [entry.item];
+        # The tokenizer marks ordered vs unordered on the LIST_ITEM token's
+        # `marker` field. The list inherits the marker shape from its first
+        # item — mixed-marker lists land as separate blocks per Markdown spec.
+        md_list_shape {
+            ordered: captures.first.is_ordered,
+            items:   items,
+        }
+    },
+};
+
+# ────────────────────────────── rule: md_block ────────────────────────
+defn md_block_rule = rule_shape {
+    name:    "md_block",
+    pattern: pattern_choice_shape {
+        alternatives: [
+            md_heading_rule.pattern,
+            md_code_fenced_rule.pattern,
+            md_horizontal_rule_rule.pattern,
+            md_blockquote_rule.pattern,
+            md_list_rule.pattern,
+            md_paragraph_rule.pattern,        # paragraph last — longest fallback
+        ],
+    },
+    action: defn md_block_action(captures, span) = captures,
+};
+
 defn markdown_grammar = grammar_shape {
     modality:           modality_shape { name: "text-tree", domain: "prose" },
-    ingest_pattern:     ?rule md_document,
+    ingest_pattern:     md_block_rule,
     parse_into:         ~Blueprint @md_document_shape,
     capture_rules: [
-        # Block-level rules (order matters — first match wins per line).
-        rule(md_frontmatter,    "^---\\n.*?\\n---\\n",                        frontmatter_node),
-        rule(md_heading,        "^(#{1,6})\\s+(.+?)$",                        heading_node),
-        rule(md_horizontal_rule, "^(\\*{3,}|-{3,}|_{3,})$",                    hr_node),
-        rule(md_code_fenced,    "^```([a-z]*)\\n(.*?)\\n```",                  fenced_code_node),
-        rule(md_blockquote,     "^>(.*)$(?:\\n>.*)*",                         blockquote_node),
-        rule(md_list_unordered, "^[\\-*+]\\s+.+(?:\\n[\\-*+]\\s+.+)*",         unordered_list_node),
-        rule(md_list_ordered,   "^\\d+\\.\\s+.+(?:\\n\\d+\\.\\s+.+)*",         ordered_list_node),
-        rule(md_crossref_block, "^→\\s+([a-z][a-z0-9-]*(?:\\s*,\\s*[a-z][a-z0-9-]*)*)$",
-                                                                              crossref_node),
-        rule(md_paragraph,      "^.+(?:\\n[^\\n]+)*",                          paragraph_node),
-        # Inline rules (applied inside paragraph / heading / list-item text).
-        rule(md_emphasis_bold,  "\\*\\*([^*]+)\\*\\*|__([^_]+)__",             bold_inline_node),
-        rule(md_emphasis_italic, "(?<!\\*)\\*([^*]+)\\*(?!\\*)|(?<!_)_([^_]+)_(?!_)",
-                                                                              italic_inline_node),
-        rule(md_code_inline,    "`([^`]+)`",                                   code_inline_node),
-        rule(md_link,           "\\[([^\\]]+)\\]\\(([^)]+)\\)",                link_node),
-        rule(md_image,          "!\\[([^\\]]*)\\]\\(([^)]+)\\)",               image_node),
+        md_block_rule,
+        md_heading_rule,
+        md_paragraph_rule,
+        md_code_fenced_rule,
+        md_horizontal_rule_rule,
+        md_blockquote_rule,
+        md_list_rule,
+        # Pending — inline rules (sibling pass over paragraph text)
+        ?rule md_emphasis_bold,           # **bold** / __bold__
+        ?rule md_emphasis_italic,         # *italic* / _italic_
+        ?rule md_code_inline,             # `code`
+        ?rule md_link,                    # [text](url)
+        ?rule md_image,                   # ![alt](url)
+        ?rule md_crossref,                # → lc-id (vision-kb cross-ref shape)
+        ?rule md_frontmatter,             # YAML between --- markers at file start
     ],
     pre_pipeline: [],
     # Source attribution stamped on every parsed node — per the
