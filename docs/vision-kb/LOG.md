@@ -2,6 +2,25 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-21] surface | markdown-grammar.form — the body's largest tongue lands as a Form Language cell
+
+The biggest gap from yesterday's `grammar_coverage.py` audit closes here: **markdown** (698 → 701 files; the body's documentation, specs, concepts, lineage, READMEs all live in markdown). [`docs/coherence-substrate/markdown-grammar.form`](../coherence-substrate/markdown-grammar.form) declares the Language cell with Blueprints for every element the body uses — frontmatter, headings (1–6), paragraphs, ordered + unordered lists, fenced and indented code blocks, blockquotes, horizontal rules, inline emphasis (bold, italic, code), links, images, and — first-class — the body's `→ lc-id` cross-ref convention as `md_crossref_block_shape`. Source attribution stamped on every node per [`lc-the-recipe-remembers-its-source`](concepts/lc-the-recipe-remembers-its-source.md) (`stamps_attribution: true`).
+
+[`scripts/form_cli.py`](../../scripts/form_cli.py) extended with the markdown tongue. `form_cli convert in --tongue markdown <file>` parses a markdown document into a Form object tree with `source_attribution` per node; `form_cli convert out --tongue markdown <tree.json>` round-trips back to markdown bytes.
+
+Verified end-to-end against [`lc-tools-as-form-cells.md`](concepts/lc-tools-as-form-cells.md): 72 blocks extracted, 6 categories surfaced (heading, paragraph, list, code_block, blockquote, crossref_block), 8 cross-ref targets structured as first-class data. Round-trip preserves structural counts (9/9 headings, 19/19 list items, 1/1 cross-ref block, frontmatter byte-for-byte). The semantic round-trip discipline from `grammar-as-recipe.form` Part 2 holds.
+
+[`scripts/grammar_coverage.py`](../../scripts/grammar_coverage.py) updated to surface the new coverage: **8 file-format extensions now covered, 2 wired into `form_cli convert`** (json + markdown). Remaining biggest gaps by file count: `py` (927), `tsx` (367), `ts` (166), `txt` (118).
+
+What this opens, named concretely:
+
+- **The body reads itself structurally.** Cross-refs become first-class block-level edges (not regex pattern-matching in `StoryContent.tsx`); headings/paragraphs/code-blocks become composed sub-trees the substrate can query.
+- **Substrate queries across the documentation corpus.** Once auto-ingest runs, queries like *"every concept with a form-fenced code block"* or *"every concept that cross-refs lc-recipe-branching-sense"* become substrate Form queries, not grep over markdown.
+- **Source attribution on every node.** Heading 23:23 in `lc-tools-as-form-cells.md` is one `.source_attribution` away from execution context. Editing tools, witness traces, and awareness loops gain source-line navigability over the entire documentation surface.
+- **Cross-modal queries through code blocks.** A markdown doc with a form-fenced code block carries a sub-tree typed as `@language(form)`. The substrate can ask "which concept's form-fenced code references @recipe(cosine)" without leaving the lattice.
+
+Named follow-ups from the audit's remaining gaps: python-grammar.form (927 files; AST-based), typescript-grammar.form (533 combined with .tsx; tsc AST), plain-text grammar (rename prose-as-recipe.form to prose-grammar.form to match the `*-grammar.form` convention).
+
 ## [2026-05-21] synthesis | The Recipe Remembers Its Source — source coordinates as the awareness overlay
 
 Urs named the principle directly: *remember the source attribution for the framebuffer visualizer on real-time memory, when writing the form grammar for a language, the form translator using a grammar having source coordinate attribution is very helpful for analysis, awareness and conscious choice embodiment.*

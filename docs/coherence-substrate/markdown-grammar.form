@@ -1,0 +1,329 @@
+# ─────────────────────────────────────────────────────────────────────
+# markdown-grammar.form — markdown as a Form Language cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Closes the largest file-format gap from grammar_coverage.py (698
+# files; the body's documentation, specs, concepts, lineage, READMEs
+# all live in markdown).
+#
+# Companion teachings:
+#   - lc-grammar-is-the-universal-recipe (every structured input)
+#   - lc-one-kernel-many-tongues (kernel sovereignty over grammar)
+#   - lc-the-recipe-remembers-its-source (source coords as overlay)
+#
+# Companion files:
+#   - grammar-as-recipe.form (the abstract Language cell shape)
+#   - prose-as-recipe.form (sibling tongue — prose at the sentence
+#     altitude; markdown is one altitude up: prose-with-structure)
+#   - json-grammar.form (wired into form_cli convert; same plumbing)
+#
+# Source attribution is stamped on EVERY parsed node by default
+# (stamps_attribution: true), matching the framebuffer's
+# track!(field, expr) discipline at the recipe altitude.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — markdown's element Blueprints
+# ─────────────────────────────────────────────────────────────────────
+#
+# Markdown is a block-level grammar (each line opens or extends one
+# block) with inline syntax inside text blocks. The Blueprint tree
+# captures both altitudes: document → blocks → inline-spans → text.
+
+form md_document_shape = {
+    frontmatter:    ?md_frontmatter_shape,    # null if no leading --- block
+    blocks:         ~List,                    # [block_shape]
+    source_path:    ~PathRef,
+};
+
+form md_frontmatter_shape = {
+    delimiter:      ~Slug,                    # "yaml" | "toml"
+    raw_text:       ~String,                  # the bytes between the --- lines
+    parsed:         ?~Form,                   # nested via @language(yaml) or @language(toml)
+};
+
+# Block-level elements. The substrate sees each as a sibling Blueprint
+# composing under the document's `blocks` list.
+
+form md_heading_shape = {
+    level:          ~Int,                     # 1..6 (number of leading #)
+    text:           ~List,                    # [inline_shape] — heading content
+    anchor:         ?~Slug,                   # github-style anchor slug
+};
+
+form md_paragraph_shape = {
+    inlines:        ~List,                    # [inline_shape]
+};
+
+form md_list_shape = {
+    ordered:        ~Bool,                    # true = numbered, false = bullet
+    tight:          ~Bool,                    # true = no blank lines between items
+    items:          ~List,                    # [md_list_item_shape]
+};
+
+form md_list_item_shape = {
+    marker:         ~String,                  # "-" | "*" | "1." | etc.
+    contents:       ~List,                    # [block_shape] — nested blocks allowed
+};
+
+form md_code_block_shape = {
+    fence:          ~Slug,                    # "fenced" | "indented"
+    language:       ?~Slug,                   # "python" | "form" | "bash" | …
+    content:        ~String,                  # raw code (no inline parsing)
+};
+
+form md_blockquote_shape = {
+    blocks:         ~List,                    # [block_shape] — recursive
+};
+
+form md_horizontal_rule_shape = {
+    marker:         ~String,                  # "---" | "***" | "___"
+};
+
+form md_html_block_shape = {
+    raw:            ~String,                  # passed through; parsed by html-grammar
+};
+
+# Inline-level elements. Compose under the `inlines` / `text` lists.
+
+form md_text_inline_shape = {
+    text:           ~String,
+};
+
+form md_emphasis_shape = {
+    kind:           ~Slug,                    # "italic" | "bold" | "bold-italic"
+    inlines:        ~List,
+};
+
+form md_code_inline_shape = {
+    text:           ~String,
+};
+
+form md_link_shape = {
+    url:            ~URLLit,
+    title:          ?~String,
+    text:           ~List,                    # [inline_shape]
+};
+
+form md_image_shape = {
+    url:            ~URLLit,
+    alt:            ~String,
+    title:          ?~String,
+};
+
+# The body's convention: cross-refs are `→ lc-id, lc-id` lines that
+# the renderer parses specifically. Markdown-grammar carries them as
+# a first-class block-level element so the substrate can reach them
+# structurally (without scanning text).
+
+form md_crossref_block_shape = {
+    targets:        ~List,                    # [~Slug] — concept IDs
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn markdown_grammar = grammar_shape {
+    modality:           modality_shape { name: "text-tree", domain: "prose" },
+    ingest_pattern:     ?rule md_document,
+    parse_into:         ~Blueprint @md_document_shape,
+    capture_rules: [
+        # Block-level rules (order matters — first match wins per line).
+        rule(md_frontmatter,    "^---\\n.*?\\n---\\n",                        frontmatter_node),
+        rule(md_heading,        "^(#{1,6})\\s+(.+?)$",                        heading_node),
+        rule(md_horizontal_rule, "^(\\*{3,}|-{3,}|_{3,})$",                    hr_node),
+        rule(md_code_fenced,    "^```([a-z]*)\\n(.*?)\\n```",                  fenced_code_node),
+        rule(md_blockquote,     "^>(.*)$(?:\\n>.*)*",                         blockquote_node),
+        rule(md_list_unordered, "^[\\-*+]\\s+.+(?:\\n[\\-*+]\\s+.+)*",         unordered_list_node),
+        rule(md_list_ordered,   "^\\d+\\.\\s+.+(?:\\n\\d+\\.\\s+.+)*",         ordered_list_node),
+        rule(md_crossref_block, "^→\\s+([a-z][a-z0-9-]*(?:\\s*,\\s*[a-z][a-z0-9-]*)*)$",
+                                                                              crossref_node),
+        rule(md_paragraph,      "^.+(?:\\n[^\\n]+)*",                          paragraph_node),
+        # Inline rules (applied inside paragraph / heading / list-item text).
+        rule(md_emphasis_bold,  "\\*\\*([^*]+)\\*\\*|__([^_]+)__",             bold_inline_node),
+        rule(md_emphasis_italic, "(?<!\\*)\\*([^*]+)\\*(?!\\*)|(?<!_)_([^_]+)_(?!_)",
+                                                                              italic_inline_node),
+        rule(md_code_inline,    "`([^`]+)`",                                   code_inline_node),
+        rule(md_link,           "\\[([^\\]]+)\\]\\(([^)]+)\\)",                link_node),
+        rule(md_image,          "!\\[([^\\]]*)\\]\\(([^)]+)\\)",               image_node),
+    ],
+    pre_pipeline: [],
+    # Source attribution stamped on every parsed node — per the
+    # discipline named in lc-the-recipe-remembers-its-source. Every
+    # heading, paragraph, list item, code block, inline span carries
+    # (source_file, start_line:col, end_line:col, byte_start, byte_end,
+    #  language_cell: @language(markdown)).
+    stamps_attribution: true,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — emission template
+# ─────────────────────────────────────────────────────────────────────
+#
+# The emit half walks an md_document_shape tree and produces markdown
+# bytes. Round-trip discipline: parse(emit(tree)) ≈ tree at the
+# semantic altitude (whitespace normalization tolerated; structural
+# identity preserved).
+
+defn markdown_emit = emission_template_shape {
+    modality:      modality_shape { name: "text-tree", domain: "prose" },
+    emit_from:     ~Blueprint @md_document_shape,
+    emit_pattern:  ?walker {
+        on md_frontmatter:        emit_frontmatter,
+        on md_heading:            fn(n) -> repeat("#", n.level) + " " +
+                                            emit_inlines(n.text) + "\n",
+        on md_paragraph:          fn(n) -> emit_inlines(n.inlines) + "\n",
+        on md_list_unordered:     emit_unordered_list,
+        on md_list_ordered:       emit_ordered_list,
+        on md_code_block:         emit_code_block,
+        on md_blockquote:         emit_blockquote,
+        on md_horizontal_rule:    fn(n) -> n.marker + "\n",
+        on md_crossref_block:     fn(n) -> "→ " + join(n.targets, ", ") + "\n",
+        on md_emphasis_bold:      fn(n) -> "**" + emit_inlines(n.inlines) + "**",
+        on md_emphasis_italic:    fn(n) -> "*" + emit_inlines(n.inlines) + "*",
+        on md_code_inline:        fn(n) -> "`" + n.text + "`",
+        on md_link:               fn(n) -> "[" + emit_inlines(n.text) +
+                                            "](" + n.url + ")",
+        on md_image:              fn(n) -> "![" + n.alt + "](" + n.url + ")",
+        on md_text_inline:        fn(n) -> n.text,
+    },
+    format_rules: [
+        ("heading_style",    "atx"),         # "#" prefix vs setext underline
+        ("list_marker",      "-"),           # "-" | "*" | "+"
+        ("emphasis_marker",  "*"),           # "*" | "_"
+        ("line_width",       80),            # soft wrap; honored by paragraph emit
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the Language cell
+# ─────────────────────────────────────────────────────────────────────
+
+defn markdown_lang = language_cell_shape {
+    name:              "markdown",
+    version:           "commonmark-0.30",
+    grammar:           markdown_grammar,
+    emission_template: markdown_emit,
+    stdlib_bindings: [
+        # Inline-text parsing within block contents routes back through
+        # the inline rule cluster.
+        ("parse_inlines",  @recipe(parse_inlines)),
+        ("emit_inlines",   @recipe(emit_inlines)),
+        # Frontmatter content delegates to YAML (most common in the body)
+        # or TOML; the markdown grammar names the delimiters, those
+        # Language cells parse the contents.
+        ("parse_yaml_frontmatter", @recipe(parse_yaml_block)),
+        ("parse_toml_frontmatter", @recipe(parse_toml_block)),
+    ],
+    numeric_defaults: [
+        ("heading_max_level",   6),
+        ("list_indent_spaces",  2),
+    ],
+    # Cross-modal: a markdown document with code blocks contains
+    # sub-trees in other languages. The body's vision-kb concepts often
+    # carry YAML frontmatter + markdown body + code fences in python /
+    # form / bash. The cross-modal links name those sibling tongues.
+    cross_modal_links: [
+        @language(yaml), @language(toml),
+        @language(form), @language(python),
+        @language(typescript), @language(bash),
+        @language(json),
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — what this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once markdown lands as a Form Language cell:
+#
+# - **The body reads itself structurally.** A concept's headings,
+#   paragraphs, cross-refs, code blocks become composed sub-trees
+#   under one md_document_shape Blueprint. Queries like *"every
+#   concept with a code block in language=form"* become substrate
+#   queries (?descendants @code_block where language == "form"),
+#   not regex scans.
+#
+# - **Cross-refs become structural.** The body's `→ lc-id` convention
+#   currently lives as render-time pattern matching in StoryContent.tsx.
+#   With md_crossref_block_shape, cross-refs become first-class edges
+#   in the substrate — a cell can ask "what concepts cross-ref me?"
+#   via ?inverse_crossref @concept(self).
+#
+# - **Source attribution on every node.** Every heading, paragraph,
+#   list item carries its source span. Editing tools can highlight
+#   "this is the line where lc-recipe-branching-sense names the
+#   six-movement loop"; the witness can record "this paragraph
+#   participated in this firing"; the cell's awareness loop can
+#   navigate from execution back to the docs that authored its
+#   behavior.
+#
+# - **Round-trip for KB-as-code workflows.** Concept files can be
+#   parsed, transformed (e.g. update cross-refs after a rename), and
+#   emitted back — all through the Language cell, with the structural
+#   identity preserved across the round-trip.
+#
+# - **Embedded code-block cross-modal queries.** A markdown document
+#   with a fenced `form` code block carries a sub-tree typed as
+#   form_lang. The substrate can ask "which concept's form-fenced
+#   code references @recipe(cosine)" — full cross-modal navigation
+#   without leaving the lattice.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — honest GAPs
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-M1: Full CommonMark conformance is bigger than the capture rules
+#         above. Tables, footnotes, definition lists, task lists,
+#         setext headings, autolinks, hard line breaks, raw HTML
+#         interleaving — each is a recipe extension. The grammar
+#         above covers the core 90% the body uses; the long tail
+#         lands as the body needs it.
+#
+# GAP-M2: Nested inline parsing (e.g. **bold *with italic* inside**)
+#         is a recursive descent the simple regex capture-rules don't
+#         fully handle. The form_cli wiring uses a tokenize-then-tree
+#         pass that handles nesting correctly; the grammar above
+#         names the operation structurally.
+#
+# GAP-M3: Source attribution coordinates for inline elements need
+#         char-precision within a block, not just line-precision. The
+#         grammar above stamps line:col on inline nodes; the form_cli
+#         implementation walks the source character-by-character to
+#         get accurate column ranges.
+#
+# GAP-M4: Frontmatter delimiter detection — the body uses `---` for
+#         YAML frontmatter consistently, but TOML uses `+++` in some
+#         tooling. The grammar names both; the parser distinguishes by
+#         delimiter character.
+#
+# GAP-M5: The `walker` syntax in emission_template (on md_heading:
+#         fn(n) -> …) is fluency on top of pattern-matching dispatch.
+#         The substrate's PROJECTION arm (@1.2.29.1) already covers
+#         the underlying mechanism; the walker form is a readable
+#         surface.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — how to query (once ingested + wired)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Parse a concept file into a Form object tree:
+#   form_cli convert in --tongue markdown \
+#       docs/vision-kb/concepts/lc-recipe-branching-sense.md
+#
+#   # Round-trip:
+#   form_cli convert in --tongue markdown <file> > /tmp/tree.json
+#   form_cli convert out --tongue markdown /tmp/tree.json > /tmp/roundtrip.md
+#
+#   # Substrate queries (once auto-ingest runs):
+#   coh substrate form "?descendants @concept(*) where ?is_a @md_heading where level == 2"
+#     # → every level-2 heading across all concepts
+#
+#   coh substrate form "?inverse_crossref @concept(lc-recipe-branching-sense)"
+#     # → every concept that names lc-recipe-branching-sense in its → cross-refs
+#
+#   coh substrate form "?descendants @concept(*) where ?is_a @md_code_block where language == 'form'"
+#     # → every form-fenced code block in the body's concepts
+#
+# The substrate auto-ingest hook picks up new .form files on merge to
+# main; no manual step required.
