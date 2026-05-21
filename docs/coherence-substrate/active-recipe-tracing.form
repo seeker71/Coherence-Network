@@ -93,26 +93,25 @@ defn available_recipes() = [
 # ---------------------------------------------------------------------
 #
 # The active set is the recipes already firing in the state. A caller
-# can pass them explicitly, or a future host can hydrate them from
-# witness traces. The Form contract is the same in both cases: active
-# means "already firing now", not "recommended someday".
+# can pass them explicitly, or the host can hydrate them from witness
+# traces. The Form contract is the same in both cases: active means
+# "already firing now", not "recommended someday".
 
 defn active_recipes(state) = state.active_recipes;
 
 defn recipe_is_active(state, recipe) =
     contains(active_recipes(state), recipe);
 
-# GAP-A1: active_recipes_from_trace(cell)
+defn active_recipes_from_trace(cell) =
+    ?active_recipe_traces @cell since current_breath;
+
+# Host bridge:
+#   python3 scripts/active_recipe_trace_index.py --cell <cell> --since current_breath --json
 #
-# The natural substrate query is:
-#
-#   ?active_recipe_traces @cell since current_breath
-#
-# It should read witness traces whose kind is "recipe_active" or
-# "strategy_fired" and whose effect has not been retired. That query
-# belongs next to traces-teach-the-recipe.form's GAP-W1 trace index.
-# Until that trace index exists, the state receives active_recipes as
-# a composed child.
+# The bridge reads witness traces whose kind is "strategy_fired" and
+# treats the latest contiguous burst as current_breath. This closes the
+# file-backed part of GAP-A1. A first-class substrate ORM trace index
+# remains the field-altitude GAP-W1 from traces-teach-the-recipe.form.
 
 # ---------------------------------------------------------------------
 # Part 4 -- choose from current state to desired state

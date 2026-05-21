@@ -4,11 +4,12 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 184
+**Total files**: 186
 
 | File | Purpose |
 |---|---|
 | [conftest.py](conftest.py) | Pytest configuration and fixtures. |
+| [test_active_recipe_trace_index.py](test_active_recipe_trace_index.py) | Proof that active recipes hydrate from the witness trace stream. |
 | [test_active_recipe_tracing_form.py](test_active_recipe_tracing_form.py) | Proof that active recipe tracing lives in Form. |
 | [test_agent_control_plane.py](test_agent_control_plane.py) | _no top-of-file purpose_ |
 | [test_agent_execute_endpoint.py](test_agent_execute_endpoint.py) | Tests for the agent-execution-lifecycle-hooks spec |
@@ -186,6 +187,7 @@
 | [test_sync_kb_to_db.py](test_sync_kb_to_db.py) | _no top-of-file purpose_ |
 | [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |
 | [test_task_dedup_service.py](test_task_dedup_service.py) | Tests for the task dedup service — prevents duplicate tasks per idea+phase. |
+| [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |

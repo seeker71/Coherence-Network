@@ -69,7 +69,7 @@ def sense_proprioception() -> list[str]:
     actual = count_files("specs", {"INDEX.md", "TEMPLATE.md"})
     claimed = read_first_match(ROOT / "specs" / "INDEX.md", r"(\d+)\s+specs\s+\(")
     if claimed is None:
-        findings.append(f"  specs/INDEX.md — count pattern not found; cannot verify")
+        findings.append("  specs/INDEX.md — count pattern not found; cannot verify")
     elif claimed == actual:
         findings.append(f"  specs/INDEX.md — aligned ({actual} specs)")
     else:
@@ -79,7 +79,7 @@ def sense_proprioception() -> list[str]:
     actual_i = count_files("ideas", {"INDEX.md"})
     claimed_i = read_first_match(ROOT / "ideas" / "INDEX.md", r"(\d+)\s+super-ideas")
     if claimed_i is None:
-        findings.append(f"  ideas/INDEX.md — count pattern not found; cannot verify")
+        findings.append("  ideas/INDEX.md — count pattern not found; cannot verify")
     elif claimed_i == actual_i:
         findings.append(f"  ideas/INDEX.md — aligned ({actual_i} super-ideas)")
     else:
@@ -99,7 +99,7 @@ def sense_proprioception() -> list[str]:
             r"\*\*Concepts\*\*:\s*(\d+)",
         )
         if claimed_c is None:
-            findings.append(f"  vision-kb/INDEX.md — concept count pattern not found")
+            findings.append("  vision-kb/INDEX.md — concept count pattern not found")
         elif claimed_c == actual_c:
             findings.append(f"  vision-kb/INDEX.md — aligned ({actual_c} concepts)")
         else:
@@ -204,7 +204,7 @@ def sense_spec_symbols() -> list[str]:
     the file is still there, but ``bar()`` has been renamed,
     deleted, or moved. The body's claim aged silently.
 
-    Symbols are matched against common Python and TypeScript declaration
+    Symbols are matched against common Python, TypeScript, and Form declaration
     shapes (def, class, async def, top-level assignment, export
     function/class/const/type/interface). Identifiers that don't match
     a real-looking name pattern are skipped — many spec frontmatters
@@ -230,7 +230,7 @@ def sense_spec_symbols() -> list[str]:
     ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
     def _symbol_resolves(text: str, sym: str) -> bool:
-        # A handful of common declaration shapes across Python and TS.
+        # A handful of common declaration shapes across Python, TS, and Form.
         # Note: every `export` form admits `default` between `export` and
         # the keyword — Next.js page components use that convention
         # (`export default function Home() {...}`); the body has dozens
@@ -245,6 +245,8 @@ def sense_spec_symbols() -> list[str]:
             rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:default\s+)?class\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
+            rf"^\s*form\s+{re.escape(sym)}\b",         # Form shape
+            rf"^\s*defn\s+{re.escape(sym)}\b",         # Form definition
             rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
             rf"\b{re.escape(sym)}\s*=\s*\(",           # arrow function / lambda binding
         ]
@@ -467,7 +469,6 @@ def sense_chain() -> list[str]:
         src_paths = [m.group(1).strip() for m in re.finditer(r"^\s*-\s*file:\s*(\S+)", fm, re.MULTILINE)]
         src_paths = [p for p in src_paths if not p.startswith("..") and "://" not in p and not p.startswith("specs/")]
         src_ok = bool(src_paths) and all((ROOT / p).exists() for p in src_paths)
-        src_declared = bool(src_paths)
 
         # ``proof: operational`` is the second legitimate proof shape:
         # the spec is exercised in production rather than unit-tested.
@@ -564,8 +565,8 @@ def sense_form_engine() -> list[str]:
         return ["  (form-engine.form has no BEGIN/END engine markers)"]
     engine_block = block_match.group(0)
     form_arm_types: set[int] = set()
-    for _p, l, t, _i in re.findall(r"@(\d+)\.(\d+)\.(\d+)\.(\d+)", engine_block):
-        if int(l) == 2:
+    for _p, level, t, _i in re.findall(r"@(\d+)\.(\d+)\.(\d+)\.(\d+)", engine_block):
+        if int(level) == 2:
             form_arm_types.add(int(t))
 
     eval_src = eval_path.read_text()

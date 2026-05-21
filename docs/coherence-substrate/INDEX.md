@@ -28,6 +28,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `docs/coherence-substrate/form-engine.form` | The recipe-evaluator in Form's own voice — 15/15 RBasic dispatch arms self-hosted |
 | `docs/coherence-substrate/form-runtime-in-form.form` | Companion to form-engine — walks lexer / parser / evaluator / registries / substrate-write in Form, names the 15 surface gaps to full self-hosting |
 | `docs/coherence-substrate/active-recipe-tracing.form` | Active recipe state, available recipe library, and keep-or-choose relation from current_state to desired_state |
+| `docs/coherence-substrate/trace-symbol-spaces.form` | Raw trace cells, shared Blueprint, active strategy recipes, selected symbol spaces, and gap-closure recipes for the current pattern |
+| `docs/coherence-substrate/trace-symbol-spaces-proof.fk` | Native kernel proof that reads the raw trace witness and verifies the current-breath active recipe pattern |
 | `docs/coherence-substrate/agents-using-substrate.md` | Agent guide — when and how to ground reasoning |
 | `docs/coherence-substrate/agents-tending-presence-pages.md` | Composting static `/people/{slug}` directories into graph-rendered presence pages |
 | `docs/coherence-substrate/language-cells.md` | Languages as substrate cells — ingestion grammars + emission templates as data; cross-language identity via content-addressing; N+M transpilation |

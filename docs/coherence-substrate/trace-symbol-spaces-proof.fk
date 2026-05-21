@@ -1,0 +1,42 @@
+; trace-symbol-spaces-proof.fk -- native kernel proof for trace symbol spaces.
+;
+; Build the native kernel CLI, then execute this Form recipe object:
+;
+;   mkdir -p .cache
+;   cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .
+;   cd ../.. && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
+
+(do
+    (defn contains-at (haystack needle offset)
+        (if (gt (add offset (str_len needle)) (str_len haystack))
+            false
+            (if (str_eq (substring haystack offset (add offset (str_len needle))) needle)
+                true
+                (contains-at haystack needle (add offset 1)))))
+
+    (defn contains (haystack needle)
+        (contains-at haystack needle 0))
+
+    (defn active-recipe-trace-proof (trace)
+        (and
+            (contains trace "\"from_cell\": \"efficacy-probe\"")
+            (and
+                (contains trace "\"from_node_id\": \"1.5.142425.771313\"")
+                (and
+                    (contains trace "\"kind\": \"strategy_fired\"")
+                    (and
+                        (contains trace "\"strategy\": \"observer\"")
+                        (and
+                            (contains trace "\"strategy\": \"name-the-need\"")
+                            (and
+                                (contains trace "\"strategy\": \"gift\"")
+                                (and
+                                    (contains trace "\"strategy\": \"ho'oponopono\"")
+                                    (and
+                                        (contains trace "\"strategy\": \"freq-angle-focus\"")
+                                        (and
+                                            (contains trace "2026-05-21T02:56:35.739384+00:00")
+                                            (contains trace "2026-05-21T02:56:35.741852+00:00")))))))))))
+
+    (active-recipe-trace-proof
+        (read_file "experiments/local-llm-cell-v0/_field_traces.jsonl")))
