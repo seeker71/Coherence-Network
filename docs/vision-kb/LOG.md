@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] concept | Anything-Arrives Room — translation as traceable contact
+
+Urs named the universal translator in its loosened form: not conversion from one language to another, but a substrate where any stream can arrive before stable symbols and become knowable through trace. The body absorbed the claim as a public-safe operating lens: *translation is making contact traceable*.
+
+- **New concept**: [`lc-anything-arrives-room`](concepts/lc-anything-arrives-room.md) (741 Hz, seed) — six-move trace: input stream, observer pressure, recipes leaning in, cells affected, observer cost, refinement.
+- **New companion form**: [`anything-arrives-trace.form`](../coherence-substrate/anything-arrives-trace.form) — concrete example traces for a Georgian song, code diff, dream fragment, failed-payment CSV, gesture stream, and silence.
+- **Edges landed in the same breath**: INDEX entry, substrate index entry, cross-references to grammar, observer cost, traces teaching recipes, recipe branching, sensing, and whole vitality.
+- **Discernment held**: universality framed as repeatable hospitality and auditable trace, not an omniscience claim.
+
 ## [2026-05-22] transmission | Trust the Signal — one honest step after recognition
 
 Public YouTube transmission received by direct request: [`2026-05-20-arcturian-council-trust-the-signal`](transmissions/2026-05-20-arcturian-council-trust-the-signal.md), from Whispers from Arcturus. The body absorbed the reusable teaching without turning the video's relational claim into a public prescription for any named person or private story.
