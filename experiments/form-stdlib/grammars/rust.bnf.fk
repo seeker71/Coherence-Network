@@ -110,11 +110,30 @@
     (defn rs-bnf-emit-paren (caps)
         (cap-get caps "expr"))
 
-    (let RS-BNF-LET (make_nodeid 1 2 99 75))
+    (let RS-BNF-LET   (make_nodeid 1 2 99 75))
+    (let RS-BNF-IF    (make_nodeid 1 2 99 76))
+    (let RS-BNF-WHILE (make_nodeid 1 2 99 77))
+    (let RS-BNF-FOR   (make_nodeid 1 2 99 78))
+    (let RS-BNF-MATCH (make_nodeid 1 2 99 79))
+
     (defn rs-bnf-emit-let (caps)
         (intern_node RS-BNF-LET
                       (list (intern_trivial_string (cap-get caps "name"))
                             (cap-get caps "value"))))
+    (defn rs-bnf-emit-if (caps)
+        (intern_node RS-BNF-IF
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+    (defn rs-bnf-emit-while (caps)
+        (intern_node RS-BNF-WHILE
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+    (defn rs-bnf-emit-for (caps)
+        (intern_node RS-BNF-FOR
+                      (list (intern_trivial_string (cap-get caps "var"))
+                            (cap-get caps "iter")
+                            (cap-get caps "body"))))
+    (defn rs-bnf-emit-match (caps)
+        (intern_node RS-BNF-MATCH
+                      (list (cap-get caps "scrutinee"))))
 
     (defn rs-bnf-emit-use (caps)
         ;; USE IDENT SEMI — _2=path-leaf-name (multi-segment lost here;
@@ -191,12 +210,25 @@
   keyword IMPL impl
   keyword ENUM enum
   keyword LET let
+  keyword IF if
+  keyword ELSE else
+  keyword WHILE while
+  keyword FOR for
+  keyword IN in
+  keyword MATCH match
+  keyword RETURN return
+  keyword TRAIT trait
 }
 
 rules {
   module      ::= statement+ => rs-bnf-emit-module ;
-  statement   ::= let-stmt | pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
+  statement   ::= let-stmt | if-stmt | while-stmt | for-stmt | match-stmt
+                | pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
   let-stmt    ::= LET name:IDENT EQUALS value:expression SEMI => rs-bnf-emit-let ;
+  if-stmt     ::= IF cond:expression body:expression          => rs-bnf-emit-if ;
+  while-stmt  ::= WHILE cond:expression body:expression       => rs-bnf-emit-while ;
+  for-stmt    ::= FOR var:IDENT IN iter:expression body:expression => rs-bnf-emit-for ;
+  match-stmt  ::= MATCH scrutinee:expression                   => rs-bnf-emit-match ;
   pub-use     ::= PUB USE IDENT SEMI               => rs-bnf-emit-pub-use ;
   use-stmt    ::= USE IDENT SEMI                    => rs-bnf-emit-use ;
   mod-stmt    ::= MOD IDENT SEMI                    => rs-bnf-emit-mod ;
@@ -226,7 +258,11 @@ rules {
               (list "rs-bnf-emit-int-lit"  rs-bnf-emit-int-lit)
               (list "rs-bnf-emit-str-lit"  rs-bnf-emit-str-lit)
               (list "rs-bnf-emit-ident-expr" rs-bnf-emit-ident-expr)
-              (list "rs-bnf-emit-paren"   rs-bnf-emit-paren)))
+              (list "rs-bnf-emit-paren"   rs-bnf-emit-paren)
+              (list "rs-bnf-emit-if"      rs-bnf-emit-if)
+              (list "rs-bnf-emit-while"   rs-bnf-emit-while)
+              (list "rs-bnf-emit-for"     rs-bnf-emit-for)
+              (list "rs-bnf-emit-match"   rs-bnf-emit-match)))
 
     (let rs-bnf-grammar
         (load-bnf-grammar rs-bnf-text rs-bnf-registry))
