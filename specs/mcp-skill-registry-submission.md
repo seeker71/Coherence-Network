@@ -1,6 +1,6 @@
 ---
 idea_id: user-surfaces
-status: done
+status: active
 source:
   - file: mcp-server/coherence_mcp_server/server.py
     symbols: [MCP server]
@@ -21,6 +21,17 @@ done_when:
   - registry-submissions returns exactly six items
   - registry-dashboard returns 200 even when stats are fully unavailable
   - pytest api/tests/test_registry_discovery.py passes
+notes: |
+  Live status as of 2026-05-22 (post path-resolution fix):
+  - /api/discovery/registry-submissions returns 9 items (≥ 6 spec'd) ✓
+  - /api/discovery/registry-dashboard returns 200 ✓
+  - core_requirement_met: false — submission_ready_count: 0, missing_asset_count: 9.
+    Registries are discovered and listed, but none have submission assets (icons,
+    manifests, descriptions) prepared yet. That's content-creation work, not code.
+  - test_registry_discovery.py still missing — pending honest test of the validation
+    pipeline + asset-presence check.
+  Status attuned 2026-05-22 from done → active to match: the discovery pipeline
+  ships, the submission packages do not.
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
@@ -29,7 +40,7 @@ done_when:
 # Submit to 5+ MCP and Skill Registries for Discovery
 
 **ID:** 180-mcp-skill-registry-submission
-**Status:** approved
+**Status:** active (see frontmatter `notes:` for live status)
 **Priority:** high
 **Category:** distribution / discoverability
 **Author:** claude (product-manager)
