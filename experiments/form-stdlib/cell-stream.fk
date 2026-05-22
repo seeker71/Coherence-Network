@@ -121,4 +121,59 @@
         (if (nil? cells) (empty)
             (cons (transmuter (head cells))
                   (transmute (tail cells) transmuter))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 6 — walk-stream: PUSH-style streaming (no intermediate list)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Urs's teaching (2026-05-22): "for grammar rules, if each rule
+    ;; can generate cells and place them inside the stream of cells
+    ;; flowing through that keeps the overall footprint minimal and the
+    ;; energy is used for just what is in front of us right now."
+    ;;
+    ;; stream-of-cells (Part 2) builds a list — the cells exist in
+    ;; memory all at once after parsing. walk-stream collapses parse
+    ;; + observe + analyze into ONE pass: each cell is emitted to a
+    ;; handler immediately, never materialized into an intermediate
+    ;; list. Memory footprint = current parser state + current state
+    ;; threaded through, regardless of stream length.
+    ;;
+    ;; Signature:
+    ;;   (walk-stream input segmenter encoder source-path init-state handler)
+    ;;     handler: (state cell) → new-state
+    ;;   → final-state
+    ;;
+    ;; SAX-style not DOM-style. The cell is "in front of us right now";
+    ;; once handled, it falls away. Downstream gets each cell exactly
+    ;; once, in arrival order.
+
+    (defn walk-stream (input segmenter encoder source-path init-state handler)
+        (walk-loop input segmenter encoder source-path 0 init-state handler))
+
+    (defn walk-loop (input segmenter encoder source-path pos state handler)
+        (do
+            (let seg (segmenter input pos))
+            (if (str_eq (seg-kind seg) "eof")
+                state
+                (do
+                    (let cell (encoder (seg-text seg) source-path (seg-line seg)))
+                    (let new-state (handler state cell))
+                    (walk-loop input segmenter encoder source-path
+                                (seg-next seg) new-state handler)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 7 — combine-handlers: subscriber composition
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Multiple downstream metabolizers can attach to one cell stream.
+    ;; combine-handlers takes two handlers, returns one that calls both
+    ;; in sequence on each cell. Each receives the SAME cell; their
+    ;; states are paired in a list. Chain N handlers by repeated
+    ;; combine for higher arities.
+
+    (defn combine-handlers (h1 h2)
+        (defn combined (paired-state cell)
+            (do
+                (let s1 (head paired-state))
+                (let s2 (head (tail paired-state)))
+                (list (h1 s1 cell) (h2 s2 cell))))
+        combined)
 )
