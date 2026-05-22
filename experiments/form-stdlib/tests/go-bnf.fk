@@ -78,7 +78,24 @@ func main() { }"))
     (let r11 (parse-go-bnf "t.go" "func h() { if x == 1 { } }"))
     (let probe-11 (len (node_children r11)))              ; → 1
 
-    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 = 37
+    ;; Probe 12 — verify precedence: `1 + 2 * 3` should parse as
+    ;; BIN(+, 1, BIN(*, 2, 3)) — outer op is +, inner-right is BIN(*).
+    ;; This proves BMF-style precedence-as-data fold works correctly.
+    (let r12 (parse-go-bnf "t.go" "func k() { return 1 + 2 * 3 }"))
+    (let body12 (head (tail (node_children (first-stmt r12)))))
+    (let return-12 (head (node_children body12)))
+    (let outer-expr (head (node_children return-12)))
+    ;; outer-expr is BIN-EXPR; children: op-text, lhs, rhs
+    (let outer-kids (node_children outer-expr))
+    (let outer-op (node_value (head outer-kids)))         ; "+"
+    (let outer-rhs (head (tail (tail outer-kids))))        ; should be BIN-EXPR (*)
+    (let inner-kids (node_children outer-rhs))
+    (let inner-op (node_value (head inner-kids)))         ; "*"
+    (let probe-12 (if (and (str_eq outer-op "+")
+                            (str_eq inner-op "*"))
+                      1 0))                               ; → 1
+
+    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 + 1 = 38
     (add probe-1
          (add probe-2
               (add probe-3
@@ -88,4 +105,5 @@ func main() { }"))
                                   (add probe-7
                                        (add probe-8
                                             (add probe-9
-                                                 (add probe-10 probe-11)))))))))))
+                                                 (add probe-10
+                                                      (add probe-11 probe-12))))))))))))

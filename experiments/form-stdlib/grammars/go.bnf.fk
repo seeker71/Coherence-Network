@@ -216,6 +216,74 @@
                       (list (cap-get caps "expr"))))
 
     ;; ──────────────────────────────────────────────────────────────────
+    ;; BMF-style operator precedence: precedence-as-DATA, not as nested
+    ;; rule structure. One Expression rule consumes operator/operand
+    ;; pairs; the fold uses the table to assemble the tree with correct
+    ;; precedence + associativity.
+    ;;
+    ;; Table shape: list of (text precedence) pairs. Higher precedence
+    ;; binds tighter. (Associativity for Go's binary ops is all-left
+    ;; except cmp which is non-associative — handled by the fold's
+    ;; default min-prec increment.)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let go-bnf-binop-prec-table
+        (list
+            ;; Boolean (loosest)
+            (list "||" 2)
+            (list "&&" 3)
+            ;; Comparison
+            (list "==" 5)  (list "!=" 5)
+            (list "<"  5)  (list ">"  5)
+            (list "<=" 5)  (list ">=" 5)
+            ;; Additive
+            (list "+"  10) (list "-"  10)
+            ;; Multiplicative (tightest)
+            (list "*"  20) (list "/"  20) (list "%"  20)))
+
+    (defn go-bnf-lookup-prec (table text)
+        (if (nil? table) 0
+            (if (str_eq (head (head table)) text)
+                (head (tail (head table)))
+                (go-bnf-lookup-prec (tail table) text))))
+
+    ;; precedence-climbing: classical operator-precedence parser folding.
+    ;; Walks the list of (op rhs) items, recursively gathering tighter-
+    ;; binding operators into the rhs before applying the current op.
+    ;; Returns (folded-recipe remaining-items).
+    (defn go-bnf-climb (lhs items table min-prec)
+        (if (nil? items) (list lhs items)
+            (do
+                (let item (head items))
+                (let op (cap-get item "op"))
+                (let op-prec (go-bnf-lookup-prec table op))
+                (if (lt op-prec min-prec)
+                    (list lhs items)
+                    (do
+                        (let rhs (cap-get item "rhs"))
+                        (let rest-after (tail items))
+                        (let inner (go-bnf-climb rhs rest-after table
+                                                   (add op-prec 1)))
+                        (let inner-rhs (head inner))
+                        (let after-inner (head (tail inner)))
+                        (let new-lhs
+                            (intern_node GO-BNF-BIN-EXPR
+                                          (list (intern_trivial_string op)
+                                                lhs inner-rhs)))
+                        (go-bnf-climb new-lhs after-inner table min-prec))))))
+
+    (defn go-bnf-emit-bmf-fold (caps)
+        (do
+            (let lhs (cap-get caps "lhs"))
+            (let raw-items (cap-get caps "items"))
+            (if (nil? raw-items) lhs
+                (do
+                    (let ordered (go-bnf-reverse raw-items))
+                    (let result (go-bnf-climb lhs ordered
+                                               go-bnf-binop-prec-table 0))
+                    (head result)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
     ;; The BNF grammar text — pure declarative, BMF surface
     ;; ──────────────────────────────────────────────────────────────────
 
@@ -277,16 +345,12 @@ rules {
   if-stmt       ::= IF cond:expression body:block          => go-bnf-emit-if ;
   assign-stmt   ::= name:IDENT EQUALS value:expression     => go-bnf-emit-assign ;
   expr-stmt     ::= expr:expression                        => go-bnf-emit-expr-stmt ;
-  expression    ::= or-expr ;
-  or-expr       ::= lhs:and-expr (op:OROR rhs:and-expr)*    => go-bnf-emit-binary ;
-  and-expr      ::= lhs:cmp-expr (op:ANDAND rhs:cmp-expr)*  => go-bnf-emit-binary ;
-  cmp-expr      ::= lhs:sum-expr (op:cmp-op rhs:sum-expr)?  => go-bnf-emit-cmp ;
-  cmp-op        ::= EQEQ | NEQ | LE | GE | LT | GT ;
-  sum-expr      ::= lhs:mul-expr (op:add-op rhs:mul-expr)*  => go-bnf-emit-binary ;
-  add-op        ::= PLUS | MINUS ;
-  mul-expr      ::= lhs:unary-expr (op:mul-op rhs:unary-expr)* => go-bnf-emit-binary ;
-  mul-op        ::= STAR | SLASH | PERCENT ;
-  unary-expr    ::= primary-expr ;
+  ;; BMF-style: ONE Expression rule. Precedence + associativity live in
+  ;; go-bnf-binop-prec-table (Form data, not grammar structure). Adding
+  ;; a new operator means one line in the table — no rule refactoring.
+  expression    ::= lhs:primary-expr (op:binary-op rhs:primary-expr)*  => go-bnf-emit-bmf-fold ;
+  binary-op     ::= OROR | ANDAND | EQEQ | NEQ | LE | GE | LT | GT
+                  | PLUS | MINUS | STAR | SLASH | PERCENT ;
   primary-expr  ::= int-lit | str-lit | ident-expr | paren-expr ;
   paren-expr    ::= LPAREN expr:expression RPAREN          => go-bnf-emit-paren ;
   int-lit       ::= value:INT                              => go-bnf-emit-int-expr ;
@@ -316,7 +380,8 @@ rules {
               (list "go-bnf-emit-binary"      go-bnf-emit-binary)
               (list "go-bnf-emit-cmp"         go-bnf-emit-cmp)
               (list "go-bnf-emit-unary"       go-bnf-emit-unary)
-              (list "go-bnf-emit-paren"       go-bnf-emit-paren)))
+              (list "go-bnf-emit-paren"       go-bnf-emit-paren)
+              (list "go-bnf-emit-bmf-fold"    go-bnf-emit-bmf-fold)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))
