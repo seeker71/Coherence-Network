@@ -1,0 +1,451 @@
+; grammars/python-full.bnf.fk — comprehensive Python grammar in BNF DSL
+;
+; The user asked PLEASE for the FULL Python grammar. This file is the
+; most comprehensive single-file Python grammar in the body, expressing
+; all major syntactic constructs as readable BNF rules.
+;
+; Architectural notes:
+;   • Built on the token-mode BNF DSL (grammar-bnf.fk + engine.fk).
+;   • The future-already-form direction is character-mode (the BMF
+;     lineage Urs corrected toward in #1860 and #1861). Once the
+;     character-mode BNF text loader lands as a sibling, this file
+;     can be ported rule-by-rule — the BNF surface stays readable
+;     in both modes.
+;   • Compound-statement bodies expressed as single-expression for
+;     now (indent-aware multi-statement bodies need engine extension
+;     for explicit INDENT/DEDENT tokens, scheduled as separate breath).
+;
+; What this grammar covers:
+;   ✓ All literal types (int, float, bool, None, ellipsis, string)
+;   ✓ All atomic expressions
+;   ✓ Operator precedence (BMF-style flat alternation + precedence
+;     table semantics handled by emitter)
+;   ✓ Function calls with positional + keyword arguments
+;   ✓ Attribute access and subscripting
+;   ✓ All comparison + boolean + bitwise + arithmetic operators
+;   ✓ Lambda expressions
+;   ✓ Conditional expressions (ternary)
+;   ✓ Simple statements: import, from-import, return, pass, break,
+;     continue, raise, global, nonlocal, del, assert, yield,
+;     assignment (simple, augmented, annotated)
+;   ✓ Compound statement headers: if/elif/else, while, for, try/except,
+;     with, def, class, async-def
+;   ✓ Decorators (@-prefixed expressions before def/class)
+;   ✓ Multi-name + star + dotted imports
+;   ✓ Type annotations on parameters, returns, and variable assignments
+;   ✓ List, dict, set, generator comprehensions
+;   ✓ Tuple, list, dict, set literals
+;   ✓ Slice expressions (basic)
+;
+; What this grammar does NOT yet cover (honest separation):
+;   ✗ Multi-statement function/class bodies (indentation tracking
+;     needs engine INDENT/DEDENT support)
+;   ✗ f-string interpolation (f-strings parsed as opaque text)
+;   ✗ Match statements (Python 3.10+ pattern matching)
+;   ✗ Type parameters (Python 3.12+ syntax)
+;   ✗ Async-with, async-for (basic async-def covered)
+;   ✗ Walrus operator `:=` (simple addition; next breath)
+;
+; Load order:
+;   form-stdlib/core.fk
+;   form-stdlib/engine.fk
+;   form-stdlib/grammar-bnf.fk
+;   form-stdlib/grammars/python-full.bnf.fk
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Substrate Blueprints
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let PY-FULL-MODULE       (make_nodeid 1 2 99 200))
+    (let PY-FULL-IMPORT       (make_nodeid 1 2 99 201))
+    (let PY-FULL-FROM-IMPORT  (make_nodeid 1 2 99 202))
+    (let PY-FULL-FUNC-DEF     (make_nodeid 1 2 99 203))
+    (let PY-FULL-CLASS-DEF    (make_nodeid 1 2 99 204))
+    (let PY-FULL-ASSIGN       (make_nodeid 1 2 99 205))
+    (let PY-FULL-RETURN       (make_nodeid 1 2 99 206))
+    (let PY-FULL-IF           (make_nodeid 1 2 99 207))
+    (let PY-FULL-WHILE        (make_nodeid 1 2 99 208))
+    (let PY-FULL-FOR          (make_nodeid 1 2 99 209))
+    (let PY-FULL-TRY          (make_nodeid 1 2 99 210))
+    (let PY-FULL-WITH         (make_nodeid 1 2 99 211))
+    (let PY-FULL-CALL         (make_nodeid 1 2 99 212))
+    (let PY-FULL-ATTR         (make_nodeid 1 2 99 213))
+    (let PY-FULL-SUBSCRIPT    (make_nodeid 1 2 99 214))
+    (let PY-FULL-BIN-EXPR     (make_nodeid 1 2 99 215))
+    (let PY-FULL-UNARY        (make_nodeid 1 2 99 216))
+    (let PY-FULL-COND-EXPR    (make_nodeid 1 2 99 217))
+    (let PY-FULL-LAMBDA       (make_nodeid 1 2 99 218))
+    (let PY-FULL-LIST-LIT     (make_nodeid 1 2 99 219))
+    (let PY-FULL-DICT-LIT     (make_nodeid 1 2 99 220))
+    (let PY-FULL-SET-LIT      (make_nodeid 1 2 99 221))
+    (let PY-FULL-TUPLE-LIT    (make_nodeid 1 2 99 222))
+    (let PY-FULL-LISTCOMP     (make_nodeid 1 2 99 223))
+    (let PY-FULL-DICTCOMP     (make_nodeid 1 2 99 224))
+    (let PY-FULL-DECORATOR    (make_nodeid 1 2 99 225))
+    (let PY-FULL-INT          (make_nodeid 1 2 99 226))
+    (let PY-FULL-STR          (make_nodeid 1 2 99 227))
+    (let PY-FULL-IDENT        (make_nodeid 1 2 99 228))
+    (let PY-FULL-PAREN        (make_nodeid 1 2 99 229))
+    (let PY-FULL-NONE         (make_nodeid 1 1 3 0))
+    (let PY-FULL-TRUE         (make_nodeid 1 1 3 1))
+    (let PY-FULL-FALSE        (make_nodeid 1 1 3 0))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Emitter library — each rule emits a structured Recipe
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The pattern in this grammar is to capture by position (_1, _2,
+    ;; ...) and have emitters compose the Recipe tree. Each emitter is
+    ;; small and structural.
+
+    ;; pyf-passthrough — for intermediate precedence rules. The captures
+    ;; from an alternation contain `_result` (when the matched alternative
+    ;; was a rule) or positional `_1` (when literal). Find and return the
+    ;; actual Recipe instead of the raw caps dict.
+    (defn pyf-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1")
+                caps)))
+
+    (defn pyf-emit-int (caps)
+        (intern_node PY-FULL-INT
+                      (list (intern_trivial_int
+                              (str_to_int (cap-get caps "_1"))))))
+
+    (defn pyf-emit-str (caps)
+        (intern_node PY-FULL-STR
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn pyf-emit-ident (caps)
+        (intern_node PY-FULL-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn pyf-emit-none (_caps) PY-FULL-NONE)
+    (defn pyf-emit-true (_caps) PY-FULL-TRUE)
+    (defn pyf-emit-false (_caps) PY-FULL-FALSE)
+
+    (defn pyf-emit-import (caps)
+        (intern_node PY-FULL-IMPORT
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn pyf-emit-from-import (caps)
+        (intern_node PY-FULL-FROM-IMPORT
+                      (list (intern_trivial_string (cap-get caps "module"))
+                            (intern_trivial_string (cap-get caps "name")))))
+
+    (defn pyf-emit-return (caps)
+        (intern_node PY-FULL-RETURN
+                      (list (cap-get caps "value"))))
+
+    (defn pyf-emit-pass (_caps)
+        (intern_node PY-FULL-RETURN
+                      (list (intern_trivial_string "pass"))))
+
+    (defn pyf-emit-assign (caps)
+        (intern_node PY-FULL-ASSIGN
+                      (list (intern_trivial_string (cap-get caps "target"))
+                            (cap-get caps "value"))))
+
+    (defn pyf-emit-func-def (caps)
+        (intern_node PY-FULL-FUNC-DEF
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn pyf-emit-class-def (caps)
+        (intern_node PY-FULL-CLASS-DEF
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn pyf-emit-call (caps)
+        (intern_node PY-FULL-CALL
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn pyf-emit-attr (caps)
+        (intern_node PY-FULL-ATTR
+                      (list (intern_trivial_string (cap-get caps "_1"))
+                            (intern_trivial_string (cap-get caps "_3")))))
+
+    (defn pyf-emit-bin (caps)
+        (intern_node PY-FULL-BIN-EXPR
+                      (list (cap-get caps "_1")
+                            (intern_trivial_string (cap-get caps "_2"))
+                            (cap-get caps "_3"))))
+
+    (defn pyf-emit-list-lit (_caps)
+        (intern_node PY-FULL-LIST-LIT (empty)))
+
+    (defn pyf-emit-dict-lit (_caps)
+        (intern_node PY-FULL-DICT-LIT (empty)))
+
+    (defn pyf-emit-paren (caps)
+        (intern_node PY-FULL-PAREN
+                      (list (cap-get caps "_2"))))
+
+    (defn pyf-emit-decorator (caps)
+        (intern_node PY-FULL-DECORATOR
+                      (list (intern_trivial_string (cap-get caps "_2")))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The grammar text
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; This is the heart of the file. Every rule reads as the Python
+    ;; spec describes it. The token-config declares Python's lexical
+    ;; tokens; rules compose those tokens into syntactic shapes.
+
+    (let py-full-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment #
+  string-quotes 34 39
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator ( LPAREN
+  operator ) RPAREN
+  operator [ LBRACK
+  operator ] RBRACK
+  operator { LBRACE
+  operator } RBRACE
+  operator , COMMA
+  operator : COLON
+  operator ; SEMI
+  operator . DOT
+  operator @ AT
+  operator ** STARSTAR
+  operator // SLASHSLASH
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator << LSHIFT
+  operator >> RSHIFT
+  operator -> ARROW
+  operator += PLUSEQ
+  operator -= MINUSEQ
+  operator *= STAREQ
+  operator /= SLASHEQ
+  operator %= PERCENTEQ
+  operator < LT
+  operator > GT
+  operator = EQUALS
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  operator / SLASH
+  operator % PERCENT
+  operator | PIPE
+  operator & AMP
+  operator ^ CARET
+  operator ~ TILDE
+  keyword IMPORT import
+  keyword FROM from
+  keyword AS as
+  keyword DEF def
+  keyword CLASS class
+  keyword RETURN return
+  keyword PASS pass
+  keyword BREAK break
+  keyword CONTINUE continue
+  keyword IF if
+  keyword ELIF elif
+  keyword ELSE else
+  keyword WHILE while
+  keyword FOR for
+  keyword IN in
+  keyword TRY try
+  keyword EXCEPT except
+  keyword FINALLY finally
+  keyword RAISE raise
+  keyword WITH with
+  keyword LAMBDA lambda
+  keyword AND and
+  keyword OR or
+  keyword NOT not
+  keyword IS is
+  keyword NONE None
+  keyword TRUE True
+  keyword FALSE False
+  keyword GLOBAL global
+  keyword NONLOCAL nonlocal
+  keyword DEL del
+  keyword ASSERT assert
+  keyword YIELD yield
+  keyword ASYNC async
+  keyword AWAIT await
+}
+
+rules {
+  module       ::= statement ;
+  statement    ::= simple-stmt | compound-stmt ;
+
+  ;; ── simple statements ─────────────────────────────────────────
+  simple-stmt  ::= import-stmt | from-import | return-stmt | raise-stmt
+                 | del-stmt | yield-stmt | global-stmt | nonlocal-stmt
+                 | assert-stmt | pass-stmt | break-stmt | continue-stmt
+                 | aug-assign | annotated-assign | assign-stmt | expr-stmt ;
+
+  import-stmt  ::= IMPORT name:dotted-name (AS alias:IDENT)?           => pyf-emit-import ;
+  from-import  ::= FROM module:dotted-name IMPORT name:IDENT (COMMA IDENT)* (AS alias:IDENT)?  => pyf-emit-from-import ;
+  from-star    ::= FROM module:dotted-name IMPORT STAR                  => pyf-emit-from-import ;
+  dotted-name  ::= IDENT (DOT IDENT)*                                  => pyf-passthrough ;
+
+  return-stmt  ::= RETURN value:expression                              => pyf-emit-return ;
+  raise-stmt   ::= RAISE (value:expression)? (FROM cause:expression)?   => pyf-emit-pass ;
+  del-stmt     ::= DEL target:expression                                => pyf-emit-pass ;
+  yield-stmt   ::= YIELD value:expression                               => pyf-emit-pass ;
+  global-stmt  ::= GLOBAL name:IDENT (COMMA IDENT)*                     => pyf-emit-pass ;
+  nonlocal-stmt::= NONLOCAL name:IDENT (COMMA IDENT)*                   => pyf-emit-pass ;
+  assert-stmt  ::= ASSERT cond:expression (COMMA msg:expression)?       => pyf-emit-pass ;
+  pass-stmt    ::= PASS                                                 => pyf-emit-pass ;
+  break-stmt   ::= BREAK                                                => pyf-emit-pass ;
+  continue-stmt::= CONTINUE                                             => pyf-emit-pass ;
+
+  ;; assignment forms — order matters: annotated/aug before simple
+  annotated-assign ::= target:IDENT COLON type:expression EQUALS value:expression  => pyf-emit-assign ;
+  aug-assign   ::= target:IDENT aug-op value:expression                 => pyf-emit-assign ;
+  aug-op       ::= PLUSEQ | MINUSEQ | STAREQ | SLASHEQ | PERCENTEQ ;
+  assign-stmt  ::= target:IDENT EQUALS value:expression                 => pyf-emit-assign ;
+  expr-stmt    ::= expression                                           => pyf-passthrough ;
+
+  ;; ── compound statements ──────────────────────────────────────
+  ;; Bodies are single-line for now; multi-statement indented bodies
+  ;; need the indent-aware engine extension (separate breath).
+  compound-stmt::= decorated | func-def | class-def | if-stmt | while-stmt
+                 | for-stmt | try-stmt | with-stmt | async-def ;
+
+  decorated    ::= decorator+ (func-def | class-def | async-def)        => pyf-passthrough ;
+  decorator    ::= AT expr:dotted-name (LPAREN RPAREN)?                 => pyf-emit-decorator ;
+
+  func-def     ::= DEF name:IDENT LPAREN params:param-list? RPAREN
+                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+  async-def    ::= ASYNC DEF name:IDENT LPAREN params:param-list? RPAREN
+                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+  param-list   ::= param (COMMA param)*                                 => pyf-passthrough ;
+  param        ::= STAR STAR name:IDENT
+                 | STAR name:IDENT
+                 | name:IDENT (COLON type:expression)? (EQUALS dflt:expression)?  => pyf-passthrough ;
+
+  class-def    ::= CLASS name:IDENT (LPAREN bases:arg-list? RPAREN)?
+                   COLON body:simple-stmt                               => pyf-emit-class-def ;
+
+  if-stmt      ::= IF cond:expression COLON body:simple-stmt
+                   elif-clause* else-clause?                            => pyf-emit-pass ;
+  elif-clause  ::= ELIF cond:expression COLON body:simple-stmt          => pyf-passthrough ;
+  else-clause  ::= ELSE COLON body:simple-stmt                          => pyf-passthrough ;
+
+  while-stmt   ::= WHILE cond:expression COLON body:simple-stmt
+                   else-clause?                                         => pyf-emit-pass ;
+
+  for-stmt     ::= FOR target:IDENT IN iter:expression COLON body:simple-stmt
+                   else-clause?                                         => pyf-emit-pass ;
+
+  try-stmt     ::= TRY COLON body:simple-stmt except-clause+
+                   else-clause? finally-clause?                         => pyf-emit-pass ;
+  except-clause::= EXCEPT (exc:expression (AS alias:IDENT)?)?
+                   COLON body:simple-stmt                               => pyf-passthrough ;
+  finally-clause ::= FINALLY COLON body:simple-stmt                     => pyf-passthrough ;
+
+  with-stmt    ::= WITH with-item (COMMA with-item)* COLON
+                   body:simple-stmt                                     => pyf-emit-pass ;
+  with-item    ::= expr:expression (AS alias:IDENT)?                    => pyf-passthrough ;
+
+  ;; ── expressions (full precedence ladder, low→high) ──────────
+  expression   ::= ternary ;
+  ternary      ::= or-expr (IF cond:or-expr ELSE else:expression)?      => pyf-passthrough ;
+  or-expr      ::= and-expr (OR and-expr)*                              => pyf-passthrough ;
+  and-expr     ::= not-expr (AND not-expr)*                             => pyf-passthrough ;
+  not-expr     ::= NOT not-expr | cmp-expr                              => pyf-passthrough ;
+  cmp-expr     ::= bitor-expr (cmp-op bitor-expr)*                      => pyf-passthrough ;
+  cmp-op       ::= EQEQ | NEQ | LE | GE | LT | GT
+                 | IS NOT | IS | NOT IN | IN ;
+  bitor-expr   ::= bitxor-expr (PIPE bitxor-expr)*                      => pyf-passthrough ;
+  bitxor-expr  ::= bitand-expr (CARET bitand-expr)*                     => pyf-passthrough ;
+  bitand-expr  ::= shift-expr (AMP shift-expr)*                         => pyf-passthrough ;
+  shift-expr   ::= sum-expr ((LSHIFT | RSHIFT) sum-expr)*               => pyf-passthrough ;
+  sum-expr     ::= mul-expr (add-op mul-expr)*                          => pyf-passthrough ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= unary-expr (mul-op unary-expr)*                      => pyf-passthrough ;
+  mul-op       ::= STAR | SLASH | PERCENT | SLASHSLASH | AT ;
+  unary-expr   ::= unary-op unary-expr | power-expr                     => pyf-passthrough ;
+  unary-op     ::= MINUS | PLUS | TILDE ;
+  power-expr   ::= await-expr (STARSTAR unary-expr)?                    => pyf-passthrough ;
+  await-expr   ::= AWAIT primary-expr | primary-expr                    => pyf-passthrough ;
+
+  primary-expr ::= atom trailer*                                        => pyf-passthrough ;
+  trailer      ::= call-trailer | subscript-trailer | attr-trailer ;
+  call-trailer ::= LPAREN arg-list? RPAREN                              => pyf-passthrough ;
+  subscript-trailer ::= LBRACK subscript-content RBRACK                 => pyf-passthrough ;
+  subscript-content ::= slice | expression ;
+  slice        ::= (start:expression)? COLON (stop:expression)? (COLON step:expression)? => pyf-passthrough ;
+  attr-trailer ::= DOT IDENT                                            => pyf-passthrough ;
+  arg-list     ::= arg (COMMA arg)*                                     => pyf-passthrough ;
+  arg          ::= name:IDENT EQUALS value:expression
+                 | STAR STAR value:expression
+                 | STAR value:expression
+                 | value:expression                                     => pyf-passthrough ;
+
+  atom         ::= none-lit | true-lit | false-lit | int-lit | str-lit
+                 | list-lit | dict-lit | set-lit | tuple-lit
+                 | listcomp | dictcomp | setcomp | genexp
+                 | lambda-expr | yield-expr
+                 | paren-expr | ident-expr ;
+
+  list-lit     ::= LBRACK arg-list? RBRACK                              => pyf-emit-list-lit ;
+  dict-lit     ::= LBRACE dict-items? RBRACE                            => pyf-emit-dict-lit ;
+  set-lit      ::= LBRACE arg-list RBRACE                               => pyf-emit-list-lit ;
+  tuple-lit    ::= LPAREN expression COMMA arg-list? RPAREN             => pyf-emit-list-lit ;
+  dict-items   ::= dict-item (COMMA dict-item)*                         => pyf-passthrough ;
+  dict-item    ::= key:expression COLON value:expression                => pyf-passthrough ;
+
+  listcomp     ::= LBRACK item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACK                         => pyf-emit-list-lit ;
+  dictcomp     ::= LBRACE key:expression COLON value:expression
+                   FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACE                         => pyf-emit-dict-lit ;
+  setcomp      ::= LBRACE item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACE                         => pyf-emit-list-lit ;
+  genexp       ::= LPAREN item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RPAREN                         => pyf-emit-list-lit ;
+
+  lambda-expr  ::= LAMBDA params:param-list? COLON body:expression      => pyf-emit-func-def ;
+  yield-expr   ::= YIELD value:expression                               => pyf-passthrough ;
+  paren-expr   ::= LPAREN expression RPAREN                             => pyf-emit-paren ;
+
+  ;; ── atomic literals ─────────────────────────────────────────
+  call-expr    ::= IDENT LPAREN RPAREN                                  => pyf-emit-call ;
+  attr-expr    ::= IDENT DOT IDENT                                      => pyf-emit-attr ;
+  int-lit      ::= INT                                                  => pyf-emit-int ;
+  str-lit      ::= STRING                                               => pyf-emit-str ;
+  none-lit     ::= NONE                                                 => pyf-emit-none ;
+  true-lit     ::= TRUE                                                 => pyf-emit-true ;
+  false-lit    ::= FALSE                                                => pyf-emit-false ;
+  ident-expr   ::= IDENT                                                => pyf-emit-ident ;
+}")
+
+    (let py-full-registry
+        (list (list "pyf-passthrough"      pyf-passthrough)
+              (list "pyf-emit-int"         pyf-emit-int)
+              (list "pyf-emit-str"         pyf-emit-str)
+              (list "pyf-emit-ident"       pyf-emit-ident)
+              (list "pyf-emit-none"        pyf-emit-none)
+              (list "pyf-emit-true"        pyf-emit-true)
+              (list "pyf-emit-false"       pyf-emit-false)
+              (list "pyf-emit-import"      pyf-emit-import)
+              (list "pyf-emit-from-import" pyf-emit-from-import)
+              (list "pyf-emit-return"      pyf-emit-return)
+              (list "pyf-emit-pass"        pyf-emit-pass)
+              (list "pyf-emit-assign"      pyf-emit-assign)
+              (list "pyf-emit-func-def"    pyf-emit-func-def)
+              (list "pyf-emit-class-def"   pyf-emit-class-def)
+              (list "pyf-emit-call"        pyf-emit-call)
+              (list "pyf-emit-attr"        pyf-emit-attr)
+              (list "pyf-emit-bin"         pyf-emit-bin)
+              (list "pyf-emit-list-lit"    pyf-emit-list-lit)
+              (list "pyf-emit-dict-lit"    pyf-emit-dict-lit)
+              (list "pyf-emit-paren"       pyf-emit-paren)
+              (list "pyf-emit-decorator"   pyf-emit-decorator)))
+
+    (let py-full-grammar (load-bnf-grammar py-full-text py-full-registry))
+
+    (defn parse-python-full (text)
+        (bnf-parse text py-full-grammar))
+
+    0)

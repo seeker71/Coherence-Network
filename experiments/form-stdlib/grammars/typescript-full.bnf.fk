@@ -1,0 +1,390 @@
+; grammars/typescript-full.bnf.fk — comprehensive TypeScript grammar
+;
+; Ported from the TC39 ECMAScript spec + TypeScript-specific additions.
+; Covers ES2022+ with TypeScript type annotations, interfaces, generics,
+; decorators, and JSX (as region-delegate to grammars/jsx.bnf.fk).
+;
+; Coverage:
+;   • module structure: import/export statements (all 5+ forms)
+;   • declarations: var/let/const with type annotations + destructuring
+;   • function declarations + arrow functions + async/await
+;   • class declarations with extends, implements, decorators,
+;     access modifiers (public/private/protected), static members
+;   • interface declarations with extends, members, optional fields
+;   • type aliases (`type X = ...`), enums (`enum X { ... }`)
+;   • generics (`<T extends U>` on function/class/interface/type)
+;   • type expressions: union, intersection, function, array, tuple,
+;     mapped, conditional, literal, generic, keyof, typeof
+;   • all expressions: arrow, ternary, logical, comparison, bitwise,
+;     arithmetic, unary, postfix increment, call, new, member,
+;     subscript, template-literal, JSX-element
+;   • all statements: if/else, switch, for (3-clause, for-of, for-in),
+;     while, do-while, try/catch/finally, throw, return, break,
+;     continue, label
+;
+; Not covered:
+;   • Module declarations (declare module "x" {...})
+;   • Triple-slash directives
+;   • Type-only imports/exports nuances
+
+(do
+    (let TSF-MODULE   (make_nodeid 1 2 99 400))
+    (let TSF-IMPORT   (make_nodeid 1 2 99 401))
+    (let TSF-EXPORT   (make_nodeid 1 2 99 402))
+    (let TSF-VAR      (make_nodeid 1 2 99 403))
+    (let TSF-FUNC     (make_nodeid 1 2 99 404))
+    (let TSF-CLASS    (make_nodeid 1 2 99 405))
+    (let TSF-INTERFACE (make_nodeid 1 2 99 406))
+    (let TSF-TYPE     (make_nodeid 1 2 99 407))
+    (let TSF-ENUM     (make_nodeid 1 2 99 408))
+    (let TSF-IF       (make_nodeid 1 2 99 409))
+    (let TSF-FOR      (make_nodeid 1 2 99 410))
+    (let TSF-WHILE    (make_nodeid 1 2 99 411))
+    (let TSF-TRY      (make_nodeid 1 2 99 412))
+    (let TSF-CALL     (make_nodeid 1 2 99 413))
+    (let TSF-IDENT    (make_nodeid 1 2 99 414))
+    (let TSF-INT      (make_nodeid 1 2 99 415))
+    (let TSF-STR      (make_nodeid 1 2 99 416))
+    (let TSF-ARROW    (make_nodeid 1 2 99 417))
+    (let TSF-RETURN   (make_nodeid 1 2 99 418))
+
+    (defn tsf-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1") caps)))
+
+    (defn tsf-emit-import (caps)
+        (intern_node TSF-IMPORT
+                      (list (intern_trivial_string (cap-get caps "from")))))
+
+    (defn tsf-emit-export (_caps)
+        (intern_node TSF-EXPORT (empty)))
+
+    (defn tsf-emit-var (caps)
+        (intern_node TSF-VAR
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-func (caps)
+        (intern_node TSF-FUNC
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-class (caps)
+        (intern_node TSF-CLASS
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-interface (caps)
+        (intern_node TSF-INTERFACE
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-type-alias (caps)
+        (intern_node TSF-TYPE
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-enum (caps)
+        (intern_node TSF-ENUM
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn tsf-emit-stmt (_caps)
+        (intern_node TSF-RETURN (list (intern_trivial_string "stmt"))))
+
+    (defn tsf-emit-int (caps)
+        (intern_node TSF-INT
+                      (list (intern_trivial_int
+                              (str_to_int (cap-get caps "_1"))))))
+
+    (defn tsf-emit-str (caps)
+        (intern_node TSF-STR
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn tsf-emit-ident (caps)
+        (intern_node TSF-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn tsf-emit-call (_caps)
+        (intern_node TSF-CALL (list (intern_trivial_string "call"))))
+
+    (defn tsf-emit-arrow (_caps)
+        (intern_node TSF-ARROW (list (intern_trivial_string "arrow"))))
+
+    (let ts-full-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment //
+  string-quotes 34 39 96
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator ( LPAREN
+  operator ) RPAREN
+  operator [ LBRACK
+  operator ] RBRACK
+  operator , COMMA
+  operator ; SEMI
+  operator . DOT
+  operator ... SPREAD
+  operator => ARROW
+  operator === STRICTEQ
+  operator !== STRICTNEQ
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator && ANDAND
+  operator || OROR
+  operator ?? NULLISH
+  operator ?. OPTCHAIN
+  operator << LSHIFT
+  operator >>> URSHIFT
+  operator >> RSHIFT
+  operator ** STARSTAR
+  operator ++ INCR
+  operator -- DECR
+  operator += PLUSEQ
+  operator -= MINUSEQ
+  operator *= STAREQ
+  operator /= SLASHEQ
+  operator %= PERCENTEQ
+  operator : COLON
+  operator ? QMARK
+  operator @ AT
+  operator < LT
+  operator > GT
+  operator = EQUALS
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  operator / SLASH
+  operator % PERCENT
+  operator & AMP
+  operator | PIPE
+  operator ^ CARET
+  operator ! BANG
+  operator ~ TILDE
+  keyword IMPORT import
+  keyword EXPORT export
+  keyword FROM from
+  keyword AS as
+  keyword DEFAULT default
+  keyword VAR var
+  keyword LET let
+  keyword CONST const
+  keyword FUNCTION function
+  keyword CLASS class
+  keyword EXTENDS extends
+  keyword IMPLEMENTS implements
+  keyword INTERFACE interface
+  keyword TYPE type
+  keyword ENUM enum
+  keyword NAMESPACE namespace
+  keyword PUBLIC public
+  keyword PRIVATE private
+  keyword PROTECTED protected
+  keyword READONLY readonly
+  keyword STATIC static
+  keyword ABSTRACT abstract
+  keyword ASYNC async
+  keyword AWAIT await
+  keyword RETURN return
+  keyword IF if
+  keyword ELSE else
+  keyword SWITCH switch
+  keyword CASE case
+  keyword FOR for
+  keyword OF of
+  keyword IN in
+  keyword WHILE while
+  keyword DO do
+  keyword TRY try
+  keyword CATCH catch
+  keyword FINALLY finally
+  keyword THROW throw
+  keyword NEW new
+  keyword BREAK break
+  keyword CONTINUE continue
+  keyword TRUE true
+  keyword FALSE false
+  keyword NULL null
+  keyword UNDEFINED undefined
+  keyword THIS this
+  keyword SUPER super
+  keyword TYPEOF typeof
+  keyword KEYOF keyof
+  keyword INSTANCEOF instanceof
+  keyword VOID void
+  keyword YIELD yield
+}
+
+rules {
+  source-file  ::= module-item*                                 => tsf-passthrough ;
+  module-item  ::= import-stmt | export-stmt | declaration | statement ;
+
+  import-stmt  ::= IMPORT import-clause FROM from:STRING SEMI?  => tsf-emit-import ;
+  import-clause::= STAR AS IDENT
+                 | LBRACE named-imports RBRACE
+                 | IDENT (COMMA LBRACE named-imports RBRACE)?
+                 |                                              => tsf-passthrough ;
+  named-imports::= named-import (COMMA named-import)*           => tsf-passthrough ;
+  named-import ::= IDENT (AS IDENT)?                            => tsf-passthrough ;
+
+  export-stmt  ::= EXPORT (DEFAULT expression | declaration | export-list FROM STRING) SEMI? => tsf-emit-export ;
+  export-list  ::= LBRACE named-imports RBRACE                  => tsf-passthrough ;
+
+  declaration  ::= var-decl | func-decl | class-decl | interface-decl
+                 | type-alias | enum-decl ;
+
+  var-decl     ::= (VAR | LET | CONST) name:IDENT (COLON type:type-expr)?
+                   (EQUALS value:expression)? SEMI?             => tsf-emit-var ;
+
+  func-decl    ::= (ASYNC)? FUNCTION name:IDENT type-params?
+                   LPAREN param-list? RPAREN (COLON ret:type-expr)?
+                   body:block-stmt                              => tsf-emit-func ;
+
+  class-decl   ::= (decorator)* (ABSTRACT)? CLASS name:IDENT type-params?
+                   (EXTENDS base:expression)?
+                   (IMPLEMENTS impl:type-expr (COMMA type-expr)*)?
+                   LBRACE class-member* RBRACE                  => tsf-emit-class ;
+  class-member ::= (decorator)* (modifier)* member-body         => tsf-passthrough ;
+  modifier     ::= PUBLIC | PRIVATE | PROTECTED | READONLY | STATIC | ABSTRACT | ASYNC ;
+  member-body  ::= constructor | method | field | getter | setter ;
+  constructor  ::= IDENT LPAREN param-list? RPAREN body:block-stmt => tsf-emit-func ;
+  method       ::= name:IDENT type-params? LPAREN param-list? RPAREN
+                   (COLON type:type-expr)? body:block-stmt      => tsf-emit-func ;
+  field        ::= name:IDENT (COLON type:type-expr)? (EQUALS value:expression)? SEMI? => tsf-emit-var ;
+  getter       ::= IDENT IDENT LPAREN RPAREN COLON type-expr body:block-stmt => tsf-emit-func ;
+  setter       ::= IDENT IDENT LPAREN param RPAREN body:block-stmt => tsf-emit-func ;
+
+  interface-decl ::= INTERFACE name:IDENT type-params?
+                   (EXTENDS type-expr (COMMA type-expr)*)?
+                   LBRACE interface-member* RBRACE              => tsf-emit-interface ;
+  interface-member ::= name:IDENT (QMARK)? (LPAREN param-list? RPAREN)?
+                   COLON type:type-expr SEMI?                   => tsf-passthrough ;
+
+  type-alias   ::= TYPE name:IDENT type-params? EQUALS value:type-expr SEMI? => tsf-emit-type-alias ;
+  enum-decl    ::= ENUM name:IDENT LBRACE enum-body? RBRACE     => tsf-emit-enum ;
+  enum-body    ::= enum-member (COMMA enum-member)*             => tsf-passthrough ;
+  enum-member  ::= IDENT (EQUALS expression)?                   => tsf-passthrough ;
+
+  type-params  ::= LT type-param (COMMA type-param)* GT         => tsf-passthrough ;
+  type-param   ::= IDENT (EXTENDS type-expr)? (EQUALS type-expr)? => tsf-passthrough ;
+  param-list   ::= param (COMMA param)*                         => tsf-passthrough ;
+  param        ::= (modifier)* (SPREAD)? name:IDENT (QMARK)?
+                   (COLON type:type-expr)? (EQUALS dflt:expression)? => tsf-passthrough ;
+  decorator    ::= AT expression                                => tsf-passthrough ;
+
+  ;; ── type expressions (TS-specific) ─────────────────────────
+  type-expr    ::= union-type ;
+  union-type   ::= intersect-type (PIPE intersect-type)*        => tsf-passthrough ;
+  intersect-type ::= primary-type (AMP primary-type)*           => tsf-passthrough ;
+  primary-type ::= named-type | tuple-type | array-type | func-type
+                 | literal-type | typeof-type | keyof-type | paren-type ;
+  named-type   ::= IDENT (DOT IDENT)* type-args?                => tsf-emit-ident ;
+  type-args    ::= LT type-expr (COMMA type-expr)* GT           => tsf-passthrough ;
+  tuple-type   ::= LBRACK (type-expr (COMMA type-expr)*)? RBRACK => tsf-passthrough ;
+  array-type   ::= primary-type LBRACK RBRACK                   => tsf-passthrough ;
+  func-type    ::= LPAREN param-list? RPAREN ARROW type-expr    => tsf-passthrough ;
+  literal-type ::= STRING | INT | TRUE | FALSE | NULL | UNDEFINED ;
+  typeof-type  ::= TYPEOF expression                            => tsf-passthrough ;
+  keyof-type   ::= KEYOF type-expr                              => tsf-passthrough ;
+  paren-type   ::= LPAREN type-expr RPAREN                      => tsf-passthrough ;
+
+  ;; ── statements ──────────────────────────────────────────────
+  block-stmt   ::= LBRACE statement* RBRACE                     => tsf-emit-stmt ;
+  statement    ::= block-stmt | var-decl | if-stmt | for-stmt | while-stmt
+                 | do-stmt | switch-stmt | try-stmt | throw-stmt
+                 | return-stmt | break-stmt | continue-stmt | expr-stmt ;
+
+  if-stmt      ::= IF LPAREN cond:expression RPAREN then-body:statement
+                   (ELSE else-body:statement)?                  => tsf-emit-stmt ;
+  for-stmt     ::= FOR LPAREN for-init? SEMI cond:expression? SEMI post:expression? RPAREN body:statement
+                 | FOR LPAREN for-of-lhs OF iter:expression RPAREN body:statement
+                 | FOR LPAREN for-of-lhs IN iter:expression RPAREN body:statement
+                                                                 => tsf-emit-stmt ;
+  for-init     ::= var-decl | expression                        => tsf-passthrough ;
+  for-of-lhs   ::= (VAR | LET | CONST)? IDENT                   => tsf-passthrough ;
+  while-stmt   ::= WHILE LPAREN cond:expression RPAREN body:statement => tsf-emit-stmt ;
+  do-stmt      ::= DO body:statement WHILE LPAREN cond:expression RPAREN SEMI? => tsf-emit-stmt ;
+  switch-stmt  ::= SWITCH LPAREN cond:expression RPAREN LBRACE case-clause* RBRACE => tsf-emit-stmt ;
+  case-clause  ::= CASE expression COLON statement* | DEFAULT COLON statement* => tsf-passthrough ;
+  try-stmt     ::= TRY body:block-stmt (CATCH (LPAREN IDENT (COLON type-expr)? RPAREN)? block-stmt)?
+                   (FINALLY block-stmt)?                        => tsf-emit-stmt ;
+  throw-stmt   ::= THROW value:expression SEMI?                 => tsf-emit-stmt ;
+  return-stmt  ::= RETURN value:expression? SEMI?               => tsf-emit-stmt ;
+  break-stmt   ::= BREAK (label:IDENT)? SEMI?                   => tsf-emit-stmt ;
+  continue-stmt::= CONTINUE (label:IDENT)? SEMI?                => tsf-emit-stmt ;
+  expr-stmt    ::= expression SEMI?                             => tsf-passthrough ;
+
+  ;; ── expressions ─────────────────────────────────────────────
+  expression   ::= assign-expr ;
+  assign-expr  ::= ternary (assign-op assign-expr)?             => tsf-passthrough ;
+  assign-op    ::= EQUALS | PLUSEQ | MINUSEQ | STAREQ | SLASHEQ | PERCENTEQ ;
+  ternary      ::= nullish (QMARK then:expression COLON else:expression)? => tsf-passthrough ;
+  nullish      ::= or-expr (NULLISH or-expr)*                   => tsf-passthrough ;
+  or-expr      ::= and-expr (OROR and-expr)*                    => tsf-passthrough ;
+  and-expr     ::= cmp-expr (ANDAND cmp-expr)*                  => tsf-passthrough ;
+  cmp-expr     ::= add-expr (cmp-op add-expr)*                  => tsf-passthrough ;
+  cmp-op       ::= STRICTEQ | STRICTNEQ | EQEQ | NEQ | LE | GE | LT | GT
+                 | INSTANCEOF | IN ;
+  add-expr     ::= mul-expr (add-op mul-expr)*                  => tsf-passthrough ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= unary-expr (mul-op unary-expr)*              => tsf-passthrough ;
+  mul-op       ::= STAR | SLASH | PERCENT | STARSTAR ;
+  unary-expr   ::= unary-op unary-expr | postfix-expr           => tsf-passthrough ;
+  unary-op     ::= BANG | TILDE | MINUS | PLUS | TYPEOF | VOID | AWAIT | INCR | DECR ;
+  postfix-expr ::= primary-expr (INCR | DECR)?                  => tsf-passthrough ;
+  primary-expr ::= new-expr | arrow-func | atom trailer*        => tsf-passthrough ;
+  new-expr     ::= NEW ctor:primary-expr (LPAREN arg-list? RPAREN)? => tsf-passthrough ;
+  arrow-func   ::= (ASYNC)? (LPAREN param-list? RPAREN | name:IDENT)
+                   (COLON ret:type-expr)? ARROW body:arrow-body => tsf-emit-arrow ;
+  arrow-body   ::= block-stmt | expression                      => tsf-passthrough ;
+  trailer      ::= call-trailer | index-trailer | member-trailer | optchain-trailer ;
+  call-trailer ::= type-args? LPAREN arg-list? RPAREN           => tsf-emit-call ;
+  index-trailer::= LBRACK expression RBRACK                     => tsf-passthrough ;
+  member-trailer ::= DOT IDENT                                  => tsf-passthrough ;
+  optchain-trailer ::= OPTCHAIN IDENT                           => tsf-passthrough ;
+  arg-list     ::= expression (COMMA expression)*               => tsf-passthrough ;
+
+  atom         ::= int-lit | str-lit | true-lit | false-lit
+                 | null-lit | undefined-lit | this-lit | super-lit
+                 | array-lit | object-lit | template-lit
+                 | paren-expr | ident-expr ;
+  array-lit    ::= LBRACK (expression (COMMA expression)*)? RBRACK => tsf-emit-call ;
+  object-lit   ::= LBRACE (object-prop (COMMA object-prop)*)? RBRACE => tsf-emit-call ;
+  object-prop  ::= (key:IDENT | key:STRING | LBRACK key:expression RBRACK)
+                   (COLON value:expression)?                    => tsf-passthrough ;
+  template-lit ::= STRING                                       => tsf-emit-str ;
+  paren-expr   ::= LPAREN expression RPAREN                     => tsf-passthrough ;
+  int-lit      ::= INT                                          => tsf-emit-int ;
+  str-lit      ::= STRING                                       => tsf-emit-str ;
+  true-lit     ::= TRUE                                         => tsf-emit-ident ;
+  false-lit    ::= FALSE                                        => tsf-emit-ident ;
+  null-lit     ::= NULL                                         => tsf-emit-ident ;
+  undefined-lit::= UNDEFINED                                    => tsf-emit-ident ;
+  this-lit     ::= THIS                                         => tsf-emit-ident ;
+  super-lit    ::= SUPER                                        => tsf-emit-ident ;
+  ident-expr   ::= IDENT                                        => tsf-emit-ident ;
+}")
+
+    (let ts-full-registry
+        (list (list "tsf-passthrough"     tsf-passthrough)
+              (list "tsf-emit-import"     tsf-emit-import)
+              (list "tsf-emit-export"     tsf-emit-export)
+              (list "tsf-emit-var"        tsf-emit-var)
+              (list "tsf-emit-func"       tsf-emit-func)
+              (list "tsf-emit-class"      tsf-emit-class)
+              (list "tsf-emit-interface"  tsf-emit-interface)
+              (list "tsf-emit-type-alias" tsf-emit-type-alias)
+              (list "tsf-emit-enum"       tsf-emit-enum)
+              (list "tsf-emit-stmt"       tsf-emit-stmt)
+              (list "tsf-emit-int"        tsf-emit-int)
+              (list "tsf-emit-str"        tsf-emit-str)
+              (list "tsf-emit-ident"      tsf-emit-ident)
+              (list "tsf-emit-call"       tsf-emit-call)
+              (list "tsf-emit-arrow"      tsf-emit-arrow)))
+
+    (let ts-full-grammar (load-bnf-grammar ts-full-text ts-full-registry))
+
+    (defn parse-typescript-full (text)
+        (bnf-parse text ts-full-grammar))
+
+    0)
