@@ -1,0 +1,31 @@
+; tests/real-file-parse.fk — parse a structured Python sample
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-full.bnf.fk
+;
+; Parses form-samples/test_module.py — a small real-shaped Python
+; module with: imports, constant, two function definitions, multi-stmt
+; function bodies, function calls.
+
+(do
+    (let src (read_file "form-samples/test_module.py"))
+    (print (str_concat "source: "
+                       (str_concat (int_to_str (str_len src)) " bytes")))
+
+    (let preprocessed (pyf-preprocess src))
+    (print (str_concat "preprocessed: "
+                       (str_concat (int_to_str (str_len preprocessed)) " bytes")))
+
+    ;; Show first 200 chars of preprocessed
+    (defn first-n (s n)
+        (if (le (str_len s) n) s
+            (substring s 0 n)))
+
+    (print "preprocessed preview:")
+    (print (first-n preprocessed 300))
+
+    (let result (parse-python-full-indented src))
+    (let kids (node_children result))
+    (print (str_concat "top-level constructs parsed: "
+                       (int_to_str (len kids))))
+
+    (str_len src))
