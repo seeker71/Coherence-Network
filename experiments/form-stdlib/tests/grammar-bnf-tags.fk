@@ -1,0 +1,60 @@
+; tests/grammar-bnf-tags.fk — exercise BMF-style Tag captures
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+;
+; BMF's Tag container (docs/field/urs/artifacts/master-thesis-2000/
+; companion/source-samples/BMF-includes.bml line 19) wraps a sub-rule
+; and attaches a named tag to the matched result so the rule's process
+; can find that result on the stack by name rather than by position.
+; This test proves the same semantics in our BNF DSL via the surface
+; `name:atom` and the engine's "tag" pattern arm.
+
+(do
+    ;; Emitter that pulls captures by NAME — not by positional _1/_2.
+    ;; A tagged grammar makes actions readable without counting atoms.
+    (defn emit-by-name (caps)
+        (intern_trivial_int
+            (add (str_to_int (cap-get caps "first"))
+                 (str_to_int (cap-get caps "second")))))
+
+    (let registry-tag (list (list "emit-by-name" emit-by-name)))
+
+    ;; Grammar: two integers separated by whitespace, sum them.
+    ;; first:INT second:INT — both captured by tag name.
+    (let bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+}
+rules {
+  pair ::= first:INT second:INT => emit-by-name ;
+}")
+
+    (let grammar (load-bnf-grammar bnf-text registry-tag))
+    (let result (bnf-parse "17 25" grammar))
+    (let probe-1 (walk_recipe result))                   ; → 42
+
+    ;; Probe 2 — `+` postfix (one-or-more) sugars to (sequence p (star p))
+    ;; Grammar accepts at least one INT, possibly more. We sum the FIRST
+    ;; via tag binding; subsequent matches are absorbed by the star.
+
+    (defn emit-first (caps)
+        (intern_trivial_int (str_to_int (cap-get caps "n"))))
+
+    (let registry-plus (list (list "emit-first" emit-first)))
+
+    (let bnf-text-plus
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+}
+rules {
+  many ::= n:INT INT* => emit-first ;
+}")
+
+    (let grammar-plus (load-bnf-grammar bnf-text-plus registry-plus))
+    (let result-plus (bnf-parse "7 1 2 3" grammar-plus))
+    (let probe-2 (walk_recipe result-plus))              ; → 7
+
+    ;; Sum: 42 + 7 = 49
+    (add probe-1 probe-2))
