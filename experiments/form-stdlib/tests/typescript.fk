@@ -1,0 +1,28 @@
+; tests/typescript.fk — exercise typescript.fk file-header subset
+
+(do
+    (let sample
+        (str_concat "import { NodeID, Recipe } from './substrate';
+" (str_concat "import * as fs from 'fs';
+" (str_concat "// comment line
+" (str_concat "
+" (str_concat "export const VERSION = 1;
+" (str_concat "export function init(): void {}
+" "class Kernel {}")))))))
+
+    (let module (parse-typescript "kernel.ts" sample))
+
+    (let kids (node_children module))
+    (let probe-1 (len kids))                              ; → 5 (2 imports + 2 exports + 1 class)
+
+    (defn count-attributed (xs)
+        (if (nil? xs) 0
+            (if (str_eq (cell-source (head xs)) "")
+                (count-attributed (tail xs))
+                (add 1 (count-attributed (tail xs))))))
+    (let probe-2 (count-attributed kids))                 ; → 5
+
+    (let probe-3 (str_len (cell-source module)))          ; → length "kernel.ts:1:1" = 13
+
+    ;; sum: 5 + 5 + 13 = 23
+    (add probe-1 (add probe-2 probe-3)))
