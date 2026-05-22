@@ -1,0 +1,109 @@
+; tests/region-streaming.fk — exercise region streaming: one grammar
+; delegates a sub-pattern's match to a DIFFERENT loaded grammar.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+;
+; The shape Urs's goal named: "CSS or .tsx file have different grammar
+; for different parts...stream any source part using any recipe."
+;
+; First proof: an outer grammar that embeds a math-expression region
+; parsed by an inner grammar. The outer matches a marker INT, then
+; delegates to @math for an arithmetic expression, then matches another
+; marker INT. Both grammars share the same token stream.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Inner grammar — simple arithmetic: int (op int)* fold to int
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let UNIV-PLUS (make_nodeid 1 2 12 1))
+    (let UNIV-MUL  (make_nodeid 1 2 12 3))
+
+    (defn math-emit-lhs (caps) (intern_trivial_int (str_to_int (cap-get caps "value"))))
+    (defn math-emit-op-to-bp (op)
+        (if (str_eq op "+") UNIV-PLUS
+            (if (str_eq op "*") UNIV-MUL UNIV-PLUS)))
+    (defn math-rev-step (acc x) (cons x acc))
+    (defn math-reverse (xs) (foldl math-rev-step (empty) xs))
+
+    (defn math-fold (lhs items)
+        (if (nil? items) lhs
+            (do
+                (let item (head items))
+                (let op (cap-get item "op"))
+                (let rhs-raw (cap-get item "rhs"))
+                (let rhs (intern_trivial_int (str_to_int rhs-raw)))
+                (let new-lhs
+                    (intern_node (math-emit-op-to-bp op)
+                                  (list lhs rhs)))
+                (math-fold new-lhs (tail items)))))
+
+    (defn math-emit-expr (caps)
+        (do
+            (let lhs-raw (cap-get caps "lhs"))
+            (let lhs (intern_trivial_int (str_to_int lhs-raw)))
+            (let raw-items (cap-get caps "items"))
+            (if (nil? raw-items) lhs
+                (math-fold lhs (math-reverse raw-items)))))
+
+    (let math-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  operator + PLUS
+  operator * STAR
+}
+
+rules {
+  start ::= lhs:INT (op:add-op rhs:INT)*  => math-emit-expr ;
+  add-op ::= PLUS | STAR ;
+}")
+
+    (let math-registry (list (list "math-emit-expr" math-emit-expr)))
+    (let math-grammar (load-bnf-grammar math-text math-registry))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Register the math grammar so @math resolves
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; bnf-register-grammar returns the new registry — bind it back.
+
+    (let bnf-grammar-registry (bnf-register-grammar "math" math-grammar))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Outer grammar with embedded @math region
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Surface: `[ EXPR ]` — match a left-bracket, delegate to math, match
+    ;; right-bracket. The brackets are the OUTER grammar's tokens; the
+    ;; tokens inside flow to the inner grammar via the shared stream.
+
+    (defn outer-emit (caps)
+        ;; The math expression's Recipe lives at "expr" tag.
+        (cap-get caps "expr"))
+
+    (let outer-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  operator [ LBRACK
+  operator ] RBRACK
+  operator + PLUS
+  operator * STAR
+}
+
+rules {
+  document ::= LBRACK expr:@math RBRACK  => outer-emit ;
+}")
+
+    (let outer-registry (list (list "outer-emit" outer-emit)))
+    (let outer-grammar (load-bnf-grammar outer-text outer-registry))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe — parse `[ 2 + 3 * 4 ]` via outer-grammar.
+    ;; Outer matches `[`. Region @math parses `2 + 3 * 4` per its rules
+    ;; (left-fold: ((2+3)*4) = 20 since math grammar lacks precedence —
+    ;; intentional simple shape). Outer matches `]`.
+    ;; walk_recipe of the result uses universal MATH Blueprints.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let parsed (bnf-parse "[ 2 + 3 * 4 ]" outer-grammar))
+    (walk_recipe parsed))    ; → 20  (left-fold: (2+3)*4)
