@@ -70,6 +70,88 @@ async def test_health_and_meta_endpoints():
         assert "endpoint_count" in meta.json() or "total_endpoints" in meta.json()
 
 
+@pytest.mark.asyncio
+async def test_meta_self_discovery_endpoints():
+    """meta-self-discovery spec: list response carries traced/coverage_pct
+    + has_trace per item; /meta/coverage, /meta/endpoints/{path_hash},
+    /meta/modules/{module_name} all behave per spec. One flow through the
+    self-description surface."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # 1. /meta/endpoints — list response shape.
+        eps = await c.get("/api/meta/endpoints")
+        assert eps.status_code == 200, eps.text
+        body = eps.json()
+        for field in ("total", "traced", "coverage_pct", "endpoints"):
+            assert field in body, f"missing top-level field: {field}"
+        assert isinstance(body["total"], int) and body["total"] > 0
+        assert isinstance(body["traced"], int) and body["traced"] >= 0
+        assert 0.0 <= body["coverage_pct"] <= 100.0
+        # Per-item: path/method/path_hash/tags/has_trace; spec_id/idea_id nullable.
+        sample = body["endpoints"][0]
+        for field in ("path", "method", "path_hash", "tags", "has_trace"):
+            assert field in sample, f"endpoint missing field: {field}"
+        assert isinstance(sample["path_hash"], str) and len(sample["path_hash"]) == 8
+        # traced count must equal the count of has_trace=true items.
+        traced_in_list = sum(1 for ep in body["endpoints"] if ep["has_trace"])
+        assert traced_in_list == body["traced"]
+        # Untraced endpoints have null spec_id and idea_id (scenario 5 edge case).
+        for ep in body["endpoints"]:
+            if not ep["has_trace"]:
+                assert ep["spec_id"] is None and ep["idea_id"] is None
+
+        # 2. /meta/coverage — shape + cross-consistency with /meta/endpoints.
+        cov = await c.get("/api/meta/coverage")
+        assert cov.status_code == 200, cov.text
+        cbody = cov.json()
+        for field in (
+            "total_endpoints", "traced_endpoints", "coverage_pct",
+            "total_modules", "modules_with_any_trace", "untraced_paths",
+        ):
+            assert field in cbody
+        assert cbody["total_endpoints"] == body["total"]
+        assert cbody["traced_endpoints"] == body["traced"]
+        assert cbody["coverage_pct"] == body["coverage_pct"]
+        # untraced_paths count consistent with has_trace=false set in list.
+        untraced_in_list = {ep["path"] for ep in body["endpoints"] if not ep["has_trace"]}
+        assert set(cbody["untraced_paths"]) == untraced_in_list
+
+        # 3. /meta/endpoints/{path_hash} — 200 valid, 404 invalid.
+        valid_hash = sample["path_hash"]
+        one = await c.get(f"/api/meta/endpoints/{valid_hash}")
+        assert one.status_code == 200, one.text
+        assert one.json()["path_hash"] == valid_hash
+
+        missing = await c.get("/api/meta/endpoints/deadbeef")
+        assert missing.status_code == 404
+
+        # 4. /meta/modules/{module_name} — short name resolution + 404.
+        mods = await c.get("/api/meta/modules")
+        assert mods.status_code == 200
+        mbody = mods.json()
+        assert mbody["total"] > 0
+        # Each module entry carries trace_coverage_pct (0–100).
+        for m in mbody["modules"]:
+            assert "trace_coverage_pct" in m
+            assert 0.0 <= m["trace_coverage_pct"] <= 100.0
+
+        # Find a real short name (e.g. "ideas") that resolves.
+        short_names = [m["name"] for m in mbody["modules"]]
+        assert "ideas" in short_names, f"expected 'ideas' module, got {short_names[:10]}"
+        by_short = await c.get("/api/meta/modules/ideas")
+        assert by_short.status_code == 200, by_short.text
+        assert by_short.json()["name"] == "ideas"
+
+        # Dotted-name lookup also works.
+        dotted = by_short.json()["id"]
+        by_dotted = await c.get(f"/api/meta/modules/{dotted}")
+        assert by_dotted.status_code == 200
+        assert by_dotted.json()["id"] == dotted
+
+        # Unknown name → 404.
+        missing_mod = await c.get("/api/meta/modules/nonexistent_module_xyz")
+        assert missing_mod.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # Idea CRUD (10 tests)
 # ---------------------------------------------------------------------------
