@@ -37,6 +37,9 @@
     (let PYC-IMPORT       (make_nodeid 1 2 99 131))   ; (module, name)
     (let PYC-FROM-IMPORT  (make_nodeid 1 2 99 132))
     (let PYC-DEF          (make_nodeid 1 2 99 133))   ; (name)
+    (let PYC-CLASS        (make_nodeid 1 2 99 134))   ; (name)
+    (let PYC-DOCSTRING    (make_nodeid 1 2 99 135))   ; (text)
+    (let PYC-NAME-LIST    (make_nodeid 1 2 99 136))   ; list of name strings
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Character-class helpers (codepoints)
@@ -125,6 +128,103 @@
     ;; what they need with exact character matches.
     ;; ──────────────────────────────────────────────────────────────────
 
+    ;; Comma + spaces (used inside multi-name import lists)
+    (let pyc-comma-spaces
+        (list "sequence"
+              pyc-skip-spaces
+              (list "char" ",")
+              pyc-skip-spaces))
+
+    ;; Triple-quote docstring: """ ... """ — reads characters until
+    ;; matching close-triple. Uses (not "\"\"\"") to ensure we stop at
+    ;; the close marker. This is the Urs-corrected shape: the rule
+    ;; reads exactly what it needs (chars NOT closing the triple).
+    (let pyc-not-triple
+        (list "not" (list "string" "\"\"\"")))
+
+    (let pyc-doc-body-char
+        (list "sequence" pyc-not-triple (list "any")))
+
+    (let pyc-docstring-rule
+        (list "sequence"
+              (list "string" "\"\"\"")
+              (list "cut")
+              (list "capture" "body"
+                    (list "star" pyc-doc-body-char))
+              (list "string" "\"\"\"")))
+
+    (defn pyc-emit-docstring (caps)
+        (intern_node PYC-DOCSTRING
+                      (list (intern_trivial_string (pyc-cap-get caps "body")))))
+
+    ;; class-decl: `class NAME:` or `class NAME(BASE):`
+    ;; Cut after `class` SP commits — keyword recognized.
+    (let pyc-bases-block
+        (list "opt"
+              (list "sequence"
+                    (list "char" "(")
+                    pyc-skip-spaces
+                    ;; Read any chars up to ')' — bases are captured
+                    ;; opaquely for now (typed base lists are a later
+                    ;; breath; the rule that matters is "find the colon").
+                    (list "star"
+                          (list "sequence"
+                                (list "not" (list "char" ")"))
+                                (list "any")))
+                    (list "char" ")"))))
+
+    (let pyc-class-rule
+        (list "sequence"
+              (list "string" "class")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "cut")
+              (list "capture" "name"
+                    (list "sequence" pyc-ident-start
+                          (list "star" pyc-ident-cont)))
+              pyc-skip-spaces
+              pyc-bases-block
+              pyc-skip-spaces
+              (list "char" ":")))
+
+    (defn pyc-emit-class (caps)
+        (intern_node PYC-CLASS
+                      (list (intern_trivial_string (pyc-cap-get caps "name")))))
+
+    ;; multi-import: `from MODULE import N1, N2, N3` — head + zero or
+    ;; more comma-separated additional names. The emit produces a
+    ;; PYC-FROM-IMPORT with module + comma-joined name string (a
+    ;; structured name-list Recipe is next breath when we wire
+    ;; star-captures to collect into a list children).
+
+    (let pyc-multi-import-rule
+        (list "sequence"
+              (list "string" "from")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "cut")
+              pyc-dotted-ident
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "string" "import")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              ;; capture the entire name list as text (commas + spaces
+              ;; preserved) — the rule reads exactly to end-of-line or
+              ;; end-of-input. Inner structure can be extracted in a
+              ;; later breath without changing this grammar's emit.
+              (list "capture" "names"
+                    (list "sequence"
+                          ;; first name
+                          (list "sequence" pyc-ident-start
+                                (list "star" pyc-ident-cont))
+                          ;; zero or more comma-separated more names
+                          (list "star"
+                                (list "sequence" pyc-comma-spaces
+                                      (list "sequence" pyc-ident-start
+                                            (list "star" pyc-ident-cont))))))))
+
+    (defn pyc-emit-multi-import (caps)
+        (intern_node PYC-FROM-IMPORT
+                      (list (intern_trivial_string (pyc-cap-get caps "module"))
+                            (intern_trivial_string (pyc-cap-get caps "names")))))
+
     ;; from-import: `from MODULE import NAME`
     ;;
     ;; Rule shape:
@@ -166,14 +266,26 @@
     ;; The rules-list cm-parse consumes
     (let python-chars-rules
         (list
-            (list "from_import" pyc-from-import-rule pyc-emit-from-import)
-            (list "def_header"  pyc-def-rule         pyc-emit-def)))
+            (list "from_import"  pyc-from-import-rule  pyc-emit-from-import)
+            (list "multi_import" pyc-multi-import-rule pyc-emit-multi-import)
+            (list "def_header"   pyc-def-rule          pyc-emit-def)
+            (list "class_decl"   pyc-class-rule        pyc-emit-class)
+            (list "docstring"    pyc-docstring-rule    pyc-emit-docstring)))
 
     ;; Entry points for callers
     (defn parse-py-from-import (text)
         (cm-parse text python-chars-rules "from_import"))
 
+    (defn parse-py-multi-import (text)
+        (cm-parse text python-chars-rules "multi_import"))
+
     (defn parse-py-def-header (text)
         (cm-parse text python-chars-rules "def_header"))
+
+    (defn parse-py-class-decl (text)
+        (cm-parse text python-chars-rules "class_decl"))
+
+    (defn parse-py-docstring (text)
+        (cm-parse text python-chars-rules "docstring"))
 
     0)

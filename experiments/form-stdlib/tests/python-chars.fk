@@ -35,5 +35,34 @@
     ;; "foo" = 3
     (let probe-4 (str_len name-4))
 
-    ;; Sum: 14 + 23 + 22 + 3 = 62
-    (add probe-1 (add probe-2 (add probe-3 probe-4))))
+    ;; Probe 5: multi-name import — `from typing import Optional, List, Dict`
+    (let p5 (parse-py-multi-import "from typing import Optional, List, Dict"))
+    (let kids-5 (node_children p5))
+    (let names-5 (node_value (head (tail kids-5))))
+    ;; "Optional, List, Dict" = 20 chars
+    (let probe-5 (str_len names-5))
+
+    ;; Probe 6: class declaration — `class SubstrateStringORM(Base):`
+    (let p6 (parse-py-class-decl "class SubstrateStringORM(Base):"))
+    (let kids-6 (node_children p6))
+    (let cname (node_value (head kids-6)))
+    ;; "SubstrateStringORM" = 18
+    (let probe-6 (str_len cname))
+
+    ;; Probe 7: docstring — three-line """ ... """
+    (let docstring-text
+        (str_concat "\"\"\"Substrate string-table." (str_concat "
+" "Cross-process stable.\"\"\"")))
+    (let p7 (parse-py-docstring docstring-text))
+    (let kids-7 (node_children p7))
+    (let body (node_value (head kids-7)))
+    ;; "Substrate string-table.\nCross-process stable." = 45
+    (let probe-7 (str_len body))
+
+    ;; Sum: 14 + 23 + 22 + 3 + 20 + 18 + 45 = 145
+    (add probe-1
+         (add probe-2
+              (add probe-3
+                   (add probe-4
+                        (add probe-5
+                             (add probe-6 probe-7)))))))
