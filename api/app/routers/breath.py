@@ -12,10 +12,24 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_BREATH_FILE = _REPO_ROOT / "docs" / "breath" / "now.md"
-_BREATHS_DIR = _REPO_ROOT / "docs" / "breath" / "breaths"
+_HERE = Path(__file__).resolve()
+_CANDIDATE_ROOTS = [
+    _HERE.parents[3],            # local dev layout: api/app/routers/ → repo root
+    _HERE.parents[2],            # container layout: app/routers/ → /app
+    Path("/app"),                # absolute container fallback
+]
 _WITNESS_URL = "https://pulse.coherencycoin.com/pulse/now"
+
+
+def _resolve_breath_paths() -> tuple[Path, Path]:
+    """Return (now_file, breaths_dir) from the first root that holds the file."""
+    for root in _CANDIDATE_ROOTS:
+        candidate = root / "docs" / "breath" / "now.md"
+        if candidate.exists():
+            return candidate, root / "docs" / "breath" / "breaths"
+    # No root has it — return the first candidate so the endpoint can attest
+    # the absence honestly via its file-not-present fallback.
+    return _CANDIDATE_ROOTS[0] / "docs" / "breath" / "now.md", _CANDIDATE_ROOTS[0] / "docs" / "breath" / "breaths"
 
 
 def _parse_breath(text: str) -> dict[str, Any]:
@@ -102,7 +116,8 @@ async def _fetch_witness() -> dict[str, Any]:
 
 @router.get("/breath/now", summary="The body's present-tense felt voice")
 async def breath_now() -> dict[str, Any]:
-    if not _BREATH_FILE.exists():
+    breath_file, _ = _resolve_breath_paths()
+    if not breath_file.exists():
         return {
             "voice": "The breath file is not present in this body.",
             "composed_at": None,
@@ -115,7 +130,7 @@ async def breath_now() -> dict[str, Any]:
             "fetched_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    parsed = _parse_breath(_BREATH_FILE.read_text(encoding="utf-8"))
+    parsed = _parse_breath(breath_file.read_text(encoding="utf-8"))
     fm = parsed["frontmatter"]
     sections = parsed["sections"]
     witness = await _fetch_witness()
@@ -136,9 +151,10 @@ async def breath_now() -> dict[str, Any]:
 
 @router.get("/breath/history", summary="Past breath compositions")
 async def breath_history(limit: int = 20) -> dict[str, Any]:
-    if not _BREATHS_DIR.exists():
+    _, breaths_dir = _resolve_breath_paths()
+    if not breaths_dir.exists():
         return {"breaths": [], "count": 0}
-    files = sorted(_BREATHS_DIR.glob("*.md"), reverse=True)[:limit]
+    files = sorted(breaths_dir.glob("*.md"), reverse=True)[:limit]
     items = []
     for path in files:
         parsed = _parse_breath(path.read_text(encoding="utf-8"))
