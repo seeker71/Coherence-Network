@@ -1,0 +1,99 @@
+; grammars/go.bnf.fk — Go file-header grammar in BNF DSL
+;
+; Scope:
+;   - package main
+;   - import "fmt"
+;   - func name() { ... }    (header only)
+;   - type Name struct { ... }
+;   - var Name = value
+;   - // line comments
+;   - "string" / `raw` literals
+
+(do
+    (let GO-BNF-PACKAGE (make_nodeid 1 2 99 80))
+    (let GO-BNF-IMPORT  (make_nodeid 1 2 99 81))
+    (let GO-BNF-FUNC    (make_nodeid 1 2 99 82))
+    (let GO-BNF-TYPE    (make_nodeid 1 2 99 83))
+    (let GO-BNF-VAR     (make_nodeid 1 2 99 84))
+
+    (defn go-bnf-emit-package (caps)
+        ;; PACKAGE IDENT — _2=name
+        (intern_node GO-BNF-PACKAGE
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn go-bnf-emit-import (caps)
+        ;; IMPORT STRING — _2=path
+        (intern_node GO-BNF-IMPORT
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn go-bnf-emit-func (caps)
+        ;; FUNC IDENT LPAREN RPAREN — _2=name
+        (intern_node GO-BNF-FUNC
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn go-bnf-emit-type-struct (caps)
+        ;; TYPE IDENT STRUCT — _2=name
+        (intern_node GO-BNF-TYPE
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string "struct"))))
+
+    (defn go-bnf-emit-var (caps)
+        ;; VAR IDENT EQUALS value — _2=name, _4=value
+        (intern_node GO-BNF-VAR
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string (cap-get caps "_4")))))
+
+    (let go-bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment //
+  string-quotes 34 96
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator ( LPAREN
+  operator ) RPAREN
+  operator , COMMA
+  operator ; SEMI
+  operator : COLON
+  operator = EQUALS
+  operator . DOT
+  keyword PACKAGE package
+  keyword IMPORT import
+  keyword FUNC func
+  keyword TYPE type
+  keyword STRUCT struct
+  keyword VAR var
+  keyword CONST const
+  keyword INTERFACE interface
+}
+
+rules {
+  module      ::= statement ;
+  statement   ::= package-stmt | import-stmt | func-stmt | type-stmt | var-stmt ;
+  package-stmt ::= PACKAGE IDENT                          => go-bnf-emit-package ;
+  import-stmt  ::= IMPORT STRING                           => go-bnf-emit-import ;
+  func-stmt    ::= FUNC IDENT LPAREN RPAREN                => go-bnf-emit-func ;
+  type-stmt    ::= TYPE IDENT STRUCT                       => go-bnf-emit-type-struct ;
+  var-stmt     ::= VAR IDENT EQUALS INT                    => go-bnf-emit-var ;
+}")
+
+    (let go-bnf-registry
+        (list (list "go-bnf-emit-package"     go-bnf-emit-package)
+              (list "go-bnf-emit-import"      go-bnf-emit-import)
+              (list "go-bnf-emit-func"        go-bnf-emit-func)
+              (list "go-bnf-emit-type-struct" go-bnf-emit-type-struct)
+              (list "go-bnf-emit-var"         go-bnf-emit-var)))
+
+    (let go-bnf-grammar
+        (load-bnf-grammar go-bnf-text go-bnf-registry))
+
+    (defn parse-go-bnf (_source-path text)
+        (bnf-parse text go-bnf-grammar))
+
+    0)
