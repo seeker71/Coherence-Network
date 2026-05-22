@@ -617,8 +617,26 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
 	})
+	// int_to_str — value-to-string for trivial leaves. The historical
+	// name reflects its first use (line numbers in cell-trace.fk); its
+	// semantics is "render any trivial value as text" so emit-engine.fk
+	// can pass node_value of any leaf type through it. Multi-target
+	// emit (universal codec lattice — see emit.fk + emits/json.fk)
+	// depends on this passthrough for strings and bools.
 	k.registerNative("int_to_str", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VStr, Str: strconv.FormatInt(args[0].Int, 10)}
+		v := args[0]
+		switch v.Kind {
+		case VStr:
+			return Value{Kind: VStr, Str: v.Str}
+		case VBool:
+			if v.Bool {
+				return Value{Kind: VStr, Str: "true"}
+			}
+			return Value{Kind: VStr, Str: "false"}
+		case VNull:
+			return Value{Kind: VStr, Str: "null"}
+		}
+		return Value{Kind: VStr, Str: strconv.FormatInt(v.Int, 10)}
 	})
 	k.registerNative("str_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
 		n, _ := strconv.ParseInt(args[0].Str, 10, 64)

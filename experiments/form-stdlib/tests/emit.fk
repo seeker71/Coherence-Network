@@ -1,27 +1,34 @@
 ; tests/emit.fk — exercise the universal emit dispatcher end-to-end
 ;
 ; The breath being probed: cells (Recipe tree) → text via target-name
-; dispatch. JSON is the first concrete target.
+; dispatch. JSON is the first concrete target via emits/json.fk;
+; markdown is the second concrete target via grammars/markdown.fk
+; (whose emit half ships as `markdown-templates`). Two targets in one
+; registry — multi-target is real.
 ;
 ; Load:
-;   bin-go core.fk emit-engine.fk grammars/json.fk \
-;          emits/json.fk emit.fk codec.fk tests/emit.fk
+;   bin-go core.fk emit-engine.fk codec.fk \
+;          grammars/json.fk grammars/markdown.fk \
+;          emit.fk emits/json.fk tests/emit.fk
 ;
 ; What we probe with one strange-minimal expression:
-;   1. registry construction       → list-targets length = 1
+;   1. registry construction       → list-targets length = 2 (json + markdown)
 ;   2. unknown-target sentinel     → starts with "unknown-target:"
 ;   3. parse-then-emit produces non-empty text for a small JSON
-;   4. tied codec round-trip       → emit-with returns non-empty text
+;   4. tied JSON codec round-trip  → emit-with returns non-empty text
+;   5. markdown target dispatches  → heading emit returns non-empty text
 ;
 ; Sum returned: a probe number that holds at each green breath. The
 ; first failure makes one of these probes shift — the test surface
 ; itself becomes the diagnostic.
 
 (do
-    ;; ── Probe 1: registry with one entry, list-targets returns it ──
-    (let registry (list (list "json" json-templates)))
+    ;; ── Probe 1: registry with TWO entries (multi-target) ──
+    (let registry
+        (list (list "json"     json-templates)
+              (list "markdown" markdown-templates)))
     (let names (list-targets registry))
-    (let probe-1 (len names))                        ; → 1
+    (let probe-1 (len names))                        ; → 2
 
     ;; ── Probe 2: unknown-target sentinel surfaces cleanly ──
     (let bogus-cell (intern_trivial_int 0))
@@ -39,5 +46,11 @@
     (let codec-text (emit-with json-codec codec-cell))
     (let probe-4 (str_len codec-text))               ; → 7
 
-    ;; Sum: 1 + 41 + 7 + 7 = 56
-    (add probe-1 (add probe-2 (add probe-3 probe-4))))
+    ;; ── Probe 5: markdown target dispatches via the SAME registry ──
+    (let md-sample "# Hello")
+    (let md-cell (parse-markdown "smoke.md" md-sample))
+    (let md-emitted (emit-to "markdown" md-cell registry))
+    (let probe-5 (str_len md-emitted))               ; → "# Hello" = 7
+
+    ;; Sum: 2 + 41 + 7 + 7 + 7 = 64
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 probe-5)))))

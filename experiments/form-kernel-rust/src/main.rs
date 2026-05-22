@@ -600,8 +600,19 @@ impl Kernel {
         self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_str() == args[1].as_str())
         });
+        // int_to_str — value-to-string for trivial leaves. Historical name
+        // (first use: line numbers in cell-trace.fk); semantics is "render
+        // any trivial value as text" so emit-engine.fk's leaf walker can
+        // pass node_value of any leaf type through it. Multi-target emit
+        // (universal codec lattice — emit.fk + emits/json.fk) depends on
+        // string + bool + null passthrough.
         self.register_native("int_to_str", cat_method(), |_, _, args| {
-            Value::Str(args[0].as_int().to_string())
+            match &args[0] {
+                Value::Str(s) => Value::Str(s.clone()),
+                Value::Bool(b) => Value::Str(if *b { "true".to_string() } else { "false".to_string() }),
+                Value::Null => Value::Str("null".to_string()),
+                _ => Value::Str(args[0].as_int().to_string()),
+            }
         });
         self.register_native("str_to_int", cat_method(), |_, _, args| {
             Value::Int(args[0].as_str().parse().unwrap_or(0))

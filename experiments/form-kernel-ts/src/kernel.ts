@@ -814,10 +814,19 @@ export class Kernel {
       kind: "bool",
       bool: argStr(args, 0) === argStr(args, 1),
     }));
-    this.registerNative("int_to_str", catMethod(), (_k, args) => ({
-      kind: "str",
-      str: String(argInt(args, 0)),
-    }));
+    // int_to_str — value-to-string for trivial leaves. Historical name
+    // (first use: line numbers in cell-trace.fk); semantics is "render
+    // any trivial value as text" so emit-engine.fk's leaf walker can
+    // pass node_value of any leaf type through it. Multi-target emit
+    // (universal codec lattice — emit.fk + emits/json.fk) depends on
+    // string + bool + null passthrough.
+    this.registerNative("int_to_str", catMethod(), (_k, args) => {
+      const v = args[0]!;
+      if (v.kind === "str") return { kind: "str", str: v.str ?? "" };
+      if (v.kind === "bool") return { kind: "str", str: v.bool ? "true" : "false" };
+      if (v.kind === "null") return { kind: "str", str: "null" };
+      return { kind: "str", str: String(argInt(args, 0)) };
+    });
     this.registerNative("str_to_int", catMethod(), (_k, args) => ({
       kind: "int",
       int: parseInt(argStr(args, 0), 10) || 0,
@@ -948,7 +957,7 @@ export class Kernel {
         const buf = readFileSync(argStr(args, 0));
         const out: Value[] = new Array(buf.length);
         for (let i = 0; i < buf.length; i++) {
-          out[i] = { kind: "int", int: buf[i] };
+          out[i] = { kind: "int", int: buf[i]! };
         }
         return { kind: "list", list: out };
       } catch {
