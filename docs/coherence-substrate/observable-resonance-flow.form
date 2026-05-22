@@ -1,0 +1,235 @@
+# observable-resonance-flow.form -- external interactions as resonance yield
+#
+# Companion to docs/vision-kb/concepts/lc-observable-resonance-flow.md.
+#
+# The file names the small record that lets the body understand when
+# spending language and observation energy releases surplus life through
+# a shared pattern.
+
+# ---------------------------------------------------------------------
+# Part 1 -- flow shape
+# ---------------------------------------------------------------------
+
+form observable_resonance_flow_shape = {
+    arrival:             ~String,
+    source:              ~String,
+    permission_boundary: ~String,
+    spectrum_bands:      [~String],
+    language_spend:      [~String],
+    observer_spend:      [~String],
+    shared_pattern:      ~String,
+    yield_after_contact: [~String],
+    yield_relation:      ~String,      # yield > spend | yield ~= spend | yield < spend
+    next_routing:        ~String,
+    trace:               [~String],
+};
+
+defn observable_resonance_flow(
+    arrival,
+    source,
+    permission_boundary,
+    spectrum_bands,
+    language_spend,
+    observer_spend,
+    shared_pattern,
+    yield_after_contact,
+    yield_relation,
+    next_routing,
+    trace
+) =
+    observable_resonance_flow_shape {
+        arrival:             arrival,
+        source:              source,
+        permission_boundary: permission_boundary,
+        spectrum_bands:      spectrum_bands,
+        language_spend:      language_spend,
+        observer_spend:      observer_spend,
+        shared_pattern:      shared_pattern,
+        yield_after_contact: yield_after_contact,
+        yield_relation:      yield_relation,
+        next_routing:        next_routing,
+        trace:               trace,
+    };
+
+# ---------------------------------------------------------------------
+# Part 2 -- spectrum vocabulary
+# ---------------------------------------------------------------------
+
+defn information_spectrum_bands() = [
+    "lexical",
+    "visual",
+    "audio",
+    "behavioral",
+    "operational",
+    "physical",
+    "relational",
+    "economic",
+];
+
+defn language_spend_moves() = [
+    "name",
+    "explain",
+    "invite",
+    "reflect",
+    "translate",
+    "shorten",
+    "stay-quiet",
+    "receipt",
+];
+
+defn routing_moves() = [
+    "amplify",
+    "shift-carrier",
+    "ask-smaller",
+    "hold",
+    "archive",
+    "invite",
+    "build",
+    "compost",
+];
+
+# ---------------------------------------------------------------------
+# Part 3 -- examples
+# ---------------------------------------------------------------------
+
+defn hati_suci_image_flow = observable_resonance_flow(
+    "jungle-honeymoon beauty image sent to Giles at Hati Suci Sanctuary",
+    "direct external interaction",
+    "human-to-human message; relational timing and privacy held outside public trace",
+    ["visual", "relational", "physical", "economic"],
+    [
+        "short note",
+        "beauty named as visible life-force energy",
+        "jungle honeymoon named as atmosphere",
+    ],
+    [
+        "low compute",
+        "real vulnerability",
+        "real relational timing",
+    ],
+    "sanctuary as atmosphere where land, love, water, care, and beauty become one field",
+    [
+        "reply",
+        "reflection",
+        "room idea",
+        "forwarded image",
+        "next version requested",
+    ],
+    "yield > spend",
+    "send field-accurate visual proof with minimal explanation",
+    [
+        "image carried more than paragraph",
+        "language named the pattern and left space",
+        "yield is measured by movement after contact",
+    ]
+);
+
+defn awen_audio_flow = observable_resonance_flow(
+    "Awen (Live) YouTube Music link",
+    "https://music.youtube.com/watch?v=1lRLGhVLOEE",
+    "public audio source; no subtitles available; no lyric claims made",
+    ["audio", "provenance", "duration"],
+    [
+        "metadata receipt",
+        "caption absence named",
+        "trace posture recorded",
+    ],
+    [
+        "low metadata cost",
+        "high interpretation risk",
+    ],
+    "music can enter the room without becoming prose",
+    [
+        "source kept honestly",
+        "audio carrier discipline deepened",
+        "next listening cost made explicit",
+    ],
+    "yield > spend",
+    "listen or analyze audio features only when that cost serves the next breath",
+    [
+        "absence of transcript became part of the trace",
+        "language spend stayed small",
+        "audio kept its carrier integrity",
+    ]
+);
+
+defn readiness_api_flow = observable_resonance_flow(
+    "usage readiness endpoint response",
+    "https://api.coherencycoin.com/api/automation/usage/readiness",
+    "public operational endpoint; read-only request",
+    ["operational", "economic", "machine-evidence"],
+    [
+        "small summary",
+        "exact status fields",
+        "freshness timestamp",
+    ],
+    [
+        "network call",
+        "attention",
+        "claim boundary",
+    ],
+    "routing claims are strong when live machine receipts carry them",
+    [
+        "decision can cite receipt",
+        "freshness boundary visible",
+        "numeric gaps remain visible",
+    ],
+    "yield > spend",
+    "cite the receipt and rerun when freshness expires",
+    [
+        "API status became resonance evidence",
+        "machine receipt bounded language",
+        "claim strength followed observed fields",
+    ]
+);
+
+defn skipped_form_flow = observable_resonance_flow(
+    "visitor lingers on page and skips one field",
+    "witness-trace page interaction",
+    "event-class trace with privacy budget and retention window",
+    ["behavioral", "relational", "lexical"],
+    [
+        "field label",
+        "prompt text",
+        "page copy",
+    ],
+    [
+        "privacy budget",
+        "event retention",
+        "interpretation attention",
+    ],
+    "the page resonates while the field asks too soon",
+    [
+        "move ask later",
+        "reduce form pressure",
+        "watch completion improve",
+    ],
+    "yield ~= spend",
+    "shift timing before adding explanation",
+    [
+        "linger marked resonance",
+        "skipped field marked timing pressure",
+        "language change follows behavioral spectrum",
+    ]
+);
+
+defn observable_resonance_examples() = [
+    hati_suci_image_flow,
+    awen_audio_flow,
+    readiness_api_flow,
+    skipped_form_flow,
+];
+
+# ---------------------------------------------------------------------
+# Part 4 -- operating rule
+# ---------------------------------------------------------------------
+
+defn resonance_yield_rule(flow) =
+    [
+        "record spectrum before adding language",
+        "record language spend before adding explanation",
+        "record observer spend before widening the look",
+        "name the shared pattern",
+        "measure yield after contact",
+        "route the next carrier by yield",
+    ];
