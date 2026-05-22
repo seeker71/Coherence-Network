@@ -1,0 +1,53 @@
+; tests/use-real-md-stream.fk — end-to-end USE of the Form stack on a
+; real markdown file from this repo.
+;
+; This is observation, not construction. Pipe an actual file through
+; the universal codec, watch cells flow, verify everything composes:
+;
+;   read_file (kernel native)
+;     → parse-markdown (markdown.fk grammar)
+;     → cells in substrate (with source attribution per intern_node_at)
+;     → walk via foldl (count blocks + total content length in one pass)
+;     → cell-trace on first block (provenance back to source line)
+;
+; Sibling parity validates: the entire stack — kernel reads file,
+; grammar parses, cells intern, observers fold, trace walks — produces
+; byte-identical results on Go and Rust kernels.
+
+(do
+    ;; --- read the real file ---------------------------------------
+    (let path "form-samples/demo-concept.md")
+    (let content (read_file path))
+
+    ;; --- parse via markdown.fk ------------------------------------
+    (let doc (parse-markdown path content))
+    (let blocks (node_children doc))
+
+    ;; --- observation 1: block count -------------------------------
+    ;; demo-concept.md has: H1 + para + H2 + para + H2 + para = 6 blocks
+    (let probe-1 (len blocks))
+
+    ;; --- observation 2: count attributed blocks via foldl --------
+    ;; Each block emitted by markdown.fk carries source attribution.
+    (defn count-attributed (acc cell)
+        (if (str_eq (cell-source cell) "") acc (add acc 1)))
+    (let probe-2 (foldl count-attributed 0 blocks))
+
+    ;; --- observation 3: source of first block -------------------
+    ;; First block is H1 at line 1, col 1.
+    ;; cell-source returns "form-samples/demo-concept.md:1:1" — 33 chars
+    (let probe-3 (str_len (cell-source (head blocks))))
+
+    ;; --- observation 4: document root carries its own attribution
+    (let probe-4 (str_len (cell-source doc)))
+
+    ;; --- observation 5: sum children-counts across all blocks ----
+    ;; Sibling-safe: works whether children are int or string trivials.
+    ;; DOC-HEADING has 2 kids (level + text); DOC-PARAGRAPH has 1 kid
+    ;; (text). 3 headings × 2 + 3 paragraphs × 1 = 9.
+    (defn sum-kid-count (acc cell)
+        (add acc (len (node_children cell))))
+    (let probe-5 (foldl sum-kid-count 0 blocks))
+
+    ;; sum: 6 + 6 + 33 + 33 + 9 = 87
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 probe-5)))))
