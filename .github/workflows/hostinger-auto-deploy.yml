@@ -8,6 +8,7 @@ on:
       - 'web/**'
       - 'pulse/**'
       - 'deploy/hostinger/**'
+      - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
       - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
