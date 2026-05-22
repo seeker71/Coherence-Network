@@ -1,0 +1,50 @@
+; grammars/tsx.bnf.fk — minimal .tsx grammar that uses region streaming
+; for embedded JSX.
+;
+; The outer grammar matches TypeScript-style assignments where the
+; value may be a JSX element. When the value rule sees `<`, the parser
+; delegates to the jsx grammar (registered by grammars/jsx.bnf.fk)
+; for the embedded element.
+;
+; Surface accepted:
+;   let x = <h1>hello</h1>
+;
+; The result is a TSX-LET Recipe whose value is the JSX-ELEMENT
+; Recipe produced by the inner grammar.
+
+(do
+    (let TSX-LET (make_nodeid 1 2 99 120))
+
+    (defn tsx-emit-let (caps)
+        (intern_node TSX-LET
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+
+    (let tsx-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  ident-kind IDENT
+  operator < LANGLE
+  operator > RANGLE
+  operator / SLASH
+  operator = EQUALS
+  keyword LET let
+  keyword CONST const
+}
+
+rules {
+  ;; module ::= statement+ — for now a single let-decl with JSX value
+  module ::= let-decl ;
+  let-decl ::= LET name:IDENT EQUALS value:@jsx => tsx-emit-let ;
+}")
+
+    (let tsx-registry
+        (list (list "tsx-emit-let" tsx-emit-let)))
+
+    (let tsx-grammar (load-bnf-grammar tsx-text tsx-registry))
+
+    (defn parse-tsx-bnf (_source-path text)
+        (bnf-parse text tsx-grammar))
+
+    0)
