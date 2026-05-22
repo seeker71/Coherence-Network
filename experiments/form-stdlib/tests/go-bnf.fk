@@ -95,7 +95,38 @@ func main() { }"))
                             (str_eq inner-op "*"))
                       1 0))                               ; → 1
 
-    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 + 1 = 38
+    ;; Probe 13 — function with typed parameters
+    (let r13 (parse-go-bnf "t.go" "func add(a int, b int) { return a }"))
+    (let probe-13 (len (node_children r13)))              ; → 1
+
+    ;; Probe 14 — function call
+    (let r14 (parse-go-bnf "t.go" "func main() { print(42) }"))
+    (let body14 (head (tail (node_children (first-stmt r14)))))
+    (let stmt14 (head (node_children body14)))
+    (let expr14 (head (node_children stmt14)))
+    (let probe-14 (if (node_eq (node_category expr14) (make_nodeid 1 2 99 99)) 1 0))
+                                                          ; → 1 (CALL)
+
+    ;; Probe 15 — selector expression
+    (let r15 (parse-go-bnf "t.go" "func use() { return fmt.Println }"))
+    (let body15 (head (tail (node_children (first-stmt r15)))))
+    (let ret15 (head (node_children body15)))
+    (let expr15 (head (node_children ret15)))
+    (let probe-15 (if (node_eq (node_category expr15) (make_nodeid 1 2 99 100)) 1 0))
+                                                          ; → 1 (SELECTOR)
+
+    ;; Probe 16 — for loop
+    (let r16 (parse-go-bnf "t.go" "func loop() { for x { } }"))
+    (let body16 (head (tail (node_children (first-stmt r16)))))
+    (let for16 (head (node_children body16)))
+    (let probe-16 (if (node_eq (node_category for16) (make_nodeid 1 2 99 101)) 1 0))
+                                                          ; → 1 (FOR)
+
+    ;; Probe 17 — struct with fields
+    (let r17 (parse-go-bnf "t.go" "type Kernel struct { name string }"))
+    (let probe-17 (len (node_children r17)))              ; → 1
+
+    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 43
     (add probe-1
          (add probe-2
               (add probe-3
@@ -106,4 +137,9 @@ func main() { }"))
                                        (add probe-8
                                             (add probe-9
                                                  (add probe-10
-                                                      (add probe-11 probe-12))))))))))))
+                                                      (add probe-11
+                                                           (add probe-12
+                                                                (add probe-13
+                                                                     (add probe-14
+                                                                          (add probe-15
+                                                                               (add probe-16 probe-17)))))))))))))))))
