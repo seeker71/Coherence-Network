@@ -1,39 +1,38 @@
-; tests/typescript-bnf.fk — exercise typescript.bnf.fk
+; tests/typescript-bnf.fk — exercise typescript.bnf.fk with multi-stmt
 ;
 ; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/typescript.bnf.fk
 
 (do
-    ;; Probe 1: import { NodeID } from './substrate';
+    (defn first-stmt (root) (head (node_children root)))
+
     (let r1 (parse-typescript-bnf "t.ts" "import { NodeID } from \"./substrate\""))
-    (let kids-1 (node_children r1))
-    (let probe-1 (len kids-1))                              ; → 2
+    (let kids-1 (node_children (first-stmt r1)))
+    (let probe-1 (len kids-1))
 
-    ;; Probe 2: import * as fs from 'fs';
     (let r2 (parse-typescript-bnf "t.ts" "import * as fs from \"fs\""))
-    (let kids-2 (node_children r2))
-    (let alias-val (node_value (head kids-2)))
-    (let probe-2 (str_len alias-val))                       ; → 2 ("fs")
+    (let alias-val (node_value (head (node_children (first-stmt r2)))))
+    (let probe-2 (str_len alias-val))
 
-    ;; Probe 3: import React from 'react';
     (let r3 (parse-typescript-bnf "t.ts" "import React from \"react\""))
-    (let kids-3 (node_children r3))
-    (let name-val (node_value (head kids-3)))
-    (let probe-3 (str_len name-val))                        ; → 5 ("React")
+    (let name-val (node_value (head (node_children (first-stmt r3)))))
+    (let probe-3 (str_len name-val))
 
-    ;; Probe 4: export const VERSION = 1;
     (let r4 (parse-typescript-bnf "t.ts" "export const VERSION = 1"))
-    (let kids-4 (node_children r4))
-    (let const-name (node_value (head kids-4)))
-    (let probe-4 (str_len const-name))                      ; → 7 ("VERSION")
+    (let const-name (node_value (head (node_children (first-stmt r4)))))
+    (let probe-4 (str_len const-name))
 
-    ;; Probe 5: export function init(): void
     (let r5 (parse-typescript-bnf "t.ts" "export function init(): void"))
-    (let kids-5 (node_children r5))
-    (let fn-name (node_value (head kids-5)))
-    (let probe-5 (str_len fn-name))                         ; → 4 ("init")
+    (let fn-name (node_value (head (node_children (first-stmt r5)))))
+    (let probe-5 (str_len fn-name))
 
-    ;; Sum: 2 + 2 + 5 + 7 + 4 = 20
+    ;; Probe 6 — multi-statement (3 statements)
+    (let r6 (parse-typescript-bnf "t.ts" "import React from \"react\"
+export const VERSION = 1
+export function init(): void"))
+    (let probe-6 (len (node_children r6)))               ; → 3
+
     (add probe-1
          (add probe-2
               (add probe-3
-                   (add probe-4 probe-5)))))
+                   (add probe-4
+                        (add probe-5 probe-6))))))

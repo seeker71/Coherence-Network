@@ -1,40 +1,38 @@
-; tests/rust-bnf.fk — exercise rust.bnf.fk
+; tests/rust-bnf.fk — exercise rust.bnf.fk with multi-stmt
 ;
 ; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/rust.bnf.fk
 
 (do
-    ;; Probe 1: use std;
+    (defn first-stmt (root) (head (node_children root)))
+
     (let r1 (parse-rust-bnf "t.rs" "use std;"))
-    (let kids-1 (node_children r1))
-    (let path-val (node_value (head kids-1)))
-    (let probe-1 (str_len path-val))                       ; → 3 ("std")
+    (let path-val (node_value (head (node_children (first-stmt r1)))))
+    (let probe-1 (str_len path-val))
 
-    ;; Probe 2: pub use crate;
     (let r2 (parse-rust-bnf "t.rs" "pub use crate;"))
-    (let kids-2 (node_children r2))
-    (let pub-path (node_value (head kids-2)))
-    (let probe-2 (str_len pub-path))                       ; → 5 ("crate")
+    (let pub-path (node_value (head (node_children (first-stmt r2)))))
+    (let probe-2 (str_len pub-path))
 
-    ;; Probe 3: mod helper;
     (let r3 (parse-rust-bnf "t.rs" "mod helper;"))
-    (let kids-3 (node_children r3))
-    (let mod-name (node_value (head kids-3)))
-    (let probe-3 (str_len mod-name))                       ; → 6 ("helper")
+    (let mod-name (node_value (head (node_children (first-stmt r3)))))
+    (let probe-3 (str_len mod-name))
 
-    ;; Probe 4: pub fn run()
     (let r4 (parse-rust-bnf "t.rs" "pub fn run()"))
-    (let kids-4 (node_children r4))
-    (let fn-name (node_value (head kids-4)))
-    (let probe-4 (str_len fn-name))                        ; → 3 ("run")
+    (let fn-name (node_value (head (node_children (first-stmt r4)))))
+    (let probe-4 (str_len fn-name))
 
-    ;; Probe 5: struct Recipe
     (let r5 (parse-rust-bnf "t.rs" "struct Recipe"))
-    (let kids-5 (node_children r5))
-    (let st-name (node_value (head kids-5)))
-    (let probe-5 (str_len st-name))                        ; → 6 ("Recipe")
+    (let st-name (node_value (head (node_children (first-stmt r5)))))
+    (let probe-5 (str_len st-name))
 
-    ;; Sum: 3 + 5 + 6 + 3 + 6 = 23
+    ;; Probe 6 — multi-statement (3 statements)
+    (let r6 (parse-rust-bnf "t.rs" "use std;
+mod helper;
+struct Recipe"))
+    (let probe-6 (len (node_children r6)))               ; → 3
+
     (add probe-1
          (add probe-2
               (add probe-3
-                   (add probe-4 probe-5)))))
+                   (add probe-4
+                        (add probe-5 probe-6))))))
