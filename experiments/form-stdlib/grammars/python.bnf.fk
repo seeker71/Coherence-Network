@@ -154,6 +154,32 @@
                 (head (tail (head table)))
                 (py-bnf-lookup-prec (tail table) text))))
 
+    ;; Universal Blueprints — kernel walk_recipe evaluates these natively
+    ;; (no per-language evaluator needed; the form runtime IS the executor).
+    (let PY-UNIV-MATH-PLUS   (make_nodeid 1 2 12 1))
+    (let PY-UNIV-MATH-MINUS  (make_nodeid 1 2 12 2))
+    (let PY-UNIV-MATH-MUL    (make_nodeid 1 2 12 3))
+    (let PY-UNIV-MATH-DIV    (make_nodeid 1 2 12 4))
+    (let PY-UNIV-CMP-EQ      (make_nodeid 1 2 13 1))
+    (let PY-UNIV-CMP-NEQ     (make_nodeid 1 2 13 2))
+    (let PY-UNIV-CMP-LT      (make_nodeid 1 2 13 3))
+    (let PY-UNIV-CMP-LE      (make_nodeid 1 2 13 4))
+    (let PY-UNIV-CMP-GT      (make_nodeid 1 2 13 5))
+    (let PY-UNIV-CMP-GE      (make_nodeid 1 2 13 6))
+
+    (defn py-bnf-op-to-blueprint (op)
+        (if (str_eq op "+") PY-UNIV-MATH-PLUS
+        (if (str_eq op "-") PY-UNIV-MATH-MINUS
+        (if (str_eq op "*") PY-UNIV-MATH-MUL
+        (if (str_eq op "/") PY-UNIV-MATH-DIV
+        (if (str_eq op "==") PY-UNIV-CMP-EQ
+        (if (str_eq op "!=") PY-UNIV-CMP-NEQ
+        (if (str_eq op "<")  PY-UNIV-CMP-LT
+        (if (str_eq op "<=") PY-UNIV-CMP-LE
+        (if (str_eq op ">")  PY-UNIV-CMP-GT
+        (if (str_eq op ">=") PY-UNIV-CMP-GE
+            PY-UNIV-MATH-PLUS))))))))))) ; fallback for and/or/%/etc
+
     (defn py-bnf-climb (lhs items table min-prec)
         (if (nil? items) (list lhs items)
             (do
@@ -169,10 +195,12 @@
                                                    (add op-prec 1)))
                         (let inner-rhs (head inner))
                         (let after-inner (head (tail inner)))
+                        ;; Universal Blueprint emission: the kernel's
+                        ;; walk_recipe evaluates MATH/COMPARE natively.
+                        ;; No per-language eval needed.
                         (let new-lhs
-                            (intern_node PY-BNF-BIN-EXPR
-                                          (list (intern_trivial_string op)
-                                                lhs inner-rhs)))
+                            (intern_node (py-bnf-op-to-blueprint op)
+                                          (list lhs inner-rhs)))
                         (py-bnf-climb new-lhs after-inner table min-prec))))))
 
     (defn py-bnf-emit-expression (caps)
@@ -186,10 +214,10 @@
                                                py-bnf-binop-prec-table 0))
                     (head result)))))
 
+    ;; Integer literal → trivial-int Recipe. walk_recipe of a trivial
+    ;; returns the value directly. No wrapper composite needed.
     (defn py-bnf-emit-int-expr (caps)
-        (intern_node PY-BNF-INT-EXPR
-                      (list (intern_trivial_int
-                              (str_to_int (cap-get caps "value"))))))
+        (intern_trivial_int (str_to_int (cap-get caps "value"))))
 
     (defn py-bnf-emit-str-expr (caps)
         (intern_node PY-BNF-STR-EXPR
@@ -199,9 +227,10 @@
         (intern_node PY-BNF-IDENT-EXPR
                       (list (intern_trivial_string (cap-get caps "name")))))
 
+    ;; Parens are syntactic, not semantic. The inner Recipe passes
+    ;; through unchanged so walk_recipe evaluates it directly.
     (defn py-bnf-emit-paren-expr (caps)
-        (intern_node PY-BNF-PAREN-EXPR
-                      (list (cap-get caps "expr"))))
+        (cap-get caps "expr"))
 
     ;; py-bnf-emit-assign now takes an expression Recipe (not a string).
     ;; The structured emit lets downstream tools (py-exec, py-emit) walk

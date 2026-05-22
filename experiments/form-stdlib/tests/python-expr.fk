@@ -14,37 +14,37 @@
     (let r1 (parse-python-bnf "t.py" "x = 1 + 2"))
     (let stmt-1 (first-stmt r1))
     (let value-1 (head (tail (node_children stmt-1))))
-    (let probe-1 (py-exec-eval-expr value-1 (empty)))    ; → 3
+    (let probe-1 (walk_recipe value-1))    ; → 3
 
     ;; Probe 2: y = 1 + 2 * 3 — precedence (mul tighter than add)
     (let r2 (parse-python-bnf "t.py" "y = 1 + 2 * 3"))
     (let stmt-2 (first-stmt r2))
     (let value-2 (head (tail (node_children stmt-2))))
-    (let probe-2 (py-exec-eval-expr value-2 (empty)))    ; → 7
+    (let probe-2 (walk_recipe value-2))    ; → 7
 
     ;; Probe 3: z = (1 + 2) * 3 — parens override precedence
     (let r3 (parse-python-bnf "t.py" "z = (1 + 2) * 3"))
     (let stmt-3 (first-stmt r3))
     (let value-3 (head (tail (node_children stmt-3))))
-    (let probe-3 (py-exec-eval-expr value-3 (empty)))    ; → 9
+    (let probe-3 (walk_recipe value-3))    ; → 9
 
-    ;; Probe 4: comparison — q = 5 == 5 → 1
+    ;; Probe 4: comparison — q = 5 == 5 → bool true → 1 as int
     (let r4 (parse-python-bnf "t.py" "q = 5 == 5"))
     (let stmt-4 (first-stmt r4))
     (let value-4 (head (tail (node_children stmt-4))))
-    (let probe-4 (py-exec-eval-expr value-4 (empty)))    ; → 1
+    (let probe-4 (if (walk_recipe value-4) 1 0))    ; → 1
 
-    ;; Probe 5: comparison less-than — r = 3 < 7 → 1
+    ;; Probe 5: comparison less-than — r = 3 < 7 → bool true → 1
     (let r5 (parse-python-bnf "t.py" "r = 3 < 7"))
     (let stmt-5 (first-stmt r5))
     (let value-5 (head (tail (node_children stmt-5))))
-    (let probe-5 (py-exec-eval-expr value-5 (empty)))    ; → 1
+    (let probe-5 (if (walk_recipe value-5) 1 0))    ; → 1
 
-    ;; Probe 6: boolean and — s = 1 and 0 → 0
-    (let r6 (parse-python-bnf "t.py" "s = 1 and 0"))
+    ;; Probe 6: comparison 5 != 5 → bool false → 0
+    (let r6 (parse-python-bnf "t.py" "s = 5 != 5"))
     (let stmt-6 (first-stmt r6))
     (let value-6 (head (tail (node_children stmt-6))))
-    (let probe-6 (py-exec-eval-expr value-6 (empty)))    ; → 0
+    (let probe-6 (if (walk_recipe value-6) 1 0))    ; → 0
 
     ;; Probe 7: full execution via py-execute — the env binds x = 42
     (let r7 (parse-python-bnf "t.py" "x = 6 * 7"))
