@@ -1,0 +1,43 @@
+; tests/emit.fk — exercise the universal emit dispatcher end-to-end
+;
+; The breath being probed: cells (Recipe tree) → text via target-name
+; dispatch. JSON is the first concrete target.
+;
+; Load:
+;   bin-go core.fk emit-engine.fk grammars/json.fk \
+;          emits/json.fk emit.fk codec.fk tests/emit.fk
+;
+; What we probe with one strange-minimal expression:
+;   1. registry construction       → list-targets length = 1
+;   2. unknown-target sentinel     → starts with "unknown-target:"
+;   3. parse-then-emit produces non-empty text for a small JSON
+;   4. tied codec round-trip       → emit-with returns non-empty text
+;
+; Sum returned: a probe number that holds at each green breath. The
+; first failure makes one of these probes shift — the test surface
+; itself becomes the diagnostic.
+
+(do
+    ;; ── Probe 1: registry with one entry, list-targets returns it ──
+    (let registry (list (list "json" json-templates)))
+    (let names (list-targets registry))
+    (let probe-1 (len names))                        ; → 1
+
+    ;; ── Probe 2: unknown-target sentinel surfaces cleanly ──
+    (let bogus-cell (intern_trivial_int 0))
+    (let unknown-text (emit-to "this-target-does-not-exist" bogus-cell registry))
+    (let probe-2 (str_len unknown-text))             ; → length of "unknown-target:this-target-does-not-exist" = 41
+
+    ;; ── Probe 3: emit-to dispatches to json and returns non-empty text ──
+    (let sample "[1,2,3]")
+    (let cell (parse-json "smoke.json" sample))
+    (let emitted (emit-to "json" cell registry))
+    (let probe-3 (str_len emitted))                  ; → "[1,2,3]" = 7 (children are int trivials, array template wraps)
+
+    ;; ── Probe 4: tied codec offers both directions through one value ──
+    (let codec-cell (parse-with json-codec "codec.json" sample))
+    (let codec-text (emit-with json-codec codec-cell))
+    (let probe-4 (str_len codec-text))               ; → 7
+
+    ;; Sum: 1 + 41 + 7 + 7 = 56
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))
