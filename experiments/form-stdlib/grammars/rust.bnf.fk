@@ -1,0 +1,107 @@
+; grammars/rust.bnf.fk — Rust file-header grammar in BNF DSL
+;
+; Scope (file-header subset; expression bodies are later breaths):
+;   - use std::collections::HashMap;
+;   - pub use crate::module;
+;   - mod helper;
+;   - pub fn name(arg: u32) -> u32 { ... }
+;   - struct Name { ... }
+;   - // line comments
+;   - "string" literals
+
+(do
+    (let RS-BNF-USE       (make_nodeid 1 2 99 70))
+    (let RS-BNF-PUB-USE   (make_nodeid 1 2 99 71))
+    (let RS-BNF-MOD       (make_nodeid 1 2 99 72))
+    (let RS-BNF-FN        (make_nodeid 1 2 99 73))
+    (let RS-BNF-STRUCT    (make_nodeid 1 2 99 74))
+
+    (defn rs-bnf-emit-use (caps)
+        ;; USE IDENT SEMI — _2=path-leaf-name (multi-segment lost here;
+        ;; expanded in a later breath with a path-grammar sub-rule)
+        (intern_node RS-BNF-USE
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn rs-bnf-emit-pub-use (caps)
+        ;; PUB USE IDENT SEMI — _3=path
+        (intern_node RS-BNF-PUB-USE
+                      (list (intern_trivial_string (cap-get caps "_3"))
+                            (intern_trivial_string ""))))
+
+    (defn rs-bnf-emit-mod (caps)
+        ;; MOD IDENT SEMI — _2=name
+        (intern_node RS-BNF-MOD
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn rs-bnf-emit-pub-fn (caps)
+        ;; PUB FN IDENT LPAREN RPAREN — _3=name
+        (intern_node RS-BNF-FN
+                      (list (intern_trivial_string (cap-get caps "_3"))
+                            (intern_trivial_string "pub"))))
+
+    (defn rs-bnf-emit-fn (caps)
+        ;; FN IDENT LPAREN RPAREN — _2=name
+        (intern_node RS-BNF-FN
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn rs-bnf-emit-struct (caps)
+        ;; STRUCT IDENT — _2=name
+        (intern_node RS-BNF-STRUCT
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (let rs-bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment //
+  string-quotes 34
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator ( LPAREN
+  operator ) RPAREN
+  operator , COMMA
+  operator ; SEMI
+  operator : COLON
+  operator . DOT
+  keyword PUB pub
+  keyword USE use
+  keyword MOD mod
+  keyword FN fn
+  keyword STRUCT struct
+  keyword IMPL impl
+  keyword ENUM enum
+  keyword LET let
+}
+
+rules {
+  module      ::= statement ;
+  statement   ::= pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
+  pub-use     ::= PUB USE IDENT SEMI               => rs-bnf-emit-pub-use ;
+  use-stmt    ::= USE IDENT SEMI                    => rs-bnf-emit-use ;
+  mod-stmt    ::= MOD IDENT SEMI                    => rs-bnf-emit-mod ;
+  pub-fn      ::= PUB FN IDENT LPAREN RPAREN        => rs-bnf-emit-pub-fn ;
+  fn-stmt     ::= FN IDENT LPAREN RPAREN            => rs-bnf-emit-fn ;
+  struct-stmt ::= STRUCT IDENT                      => rs-bnf-emit-struct ;
+}")
+
+    (let rs-bnf-registry
+        (list (list "rs-bnf-emit-use"     rs-bnf-emit-use)
+              (list "rs-bnf-emit-pub-use" rs-bnf-emit-pub-use)
+              (list "rs-bnf-emit-mod"     rs-bnf-emit-mod)
+              (list "rs-bnf-emit-pub-fn"  rs-bnf-emit-pub-fn)
+              (list "rs-bnf-emit-fn"      rs-bnf-emit-fn)
+              (list "rs-bnf-emit-struct"  rs-bnf-emit-struct)))
+
+    (let rs-bnf-grammar
+        (load-bnf-grammar rs-bnf-text rs-bnf-registry))
+
+    (defn parse-rust-bnf (_source-path text)
+        (bnf-parse text rs-bnf-grammar))
+
+    0)

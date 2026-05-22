@@ -1,0 +1,106 @@
+; grammars/typescript.bnf.fk — TypeScript file-header grammar in BNF DSL
+;
+; Companion to grammars/typescript.fk. Expresses the same file-header
+; subset (imports / re-exports / function declaration / type aliases)
+; declaratively through grammar-bnf.fk's reader.
+;
+; Scope (parity with the hand-coded line parser, plus a couple of
+; small additions the BNF makes easy):
+;   - import { A, B } from 'mod';
+;   - import * as ns from 'mod';
+;   - import name from 'mod';
+;   - export const NAME = literal;
+;   - export function name(): void {}
+;   - // line comments
+;   - "string" / 'string' / `template` literals
+
+(do
+    ;; Universal Blueprints for TS file-header shapes
+    (let TS-BNF-IMPORT      (make_nodeid 1 2 99 60))
+    (let TS-BNF-IMPORT-NS   (make_nodeid 1 2 99 61))
+    (let TS-BNF-IMPORT-DEF  (make_nodeid 1 2 99 62))
+    (let TS-BNF-EXPORT-CONST (make_nodeid 1 2 99 63))
+    (let TS-BNF-EXPORT-FN   (make_nodeid 1 2 99 64))
+
+    ;; Emitters
+    (defn ts-bnf-emit-import-named (caps)
+        ;; IMPORT LBRACE IDENT RBRACE FROM STRING — _3=name, _6=module
+        (intern_node TS-BNF-IMPORT
+                      (list (intern_trivial_string (cap-get caps "_3"))
+                            (intern_trivial_string (cap-get caps "_6")))))
+
+    (defn ts-bnf-emit-import-ns (caps)
+        ;; IMPORT STAR AS IDENT FROM STRING — _4=alias, _6=module
+        (intern_node TS-BNF-IMPORT-NS
+                      (list (intern_trivial_string (cap-get caps "_4"))
+                            (intern_trivial_string (cap-get caps "_6")))))
+
+    (defn ts-bnf-emit-import-default (caps)
+        ;; IMPORT IDENT FROM STRING — _2=name, _4=module
+        (intern_node TS-BNF-IMPORT-DEF
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string (cap-get caps "_4")))))
+
+    (defn ts-bnf-emit-export-const (caps)
+        ;; EXPORT CONST IDENT EQUALS value — _3=name, _5=value
+        (intern_node TS-BNF-EXPORT-CONST
+                      (list (intern_trivial_string (cap-get caps "_3"))
+                            (intern_trivial_string (cap-get caps "_5")))))
+
+    (defn ts-bnf-emit-export-fn (caps)
+        ;; EXPORT FUNCTION IDENT LPAREN RPAREN COLON IDENT — _3=name, _7=ret-type
+        (intern_node TS-BNF-EXPORT-FN
+                      (list (intern_trivial_string (cap-get caps "_3"))
+                            (intern_trivial_string (cap-get caps "_7")))))
+
+    (let ts-bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment //
+  string-quotes 34 39 96
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator ( LPAREN
+  operator ) RPAREN
+  operator , COMMA
+  operator ; SEMI
+  operator : COLON
+  operator = EQUALS
+  operator * STAR
+  operator . DOT
+  keyword IMPORT import
+  keyword EXPORT export
+  keyword FROM from
+  keyword AS as
+  keyword CONST const
+  keyword FUNCTION function
+  keyword TYPE type
+}
+
+rules {
+  module        ::= statement ;
+  statement     ::= import-named | import-ns | import-default | export-const | export-fn ;
+  import-named  ::= IMPORT LBRACE IDENT RBRACE FROM STRING        => ts-bnf-emit-import-named ;
+  import-ns     ::= IMPORT STAR AS IDENT FROM STRING               => ts-bnf-emit-import-ns ;
+  import-default ::= IMPORT IDENT FROM STRING                       => ts-bnf-emit-import-default ;
+  export-const  ::= EXPORT CONST IDENT EQUALS INT                  => ts-bnf-emit-export-const ;
+  export-fn     ::= EXPORT FUNCTION IDENT LPAREN RPAREN COLON IDENT => ts-bnf-emit-export-fn ;
+}")
+
+    (let ts-bnf-registry
+        (list (list "ts-bnf-emit-import-named"   ts-bnf-emit-import-named)
+              (list "ts-bnf-emit-import-ns"      ts-bnf-emit-import-ns)
+              (list "ts-bnf-emit-import-default" ts-bnf-emit-import-default)
+              (list "ts-bnf-emit-export-const"   ts-bnf-emit-export-const)
+              (list "ts-bnf-emit-export-fn"      ts-bnf-emit-export-fn)))
+
+    (let ts-bnf-grammar
+        (load-bnf-grammar ts-bnf-text ts-bnf-registry))
+
+    (defn parse-typescript-bnf (_source-path text)
+        (bnf-parse text ts-bnf-grammar))
+
+    0)
