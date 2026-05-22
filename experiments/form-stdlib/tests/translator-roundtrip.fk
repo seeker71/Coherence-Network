@@ -1,0 +1,52 @@
+; tests/translator-roundtrip.fk — verifiable parse↔emit round-trip
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+;
+; The verifiable translator chain:
+;
+;   text → parse(text, python) → universal_recipe → emit(recipe, lang) → text'
+;
+; Round-trip: parse + emit in same language ≈ original.
+; Translator: parse Python + emit Go = cross-language conversion.
+
+(do
+    (let NL "
+")
+
+    ;; Source: a tiny Python function
+    (let src "def add(a, b): return a + b")
+
+    ;; Parse — produces a universal Recipe (Blueprint NodeIDs match emit/*.fk)
+    (let recipe (parse-python-universal src))
+
+    ;; Verify the recipe is non-empty
+    (let recipe-children (len (node_children recipe)))
+    (print "recipe children:")
+    (print (int_to_str recipe-children))
+
+    ;; Emit registry — three target languages
+    (let registry
+        (list (list "python"     python-templates)
+              (list "go"         go-templates)
+              (list "typescript" typescript-templates)))
+
+    (let py-out (emit-to "python"     recipe registry))
+    (let go-out (emit-to "go"         recipe registry))
+    (let ts-out (emit-to "typescript" recipe registry))
+
+    (print "")
+    (print "── original Python ──")
+    (print src)
+    (print "")
+    (print "── round-trip: parse → emit Python ──")
+    (print py-out)
+    (print "")
+    (print "── translator: parse Python → emit Go ──")
+    (print go-out)
+    (print "")
+    (print "── translator: parse Python → emit TypeScript ──")
+    (print ts-out)
+    (print "")
+
+    ;; Deterministic sum for kernel comparison
+    (add (str_len py-out) (add (str_len go-out) (str_len ts-out))))

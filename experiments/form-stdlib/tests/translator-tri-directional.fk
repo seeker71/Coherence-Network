@@ -1,0 +1,51 @@
+; tests/translator-tri-directional.fk — Python ↔ Go ↔ TypeScript through
+; one universal Recipe vocabulary.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/grammars/typescript-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+;
+; Three languages, ONE substrate. Any source language parses to a
+; universal Recipe; any target language emits from that Recipe.
+; 3 × 3 = 9 directions, all proven through the same vocabulary.
+
+(do
+    (let NL "
+")
+
+    (let registry
+        (list (list "python"     python-templates)
+              (list "go"         go-templates)
+              (list "typescript" typescript-templates)))
+
+    (let py-src "def f(x, y): return x + y")
+    (let go-src "func f(x, y) { return x + y }")
+    (let ts-src "function f(x, y) { return x + y }")
+
+    (let r-py (parse-python-universal py-src))
+    (let r-go (parse-go-universal go-src))
+    (let r-ts (parse-typescript-universal ts-src))
+
+    (print "── PYTHON SOURCE → 3 tongues ──")
+    (print py-src)
+    (print (str_concat "→ Py: " (emit-to "python"     r-py registry)))
+    (print (str_concat "→ Go: " (emit-to "go"         r-py registry)))
+    (print (str_concat "→ TS: " (emit-to "typescript" r-py registry)))
+    (print "")
+    (print "── GO SOURCE → 3 tongues ──")
+    (print go-src)
+    (print (str_concat "→ Py: " (emit-to "python"     r-go registry)))
+    (print (str_concat "→ Go: " (emit-to "go"         r-go registry)))
+    (print (str_concat "→ TS: " (emit-to "typescript" r-go registry)))
+    (print "")
+    (print "── TYPESCRIPT SOURCE → 3 tongues ──")
+    (print ts-src)
+    (print (str_concat "→ Py: " (emit-to "python"     r-ts registry)))
+    (print (str_concat "→ Go: " (emit-to "go"         r-ts registry)))
+    (print (str_concat "→ TS: " (emit-to "typescript" r-ts registry)))
+    (print "")
+    (print "── 9 directions, ONE substrate, ONE recipe vocabulary ──")
+
+    ;; All three sources should produce same-structure recipes; their
+    ;; emit outputs should be byte-comparable across kernels.
+    (add (str_len (emit-to "python" r-py registry))
+         (add (str_len (emit-to "go" r-go registry))
+              (str_len (emit-to "typescript" r-ts registry)))))

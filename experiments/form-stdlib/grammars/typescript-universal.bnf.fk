@@ -1,0 +1,110 @@
+; grammars/typescript-universal.bnf.fk — TS parser → universal Blueprints
+;
+; Symmetric to python-universal and go-universal. Completes the
+; tri-directional translator: any of {Python, Go, TS} → universal Recipe
+; → any other tongue.
+;
+; Subset: function name(params) { return expr }
+; (TS arrow functions, type annotations, etc. extend in later breaths.)
+
+(do
+    (let U-FNDEF     (make_nodeid 1 2 31 1))
+    (let U-RETURN    (make_nodeid 1 2 18 1))
+    (let U-MATH-PLUS (make_nodeid 1 2 12 1))
+    (let U-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let U-MATH-MUL  (make_nodeid 1 2 12 3))
+    (let U-IDENT     (make_nodeid 1 2 33 1))
+    (let U-SEQ       (make_nodeid 1 2 9 2))
+
+    (defn tu-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1") caps)))
+
+    (defn tu-name-of (ident-recipe)
+        (node_value (head (node_children ident-recipe))))
+
+    (defn tu-emit-int (caps)
+        (intern_node U-IDENT (list (intern_trivial_string (cap-get caps "_1")))))
+    (defn tu-emit-ident (caps)
+        (intern_node U-IDENT (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn tu-emit-binop (caps)
+        (if (cap-has? caps "op")
+            (do
+                (let op (cap-get caps "op"))
+                (if (str_eq op "+")
+                    (intern_node U-MATH-PLUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "-")
+                    (intern_node U-MATH-MINUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "*")
+                    (intern_node U-MATH-MUL (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                    (cap-get caps "lhs")))))
+            (cap-get caps "lhs")))
+
+    (defn tu-emit-return (caps)
+        (intern_node U-RETURN (list (cap-get caps "value"))))
+
+    (defn tu-emit-params (caps)
+        (intern_trivial_string
+            (str_concat (tu-name-of (cap-get caps "p1"))
+                        (str_concat ", " (tu-name-of (cap-get caps "p2"))))))
+    (defn tu-emit-params-one (caps)
+        (intern_trivial_string (tu-name-of (cap-get caps "p1"))))
+
+    (defn tu-emit-fndef (caps)
+        (intern_node U-FNDEF
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "params")
+                            (cap-get caps "body"))))
+
+    (let ts-universal-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  ident-kind IDENT
+  operator ( LPAREN
+  operator ) RPAREN
+  operator { LBRACE
+  operator } RBRACE
+  operator , COMMA
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  keyword FUNCTION function
+  keyword RETURN return
+}
+
+rules {
+  start        ::= fndef ;
+  fndef        ::= FUNCTION name:IDENT LPAREN params:param-list RPAREN LBRACE body:return-stmt RBRACE => tu-emit-fndef ;
+  param-list   ::= param-pair | param-single ;
+  param-pair   ::= p1:ident-expr COMMA p2:ident-expr  => tu-emit-params ;
+  param-single ::= p1:ident-expr                       => tu-emit-params-one ;
+  return-stmt  ::= RETURN value:expression             => tu-emit-return ;
+  expression   ::= sum-expr ;
+  sum-expr     ::= lhs:mul-expr (op:add-op rhs:mul-expr)?  => tu-emit-binop ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= lhs:atom (op:mul-op rhs:atom)?      => tu-emit-binop ;
+  mul-op       ::= STAR ;
+  atom         ::= int-lit | ident-expr ;
+  int-lit      ::= INT                                 => tu-emit-int ;
+  ident-expr   ::= IDENT                               => tu-emit-ident ;
+}")
+
+    (let ts-universal-registry
+        (list (list "tu-passthrough"   tu-passthrough)
+              (list "tu-emit-int"      tu-emit-int)
+              (list "tu-emit-ident"    tu-emit-ident)
+              (list "tu-emit-binop"    tu-emit-binop)
+              (list "tu-emit-return"   tu-emit-return)
+              (list "tu-emit-fndef"    tu-emit-fndef)
+              (list "tu-emit-params"   tu-emit-params)
+              (list "tu-emit-params-one" tu-emit-params-one)))
+
+    (let ts-universal-grammar
+        (load-bnf-grammar ts-universal-text ts-universal-registry))
+
+    (defn parse-typescript-universal (text)
+        (bnf-parse text ts-universal-grammar))
+
+    0)
