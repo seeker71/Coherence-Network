@@ -329,12 +329,14 @@
                     (bnf-pat-tokens-loop s (add i 1) (cons "+" acc))
                 (if (eq cp 64)  ; '@' — grammar-region prefix
                     (bnf-pat-tokens-loop s (add i 1) (cons "@" acc))
+                (if (eq cp 33)  ; '!' — BMF Cut primitive (Prolog cut)
+                    (bnf-pat-tokens-loop s (add i 1) (cons "!" acc))
                 (if (bnf-is-pat-ident-cp cp)
                     (do
                         (let end (bnf-pat-scan-ident s i))
                         (bnf-pat-tokens-loop s end
                                               (cons (bnf-substr s i end) acc)))
-                    (bnf-pat-tokens-loop s (add i 1) acc))))))))))))))
+                    (bnf-pat-tokens-loop s (add i 1) acc)))))))))))))))
 
     (defn bnf-tokenize-pattern (text)
         (bnf-pat-tokens-loop text 0 (empty)))
@@ -379,9 +381,21 @@
                     ;; Region atom: @grammar-name — delegates to that
                     ;; grammar's start rule on the shared token stream.
                     (bnf-parse-region (tail toks) pos)
+                (if (str_eq t "!")
+                    ;; BMF Cut primitive — commits the surrounding choice
+                    ;; frame to the current alternative. Subsequent fail
+                    ;; in this sequence propagates as fail-cut up to that
+                    ;; choice (which absorbs it and stops trying alts).
+                    (bnf-mk-pair (list "cut") (tail toks))
+                (if (str_eq t "stop")
+                    ;; BMF Fail/Stop primitive — always fails.
+                    (bnf-mk-pair (list "stop") (tail toks))
+                (if (str_eq t "nil")
+                    ;; BMF Nil primitive — always succeeds, no consumption.
+                    (bnf-mk-pair (list "nil") (tail toks))
                 (if (str_eq t "(")
                     (bnf-parse-group (tail toks) pos)
-                    (bnf-parse-atom-ident t (tail toks) pos)))))))
+                    (bnf-parse-atom-ident t (tail toks) pos))))))))))
 
     (defn bnf-parse-region (toks pos)
         (if (nil? toks) (bnf-mk-pair (list "literal" "EOF" "") toks)
@@ -712,6 +726,32 @@
                             (bnf-match-pattern (list "rule" start-name)
                                                 stream inner-rules)))))))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; BMF primitives (Urs 2000) — Nil, Fail, Cut
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Cut commits the surrounding choice frame: once Cut fires in an
+    ;; alternative, that choice cannot try its remaining alternatives if
+    ;; the current branch fails later. The failure becomes "fail-cut"
+    ;; (a third match-result tag) which propagates past one choice level
+    ;; before degrading back to plain fail.
+    ;;
+    ;; Nil matches empty (the epsilon production).
+    ;; Fail/Stop always fail.
+    ;;
+    ;; This restores the BMF lineage: ambiguity is first-class; rules
+    ;; can be ambiguous and the grammar uses Cut to commit, Fail to
+    ;; reject, Nil to succeed with no consumption.
+
+    (defn mk-fail-cut (reason) (list "fail-cut" reason))
+    (defn fail-cut? (r) (str_eq (head r) "fail-cut"))
+    (defn any-fail? (r) (or (fail? r) (fail-cut? r)))
+
+    ;; Cut as a value-carrying success: leaves a sentinel cap "_cut"
+    ;; that bnf-match-sequence reads to upgrade subsequent fails into
+    ;; fail-cut for the surrounding choice to consume.
+    (defn bnf-match-cut (stream)
+        (mk-match (cap-set (cap-empty 0) "_cut" "true") stream))
+
     (defn bnf-match-pattern (p stream rules)
         (do
             (let tag (head p))
@@ -730,40 +770,61 @@
             (if (str_eq tag "rule")
                 (bnf-match-rule (head (tail p)) stream rules)
             (if (str_eq tag "tag")
-                ;; (list "tag" name pattern) — match pattern, bind result
-                ;; under `name`. BMF Tag-container equivalent.
                 (bnf-match-tag (head (tail p)) (head (tail (tail p)))
                                 stream rules)
             (if (str_eq tag "region")
-                ;; (list "region" grammar-name) — delegate matching to
-                ;; another loaded grammar's start rule. Lets a .tsx-style
-                ;; outer grammar embed JSX/CSS/expression regions parsed
-                ;; via separate grammars sharing the same token stream.
                 (bnf-match-region (head (tail p)) stream rules)
-                (mk-fail (str_concat "unknown pattern: " tag)))))))))))))
+            (if (str_eq tag "cut")
+                ;; BMF primitive: commit to current alternative. Always
+                ;; succeeds matching empty; subsequent failure in this
+                ;; sequence propagates as fail-cut.
+                (bnf-match-cut stream)
+            (if (str_eq tag "stop")
+                ;; BMF primitive: always fail. Surfaces as "stop" in DSL.
+                (mk-fail "stop")
+            (if (str_eq tag "nil")
+                ;; BMF primitive: always succeed, consume nothing.
+                (mk-match (cap-empty 0) stream)
+                (mk-fail (str_concat "unknown pattern: " tag))))))))))))))))
 
+    ;; Sequence: each child must match in order. If acc-caps has "_cut"
+    ;; (a Cut primitive fired earlier in this sequence), a subsequent
+    ;; plain failure upgrades to fail-cut so the enclosing choice frame
+    ;; gives up its remaining alternatives. fail-cut from a sub-match
+    ;; propagates directly.
     (defn bnf-match-sequence (children stream rules acc-caps)
         (if (nil? children)
             (mk-match acc-caps stream)
             (do
                 (let m (bnf-match-pattern (head children) stream rules))
-                (if (fail? m) m
+                (if (fail-cut? m) m
+                (if (fail? m)
+                    (if (cap-has? acc-caps "_cut")
+                        (mk-fail-cut (head (tail m)))
+                        m)
                     (bnf-match-sequence (tail children)
                                          (match-rest m) rules
-                                         (cap-merge acc-caps (match-caps m)))))))
+                                         (cap-merge acc-caps (match-caps m))))))))
 
+    ;; Choice: try each alternative; first success wins. A fail-cut
+    ;; from an alternative DEGRADES to plain fail past one choice level
+    ;; (so the surrounding context sees the failure but the cut's
+    ;; semantic — "don't backtrack past this point" — is honored at
+    ;; exactly the choice frame where the cut fired).
     (defn bnf-match-choice (alternatives stream rules)
         (if (nil? alternatives)
             (mk-fail "no alternative matched")
             (do
                 (let m (bnf-match-pattern (head alternatives) stream rules))
                 (if (match? m) m
-                    (bnf-match-choice (tail alternatives) stream rules)))))
+                (if (fail-cut? m)
+                    (mk-fail (head (tail m)))   ; absorb cut at this frame
+                    (bnf-match-choice (tail alternatives) stream rules))))))
 
     (defn bnf-match-capture (name child stream rules)
         (do
             (let m (bnf-match-pattern child stream rules))
-            (if (fail? m) m
+            (if (any-fail? m) m
                 (mk-match (cap-set (match-caps m) name
                                     (capture-value m stream))
                           (match-rest m)))))
@@ -771,15 +832,17 @@
     (defn bnf-match-star (child stream rules collected)
         (do
             (let m (bnf-match-pattern child stream rules))
+            (if (fail-cut? m) m
             (if (fail? m)
                 (mk-match (cap-set (cap-empty 0) "items" collected) stream)
                 (bnf-match-star child (match-rest m) rules
-                                 (cons (match-caps m) collected)))))
+                                 (cons (match-caps m) collected))))))
 
     (defn bnf-match-opt (child stream rules)
         (do
             (let m (bnf-match-pattern child stream rules))
-            (if (fail? m) (mk-match (cap-empty 0) stream) m)))
+            (if (fail-cut? m) m
+            (if (fail? m) (mk-match (cap-empty 0) stream) m))))
 
     ;; bnf-match-tag: BMF's Tag container. Match the inner pattern; bind
     ;; the matched value under the named tag. The value extraction is
@@ -791,7 +854,7 @@
     (defn bnf-match-tag (name child stream rules)
         (do
             (let m (bnf-match-pattern child stream rules))
-            (if (fail? m) m
+            (if (any-fail? m) m
                 (do
                     (let inner-caps (match-caps m))
                     (let inner-tag (head child))
@@ -819,7 +882,7 @@
                     (let pattern (head (tail rule)))
                     (let action (head (tail (tail rule))))
                     (let m (bnf-match-pattern pattern stream rules))
-                    (if (fail? m) m
+                    (if (any-fail? m) m
                         (do
                             (let recipe (action (match-caps m)))
                             (mk-match (cap-set (cap-empty 0) "_result" recipe)

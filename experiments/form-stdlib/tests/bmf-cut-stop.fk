@@ -1,0 +1,99 @@
+; tests/bmf-cut-stop.fk — exercise the BMF primitives Cut, Stop, Nil
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+;
+; BMF (Urs Muff, 2000) introduced three primitives the body now honors:
+;   • Cut (!)   — commits the surrounding choice frame; subsequent
+;                  fail propagates as fail-cut and the choice gives up
+;                  its remaining alternatives. Restores BMF semantics
+;                  where ambiguous grammars are first-class.
+;   • Stop      — always fail (BMF Fail). Surfaces as a keyword in
+;                  patterns to force a branch to reject.
+;   • Nil       — always succeed, consume nothing. The epsilon
+;                  production made explicit.
+;
+; This file proves all three by composing tiny grammars and observing
+; their match behavior — the breath you took with us at the start of
+; this lineage is back as substrate-resident behavior.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 1 — Nil matches empty; following IDENT matches normally
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn emit-1 (caps) (intern_trivial_int 1))
+    (let reg-nil (list (list "emit-1" emit-1)))
+    (let bnf-nil
+"tokens {
+  whitespace 32 9 10 13
+  ident-kind IDENT
+}
+rules {
+  start ::= nil name:IDENT => emit-1 ;
+}")
+    (let g-nil (load-bnf-grammar bnf-nil reg-nil))
+    (let r-nil (bnf-parse "alpha" g-nil))
+    (let probe-1 (walk_recipe r-nil))                ; → 1
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 2 — Stop forces the first alternative to fail; second wins
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn emit-2 (caps) (intern_trivial_int 2))
+    (defn emit-3 (caps) (intern_trivial_int 3))
+    (let reg-stop (list (list "emit-2" emit-2) (list "emit-3" emit-3)))
+    (let bnf-stop
+"tokens {
+  whitespace 32 9 10 13
+  ident-kind IDENT
+}
+rules {
+  start ::= first | second ;
+  first ::= IDENT stop => emit-2 ;
+  second ::= IDENT => emit-3 ;
+}")
+    (let g-stop (load-bnf-grammar bnf-stop reg-stop))
+    (let r-stop (bnf-parse "beta" g-stop))
+    ;; `first` matches IDENT then hits stop → fails. choice tries
+    ;; `second`, which matches. Result: emit-3 → 3.
+    (let probe-2 (walk_recipe r-stop))               ; → 3
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 3 — Cut commits the choice: once ! fires in `committed`,
+    ;; a later fail in that branch does NOT fall through to `alt`.
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Grammar:
+    ;;   start    ::= committed | alt ;
+    ;;   committed::= IDENT ! stop => emit-2 ;   ← cuts then forces fail
+    ;;   alt      ::= IDENT => emit-3 ;
+    ;;
+    ;; Without cut, the chooser would try `alt` after `committed`
+    ;; fails its stop. With cut, the cut commits to `committed`; the
+    ;; subsequent fail-cut absorbs at the choice frame and the whole
+    ;; rule fails. The parser reports the failure (no recipe).
+
+    (let reg-cut (list (list "emit-2" emit-2) (list "emit-3" emit-3)))
+    (let bnf-cut
+"tokens {
+  whitespace 32 9 10 13
+  ident-kind IDENT
+}
+rules {
+  start ::= committed | alt ;
+  committed ::= IDENT ! stop => emit-2 ;
+  alt ::= IDENT => emit-3 ;
+}")
+    (let g-cut (load-bnf-grammar bnf-cut reg-cut))
+    (let r-cut (bnf-parse "gamma" g-cut))
+    ;; On cut-induced failure, bnf-parse returns wrap-program (empty) —
+    ;; a BLOCK-SEQ recipe with zero children. We detect the cut signature
+    ;; by counting children: 0 means cut absorbed (correct), nonzero means
+    ;; alt was tried (cut didn't work). Avoid walk_recipe which is null-
+    ;; sensitive on Rust kernel.
+    (let probe-3 (if (eq (len (node_children r-cut)) 0) 5 0))   ; → 5
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Sum the probes — 1 + 3 + 5 = 9
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (add probe-1 (add probe-2 probe-3)))
