@@ -37,6 +37,87 @@
             (let all-stmts (cons first-stmt (ts-bnf-collect-results rest-items)))
             (intern_node TS-BNF-MODULE all-stmts)))
 
+    ;; Universal Blueprints — same shape Python + Go use
+    (let TS-UNIV-MATH-PLUS  (make_nodeid 1 2 12 1))
+    (let TS-UNIV-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let TS-UNIV-MATH-MUL   (make_nodeid 1 2 12 3))
+    (let TS-UNIV-MATH-DIV   (make_nodeid 1 2 12 4))
+    (let TS-UNIV-CMP-EQ     (make_nodeid 1 2 13 1))
+    (let TS-UNIV-CMP-NEQ    (make_nodeid 1 2 13 2))
+    (let TS-UNIV-CMP-LT     (make_nodeid 1 2 13 3))
+    (let TS-UNIV-CMP-LE     (make_nodeid 1 2 13 4))
+    (let TS-UNIV-CMP-GT     (make_nodeid 1 2 13 5))
+    (let TS-UNIV-CMP-GE     (make_nodeid 1 2 13 6))
+
+    (defn ts-bnf-op-to-blueprint (op)
+        (if (str_eq op "+") TS-UNIV-MATH-PLUS
+        (if (str_eq op "-") TS-UNIV-MATH-MINUS
+        (if (str_eq op "*") TS-UNIV-MATH-MUL
+        (if (str_eq op "/") TS-UNIV-MATH-DIV
+        (if (str_eq op "==") TS-UNIV-CMP-EQ
+        (if (str_eq op "===") TS-UNIV-CMP-EQ
+        (if (str_eq op "!=") TS-UNIV-CMP-NEQ
+        (if (str_eq op "!==") TS-UNIV-CMP-NEQ
+        (if (str_eq op "<")  TS-UNIV-CMP-LT
+        (if (str_eq op "<=") TS-UNIV-CMP-LE
+        (if (str_eq op ">")  TS-UNIV-CMP-GT
+        (if (str_eq op ">=") TS-UNIV-CMP-GE
+            TS-UNIV-MATH-PLUS)))))))))))))
+
+    (let ts-bnf-binop-prec-table
+        (list
+            (list "||" 4) (list "&&" 5)
+            (list "==" 8) (list "!=" 8) (list "===" 8) (list "!==" 8)
+            (list "<"  9) (list ">"  9) (list "<=" 9) (list ">=" 9)
+            (list "+" 11) (list "-" 11)
+            (list "*" 12) (list "/" 12) (list "%" 12)))
+
+    (defn ts-bnf-lookup-prec (table text)
+        (if (nil? table) 0
+            (if (str_eq (head (head table)) text)
+                (head (tail (head table)))
+                (ts-bnf-lookup-prec (tail table) text))))
+
+    (defn ts-bnf-climb (lhs items table min-prec)
+        (if (nil? items) (list lhs items)
+            (do
+                (let item (head items))
+                (let op (cap-get item "op"))
+                (let op-prec (ts-bnf-lookup-prec table op))
+                (if (lt op-prec min-prec)
+                    (list lhs items)
+                    (do
+                        (let rhs (cap-get item "rhs"))
+                        (let rest-after (tail items))
+                        (let inner (ts-bnf-climb rhs rest-after table
+                                                   (add op-prec 1)))
+                        (let inner-rhs (head inner))
+                        (let after-inner (head (tail inner)))
+                        (let new-lhs
+                            (intern_node (ts-bnf-op-to-blueprint op)
+                                          (list lhs inner-rhs)))
+                        (ts-bnf-climb new-lhs after-inner table min-prec))))))
+
+    (defn ts-bnf-emit-expression (caps)
+        (do
+            (let lhs (cap-get caps "lhs"))
+            (let raw-items (cap-get caps "items"))
+            (if (nil? raw-items) lhs
+                (do
+                    (let ordered (ts-bnf-reverse raw-items))
+                    (let result (ts-bnf-climb lhs ordered
+                                               ts-bnf-binop-prec-table 0))
+                    (head result)))))
+
+    (defn ts-bnf-emit-int-lit (caps)
+        (intern_trivial_int (str_to_int (cap-get caps "value"))))
+    (defn ts-bnf-emit-str-lit (caps)
+        (intern_trivial_string (cap-get caps "value")))
+    (defn ts-bnf-emit-ident-expr (caps)
+        (intern_trivial_string (cap-get caps "name")))
+    (defn ts-bnf-emit-paren (caps)
+        (cap-get caps "expr"))
+
     ;; Emitters
     (defn ts-bnf-emit-import-named (caps)
         ;; IMPORT LBRACE IDENT RBRACE FROM STRING — _3=name, _6=module

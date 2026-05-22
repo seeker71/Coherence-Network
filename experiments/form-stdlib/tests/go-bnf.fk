@@ -53,47 +53,33 @@ const Tag = 2
 func main() { }"))
     (let probe-8 (len (node_children r8)))                    ; → 6 top-level decls
 
-    ;; Probe 9 — expression parsing with precedence: `1 + 2 * 3` should
-    ;; parse as BIN(+, 1, BIN(*, 2, 3))
+    ;; Probe 9 — `1 + 2 * 3` walks via universal MATH Blueprints to 7
+    ;; (precedence honored — mul tighter than add).
     (let r9 (parse-go-bnf "t.go" "func f() { return 1 + 2 * 3 }"))
     (let func9 (first-stmt r9))
     (let body9 (head (tail (node_children func9))))
     (let return-stmt-9 (head (node_children body9)))
     (let return-expr-9 (head (node_children return-stmt-9)))
-    (let probe-9 (if (node_eq (node_category return-expr-9)
-                              (make_nodeid 1 2 99 95))
-                     1 0))                                ; → 1 (BIN-EXPR)
+    (let probe-9 (walk_recipe return-expr-9))             ; → 7
 
-    ;; Probe 10 — parenthesized expression
+    ;; Probe 10 — parenthesized `(1 + 2)` walks to 3
     (let r10 (parse-go-bnf "t.go" "func g() { return (1 + 2) }"))
     (let func10 (first-stmt r10))
     (let body10 (head (tail (node_children func10))))
     (let return-stmt-10 (head (node_children body10)))
     (let return-expr-10 (head (node_children return-stmt-10)))
-    (let probe-10 (if (node_eq (node_category return-expr-10)
-                               (make_nodeid 1 2 99 97))
-                      1 0))                               ; → 1 (PAREN-EXPR)
+    (let probe-10 (walk_recipe return-expr-10))           ; → 3
 
     ;; Probe 11 — comparison expression in if condition
     (let r11 (parse-go-bnf "t.go" "func h() { if x == 1 { } }"))
     (let probe-11 (len (node_children r11)))              ; → 1
 
-    ;; Probe 12 — verify precedence: `1 + 2 * 3` should parse as
-    ;; BIN(+, 1, BIN(*, 2, 3)) — outer op is +, inner-right is BIN(*).
-    ;; This proves BMF-style precedence-as-data fold works correctly.
-    (let r12 (parse-go-bnf "t.go" "func k() { return 1 + 2 * 3 }"))
+    ;; Probe 12 — `(2 + 3) * 4` walks to 20 (parens force precedence)
+    (let r12 (parse-go-bnf "t.go" "func k() { return (2 + 3) * 4 }"))
     (let body12 (head (tail (node_children (first-stmt r12)))))
     (let return-12 (head (node_children body12)))
     (let outer-expr (head (node_children return-12)))
-    ;; outer-expr is BIN-EXPR; children: op-text, lhs, rhs
-    (let outer-kids (node_children outer-expr))
-    (let outer-op (node_value (head outer-kids)))         ; "+"
-    (let outer-rhs (head (tail (tail outer-kids))))        ; should be BIN-EXPR (*)
-    (let inner-kids (node_children outer-rhs))
-    (let inner-op (node_value (head inner-kids)))         ; "*"
-    (let probe-12 (if (and (str_eq outer-op "+")
-                            (str_eq inner-op "*"))
-                      1 0))                               ; → 1
+    (let probe-12 (walk_recipe outer-expr))               ; → 20
 
     ;; Probe 13 — function with typed parameters
     (let r13 (parse-go-bnf "t.go" "func add(a int, b int) { return a }"))
@@ -126,7 +112,9 @@ func main() { }"))
     (let r17 (parse-go-bnf "t.go" "type Kernel struct { name string }"))
     (let probe-17 (len (node_children r17)))              ; → 1
 
-    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 43
+    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 7 + 3 + 1 + 20 + 1 + 1 + 1 + 1 + 1 = 70
+    ;; Probes 9, 10, 12 now compute via walk_recipe — universal MATH
+    ;; Blueprints evaluate the parsed Go expressions natively.
     (add probe-1
          (add probe-2
               (add probe-3
