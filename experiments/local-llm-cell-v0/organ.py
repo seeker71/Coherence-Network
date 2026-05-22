@@ -304,6 +304,31 @@ def pick_strategy(spectrum, desire, presets=None):
     }
 
 
+def pick_strategy_informed(spectrum, desire, presets=None, alpha: float = 0.5):
+    """Strategy selection that blends cosine-fit with efficacy-alignment.
+
+    `alpha` controls how much weight the efficacy signature carries
+    vs the canonical cosine fit. `alpha=0.0` is byte-equivalent to
+    `pick_strategy` — same call shape, same chosen recipe, same
+    operator-fallback. `alpha=1.0` selects purely by efficacy
+    (when efficacy data is available).
+
+    For now the alpha>0 path is honest: it delegates to pick_strategy
+    and records the alpha that was requested. The efficacy_signature
+    integration ships in the same breath as substrate_bridge's
+    efficacy_signature / efficacy_alignment helpers (see
+    specs/recipes-tuned-by-trace.md, R3–R5). Until those land, this
+    function honors the alpha=0.0 byte-equivalence contract and
+    surfaces alpha in the result for downstream readers.
+
+    Returns the same dict shape as pick_strategy, with an additional
+    `alpha` field naming the requested weight.
+    """
+    result = pick_strategy(spectrum, desire, presets=presets)
+    result["alpha"] = float(alpha)
+    return result
+
+
 # ─── cell ─────────────────────────────────────────────────────────────────
 
 class Cell:
