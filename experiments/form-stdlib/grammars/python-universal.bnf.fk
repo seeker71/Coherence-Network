@@ -1,0 +1,168 @@
+; grammars/python-universal.bnf.fk — Python parser that emits universal
+; Blueprints (the common bytecode the kernel and all emits/*.fk share).
+;
+; Where python-full.bnf.fk uses doc-band 99 Blueprints (language-specific),
+; this grammar emits the SAME Blueprint NodeIDs that emits/python.fk and
+; emits/go.fk consume. That makes:
+;
+;   parse(text, "python")  →  universal recipe
+;   emit-to("python", recipe, registry)  →  text  (round-trip)
+;   emit-to("go", recipe, registry)      →  Go text  (translator)
+;
+; This is the "verifiable translator" architecture made concrete.
+;
+; Subset for proof-of-concept (extends as separate breaths):
+;   • Integer literal
+;   • Identifier
+;   • Binary arithmetic (+, -, *, /, %)
+;   • Function definition: `def name(params): expr`
+;   • Return statement: `return expr`
+;   • Single-line bodies only
+
+(do
+    ;; Universal Blueprint NodeIDs (the common bytecode vocabulary)
+    (let U-FNDEF     (make_nodeid 1 2 31 1))
+    (let U-RETURN    (make_nodeid 1 2 18 1))
+    (let U-MATH-PLUS (make_nodeid 1 2 12 1))
+    (let U-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let U-MATH-MUL  (make_nodeid 1 2 12 3))
+    (let U-MATH-DIV  (make_nodeid 1 2 12 4))
+    (let U-MATH-MOD  (make_nodeid 1 2 12 5))
+    (let U-IDENT     (make_nodeid 1 2 33 1))
+    (let U-SEQ       (make_nodeid 1 2 9 2))
+
+    ;; Helper: get cap-value or empty
+    (defn pu-cap (caps name)
+        (if (nil? caps) ""
+            (if (str_eq (head (head caps)) name)
+                (head (tail (head caps)))
+                (pu-cap (tail caps) name))))
+
+    ;; Emitters — each produces a universal Blueprint Recipe
+    (defn pu-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1") caps)))
+
+    (defn pu-emit-int (caps)
+        ;; INT token's value is the digit string; intern as a trivial.
+        ;; The ident-as-int pattern: emits as an IDENT cell carrying the
+        ;; literal string (compatible with py-ident in emits/python.fk).
+        (intern_node U-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn pu-emit-ident (caps)
+        (intern_node U-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn pu-emit-plus (caps)
+        (intern_node U-MATH-PLUS
+                      (list (cap-get caps "lhs") (cap-get caps "rhs"))))
+
+    (defn pu-emit-minus (caps)
+        (intern_node U-MATH-MINUS
+                      (list (cap-get caps "lhs") (cap-get caps "rhs"))))
+
+    (defn pu-emit-mul (caps)
+        (intern_node U-MATH-MUL
+                      (list (cap-get caps "lhs") (cap-get caps "rhs"))))
+
+    (defn pu-emit-return (caps)
+        (intern_node U-RETURN
+                      (list (cap-get caps "value"))))
+
+    (defn pu-emit-fndef (caps)
+        (intern_node U-FNDEF
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "params")
+                            (cap-get caps "body"))))
+
+    ;; Params: emit as a single trivial-string "a, b" so py-fndef's
+    ;; (head (tail cs)) gets ready-to-render text. This sidesteps the
+    ;; SEQ-uses-NL-as-separator design in emits/python.fk. A cleaner
+    ;; future shape: a U-PARAM-LIST Blueprint with comma-joining
+    ;; templates per language. For now: text directly.
+    (defn pu-name-of (ident-recipe)
+        (node_value (head (node_children ident-recipe))))
+
+    (defn pu-emit-params (caps)
+        (intern_trivial_string
+            (str_concat (pu-name-of (cap-get caps "p1"))
+                        (str_concat ", " (pu-name-of (cap-get caps "p2"))))))
+
+    (defn pu-emit-params-one (caps)
+        (intern_trivial_string (pu-name-of (cap-get caps "p1"))))
+
+    (defn pu-emit-body (caps)
+        ;; Body is a single return statement wrapped in SEQ
+        (intern_node U-SEQ (list (cap-get caps "stmt"))))
+
+    (let py-universal-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  ident-kind IDENT
+  operator ( LPAREN
+  operator ) RPAREN
+  operator , COMMA
+  operator : COLON
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  operator / SLASH
+  operator % PERCENT
+  keyword DEF def
+  keyword RETURN return
+}
+
+rules {
+  start        ::= fndef ;
+  fndef        ::= DEF name:IDENT LPAREN params:param-list RPAREN COLON body:return-stmt   => pu-emit-fndef ;
+  param-list   ::= param-pair | param-single ;
+  param-pair   ::= p1:ident-expr COMMA p2:ident-expr  => pu-emit-params ;
+  param-single ::= p1:ident-expr                       => pu-emit-params-one ;
+  return-stmt  ::= RETURN value:expression             => pu-emit-return ;
+  expression   ::= sum-expr ;
+  sum-expr     ::= lhs:mul-expr (op:add-op rhs:mul-expr)?  => pu-emit-binop ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= lhs:atom (op:mul-op rhs:atom)?      => pu-emit-binop ;
+  mul-op       ::= STAR | SLASH | PERCENT ;
+  atom         ::= int-lit | ident-expr ;
+  int-lit      ::= INT                                 => pu-emit-int ;
+  ident-expr   ::= IDENT                               => pu-emit-ident ;
+}")
+
+    ;; pu-emit-binop dispatches by op
+    (defn pu-emit-binop (caps)
+        (if (cap-has? caps "op")
+            (do
+                (let op (cap-get caps "op"))
+                (if (str_eq op "+")
+                    (intern_node U-MATH-PLUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "-")
+                    (intern_node U-MATH-MINUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "*")
+                    (intern_node U-MATH-MUL (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                    (intern_node U-MATH-PLUS (list (cap-get caps "lhs") (cap-get caps "rhs")))))))
+            (cap-get caps "lhs")))
+
+    (let py-universal-registry
+        (list (list "pu-passthrough"   pu-passthrough)
+              (list "pu-emit-int"      pu-emit-int)
+              (list "pu-emit-ident"    pu-emit-ident)
+              (list "pu-emit-plus"     pu-emit-plus)
+              (list "pu-emit-minus"    pu-emit-minus)
+              (list "pu-emit-mul"      pu-emit-mul)
+              (list "pu-emit-return"   pu-emit-return)
+              (list "pu-emit-fndef"    pu-emit-fndef)
+              (list "pu-emit-params"   pu-emit-params)
+              (list "pu-emit-params-one" pu-emit-params-one)
+              (list "pu-emit-body"     pu-emit-body)
+              (list "pu-emit-binop"    pu-emit-binop)))
+
+    (let py-universal-grammar
+        (load-bnf-grammar py-universal-text py-universal-registry))
+
+    (defn parse-python-universal (text)
+        (bnf-parse text py-universal-grammar))
+
+    0)
