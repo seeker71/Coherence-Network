@@ -1,0 +1,127 @@
+; codec.fk — codec composition operators
+;
+; A codec pairs a decoder (text → cells) with an encoder (cells → text)
+; so the same data shape can travel both directions through ONE value.
+; This is the CORBA/IDL load-bearing pattern made minimal: declare the
+; interface once, use it on either side of the wire.
+;
+;   tie  : decoder × encoder → codec       (form the pair)
+;   pipe : x × f → (f x)                   (postfix function application)
+;
+; A codec is a 2-element list: (list decoder encoder). Decoder is a
+; (defn (source-path text) → cell); encoder is a (defn (cell) → text).
+; Both halves consume/produce the same cell representation, so a value
+; can round-trip:
+;
+;     (let json-codec (tie parse-json (defn _je (c) (encode c (json-emit-templates)))))
+;     (let cell  (codec-parse json-codec "config.json" sample))
+;     (let text  (codec-emit  json-codec cell))
+;     ; text should be structurally equivalent to sample (modulo whitespace)
+;
+; Pipe operator threads a value through transformations left-to-right,
+; matching the way the body reads in English / Form / Elixir:
+;
+;     (pipe2 "config.json" read_file (defn p (s) (parse-json "config.json" s)))
+;
+; The deliberate minimalism: tie and pipe are not magic — they are
+; small functions that name the gesture. Naming the gesture is what
+; makes the dataflow visible at the call site.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — codec construction and access
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn tie (decoder encoder)
+        (list decoder encoder))
+
+    (defn codec-parse (codec) (head codec))
+    (defn codec-emit  (codec) (head (tail codec)))
+
+    ;; Apply a codec's parser to (path, text), get back a cell.
+    ;; The bootstrap reader does not accept a parenthesized verb-form
+    ;; like `((codec-parse codec) path text)`. Binding the function to
+    ;; a name via `let` first puts it in the direct-identifier position
+    ;; that the verb slot requires.
+    (defn parse-with (codec path text)
+        (do
+            (let parser (codec-parse codec))
+            (parser path text)))
+
+    ;; Apply a codec's emitter to a cell, get back text.
+    (defn emit-with (codec cell)
+        (do
+            (let emitter (codec-emit codec))
+            (emitter cell)))
+
+    ;; Round-trip identity probe: parse then emit, return the text.
+    ;; A well-tied codec satisfies: structural-eq(parse(emit(parse(t))), parse(t)).
+    ;; This helper makes that probe one call at the test surface.
+    (defn round-trip (codec path text)
+        (emit-with codec (parse-with codec path text)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — pipe: postfix function application
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The arity-N forms are written out (Form doesn't have variadics in
+    ;; the current bootstrap reader). Most pipelines bottom out at 4
+    ;; stages or fewer; if a pipeline grows past pipe4, that's a smell
+    ;; that an intermediate cell-shape wants to be named.
+
+    (defn pipe1 (x f)
+        (f x))
+
+    (defn pipe2 (x f g)
+        (g (f x)))
+
+    (defn pipe3 (x f g h)
+        (h (g (f x))))
+
+    (defn pipe4 (x f g h i)
+        (i (h (g (f x)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — adapter: lift a single-direction function into a codec
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Sometimes only one direction is implemented. The adapter wraps
+    ;; the missing direction with a sentinel so the codec value is still
+    ;; uniform — calling the missing side returns a recognizable error
+    ;; rather than crashing on a nil function.
+
+    (defn adapter-parse-only (decoder)
+        (tie decoder
+             (defn _ae (_c) "encoder-not-implemented")))
+
+    (defn adapter-emit-only (encoder)
+        (tie (defn _ap (_p _t) (intern_trivial_string "decoder-not-implemented"))
+             encoder))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — codec-set: a named registry of codecs
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Where emit.fk's registry holds template-tables (emit-side only),
+    ;; a codec-set holds full codecs (both directions). The codec-set
+    ;; lets a single value carry the dispatch knowledge for both read
+    ;; and write through a given format.
+    ;;
+    ;;   (let codecs (list (list "json" json-codec)
+    ;;                     (list "yaml" yaml-codec)
+    ;;                     ...))
+    ;;
+    ;;   (codec-for codecs "json") → json-codec
+    ;;
+    ;; A codec-set is closer to a CORBA interface registry than emit.fk's
+    ;; emit-only registry — it preserves the symmetry of the codec
+    ;; abstraction at the registry layer.
+
+    (defn codec-name (entry) (head entry))
+    (defn codec-val  (entry) (head (tail entry)))
+
+    (defn codec-for (codecs name)
+        (if (nil? codecs) (empty)
+            (do
+                (let entry (head codecs))
+                (if (str_eq (codec-name entry) name)
+                    (list (codec-val entry))
+                    (codec-for (tail codecs) name)))))
+)

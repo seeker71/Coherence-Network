@@ -1,0 +1,130 @@
+; emits/json.fk — Recipe → JSON text emit templates
+;
+; Symmetric to grammars/json.fk (which is JSON text → Recipe). Together
+; they form the JSON codec: every Recipe shape that grammars/json.fk
+; produces has a matching emit template here.
+;
+; Round-trip target: parse-then-emit reproduces the canonical JSON
+; surface form (modulo whitespace — JSON has no significant whitespace
+; outside string literals, so canonical form uses no padding).
+;
+; Category coverage (must match grammars/json.fk):
+;   JSON-OBJECT (99.10)  → {"k":v, "k":v}
+;   JSON-ARRAY  (99.11)  → [v, v, v]
+;   JSON-PAIR   (99.12)  → "k":v    (used inside object templates)
+;   JSON-NULL   (99.13)  → null
+;   string-trivial       → "<escaped>"
+;   int-trivial          → digits
+;   bool-trivial (0/1)   → false / true   (encoded as 0/1 ints today)
+;
+; Loading order:
+;   bin-go core.fk emit-engine.fk grammars/json.fk emits/json.fk \
+;          emit.fk codec.fk <orchestrator.fk>
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — string escape (JSON-spec subset)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The minimal-correct escapes: " \ \n \t. The rest of the JSON
+    ;; escape table extends as data when needed. The point of starting
+    ;; minimal is to keep the round-trip probe honest — every escape
+    ;; lands with its own test before being claimed.
+
+    (defn cp-needs-escape (cp)
+        (or (eq cp 34)                          ; "
+            (or (eq cp 92)                      ; \
+                (or (eq cp 10) (eq cp 9)))))    ; \n \t
+
+    (defn escape-cp (cp)
+        (if (eq cp 34)  "\\\""
+        (if (eq cp 92)  "\\\\"
+        (if (eq cp 10)  "\\n"
+        (if (eq cp 9)   "\\t"
+            "?")))))
+
+    (defn escape-loop (s i acc)
+        (if (eq i (str_len s)) acc
+            (do
+                (let c (char_at s i))
+                (let cp (ord c))
+                (let piece (if (cp-needs-escape cp) (escape-cp cp) c))
+                (escape-loop s (add i 1) (str_concat acc piece)))))
+
+    (defn json-escape (s) (escape-loop s 0 ""))
+
+    (defn quote-string (s)
+        (str_concat "\"" (str_concat (json-escape s) "\"")))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — template functions for each JSON shape
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each template receives the LIST OF ALREADY-EMITTED CHILDREN as
+    ;; strings (emit-engine.fk recurses children first) and arranges
+    ;; them into the parent's JSON surface form.
+
+    (defn json-emit-null (_children)
+        "null")
+
+    (defn join-comma (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat ","
+                                        (join-comma (tail xs)))))))
+
+    (defn json-emit-array (children)
+        (str_concat "[" (str_concat (join-comma children) "]")))
+
+    (defn json-emit-object (children)
+        ;; children are already-emitted pair strings ("k":v)
+        (str_concat "{" (str_concat (join-comma children) "}")))
+
+    (defn json-emit-pair (children)
+        ;; children = (key-emitted value-emitted); both are pre-emitted
+        ;; strings. The key arrives from string-trivial emit (raw — see
+        ;; Part 3 note), so we quote it here. The value rides as-is.
+        (do
+            (let key-raw (head children))
+            (let value   (head (tail children)))
+            (str_concat (quote-string key-raw)
+                        (str_concat ":" value))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — template-table as a top-level value
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The template table is a VALUE — a list of (cat-nodeid template-fn)
+    ;; pairs that emit-engine.fk's lookup-template walks. The orchestrator
+    ;; (or a test) reads `json-templates` directly and registers it under
+    ;; the "json" target name in emit.fk's registry.
+    ;;
+    ;; The category NodeIDs MUST match grammars/json.fk's constants
+    ;; exactly. They live in this file as let-bindings so the emit and
+    ;; decode definitions stay co-resident with the format they serve.
+
+    (let E-JSON-OBJECT (make_nodeid 1 2 99 10))
+    (let E-JSON-ARRAY  (make_nodeid 1 2 99 11))
+    (let E-JSON-PAIR   (make_nodeid 1 2 99 12))
+    (let E-JSON-NULL   (make_nodeid 1 2 99 13))
+
+    (let json-templates
+        (list
+            (list E-JSON-OBJECT json-emit-object)
+            (list E-JSON-ARRAY  json-emit-array)
+            (list E-JSON-PAIR   json-emit-pair)
+            (list E-JSON-NULL   json-emit-null)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — full codec value
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The JSON codec ties parse-json (from grammars/json.fk) with the
+    ;; emit-templates-bound encoder. Callers pull this one value and
+    ;; have both directions:
+    ;;
+    ;;   (parse-with json-codec "config.json" raw)
+    ;;   (emit-with  json-codec cell)
+
+    (defn json-emit-fn (cell)
+        (encode cell json-templates))
+
+    (let json-codec (tie parse-json json-emit-fn))
+)

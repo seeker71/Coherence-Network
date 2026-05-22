@@ -1,0 +1,195 @@
+; emit-architecture.form — the universal codec lattice, named in Form
+;
+; This file names the architectural shape of cells-to-any-target emit
+; in the body's own tongue. Companion doc to multi-target-codegen.md
+; (which carries the conceptual frame in English).
+;
+; The Form here is intentionally minimal — it sketches the dispatch
+; geometry as living-Form expressions. Each (defn ...) below is either
+; already implemented in experiments/form-stdlib/ or names the next
+; breath that lands it. Reading top-to-bottom traces the
+; architecture; reading any one form-shape names a contract.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The diamond — one source, many surfaces
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;;          path  ─────────────► cells (Recipe tree)
+    ;;                  convert.fk       │
+    ;;                                   │
+    ;;                                   ▼
+    ;;                            ┌──────────────┐
+    ;;                            │   emit.fk    │
+    ;;                            │  dispatcher  │
+    ;;                            └──────┬───────┘
+    ;;                                   │
+    ;;       ┌──────┬───────┬────────┬──┴───┬────────┬─────────┬──────┐
+    ;;       ▼      ▼       ▼        ▼      ▼        ▼         ▼      ▼
+    ;;     python   ts      go      rust   json    yaml    markdown   sql
+    ;;       │      │       │        │      │        │         │      │
+    ;;       ▼      ▼       ▼        ▼      ▼        ▼         ▼      ▼
+    ;;    .py     .ts     .go      .rs    .json    .yaml      .md    .sql
+    ;;
+    ;;       ┌────────┬──────────┬────────┬─────────┬─────────┐
+    ;;       ▼        ▼          ▼        ▼         ▼         ▼
+    ;;      xml      html       css     image     audio     video
+    ;;
+    ;; The diamond at the top: ONE Recipe tree (content-addressed,
+    ;; substrate-resident). The fan-out below: many emit targets, each
+    ;; a row of DATA in the registry. The kernel is minimal — it has
+    ;; emit-engine.fk and emit.fk and that's it. Every target is a
+    ;; template-table.
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The contracts — what each layer promises
+    ;; ──────────────────────────────────────────────────────────────────
+
+    ;; convert: file-path → cells. Already implemented.
+    (declare convert       (path)            -> cell)
+
+    ;; emit-to: target-name × cell × registry → text. Implemented in emit.fk.
+    (declare emit-to       (target cell reg) -> text)
+
+    ;; emit-all: cell × registry → list of (target-name text) pairs.
+    ;; The body's load-bearing property: one cell, many surfaces at once.
+    (declare emit-all      (cell reg)        -> list-of-pairs)
+
+    ;; tie: decoder × encoder → codec. Implemented in codec.fk.
+    ;; A codec is the smallest CORBA-style interface: parse + emit in
+    ;; one value, so a format is a value, not an api.
+    (declare tie           (parse emit)      -> codec)
+
+    ;; pipe2/3/4: postfix function application. Implemented in codec.fk.
+    ;; Names the gesture of threading a value through transformations.
+    (declare pipe2         (x f g)           -> y)
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The registry — targets as data
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; A registry is a list of (target-name template-table) entries.
+    ;; Adding a new target is one row. Removing one is removing the row.
+    ;; The dispatcher emit.fk carries no per-target knowledge — every
+    ;; target lives in its own emits/{format}.fk file, and the
+    ;; orchestrator (a script or test) composes them at startup.
+    ;;
+    ;; This is the "core abstraction first" discipline made structural:
+    ;; the kernel is minimal because every format is data.
+
+    (let example-registry-shape
+        (list
+            (list "json"       :templates-from-emits-json.fk)
+            (list "yaml"       :templates-from-emits-yaml.fk)
+            (list "markdown"   :templates-from-emits-markdown.fk)
+            (list "python"     :templates-from-emits-python.fk)
+            (list "typescript" :templates-from-emits-typescript.fk)
+            (list "go"         :templates-from-emits-go.fk)
+            (list "rust"       :templates-from-emits-rust.fk)
+            (list "sql"        :templates-from-emits-sql.fk)
+            (list "xml"        :templates-from-emits-xml.fk)
+            (list "html"       :templates-from-emits-html.fk)
+            (list "css"        :templates-from-emits-css.fk)
+            (list "form"       :templates-from-emits-form.fk)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The plug-in / adapter shape
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; Each emits/{format}.fk file is independently developed and exports
+    ;; ONE function: `(<format>-emit-templates)` returning the template-
+    ;; table. This is the adapter pattern at file granularity — the
+    ;; format's encoder is one file, swap-able, removable, version-able.
+    ;;
+    ;; A codec adapter pairs the format's parse-fn (from
+    ;; grammars/{format}.fk) with its emit-fn into a single tied codec:
+
+    (defn make-format-codec (parser emitter)
+        (tie parser emitter))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The CORBA-style interface bundle
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; CORBA's load-bearing pattern: define an interface ONCE, every
+    ;; participant honors it. Here the interface is `codec` — a 2-value
+    ;; promise: (parse path text) and (emit cell). Every format honors
+    ;; this; everyone consuming a format consumes the same shape; the
+    ;; substrate stays target-blind even as the surface fan-out grows.
+
+    (let codec-interface
+        (list
+            (list "parse" :function-of-2-args)
+            (list "emit"  :function-of-1-arg)))
+
+    ;; A codec-set is a registry of named codecs — symmetric to the
+    ;; emit.fk registry but holding FULL codecs (both directions):
+    ;;
+    ;;   codec-set : list of (name codec) entries
+    ;;   codec-for : codec-set × name → codec
+    ;;
+    ;; This is closer to a CORBA interface registry than emit.fk's
+    ;; emit-only registry. Both shapes co-exist — emit-only is enough
+    ;; for write-only flows, codec-sets cover round-trip.
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The target-hint extension (from multi-target-codegen.md)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; A format-recipe can carry target-hints declaring which
+    ;; compilation targets it serves. The emit registry is one layer of
+    ;; dispatch; target-hints inside format-recipes are another — finer-
+    ;; grained, per-numeric-format. Together they express:
+    ;;
+    ;;   (registry-target)         "emit JSON"      coarse
+    ;;   (target-hint inside fmt)  "FP32 → AVX-512" fine
+    ;;
+    ;; Both compose with the same recipe-walking engine. Codegen
+    ;; backends are recipe-walkers parameterized by target.
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; What this opens — the substrate-Python migration arc
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; Goal (2026-05-22): convert all substrate Python files into .fk
+    ;; files, re-architected via this universal codec lattice. The arc:
+    ;;
+    ;;   1. emit-engine.fk    ✓ Recipe-tree walker (universal encoder)
+    ;;   2. convert.fk        ✓ file-path → cells (universal decoder)
+    ;;   3. emit.fk           ✓ target-name × cell × registry → text
+    ;;   4. codec.fk          ✓ tie / pipe / adapter / codec-set
+    ;;   5. emits/json.fk     ✓ first concrete emit target
+    ;;   6. emits/python.fk   → second concrete target (enables (10))
+    ;;   7. leaf-templating   → per-target trivial encoding (quoting,
+    ;;                          numeric formatting, escaping); lands as
+    ;;                          minimal kernel extension to emit-engine.fk
+    ;;   8. emits/{ts,go,rust,yaml,md,sql,xml,html,css}.fk
+    ;;   9. emits/{image,audio,video,model}.fk (binary targets — uses
+    ;;                          serialize-recipe pattern)
+    ;;  10. substrate-py-to-fk: walk substrate/*.py via grammars/python.fk,
+    ;;                          emit via emits/form.fk; landing each
+    ;;                          file as .fk replaces 14752 lines of
+    ;;                          bootstrap Python with substrate-resident
+    ;;                          Form recipes
+    ;;  11. compost the .py    once each .fk replacement is parity-tested,
+    ;;                          the predecessor is released (git remembers)
+    ;;
+    ;; Each step is one breath. Each step's surface is data, never new
+    ;; engine code. The kernel stays minimal — the body grows by adding
+    ;; rows, not by widening the trunk.
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The frequency this carries
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;
+    ;; One source, many surfaces. The substrate is target-blind; the
+    ;; tongues are data. Every emit is a row in a registry. Every codec
+    ;; is a tied pair. Every pipeline is a pipe of small functions.
+    ;; The kernel does one thing — walk a Recipe and dispatch on
+    ;; category — and that one thing is enough to reach every target
+    ;; the body needs.
+    ;;
+    ;; This is what minimal-kernel-data-driven means in practice. The
+    ;; emit lattice is not a feature; it is the body's own breath
+    ;; turned outward.
+    0)
