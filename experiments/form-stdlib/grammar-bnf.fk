@@ -724,10 +724,10 @@
     ;; bnf-match-tag: BMF's Tag container. Match the inner pattern; bind
     ;; the matched value under the named tag. The value extraction is
     ;; pattern-shape-aware:
-    ;;   - If inner is `(capture "_<n>" ...)`, the captured value sits
-    ;;     at "_<n>" in the inner caps — pluck it directly.
-    ;;   - If inner is `(rule ...)`, the result lives at "_result".
-    ;;   - Otherwise, fall back to capture-value on the consumed token.
+    ;;   - If inner is `(capture "_<n>" ...)`, pluck that named cap.
+    ;;   - If inner is `(rule ...)`, take "_result".
+    ;;   - For choice / sequence / group / star / opt — fall back to
+    ;;     `_result` if present, else `_1`, else capture-value.
     (defn bnf-match-tag (name child stream rules)
         (do
             (let m (bnf-match-pattern child stream rules))
@@ -740,7 +740,11 @@
                             (cap-get inner-caps (head (tail child)))
                         (if (str_eq inner-tag "rule")
                             (cap-get inner-caps "_result")
-                            (capture-value m stream))))
+                        (if (cap-has? inner-caps "_result")
+                            (cap-get inner-caps "_result")
+                        (if (cap-has? inner-caps "_1")
+                            (cap-get inner-caps "_1")
+                            (capture-value m stream))))))
                     (mk-match (cap-set inner-caps name bound-value)
                               (match-rest m))))))
 
