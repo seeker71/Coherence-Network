@@ -1,0 +1,211 @@
+# anything-arrives-trace.form -- translation as traceable contact
+#
+# Companion to docs/vision-kb/concepts/lc-anything-arrives-room.md.
+#
+# The point of this file is intentionally small: describe the trace
+# shape that lets an arbitrary stream become knowable without forcing a
+# fixed symbol at the doorway. A stream arrives; an observer pays to
+# look; recipes make contact; cells change; refinement keeps the next
+# question alive.
+
+# ---------------------------------------------------------------------
+# Part 1 -- trace shape
+# ---------------------------------------------------------------------
+
+form anything_arrives_trace_shape = {
+    input_stream:       ~String,
+    carrier:            ~String,       # audio | code | prose | csv | gesture | silence | ...
+    observer_pressure:  [~String],     # what became noticeable before a label settled
+    recipes:            [~String],     # provisional contact recipes
+    cells_affected:     [~String],     # where the stream touched the body
+    observer_cost:      ~String,       # attention / compute / risk / exposure
+    trace:              [~String],     # path of contact becoming visible
+    refinement:         ~String,       # next smaller question
+    output:             ~String,       # not verdict; current lantern
+};
+
+defn anything_arrives_trace(
+    input_stream,
+    carrier,
+    observer_pressure,
+    recipes,
+    cells_affected,
+    observer_cost,
+    trace,
+    refinement,
+    output
+) =
+    anything_arrives_trace_shape {
+        input_stream:      input_stream,
+        carrier:           carrier,
+        observer_pressure: observer_pressure,
+        recipes:           recipes,
+        cells_affected:    cells_affected,
+        observer_cost:     observer_cost,
+        trace:             trace,
+        refinement:        refinement,
+        output:            output,
+    };
+
+# ---------------------------------------------------------------------
+# Part 2 -- example traces
+# ---------------------------------------------------------------------
+
+defn georgian_song_trace = anything_arrives_trace(
+    "livestreamed song in Georgian, untranslated",
+    "audio",
+    [
+        "phrase returns every eighteen seconds",
+        "vocal strain rises on the return",
+        "breath breaks in the same place",
+    ],
+    [
+        "lament-pattern",
+        "recurrence-before-lexicon",
+        "prosody-as-pressure",
+    ],
+    ["return", "breath", "threshold", "loss"],
+    "low compute, medium interpretive risk; lexical translation deferred",
+    [
+        "audio moved from unknown-language to repeated-return",
+        "return moved from timing feature to grief-shaped pressure",
+        "words remain unopened while recurrence carries the first contact",
+    ],
+    "ask what recurrence is doing before translating the words",
+    "this stream is making grief-shaped recurrence available"
+);
+
+defn code_diff_trace = anything_arrives_trace(
+    "three config settings and one retry-loop change",
+    "code",
+    [
+        "small file surface",
+        "retry behavior touches paid provider path",
+        "failure mode changes under uncertainty",
+    ],
+    [
+        "resilience",
+        "cost-control",
+        "routing-pressure",
+    ],
+    ["failure-recovery", "provider-routing", "attention-budget"],
+    "medium review cost; money-path risk requires exact proof",
+    [
+        "diff moved from config update to pressure valve",
+        "retry moved from local behavior to spending behavior",
+        "provider route became the affected cell",
+    ],
+    "prove one cheap route and one escalation route before claiming routing behavior",
+    "this diff changes how uncertainty behaves when it gets expensive"
+);
+
+defn door_city_trace = anything_arrives_trace(
+    "I was carrying a door through a city made of windows",
+    "dream-fragment",
+    [
+        "door is mobile",
+        "city is all visibility",
+        "boundary travels through exposure",
+    ],
+    [
+        "boundary-as-tool",
+        "visibility-field",
+        "portable-threshold",
+    ],
+    ["threshold", "exposure", "agency", "entry"],
+    "low lexical cost, medium interpretive risk; no fixed symbol claimed",
+    [
+        "door moved from object to carried boundary",
+        "city moved from place to visibility condition",
+        "window moved from image to exposure pressure",
+    ],
+    "ask where entry is being carried, not what the door symbolizes",
+    "a boundary is becoming portable inside a field of total visibility"
+);
+
+defn failed_payment_trace = anything_arrives_trace(
+    "CSV spike of declined payments by date, region, and error code",
+    "csv",
+    [
+        "declines cluster on one provider path",
+        "retry frequency rises without recovery",
+        "region behaves like a friction accent",
+    ],
+    [
+        "trust-continuity",
+        "regional-friction",
+        "retry-tone",
+    ],
+    ["billing-friction", "trust-continuity", "regional-pattern"],
+    "medium attention cost; repeated retries can increase user pressure",
+    [
+        "failed rows moved from errors to continuity break",
+        "region moved from geography to handshake condition",
+        "retry moved from recovery attempt to pressure amplifier",
+    ],
+    "test provider-path recovery before increasing retry pressure",
+    "not a customer problem; a brittle handshake with a local accent"
+);
+
+defn publish_hesitation_trace = anything_arrives_trace(
+    "cursor hovers over Publish, retreats twice, returns to same paragraph",
+    "gesture",
+    [
+        "hover duration increases",
+        "cursor retreats from irreversible action",
+        "attention returns to one paragraph",
+    ],
+    [
+        "hesitation",
+        "public-claim",
+        "consequence-sensing",
+    ],
+    ["exposure", "irreversibility", "public-claim"],
+    "low compute, high exposure sensitivity; do not over-infer identity",
+    [
+        "button moved from UI control to consequence threshold",
+        "paragraph moved from text to unresolved risk",
+        "hesitation moved from delay to sensing act",
+    ],
+    "surface the reversible next action instead of forcing publication",
+    "the user is negotiating consequence"
+);
+
+defn silence_trace = anything_arrives_trace(
+    "normally noisy endpoint stops producing witness events",
+    "silence",
+    [
+        "absence where rhythm usually exists",
+        "health probe times out",
+        "interpretation would outrun sensing",
+    ],
+    [
+        "silence-as-signal",
+        "restore-sensing-before-meaning",
+        "witness-budget",
+    ],
+    ["skin", "circulation", "attention-budget", "deploy-caution"],
+    "timeout budget plus operational attention; no causal claim yet",
+    [
+        "absence moved from empty to unobservable breathing",
+        "timeout moved from annoyance to sensing failure",
+        "endpoint moved from implementation detail to organ status",
+    ],
+    "restore the sensing path before interpreting the silence",
+    "something that normally breathes has become unobservable"
+);
+
+# ---------------------------------------------------------------------
+# Part 3 -- operating rule
+# ---------------------------------------------------------------------
+
+defn translation_rule(trace) =
+    [
+        "do not ask first what the stream means",
+        "ask what it touched",
+        "ask which recipe made contact",
+        "ask which cells changed",
+        "ask what the observer paid",
+        "leave the next question smaller",
+    ];
+
