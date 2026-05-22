@@ -1,0 +1,109 @@
+; emit.fk — the unified Recipe-to-target dispatcher
+;
+; Sibling to convert.fk. Where convert dispatches by FILE EXTENSION to
+; a parser (any tongue → cells), emit dispatches by TARGET NAME to a
+; template table (cells → any tongue). Together they form the universal
+; codec: the substrate is target-blind, every tongue is data.
+;
+;   convert.fk   : path → cells          (read-direction)
+;   emit.fk      : cells × target → text (write-direction)
+;
+; Architecture:
+;
+;   A target-registry is a list of (target-name template-table) pairs.
+;   Each emits/{format}.fk file exports a (defn <format>-emit-templates)
+;   function that returns its template-table. The orchestrator (a script
+;   or test) composes them:
+;
+;     (let registry
+;          (list (list "json"       (json-emit-templates))
+;                (list "yaml"       (yaml-emit-templates))
+;                (list "python"     (python-emit-templates))
+;                (list "typescript" (typescript-emit-templates))
+;                (list "go"         (go-emit-templates))
+;                (list "rust"       (rust-emit-templates))
+;                (list "markdown"   (markdown-emit-templates))
+;                (list "sql"        (sql-emit-templates))
+;                (list "xml"        (xml-emit-templates))
+;                (list "html"       (html-emit-templates))
+;                (list "css"        (css-emit-templates))
+;                (list "form"       (form-emit-templates))))
+;
+;     (emit-to "python" my-cell registry)   ; → Python source text
+;
+; The dispatcher carries no per-target knowledge. New targets are data,
+; never code in emit.fk itself. This is the "core abstraction first"
+; discipline made structural: ONE engine, every target as a row.
+;
+; Loading: requires core.fk + emit-engine.fk + per-target emits/*.fk
+; files to be loaded before this file, then orchestrator builds the
+; registry from those.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — registry accessors
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A registry entry is (list target-name templates-table). The
+    ;; templates-table is itself a list of (cat-nodeid template-fn) pairs
+    ;; (the shape emit-engine.fk consumes via lookup-template).
+
+    (defn target-name      (entry) (head entry))
+    (defn target-templates (entry) (head (tail entry)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — lookup: registry × target-name → templates (or empty)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Empty-list sentinel for miss (same convention as
+    ;; emit-engine.fk/lookup-template). A list-wrapped templates table
+    ;; on hit, so callers can use (nil? result) cleanly.
+
+    (defn lookup-target (registry name)
+        (if (nil? registry) (empty)
+            (do
+                (let entry (head registry))
+                (if (str_eq (target-name entry) name)
+                    (list (target-templates entry))
+                    (lookup-target (tail registry) name)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — emit-to: top-level entry point
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Given a target name, a Recipe (cell), and the registry, dispatch
+    ;; to the appropriate template-table and delegate to emit-engine.fk's
+    ;; encode. If the target isn't registered, return a sentinel string
+    ;; so the caller can detect-and-react (same pattern as convert.fk's
+    ;; UNKNOWN-FORMAT cell).
+
+    (defn emit-to (target cell registry)
+        (do
+            (let found (lookup-target registry target))
+            (if (nil? found)
+                (str_concat "unknown-target:" target)
+                (encode cell (head found)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — list-targets: the registry as data
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walks the registry returning just the target names. Useful for
+    ;; tooling that wants to enumerate supported emit targets.
+
+    (defn list-targets (registry)
+        (if (nil? registry) (empty)
+            (cons (target-name (head registry))
+                  (list-targets (tail registry)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — fan-out: emit ONE cell into MANY targets at once
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The substrate's load-bearing property: one cell, many surfaces.
+    ;; Returns a list of (target-name emitted-text) pairs — symmetric to
+    ;; the registry shape, so downstream walkers see the same vocabulary.
+
+    (defn emit-all (cell registry)
+        (if (nil? registry) (empty)
+            (do
+                (let entry (head registry))
+                (let name (target-name entry))
+                (let text (encode cell (target-templates entry)))
+                (cons (list name text) (emit-all cell (tail registry))))))
+)
