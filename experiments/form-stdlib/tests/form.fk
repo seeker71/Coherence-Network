@@ -1,0 +1,37 @@
+; tests/form.fk — exercise form.fk S-expression parser end-to-end
+;
+; The self-host probe: parse small .fk fragments into Recipe trees
+; without going through the kernel's bootstrap reader.
+
+(do
+    (let sample
+        (str_concat "(add 2 3) "
+        (str_concat "; this is a comment
+" "(defn double (x) (mul x 2))")))
+
+    (let exprs (parse-form "demo.fk" sample))
+
+    ;; --- probe 1: two top-level expressions parsed ----------------
+    (let probe-1 (len exprs))                              ; → 2
+
+    ;; --- probe 2: first expression is a list ----------------------
+    (let first-expr (head exprs))
+    (let first-kids (node_children first-expr))
+    (let probe-2 (len first-kids))                         ; → 3 (add, 2, 3)
+
+    ;; --- probe 3: first child of first list is the ident "add" ----
+    (let add-ident (head first-kids))
+    (let ident-kids (node_children add-ident))
+    (let probe-3 (len ident-kids))                         ; → 1 (ident has one child: the name trivial)
+
+    ;; --- probe 4: source attribution recorded on first list -------
+    ;; demo.fk:1:1 → 10 chars
+    (let probe-4 (str_len (cell-source first-expr)))       ; → 10
+
+    ;; --- probe 5: second expression is the defn (5 children: defn, name, args-list, body-list)
+    (let defn-expr (head (tail exprs)))
+    (let defn-kids (node_children defn-expr))
+    (let probe-5 (len defn-kids))                          ; → 4
+
+    ;; sum: 2 + 3 + 1 + 10 + 4 = 20
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 probe-5)))))
