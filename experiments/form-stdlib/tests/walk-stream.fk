@@ -1,0 +1,64 @@
+; tests/walk-stream.fk — verify push-style streaming with combined handlers.
+;
+; Strange-minimal probe: ONE input stream through ONE walk-stream call
+; with TWO handlers combined (count + sum-of-lengths). Verifies each
+; cell is seen by both handlers exactly once, no intermediate list is
+; materialized, and the final state captures both aggregates in one pass.
+
+(do
+    (let CELL-CHUNK (make_nodeid 1 2 99 81))
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn digit-to-int (c) (sub (ord c) 48))
+
+    (defn chunk-segmenter (input pos)
+        (if (ge pos (str_len input))
+            (mk-eof 0)
+            (do
+                (let len (digit-to-int (char_at input pos)))
+                (let data-start (add pos 1))
+                (let data-end (add data-start len))
+                (mk-block (substr input data-start data-end) data-end
+                           (add pos 1)))))
+
+    (defn chunk-encoder (block-text source-path line-no)
+        (intern_node_at CELL-CHUNK
+                         (list (intern_trivial_string block-text))
+                         source-path line-no 1))
+
+    (defn handler-count (state cell) (add state 1))
+
+    (defn first-child-text-len (cell)
+        (do
+            (let kids (node_children cell))
+            (if (nil? kids) 0
+                (str_len (node_value (head kids))))))
+
+    (defn handler-len-sum (state cell) (add state (first-child-text-len cell)))
+
+    (let combined (combine-handlers handler-count handler-len-sum))
+
+    (let source "3abc2de1f4hell")
+
+    (let final-state (walk-stream source
+                                   chunk-segmenter chunk-encoder
+                                   "stream.bin"
+                                   (list 0 0)
+                                   combined))
+
+    (let count (head final-state))
+    (let len-sum (head (tail final-state)))
+
+    (let probe-1 count)                                    ; → 4
+    (let probe-2 len-sum)                                  ; → 10
+    (let probe-3 (len final-state))                        ; → 2
+
+    (let pulled (stream-of-cells source chunk-segmenter chunk-encoder
+                                  "stream.bin"))
+    (let probe-4 (len pulled))                             ; → 4
+
+    ;; sum: 4 + 10 + 2 + 4 = 20
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))
