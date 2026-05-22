@@ -50,6 +50,11 @@
     (let PY-BNF-ASSIGN       (make_nodeid 1 2 99 44))
     (let PY-BNF-IDENT        (make_nodeid 1 2 99 45))
     (let PY-BNF-NAME-PAIR    (make_nodeid 1 2 99 46))
+    (let PY-BNF-BIN-EXPR     (make_nodeid 1 2 99 47))
+    (let PY-BNF-INT-EXPR     (make_nodeid 1 2 99 48))
+    (let PY-BNF-STR-EXPR     (make_nodeid 1 2 99 49))
+    (let PY-BNF-IDENT-EXPR   (make_nodeid 1 2 99 50))
+    (let PY-BNF-PAREN-EXPR   (make_nodeid 1 2 99 51))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 2 — emitter library
@@ -123,6 +128,90 @@
             (intern_node PY-BNF-MODULE all-stmts)))
 
     ;; ──────────────────────────────────────────────────────────────────
+    ;; Python expression emitters — BMF-style precedence as DATA
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Python operator precedence (subset; standard left-assoc except **):
+    ;;   or       → 3
+    ;;   and      → 4
+    ;;   == != < > <= >= → 6
+    ;;   + -      → 11
+    ;;   * / // % → 12
+    ;;   **       → 14 (right-assoc — left-fold here as simplification)
+
+    (let py-bnf-binop-prec-table
+        (list
+            (list "or" 3) (list "and" 4)
+            (list "==" 6) (list "!=" 6)
+            (list "<"  6) (list ">"  6)
+            (list "<=" 6) (list ">=" 6)
+            (list "+" 11) (list "-" 11)
+            (list "*" 12) (list "/" 12) (list "//" 12) (list "%" 12)
+            (list "**" 14)))
+
+    (defn py-bnf-lookup-prec (table text)
+        (if (nil? table) 0
+            (if (str_eq (head (head table)) text)
+                (head (tail (head table)))
+                (py-bnf-lookup-prec (tail table) text))))
+
+    (defn py-bnf-climb (lhs items table min-prec)
+        (if (nil? items) (list lhs items)
+            (do
+                (let item (head items))
+                (let op (cap-get item "op"))
+                (let op-prec (py-bnf-lookup-prec table op))
+                (if (lt op-prec min-prec)
+                    (list lhs items)
+                    (do
+                        (let rhs (cap-get item "rhs"))
+                        (let rest-after (tail items))
+                        (let inner (py-bnf-climb rhs rest-after table
+                                                   (add op-prec 1)))
+                        (let inner-rhs (head inner))
+                        (let after-inner (head (tail inner)))
+                        (let new-lhs
+                            (intern_node PY-BNF-BIN-EXPR
+                                          (list (intern_trivial_string op)
+                                                lhs inner-rhs)))
+                        (py-bnf-climb new-lhs after-inner table min-prec))))))
+
+    (defn py-bnf-emit-expression (caps)
+        (do
+            (let lhs (cap-get caps "lhs"))
+            (let raw-items (cap-get caps "items"))
+            (if (nil? raw-items) lhs
+                (do
+                    (let ordered (py-bnf-reverse raw-items))
+                    (let result (py-bnf-climb lhs ordered
+                                               py-bnf-binop-prec-table 0))
+                    (head result)))))
+
+    (defn py-bnf-emit-int-expr (caps)
+        (intern_node PY-BNF-INT-EXPR
+                      (list (intern_trivial_int
+                              (str_to_int (cap-get caps "value"))))))
+
+    (defn py-bnf-emit-str-expr (caps)
+        (intern_node PY-BNF-STR-EXPR
+                      (list (intern_trivial_string (cap-get caps "value")))))
+
+    (defn py-bnf-emit-ident-expr (caps)
+        (intern_node PY-BNF-IDENT-EXPR
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    (defn py-bnf-emit-paren-expr (caps)
+        (intern_node PY-BNF-PAREN-EXPR
+                      (list (cap-get caps "expr"))))
+
+    ;; py-bnf-emit-assign now takes an expression Recipe (not a string).
+    ;; The structured emit lets downstream tools (py-exec, py-emit) walk
+    ;; both the lhs (name) and the rhs (value Recipe).
+    (defn py-bnf-emit-assign-expr (caps)
+        (intern_node PY-BNF-ASSIGN
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+
+    ;; ──────────────────────────────────────────────────────────────────
     ;; Part 3 — the BNF grammar text
     ;; ──────────────────────────────────────────────────────────────────
     ;; Reading aloud:
@@ -143,22 +232,47 @@
   operator ) RPAREN
   operator , COMMA
   operator : COLON
-  operator = EQUALS
   operator . DOT
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator <  LT
+  operator >  GT
+  operator ** STARSTAR
+  operator // SLASHSLASH
+  operator =  EQUALS
+  operator +  PLUS
+  operator -  MINUS
+  operator *  STAR
+  operator /  SLASH
+  operator %  PERCENT
   keyword IMPORT import
   keyword FROM from
   keyword AS as
   keyword DEF def
+  keyword AND and
+  keyword OR or
+  keyword NOT not
 }
 
 rules {
-  module       ::= statement+                     => py-bnf-emit-module ;
+  module       ::= statement+                                  => py-bnf-emit-module ;
   statement    ::= import-as | import-bare | from-stmt | def-stmt | assign-stmt ;
-  import-as    ::= IMPORT IDENT AS IDENT          => py-bnf-emit-import-as ;
-  import-bare  ::= IMPORT IDENT                    => py-bnf-emit-import-bare ;
-  from-stmt    ::= FROM IDENT IMPORT IDENT         => py-bnf-emit-from-import ;
-  def-stmt     ::= DEF IDENT LPAREN RPAREN COLON   => py-bnf-emit-def ;
-  assign-stmt  ::= IDENT EQUALS INT                => py-bnf-emit-assign ;
+  import-as    ::= IMPORT IDENT AS IDENT                       => py-bnf-emit-import-as ;
+  import-bare  ::= IMPORT IDENT                                 => py-bnf-emit-import-bare ;
+  from-stmt    ::= FROM IDENT IMPORT IDENT                      => py-bnf-emit-from-import ;
+  def-stmt     ::= DEF IDENT LPAREN RPAREN COLON                => py-bnf-emit-def ;
+  assign-stmt  ::= name:IDENT EQUALS value:expression           => py-bnf-emit-assign-expr ;
+  ;; BMF-style: ONE Expression rule + precedence DATA in Form code.
+  expression   ::= lhs:primary-expr (op:binary-op rhs:primary-expr)* => py-bnf-emit-expression ;
+  binary-op    ::= OR | AND | EQEQ | NEQ | LE | GE | LT | GT
+                 | PLUS | MINUS | STARSTAR | SLASHSLASH | STAR | SLASH | PERCENT ;
+  primary-expr ::= int-lit | str-lit | ident-expr | paren-expr ;
+  paren-expr   ::= LPAREN expr:expression RPAREN                => py-bnf-emit-paren-expr ;
+  int-lit      ::= value:INT                                    => py-bnf-emit-int-expr ;
+  str-lit      ::= value:STRING                                 => py-bnf-emit-str-expr ;
+  ident-expr   ::= name:IDENT                                   => py-bnf-emit-ident-expr ;
 }")
 
     ;; ──────────────────────────────────────────────────────────────────
@@ -173,7 +287,13 @@ rules {
               (list "py-bnf-emit-from-import"      py-bnf-emit-from-import)
               (list "py-bnf-emit-def"              py-bnf-emit-def)
               (list "py-bnf-emit-assign"           py-bnf-emit-assign)
+              (list "py-bnf-emit-assign-expr"      py-bnf-emit-assign-expr)
               (list "py-bnf-emit-module"           py-bnf-emit-module)
+              (list "py-bnf-emit-expression"      py-bnf-emit-expression)
+              (list "py-bnf-emit-int-expr"         py-bnf-emit-int-expr)
+              (list "py-bnf-emit-str-expr"         py-bnf-emit-str-expr)
+              (list "py-bnf-emit-ident-expr"       py-bnf-emit-ident-expr)
+              (list "py-bnf-emit-paren-expr"       py-bnf-emit-paren-expr)
               (list "py-bnf-emit-passthrough"      py-bnf-emit-passthrough)))
 
     (let py-bnf-grammar
