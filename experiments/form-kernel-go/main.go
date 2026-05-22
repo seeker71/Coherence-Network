@@ -690,14 +690,10 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: args[0].Int}
 	})
-	k.registerNative("sum", catMethod(), func(_ *Kernel, args []Value) Value {
-		if args[0].Kind == VList {
-			var total int64
-			for _, v := range args[0].List { total += v.Int }
-			return Value{Kind: VInt, Int: total}
-		}
-		return Value{Kind: VInt, Int: 0}
-	})
+	// `sum` composted from the kernel native list 2026-05-22 —
+	// core.fk's (defn sum (xs) (foldl plus 0 xs)) covers it via the
+	// existing foldl + plus primitives. First of 9 composable natives
+	// named in kernel-minimality-audit.md.
 	k.registerNative("abs", catMethod(), func(_ *Kernel, args []Value) Value {
 		n := args[0].Int
 		if n < 0 { n = -n }

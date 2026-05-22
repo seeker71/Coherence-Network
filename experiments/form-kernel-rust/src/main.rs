@@ -656,14 +656,11 @@ impl Kernel {
             }
             Value::Int(args[0].as_int())
         });
-        self.register_native("sum", cat_method(), |_, _, args| {
-            if let Value::List(xs) = &args[0] {
-                let mut total: i64 = 0;
-                for v in xs { total += v.as_int(); }
-                return Value::Int(total);
-            }
-            Value::Int(0)
-        });
+        // `sum` composted from the kernel native list 2026-05-22 —
+        // core.fk's `(defn sum (xs) (foldl plus 0 xs))` covers it
+        // via the existing `foldl` + `plus` primitives. Kernel
+        // minimality audit (kernel-minimality-audit.md) named this
+        // one of 9 composable natives; this is the first compost.
         self.register_native("abs", cat_method(), |_, _, args| {
             let n = args[0].as_int();
             Value::Int(if n < 0 { -n } else { n })
