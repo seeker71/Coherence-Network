@@ -1,0 +1,154 @@
+; escape-reader.fk — the common ground under text escapes AND binary framing
+;
+; Urs's intuition (2026-05-22): "for text encoding, something common and
+; somewhat difficult is nested escaping and special character support,
+; and that is probably also the case for binary encoder/decoders, so
+; there is probably some common ground for all of that, just an
+; intuition."
+;
+; The intuition is right. The unified shape across:
+;   - JSON string escapes: \", \\, \n, é
+;   - PNG chunks: 4-byte length + type + data + CRC
+;   - HTML entities: &amp; &lt; &#39;
+;   - MIME multipart: --boundary...content...--boundary--
+;   - Tar block headers: 512-byte header → data-length-in-blocks
+;
+; is: **a bounded sub-context inside an outer context, where the length
+; is determined by either (1) explicit count from a header field, or
+; (2) a terminator value/string, or (3) a sub-context lookup-table that
+; dispatches one or more units to a sub-rule. Sub-contexts can recurse.**
+;
+; Text and binary differ only in unit size (chars vs bytes) and how the
+; length is established. The matcher itself is identical.
+;
+; This file lands ONE primitive — `read-with-escape` — that handles all
+; five shapes above as parameterizations. The escape-table is data;
+; the engine is one recipe. Inside-out: lives in form-stdlib so per-
+; format grammars compose it rather than reimplementing.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — shared infrastructure (from line-grammar.fk)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — escape-table lookup
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; An escape-table is a list of (trigger-char, replacement-string)
+    ;; pairs. When the reader is in escape mode and encounters
+    ;; trigger-char, it emits replacement-string and returns to normal
+    ;; mode. Unknown triggers emit the trigger char itself (lossless
+    ;; passthrough).
+
+    (defn esc-trigger (entry) (head entry))
+    (defn esc-replacement (entry) (head (tail entry)))
+
+    (defn lookup-escape (table trigger-char)
+        (if (nil? table) trigger-char   ; unknown escape: emit the char itself
+            (do
+                (let entry (head table))
+                (if (str_eq (esc-trigger entry) trigger-char)
+                    (esc-replacement entry)
+                    (lookup-escape (tail table) trigger-char)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — read-with-escape: terminator-bounded with escape table
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Reads from s starting at i, accumulating chars until terminator
+    ;; is hit. Inside the bounded region, escape-char triggers a one-
+    ;; char escape lookup. Returns (decoded-string, position-after-
+    ;; terminator).
+    ;;
+    ;; This is the JSON string shape, the HTML entity shape (with
+    ;; ';' as terminator and '&' triggering a multi-char entity),
+    ;; and the MIME multipart shape (with the boundary string as
+    ;; terminator).
+
+    (defn mk-result (text pos) (list text pos))
+    (defn result-text (r) (head r))
+    (defn result-pos (r) (head (tail r)))
+
+    (defn read-with-escape (s i terminator escape-char escape-table)
+        (read-loop s i terminator escape-char escape-table ""))
+
+    (defn read-loop (s i terminator escape-char escape-table acc)
+        (if (eq i (str_len s))
+            ;; EOF before terminator — return what we have
+            (mk-result acc i)
+            (do
+                (let c (char_at s i))
+                (if (str_eq c terminator)
+                    (mk-result acc (add i 1))   ; consume terminator
+                    (if (str_eq c escape-char)
+                        (if (ge (add i 1) (str_len s))
+                            ;; escape at EOF — emit the escape char
+                            (mk-result (str_concat acc c) (add i 1))
+                            (do
+                                (let next-c (char_at s (add i 1)))
+                                (let decoded (lookup-escape escape-table next-c))
+                                (read-loop s (add i 2) terminator escape-char escape-table
+                                            (str_concat acc decoded))))
+                        (read-loop s (add i 1) terminator escape-char escape-table
+                                    (str_concat acc c)))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — read-with-length: count-bounded (binary framing)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Reads exactly N bytes/chars from s starting at i. Returns
+    ;; (substring, position-after). This is the PNG chunk-data shape,
+    ;; the tar block shape, the length-prefixed string shape.
+    ;;
+    ;; The length itself usually comes from a prior read of a header
+    ;; field (e.g. read 4 bytes as big-endian uint32, then read that
+    ;; many bytes). This primitive doesn't decode the length — the
+    ;; caller does that with header-specific helpers.
+
+    (defn read-with-length (s i n)
+        (mk-result (substr s i (add i n)) (add i n)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — read-length-prefix: single-byte length-prefixed read
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Convenience for the common "1 byte length + that many bytes data"
+    ;; shape that shows up in many simple binary formats (Pascal strings,
+    ;; net/string in BSON-likes, etc.). Reads the length byte, then
+    ;; reads that many subsequent bytes.
+
+    (defn read-length-prefix (s i)
+        (do
+            (let len (ord (char_at s i)))
+            (read-with-length s (add i 1) len)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 6 — read-context: the unified abstraction
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A context is one of:
+    ;;   (list "escape" terminator escape-char escape-table)
+    ;;   (list "length" n)
+    ;;   (list "length-prefixed")
+    ;;
+    ;; read-context dispatches on the kind, calling the appropriate
+    ;; specific reader. This is the API the per-format grammars use:
+    ;; they describe each region as a context-spec, the engine reads
+    ;; per-spec. Same primitive for text escapes and binary framing.
+
+    (defn ctx-kind (ctx) (head ctx))
+
+    (defn read-context (s i ctx)
+        (do
+            (let kind (ctx-kind ctx))
+            (if (str_eq kind "escape")
+                (read-with-escape s i
+                                   (head (tail ctx))
+                                   (head (tail (tail ctx)))
+                                   (head (tail (tail (tail ctx)))))
+                (if (str_eq kind "length")
+                    (read-with-length s i (head (tail ctx)))
+                    (if (str_eq kind "length-prefixed")
+                        (read-length-prefix s i)
+                        (mk-result "" i))))))
+)

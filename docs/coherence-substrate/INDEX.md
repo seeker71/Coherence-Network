@@ -47,6 +47,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `experiments/form-stdlib/grammars/form.fk` | The self-host moment: S-expression (.fk) parser in pure Form. Parses Form source into Recipe trees without going through the kernel's bootstrap reader. Sibling parity Go+Rust. Once the kernel reads .fk source via this parser, the redundant tokenize_sexp / readSexpr / buildVerb code (~750 lines across three kernels) composts |
 | `experiments/form-stdlib/grammars/python.fk` | Python parser (file-header subset: imports + def-headers + simple assignments + comments) in pure Form. The compost target: experiments/local-llm-cell-v0/bmf.py (643 lines). Subsequent breaths add control flow, class defs, full expression grammar |
 | `experiments/form-stdlib/grammars/typescript.fk` | TypeScript parser (file-header subset: imports + exports + function/class headers + const/let/var assignments + line comments) in pure Form. Compost target: experiments/form-kernel-ts/src/lang-typescript.ts (1887 lines) |
+| `experiments/form-stdlib/escape-reader.fk` | The common ground under text escapes AND binary framing: a unified `read-context` primitive that dispatches on context-kind (escape-with-table | length-counted | length-prefixed). One ~135-line abstraction handles JSON string escapes, PNG chunks, HTML entities, MIME multipart, Tar blocks — text and binary differ only in unit size and length-source, not in shape |
 
 ## The trinity
 
