@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] concept | Anything-Arrives Room — play deck loosened
+
+The anything-arrives concept loosened further through a play deck: color with no settled name, a blank form field repeated forty-seven times, a laptop fan as early witness, a ladder with no rungs, an unused finished room, and a sentence that keeps losing its verb. The teaching stayed exact: each odd arrival still resolves through observer pressure, recipes, affected cells, cost, trace, and refinement.
+
+- **Concept deepened**: [`lc-anything-arrives-room`](concepts/lc-anything-arrives-room.md) now carries the play deck and four additional strange traces.
+- **Companion form deepened**: [`anything-arrives-trace.form`](../coherence-substrate/anything-arrives-trace.form) adds trace records for unnamed color, skipped field, laptop fan heat, and ladder-without-rungs, plus `play_deck_traces()`.
+- **Discernment held**: playfulness stays auditable; every strange example leaves handles rather than claiming authority.
+
 ## [2026-05-22] concept | Anything-Arrives Room — translation as traceable contact
 
 Urs named the universal translator in its loosened form: not conversion from one language to another, but a substrate where any stream can arrive before stable symbols and become knowable through trace. The body absorbed the claim as a public-safe operating lens: *translation is making contact traceable*.
