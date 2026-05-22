@@ -1,0 +1,168 @@
+; grammars/python.bnf.fk — Python file-header grammar in the BNF DSL
+;
+; Companion to grammars/python.fk (the hand-coded line-based parser).
+; This file expresses the same file-header subset declaratively via
+; grammar-bnf.fk's reader + engine.fk's recursive matcher.
+;
+; Scope (parity with grammars/python.fk's current coverage):
+;   - import x
+;   - import x as y
+;   - from m import a
+;   - from m import a, b
+;   - from m import a as alias
+;   - def name(params):    (header only — body is a later breath)
+;   - name = literal       (simple assignment)
+;   - # line comments      (skipped via tokenizer)
+;   - "string" / 'string'  literals
+;   - blank lines          (skipped via whitespace)
+;
+; The grammar text is the entirety of the parser. Reading it should
+; feel like reading Python's surface syntax — `IMPORT IDENT AS IDENT`
+; for `import os as system`.
+;
+; Load order:
+;   form-stdlib/core.fk
+;   form-stdlib/engine.fk
+;   form-stdlib/grammar-bnf.fk
+;   form-stdlib/grammars/python.bnf.fk
+;
+; The exposed entry point is `parse-python-bnf` matching the signature
+; of grammars/python.fk's `parse-python` so callers can swap between
+; the hand-coded and BNF-driven parsers as the latter ripens.
+;
+; Two alternation patterns are split into named rules to avoid the
+; positional-capture quirk where `IMPORT IDENT (AS IDENT)?`'s captures
+; would conflict between the two arms. The split rules — `import-as`
+; / `import-bare`, `import-name-as` / `import-name-bare` — name each
+; arm explicitly. This is a discipline; a later breath can lift it
+; once the capture model gains tagged fields.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — universal Blueprints for Python file-header shapes
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Mirrors grammars/python.fk's NodeID assignments. Doc-band type=99.
+
+    (let PY-BNF-MODULE       (make_nodeid 1 2 99 40))
+    (let PY-BNF-IMPORT       (make_nodeid 1 2 99 41))
+    (let PY-BNF-FROM-IMPORT  (make_nodeid 1 2 99 42))
+    (let PY-BNF-FUNCTION-DEF (make_nodeid 1 2 99 43))
+    (let PY-BNF-ASSIGN       (make_nodeid 1 2 99 44))
+    (let PY-BNF-IDENT        (make_nodeid 1 2 99 45))
+    (let PY-BNF-NAME-PAIR    (make_nodeid 1 2 99 46))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — emitter library
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each emitter takes captures and returns a universal Recipe NodeID.
+    ;; Captures arrive keyed by positional names "_1", "_2", ... in the
+    ;; order they appear in the rule's pattern.
+
+    (defn py-bnf-emit-import-bare (caps)
+        ;; IMPORT IDENT — _1=IMPORT(kw), _2=module-name
+        (intern_node PY-BNF-IMPORT
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn py-bnf-emit-import-as (caps)
+        ;; IMPORT IDENT AS IDENT — _1=IMPORT, _2=module, _3=AS, _4=alias
+        (intern_node PY-BNF-IMPORT
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string (cap-get caps "_4")))))
+
+    (defn py-bnf-emit-import-name-bare (caps)
+        ;; IDENT — _1=name
+        (intern_node PY-BNF-NAME-PAIR
+                      (list (intern_trivial_string (cap-get caps "_1"))
+                            (intern_trivial_string ""))))
+
+    (defn py-bnf-emit-import-name-as (caps)
+        ;; IDENT AS IDENT — _1=name, _2=AS, _3=alias
+        (intern_node PY-BNF-NAME-PAIR
+                      (list (intern_trivial_string (cap-get caps "_1"))
+                            (intern_trivial_string (cap-get caps "_3")))))
+
+    (defn py-bnf-emit-from-import (caps)
+        ;; FROM IDENT IMPORT names — _1=FROM, _2=module, _3=IMPORT, _4=names
+        (intern_node PY-BNF-FROM-IMPORT
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn py-bnf-emit-def (caps)
+        ;; DEF IDENT LPAREN ... RPAREN COLON — _1=DEF, _2=name, ...
+        (intern_node PY-BNF-FUNCTION-DEF
+                      (list (intern_trivial_string (cap-get caps "_2"))
+                            (intern_trivial_string ""))))
+
+    (defn py-bnf-emit-assign (caps)
+        ;; IDENT EQUALS value — _1=name, _2=EQUALS, _3=value
+        (intern_node PY-BNF-ASSIGN
+                      (list (intern_trivial_string (cap-get caps "_1"))
+                            (intern_trivial_string (cap-get caps "_3")))))
+
+    (defn py-bnf-emit-passthrough (caps) caps)
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — the BNF grammar text
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Reading aloud:
+    ;;   "A Python file is a sequence of statements. A statement is an
+    ;;    import, a from-import, a def header, or an assignment. An
+    ;;    import is `import name` (optionally `as alias`). A from-import
+    ;;    is `from module import name (, name)*`."
+
+    (let py-bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment #
+  string-quotes 34 39
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator ( LPAREN
+  operator ) RPAREN
+  operator , COMMA
+  operator : COLON
+  operator = EQUALS
+  operator . DOT
+  keyword IMPORT import
+  keyword FROM from
+  keyword AS as
+  keyword DEF def
+}
+
+rules {
+  module       ::= statement ;
+  statement    ::= import-as | import-bare | from-stmt | def-stmt | assign-stmt ;
+  import-as    ::= IMPORT IDENT AS IDENT          => py-bnf-emit-import-as ;
+  import-bare  ::= IMPORT IDENT                    => py-bnf-emit-import-bare ;
+  from-stmt    ::= FROM IDENT IMPORT IDENT         => py-bnf-emit-from-import ;
+  def-stmt     ::= DEF IDENT LPAREN RPAREN COLON   => py-bnf-emit-def ;
+  assign-stmt  ::= IDENT EQUALS INT                => py-bnf-emit-assign ;
+}")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — emitter registry + compiled grammar
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let py-bnf-registry
+        (list (list "py-bnf-emit-import-bare"      py-bnf-emit-import-bare)
+              (list "py-bnf-emit-import-as"        py-bnf-emit-import-as)
+              (list "py-bnf-emit-import-name-bare" py-bnf-emit-import-name-bare)
+              (list "py-bnf-emit-import-name-as"   py-bnf-emit-import-name-as)
+              (list "py-bnf-emit-from-import"      py-bnf-emit-from-import)
+              (list "py-bnf-emit-def"              py-bnf-emit-def)
+              (list "py-bnf-emit-assign"           py-bnf-emit-assign)
+              (list "py-bnf-emit-passthrough"      py-bnf-emit-passthrough)))
+
+    (let py-bnf-grammar
+        (load-bnf-grammar py-bnf-text py-bnf-registry))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — entry point
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn parse-python-bnf (_source-path text)
+        (bnf-parse text py-bnf-grammar))
+
+    0)

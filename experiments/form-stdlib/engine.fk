@@ -343,10 +343,19 @@
         (if (ge a b) ""
             (str_concat (char_at s a) (substr s (add a 1) b))))
 
+    ;; classify-ident: walk the keywords list, return KW-or-IDENT token.
+    ;;
+    ;; Keywords config shape: list of (value kind) pairs. The kind is
+    ;; the token KIND a grammar references; the value is the identifier
+    ;; spelling in source. For backward compat with old tests that pass
+    ;; an empty list, classify-ident still falls through to IDENT.
     (defn classify-ident (value keywords)
         (if (nil? keywords) (mk-tok "IDENT" value)
-            (if (str_eq value (head keywords)) (mk-tok "KW" value)
-                (classify-ident value (tail keywords)))))
+            (do
+                (let entry (head keywords))
+                (if (str_eq (head entry) value)
+                    (mk-tok (head (tail entry)) value)
+                    (classify-ident value (tail keywords))))))
 
     (defn try-operator (s i ops)
         ;; Try longest-match-first: ops list is pre-sorted by length descending.
