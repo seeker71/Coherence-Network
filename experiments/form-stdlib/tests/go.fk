@@ -1,0 +1,27 @@
+; tests/go.fk — exercise go.fk file-header subset
+(do
+    (let sample
+        (str_concat "package main
+" (str_concat "import \"fmt\"
+" (str_concat "// comment
+" (str_concat "
+" (str_concat "func main() {
+" (str_concat "type Kernel struct {
+" (str_concat "var Version = 1
+" "const Name = \"kernel\""))))))))
+
+    (let file (parse-go "main.go" sample))
+    (let kids (node_children file))
+    (let probe-1 (len kids))                              ; → 6 (package + import + func + type + var + const)
+
+    (defn count-attributed (xs)
+        (if (nil? xs) 0
+            (if (str_eq (cell-source (head xs)) "")
+                (count-attributed (tail xs))
+                (add 1 (count-attributed (tail xs))))))
+    (let probe-2 (count-attributed kids))                 ; → 6
+
+    (let probe-3 (str_len (cell-source file)))            ; → length "main.go:1:1" = 11
+
+    ;; sum: 6 + 6 + 11 = 23
+    (add probe-1 (add probe-2 probe-3)))
