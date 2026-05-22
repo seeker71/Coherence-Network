@@ -44,6 +44,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `experiments/form-stdlib/grammars/markdown.fk` | Markdown parser + emit in pure Form. ATX headings, paragraphs, fenced code blocks → universal DOC-* Recipes with per-block source attribution. Most-used format in this repo (thousands of .md files) |
 | `experiments/form-stdlib/grammars/json.fk` | JSON parser in pure Form. Objects, arrays, strings, numbers, bools, null → universal data Recipes with source attribution at the line/col of each composite. Sibling parity Go+Rust |
 | `experiments/form-stdlib/grammars/yaml.fk` | YAML parser (simplified subset: flat key:value pairs + list items + comments) in pure Form. Used by .github/workflows + many config files. Source attribution per line. Subsequent breaths add nested mappings, block scalars, flow style |
+| `experiments/form-stdlib/grammars/form.fk` | The self-host moment: S-expression (.fk) parser in pure Form. Parses Form source into Recipe trees without going through the kernel's bootstrap reader. Sibling parity Go+Rust. Once the kernel reads .fk source via this parser, the redundant tokenize_sexp / readSexpr / buildVerb code (~750 lines across three kernels) composts |
+| `experiments/form-stdlib/grammars/python.fk` | Python parser (file-header subset: imports + def-headers + simple assignments + comments) in pure Form. The compost target: experiments/local-llm-cell-v0/bmf.py (643 lines). Subsequent breaths add control flow, class defs, full expression grammar |
 
 ## The trinity
 

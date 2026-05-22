@@ -1,0 +1,34 @@
+; tests/python.fk — exercise python.fk file-header subset
+;
+; Loaded via:
+;   bin-go core.fk cell-trace.fk grammars/python.fk tests/python.fk
+
+(do
+    (let sample
+        (str_concat "import os
+" (str_concat "import sys as system
+" (str_concat "from typing import List, Optional
+" (str_concat "# comment
+" (str_concat "
+" (str_concat "def parse_file(path, mode):
+" "config = True")))))))
+
+    (let module (parse-python "demo.py" sample))
+
+    ;; --- probe 1: module has children -----------------------------
+    (let kids (node_children module))
+    (let probe-1 (len kids))                              ; → 5 (3 imports + 1 def + 1 assign)
+
+    ;; --- probe 2: all children attributed -------------------------
+    (defn count-attributed (xs)
+        (if (nil? xs) 0
+            (if (str_eq (cell-source (head xs)) "")
+                (count-attributed (tail xs))
+                (add 1 (count-attributed (tail xs))))))
+    (let probe-2 (count-attributed kids))                 ; → 5
+
+    ;; --- probe 3: module attributed -------------------------------
+    (let probe-3 (str_len (cell-source module)))          ; → length "demo.py:1:1" = 11
+
+    ;; sum: 5 + 5 + 11 = 21
+    (add probe-1 (add probe-2 probe-3)))
