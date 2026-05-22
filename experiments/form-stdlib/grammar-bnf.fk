@@ -198,10 +198,14 @@
     ;; classify-ident), so the keyword KIND is informational; we
     ;; surface only the text in the engine's keyword list.
 
+    ;; Tokenizer state (extended for engine.fk's string/comment features):
+    ;;   (ws-cps digit-kind string-kind ident-kind operators keywords
+    ;;    string-quotes line-comment)
     (defn bnf-tok-state-empty (_x)
         (list (list 32 9 10 13)
               "INT" "STRING" "IDENT"
-              (empty) (empty)))
+              (empty) (empty)
+              (empty) ""))
 
     (defn bnf-tok-ws    (st) (head st))
     (defn bnf-tok-di    (st) (head (tail st)))
@@ -209,9 +213,11 @@
     (defn bnf-tok-ik    (st) (head (tail (tail (tail st)))))
     (defn bnf-tok-ops   (st) (head (tail (tail (tail (tail st))))))
     (defn bnf-tok-kws   (st) (head (tail (tail (tail (tail (tail st)))))))
+    (defn bnf-tok-sq    (st) (head (tail (tail (tail (tail (tail (tail st))))))))
+    (defn bnf-tok-lc    (st) (head (tail (tail (tail (tail (tail (tail (tail st)))))))))
 
-    (defn bnf-mk-tok-state (ws di sk ik ops kws)
-        (list ws di sk ik ops kws))
+    (defn bnf-mk-tok-state (ws di sk ik ops kws sq lc)
+        (list ws di sk ik ops kws sq lc))
 
     (defn bnf-cons-op (operators text kind)
         (cons (list text kind) operators))
@@ -224,31 +230,48 @@
                 (bnf-mk-tok-state (bnf-parse-int-fields rest)
                                    (bnf-tok-di st) (bnf-tok-sk st)
                                    (bnf-tok-ik st) (bnf-tok-ops st)
-                                   (bnf-tok-kws st))
+                                   (bnf-tok-kws st) (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "digit-kind")
                 (bnf-mk-tok-state (bnf-tok-ws st) (head rest)
                                    (bnf-tok-sk st) (bnf-tok-ik st)
-                                   (bnf-tok-ops st) (bnf-tok-kws st))
+                                   (bnf-tok-ops st) (bnf-tok-kws st)
+                                   (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "string-kind")
                 (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
                                    (head rest) (bnf-tok-ik st)
-                                   (bnf-tok-ops st) (bnf-tok-kws st))
+                                   (bnf-tok-ops st) (bnf-tok-kws st)
+                                   (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "ident-kind")
                 (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
                                    (bnf-tok-sk st) (head rest)
-                                   (bnf-tok-ops st) (bnf-tok-kws st))
+                                   (bnf-tok-ops st) (bnf-tok-kws st)
+                                   (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "operator")
                 (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
                                    (bnf-tok-sk st) (bnf-tok-ik st)
                                    (bnf-cons-op (bnf-tok-ops st)
                                                  (head rest) (head (tail rest)))
-                                   (bnf-tok-kws st))
+                                   (bnf-tok-kws st)
+                                   (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "keyword")
                 (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
                                    (bnf-tok-sk st) (bnf-tok-ik st)
                                    (bnf-tok-ops st)
-                                   (cons (head (tail rest)) (bnf-tok-kws st)))
-                st))))))))
+                                   (cons (head (tail rest)) (bnf-tok-kws st))
+                                   (bnf-tok-sq st) (bnf-tok-lc st))
+            (if (str_eq kind "string-quotes")
+                ;; List of codepoints to honor as string-opening quotes
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (bnf-tok-sk st) (bnf-tok-ik st)
+                                   (bnf-tok-ops st) (bnf-tok-kws st)
+                                   (bnf-parse-int-fields rest) (bnf-tok-lc st))
+            (if (str_eq kind "line-comment")
+                ;; Prefix string that introduces a comment (skip to EOL)
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (bnf-tok-sk st) (bnf-tok-ik st)
+                                   (bnf-tok-ops st) (bnf-tok-kws st)
+                                   (bnf-tok-sq st) (head rest))
+                st))))))))))
 
     (defn bnf-finalize-token-config (st)
         (list
@@ -257,7 +280,9 @@
             (list "string-kind" (bnf-tok-sk st))
             (list "ident-kind" (bnf-tok-ik st))
             (list "operators"  (bnf-reverse (bnf-tok-ops st)))
-            (list "keywords"   (bnf-reverse (bnf-tok-kws st)))))
+            (list "keywords"   (bnf-reverse (bnf-tok-kws st)))
+            (list "string-quotes" (bnf-tok-sq st))
+            (list "line-comment"  (bnf-tok-lc st))))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 5 — pattern tokenizer
