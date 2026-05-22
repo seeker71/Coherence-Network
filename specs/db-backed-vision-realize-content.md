@@ -15,6 +15,7 @@ requirements:
 done_when:
   - "cd api && .venv/bin/pytest -q tests/test_vision_content.py"
   - "cd web && npm run build"
+test: "cd api && python -m pytest -q tests/test_vision_content.py::test_vision_realize_reads_scoped_graph_nodes"
 constraints:
   - "Do not move presentation-only Tailwind classes into the DB."
   - "Do not add hardcoded realize-page catalogs to application code."

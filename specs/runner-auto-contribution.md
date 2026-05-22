@@ -14,6 +14,7 @@ requirements:
   - "`GET /api/contributions/ledger/{contributor_id}` must accept an optional"
   - "`amount_cc` must incorporate the task's DIF score if present in"
   - "`_NODE_ID` must appear verbatim in `metadata.node_id` of every auto-recorded"
+test: "cd api && python -m pytest -q tests/test_runner_auto_contribution.py"
 ---
 
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)

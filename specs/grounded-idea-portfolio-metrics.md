@@ -17,6 +17,7 @@ requirements:
 done_when:
   - Unit tests verify exact metric computations from known inputs
   - pytest api/tests/test_grounded_idea_portfolio_metrics.py passes
+test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_grounded_metrics"
 ---
 
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)

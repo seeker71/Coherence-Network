@@ -20,6 +20,7 @@ done_when:
   - POST /api/ideas with no slug returns derived slug from name
   - Old slug resolves after rename via history
   - All existing test_ideas.py tests pass without modification
+test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_slug_rename_preserves_history"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
