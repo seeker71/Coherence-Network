@@ -1,0 +1,179 @@
+; grammars/python-chars.bnf.fk — Python grammar in character-mode (no
+; tokenizer). The BMF lineage Urs named twice:
+;
+;   "BMF also does not have a tokenizer at all!"
+;   "Ambiguity comes most often from the tokenizer, when the rules
+;    read what it needs and not just reads blindly into context free
+;    tokens that is where most issues come from."
+;
+; This grammar uses grammar-chars.fk's character-stream primitives.
+; Each rule reads exactly the characters it needs. Disambiguation
+; happens via Cut at the point the rule decides — not in a global
+; lex phase ahead of parsing.
+;
+; Subset covered in this breath (a meaningful starting tongue):
+;   • from-import: `from MODULE import NAME` (single name, no comma)
+;   • def-header: `def NAME():` (empty body marker)
+;   • Whitespace and comments handled per-rule (no global skip)
+;
+; What's deliberately NOT here yet (each = its own breath):
+;   • Multi-name imports, * imports, dotted imports
+;   • Function parameters + type annotations
+;   • Class declarations
+;   • Multi-statement function bodies (indent rules)
+;   • Triple-quoted strings, f-strings
+;   • Expressions beyond literal-ish atoms
+;   • Comprehensions, lambda, async, try/except
+;
+; Per-tongue ripening is the path. This file is the character-mode
+; FOUNDATION; subsequent breaths add features one shape at a time.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Substrate Blueprints for the emitted Recipes
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let PYC-MODULE       (make_nodeid 1 2 99 130))
+    (let PYC-IMPORT       (make_nodeid 1 2 99 131))   ; (module, name)
+    (let PYC-FROM-IMPORT  (make_nodeid 1 2 99 132))
+    (let PYC-DEF          (make_nodeid 1 2 99 133))   ; (name)
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Character-class helpers (codepoints)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;;   '0'..'9' = 48..57
+    ;;   'A'..'Z' = 65..90
+    ;;   'a'..'z' = 97..122
+    ;;   '_' = 95
+    ;;   ' ' = 32   '\t' = 9   '\n' = 10
+    ;;   '.' = 46   '(' = 40   ')' = 41   ':' = 58
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Per-rule whitespace skipper — explicit, not a global pre-pass
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Reads zero-or-more spaces and tabs. NOT newlines — Python is
+    ;; line-sensitive; preserving newlines is what lets indentation
+    ;; rules (future breath) recognize statement boundaries.
+
+    (let pyc-space-char
+        (list "choice"
+              (list "char" " ")
+              (list "char" "	")))   ; tab
+
+    (let pyc-skip-spaces
+        (list "star" pyc-space-char))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Identifier: alpha/_ followed by alpha/digit/_
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let pyc-ident-start
+        (list "choice"
+              (list "char-range" 65 90)     ; A-Z
+              (list "char-range" 97 122)    ; a-z
+              (list "char" "_")))
+
+    (let pyc-ident-cont
+        (list "choice"
+              (list "char-range" 65 90)
+              (list "char-range" 97 122)
+              (list "char-range" 48 57)     ; 0-9
+              (list "char" "_")))
+
+    (let pyc-ident
+        (list "capture" "ident"
+              (list "sequence" pyc-ident-start
+                    (list "star" pyc-ident-cont))))
+
+    ;; Dotted identifier (for module names like `app.services.foo`)
+    (let pyc-dotted-ident
+        (list "capture" "module"
+              (list "sequence"
+                    pyc-ident-start
+                    (list "star"
+                          (list "choice"
+                                pyc-ident-cont
+                                (list "char" "."))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Emitters — caps come from rule's child match
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn pyc-cap-get (caps name)
+        (if (nil? caps) ""
+            (if (str_eq (head (head caps)) name)
+                (head (tail (head caps)))
+                (pyc-cap-get (tail caps) name))))
+
+    (defn pyc-emit-import (caps)
+        (intern_node PYC-IMPORT
+                      (list (intern_trivial_string (pyc-cap-get caps "module")))))
+
+    (defn pyc-emit-from-import (caps)
+        (intern_node PYC-FROM-IMPORT
+                      (list (intern_trivial_string (pyc-cap-get caps "module"))
+                            (intern_trivial_string (pyc-cap-get caps "name")))))
+
+    (defn pyc-emit-def (caps)
+        (intern_node PYC-DEF
+                      (list (intern_trivial_string (pyc-cap-get caps "name")))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Rules — each composes character-level primitives. The keyword
+    ;; rules read `import` / `from` / `def` literally, then Cut to
+    ;; commit (no backtracking past keyword recognition), then read
+    ;; what they need with exact character matches.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    ;; from-import: `from MODULE import NAME`
+    ;;
+    ;; Rule shape:
+    ;;   "from" SP+ module:dotted-ident SP+ "import" SP+ name:ident
+    ;;
+    ;; Cut after `from` SP commits — the parser will not backtrack
+    ;; past this point if the rest fails. (Future Cut placement can
+    ;; come AFTER `import` once more import shapes land.)
+
+    (let pyc-from-import-rule
+        (list "sequence"
+              (list "string" "from")
+              (list "sequence" pyc-space-char pyc-skip-spaces)   ; SP+
+              (list "cut")
+              pyc-dotted-ident
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "string" "import")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "capture" "name"
+                    (list "sequence" pyc-ident-start
+                          (list "star" pyc-ident-cont)))))
+
+    ;; def-header: `def NAME ():`
+    (let pyc-def-rule
+        (list "sequence"
+              (list "string" "def")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "cut")
+              (list "capture" "name"
+                    (list "sequence" pyc-ident-start
+                          (list "star" pyc-ident-cont)))
+              pyc-skip-spaces
+              (list "char" "(")
+              pyc-skip-spaces
+              (list "char" ")")
+              pyc-skip-spaces
+              (list "char" ":")))
+
+    ;; The rules-list cm-parse consumes
+    (let python-chars-rules
+        (list
+            (list "from_import" pyc-from-import-rule pyc-emit-from-import)
+            (list "def_header"  pyc-def-rule         pyc-emit-def)))
+
+    ;; Entry points for callers
+    (defn parse-py-from-import (text)
+        (cm-parse text python-chars-rules "from_import"))
+
+    (defn parse-py-def-header (text)
+        (cm-parse text python-chars-rules "def_header"))
+
+    0)

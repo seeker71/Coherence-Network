@@ -1,0 +1,39 @@
+; tests/python-chars.fk — Python in character-mode end-to-end
+;
+; preludes: form-stdlib/grammar-chars.fk form-stdlib/grammars/python-chars.bnf.fk
+;
+; Proves the BMF-shape Python grammar parses real Python lines via
+; rules-read-characters discipline. No tokenizer phase.
+
+(do
+    ;; Probe 1: from-import line — `from typing import Optional`
+    (let p1 (parse-py-from-import "from typing import Optional"))
+    (let kids-1 (node_children p1))
+    (let mod-1 (node_value (head kids-1)))
+    (let name-1 (node_value (head (tail kids-1))))
+    ;; "typing" (6) + "Optional" (8) = 14
+    (let probe-1 (add (str_len mod-1) (str_len name-1)))
+
+    ;; Probe 2: dotted module — `from app.services.unified_db import Base`
+    (let p2 (parse-py-from-import "from app.services.unified_db import Base"))
+    (let kids-2 (node_children p2))
+    (let mod-2 (node_value (head kids-2)))
+    ;; "app.services.unified_db" = 23
+    (let probe-2 (str_len mod-2))
+
+    ;; Probe 3: def header — `def intern_string_instance():`
+    (let p3 (parse-py-def-header "def intern_string_instance():"))
+    (let kids-3 (node_children p3))
+    (let name-3 (node_value (head kids-3)))
+    ;; "intern_string_instance" = 22
+    (let probe-3 (str_len name-3))
+
+    ;; Probe 4: def with leading whitespace tolerance
+    (let p4 (parse-py-def-header "def foo (  )  :"))
+    (let kids-4 (node_children p4))
+    (let name-4 (node_value (head kids-4)))
+    ;; "foo" = 3
+    (let probe-4 (str_len name-4))
+
+    ;; Sum: 14 + 23 + 22 + 3 = 62
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))
