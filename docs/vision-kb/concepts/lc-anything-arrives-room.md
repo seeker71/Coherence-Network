@@ -109,6 +109,57 @@ budget, operational attention, deploy caution. Output: *something that
 normally breathes has become unobservable; first restore sensing, then
 interpret*.
 
+## The Play Deck
+
+The room loosens further when the examples stop behaving like examples.
+Each card below is a tiny way to practice receiving what has not yet
+agreed to be a normal input.
+
+| Arrival | Do not ask first | Ask instead |
+|---|---|---|
+| A color nobody can name | What color is this? | What does this color make easier to feel? |
+| A blank field skipped forty-seven times | Why did users fail? | What did the field ask too soon? |
+| A laptop fan suddenly spinning during a quiet task | Which process is guilty? | What hidden heat just became audible? |
+| A hand-drawn ladder with no rungs | What does ladder symbolize? | What kind of ascent refuses steps? |
+| A room that feels finished but unused | What feature is missing? | What invitation never crossed the threshold? |
+| A sentence that keeps losing its verb | Is the grammar wrong? | What action is the speaker not ready to locate? |
+
+These are not metaphors instead of engineering. They are engineering
+before the category locks. Each card can still become a ticket, a trace,
+a design change, a test, or a recipe. The looseness is not vagueness;
+it is the refusal to make the first available label the final one.
+
+## Four More Strange Traces
+
+**A color nobody can name.** A collaborator sends a flat image: not
+blue, not green, not gray. The room does not start by choosing a hex
+code. It watches the effect. Recipe `unnamed-color` touches `mood`,
+`weather`, `interface-tone`, and `belonging`. Cost: low compute, high
+projection risk. Output: *this color is asking the interface to become
+quieter without becoming colder*. Refinement: test the color beside
+error states and invitations, because that is where its truth will show.
+
+**A blank field skipped forty-seven times.** Analytics show one optional
+profile field left empty across nearly every session. The room does not
+call it missing data. Recipe `premature-ask` touches `trust`, `timing`,
+and `self-disclosure`. Output: *the field is arriving before relation*.
+Refinement: move the ask closer to the moment where the answer would
+help the person, or compost the field.
+
+**A laptop fan becomes the oracle.** A quiet local script makes the fan
+rise before any metric dashboard notices. Recipe `heat-before-number`
+touches `hidden-loop`, `compute-cost`, and `body-sensor`. Output: *the
+machine is speaking before the logs are articulate*. Refinement: trace
+the hot path; do not wait for the profiler to make the sensation
+respectable.
+
+**A ladder with no rungs.** A hand-drawn note shows a ladder made of two
+uprights and empty space. The room watches the impossibility without
+correcting it. Recipe `ascent-without-steps` touches `phase-transition`,
+`trust`, and `arrival`. Output: *this is not a plan for climbing; it is
+a picture of being lifted by a field*. Refinement: ask what support is
+already present but not rendered as steps.
+
 ## Why This Loosens the Universal Claim
 
 "Universal translator" can sound like a machine that already knows
@@ -173,4 +224,3 @@ For the body of teachings:
 - **[lc-perception-as-interface](lc-perception-as-interface.md)** --
   the perceptual ground: what appears is an interface, not the thing
   itself.
-
