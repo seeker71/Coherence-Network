@@ -34,6 +34,8 @@ The kernels read S-expression syntax that maps directly onto substrate recipes:
 | `(defn <name> (params...) <body>)` | FNDEF | |
 | `(<name> <args>...)` | FNCALL | shorthand for both user fns and natives |
 
-Natives (called via `(<name> ...)` when no user binding shadows): `print`, `list`, `cons`, `head`, `tail`, `len`, `nth`, `empty`, `str_len`, `substring`, `char_at`, `str_concat`, `str_eq`, `int_to_str`, `str_to_int`, `ord`, `read_file`.
+Natives (called via `(<name> ...)` when no user binding shadows): `print`, `list`, `cons`, `head`, `tail`, `len`, `nth`, `empty`, `str_len`, `substring`, `char_at`, `str_concat`, `str_eq`, `int_to_str`, `str_to_int`, `ord`, `read_file`, `read_file_bytes`.
+
+Binary fixtures live alongside the `.fk` samples: [`tiny.png`](tiny.png) is a 45-byte 1x1 PNG (signature + IHDR + IEND) that exercises `read_file_bytes` and `experiments/form-stdlib/grammars/png.fk`.
 
 The Form-surface-syntax parser written in Form (next turn) will sugar these into the `1 + 2` / `if x then a else b` / `defn f(x) = ...` syntax the Python kernel currently accepts. The recipes produced are identical either way.

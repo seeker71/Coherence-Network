@@ -1,0 +1,135 @@
+; grammars/png.fk — PNG parser in pure Form (byte-based)
+;
+; Same SHAPE as the text grammars (yaml.fk, json.fk, markdown.fk): walk
+; the input, segment into blocks, emit composed Recipes via
+; intern_node_at with source attribution. The variation is what the
+; input is — a list of bytes (read_file_bytes) instead of a string of
+; chars (read_file). Universal codec; binary slot.
+;
+; PNG layout:
+;   - 8-byte signature: 0x89 'P' 'N' 'G' 0x0D 0x0A 0x1A 0x0A
+;   - then chunks until IEND
+;     each chunk: 4-byte BE length + 4-byte type (ASCII) + N data + 4-byte CRC
+;
+; The emitted tree:
+;   PNG-FILE
+;     PNG-CHUNK ("IHDR", 13, <13 data bytes interned as string>)
+;     PNG-CHUNK ("IDAT", N, <N data bytes>)
+;     ...
+;     PNG-CHUNK ("IEND", 0, "")
+;
+; Each chunk's source attribution is the byte offset where the length
+; field starts — line "1", column = byte-offset + 1 (PNGs are not line-
+; oriented, so we project the byte position into the column axis).
+
+(do
+    (let PNG-FILE  (make_nodeid 1 2 99 90))   ; root file
+    (let PNG-CHUNK (make_nodeid 1 2 99 91))   ; one chunk
+
+    ;; --- byte helpers --------------------------------------------------
+    ;;
+    ;; nth via head+tail recursion. The kernel native `nth` was composted
+    ;; (PR #1826) as composable; this is its core-equivalent. Quadratic
+    ;; over the byte-list for large PNGs — fine for the universal-codec
+    ;; proof, a streaming segmenter is the followup breath.
+
+    (defn nth (xs i)
+        (if (eq i 0) (head xs)
+            (nth (tail xs) (sub i 1))))
+
+    (defn read-be-uint32 (bs pos)
+        (add (mul (nth bs pos) 16777216)
+        (add (mul (nth bs (add pos 1)) 65536)
+        (add (mul (nth bs (add pos 2)) 256)
+                  (nth bs (add pos 3))))))
+
+    ;; bytes-to-string: take a sub-range of byte-list and pack into a
+    ;; string via char_at-of-string-of-one-byte. Used for type tags
+    ;; ("IHDR" etc) which are ASCII. For binary data chunks the same
+    ;; routine accumulates a byte-equivalent string; callers that only
+    ;; need length + CRC don't depend on data being human-readable.
+    ;;
+    ;; The conversion stays in the ASCII range here because chunk types
+    ;; are spec-fixed to ASCII letters. For data bytes >= 128 the str
+    ;; representation diverges between kernels (Go: latin-1; Rust:
+    ;; char-from-byte → 2-byte UTF-8), so we keep data as a byte-count
+    ;; integer in the CTOR rather than a string blob this breath.
+
+    (defn ascii-byte-str (n) (char_at " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" (sub n 32)))
+
+    (defn bytes-to-ascii (bs pos n)
+        (if (eq n 0) ""
+            (str_concat (ascii-byte-str (nth bs pos))
+                        (bytes-to-ascii bs (add pos 1) (sub n 1)))))
+
+    ;; --- chunk reader --------------------------------------------------
+    ;; (parse-chunk bs pos source-path) → (list chunk-cell next-pos type-str)
+    ;; Reads one chunk starting at byte `pos`. Returns the interned cell,
+    ;; the next byte position (pos + 12 + length), and the type string so
+    ;; the outer loop can stop at "IEND".
+
+    (defn parse-chunk (bs pos source-path)
+        (do
+            (let length    (read-be-uint32 bs pos))
+            (let type-str  (bytes-to-ascii bs (add pos 4) 4))
+            (let crc       (read-be-uint32 bs (add (add pos 8) length)))
+            (let next-pos  (add (add pos 12) length))
+            ;; data is held as length-int + crc-int rather than a raw byte
+            ;; blob this breath — binary blob → string round-trip diverges
+            ;; between kernels (see ascii-byte-str comment). The chunk's
+            ;; type + length + CRC are the IDENTITY; data bytes are
+            ;; recoverable by re-reading from source-path at this offset.
+            (let cell (intern_node_at PNG-CHUNK
+                                      (list (intern_trivial_string type-str)
+                                            (intern_trivial_int length)
+                                            (intern_trivial_int crc))
+                                      source-path 1 (add pos 1)))
+            (list cell next-pos type-str)))
+
+    ;; --- signature verification ----------------------------------------
+    ;; PNG begins with 8 fixed bytes. If the signature doesn't match,
+    ;; we return an empty file-cell — the body's honest "this is not a
+    ;; PNG". A real metabolizer downstream would observe the empty-
+    ;; children and surface that.
+
+    (defn sig-byte-at (i)
+        (if (eq i 0) 137
+            (if (eq i 1) 80
+                (if (eq i 2) 78
+                    (if (eq i 3) 71
+                        (if (eq i 4) 13
+                            (if (eq i 5) 10
+                                (if (eq i 6) 26
+                                    10))))))))
+
+    (defn sig-matches? (bs i)
+        (if (eq i 8) true
+            (if (eq (nth bs i) (sig-byte-at i))
+                (sig-matches? bs (add i 1))
+                false)))
+
+    ;; --- chunk loop ----------------------------------------------------
+
+    (defn parse-chunks (bs pos source-path acc)
+        (do
+            (let result (parse-chunk bs pos source-path))
+            (let cell (head result))
+            (let next-pos (head (tail result)))
+            (let type-str (head (tail (tail result))))
+            (let acc2 (cons cell acc))
+            (if (str_eq type-str "IEND")
+                (reverse-acc acc2)
+                (parse-chunks bs next-pos source-path acc2))))
+
+    (defn rev-step (acc x) (cons x acc))
+    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+
+    ;; --- top-level entry -----------------------------------------------
+
+    (defn parse-png (source-path bs)
+        (if (sig-matches? bs 0)
+            (do
+                (let chunks (parse-chunks bs 8 source-path (empty)))
+                (intern_node_at PNG-FILE chunks source-path 1 1))
+            (intern_node_at PNG-FILE (empty) source-path 1 1)))
+)

@@ -939,6 +939,22 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // Byte-level file read — returns a list of ints (0-255), one per byte.
+    // Pair with `nth` for byte-at-index access. The codec stays universal
+    // across text and binary formats: text grammars walk a string with
+    // char_at + ord; binary grammars walk a byte-list with nth.
+    this.registerNative("read_file_bytes", catCall(), (_k, args) => {
+      try {
+        const buf = readFileSync(argStr(args, 0));
+        const out: Value[] = new Array(buf.length);
+        for (let i = 0; i < buf.length; i++) {
+          out[i] = { kind: "int", int: buf[i] };
+        }
+        return { kind: "list", list: out };
+      } catch {
+        return { kind: "null" };
+      }
+    });
 
     // Substrate write surface — all attributed as WITNESS.
     this.registerNative("make_nodeid", catWitness(), (_k, args) => ({
