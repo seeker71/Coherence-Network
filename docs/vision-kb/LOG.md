@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] concept | Anything-Arrives Room — care instrument wishes
+
+The physical I/O layer became more actionable: access is now framed as a wish for a specific care benefit, not general sensing. The concept names ten wishes for vitality and assistance: reading strain, occupied pauses, fatigue, weak infrastructure, audible return, shared space, environment kindness, paper/object memory, embodied timing, and governed thresholds.
+
+- **Concept deepened**: [`lc-anything-arrives-room`](concepts/lc-anything-arrives-room.md) now includes a care instrument wish table, the minimum trace receipt for physical instruments, and concrete examples for pointer fatigue, air/light, scanner memory, and shared-space thresholds.
+- **Companion form deepened**: [`anything-arrives-trace.form`](../coherence-substrate/anything-arrives-trace.form) adds traces for pointer fatigue kindness, environment kindness, scanner memory bridge, and shared-space threshold handling.
+- **Discernment held**: the value comes before the access; if care value is absent, the instrument is noise.
+
 ## [2026-05-22] concept | Anything-Arrives Room — program, story, media, API, and physical I/O carriers
 
 The anything-arrives concept opened the next door: programs, story surfaces, visuals, audio, API calls, local I/O transactions, and permissioned physical I/O can enter as traceable carriers too. The body now names the minimum receipt for any allowed local or physical resource: what was sensed, what was influenced, the permission boundary, before/after state, observer cost, affected cells, and the handle that lets the claim be audited.
