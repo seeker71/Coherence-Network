@@ -1,0 +1,36 @@
+; tests/python-exec.fk — exercise the EXECUTE pipeline on Python BNF
+; recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python.bnf.fk form-stdlib/grammars/python-exec.fk
+;
+; Proof of the read → understand → execute arc: source text becomes
+; tokens, tokens become Recipes, Recipes become actions. The walker
+; prints what it did and returns an env-binding count the sibling
+; kernels validate byte-identically.
+
+(do
+    ;; Probe 1: import os → executes one import, env grows by 1
+    (let result-1 (parse-python-bnf "t.py" "import os"))
+    (let count-1 (py-execute result-1))                ; → 1
+
+    ;; Probe 2: import os as system → executes import, binds `system`
+    (let result-2 (parse-python-bnf "t.py" "import os as system"))
+    (let count-2 (py-execute result-2))                ; → 1
+
+    ;; Probe 3: x = 42 → executes assign, env grows by 1
+    (let result-3 (parse-python-bnf "t.py" "x = 42"))
+    (let count-3 (py-execute result-3))                ; → 1
+
+    ;; Probe 4: def main(): → executes def, env grows by 1
+    (let result-4 (parse-python-bnf "t.py" "def main():"))
+    (let count-4 (py-execute result-4))                ; → 1
+
+    ;; Probe 5: from typing import List → executes from-import (no env bind)
+    (let result-5 (parse-python-bnf "t.py" "from typing import List"))
+    (let count-5 (py-execute result-5))                ; → 0
+
+    ;; Sum: 1 + 1 + 1 + 1 + 0 = 4
+    (add count-1
+         (add count-2
+              (add count-3
+                   (add count-4 count-5)))))

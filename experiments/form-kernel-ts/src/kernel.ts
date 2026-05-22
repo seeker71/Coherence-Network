@@ -1006,6 +1006,18 @@ export class Kernel {
     this.registerNative("node_value", catWitness(), (k, args) =>
       k.trivialValue(argNodeID(args, 0)),
     );
+    // node_eq — structural compare of two NodeIDs by their four
+    // components. Sibling parity with Go's node_eq + Rust's node_eq.
+    this.registerNative("node_eq", catWitness(), (_k, args) => {
+      const a = argNodeID(args, 0);
+      const b = argNodeID(args, 1);
+      const equal =
+        a.pkg === b.pkg &&
+        a.level === b.level &&
+        a.type === b.type &&
+        a.inst === b.inst;
+      return { kind: "bool", bool: equal };
+    });
     this.registerNative("walk_recipe", catWitness(), (k, args) =>
       walk(k, argNodeID(args, 0), new Frame(null)),
     );
