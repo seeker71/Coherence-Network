@@ -69,6 +69,22 @@
     (let GO-BNF-SELECTOR   (make_nodeid 1 2 99 100))
     (let GO-BNF-FOR        (make_nodeid 1 2 99 101))
     (let GO-BNF-FIELD      (make_nodeid 1 2 99 102))
+    (let GO-BNF-SHORT-VAR  (make_nodeid 1 2 99 103))
+    (let GO-BNF-SWITCH     (make_nodeid 1 2 99 104))
+    (let GO-BNF-CASE       (make_nodeid 1 2 99 105))
+
+    (defn go-bnf-emit-short-var (caps)
+        (intern_node GO-BNF-SHORT-VAR
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+
+    (defn go-bnf-emit-switch (caps)
+        (intern_node GO-BNF-SWITCH
+                      (list (cap-get caps "cond"))))
+
+    (defn go-bnf-emit-case (caps)
+        (intern_node GO-BNF-CASE
+                      (list (cap-get caps "val"))))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Module-collection helpers
@@ -382,6 +398,7 @@
   operator ) RPAREN
   operator , COMMA
   operator ; SEMI
+  operator := COLONEQ
   operator : COLON
   operator . DOT
   operator == EQEQ
@@ -409,6 +426,9 @@
   keyword RETURN return
   keyword IF if
   keyword FOR for
+  keyword SWITCH switch
+  keyword CASE case
+  keyword DEFAULT default
   keyword INTERFACE interface
 }
 
@@ -424,7 +444,9 @@ rules {
   params        ::= first:param (COMMA param)* ;
   param         ::= name:IDENT type-name:IDENT             => go-bnf-emit-param ;
   block         ::= LBRACE statement* RBRACE               => go-bnf-emit-block ;
-  statement     ::= return-stmt | if-stmt | for-stmt | assign-stmt | expr-stmt ;
+  statement     ::= return-stmt | if-stmt | for-stmt | switch-stmt | short-var-stmt | assign-stmt | expr-stmt ;
+  short-var-stmt ::= name:IDENT COLONEQ value:expression       => go-bnf-emit-short-var ;
+  switch-stmt   ::= SWITCH cond:expression body:block          => go-bnf-emit-switch ;
   return-stmt   ::= RETURN expr:expression                 => go-bnf-emit-return-value ;
   if-stmt       ::= IF cond:expression body:block          => go-bnf-emit-if ;
   for-stmt      ::= FOR cond:expression body:block         => go-bnf-emit-for ;
@@ -477,7 +499,10 @@ rules {
               (list "go-bnf-emit-selector"    go-bnf-emit-selector)
               (list "go-bnf-emit-for"         go-bnf-emit-for)
               (list "go-bnf-emit-field"       go-bnf-emit-field)
-              (list "go-bnf-emit-struct-fields" go-bnf-emit-struct-fields)))
+              (list "go-bnf-emit-struct-fields" go-bnf-emit-struct-fields)
+              (list "go-bnf-emit-short-var"   go-bnf-emit-short-var)
+              (list "go-bnf-emit-switch"      go-bnf-emit-switch)
+              (list "go-bnf-emit-case"        go-bnf-emit-case)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))
