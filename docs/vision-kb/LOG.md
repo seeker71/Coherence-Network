@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] transmission | Trust the Signal — one honest step after recognition
+
+Public YouTube transmission received by direct request: [`2026-05-20-arcturian-council-trust-the-signal`](transmissions/2026-05-20-arcturian-council-trust-the-signal.md), from Whispers from Arcturus. The body absorbed the reusable teaching without turning the video's relational claim into a public prescription for any named person or private story.
+
+- **New concept**: [`lc-trust-the-signal`](concepts/lc-trust-the-signal.md) (639 Hz, seed) — breathe into a real signal, distinguish calm discernment from defensive case-building, and take one honest step without forcing the future.
+- **Edges landed in the same breath**: INDEX counts, source-marked transmission section, frequency family, LOG, concept cross-references.
+- **Discernment held**: practice integrated; personal/tender specifics left out of durable public tissue.
+
 ## [2026-05-22] concept | Grammar As Readable BNF — the surface the engine was waiting for
 
 Sibling to [`lc-grammar-is-the-universal-recipe`](concepts/lc-grammar-is-the-universal-recipe.md) and [`lc-parsers-as-recipes`](concepts/lc-parsers-as-recipes.md). The first names *every modality is a Language cell*; the second names *grammar rules are data*. This new concept names what was still missing: the readable authoring tongue over that data. The body's [`engine.fk`](../../experiments/form-stdlib/engine.fk) already walks grammar-as-data; the per-tongue grammars at [`grammars/`](../../experiments/form-stdlib/grammars/) were still ~250-line imperative line parsers. This breath landed [`grammar-bnf.fk`](../../experiments/form-stdlib/grammar-bnf.fk) — a reader that compiles BNF text into the engine's data shape — plus a recursive match layer for rule references inside patterns (JSON's `value → object → pair → value`). The four-language goal (Python / TypeScript / Rust / Go fully read, understood, executed by the form-native kernel) reduces to per-tongue ripening of `.grammar.fk` files; the architecture is in place. BMF (Urs 2000) inheritance returns through the lattice it predicted.
