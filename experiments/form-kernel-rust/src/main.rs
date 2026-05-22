@@ -628,11 +628,11 @@ impl Kernel {
                 _ => Value::Int(0),
             }
         });
-        self.register_native("nth", cat_access(), |_, _, args| {
-            if let Value::List(xs) = &args[0] {
-                xs[args[1].as_int() as usize].clone()
-            } else { Value::Null }
-        });
+        // `nth` composted 2026-05-22 — unused in form-stdlib/, can be
+        // re-authored in core.fk as needed:
+        //   (defn nth (xs n)
+        //       (if (eq n 0) (head xs)
+        //           (nth (tail xs) (sub n 1))))
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
@@ -694,22 +694,12 @@ impl Kernel {
         // the most common Python loop idiom. Same semantics as CPython's
         // range builtin (returning an eager list rather than a lazy
         // iterator, which the kernel doesn't yet have iterators for).
-        self.register_native("range", cat_list_nat(), |_, _, args| {
-            let (start, stop, step) = match args.len() {
-                1 => (0i64, args[0].as_int(), 1i64),
-                2 => (args[0].as_int(), args[1].as_int(), 1i64),
-                _ => (args[0].as_int(), args[1].as_int(), args[2].as_int()),
-            };
-            if step == 0 { return Value::List(vec![]); }
-            let mut out = Vec::new();
-            let mut i = start;
-            if step > 0 {
-                while i < stop { out.push(Value::Int(i)); i += step; }
-            } else {
-                while i > stop { out.push(Value::Int(i)); i += step; }
-            }
-            Value::List(out)
-        });
+        // `range` composted 2026-05-22 — core.fk's
+        //   (defn range (start end)
+        //       (if (ge start end) (empty)
+        //           (cons start (range (add start 1) end))))
+        // covers the (start, end) variant. Step variant can be re-
+        // authored in core.fk if/when needed (no current usage).
         self.register_native("read_file", cat_call(), |_, _, args| {
             match fs::read_to_string(args[0].as_str()) {
                 Ok(s) => Value::Str(s),
