@@ -1,0 +1,113 @@
+; emits/typescript.fk — Recipe → TypeScript source emit templates
+;
+; Surface-syntax sibling to emits/python.fk. The category vocabulary is
+; identical (universal-shapes UE-*); only the surface formatting
+; differs — braces instead of indentation, `&&` / `||` / `!` for logic,
+; `===` instead of `==`, `function` instead of `def`.
+
+(do
+    (let TS-PLUS  (make_nodeid 1 2 12 1))
+    (let TS-MINUS (make_nodeid 1 2 12 2))
+    (let TS-MUL   (make_nodeid 1 2 12 3))
+    (let TS-DIV   (make_nodeid 1 2 12 4))
+    (let TS-MOD   (make_nodeid 1 2 12 5))
+    (let TS-NEG   (make_nodeid 1 2 12 6))
+    (let TS-EQ    (make_nodeid 1 2 13 1))
+    (let TS-NE    (make_nodeid 1 2 13 2))
+    (let TS-LT    (make_nodeid 1 2 13 3))
+    (let TS-LE    (make_nodeid 1 2 13 4))
+    (let TS-GT    (make_nodeid 1 2 13 5))
+    (let TS-GE    (make_nodeid 1 2 13 6))
+    (let TS-AND   (make_nodeid 1 2 14 1))
+    (let TS-OR    (make_nodeid 1 2 14 2))
+    (let TS-NOT   (make_nodeid 1 2 14 3))
+    (let TS-IF    (make_nodeid 1 2 11 1))
+    (let TS-IFE   (make_nodeid 1 2 11 2))
+    (let TS-DO    (make_nodeid 1 2 9 1))
+    (let TS-SEQ   (make_nodeid 1 2 9 2))
+    (let TS-LET   (make_nodeid 1 2 9 3))
+    (let TS-RET   (make_nodeid 1 2 18 1))
+    (let TS-LOC   (make_nodeid 1 2 15 1))
+    (let TS-MEM   (make_nodeid 1 2 15 2))
+    (let TS-IDX   (make_nodeid 1 2 15 3))
+    (let TS-ASN   (make_nodeid 1 2 16 1))
+    (let TS-ID    (make_nodeid 1 2 33 1))
+    (let TS-FND   (make_nodeid 1 2 31 1))
+    (let TS-FNC   (make_nodeid 1 2 32 1))
+
+    (defn ts-binop (op cs)
+        (str_concat (head cs) (str_concat op (head (tail cs)))))
+
+    (defn ts-plus  (cs) (ts-binop " + "  cs))
+    (defn ts-minus (cs) (ts-binop " - "  cs))
+    (defn ts-mul   (cs) (ts-binop " * "  cs))
+    (defn ts-div   (cs) (ts-binop " / "  cs))
+    (defn ts-mod   (cs) (ts-binop " % "  cs))
+    (defn ts-neg   (cs) (str_concat "-" (head cs)))
+    (defn ts-eq    (cs) (ts-binop " === " cs))
+    (defn ts-ne    (cs) (ts-binop " !== " cs))
+    (defn ts-lt    (cs) (ts-binop " < "   cs))
+    (defn ts-le    (cs) (ts-binop " <= "  cs))
+    (defn ts-gt    (cs) (ts-binop " > "   cs))
+    (defn ts-ge    (cs) (ts-binop " >= "  cs))
+    (defn ts-and   (cs) (ts-binop " && "  cs))
+    (defn ts-or    (cs) (ts-binop " || "  cs))
+    (defn ts-not   (cs) (str_concat "!" (head cs)))
+
+    (defn ts-if (cs)
+        (str_concat "if (" (str_concat (head cs)
+                          (str_concat ") { " (str_concat (head (tail cs)) " }")))))
+
+    (defn ts-if-else (cs)
+        (str_concat "if (" (str_concat (head cs)
+                          (str_concat ") { " (str_concat (head (tail cs))
+                          (str_concat " } else { " (str_concat (head (tail (tail cs))) " }")))))))
+
+    (defn ts-join-nl (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat NL (ts-join-nl (tail xs)))))))
+
+    (defn ts-do (cs)  (ts-join-nl cs))
+    (defn ts-seq (cs) (ts-join-nl cs))
+
+    (defn ts-let (cs)
+        (str_concat "const " (str_concat (head cs)
+                             (str_concat " = " (head (tail cs))))))
+
+    (defn ts-return (cs) (str_concat "return " (head cs)))
+    (defn ts-local (cs)  (head cs))
+    (defn ts-member (cs) (str_concat (head cs) (str_concat "." (head (tail cs)))))
+    (defn ts-index (cs)  (str_concat (head cs) (str_concat "[" (str_concat (head (tail cs)) "]"))))
+    (defn ts-assign (cs) (str_concat (head cs) (str_concat " = " (head (tail cs)))))
+    (defn ts-ident (cs)  (head cs))
+
+    (defn ts-comma-join (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (ts-comma-join (tail xs)))))))
+
+    (defn ts-fndef (cs)
+        (str_concat "function " (str_concat (head cs)
+                                (str_concat "(" (str_concat (head (tail cs))
+                                (str_concat ") { " (str_concat (head (tail (tail cs))) " }")))))))
+
+    (defn ts-fncall (cs)
+        (str_concat (head cs)
+                    (str_concat "(" (str_concat (ts-comma-join (tail cs)) ")"))))
+
+    (let typescript-templates
+        (list
+            (list TS-PLUS  ts-plus)  (list TS-MINUS ts-minus) (list TS-MUL ts-mul)
+            (list TS-DIV   ts-div)   (list TS-MOD   ts-mod)   (list TS-NEG ts-neg)
+            (list TS-EQ    ts-eq)    (list TS-NE    ts-ne)    (list TS-LT  ts-lt)
+            (list TS-LE    ts-le)    (list TS-GT    ts-gt)    (list TS-GE  ts-ge)
+            (list TS-AND   ts-and)   (list TS-OR    ts-or)    (list TS-NOT ts-not)
+            (list TS-IF    ts-if)    (list TS-IFE   ts-if-else)
+            (list TS-DO    ts-do)    (list TS-SEQ   ts-seq)   (list TS-LET ts-let)
+            (list TS-RET   ts-return)
+            (list TS-LOC   ts-local) (list TS-MEM   ts-member) (list TS-IDX ts-index)
+            (list TS-ASN   ts-assign)(list TS-ID    ts-ident)
+            (list TS-FND   ts-fndef) (list TS-FNC   ts-fncall)))
+)

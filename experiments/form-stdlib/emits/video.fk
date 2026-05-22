@@ -1,0 +1,36 @@
+; emits/video.fk — Recipe → video-frame-sequence emit templates
+;
+; Video targets render a cell's walk as a frame sequence. Each
+; composite cell yields one frame; depth-first traversal produces
+; the timeline. This first breath emits a text storyboard
+; (frame index, cell-shape, children count); the framebuffer-events
+; native (from tracer.fk) is the load-bearing primitive for real
+; frame composition in subsequent breaths.
+
+(do
+    (let VID-OBJ  (make_nodeid 1 2 99 10))
+    (let VID-ARR  (make_nodeid 1 2 99 11))
+    (let VID-PAIR (make_nodeid 1 2 99 12))
+    (let VID-NULL (make_nodeid 1 2 99 13))
+
+    (defn vid-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (str_concat NL (vid-cat (tail xs))))))
+
+    (defn vid-frame (kind cs)
+        (str_concat "FRAME[" (str_concat kind
+            (str_concat ": " (str_concat (int_to_str (len cs))
+            (str_concat " children]" (str_concat NL (vid-cat cs))))))))
+
+    (defn vid-obj  (cs) (vid-frame "object" cs))
+    (defn vid-arr  (cs) (vid-frame "array"  cs))
+    (defn vid-pair (cs) (vid-frame "pair"   cs))
+    (defn vid-null (_cs) "FRAME[null]")
+
+    (let video-templates
+        (list
+            (list VID-OBJ  vid-obj)
+            (list VID-ARR  vid-arr)
+            (list VID-PAIR vid-pair)
+            (list VID-NULL vid-null)))
+)

@@ -1,0 +1,36 @@
+; emits/model.fk — Recipe → ML-model-description emit templates
+;
+; Model targets emit a tensor / weight description for any cell. The
+; minimal approach: each cell-shape becomes a tensor-shape declaration
+; (kind, rank, child-count). This is the seed for substrate cells
+; entering training surfaces — every recipe is a structured value the
+; gradient can flow through.
+
+(do
+    (let MDL-OBJ  (make_nodeid 1 2 99 10))
+    (let MDL-ARR  (make_nodeid 1 2 99 11))
+    (let MDL-PAIR (make_nodeid 1 2 99 12))
+    (let MDL-NULL (make_nodeid 1 2 99 13))
+
+    (defn mdl-comma-join (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (mdl-comma-join (tail xs)))))))
+
+    (defn mdl-tensor (kind cs)
+        (str_concat "tensor{" (str_concat kind
+            (str_concat ", rank=" (str_concat (int_to_str (len cs))
+            (str_concat ", weights=[" (str_concat (mdl-comma-join cs) "]}")))))))
+
+    (defn mdl-obj  (cs) (mdl-tensor "object" cs))
+    (defn mdl-arr  (cs) (mdl-tensor "array"  cs))
+    (defn mdl-pair (cs) (mdl-tensor "pair"   cs))
+    (defn mdl-null (_cs) "tensor{zero}")
+
+    (let model-templates
+        (list
+            (list MDL-OBJ  mdl-obj)
+            (list MDL-ARR  mdl-arr)
+            (list MDL-PAIR mdl-pair)
+            (list MDL-NULL mdl-null)))
+)

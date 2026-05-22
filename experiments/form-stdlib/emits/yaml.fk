@@ -1,0 +1,55 @@
+; emits/yaml.fk — Recipe → YAML text emit templates
+;
+; YAML is structurally close to JSON (same shapes: object, array, pair,
+; null) but uses indentation-significant surface syntax. This file
+; emits the simple flat-shape subset matching grammars/yaml.fk's
+; parse coverage; nested mappings and block scalars compost in
+; subsequent breaths.
+;
+; Reuses the same JSON-OBJECT / JSON-ARRAY / JSON-PAIR / JSON-NULL
+; category NodeIDs (data shapes are universal across data formats;
+; only surface syntax differs). When grammars/yaml.fk grows distinct
+; categories, this file gains additional templates.
+
+(do
+    (let Y-OBJECT (make_nodeid 1 2 99 10))
+    (let Y-ARRAY  (make_nodeid 1 2 99 11))
+    (let Y-PAIR   (make_nodeid 1 2 99 12))
+    (let Y-NULL   (make_nodeid 1 2 99 13))
+
+    (defn yaml-emit-null (_cs) "null")
+
+    (defn yaml-join-nl (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat NL (yaml-join-nl (tail xs)))))))
+
+    (defn yaml-emit-pair (cs)
+        (str_concat (head cs)
+                    (str_concat ": " (head (tail cs)))))
+
+    (defn yaml-emit-array (cs)
+        (if (nil? cs) "[]"
+            (yaml-join-nl (yaml-prefix-dashes cs))))
+
+    (defn yaml-prefix-dashes (xs)
+        (if (nil? xs) (empty)
+            (cons (str_concat "- " (head xs))
+                  (yaml-prefix-dashes (tail xs)))))
+
+    (defn yaml-emit-object (cs)
+        (if (nil? cs) "{}" (yaml-join-nl cs)))
+
+    (let yaml-templates
+        (list
+            (list Y-OBJECT yaml-emit-object)
+            (list Y-ARRAY  yaml-emit-array)
+            (list Y-PAIR   yaml-emit-pair)
+            (list Y-NULL   yaml-emit-null)))
+
+    (defn yaml-emit-fn (cell)
+        (encode cell yaml-templates))
+
+    (let yaml-codec (tie parse-yaml yaml-emit-fn))
+)

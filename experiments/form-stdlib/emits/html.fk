@@ -1,0 +1,64 @@
+; emits/html.fk — Recipe → HTML emit templates
+;
+; Object → <dl> (definition list); array → <ul> (unordered list); pair
+; → <dt><dd> pair; document shapes → semantic article elements. HTML
+; is XML's surface cousin; templates are mostly tag-renames.
+
+(do
+    (let HTML-OBJ  (make_nodeid 1 2 99 10))
+    (let HTML-ARR  (make_nodeid 1 2 99 11))
+    (let HTML-PAIR (make_nodeid 1 2 99 12))
+    (let HTML-NULL (make_nodeid 1 2 99 13))
+    (let HTML-DOC      (make_nodeid 1 2 99 1))
+    (let HTML-HEADING  (make_nodeid 1 2 99 2))
+    (let HTML-PARA     (make_nodeid 1 2 99 3))
+    (let HTML-CODE     (make_nodeid 1 2 99 4))
+
+    (defn html-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (html-cat (tail xs)))))
+
+    (defn html-wrap (tag inner)
+        (str_concat "<" (str_concat tag
+                        (str_concat ">" (str_concat inner
+                        (str_concat "</" (str_concat tag ">")))))))
+
+    (defn html-li-each (xs)
+        (if (nil? xs) ""
+            (str_concat (html-wrap "li" (head xs)) (html-li-each (tail xs)))))
+
+    (defn html-obj  (cs) (html-wrap "dl" (html-cat cs)))
+    (defn html-arr  (cs) (html-wrap "ul" (html-li-each cs)))
+    (defn html-pair (cs)
+        (str_concat (html-wrap "dt" (head cs))
+                    (html-wrap "dd" (head (tail cs)))))
+    (defn html-null (_cs) "<em>null</em>")
+
+    (defn html-doc  (cs) (html-wrap "article" (html-cat cs)))
+    (defn html-heading (cs)
+        (do
+            (let level (str_to_int (head cs)))
+            (let text (head (tail cs)))
+            (str_concat "<h" (str_concat (int_to_str level)
+                             (str_concat ">" (str_concat text
+                             (str_concat "</h" (str_concat (int_to_str level) ">"))))))))
+    (defn html-para (cs) (html-wrap "p" (head cs)))
+    (defn html-code (cs)
+        (do
+            (let lang (head cs))
+            (let content (head (tail cs)))
+            (str_concat "<pre><code class=\"language-"
+                (str_concat lang
+                (str_concat "\">" (str_concat content "</code></pre>"))))))
+
+    (let html-templates
+        (list
+            (list HTML-OBJ  html-obj)
+            (list HTML-ARR  html-arr)
+            (list HTML-PAIR html-pair)
+            (list HTML-NULL html-null)
+            (list HTML-DOC      html-doc)
+            (list HTML-HEADING  html-heading)
+            (list HTML-PARA     html-para)
+            (list HTML-CODE     html-code)))
+)

@@ -1,0 +1,42 @@
+; substrate-py-to-fk.fk — convert a substrate Python file to .fk
+;
+; The migration arc named in emit-architecture.form step 10:
+;   walk substrate/*.py via grammars/python.fk
+;   emit via emits/form.fk
+;   write the .fk text to stdout (shell wrapper redirects to disk)
+;
+; Load order:
+;   core, emit-engine, codec,
+;   grammars/python, grammars/json (for shared category arms),
+;   convert,
+;   emit, emits/form,
+;   substrate-py-to-fk
+;
+; Invocation: bin-go <files...> substrate-py-to-fk.fk
+;   The kernel doesn't yet read script args beyond .fk paths, so the
+;   target Python path is set via a top-level let here; the shell
+;   wrapper substitutes it per call.
+
+(do
+    ;; The shell wrapper rewrites this line per invocation to point at
+    ;; the actual substrate .py file under conversion.
+    (let target-path "api/app/services/substrate/substrate_strings.py")
+
+    ;; The registry holds only the form target — we want Form output.
+    (let registry (list (list "form" form-templates)))
+
+    ;; Parse the .py file into a Recipe tree via the unified convert
+    ;; dispatcher. This is the same call any other source format uses;
+    ;; Python is just another tongue from convert.fk's perspective.
+    (let cell (convert target-path))
+
+    ;; Emit the cell tree through the form target — recursive walk
+    ;; calls emits/form.fk's templates for every node, producing
+    ;; (verb args...) S-expression syntax.
+    (let fk-text (emit-to "form" cell registry))
+
+    ;; Result: the .fk source string. The kernel prints the last
+    ;; expression — the shell wrapper captures stdout and writes to
+    ;; the .fk target file.
+    (print fk-text)
+    (str_len fk-text))

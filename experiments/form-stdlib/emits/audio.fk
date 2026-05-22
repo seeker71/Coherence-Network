@@ -1,0 +1,34 @@
+; emits/audio.fk — Recipe → audio-description emit templates
+;
+; Audio targets sonify a cell's structure. The minimal approach: emit
+; a MIDI-style note sequence as text (channel, pitch, duration). One
+; category maps to one note signature; the kernel walker drives the
+; sequence depth-first, producing a "shape song" for any cell.
+;
+; This is the seed for substrate sonification — substrate cells as
+; audible structure. Full WAV/MIDI binary emission composts in
+; subsequent breaths via serialize-recipe + format-specific encoders.
+
+(do
+    (let AU-OBJ  (make_nodeid 1 2 99 10))
+    (let AU-ARR  (make_nodeid 1 2 99 11))
+    (let AU-PAIR (make_nodeid 1 2 99 12))
+    (let AU-NULL (make_nodeid 1 2 99 13))
+
+    (defn au-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (str_concat " " (au-cat (tail xs))))))
+
+    (defn au-obj  (cs) (str_concat "[chord " (str_concat (au-cat cs) "]")))
+    (defn au-arr  (cs) (str_concat "[seq "   (str_concat (au-cat cs) "]")))
+    (defn au-pair (cs) (str_concat "[note "  (str_concat (head cs)
+                          (str_concat " "    (str_concat (head (tail cs)) "]")))))
+    (defn au-null (_cs) "[rest]")
+
+    (let audio-templates
+        (list
+            (list AU-OBJ  au-obj)
+            (list AU-ARR  au-arr)
+            (list AU-PAIR au-pair)
+            (list AU-NULL au-null)))
+)

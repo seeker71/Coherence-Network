@@ -1,0 +1,36 @@
+; emits/xml.fk — Recipe → XML emit templates
+;
+; Every cell becomes a <tag>content</tag> pair where the tag names the
+; cell-category role (object / array / pair / value-kind). Children
+; emit recursively, joined with no separator (XML carries its own
+; structural whitespace).
+
+(do
+    (let XML-OBJ  (make_nodeid 1 2 99 10))
+    (let XML-ARR  (make_nodeid 1 2 99 11))
+    (let XML-PAIR (make_nodeid 1 2 99 12))
+    (let XML-NULL (make_nodeid 1 2 99 13))
+
+    (defn xml-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (xml-cat (tail xs)))))
+
+    (defn xml-wrap (tag inner)
+        (str_concat "<" (str_concat tag
+                        (str_concat ">" (str_concat inner
+                        (str_concat "</" (str_concat tag ">")))))))
+
+    (defn xml-obj  (cs) (xml-wrap "object" (xml-cat cs)))
+    (defn xml-arr  (cs) (xml-wrap "array"  (xml-cat cs)))
+    (defn xml-pair (cs)
+        (str_concat (xml-wrap "key"   (head cs))
+                    (xml-wrap "value" (head (tail cs)))))
+    (defn xml-null (_cs) "<null/>")
+
+    (let xml-templates
+        (list
+            (list XML-OBJ  xml-obj)
+            (list XML-ARR  xml-arr)
+            (list XML-PAIR xml-pair)
+            (list XML-NULL xml-null)))
+)

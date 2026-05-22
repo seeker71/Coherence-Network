@@ -1,0 +1,42 @@
+; emits/css.fk — Recipe → CSS emit templates
+;
+; CSS is a key:value rule-set. Object → rule body; pair → declaration
+; (property: value;). Array of selectors → comma-separated selector
+; list. This minimal coverage is enough for cells that represent
+; style data to round-trip through the registry — substrate-resident
+; design tokens, for example.
+
+(do
+    (let CSS-OBJ  (make_nodeid 1 2 99 10))
+    (let CSS-ARR  (make_nodeid 1 2 99 11))
+    (let CSS-PAIR (make_nodeid 1 2 99 12))
+    (let CSS-NULL (make_nodeid 1 2 99 13))
+
+    (defn css-decls (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs)
+                        (str_concat "; " (css-decls (tail xs))))))
+
+    (defn css-comma-join (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (css-comma-join (tail xs)))))))
+
+    (defn css-obj (cs)
+        (str_concat "{ " (str_concat (css-decls cs) "}")))
+
+    (defn css-arr (cs)
+        (css-comma-join cs))
+
+    (defn css-pair (cs)
+        (str_concat (head cs) (str_concat ": " (head (tail cs)))))
+
+    (defn css-null (_cs) "initial")
+
+    (let css-templates
+        (list
+            (list CSS-OBJ  css-obj)
+            (list CSS-ARR  css-arr)
+            (list CSS-PAIR css-pair)
+            (list CSS-NULL css-null)))
+)
