@@ -195,6 +195,102 @@ defn silence_trace = anything_arrives_trace(
     "something that normally breathes has become unobservable"
 );
 
+defn unnamed_color_trace = anything_arrives_trace(
+    "flat image with a color nobody can comfortably name",
+    "image",
+    [
+        "color sits between blue, green, and gray",
+        "interface feels quieter but not colder",
+        "naming the color too early flattens its effect",
+    ],
+    [
+        "unnamed-color",
+        "mood-before-label",
+        "interface-weather",
+    ],
+    ["mood", "weather", "interface-tone", "belonging"],
+    "low compute, high projection risk; compare beside real UI states",
+    [
+        "color moved from hex candidate to felt weather",
+        "weather moved from aesthetic to interface-tone",
+        "interface-tone moved from decoration to belonging pressure",
+    ],
+    "test the color beside error states and invitations",
+    "this color asks the interface to become quieter without becoming colder"
+);
+
+defn skipped_field_trace = anything_arrives_trace(
+    "optional profile field left blank across forty-seven sessions",
+    "analytics",
+    [
+        "blankness repeats more loudly than entered text",
+        "field appears before trust has formed",
+        "absence clusters around self-disclosure",
+    ],
+    [
+        "premature-ask",
+        "blankness-as-answer",
+        "timing-before-requiredness",
+    ],
+    ["trust", "timing", "self-disclosure", "form-friction"],
+    "medium product cost; changing the ask can change the relationship",
+    [
+        "blank moved from missing data to refusal-with-information",
+        "field moved from input slot to relation threshold",
+        "optional moved from harmless to premature",
+    ],
+    "move the ask to the moment where the answer helps, or compost it",
+    "the field is arriving before relation"
+);
+
+defn laptop_fan_trace = anything_arrives_trace(
+    "laptop fan rises during a quiet local script before dashboards notice",
+    "sensor",
+    [
+        "heat becomes audible before logs become articulate",
+        "quiet task carries hidden loop pressure",
+        "machine body reports cost first",
+    ],
+    [
+        "heat-before-number",
+        "body-sensor",
+        "hidden-loop",
+    ],
+    ["compute-cost", "hidden-loop", "body-sensor", "attention-budget"],
+    "low instrumentation cost; profiler proof follows the body signal",
+    [
+        "fan moved from annoyance to early witness",
+        "heat moved from sensation to cost trace",
+        "script moved from quiet task to hidden loop candidate",
+    ],
+    "trace the hot path before waiting for a dashboard to authorize concern",
+    "the machine is speaking before the logs are articulate"
+);
+
+defn ladder_without_rungs_trace = anything_arrives_trace(
+    "hand-drawn ladder with two uprights and no rungs",
+    "drawing",
+    [
+        "ascent shape appears without steps",
+        "empty space carries the missing mechanism",
+        "correction would erase the teaching",
+    ],
+    [
+        "ascent-without-steps",
+        "support-not-rendered",
+        "phase-transition-image",
+    ],
+    ["phase-transition", "trust", "arrival", "support-field"],
+    "low compute, medium symbolic risk; keep the impossibility intact",
+    [
+        "ladder moved from object to impossible ascent",
+        "missing rungs moved from error to field-support question",
+        "drawing moved from plan to phase-transition image",
+    ],
+    "ask what support is already present but not rendered as steps",
+    "this is not a plan for climbing; it is a picture of being lifted by a field"
+);
+
 # ---------------------------------------------------------------------
 # Part 3 -- operating rule
 # ---------------------------------------------------------------------
@@ -209,3 +305,15 @@ defn translation_rule(trace) =
         "leave the next question smaller",
     ];
 
+defn play_deck_traces() = [
+    georgian_song_trace,
+    code_diff_trace,
+    door_city_trace,
+    failed_payment_trace,
+    publish_hesitation_trace,
+    silence_trace,
+    unnamed_color_trace,
+    skipped_field_trace,
+    laptop_fan_trace,
+    ladder_without_rungs_trace,
+];
