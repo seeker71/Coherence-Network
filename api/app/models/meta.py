@@ -20,15 +20,18 @@ class EndpointEdge(BaseModel):
 
 
 class EndpointNode(BaseModel):
-    id: str  # e.g. "GET /api/ideas"
+    id: str  # e.g. "GET /api/ideas" — human-readable composite (kept for UI keying)
     method: str
     path: str
+    path_hash: str  # stable 8-char hex hash of f"{method} {path}" — lookup key
     name: str
     summary: Optional[str] = None
     tags: list[str] = []
     spec_id: Optional[str] = None
     idea_id: Optional[str] = None
+    has_trace: bool = False  # true when spec_id or idea_id is set
     module: Optional[str] = None
+    router_module: Optional[str] = None  # alias of module, matches spec body
     request_model: Optional[str] = None  # codex.meta/type id for request body
     response_model: Optional[str] = None  # codex.meta/type id for response
     edges: list[EndpointEdge] = []
@@ -42,6 +45,8 @@ class ModuleNode(BaseModel):
     spec_ids: list[str] = []
     idea_ids: list[str] = []
     endpoint_count: int = 0
+    traced_endpoint_count: int = 0
+    trace_coverage_pct: float = 0.0  # 0.0–100.0
     edges: list[EndpointEdge] = []
 
 
@@ -96,12 +101,25 @@ class MetaGraphResponse(BaseModel):
 
 class MetaEndpointsResponse(BaseModel):
     total: int
+    traced: int = 0
+    coverage_pct: float = 0.0  # 0.0–100.0, share of endpoints with spec/idea trace
     endpoints: list[EndpointNode]
 
 
 class MetaModulesResponse(BaseModel):
     total: int
     modules: list[ModuleNode]
+
+
+class MetaCoverageResponse(BaseModel):
+    """Traceability coverage summary across the whole API surface."""
+
+    total_endpoints: int
+    traced_endpoints: int
+    coverage_pct: float  # 0.0–100.0
+    total_modules: int
+    modules_with_any_trace: int
+    untraced_paths: list[str] = []
 
 
 class MetaTypesResponse(BaseModel):

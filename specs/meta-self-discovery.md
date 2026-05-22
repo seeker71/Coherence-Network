@@ -19,6 +19,7 @@ done_when:
   - "`coverage_pct` is consistent across `/endpoints?has_trace=false` count and `/coverage` report."
   - "No 500 errors on any meta endpoint under valid input."
   - "Meta router is registered in `main.py` with tag `meta`."
+test: "cd api && python -m pytest -q tests/test_flow_core_api.py -k meta"
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
@@ -28,7 +29,7 @@ done_when:
 
 **Spec ID**: 162-meta-self-discovery
 **Task ID**: task_e9a79c46896ff3b0
-**Status**: draft
+**Status**: done
 **Priority**: high
 **Author**: product-manager agent
 **Date**: 2026-03-28

@@ -11,16 +11,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from app.models.meta import (
+    EndpointNode,
+    MetaCoverageResponse,
     MetaEndpointsResponse,
     MetaGraphResponse,
     MetaModulesResponse,
     MetaSummaryResponse,
     MetaTypesResponse,
+    ModuleNode,
 )
 from app.services import config_service, meta_service
 
@@ -48,6 +51,23 @@ async def get_meta_endpoints(request: Request) -> MetaEndpointsResponse:
 
 
 @router.get(
+    "/meta/endpoints/{path_hash}",
+    response_model=EndpointNode,
+    summary="Single endpoint node by path_hash",
+    description=(
+        "Returns the endpoint node whose stable 8-char hex `path_hash` matches. "
+        "Returns 404 if no endpoint has that hash."
+    ),
+    tags=["meta"],
+)
+async def get_meta_endpoint_by_hash(path_hash: str, request: Request) -> EndpointNode:
+    node = meta_service.get_endpoint_by_hash(request.app, path_hash)
+    if node is None:
+        raise HTTPException(status_code=404, detail=f"endpoint not found: {path_hash}")
+    return node
+
+
+@router.get(
     "/meta/modules",
     response_model=MetaModulesResponse,
     summary="List all code modules as concept nodes",
@@ -59,6 +79,38 @@ async def get_meta_endpoints(request: Request) -> MetaEndpointsResponse:
 )
 async def get_meta_modules(request: Request) -> MetaModulesResponse:
     return meta_service.list_modules(request.app)
+
+
+@router.get(
+    "/meta/modules/{module_name}",
+    response_model=ModuleNode,
+    summary="Single code module node by name",
+    description=(
+        "Accepts either the dotted module path (`app.routers.ideas`) or the "
+        "short last-segment name (`ideas`). Returns 404 if no module matches."
+    ),
+    tags=["meta"],
+)
+async def get_meta_module_by_name(module_name: str, request: Request) -> ModuleNode:
+    node = meta_service.get_module_by_name(request.app, module_name)
+    if node is None:
+        raise HTTPException(status_code=404, detail=f"module not found: {module_name}")
+    return node
+
+
+@router.get(
+    "/meta/coverage",
+    response_model=MetaCoverageResponse,
+    summary="Traceability coverage across the API surface",
+    description=(
+        "Returns total/traced endpoint counts, overall coverage percentage, "
+        "module counts, and the list of untraced paths. Numbers are consistent "
+        "with `/meta/endpoints` (same trace registry, same denominator)."
+    ),
+    tags=["meta"],
+)
+async def get_meta_coverage(request: Request) -> MetaCoverageResponse:
+    return meta_service.get_coverage(request.app)
 
 
 @router.get(

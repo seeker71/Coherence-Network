@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -16,6 +17,8 @@ from app.models.registry_discovery import (
 
 _INVENTORY_PATH = "docs/registry-submissions.json"
 
+_logger = logging.getLogger("coherence.api.registry_discovery")
+
 
 @dataclass(frozen=True)
 class RegistrySubmissionTarget:
@@ -27,7 +30,22 @@ class RegistrySubmissionTarget:
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    """Resolve the root that contains the inventory file.
+
+    Local checkout layout:  api/app/services/<this> → parents[3] is the repo root.
+    Container layout:       /app/app/services/<this> → parents[3] is "/" (no good).
+                            The deploy script syncs docs/ subtrees into /app/docs/,
+                            so /app (parents[2]) is the operative root in-container.
+    The fallback walks both candidates and picks the first whose inventory file
+    is reachable. If neither has it, fall back to parents[3] so error messages
+    point at the canonical repo-relative path.
+    """
+    here = Path(__file__).resolve()
+    candidates = (here.parents[3], here.parents[2])
+    for candidate in candidates:
+        if (candidate / _INVENTORY_PATH).exists():
+            return candidate
+    return candidates[0]
 
 
 def _read_json(repo_root: Path, rel_path: str) -> dict[str, Any]:
@@ -180,3 +198,17 @@ def build_registry_submission_inventory() -> RegistrySubmissionInventory:
 
 
 _TARGETS = _load_targets(_repo_root())
+
+# Proprioception: surface the resolved inventory shape in container logs so
+# `docker logs api | head` (and the wellness probe) can sense drift if the
+# file stops being reachable from /app at deploy time. Note that this snapshot
+# is import-time; the live endpoint re-reads the file per request, so a deploy
+# that copies the file after container start will still serve correctly — the
+# log line just tells you what the body saw at boot.
+_INVENTORY_RESOLVED_PATH = _repo_root() / _INVENTORY_PATH
+_logger.info(
+    "Loaded %d registry targets from %s (exists=%s)",
+    len(_TARGETS),
+    _INVENTORY_RESOLVED_PATH,
+    _INVENTORY_RESOLVED_PATH.exists(),
+)
