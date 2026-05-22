@@ -1,21 +1,70 @@
-; grammars/go.bnf.fk — Go file-header grammar in BNF DSL
+; grammars/go.bnf.fk — Go grammar in BNF DSL, expanded toward the
+; official go.dev/ref/spec EBNF.
 ;
-; Scope:
-;   - package main
-;   - import "fmt"
-;   - func name() { ... }    (header only)
-;   - type Name struct { ... }
-;   - var Name = value
-;   - // line comments
-;   - "string" / `raw` literals
+; Productions ported (in spec order):
+;   SourceFile     = PackageClause ";" { ImportDecl ";" } { TopLevelDecl ";" } .
+;   PackageClause  = "package" PackageName .
+;   ImportDecl     = "import" ImportSpec .          (single-spec form)
+;   ImportSpec     = [ "." | PackageName ] ImportPath .
+;   TopLevelDecl   = Declaration | FunctionDecl .
+;   Declaration    = ConstDecl | TypeDecl | VarDecl .
+;   ConstDecl      = "const" identifier "=" Expression .
+;   TypeDecl       = "type" identifier Type .
+;   VarDecl        = "var" identifier "=" Expression .
+;   FunctionDecl   = "func" FunctionName "(" ")" [ Type ] [ Block ] .
+;   Block          = "{" { Statement ";" } "}" .   (semicolons elided
+;                                                    by Go's lexer; we
+;                                                    use newlines too)
+;   Statement      = SimpleStatement | ReturnStatement | IfStatement .
+;   SimpleStatement= Assignment | ExpressionStmt .
+;   ReturnStatement= "return" [ Expression ] .
+;   IfStatement    = "if" Expression Block .
+;   Assignment     = identifier "=" Expression .
+;   Expression     = Literal | identifier | "(" Expression ")" .
+;                    (full binary/unary precedence is a follow-on breath)
+;   Type           = identifier | StructType .
+;   StructType     = "struct" "{" "}" .             (field decls follow)
+;
+; This grammar covers enough of Go's surface to parse a real file like:
+;
+;   package main
+;   import "fmt"
+;   type Kernel struct{}
+;   var Version = 1
+;   const Tag = 2
+;   func main() {
+;     return
+;   }
+;
+; Full operator precedence, multi-spec const/type/var blocks, method
+; declarations, channel types, and the rest follow in subsequent
+; breaths — each as a small additive set of rules.
 
 (do
-    (let GO-BNF-MODULE  (make_nodeid 1 2 99 79))
-    (let GO-BNF-PACKAGE (make_nodeid 1 2 99 80))
-    (let GO-BNF-IMPORT  (make_nodeid 1 2 99 81))
-    (let GO-BNF-FUNC    (make_nodeid 1 2 99 82))
-    (let GO-BNF-TYPE    (make_nodeid 1 2 99 83))
-    (let GO-BNF-VAR     (make_nodeid 1 2 99 84))
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Universal Blueprints
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let GO-BNF-MODULE   (make_nodeid 1 2 99 79))
+    (let GO-BNF-PACKAGE  (make_nodeid 1 2 99 80))
+    (let GO-BNF-IMPORT   (make_nodeid 1 2 99 81))
+    (let GO-BNF-FUNC     (make_nodeid 1 2 99 82))
+    (let GO-BNF-TYPE     (make_nodeid 1 2 99 83))
+    (let GO-BNF-VAR      (make_nodeid 1 2 99 84))
+    (let GO-BNF-CONST    (make_nodeid 1 2 99 85))
+    (let GO-BNF-BLOCK    (make_nodeid 1 2 99 86))
+    (let GO-BNF-RETURN   (make_nodeid 1 2 99 87))
+    (let GO-BNF-IF       (make_nodeid 1 2 99 88))
+    (let GO-BNF-ASSIGN   (make_nodeid 1 2 99 89))
+    (let GO-BNF-EXPR-STMT (make_nodeid 1 2 99 90))
+    (let GO-BNF-IDENT-EXPR (make_nodeid 1 2 99 91))
+    (let GO-BNF-INT-EXPR (make_nodeid 1 2 99 92))
+    (let GO-BNF-STR-EXPR (make_nodeid 1 2 99 93))
+    (let GO-BNF-STRUCT-TYPE (make_nodeid 1 2 99 94))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Module-collection helpers
+    ;; ──────────────────────────────────────────────────────────────────
 
     (defn go-bnf-rev-step (acc x) (cons x acc))
     (defn go-bnf-reverse (xs) (foldl go-bnf-rev-step (empty) xs))
@@ -30,35 +79,90 @@
             (let all-stmts (cons first-stmt (go-bnf-collect-results rest-items)))
             (intern_node GO-BNF-MODULE all-stmts)))
 
+    (defn go-bnf-emit-block (caps)
+        (do
+            ;; A block has zero or more statements collected by `*`. The
+            ;; star's items list is reversed and unwrapped here.
+            (let stmt-items (go-bnf-reverse (cap-get caps "items")))
+            (let stmts (go-bnf-collect-results stmt-items))
+            (intern_node GO-BNF-BLOCK stmts)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Statement / declaration emitters
+    ;; ──────────────────────────────────────────────────────────────────
+
     (defn go-bnf-emit-package (caps)
-        ;; PACKAGE IDENT — _2=name
         (intern_node GO-BNF-PACKAGE
-                      (list (intern_trivial_string (cap-get caps "_2"))
-                            (intern_trivial_string ""))))
+                      (list (intern_trivial_string (cap-get caps "name")))))
 
     (defn go-bnf-emit-import (caps)
-        ;; IMPORT STRING — _2=path
         (intern_node GO-BNF-IMPORT
-                      (list (intern_trivial_string (cap-get caps "_2"))
-                            (intern_trivial_string ""))))
+                      (list (intern_trivial_string (cap-get caps "path")))))
 
-    (defn go-bnf-emit-func (caps)
-        ;; FUNC IDENT LPAREN RPAREN — _2=name
-        (intern_node GO-BNF-FUNC
-                      (list (intern_trivial_string (cap-get caps "_2"))
-                            (intern_trivial_string ""))))
+    (defn go-bnf-emit-const (caps)
+        (intern_node GO-BNF-CONST
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (intern_trivial_string (cap-get caps "value")))))
 
-    (defn go-bnf-emit-type-struct (caps)
-        ;; TYPE IDENT STRUCT — _2=name
+    (defn go-bnf-emit-type (caps)
         (intern_node GO-BNF-TYPE
-                      (list (intern_trivial_string (cap-get caps "_2"))
-                            (intern_trivial_string "struct"))))
+                      (list (intern_trivial_string (cap-get caps "name")))))
 
     (defn go-bnf-emit-var (caps)
-        ;; VAR IDENT EQUALS value — _2=name, _4=value
         (intern_node GO-BNF-VAR
-                      (list (intern_trivial_string (cap-get caps "_2"))
-                            (intern_trivial_string (cap-get caps "_4")))))
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (intern_trivial_string (cap-get caps "value")))))
+
+    (defn go-bnf-emit-struct-type (caps)
+        (intern_node GO-BNF-STRUCT-TYPE (empty)))
+
+    (defn go-bnf-emit-func (caps)
+        ;; FUNC name LPAREN RPAREN block
+        (intern_node GO-BNF-FUNC
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "body"))))
+
+    (defn go-bnf-emit-return-bare (caps)
+        (intern_node GO-BNF-RETURN (empty)))
+
+    (defn go-bnf-emit-return-value (caps)
+        (intern_node GO-BNF-RETURN
+                      (list (cap-get caps "expr"))))
+
+    (defn go-bnf-emit-if (caps)
+        (intern_node GO-BNF-IF
+                      (list (cap-get caps "cond")
+                            (cap-get caps "body"))))
+
+    (defn go-bnf-emit-assign (caps)
+        (intern_node GO-BNF-ASSIGN
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+
+    (defn go-bnf-emit-expr-stmt (caps)
+        (intern_node GO-BNF-EXPR-STMT
+                      (list (cap-get caps "expr"))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Expression emitters (literals + identifiers; binary/unary later)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn go-bnf-emit-int-expr (caps)
+        (intern_node GO-BNF-INT-EXPR
+                      (list (intern_trivial_int
+                              (str_to_int (cap-get caps "value"))))))
+
+    (defn go-bnf-emit-str-expr (caps)
+        (intern_node GO-BNF-STR-EXPR
+                      (list (intern_trivial_string (cap-get caps "value")))))
+
+    (defn go-bnf-emit-ident-expr (caps)
+        (intern_node GO-BNF-IDENT-EXPR
+                      (list (intern_trivial_string (cap-get caps "name")))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The BNF grammar text — pure declarative, BMF surface
+    ;; ──────────────────────────────────────────────────────────────────
 
     (let go-bnf-text
 "tokens {
@@ -84,26 +188,51 @@
   keyword STRUCT struct
   keyword VAR var
   keyword CONST const
+  keyword RETURN return
+  keyword IF if
   keyword INTERFACE interface
 }
 
 rules {
-  module      ::= statement+ => go-bnf-emit-module ;
-  statement   ::= package-stmt | import-stmt | func-stmt | type-stmt | var-stmt ;
-  package-stmt ::= PACKAGE IDENT                          => go-bnf-emit-package ;
-  import-stmt  ::= IMPORT STRING                           => go-bnf-emit-import ;
-  func-stmt    ::= FUNC IDENT LPAREN RPAREN                => go-bnf-emit-func ;
-  type-stmt    ::= TYPE IDENT STRUCT                       => go-bnf-emit-type-struct ;
-  var-stmt     ::= VAR IDENT EQUALS INT                    => go-bnf-emit-var ;
+  module        ::= top-decl+                              => go-bnf-emit-module ;
+  top-decl      ::= package-decl | import-decl | const-decl | type-decl | var-decl | func-decl ;
+  package-decl  ::= PACKAGE name:IDENT                     => go-bnf-emit-package ;
+  import-decl   ::= IMPORT path:STRING                     => go-bnf-emit-import ;
+  const-decl    ::= CONST name:IDENT EQUALS value:INT      => go-bnf-emit-const ;
+  type-decl     ::= TYPE name:IDENT struct-type            => go-bnf-emit-type ;
+  var-decl      ::= VAR name:IDENT EQUALS value:INT        => go-bnf-emit-var ;
+  func-decl     ::= FUNC name:IDENT LPAREN RPAREN body:block => go-bnf-emit-func ;
+  block         ::= LBRACE statement* RBRACE               => go-bnf-emit-block ;
+  statement     ::= return-stmt | if-stmt | assign-stmt | expr-stmt ;
+  return-stmt   ::= RETURN expr:expression                 => go-bnf-emit-return-value ;
+  if-stmt       ::= IF cond:expression body:block          => go-bnf-emit-if ;
+  assign-stmt   ::= name:IDENT EQUALS value:expression     => go-bnf-emit-assign ;
+  expr-stmt     ::= expr:expression                        => go-bnf-emit-expr-stmt ;
+  expression    ::= int-lit | str-lit | ident-expr ;
+  int-lit       ::= value:INT                              => go-bnf-emit-int-expr ;
+  str-lit       ::= value:STRING                           => go-bnf-emit-str-expr ;
+  ident-expr    ::= name:IDENT                             => go-bnf-emit-ident-expr ;
+  struct-type   ::= STRUCT LBRACE RBRACE                   => go-bnf-emit-struct-type ;
 }")
 
     (let go-bnf-registry
-        (list (list "go-bnf-emit-package"     go-bnf-emit-package)
+        (list (list "go-bnf-emit-module"      go-bnf-emit-module)
+              (list "go-bnf-emit-package"     go-bnf-emit-package)
               (list "go-bnf-emit-import"      go-bnf-emit-import)
-              (list "go-bnf-emit-func"        go-bnf-emit-func)
-              (list "go-bnf-emit-type-struct" go-bnf-emit-type-struct)
+              (list "go-bnf-emit-const"       go-bnf-emit-const)
+              (list "go-bnf-emit-type"        go-bnf-emit-type)
               (list "go-bnf-emit-var"         go-bnf-emit-var)
-              (list "go-bnf-emit-module"      go-bnf-emit-module)))
+              (list "go-bnf-emit-func"        go-bnf-emit-func)
+              (list "go-bnf-emit-block"       go-bnf-emit-block)
+              (list "go-bnf-emit-return-bare" go-bnf-emit-return-bare)
+              (list "go-bnf-emit-return-value" go-bnf-emit-return-value)
+              (list "go-bnf-emit-if"          go-bnf-emit-if)
+              (list "go-bnf-emit-assign"      go-bnf-emit-assign)
+              (list "go-bnf-emit-expr-stmt"   go-bnf-emit-expr-stmt)
+              (list "go-bnf-emit-int-expr"    go-bnf-emit-int-expr)
+              (list "go-bnf-emit-str-expr"    go-bnf-emit-str-expr)
+              (list "go-bnf-emit-ident-expr"  go-bnf-emit-ident-expr)
+              (list "go-bnf-emit-struct-type" go-bnf-emit-struct-type)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))
