@@ -1,0 +1,181 @@
+; tests/cell-stream.fk — verify the streaming-cells abstraction across
+; two fundamentally different input shapes, then exercise observe +
+; analyze + transmute on the resulting stream.
+;
+; Strange-minimal fixture: ONE 9-character source `a,b,c|de|f`
+; processed two different ways:
+;
+;   1. As CSV-style line: split on `,` → 3 cell children (a, b, c | de | f)
+;      — wait, this won't segment naturally. Let me re-pick.
+;
+; Cleaner: TWO tiny fixtures driven through the SAME stream-of-cells
+; primitive with different (segmenter, encoder) pairs. The probe shows
+; ONE engine handles both newline-segmented text AND length-prefixed
+; binary-style — different input shapes, identical pipeline.
+;
+; Then for each stream: observe (count via side-effect), analyze
+; (accumulate via fold), transmute (emit new cells with new Blueprint).
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Universal cell categories for this test (numeric type=99 doc-band,
+    ;; instances 80+ to avoid clash with other grammar categories)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let CELL-LINE          (make_nodeid 1 2 99 80))   ; one text line
+    (let CELL-CHUNK         (make_nodeid 1 2 99 81))   ; one binary chunk
+    (let CELL-TRANSMUTED    (make_nodeid 1 2 99 82))   ; output of transmute
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Helpers (a subset of line-grammar.fk inlined to keep the test
+    ;; loadable without depending on that file yet)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Segmenter 1: NEWLINE-DELIMITED LINES
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; (input pos) → seg-result. Walks from pos until \n or EOF;
+    ;; returns the line text + position after the newline.
+    ;;
+    ;; Tracks current line number by counting newlines from BOF up to pos.
+
+    (defn count-newlines-to (s end)
+        (count-nl-loop s 0 end 1))
+
+    (defn count-nl-loop (s i end line)
+        (if (ge i end) line
+            (if (eq (ord (char_at s i)) 10)
+                (count-nl-loop s (add i 1) end (add line 1))
+                (count-nl-loop s (add i 1) end line))))
+
+    (defn line-segmenter (input pos)
+        (if (ge pos (str_len input))
+            (mk-eof 0)
+            (line-segment-loop input pos pos)))
+
+    (defn line-segment-loop (input start i)
+        (if (eq i (str_len input))
+            (mk-block (substr input start i) i
+                       (count-newlines-to input start))
+            (if (eq (ord (char_at input i)) 10)
+                (mk-block (substr input start i) (add i 1)
+                           (count-newlines-to input start))
+                (line-segment-loop input start (add i 1)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Segmenter 2: LENGTH-PREFIXED BINARY-STYLE CHUNKS
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each chunk is a single decimal digit (length, 0-9) followed by
+    ;; that many data chars. Pure ASCII so the .fk reader doesn't fight us.
+    ;; "3abc2de1f" → chunks "abc", "de", "f".
+    ;;
+    ;; Line number for binary chunks: the chunk index (1-based).
+
+    (defn digit-to-int (c) (sub (ord c) 48))   ; ord('0') = 48
+
+    (defn chunk-segmenter (input pos)
+        (if (ge pos (str_len input))
+            (mk-eof 0)
+            (do
+                (let len (digit-to-int (char_at input pos)))
+                (let data-start (add pos 1))
+                (let data-end (add data-start len))
+                (mk-block (substr input data-start data-end) data-end
+                           (add pos 1)))))   ; "line" = chunk start position
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Encoder: block text → interned cell with the chosen category
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn line-encoder (block-text source-path line-no)
+        (intern_node_at CELL-LINE
+                         (list (intern_trivial_string block-text))
+                         source-path line-no 1))
+
+    (defn chunk-encoder (block-text source-path line-no)
+        (intern_node_at CELL-CHUNK
+                         (list (intern_trivial_string block-text))
+                         source-path line-no 1))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 1: line stream from "alpha\nbeta\ngamma"
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let line-source "alpha
+beta
+gamma")
+
+    (let line-cells (stream-of-cells line-source
+                                      line-segmenter line-encoder
+                                      "test.txt"))
+    (let probe-1 (len line-cells))                         ; → 3 cells
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 2: chunk stream from "3abc2de1f"
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let chunk-source "3abc2de1f")
+    (let chunk-cells (stream-of-cells chunk-source
+                                       chunk-segmenter chunk-encoder
+                                       "test.bin"))
+    (let probe-2 (len chunk-cells))                        ; → 3 cells
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 3: observe — side-effect walk, returns stream untouched.
+    ;; Uses int_to_str on cell-source as the "side effect" (print would
+    ;; pollute the test sum). Returns original stream length unchanged.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn null-observer (cell) cell)
+    (let observed (observe line-cells null-observer))
+    (let probe-3 (len observed))                           ; → 3
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 4: analyze — fold the stream into an aggregate.
+    ;; Aggregate: count of cells whose first-child-string-length > 3.
+    ;; "alpha" (5), "beta" (4), "gamma" (5) → all three > 3 → result 3.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn first-child-len (cell)
+        (do
+            (let kids (node_children cell))
+            (if (nil? kids) 0
+                (str_len (node_value (head kids))))))
+
+    (defn count-long (acc cell)
+        (if (gt (first-child-len cell) 3) (add acc 1) acc))
+
+    (let probe-4 (analyze line-cells 0 count-long))        ; → 3
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 5: transmute — each line-cell becomes a CELL-TRANSMUTED
+    ;; with the same content. The substrate's content-addressing
+    ;; dedupes identical transmuted-content cells automatically.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn line-to-transmuted (cell)
+        (do
+            (let kids (node_children cell))
+            (intern_node CELL-TRANSMUTED kids)))
+
+    (let transmuted (transmute line-cells line-to-transmuted))
+    (let probe-5 (len transmuted))                         ; → 3
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 6: original cell carries source attribution
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let first-line-cell (head line-cells))
+    (let src (cell-source first-line-cell))
+    (let probe-6 (str_len src))                            ; → length "test.txt:1:1" = 12
+
+    ;; sum: 3 + 3 + 3 + 3 + 3 + 12 = 27
+    (add probe-1
+    (add probe-2
+    (add probe-3
+    (add probe-4
+    (add probe-5 probe-6))))))
