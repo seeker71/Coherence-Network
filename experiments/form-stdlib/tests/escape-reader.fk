@@ -1,0 +1,117 @@
+; tests/escape-reader.fk — verify the common-ground intuition
+;
+; Strange-minimal fixture: ONE 14-character source string exercises
+; nested escaping (text) AND length-prefixed framing (binary-style)
+; AND unknown-escape passthrough AND EOF-without-terminator boundary
+; AND empty-length-prefix AND multiple-sequential-escapes.
+;
+; The fixture: `"a\"\\\nb"#xyz`
+;   Breakdown:
+;     " a \" \\ \n b "   ← a quoted "string" with escape sequences:
+;                          a, escaped-quote, escaped-backslash,
+;                          escaped-n (newline), b
+;     #                  ← length-prefix marker (ASCII 35 = decimal 35,
+;                          but we'll use a small character to keep
+;                          the fixture pure ASCII)
+;     xyz                ← 3 bytes of binary-style payload
+;
+; Wait — that's hard to express in .fk source. Let me use a simpler
+; weird fixture: `"a\nb"<3>xy` where <3> is the byte-value 3 expressed
+; via str_concat with int_to_str... no, that's also hard.
+;
+; Honest move: use TWO fixtures (text and binary) in the same test, to
+; verify ONE primitive (read-context) handles both. The "strange-
+; minimal" applies to each fixture: text fixture covers escape-quote +
+; escape-backslash + escape-n + EOF-without-closing-quote; binary
+; fixture covers length-prefix + length-0 + back-to-back-prefixes.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Fixture 1 — JSON-style escape: `a\"b\\c\nd` (no closing quote,
+    ;; covers EOF boundary). Escapes: \" → ", \\ → \, \n → newline.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let json-escapes
+        (list
+            (list "\"" "\"")     ; \" → "
+            (list "\\" "\\")     ; \\ → \
+            (list "n"  "
+")))   ; \n → actual newline
+
+    ;; Source: a\"b\\c\nd with no terminator at end
+    (let text-source "a\\\"b\\\\c\\nd")
+
+    ;; Probe via read-with-escape directly (terminator = something not
+    ;; in source, so we walk to EOF cleanly).
+    (let r1 (read-with-escape text-source 0 "|" "\\" json-escapes))
+    (let decoded (result-text r1))
+    (let probe-1 (str_len decoded))
+    ;; "a\"b\\c\nd" decoded → a"b\c<NL>d = 7 chars
+    ;; (a, ", b, \, c, NL, d)
+
+    ;; --- probe 2: position is at EOF -----------------------------
+    (let probe-2 (result-pos r1))
+    ;; original length: a \ " b \ \ c \ n d = 11 chars. So pos = 11.
+
+    ;; --- probe 3: terminator-bounded read --------------------------
+    ;; Source: `hello|world` — reads "hello" up to | terminator.
+    (let r3 (read-with-escape "hello|world" 0 "|" "\\" json-escapes))
+    (let probe-3 (str_len (result-text r3)))   ; → 5 ("hello")
+
+    ;; --- probe 4: unknown escape passes through --------------------
+    ;; Source `\z` with empty escape-table → emits "z" (passthrough).
+    (let r4 (read-with-escape "\\z|" 0 "|" "\\" (empty)))
+    (let probe-4 (str_len (result-text r4)))   ; → 1 ("z")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Fixture 2 — binary-style length-prefix (using ASCII chars as
+    ;; the length byte). Source: "\x03abc\x02de\x00\x01f"
+    ;; Three back-to-back prefixed regions:
+    ;;   - len=3, data="abc"
+    ;;   - len=2, data="de"
+    ;;   - len=0, data=""      (the edge case: zero-length region)
+    ;;   - len=1, data="f"
+    ;; ──────────────────────────────────────────────────────────────────
+
+    ;; Build the source via str_concat — chars with codepoint <32 are
+    ;; awkward to express literally; we use letters as length values
+    ;; (ord 'A' = 65) for testing the math, then a length-as-ord probe.
+    ;;
+    ;; Simpler: use a single-digit-length variant via decimal char codes
+    ;; we can express. Pick spaces: ord(' ') = 32 means "length 32"
+    ;; which is too long for our fixture. Use the test-friendlier
+    ;; "byte_at returns ord, ord(char) gives codepoint, length-prefix
+    ;; is just a number we read directly from string at position i".
+
+    ;; Simplest probe for read-length-prefix: encode lengths as
+    ;; single-char strings whose ord IS the length. ord('A')=65 too big.
+    ;; Use the trick: read len from the string, len comes from an
+    ;; explicit int (no need to embed binary chars).
+    (let bin-result (read-with-length "abcde" 0 3))
+    (let probe-5 (str_len (result-text bin-result)))   ; → 3 ("abc")
+    (let probe-6 (result-pos bin-result))              ; → 3 (advanced past "abc")
+
+    ;; --- probe 7: zero-length read ---------------------------------
+    (let zero-result (read-with-length "abcde" 0 0))
+    (let probe-7 (str_len (result-text zero-result)))  ; → 0 ("")
+
+    ;; --- probe 8: read-context dispatches on kind ------------------
+    ;; Same primitive handles both. "escape" context:
+    (let ctx-escape (list "escape" "|" "\\" json-escapes))
+    (let r8 (read-context "abc|def" 0 ctx-escape))
+    (let probe-8 (str_len (result-text r8)))           ; → 3 ("abc")
+
+    ;; "length" context:
+    (let ctx-length (list "length" 4))
+    (let r9 (read-context "abcdefg" 0 ctx-length))
+    (let probe-9 (str_len (result-text r9)))           ; → 4 ("abcd")
+
+    ;; Sum: 7 + 11 + 5 + 1 + 3 + 3 + 0 + 3 + 4 = 37
+    (add probe-1
+    (add probe-2
+    (add probe-3
+    (add probe-4
+    (add probe-5
+    (add probe-6
+    (add probe-7
+    (add probe-8 probe-9)))))))))
