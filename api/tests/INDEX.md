@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 188
+**Total files**: 189
 
 | File | Purpose |
 |---|---|
@@ -123,6 +123,7 @@
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
+| [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |
 | [test_renderers_router.py](test_renderers_router.py) | Route-level tests for /api/renderers/* endpoints. |
