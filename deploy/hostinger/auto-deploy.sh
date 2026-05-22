@@ -215,6 +215,17 @@ sync_substrate_content() {
   if [[ -f "$REPO_DIR/README.md" ]]; then
     docker compose cp "$REPO_DIR/README.md" api:/app/README.md 2>&1 | tee -a "$LOG_FILE"
   fi
+  # The registry inventory references the MCP entry point at its repo-
+  # relative path (api/mcp_server.py). Inside the container the file
+  # lives at /app/mcp_server.py because the api directory is the
+  # container root. Mirror it under /app/api/ so the validator's
+  # source_paths check resolves the same in both layouts.
+  if [[ -f "$REPO_DIR/api/mcp_server.py" ]]; then
+    docker compose exec -T api sh -lc 'mkdir -p /app/api' \
+      2>&1 | tee -a "$LOG_FILE" || true
+    docker compose cp "$REPO_DIR/api/mcp_server.py" api:/app/api/mcp_server.py \
+      2>&1 | tee -a "$LOG_FILE"
+  fi
 }
 
 run_substrate_ingest() {
