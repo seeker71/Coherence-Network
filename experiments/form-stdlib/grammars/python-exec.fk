@@ -35,9 +35,74 @@
     (let PY-EXEC-FROM-IMPORT  (make_nodeid 1 2 99 42))
     (let PY-EXEC-FUNCTION-DEF (make_nodeid 1 2 99 43))
     (let PY-EXEC-ASSIGN       (make_nodeid 1 2 99 44))
+    (let PY-EXEC-BIN-EXPR     (make_nodeid 1 2 99 47))
+    (let PY-EXEC-INT-EXPR     (make_nodeid 1 2 99 48))
+    (let PY-EXEC-STR-EXPR     (make_nodeid 1 2 99 49))
+    (let PY-EXEC-IDENT-EXPR   (make_nodeid 1 2 99 50))
+    (let PY-EXEC-PAREN-EXPR   (make_nodeid 1 2 99 51))
 
     (defn py-exec-is-module? (n)
         (node_eq (node_category n) PY-EXEC-MODULE))
+
+    (defn py-exec-is-int-expr? (n)
+        (node_eq (node_category n) PY-EXEC-INT-EXPR))
+    (defn py-exec-is-str-expr? (n)
+        (node_eq (node_category n) PY-EXEC-STR-EXPR))
+    (defn py-exec-is-ident-expr? (n)
+        (node_eq (node_category n) PY-EXEC-IDENT-EXPR))
+    (defn py-exec-is-bin-expr? (n)
+        (node_eq (node_category n) PY-EXEC-BIN-EXPR))
+    (defn py-exec-is-paren-expr? (n)
+        (node_eq (node_category n) PY-EXEC-PAREN-EXPR))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Expression evaluator — walks a parsed expression Recipe and
+    ;; returns an integer value (treating booleans as 0/1, identifiers
+    ;; resolved from env when they hold ints).
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn py-exec-apply-op (op lhs rhs)
+        (if (str_eq op "+") (add lhs rhs)
+        (if (str_eq op "-") (sub lhs rhs)
+        (if (str_eq op "*") (mul lhs rhs)
+        (if (str_eq op "/") (div lhs rhs)
+        (if (str_eq op "%") (mod lhs rhs)
+        (if (str_eq op "==") (if (eq lhs rhs) 1 0)
+        (if (str_eq op "!=") (if (eq lhs rhs) 0 1)
+        (if (str_eq op "<")  (if (lt lhs rhs) 1 0)
+        (if (str_eq op ">")  (if (gt lhs rhs) 1 0)
+        (if (str_eq op "<=") (if (le lhs rhs) 1 0)
+        (if (str_eq op ">=") (if (ge lhs rhs) 1 0)
+        (if (str_eq op "and") (if (and (gt lhs 0) (gt rhs 0)) 1 0)
+        (if (str_eq op "or")  (if (or (gt lhs 0) (gt rhs 0)) 1 0)
+            0))))))))))))))
+
+    (defn py-exec-env-lookup-int (env name)
+        (if (nil? env) 0
+            (if (str_eq (head (head env)) name)
+                (do
+                    (let v (head (tail (head env))))
+                    ;; Try parsing as int; non-ints return 0
+                    (str_to_int v))
+                (py-exec-env-lookup-int (tail env) name))))
+
+    (defn py-exec-eval-expr (expr env)
+        (if (py-exec-is-int-expr? expr)
+            (walk_recipe (head (node_children expr)))
+        (if (py-exec-is-str-expr? expr)
+            0   ; strings as ints fall back to 0
+        (if (py-exec-is-ident-expr? expr)
+            (py-exec-env-lookup-int env (node_value (head (node_children expr))))
+        (if (py-exec-is-paren-expr? expr)
+            (py-exec-eval-expr (head (node_children expr)) env)
+        (if (py-exec-is-bin-expr? expr)
+            (do
+                (let kids (node_children expr))
+                (let op (node_value (head kids)))
+                (let lhs-val (py-exec-eval-expr (head (tail kids)) env))
+                (let rhs-val (py-exec-eval-expr (head (tail (tail kids))) env))
+                (py-exec-apply-op op lhs-val rhs-val))
+            0))))))
 
     (defn py-exec-is-import? (n)
         (node_eq (node_category n) PY-EXEC-IMPORT))
@@ -93,9 +158,13 @@
             (if (py-exec-is-assign? stmt)
                 (do
                     (let name (node_value (head kids)))
-                    (let value (node_value (head (tail kids))))
-                    (print (str_concat "assign: " (str_concat name (str_concat " = " value))))
-                    (py-exec-env-bind env name value))
+                    (let value-expr (head (tail kids)))
+                    ;; Evaluate the expression Recipe (int arithmetic /
+                    ;; comparison / boolean / paren / ident lookup).
+                    (let value-int (py-exec-eval-expr value-expr env))
+                    (let value-str (int_to_str value-int))
+                    (print (str_concat "assign: " (str_concat name (str_concat " = " value-str))))
+                    (py-exec-env-bind env name value-str))
                 ;; unknown statement — pass through
                 env))))))
 
