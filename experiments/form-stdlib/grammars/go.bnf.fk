@@ -86,6 +86,12 @@
         (intern_node GO-BNF-CASE
                       (list (cap-get caps "val"))))
 
+    (let GO-BNF-COMPOSITE (make_nodeid 1 2 99 106))
+    (defn go-bnf-emit-composite (caps)
+        ;; Type{}: empty composite literal — type-name as identity
+        (intern_node GO-BNF-COMPOSITE
+                      (list (intern_trivial_string (cap-get caps "type")))))
+
     ;; ──────────────────────────────────────────────────────────────────
     ;; Module-collection helpers
     ;; ──────────────────────────────────────────────────────────────────
@@ -458,9 +464,12 @@ rules {
   expression    ::= lhs:primary-expr (op:binary-op rhs:primary-expr)*  => go-bnf-emit-bmf-fold ;
   binary-op     ::= OROR | ANDAND | EQEQ | NEQ | LE | GE | LT | GT
                   | PLUS | MINUS | STAR | SLASH | PERCENT ;
-  ;; primary-expr alternatives: ORDER MATTERS — call and selector
-  ;; both start with IDENT, must be tried before the bare ident-expr.
+  ;; primary-expr alternatives: ORDER MATTERS — call/selector start
+  ;; with IDENT, must be tried before bare ident. Composite literals
+  ;; live as their own statement-level construct (Go's for-condition
+  ;; otherwise has the classical `for x {` ambiguity).
   primary-expr  ::= call-expr | selector-expr | int-lit | str-lit | ident-expr | paren-expr ;
+  composite-lit ::= type:IDENT LBRACE RBRACE                       => go-bnf-emit-composite ;
   paren-expr    ::= LPAREN expr:expression RPAREN          => go-bnf-emit-paren ;
   call-expr     ::= name:IDENT LPAREN first:expression (COMMA expression)* RPAREN  => go-bnf-emit-call ;
   selector-expr ::= base:IDENT DOT field:IDENT             => go-bnf-emit-selector ;
@@ -502,7 +511,8 @@ rules {
               (list "go-bnf-emit-struct-fields" go-bnf-emit-struct-fields)
               (list "go-bnf-emit-short-var"   go-bnf-emit-short-var)
               (list "go-bnf-emit-switch"      go-bnf-emit-switch)
-              (list "go-bnf-emit-case"        go-bnf-emit-case)))
+              (list "go-bnf-emit-case"        go-bnf-emit-case)
+              (list "go-bnf-emit-composite"   go-bnf-emit-composite)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))

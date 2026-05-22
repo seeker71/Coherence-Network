@@ -281,6 +281,14 @@
         (intern_node PY-BNF-RETURN
                       (list (cap-get caps "expr"))))
 
+    ;; def-stmt with body — function definition with a single-expression
+    ;; body (multi-statement indent-aware body is the next breath when
+    ;; the indentation tokenizer lands).
+    (defn py-bnf-emit-def-body (caps)
+        (intern_node PY-BNF-FUNCTION-DEF
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "body"))))
+
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 3 — the BNF grammar text
     ;; ──────────────────────────────────────────────────────────────────
@@ -344,7 +352,9 @@ rules {
   import-as    ::= IMPORT IDENT AS IDENT                       => py-bnf-emit-import-as ;
   import-bare  ::= IMPORT IDENT                                 => py-bnf-emit-import-bare ;
   from-stmt    ::= FROM IDENT IMPORT IDENT                      => py-bnf-emit-from-import ;
-  def-stmt     ::= DEF IDENT LPAREN RPAREN COLON                => py-bnf-emit-def ;
+  def-stmt     ::= def-with-body | def-bare ;
+  def-with-body ::= DEF name:IDENT LPAREN RPAREN COLON body:expression => py-bnf-emit-def-body ;
+  def-bare     ::= DEF IDENT LPAREN RPAREN COLON               => py-bnf-emit-def ;
   if-stmt      ::= IF cond:expression COLON body:expression     => py-bnf-emit-if-stmt ;
   while-stmt   ::= WHILE cond:expression COLON body:expression  => py-bnf-emit-while-stmt ;
   for-stmt     ::= FOR var:IDENT IN iter:expression COLON body:expression => py-bnf-emit-for-stmt ;
@@ -390,6 +400,7 @@ rules {
               (list "py-bnf-emit-while-stmt"       py-bnf-emit-while-stmt)
               (list "py-bnf-emit-for-stmt"         py-bnf-emit-for-stmt)
               (list "py-bnf-emit-return-stmt"      py-bnf-emit-return-stmt)
+              (list "py-bnf-emit-def-body"         py-bnf-emit-def-body)
               (list "py-bnf-emit-passthrough"      py-bnf-emit-passthrough)))
 
     (let py-bnf-grammar
