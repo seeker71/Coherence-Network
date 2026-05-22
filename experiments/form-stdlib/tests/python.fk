@@ -1,5 +1,7 @@
 ; tests/python.fk — exercise python.fk file-header subset
 ;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/python.fk
+;
 ; Loaded via:
 ;   bin-go core.fk cell-trace.fk grammars/python.fk tests/python.fk
 

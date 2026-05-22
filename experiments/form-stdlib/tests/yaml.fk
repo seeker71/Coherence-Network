@@ -1,5 +1,7 @@
 ; tests/yaml.fk — exercise YAML parser end-to-end
 ;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/yaml.fk
+;
 ; Loaded via:
 ;   bin-go core.fk cell-trace.fk grammars/yaml.fk tests/yaml.fk
 
