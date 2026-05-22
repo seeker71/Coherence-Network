@@ -1,0 +1,112 @@
+; grammars/go-universal.bnf.fk — Go parser that emits universal Blueprints.
+;
+; Symmetric to python-universal.bnf.fk. Together they make the bidirectional
+; translator: parse Go → universal Recipe → emit Python (or any other tongue).
+;
+; Subset: func name(params) ret-type { return expr }
+
+(do
+    (let U-FNDEF     (make_nodeid 1 2 31 1))
+    (let U-RETURN    (make_nodeid 1 2 18 1))
+    (let U-MATH-PLUS (make_nodeid 1 2 12 1))
+    (let U-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let U-MATH-MUL  (make_nodeid 1 2 12 3))
+    (let U-IDENT     (make_nodeid 1 2 33 1))
+    (let U-SEQ       (make_nodeid 1 2 9 2))
+
+    (defn gu-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1") caps)))
+
+    (defn gu-name-of (ident-recipe)
+        (node_value (head (node_children ident-recipe))))
+
+    (defn gu-emit-int (caps)
+        (intern_node U-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn gu-emit-ident (caps)
+        (intern_node U-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+
+    (defn gu-emit-binop (caps)
+        (if (cap-has? caps "op")
+            (do
+                (let op (cap-get caps "op"))
+                (if (str_eq op "+")
+                    (intern_node U-MATH-PLUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "-")
+                    (intern_node U-MATH-MINUS (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                (if (str_eq op "*")
+                    (intern_node U-MATH-MUL (list (cap-get caps "lhs") (cap-get caps "rhs")))
+                    (cap-get caps "lhs")))))
+            (cap-get caps "lhs")))
+
+    (defn gu-emit-return (caps)
+        (intern_node U-RETURN (list (cap-get caps "value"))))
+
+    (defn gu-emit-params (caps)
+        (intern_trivial_string
+            (str_concat (gu-name-of (cap-get caps "p1"))
+                        (str_concat ", " (gu-name-of (cap-get caps "p2"))))))
+
+    (defn gu-emit-params-one (caps)
+        (intern_trivial_string (gu-name-of (cap-get caps "p1"))))
+
+    (defn gu-emit-fndef (caps)
+        (intern_node U-FNDEF
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "params")
+                            (cap-get caps "body"))))
+
+    (let go-universal-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  ident-kind IDENT
+  operator ( LPAREN
+  operator ) RPAREN
+  operator { LBRACE
+  operator } RBRACE
+  operator , COMMA
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  keyword FUNC func
+  keyword RETURN return
+}
+
+rules {
+  start        ::= fndef ;
+  fndef        ::= FUNC name:IDENT LPAREN params:param-list RPAREN LBRACE body:return-stmt RBRACE => gu-emit-fndef ;
+  param-list   ::= param-pair | param-single ;
+  param-pair   ::= p1:ident-expr COMMA p2:ident-expr  => gu-emit-params ;
+  param-single ::= p1:ident-expr                       => gu-emit-params-one ;
+  return-stmt  ::= RETURN value:expression             => gu-emit-return ;
+  expression   ::= sum-expr ;
+  sum-expr     ::= lhs:mul-expr (op:add-op rhs:mul-expr)?  => gu-emit-binop ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= lhs:atom (op:mul-op rhs:atom)?      => gu-emit-binop ;
+  mul-op       ::= STAR ;
+  atom         ::= int-lit | ident-expr ;
+  int-lit      ::= INT                                 => gu-emit-int ;
+  ident-expr   ::= IDENT                               => gu-emit-ident ;
+}")
+
+    (let go-universal-registry
+        (list (list "gu-passthrough"   gu-passthrough)
+              (list "gu-emit-int"      gu-emit-int)
+              (list "gu-emit-ident"    gu-emit-ident)
+              (list "gu-emit-binop"    gu-emit-binop)
+              (list "gu-emit-return"   gu-emit-return)
+              (list "gu-emit-fndef"    gu-emit-fndef)
+              (list "gu-emit-params"   gu-emit-params)
+              (list "gu-emit-params-one" gu-emit-params-one)))
+
+    (let go-universal-grammar
+        (load-bnf-grammar go-universal-text go-universal-registry))
+
+    (defn parse-go-universal (text)
+        (bnf-parse text go-universal-grammar))
+
+    0)

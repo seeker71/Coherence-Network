@@ -1,0 +1,50 @@
+; tests/translator-bidirectional.fk — verify bidirectional translation
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+;
+; The verifiable bidirectional translator:
+;
+;   Python source → parse → universal Recipe → emit Go    (Python → Go)
+;   Go source     → parse → universal Recipe → emit Python (Go → Python)
+;
+; Both directions through the SAME universal vocabulary.
+
+(do
+    (let NL "
+")
+
+    (let registry
+        (list (list "python"     python-templates)
+              (list "go"         go-templates)
+              (list "typescript" typescript-templates)))
+
+    ;; Direction 1: Python → Go
+    (let py-src "def add(a, b): return a + b")
+    (let recipe-from-py (parse-python-universal py-src))
+    (let py-to-go (emit-to "go" recipe-from-py registry))
+
+    ;; Direction 2: Go → Python
+    (let go-src "func mul(x, y) { return x * y }")
+    (let recipe-from-go (parse-go-universal go-src))
+    (let go-to-py (emit-to "python" recipe-from-go registry))
+
+    ;; Round-trip Go: parse Go → emit Go
+    (let go-roundtrip (emit-to "go" recipe-from-go registry))
+
+    (print "── Python → Go ──")
+    (print py-src)
+    (print "  ↓")
+    (print py-to-go)
+    (print "")
+    (print "── Go → Python ──")
+    (print go-src)
+    (print "  ↓")
+    (print go-to-py)
+    (print "")
+    (print "── Go round-trip ──")
+    (print go-src)
+    (print "  ↓")
+    (print go-roundtrip)
+    (print "")
+
+    (add (str_len py-to-go) (add (str_len go-to-py) (str_len go-roundtrip))))
