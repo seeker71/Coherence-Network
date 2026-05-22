@@ -766,6 +766,8 @@ app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["cr
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(substrate_router.router, prefix="/api/substrate", tags=["substrate"])
 app.include_router(wellness_router.router, prefix="/api", tags=["wellness"])
+from app.routers import breath as breath_router
+app.include_router(breath_router.router, prefix="/api", tags=["breath"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
