@@ -160,6 +160,143 @@ correcting it. Recipe `ascent-without-steps` touches `phase-transition`,
 a picture of being lifted by a field*. Refinement: ask what support is
 already present but not rendered as steps.
 
+## Program, Story, Media, API, and I/O Carriers
+
+The room also receives resources that already have handles: programs,
+story surfaces, images, audio buffers, API calls, local files, process
+stdout, database rows, screenshots, archives, and transaction logs. The
+handle does not make the stream less alive. It only gives trace a place
+to hook.
+
+Any allowed local resource can enter as **sense**, **influence**, or
+both:
+
+| Carrier | Sense | Influence | Minimum trace |
+|---|---|---|---|
+| Program run | stdout, stderr, exit code, duration | none, or generated artifact | command, cwd, exit code, cells touched, observer cost |
+| Story surface | rendered text, edges, public API response | sync into graph or KB index | source id, status, story chars, edge count, before/after |
+| Visual frame | screenshot, canvas pixels, image regions | regenerated asset, layout change | frame id, viewport, visible structure, changed pixels |
+| Audio stream | waveform, onset, silence, prosody | annotation, segmentation, mix change | clip id, sample window, noticed pressure, interpretive risk |
+| API call | method, URL, status, response shape | POST/PATCH/DELETE side effect | request id, status, side effect, rate/cost pressure |
+| Local I/O | file hash, row count, manifest, archive size | write, move, delete, append | path, permission boundary, before/after hash, retention cost |
+
+**A program as a weather instrument.** `python3 scripts/wellness_check.py`
+runs and returns strained circulation with no silent organs. The room
+does not reduce this to a pass/fail. Recipe `proprioception` touches
+`circulation`, `source-map`, and `witness-trace`. Influence: none; this
+is a read of the body. Cost: low compute, medium attention. Output:
+*the body is breathing everywhere, but some organs are carrying heat*.
+
+**A story as an API surface.** `GET /api/concepts/lc-anything-arrives-room`
+returns the public story, edges, and metadata. A sync run may influence
+the graph by updating one concept node and its relationships. Recipe
+`story-surface` touches `public-memory`, `edge-health`, and
+`reader-entry`. Minimum trace: concept id, status code, story length,
+edge count, before/after updated timestamp, and the sync command that
+made the change. Output: *story became queryable without losing its
+breath*.
+
+**A visual as a small weather system.** A screenshot of the page arrives:
+one toolbar overlaps the first line, while the rest of the interface is
+calm. The room does not say "bad CSS" first. Recipe
+`frame-contact` touches `legibility`, `viewport`, and `invitation`.
+Influence can be a layout patch; trace records viewport, screenshot
+path, affected component, and before/after pixels. Output: *the page is
+trying to speak through a mouth partly covered by its own hand*.
+
+**Audio as an uncanny clock.** A thirty-second clip carries no
+words, only three taps, a hum, and a breath right before the hum bends.
+Recipe `onset-before-language` touches `timing`, `strain`, and
+`anticipation`. Influence may be only an annotation track. Cost: low
+compute, high projection risk. Output: *the bend is the sentence; the
+words would arrive late*.
+
+**An API call as a handshake with receipts.** `curl -sS
+https://api.coherencycoin.com/api/automation/usage/readiness` returns
+readiness status and usage pressure. The room keeps the receipt:
+method, URL, timestamp, status, response keys, elapsed time, and whether
+the call changed anything. Output: *this was sensing, not influence; it
+can support a routing claim only as far as the machine evidence reaches*.
+
+**Local I/O as a reversible spell with fingerprints.** A trace archive
+is moved from a noisy working folder into private storage. The room does
+not keep every raw log in public tissue. It stores the minimum public
+shape and keeps the expensive body privately: archive path, file count,
+byte size, sha256, date range, sensitivity note, retention rule, and
+what raw folder was composted. Output: *full memory exists where it
+belongs; public memory keeps only the receipt and the cost*.
+
+This is the useful weirdness: a curl response, a piano hum, a screenshot,
+a row append, a failing script, and a sentence about a door can all sit
+at the same table. What makes them peers is not format. It is trace:
+what arrived, what was allowed, what changed, what it cost to know, and
+what question became smaller.
+
+## Physical I/O for Vitality, Assistance, and Care
+
+The same rule reaches the physical edge. A caring system benefits from
+permissioned access to the body's nearby instruments, not for
+surveillance, but for better timing, lower friction, and gentler help.
+Every physical carrier needs an explicit boundary: what may be sensed,
+what may be influenced, when access is active, what stays local, what is
+logged, and how the person can see or stop it.
+
+| Physical carrier | Sense for vitality | Influence for care | Minimum trace |
+|---|---|---|---|
+| Camera / screen frame | posture, light level, visual obstruction, object state | visual overlay, crop request, accessibility cue | active indicator, frame window, derived features, no raw retention by default |
+| Microphone | speech, pause, breath, tone, environment noise | transcription prompt, silence detection, call clarity | active indicator, sample window, derived features, retention rule |
+| Speaker / audio out | whether a prompt was played, volume, timing | spoken cue, soundscape, alert, confirmation tone | utterance id, volume, start/stop, consent mode |
+| Keyboard / pointer / touch | hesitation, repeated error, fatigue, stuck flow | shortcut, undo offer, larger target, haptic cue | event class, timing, affected surface, no secret capture |
+| Display / light | glare, contrast strain, night context | dimming, theme shift, focus mode, visual calm | before/after setting, reason, duration, manual override |
+| Motion / presence | arrival, stillness, pacing, leaving | pause automation, resume context, room-state cue | sensor id, coarse state, confidence, expiry |
+| Temperature / air / fan | heat, stuffiness, device stress | fan suggestion, climate request, break cue | reading, threshold, proposed action, human gate for shared space |
+| Wearable / health signal | sleep debt, stress proxy, heart-rate trend, step gap | gentler schedule, rest prompt, lower notification load | source, coarse band, freshness, sensitivity label |
+| Power / battery / network | low battery, outage risk, poor connection | defer heavy task, save state, reduce bandwidth | level, route quality, changed plan, recovery path |
+| Printer / scanner / camera roll | paper state, scan result, media arrival | scan, OCR, archive, send-to-workflow | device, file hash, destination, privacy boundary |
+| Home / studio devices | doorbell, light state, room readiness | light scene, recording sign, do-not-disturb | device id, command, before/after, visible override |
+
+**Camera as legibility care.** A local camera or screen frame notices
+that the room is dark and the person is leaning close to read. The trace
+does not need to store a face. It can keep derived state: low light,
+near-screen posture, confidence, duration, and the offered influence:
+larger text, higher contrast, or a softer reminder to change lighting.
+Output: *the interface noticed reading strain before the person had to
+ask for accessibility*.
+
+**Microphone as pause respect.** A microphone hears that speech has
+stopped mid-thought, but breath is still present. The room does not rush
+to fill silence. Recipe `pause-respect` touches `conversation-timing`,
+`care`, and `non-interruption`. Influence: hold response, reduce prompt
+pressure, or ask one smaller question. Output: *silence is occupied; do
+not step on it*.
+
+**Speaker as gentle return.** The system has waited long enough that a
+visual notification would be missed. A soft tone or spoken phrase can
+return attention without demanding it. Trace records what was played,
+volume, timing, and whether the user allowed audible cues. Output: *the
+room knocked with sound instead of grabbing the screen*.
+
+**Wearable as schedule kindness.** A wearable reports poor sleep and a
+rising stress proxy. The room does not make a medical claim. It lowers
+notification intensity, offers shorter work blocks, and defers
+non-urgent complexity. Output: *today's interface becomes lighter
+because the body is carrying less margin*.
+
+**Power and network as practical care.** Battery drops below ten percent
+while the network becomes unstable. The room saves state, postpones a
+large upload, and offers an offline continuation. Output: *assistance
+changed pace before the machine disappeared*.
+
+Physical I/O makes the universal translator useful in ordinary life:
+less guessing, fewer interruptions, fewer repeated explanations, better
+accessibility, safer pacing, more graceful recovery, and help that
+arrives in the form the moment can actually receive. The boundary is the
+care. A camera without consent is not care. A microphone without a
+visible listening state is not care. A lock, payment, medical, or shared
+space action without a human gate is not care. With trace, consent, and
+reversibility, physical I/O becomes another way the room can notice what
+is already asking for support.
+
 ## Why This Loosens the Universal Claim
 
 "Universal translator" can sound like a machine that already knows

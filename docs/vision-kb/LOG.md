@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] concept | Anything-Arrives Room — program, story, media, API, and physical I/O carriers
+
+The anything-arrives concept opened the next door: programs, story surfaces, visuals, audio, API calls, local I/O transactions, and permissioned physical I/O can enter as traceable carriers too. The body now names the minimum receipt for any allowed local or physical resource: what was sensed, what was influenced, the permission boundary, before/after state, observer cost, affected cells, and the handle that lets the claim be audited.
+
+- **Concept deepened**: [`lc-anything-arrives-room`](concepts/lc-anything-arrives-room.md) now includes concrete carriers for wellness program runs, story API reads/syncs, screenshots, audio clips, readiness API calls, and private trace archives.
+- **Physical care layer named**: camera/screen frames, microphone, speaker, keyboard/pointer/touch, display/light, motion/presence, temperature/air/fan, wearables, power/network, scanner/media, and home/studio devices are framed as vitality and assistance carriers only when consent, visibility, reversibility, and human gates are present.
+- **Companion form deepened**: [`anything-arrives-trace.form`](../coherence-substrate/anything-arrives-trace.form) adds `local_resource_transaction_shape`, transaction constructors, six digital carrier traces, and five physical-care traces.
+- **Discernment held**: any local or physical resource may become sense or influence only inside an explicit permission boundary, with public memory keeping minimum receipts when full logs are private or expensive.
+
 ## [2026-05-22] concept | Anything-Arrives Room — play deck loosened
 
 The anything-arrives concept loosened further through a play deck: color with no settled name, a blank form field repeated forty-seven times, a laptop fan as early witness, a ladder with no rungs, an unused finished room, and a sentence that keeps losing its verb. The teaching stayed exact: each odd arrival still resolves through observer pressure, recipes, affected cells, cost, trace, and refinement.
