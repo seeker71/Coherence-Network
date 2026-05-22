@@ -64,6 +64,11 @@
     (let GO-BNF-BIN-EXPR (make_nodeid 1 2 99 95))
     (let GO-BNF-UNARY-EXPR (make_nodeid 1 2 99 96))
     (let GO-BNF-PAREN-EXPR (make_nodeid 1 2 99 97))
+    (let GO-BNF-PARAM      (make_nodeid 1 2 99 98))
+    (let GO-BNF-CALL       (make_nodeid 1 2 99 99))
+    (let GO-BNF-SELECTOR   (make_nodeid 1 2 99 100))
+    (let GO-BNF-FOR        (make_nodeid 1 2 99 101))
+    (let GO-BNF-FIELD      (make_nodeid 1 2 99 102))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Module-collection helpers
@@ -284,6 +289,60 @@
                     (head result)))))
 
     ;; ──────────────────────────────────────────────────────────────────
+    ;; Function parameters, calls, selectors, struct fields, for loop
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn go-bnf-emit-param (caps)
+        (intern_node GO-BNF-PARAM
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (intern_trivial_string (cap-get caps "type-name")))))
+
+    (defn go-bnf-collect-from-comma-list (items)
+        ;; items is a list of inner-caps from the (COMMA rule)* star.
+        ;; Each inner-caps has `_result` = the comma-tail's value.
+        (if (nil? items) (empty)
+            (cons (cap-get (head items) "_result")
+                  (go-bnf-collect-from-comma-list (tail items)))))
+
+    (defn go-bnf-emit-call (caps)
+        (do
+            (let name (cap-get caps "name"))
+            (let first-arg (if (cap-has? caps "first") (cap-get caps "first") (empty)))
+            (let rest-items (if (cap-has? caps "items")
+                                (go-bnf-reverse (cap-get caps "items"))
+                                (empty)))
+            (let rest-args (go-bnf-collect-from-comma-list rest-items))
+            (let all-args (if (cap-has? caps "first")
+                              (cons first-arg rest-args)
+                              (empty)))
+            (intern_node GO-BNF-CALL
+                          (cons (intern_trivial_string name) all-args))))
+
+    (defn go-bnf-emit-selector (caps)
+        (intern_node GO-BNF-SELECTOR
+                      (list (intern_trivial_string (cap-get caps "base"))
+                            (intern_trivial_string (cap-get caps "field")))))
+
+    (defn go-bnf-emit-for (caps)
+        (intern_node GO-BNF-FOR
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+
+    (defn go-bnf-emit-field (caps)
+        (intern_node GO-BNF-FIELD
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (intern_trivial_string (cap-get caps "type-name")))))
+
+    (defn go-bnf-emit-struct-fields (caps)
+        ;; struct-type ::= STRUCT LBRACE field-decl* RBRACE
+        ;; Each field-decl emits a GO-BNF-FIELD; we collect them as
+        ;; children of GO-BNF-STRUCT-TYPE.
+        (do
+            (let raw-items (cap-get caps "items"))
+            (let ordered (if (nil? raw-items) (empty) (go-bnf-reverse raw-items)))
+            (let fields (go-bnf-collect-results ordered))
+            (intern_node GO-BNF-STRUCT-TYPE fields)))
+
+    ;; ──────────────────────────────────────────────────────────────────
     ;; The BNF grammar text — pure declarative, BMF surface
     ;; ──────────────────────────────────────────────────────────────────
 
@@ -327,6 +386,7 @@
   keyword CONST const
   keyword RETURN return
   keyword IF if
+  keyword FOR for
   keyword INTERFACE interface
 }
 
@@ -338,11 +398,14 @@ rules {
   const-decl    ::= CONST name:IDENT EQUALS value:INT      => go-bnf-emit-const ;
   type-decl     ::= TYPE name:IDENT struct-type            => go-bnf-emit-type ;
   var-decl      ::= VAR name:IDENT EQUALS value:INT        => go-bnf-emit-var ;
-  func-decl     ::= FUNC name:IDENT LPAREN RPAREN body:block => go-bnf-emit-func ;
+  func-decl     ::= FUNC name:IDENT LPAREN params? RPAREN body:block => go-bnf-emit-func ;
+  params        ::= first:param (COMMA param)* ;
+  param         ::= name:IDENT type-name:IDENT             => go-bnf-emit-param ;
   block         ::= LBRACE statement* RBRACE               => go-bnf-emit-block ;
-  statement     ::= return-stmt | if-stmt | assign-stmt | expr-stmt ;
+  statement     ::= return-stmt | if-stmt | for-stmt | assign-stmt | expr-stmt ;
   return-stmt   ::= RETURN expr:expression                 => go-bnf-emit-return-value ;
   if-stmt       ::= IF cond:expression body:block          => go-bnf-emit-if ;
+  for-stmt      ::= FOR cond:expression body:block         => go-bnf-emit-for ;
   assign-stmt   ::= name:IDENT EQUALS value:expression     => go-bnf-emit-assign ;
   expr-stmt     ::= expr:expression                        => go-bnf-emit-expr-stmt ;
   ;; BMF-style: ONE Expression rule. Precedence + associativity live in
@@ -351,12 +414,17 @@ rules {
   expression    ::= lhs:primary-expr (op:binary-op rhs:primary-expr)*  => go-bnf-emit-bmf-fold ;
   binary-op     ::= OROR | ANDAND | EQEQ | NEQ | LE | GE | LT | GT
                   | PLUS | MINUS | STAR | SLASH | PERCENT ;
-  primary-expr  ::= int-lit | str-lit | ident-expr | paren-expr ;
+  ;; primary-expr alternatives: ORDER MATTERS — call and selector
+  ;; both start with IDENT, must be tried before the bare ident-expr.
+  primary-expr  ::= call-expr | selector-expr | int-lit | str-lit | ident-expr | paren-expr ;
   paren-expr    ::= LPAREN expr:expression RPAREN          => go-bnf-emit-paren ;
+  call-expr     ::= name:IDENT LPAREN first:expression (COMMA expression)* RPAREN  => go-bnf-emit-call ;
+  selector-expr ::= base:IDENT DOT field:IDENT             => go-bnf-emit-selector ;
   int-lit       ::= value:INT                              => go-bnf-emit-int-expr ;
   str-lit       ::= value:STRING                           => go-bnf-emit-str-expr ;
   ident-expr    ::= name:IDENT                             => go-bnf-emit-ident-expr ;
-  struct-type   ::= STRUCT LBRACE RBRACE                   => go-bnf-emit-struct-type ;
+  struct-type   ::= STRUCT LBRACE field-decl* RBRACE       => go-bnf-emit-struct-fields ;
+  field-decl    ::= name:IDENT type-name:IDENT             => go-bnf-emit-field ;
 }")
 
     (let go-bnf-registry
@@ -381,7 +449,13 @@ rules {
               (list "go-bnf-emit-cmp"         go-bnf-emit-cmp)
               (list "go-bnf-emit-unary"       go-bnf-emit-unary)
               (list "go-bnf-emit-paren"       go-bnf-emit-paren)
-              (list "go-bnf-emit-bmf-fold"    go-bnf-emit-bmf-fold)))
+              (list "go-bnf-emit-bmf-fold"    go-bnf-emit-bmf-fold)
+              (list "go-bnf-emit-param"       go-bnf-emit-param)
+              (list "go-bnf-emit-call"        go-bnf-emit-call)
+              (list "go-bnf-emit-selector"    go-bnf-emit-selector)
+              (list "go-bnf-emit-for"         go-bnf-emit-for)
+              (list "go-bnf-emit-field"       go-bnf-emit-field)
+              (list "go-bnf-emit-struct-fields" go-bnf-emit-struct-fields)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))
