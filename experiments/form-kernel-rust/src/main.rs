@@ -827,6 +827,41 @@ impl Kernel {
             k.source_attr.clear();
             Value::Null
         });
+        // serialize-recipe — walk a Recipe tree, emit a flat byte list
+        // (each byte as Value::Int). Format per node: 5 big-endian u32
+        // values (pkg, level, ty, inst, children_count) + recursively
+        // each child's serialization. Trivials have children_count=0.
+        // The substrate's content-addressing means deserialize re-
+        // creates the same NodeID via intern.
+        self.register_native("serialize-recipe", cat_witness(), |k, _, args| {
+            let mut bytes: Vec<u8> = Vec::new();
+            serialize_nid(k, args[0].as_nid(), &mut bytes);
+            Value::List(bytes.into_iter().map(|b| Value::Int(b as i64)).collect())
+        });
+        // deserialize-recipe — read flat byte list back into a Recipe
+        // tree, re-interning composites so the resulting NodeIDs
+        // collapse to the same identities as the original tree.
+        self.register_native("deserialize-recipe", cat_witness(), |k, _, args| {
+            let bytes: Vec<u8> = match &args[0] {
+                Value::List(xs) => xs.iter().map(|v| v.as_int() as u8).collect(),
+                _ => Vec::new(),
+            };
+            let (nid, _pos) = deserialize_nid(k, &bytes, 0);
+            Value::Nid(nid)
+        });
+        // write_file_bytes — write a list of byte-values to a path.
+        // Sibling of read_file_bytes (added with PNG binary parser).
+        self.register_native("write_file_bytes", cat_call(), |_, _, args| {
+            let path = args[0].as_str().to_string();
+            let bytes: Vec<u8> = match &args[1] {
+                Value::List(xs) => xs.iter().map(|v| v.as_int() as u8).collect(),
+                _ => Vec::new(),
+            };
+            match fs::write(&path, &bytes) {
+                Ok(_) => Value::Int(bytes.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
         // walk_recipe — evaluate a NodeID in a fresh root frame. Returns
         // the value the recipe produces. Use case: Form code builds a
         // recipe via intern_node, then walks it to get the runtime result.
@@ -1757,4 +1792,83 @@ fn main() {
         }
     };
     std::process::exit(exit_code);
+}
+
+// ---------------------------------------------------------------------------
+// Form binary artifact format
+// ---------------------------------------------------------------------------
+// Each NodeID serializes to 20 bytes of (pkg, level, ty, inst, children_count)
+// as big-endian u32s, followed by recursive serialization of each child.
+// Trivials have children_count=0 (their value is encoded in inst, no
+// children follow). Composites have children_count>0 and the next that
+// many serialized NodeIDs are recursive sub-trees.
+//
+// Round-trip property: deserialize(serialize(nid)) === nid via the
+// substrate's content-addressing — same shape interns to same NodeID.
+
+fn push_u32(bytes: &mut Vec<u8>, v: u32) {
+    bytes.push((v >> 24) as u8);
+    bytes.push((v >> 16) as u8);
+    bytes.push((v >> 8) as u8);
+    bytes.push(v as u8);
+}
+
+fn read_u32(bytes: &[u8], pos: usize) -> (u32, usize) {
+    let v = ((bytes[pos] as u32) << 24)
+          | ((bytes[pos + 1] as u32) << 16)
+          | ((bytes[pos + 2] as u32) << 8)
+          | (bytes[pos + 3] as u32);
+    (v, pos + 4)
+}
+
+fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
+    let kids = k.children(nid);
+    if kids.is_empty() {
+        // Trivial leaf — the NodeID IS the value (inst encodes it).
+        // Write the nid as-is.
+        push_u32(bytes, nid.pkg);
+        push_u32(bytes, nid.level);
+        push_u32(bytes, nid.ty);
+        push_u32(bytes, nid.inst);
+        push_u32(bytes, 0);
+    } else {
+        // Composite — the NodeID's inst is the intern-counter
+        // (recreated at deserialize time via re-intern). What we
+        // serialize is the CATEGORY (which determines the shape)
+        // plus the children. The composite NodeID itself will be
+        // reconstructed by k.intern(category, children).
+        let cat = k.category(nid);
+        push_u32(bytes, cat.pkg);
+        push_u32(bytes, cat.level);
+        push_u32(bytes, cat.ty);
+        push_u32(bytes, cat.inst);
+        push_u32(bytes, kids.len() as u32);
+        for c in kids {
+            serialize_nid(k, c, bytes);
+        }
+    }
+}
+
+fn deserialize_nid(k: &mut Kernel, bytes: &[u8], pos: usize) -> (NodeID, usize) {
+    let (pkg, p) = read_u32(bytes, pos);
+    let (level, p) = read_u32(bytes, p);
+    let (ty, p) = read_u32(bytes, p);
+    let (inst, p) = read_u32(bytes, p);
+    let (count, mut p) = read_u32(bytes, p);
+    if count == 0 {
+        // Trivial leaf — reconstruct NodeID directly. The substrate
+        // content-addresses these (same bytes = same NodeID).
+        return (NodeID { pkg, level, ty, inst }, p);
+    }
+    // Composite — (pkg, level, ty, inst) is the CATEGORY. Re-intern
+    // with reconstructed children to get back the same composite
+    // NodeID (intern is content-addressed: same shape = same id).
+    let category = NodeID { pkg, level, ty, inst };
+    let mut children = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        let (c, np) = deserialize_nid(k, bytes, p);
+        children.push(c);
+        p = np;
+    }
+    (k.intern(category, children), p)
 }
