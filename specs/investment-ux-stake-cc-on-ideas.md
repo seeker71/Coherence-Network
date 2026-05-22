@@ -1,6 +1,6 @@
 ---
 idea_id: identity-and-onboarding
-status: done
+status: active
 source:
   - file: api/app/services/stake_compute_service.py
     symbols: [compute_next_tasks_for_idea()]
@@ -21,6 +21,15 @@ done_when:
   - Web /ideas shows Invest button opening modal with ROI data
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
+notes: |
+  Live: web/app/invest/page.tsx renders at /invest (200 in production).
+  Pending: api/app/routers/investments.py, api/app/services/investment_service.py,
+  api/app/services/time_pledge_service.py, web/app/portfolio/investments/page.tsx,
+  web/components/InvestModal.tsx — none of these files exist yet.
+  /api/ideas/{idea_id}/invest-preview, /api/contributors/{id}/investments,
+  /api/contributors/{id}/investment-history, /api/contributors/{id}/pledges all
+  return 404. test_investments.py does not exist.
+  Status attuned 2026-05-22 from done → active to match what the body actually holds.
 ---
 
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
@@ -30,7 +39,7 @@ done_when:
 
 **Spec ID**: 157-investment-ux-stake-cc-on-ideas
 **Idea ID**: investment-ux
-**Status**: Draft
+**Status**: active (see frontmatter `notes:` for what's live vs pending)
 **Depends on**: Spec 119 (Coherence Credit), Spec 121 (OpenClaw Marketplace), Spec 048 (Value Lineage), Spec 052 (Portfolio Cockpit)
 **Depended on by**: Spec 124 (CC Economics), Spec 126 (Portfolio Governance)
 

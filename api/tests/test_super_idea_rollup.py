@@ -262,3 +262,105 @@ async def test_r3_validate_no_children_stays_none():
         assert body["children_total"] == 0
         assert body["rollup_met"] is False
         assert body["manifestation_status"] == "none"
+
+
+# ---------------------------------------------------------------------------
+# idea-hierarchy-super-child spec — set_parent_idea two-sided invariant
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_parent_idea_reparents_both_sides():
+    """Reparenting a child from one super to another keeps both sides consistent.
+
+    Strange-minimal case: a single PATCH must (a) flip child's parent_idea_id,
+    (b) remove the child from the OLD super's child_idea_ids, and
+    (c) append the child to the NEW super's child_idea_ids — all in one call.
+    Covers every branch of set_parent_idea (old-parent removal + new-parent add
+    + target update) with the smallest portfolio that can fail any of them.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        super_a = _uid("super-a")
+        super_b = _uid("super-b")
+        child = _uid("child")
+
+        await _create_idea(c, idea_id=super_a, idea_type="super")
+        await _create_idea(c, idea_id=super_b, idea_type="super")
+        await _create_idea(c, idea_id=child, idea_type="child")
+
+        # Establish initial parent via PATCH → set_parent_idea(child, super_a).
+        # This drives the new-parent-add branch from a clean state.
+        r = await c.patch(
+            f"/api/ideas/{child}",
+            json={"parent_idea_id": super_a},
+            headers=AUTH,
+        )
+        assert r.status_code == 200, r.text
+
+        body_a = (await c.get(f"/api/ideas/{super_a}")).json()
+        assert child in body_a["child_idea_ids"], (
+            "set_parent_idea did not append child to new parent's child_idea_ids"
+        )
+
+        # Reparent: same call must remove from super_a AND add to super_b.
+        r = await c.patch(
+            f"/api/ideas/{child}",
+            json={"parent_idea_id": super_b},
+            headers=AUTH,
+        )
+        assert r.status_code == 200, r.text
+
+        # Child's own pointer flipped.
+        child_after = (await c.get(f"/api/ideas/{child}")).json()
+        assert child_after["parent_idea_id"] == super_b
+
+        # Old parent's child list no longer contains the child.
+        super_a_after = (await c.get(f"/api/ideas/{super_a}")).json()
+        assert child not in super_a_after["child_idea_ids"]
+
+        # New parent's child list contains the child exactly once.
+        super_b_after = (await c.get(f"/api/ideas/{super_b}")).json()
+        assert super_b_after["child_idea_ids"].count(child) == 1
+
+
+# ---------------------------------------------------------------------------
+# idea-hierarchy-super-child spec — super-ideas excluded from pickup
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_super_idea_excluded_from_select_pickup():
+    """select_idea must skip super-ideas even when the portfolio is rigged so a
+    super-idea would otherwise dominate.
+
+    Strange-minimal case: a portfolio of exactly one super + one standalone,
+    with the super deliberately given a far higher potential_value (so its
+    score dominates), called at temperature=0 (deterministic, always-top).
+    If the SUPER filter is broken the super wins on every roll. With the
+    filter intact the standalone is the only legal pick, no matter the seed.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        sid = _uid("super-dominant")
+        standalone_id = _uid("standalone-quiet")
+
+        # Super has overwhelming score — would be ranked #1 without the filter.
+        await _create_idea(
+            c, idea_id=sid, idea_type="super",
+            potential_value=1_000_000.0, estimated_cost=1.0, confidence=0.99,
+        )
+        # Standalone has tiny score — would lose every softmax roll.
+        await _create_idea(
+            c, idea_id=standalone_id, idea_type="standalone",
+            potential_value=1.0, estimated_cost=100.0, confidence=0.1,
+        )
+
+        # Deterministic pick (temperature=0 → always top of filtered list).
+        r = await c.post(
+            "/api/ideas/select?temperature=0&seed=42",
+            headers=AUTH,
+        )
+        assert r.status_code == 200, r.text
+        picked_id = r.json()["selected"]["id"]
+        assert picked_id == standalone_id, (
+            f"super-idea {sid} leaked through pickup filter; got {picked_id}"
+        )
