@@ -16,11 +16,26 @@
 
 (do
     ;; Universal Blueprints for TS file-header shapes
+    (let TS-BNF-MODULE      (make_nodeid 1 2 99 59))
     (let TS-BNF-IMPORT      (make_nodeid 1 2 99 60))
     (let TS-BNF-IMPORT-NS   (make_nodeid 1 2 99 61))
     (let TS-BNF-IMPORT-DEF  (make_nodeid 1 2 99 62))
     (let TS-BNF-EXPORT-CONST (make_nodeid 1 2 99 63))
     (let TS-BNF-EXPORT-FN   (make_nodeid 1 2 99 64))
+
+    ;; Helpers used by the multi-statement module emitter
+    (defn ts-bnf-rev-step (acc x) (cons x acc))
+    (defn ts-bnf-reverse (xs) (foldl ts-bnf-rev-step (empty) xs))
+    (defn ts-bnf-collect-results (items)
+        (if (nil? items) (empty)
+            (cons (cap-get (head items) "_result")
+                  (ts-bnf-collect-results (tail items)))))
+    (defn ts-bnf-emit-module (caps)
+        (do
+            (let first-stmt (cap-get caps "_result"))
+            (let rest-items (ts-bnf-reverse (cap-get caps "items")))
+            (let all-stmts (cons first-stmt (ts-bnf-collect-results rest-items)))
+            (intern_node TS-BNF-MODULE all-stmts)))
 
     ;; Emitters
     (defn ts-bnf-emit-import-named (caps)
@@ -81,7 +96,7 @@
 }
 
 rules {
-  module        ::= statement ;
+  module        ::= statement+ => ts-bnf-emit-module ;
   statement     ::= import-named | import-ns | import-default | export-const | export-fn ;
   import-named  ::= IMPORT LBRACE IDENT RBRACE FROM STRING        => ts-bnf-emit-import-named ;
   import-ns     ::= IMPORT STAR AS IDENT FROM STRING               => ts-bnf-emit-import-ns ;
@@ -95,7 +110,8 @@ rules {
               (list "ts-bnf-emit-import-ns"      ts-bnf-emit-import-ns)
               (list "ts-bnf-emit-import-default" ts-bnf-emit-import-default)
               (list "ts-bnf-emit-export-const"   ts-bnf-emit-export-const)
-              (list "ts-bnf-emit-export-fn"      ts-bnf-emit-export-fn)))
+              (list "ts-bnf-emit-export-fn"      ts-bnf-emit-export-fn)
+              (list "ts-bnf-emit-module"         ts-bnf-emit-module)))
 
     (let ts-bnf-grammar
         (load-bnf-grammar ts-bnf-text ts-bnf-registry))

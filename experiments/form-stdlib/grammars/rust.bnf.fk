@@ -10,11 +10,25 @@
 ;   - "string" literals
 
 (do
+    (let RS-BNF-MODULE    (make_nodeid 1 2 99 69))
     (let RS-BNF-USE       (make_nodeid 1 2 99 70))
     (let RS-BNF-PUB-USE   (make_nodeid 1 2 99 71))
     (let RS-BNF-MOD       (make_nodeid 1 2 99 72))
     (let RS-BNF-FN        (make_nodeid 1 2 99 73))
     (let RS-BNF-STRUCT    (make_nodeid 1 2 99 74))
+
+    (defn rs-bnf-rev-step (acc x) (cons x acc))
+    (defn rs-bnf-reverse (xs) (foldl rs-bnf-rev-step (empty) xs))
+    (defn rs-bnf-collect-results (items)
+        (if (nil? items) (empty)
+            (cons (cap-get (head items) "_result")
+                  (rs-bnf-collect-results (tail items)))))
+    (defn rs-bnf-emit-module (caps)
+        (do
+            (let first-stmt (cap-get caps "_result"))
+            (let rest-items (rs-bnf-reverse (cap-get caps "items")))
+            (let all-stmts (cons first-stmt (rs-bnf-collect-results rest-items)))
+            (intern_node RS-BNF-MODULE all-stmts)))
 
     (defn rs-bnf-emit-use (caps)
         ;; USE IDENT SEMI — _2=path-leaf-name (multi-segment lost here;
@@ -80,7 +94,7 @@
 }
 
 rules {
-  module      ::= statement ;
+  module      ::= statement+ => rs-bnf-emit-module ;
   statement   ::= pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
   pub-use     ::= PUB USE IDENT SEMI               => rs-bnf-emit-pub-use ;
   use-stmt    ::= USE IDENT SEMI                    => rs-bnf-emit-use ;
@@ -96,7 +110,8 @@ rules {
               (list "rs-bnf-emit-mod"     rs-bnf-emit-mod)
               (list "rs-bnf-emit-pub-fn"  rs-bnf-emit-pub-fn)
               (list "rs-bnf-emit-fn"      rs-bnf-emit-fn)
-              (list "rs-bnf-emit-struct"  rs-bnf-emit-struct)))
+              (list "rs-bnf-emit-struct"  rs-bnf-emit-struct)
+              (list "rs-bnf-emit-module"  rs-bnf-emit-module)))
 
     (let rs-bnf-grammar
         (load-bnf-grammar rs-bnf-text rs-bnf-registry))
