@@ -1,0 +1,44 @@
+; tests/python-universal-expanded.fk — expanded universal Python coverage
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk
+;
+; New shapes: assignment, function call, multi-statement bodies via `;`.
+
+(do
+    (let NL "
+")
+
+    (defn parsed? (r) (if (gt (len (node_children r)) 0) 1 0))
+
+    (let registry (list (list "python" python-templates)
+                        (list "go"     go-templates)))
+
+    ;; Probe 1: assignment
+    (let r1 (parse-python-universal "x = 5"))
+    (let p1 (parsed? r1))
+    (print (str_concat "p1 (assign): " (int_to_str p1)))
+
+    ;; Probe 2: function call
+    (let r2 (parse-python-universal "print(42)"))
+    (let p2 (parsed? r2))
+    (print (str_concat "p2 (call):   " (int_to_str p2)))
+
+    ;; Probe 3: function def with no params + assignment in body
+    (let r3 (parse-python-universal "def init(): x = 1"))
+    (let p3 (parsed? r3))
+    (print (str_concat "p3 (def-empty-args + assign): " (int_to_str p3)))
+
+    ;; Probe 4: function def with multi-statement body (; separated)
+    (let r4 (parse-python-universal "def f(): x = 1; y = 2"))
+    (let p4 (parsed? r4))
+    (print (str_concat "p4 (multi-stmt body via ;): " (int_to_str p4)))
+
+    ;; Probe 5: cross-language emit of assignment
+    (let py-out (emit-to "python" r1 registry))
+    (let go-out (emit-to "go"     r1 registry))
+    (print "")
+    (print (str_concat "x = 5 → Python: " py-out))
+    (print (str_concat "x = 5 → Go:     " go-out))
+
+    ;; Sum probes for kernel comparison
+    (add p1 (add p2 (add p3 p4))))
