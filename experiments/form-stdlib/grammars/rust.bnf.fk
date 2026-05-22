@@ -135,6 +135,12 @@
         (intern_node RS-BNF-MATCH
                       (list (cap-get caps "scrutinee"))))
 
+    (let RS-BNF-MATCH-ARM (make_nodeid 1 2 99 80))
+    (defn rs-bnf-emit-arm (caps)
+        (intern_node RS-BNF-MATCH-ARM
+                      (list (cap-get caps "pat")
+                            (cap-get caps "body"))))
+
     (defn rs-bnf-emit-use (caps)
         ;; USE IDENT SEMI — _2=path-leaf-name (multi-segment lost here;
         ;; expanded in a later breath with a path-grammar sub-rule)
@@ -196,6 +202,7 @@
   operator >  GT
   operator && ANDAND
   operator || OROR
+  operator => FATARROW
   operator =  EQUALS
   operator +  PLUS
   operator -  MINUS
@@ -229,6 +236,7 @@ rules {
   while-stmt  ::= WHILE cond:expression body:expression       => rs-bnf-emit-while ;
   for-stmt    ::= FOR var:IDENT IN iter:expression body:expression => rs-bnf-emit-for ;
   match-stmt  ::= MATCH scrutinee:expression                   => rs-bnf-emit-match ;
+  match-arm   ::= pat:expression FATARROW body:expression       => rs-bnf-emit-arm ;
   pub-use     ::= PUB USE IDENT SEMI               => rs-bnf-emit-pub-use ;
   use-stmt    ::= USE IDENT SEMI                    => rs-bnf-emit-use ;
   mod-stmt    ::= MOD IDENT SEMI                    => rs-bnf-emit-mod ;
@@ -262,7 +270,8 @@ rules {
               (list "rs-bnf-emit-if"      rs-bnf-emit-if)
               (list "rs-bnf-emit-while"   rs-bnf-emit-while)
               (list "rs-bnf-emit-for"     rs-bnf-emit-for)
-              (list "rs-bnf-emit-match"   rs-bnf-emit-match)))
+              (list "rs-bnf-emit-match"   rs-bnf-emit-match)
+              (list "rs-bnf-emit-arm"     rs-bnf-emit-arm)))
 
     (let rs-bnf-grammar
         (load-bnf-grammar rs-bnf-text rs-bnf-registry))
