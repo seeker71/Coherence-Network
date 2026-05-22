@@ -658,9 +658,8 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
-	k.registerNative("nth", catAccess(), func(_ *Kernel, args []Value) Value {
-		return args[0].List[args[1].Int]
-	})
+	// `nth` composted 2026-05-22 — sibling-parity with Rust kernel.
+	// Re-author in core.fk as needed: (defn nth (xs n) (if (eq n 0) (head xs) (nth (tail xs) (sub n 1))))
 	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
 	})
@@ -725,34 +724,8 @@ func (k *Kernel) registerNatives() {
 	// range(n) / range(a,b) / range(a,b,s) — eager list of integers.
 	// Matches CPython semantics for `for i in range(N):`.
 	// Sibling-parity with the Rust + TS kernels.
-	k.registerNative("range", catListNat(), func(_ *Kernel, args []Value) Value {
-		var start, stop, step int64
-		switch len(args) {
-		case 1:
-			start, stop, step = 0, args[0].Int, 1
-		case 2:
-			start, stop, step = args[0].Int, args[1].Int, 1
-		default:
-			start, stop, step = args[0].Int, args[1].Int, args[2].Int
-		}
-		if step == 0 {
-			return Value{Kind: VList, List: []Value{}}
-		}
-		out := []Value{}
-		i := start
-		if step > 0 {
-			for i < stop {
-				out = append(out, Value{Kind: VInt, Int: i})
-				i += step
-			}
-		} else {
-			for i > stop {
-				out = append(out, Value{Kind: VInt, Int: i})
-				i += step
-			}
-		}
-		return Value{Kind: VList, List: out}
-	})
+	// `range` composted 2026-05-22 — core.fk has (defn range (start end) ...).
+	// Sibling-parity with Rust kernel removal.
 	// File I/O
 	k.registerNative("read_file", catCall(), func(_ *Kernel, args []Value) Value {
 		b, err := os.ReadFile(args[0].Str)
