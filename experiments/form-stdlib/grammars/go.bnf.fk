@@ -155,18 +155,13 @@
     ;; Expression emitters (literals + identifiers; binary/unary later)
     ;; ──────────────────────────────────────────────────────────────────
 
+    ;; Trivial Recipes — walk_recipe returns the value directly.
     (defn go-bnf-emit-int-expr (caps)
-        (intern_node GO-BNF-INT-EXPR
-                      (list (intern_trivial_int
-                              (str_to_int (cap-get caps "value"))))))
-
+        (intern_trivial_int (str_to_int (cap-get caps "value"))))
     (defn go-bnf-emit-str-expr (caps)
-        (intern_node GO-BNF-STR-EXPR
-                      (list (intern_trivial_string (cap-get caps "value")))))
-
+        (intern_trivial_string (cap-get caps "value")))
     (defn go-bnf-emit-ident-expr (caps)
-        (intern_node GO-BNF-IDENT-EXPR
-                      (list (intern_trivial_string (cap-get caps "name")))))
+        (intern_trivial_string (cap-get caps "name")))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Binary expression precedence — left-fold over operator/operand
@@ -216,9 +211,9 @@
                                     inner))
                 inner)))
 
+    ;; Parens are syntactic — pass inner Recipe through unchanged.
     (defn go-bnf-emit-paren (caps)
-        (intern_node GO-BNF-PAREN-EXPR
-                      (list (cap-get caps "expr"))))
+        (cap-get caps "expr"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; BMF-style operator precedence: precedence-as-DATA, not as nested
@@ -256,6 +251,33 @@
     ;; Walks the list of (op rhs) items, recursively gathering tighter-
     ;; binding operators into the rhs before applying the current op.
     ;; Returns (folded-recipe remaining-items).
+    ;; Universal Blueprints — kernel walk_recipe evaluates these natively.
+    ;; Same shape Python landed in breath 15: per-tongue grammar emits
+    ;; universal Recipes, the form runtime executes them.
+    (let GO-UNIV-MATH-PLUS  (make_nodeid 1 2 12 1))
+    (let GO-UNIV-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let GO-UNIV-MATH-MUL   (make_nodeid 1 2 12 3))
+    (let GO-UNIV-MATH-DIV   (make_nodeid 1 2 12 4))
+    (let GO-UNIV-CMP-EQ     (make_nodeid 1 2 13 1))
+    (let GO-UNIV-CMP-NEQ    (make_nodeid 1 2 13 2))
+    (let GO-UNIV-CMP-LT     (make_nodeid 1 2 13 3))
+    (let GO-UNIV-CMP-LE     (make_nodeid 1 2 13 4))
+    (let GO-UNIV-CMP-GT     (make_nodeid 1 2 13 5))
+    (let GO-UNIV-CMP-GE     (make_nodeid 1 2 13 6))
+
+    (defn go-bnf-op-to-blueprint (op)
+        (if (str_eq op "+") GO-UNIV-MATH-PLUS
+        (if (str_eq op "-") GO-UNIV-MATH-MINUS
+        (if (str_eq op "*") GO-UNIV-MATH-MUL
+        (if (str_eq op "/") GO-UNIV-MATH-DIV
+        (if (str_eq op "==") GO-UNIV-CMP-EQ
+        (if (str_eq op "!=") GO-UNIV-CMP-NEQ
+        (if (str_eq op "<")  GO-UNIV-CMP-LT
+        (if (str_eq op "<=") GO-UNIV-CMP-LE
+        (if (str_eq op ">")  GO-UNIV-CMP-GT
+        (if (str_eq op ">=") GO-UNIV-CMP-GE
+            GO-UNIV-MATH-PLUS)))))))))))
+
     (defn go-bnf-climb (lhs items table min-prec)
         (if (nil? items) (list lhs items)
             (do
@@ -271,10 +293,10 @@
                                                    (add op-prec 1)))
                         (let inner-rhs (head inner))
                         (let after-inner (head (tail inner)))
+                        ;; Universal Blueprint emission — kernel walks it.
                         (let new-lhs
-                            (intern_node GO-BNF-BIN-EXPR
-                                          (list (intern_trivial_string op)
-                                                lhs inner-rhs)))
+                            (intern_node (go-bnf-op-to-blueprint op)
+                                          (list lhs inner-rhs)))
                         (go-bnf-climb new-lhs after-inner table min-prec))))))
 
     (defn go-bnf-emit-bmf-fold (caps)
