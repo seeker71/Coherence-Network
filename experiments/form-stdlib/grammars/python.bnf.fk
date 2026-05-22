@@ -102,6 +102,26 @@
 
     (defn py-bnf-emit-passthrough (caps) caps)
 
+    ;; py-bnf-emit-module: collect the leading statement plus every
+    ;; statement in `items` (from the `statement*` portion of the `+`
+    ;; sugar) into one PY-BNF-MODULE recipe whose children are the
+    ;; statement Recipes in source order.
+    (defn py-bnf-collect-results (items)
+        (if (nil? items) (empty)
+            (cons (cap-get (head items) "_result")
+                  (py-bnf-collect-results (tail items)))))
+
+    ;; Reverse a list — star collects items in reverse order via cons.
+    (defn py-bnf-rev-step (acc x) (cons x acc))
+    (defn py-bnf-reverse (xs) (foldl py-bnf-rev-step (empty) xs))
+
+    (defn py-bnf-emit-module (caps)
+        (do
+            (let first-stmt (cap-get caps "_result"))
+            (let rest-items (py-bnf-reverse (cap-get caps "items")))
+            (let all-stmts (cons first-stmt (py-bnf-collect-results rest-items)))
+            (intern_node PY-BNF-MODULE all-stmts)))
+
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 3 — the BNF grammar text
     ;; ──────────────────────────────────────────────────────────────────
@@ -132,7 +152,7 @@
 }
 
 rules {
-  module       ::= statement ;
+  module       ::= statement+                     => py-bnf-emit-module ;
   statement    ::= import-as | import-bare | from-stmt | def-stmt | assign-stmt ;
   import-as    ::= IMPORT IDENT AS IDENT          => py-bnf-emit-import-as ;
   import-bare  ::= IMPORT IDENT                    => py-bnf-emit-import-bare ;
@@ -153,6 +173,7 @@ rules {
               (list "py-bnf-emit-from-import"      py-bnf-emit-from-import)
               (list "py-bnf-emit-def"              py-bnf-emit-def)
               (list "py-bnf-emit-assign"           py-bnf-emit-assign)
+              (list "py-bnf-emit-module"           py-bnf-emit-module)
               (list "py-bnf-emit-passthrough"      py-bnf-emit-passthrough)))
 
     (let py-bnf-grammar

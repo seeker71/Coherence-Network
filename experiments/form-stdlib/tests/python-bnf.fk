@@ -1,75 +1,80 @@
 ; tests/python-bnf.fk — exercise python.bnf.fk's BNF-driven Python
-; file-header parser on the native kernel.
+; parser on the native kernel.
 ;
 ; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python.bnf.fk
 ;
-; The proof: the same Python file-header subset grammars/python.fk
-; parses by hand-coded line dispatch is now expressible declaratively
-; as a ~20-line BNF grammar that engine.fk walks.
+; With multi-statement support (`module ::= statement+`), the parser
+; wraps every parse in a PY-BNF-MODULE root whose children are the
+; statement Recipes. These probes unwrap to the first statement and
+; then check the statement's own children.
 
 (do
+    ;; Helper: pull the first statement out of the module wrapper.
+    (defn first-stmt (root)
+        (head (node_children root)))
+
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Probe 1 — `import os` parses to a PY-BNF-IMPORT recipe with two
-    ;; children (module-name + empty-alias)
+    ;; Probe 1 — `import os` → module wrapping ONE import statement
     ;; ──────────────────────────────────────────────────────────────────
 
     (let result-1 (parse-python-bnf "test.py" "import os"))
-    (let kids-1 (node_children result-1))
-    (let probe-1 (len kids-1))                          ; → 2 children
+    (let stmt-1 (first-stmt result-1))
+    (let kids-1 (node_children stmt-1))
+    (let probe-1 (len kids-1))                          ; → 2
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Probe 2 — `import os as system` parses with alias bound
     ;; ──────────────────────────────────────────────────────────────────
 
     (let result-2 (parse-python-bnf "test.py" "import os as system"))
-    (let kids-2 (node_children result-2))
-    ;; Second child is the alias trivial string "system"
-    (let alias-node (head (tail kids-2)))
-    (let alias-val (node_value alias-node))
-    (let probe-2 (str_len alias-val))                   ; → 6 ("system")
+    (let stmt-2 (first-stmt result-2))
+    (let kids-2 (node_children stmt-2))
+    (let alias-val (node_value (head (tail kids-2))))
+    (let probe-2 (str_len alias-val))                   ; → 6
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Probe 3 — `from typing import List` parses to a from-import
+    ;; Probe 3 — `from typing import List`
     ;; ──────────────────────────────────────────────────────────────────
 
     (let result-3 (parse-python-bnf "test.py" "from typing import List"))
-    (let kids-3 (node_children result-3))
+    (let stmt-3 (first-stmt result-3))
+    (let kids-3 (node_children stmt-3))
     (let module-val (node_value (head kids-3)))
     (let probe-3 (str_len module-val))                  ; → 6 ("typing")
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Probe 4 — `def main():` parses to a function-def
+    ;; Probe 4 — `def main():`
     ;; ──────────────────────────────────────────────────────────────────
 
     (let result-4 (parse-python-bnf "test.py" "def main():"))
-    (let kids-4 (node_children result-4))
+    (let stmt-4 (first-stmt result-4))
+    (let kids-4 (node_children stmt-4))
     (let name-val (node_value (head kids-4)))
     (let probe-4 (str_len name-val))                    ; → 4 ("main")
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Probe 5 — `x = 42` parses to an assignment
+    ;; Probe 5 — `x = 42`
     ;; ──────────────────────────────────────────────────────────────────
 
     (let result-5 (parse-python-bnf "test.py" "x = 42"))
-    (let kids-5 (node_children result-5))
+    (let stmt-5 (first-stmt result-5))
+    (let kids-5 (node_children stmt-5))
     (let name-val-5 (node_value (head kids-5)))
     (let probe-5 (str_len name-val-5))                  ; → 1 ("x")
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Probe 6 — comments and whitespace are skipped at tokenize-time
-    ;; so `# header comment\nimport os` parses identically to `import os`
+    ;; Probe 6 — multi-statement module (the actual `+` postfix proof)
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let result-6 (parse-python-bnf "test.py" "# top of file
-import os"))
-    (let kids-6 (node_children result-6))
-    (let probe-6 (len kids-6))                          ; → 2
+    (let result-6 (parse-python-bnf "test.py"
+"import os
+import sys
+x = 42
+def main():"))
+    (let probe-6 (len (node_children result-6)))        ; → 4
 
-    ;; ──────────────────────────────────────────────────────────────────
     ;; Sum — sibling kernels must agree
-    ;; 2 + 6 + 6 + 4 + 1 + 2 = 21
-    ;; ──────────────────────────────────────────────────────────────────
-
+    ;; 2 + 6 + 6 + 4 + 1 + 4 = 23
     (add probe-1
          (add probe-2
               (add probe-3
