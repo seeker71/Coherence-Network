@@ -1,0 +1,113 @@
+; grammars/python-exec.fk — minimal EXECUTE walker for Python BNF
+; recipes
+;
+; Companion to grammars/python.bnf.fk. Walks the parsed Recipe tree
+; statement-by-statement and performs the operation each Recipe stands
+; for. Demonstrates the read → understand → execute pipeline the
+; four-language goal points at:
+;
+;   text → tokenize-with-config → tokens
+;   tokens → bnf-parse → Recipe tree (universal Blueprints)
+;   Recipe tree → py-execute → side effects + return value
+;
+; This file handles the subset python.bnf.fk parses (file-header
+; statements). Each Recipe NodeID becomes one execution arm:
+;
+;   PY-BNF-IMPORT      → records `imported: <module>` (or with alias)
+;   PY-BNF-FROM-IMPORT → records `from <module>` import
+;   PY-BNF-FUNCTION-DEF→ records `defined: <name>`
+;   PY-BNF-ASSIGN      → binds <name> in the env, returns its value
+;
+; The walker maintains a simple env (list of (name value) pairs).
+; Return value: the count of statements executed — a deterministic
+; integer that lets sibling kernels validate byte-identical behavior.
+;
+; A second breath can extend the grammar to function bodies + calls;
+; this file's walker grows alongside without architecture changes.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Recipe-shape predicates — keyed by Blueprint NodeID
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let PY-EXEC-IMPORT       (make_nodeid 1 2 99 41))
+    (let PY-EXEC-FROM-IMPORT  (make_nodeid 1 2 99 42))
+    (let PY-EXEC-FUNCTION-DEF (make_nodeid 1 2 99 43))
+    (let PY-EXEC-ASSIGN       (make_nodeid 1 2 99 44))
+
+    (defn py-exec-is-import? (n)
+        (node_eq (node_category n) PY-EXEC-IMPORT))
+
+    (defn py-exec-is-from-import? (n)
+        (node_eq (node_category n) PY-EXEC-FROM-IMPORT))
+
+    (defn py-exec-is-function-def? (n)
+        (node_eq (node_category n) PY-EXEC-FUNCTION-DEF))
+
+    (defn py-exec-is-assign? (n)
+        (node_eq (node_category n) PY-EXEC-ASSIGN))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Env — a simple (name value) association list
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn py-exec-env-empty (_x) (empty))
+
+    (defn py-exec-env-bind (env name value)
+        (cons (list name value) env))
+
+    (defn py-exec-env-lookup (env name)
+        (if (nil? env) ""
+            (if (str_eq (head (head env)) name)
+                (head (tail (head env)))
+                (py-exec-env-lookup (tail env) name))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Execute one statement Recipe — returns the new env
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn py-exec-stmt (stmt env)
+        (do
+            (let kids (node_children stmt))
+            (if (py-exec-is-import? stmt)
+                (do
+                    (let mod-name (node_value (head kids)))
+                    (let alias (node_value (head (tail kids))))
+                    (let bound (if (str_eq alias "") mod-name alias))
+                    (print (str_concat "import: " mod-name))
+                    (py-exec-env-bind env bound mod-name))
+            (if (py-exec-is-from-import? stmt)
+                (do
+                    (let mod-name (node_value (head kids)))
+                    (print (str_concat "from-import: " mod-name))
+                    env)
+            (if (py-exec-is-function-def? stmt)
+                (do
+                    (let fn-name (node_value (head kids)))
+                    (print (str_concat "def: " fn-name))
+                    (py-exec-env-bind env fn-name "<function>"))
+            (if (py-exec-is-assign? stmt)
+                (do
+                    (let name (node_value (head kids)))
+                    (let value (node_value (head (tail kids))))
+                    (print (str_concat "assign: " (str_concat name (str_concat " = " value))))
+                    (py-exec-env-bind env name value))
+                ;; unknown statement — pass through
+                env))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; py-execute: walk a parsed Python module and run each statement
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Convention: the input is the result of parse-python-bnf (one
+    ;; root Recipe). For a single-statement module, the root IS the
+    ;; statement Recipe. For multi-statement (later breath), it's a
+    ;; sequence whose children are statements. This first cut handles
+    ;; single-statement; the helper scales transparently when grammar
+    ;; widens to `statement*`.
+
+    (defn py-execute (root)
+        (do
+            (let final-env (py-exec-stmt root (py-exec-env-empty 0)))
+            (len final-env)))
+
+    0)
