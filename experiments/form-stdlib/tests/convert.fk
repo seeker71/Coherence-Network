@@ -1,0 +1,37 @@
+; tests/convert.fk — verify the unified converter dispatches per
+; extension and produces cells.
+;
+; Strange-minimal probe: the extension-extraction helper covers many
+; boundary cases in tiny inputs; then `convert` on one real .md file
+; (load only markdown grammar — others have name-collisions on
+; helper functions that need namespacing in a subsequent breath).
+
+(do
+    ;; --- file-extension probes (test the dispatch helper) ----------
+    (let probe-1 (str_len (file-extension "demo.md")))         ; → 2
+    (let probe-2 (str_len (file-extension "no-dot")))          ; → 0
+    (let probe-3 (str_len (file-extension "many.dots.json")))  ; → 4
+    (let probe-4 (str_len (file-extension "ends-with-dot.")))  ; → 0 (trailing-dot edge)
+    (let probe-5 (str_len (file-extension ".hidden")))         ; → 6 ("hidden")
+
+    ;; --- convert.md → root cell with blocks ------------------------
+    (let md-root (convert "form-samples/demo-concept.md"))
+    (let md-kids (node_children md-root))
+    (let probe-6 (len md-kids))                                ; → 5
+
+    ;; --- root cell has source attribution --------------------------
+    (defn has-attr? (cell) (if (str_eq (cell-source cell) "") 0 1))
+    (let probe-7 (has-attr? md-root))                          ; → 1
+
+    ;; --- convert-summary returns (count kid-sum first-src) ---------
+    (let summary (convert-summary "form-samples/demo-concept.md"))
+    (let probe-8 (head summary))                               ; → 5
+
+    ;; sum: 2 + 0 + 4 + 0 + 6 + 5 + 1 + 5 = 23
+    (add probe-1
+    (add probe-2
+    (add probe-3
+    (add probe-4
+    (add probe-5
+    (add probe-6
+    (add probe-7 probe-8))))))))
