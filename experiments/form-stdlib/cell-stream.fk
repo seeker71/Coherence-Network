@@ -1,0 +1,124 @@
+; cell-stream.fk — blocks of input → stream of native cells
+;
+; Urs's vision (2026-05-22): "find similar patterns to convert blocks
+; of input into form cells, that allows for streaming input to native
+; cells, and native cells can be observed, analyzed, traced, transmuted,
+; be nutrition, information, a parasite to be eaten and released, full
+; flexibility once we have cells streaming."
+;
+; The pattern recurs across input types — CSV rows, HTTP requests,
+; log lines, audio frames, WebSocket messages, git commits, db rows,
+; LLM tokens, sensor readings, PNG chunks, markdown blocks. Each one:
+;
+;   1. segment: locate the next block boundary in the input stream
+;   2. parse: extract fields from the block content
+;   3. compose: wrap fields as composed Recipe with Blueprint identity
+;   4. intern: enter the substrate (returns NodeID; content-addressed,
+;      so repeat-blocks collapse to the same cell)
+;   5. attribute: source location stamped via intern_node_at
+;   6. emit: NodeID flows into the downstream stream
+;
+; The only variation across input types is (1) the segmenter and (2)
+; the field encoder. Steps 3-6 are universal. This file provides the
+; universal frame; per-format adapters supply segmenter + encoder as
+; data. ONE engine, every input shape.
+;
+; Once cells are in the stream, downstream recipes can:
+;   - **observe**: subscribe + read; no mutation. Cell becomes signal.
+;   - **analyze**: aggregate / count / signature. Cell as evidence.
+;   - **trace**: walk cell-trace back to source line of emission.
+;   - **transmute**: produce a new cell with a different Blueprint
+;     while preserving content-addressed lineage to the source.
+;
+; The metabolic frame (Urs's words): a cell can be **nutrition** (fed
+; to a transmuter recipe), **information** (observed without consuming),
+; or a **parasite** (transient, no downstream re-reference → eventually
+; garbage-collected by the substrate's content-addressed deduplication).
+; The cell itself is universal; its role is determined by downstream.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — pair-shaped result for segmenter return
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A segmenter returns either:
+    ;;   (list "block" text next-pos line-no)  — one more block found
+    ;;   (list "eof")                          — stream exhausted
+    ;;
+    ;; The kind discriminator avoids needing a separate "is-eof?" call
+    ;; and matches the shape engine.fk / emit-engine.fk use for fail-
+    ;; vs-success sentinels.
+
+    (defn seg-kind (r) (head r))
+    (defn seg-text (r) (head (tail r)))
+    (defn seg-next (r) (head (tail (tail r))))
+    (defn seg-line (r) (head (tail (tail (tail r)))))
+
+    (defn mk-block (text next line) (list "block" text next line))
+    (defn mk-eof (_x)               (list "eof"))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — stream-of-cells: the universal pipeline
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; (stream-of-cells input segmenter encoder source-path) → list of NodeIDs
+    ;;
+    ;; segmenter: (input pos) → seg-result
+    ;; encoder:   (block-text source-path line-no) → NodeID (interned cell)
+    ;;
+    ;; The engine walks the input via segmenter, invokes encoder per
+    ;; block, accumulates the emitted NodeIDs. In a true streaming
+    ;; runtime this would yield each cell lazily; the substrate's
+    ;; content-addressed intern means the cells are already "out
+    ;; there" once made — the list is just our handle to them.
+
+    (defn stream-of-cells (input segmenter encoder source-path)
+        (stream-loop input segmenter encoder source-path 0 (empty)))
+
+    (defn stream-loop (input segmenter encoder source-path pos acc)
+        (do
+            (let seg (segmenter input pos))
+            (if (str_eq (seg-kind seg) "eof")
+                (reverse-acc acc)
+                (do
+                    (let cell (encoder (seg-text seg) source-path (seg-line seg)))
+                    (stream-loop input segmenter encoder source-path
+                                  (seg-next seg) (cons cell acc))))))
+
+    (defn rev-step (acc x) (cons x acc))
+    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — observe: read the stream without mutation
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The simplest cell-as-information role: walk the stream, applying
+    ;; a side-effect-only observer to each cell. Returns the original
+    ;; stream untouched. Sibling of List.foreach.
+
+    (defn observe (cells observer)
+        (if (nil? cells) (empty)
+            (do
+                (observer (head cells))
+                (cons (head cells) (observe (tail cells) observer)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — analyze: fold the stream into an aggregate
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Cell-as-evidence: aggregate signal across the stream. Returns
+    ;; the aggregate; the cells themselves remain in the substrate.
+
+    (defn analyze (cells init combine)
+        (if (nil? cells) init
+            (analyze (tail cells) (combine init (head cells)) combine)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — transmute: cell → new cell with different Blueprint
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Cell-as-nutrition: a transmuter recipe consumes each cell and
+    ;; emits a new cell (different Blueprint identity, same source
+    ;; lineage). The substrate's content-addressing means transmuted
+    ;; cells dedupe automatically across the stream.
+
+    (defn transmute (cells transmuter)
+        (if (nil? cells) (empty)
+            (cons (transmuter (head cells))
+                  (transmute (tail cells) transmuter))))
+)
