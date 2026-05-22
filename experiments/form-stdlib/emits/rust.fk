@@ -1,0 +1,102 @@
+; emits/rust.fk — Recipe → Rust source emit templates
+;
+; Surface-syntax sibling to emits/go.fk. `let` for binding, `fn` keyword,
+; if-expressions return values without explicit return, `&&`/`||`/`!`
+; for logic.
+
+(do
+    (let RS-PLUS (make_nodeid 1 2 12 1))
+    (let RS-MIN  (make_nodeid 1 2 12 2))
+    (let RS-MUL  (make_nodeid 1 2 12 3))
+    (let RS-DIV  (make_nodeid 1 2 12 4))
+    (let RS-MOD  (make_nodeid 1 2 12 5))
+    (let RS-EQ   (make_nodeid 1 2 13 1))
+    (let RS-NE   (make_nodeid 1 2 13 2))
+    (let RS-LT   (make_nodeid 1 2 13 3))
+    (let RS-GT   (make_nodeid 1 2 13 5))
+    (let RS-AND  (make_nodeid 1 2 14 1))
+    (let RS-OR   (make_nodeid 1 2 14 2))
+    (let RS-NOT  (make_nodeid 1 2 14 3))
+    (let RS-IF   (make_nodeid 1 2 11 1))
+    (let RS-IFE  (make_nodeid 1 2 11 2))
+    (let RS-DO   (make_nodeid 1 2 9 1))
+    (let RS-SEQ  (make_nodeid 1 2 9 2))
+    (let RS-LET  (make_nodeid 1 2 9 3))
+    (let RS-RET  (make_nodeid 1 2 18 1))
+    (let RS-LOC  (make_nodeid 1 2 15 1))
+    (let RS-MEM  (make_nodeid 1 2 15 2))
+    (let RS-IDX  (make_nodeid 1 2 15 3))
+    (let RS-ASN  (make_nodeid 1 2 16 1))
+    (let RS-ID   (make_nodeid 1 2 33 1))
+    (let RS-FND  (make_nodeid 1 2 31 1))
+    (let RS-FNC  (make_nodeid 1 2 32 1))
+
+    (defn rs-binop (op cs)
+        (str_concat (head cs) (str_concat op (head (tail cs)))))
+
+    (defn rs-plus (cs) (rs-binop " + " cs))
+    (defn rs-min  (cs) (rs-binop " - " cs))
+    (defn rs-mul  (cs) (rs-binop " * " cs))
+    (defn rs-div  (cs) (rs-binop " / " cs))
+    (defn rs-mod  (cs) (rs-binop " % " cs))
+    (defn rs-eq   (cs) (rs-binop " == " cs))
+    (defn rs-ne   (cs) (rs-binop " != " cs))
+    (defn rs-lt   (cs) (rs-binop " < " cs))
+    (defn rs-gt   (cs) (rs-binop " > " cs))
+    (defn rs-and  (cs) (rs-binop " && " cs))
+    (defn rs-or   (cs) (rs-binop " || " cs))
+    (defn rs-not  (cs) (str_concat "!" (head cs)))
+
+    (defn rs-if (cs)
+        (str_concat "if " (str_concat (head cs)
+                          (str_concat " { " (str_concat (head (tail cs)) " }")))))
+
+    (defn rs-if-else (cs)
+        (str_concat "if " (str_concat (head cs)
+                          (str_concat " { " (str_concat (head (tail cs))
+                          (str_concat " } else { " (str_concat (head (tail (tail cs))) " }")))))))
+
+    (defn rs-join-nl (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat NL (rs-join-nl (tail xs)))))))
+
+    (defn rs-do (cs)  (rs-join-nl cs))
+    (defn rs-seq (cs) (rs-join-nl cs))
+    (defn rs-let (cs)
+        (str_concat "let " (str_concat (head cs)
+                           (str_concat " = " (head (tail cs))))))
+
+    (defn rs-return (cs) (str_concat "return " (head cs)))
+    (defn rs-local (cs)  (head cs))
+    (defn rs-member (cs) (str_concat (head cs) (str_concat "." (head (tail cs)))))
+    (defn rs-index (cs)  (str_concat (head cs) (str_concat "[" (str_concat (head (tail cs)) "]"))))
+    (defn rs-assign (cs) (str_concat (head cs) (str_concat " = " (head (tail cs)))))
+    (defn rs-ident (cs)  (head cs))
+
+    (defn rs-cj (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (rs-cj (tail xs)))))))
+
+    (defn rs-fndef (cs)
+        (str_concat "fn " (str_concat (head cs)
+                          (str_concat "(" (str_concat (head (tail cs))
+                          (str_concat ") { " (str_concat (head (tail (tail cs))) " }")))))))
+
+    (defn rs-fncall (cs)
+        (str_concat (head cs) (str_concat "(" (str_concat (rs-cj (tail cs)) ")"))))
+
+    (let rust-templates
+        (list
+            (list RS-PLUS rs-plus) (list RS-MIN rs-min) (list RS-MUL rs-mul)
+            (list RS-DIV rs-div) (list RS-MOD rs-mod)
+            (list RS-EQ rs-eq) (list RS-NE rs-ne) (list RS-LT rs-lt) (list RS-GT rs-gt)
+            (list RS-AND rs-and) (list RS-OR rs-or) (list RS-NOT rs-not)
+            (list RS-IF rs-if) (list RS-IFE rs-if-else)
+            (list RS-DO rs-do) (list RS-SEQ rs-seq) (list RS-LET rs-let)
+            (list RS-RET rs-return)
+            (list RS-LOC rs-local) (list RS-MEM rs-member) (list RS-IDX rs-index)
+            (list RS-ASN rs-assign) (list RS-ID rs-ident)
+            (list RS-FND rs-fndef) (list RS-FNC rs-fncall)))
+)

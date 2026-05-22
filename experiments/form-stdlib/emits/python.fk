@@ -1,0 +1,177 @@
+; emits/python.fk — Recipe → Python source emit templates
+;
+; Covers the universal-shapes.form vocabulary (UE-* categories) so any
+; cell shape produced by universal-emit.fk grammar actions can be
+; rendered as Python source. This is the load-bearing target for the
+; substrate-py-to-fk migration: a Form recipe walks back to Python
+; source identical (modulo formatting) to the original input.
+;
+; Categories handled (matches universal-emit.fk):
+;   math: +, -, *, /, %, negate
+;   compare: ==, !=, <, <=, >, >=
+;   logic: and, or, not
+;   cond: if/elif/else, ternary
+;   block: do (statements), sequence, let (= assignment), with
+;   jump: return, break, continue, yield
+;   access: local, member (.x), index ([x]), global
+;   write: assignment (=)
+;   identifier
+;   function decl (def), function call
+
+(do
+    ;; Category NodeIDs — must match universal-emit.fk UE-* exactly.
+    (let PY-MATH-PLUS     (make_nodeid 1 2 12 1))
+    (let PY-MATH-MINUS    (make_nodeid 1 2 12 2))
+    (let PY-MATH-MULTIPLY (make_nodeid 1 2 12 3))
+    (let PY-MATH-DIVIDE   (make_nodeid 1 2 12 4))
+    (let PY-MATH-MODULO   (make_nodeid 1 2 12 5))
+    (let PY-MATH-NEGATE   (make_nodeid 1 2 12 6))
+    (let PY-CMP-EQ        (make_nodeid 1 2 13 1))
+    (let PY-CMP-NE        (make_nodeid 1 2 13 2))
+    (let PY-CMP-LT        (make_nodeid 1 2 13 3))
+    (let PY-CMP-LE        (make_nodeid 1 2 13 4))
+    (let PY-CMP-GT        (make_nodeid 1 2 13 5))
+    (let PY-CMP-GE        (make_nodeid 1 2 13 6))
+    (let PY-LOG-AND       (make_nodeid 1 2 14 1))
+    (let PY-LOG-OR        (make_nodeid 1 2 14 2))
+    (let PY-LOG-NOT       (make_nodeid 1 2 14 3))
+    (let PY-IF            (make_nodeid 1 2 11 1))
+    (let PY-IF-ELSE       (make_nodeid 1 2 11 2))
+    (let PY-DO            (make_nodeid 1 2 9 1))
+    (let PY-SEQ           (make_nodeid 1 2 9 2))
+    (let PY-LET           (make_nodeid 1 2 9 3))
+    (let PY-RET           (make_nodeid 1 2 18 1))
+    (let PY-BRK           (make_nodeid 1 2 18 2))
+    (let PY-CONT          (make_nodeid 1 2 18 3))
+    (let PY-YIELD         (make_nodeid 1 2 18 4))
+    (let PY-LOCAL         (make_nodeid 1 2 15 1))
+    (let PY-MEMBER        (make_nodeid 1 2 15 2))
+    (let PY-INDEX         (make_nodeid 1 2 15 3))
+    (let PY-ASSIGN        (make_nodeid 1 2 16 1))
+    (let PY-IDENT         (make_nodeid 1 2 33 1))
+    (let PY-FNDEF         (make_nodeid 1 2 31 1))
+    (let PY-FNCALL        (make_nodeid 1 2 32 1))
+
+    ;; Binary infix helper — most python operators are (left OP right).
+    (defn py-binop (op cs)
+        (str_concat (head cs)
+                    (str_concat op (head (tail cs)))))
+
+    (defn py-prefix (op cs)
+        (str_concat op (head cs)))
+
+    ;; --- arithmetic ---
+    (defn py-plus     (cs) (py-binop " + " cs))
+    (defn py-minus    (cs) (py-binop " - " cs))
+    (defn py-multiply (cs) (py-binop " * " cs))
+    (defn py-divide   (cs) (py-binop " / " cs))
+    (defn py-modulo   (cs) (py-binop " % " cs))
+    (defn py-negate   (cs) (py-prefix "-" cs))
+
+    ;; --- comparison ---
+    (defn py-eq (cs) (py-binop " == " cs))
+    (defn py-ne (cs) (py-binop " != " cs))
+    (defn py-lt (cs) (py-binop " < " cs))
+    (defn py-le (cs) (py-binop " <= " cs))
+    (defn py-gt (cs) (py-binop " > " cs))
+    (defn py-ge (cs) (py-binop " >= " cs))
+
+    ;; --- logic ---
+    (defn py-and (cs) (py-binop " and " cs))
+    (defn py-or  (cs) (py-binop " or "  cs))
+    (defn py-not (cs) (py-prefix "not " cs))
+
+    ;; --- conditionals (one-line forms; block-form variant uses :\n indent) ---
+    (defn py-if (cs)
+        (str_concat "if " (str_concat (head cs)
+                          (str_concat ": " (head (tail cs))))))
+
+    (defn py-if-else (cs)
+        (str_concat (head (tail cs))
+                    (str_concat " if " (str_concat (head cs)
+                                       (str_concat " else " (head (tail (tail cs))))))))
+
+    ;; --- blocks ---
+    (defn py-join-nl (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                            (str_concat NL (py-join-nl (tail xs)))))))
+
+    (defn py-do (cs)  (py-join-nl cs))
+    (defn py-seq (cs) (py-join-nl cs))
+
+    (defn py-let (cs)
+        (str_concat (head cs)
+                    (str_concat " = " (head (tail cs)))))
+
+    ;; --- jumps ---
+    (defn py-return (cs)
+        (str_concat "return " (head cs)))
+    (defn py-break (_cs)    "break")
+    (defn py-continue (_cs) "continue")
+    (defn py-yield (cs)     (str_concat "yield " (head cs)))
+
+    ;; --- access ---
+    (defn py-local (cs)  (head cs))
+    (defn py-member (cs) (str_concat (head cs) (str_concat "." (head (tail cs)))))
+    (defn py-index (cs)  (str_concat (head cs) (str_concat "[" (str_concat (head (tail cs)) "]"))))
+
+    ;; --- write / ident / fndef / fncall ---
+    (defn py-assign (cs)
+        (str_concat (head cs) (str_concat " = " (head (tail cs)))))
+
+    (defn py-ident (cs) (head cs))
+
+    (defn comma-join (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (comma-join (tail xs)))))))
+
+    (defn py-fndef (cs)
+        (do
+            (let name (head cs))
+            (let params (head (tail cs)))
+            (let body (head (tail (tail cs))))
+            (str_concat "def " (str_concat name (str_concat "(" (str_concat params
+                       (str_concat "):" (str_concat NL (str_concat "    " body)))))))))
+
+    (defn py-fncall (cs)
+        ;; head is callee, tail is args
+        (str_concat (head cs)
+                    (str_concat "(" (str_concat (comma-join (tail cs)) ")"))))
+
+    (let python-templates
+        (list
+            (list PY-MATH-PLUS     py-plus)
+            (list PY-MATH-MINUS    py-minus)
+            (list PY-MATH-MULTIPLY py-multiply)
+            (list PY-MATH-DIVIDE   py-divide)
+            (list PY-MATH-MODULO   py-modulo)
+            (list PY-MATH-NEGATE   py-negate)
+            (list PY-CMP-EQ        py-eq)
+            (list PY-CMP-NE        py-ne)
+            (list PY-CMP-LT        py-lt)
+            (list PY-CMP-LE        py-le)
+            (list PY-CMP-GT        py-gt)
+            (list PY-CMP-GE        py-ge)
+            (list PY-LOG-AND       py-and)
+            (list PY-LOG-OR        py-or)
+            (list PY-LOG-NOT       py-not)
+            (list PY-IF            py-if)
+            (list PY-IF-ELSE       py-if-else)
+            (list PY-DO            py-do)
+            (list PY-SEQ           py-seq)
+            (list PY-LET           py-let)
+            (list PY-RET           py-return)
+            (list PY-BRK           py-break)
+            (list PY-CONT          py-continue)
+            (list PY-YIELD         py-yield)
+            (list PY-LOCAL         py-local)
+            (list PY-MEMBER        py-member)
+            (list PY-INDEX         py-index)
+            (list PY-ASSIGN        py-assign)
+            (list PY-IDENT         py-ident)
+            (list PY-FNDEF         py-fndef)
+            (list PY-FNCALL        py-fncall)))
+)

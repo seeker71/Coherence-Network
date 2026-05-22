@@ -1,0 +1,91 @@
+; emits/form.fk — Recipe → Form (.fk) source emit templates
+;
+; The load-bearing target for the substrate-py-to-fk migration arc:
+; walks any universal-shapes Recipe back to Form's own surface syntax.
+; Form's grammar is (verb args...) so every emit is a paren-wrap with
+; a verb name and space-joined emitted children.
+
+(do
+    (let F-PLUS (make_nodeid 1 2 12 1))
+    (let F-MIN  (make_nodeid 1 2 12 2))
+    (let F-MUL  (make_nodeid 1 2 12 3))
+    (let F-DIV  (make_nodeid 1 2 12 4))
+    (let F-MOD  (make_nodeid 1 2 12 5))
+    (let F-EQ   (make_nodeid 1 2 13 1))
+    (let F-NE   (make_nodeid 1 2 13 2))
+    (let F-LT   (make_nodeid 1 2 13 3))
+    (let F-LE   (make_nodeid 1 2 13 4))
+    (let F-GT   (make_nodeid 1 2 13 5))
+    (let F-GE   (make_nodeid 1 2 13 6))
+    (let F-AND  (make_nodeid 1 2 14 1))
+    (let F-OR   (make_nodeid 1 2 14 2))
+    (let F-NOT  (make_nodeid 1 2 14 3))
+    (let F-IF   (make_nodeid 1 2 11 1))
+    (let F-IFE  (make_nodeid 1 2 11 2))
+    (let F-DO   (make_nodeid 1 2 9 1))
+    (let F-SEQ  (make_nodeid 1 2 9 2))
+    (let F-LET  (make_nodeid 1 2 9 3))
+    (let F-RET  (make_nodeid 1 2 18 1))
+    (let F-LOC  (make_nodeid 1 2 15 1))
+    (let F-MEM  (make_nodeid 1 2 15 2))
+    (let F-IDX  (make_nodeid 1 2 15 3))
+    (let F-ASN  (make_nodeid 1 2 16 1))
+    (let F-ID   (make_nodeid 1 2 33 1))
+    (let F-FND  (make_nodeid 1 2 31 1))
+    (let F-FNC  (make_nodeid 1 2 32 1))
+
+    (defn fm-sj (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat " " (fm-sj (tail xs)))))))
+
+    (defn fm-wrap (verb cs)
+        (str_concat "(" (str_concat verb
+                        (str_concat " " (str_concat (fm-sj cs) ")")))))
+
+    (defn fm-plus (cs) (fm-wrap "add" cs))
+    (defn fm-min  (cs) (fm-wrap "sub" cs))
+    (defn fm-mul  (cs) (fm-wrap "mul" cs))
+    (defn fm-div  (cs) (fm-wrap "div" cs))
+    (defn fm-mod  (cs) (fm-wrap "mod" cs))
+    (defn fm-eq   (cs) (fm-wrap "eq"  cs))
+    (defn fm-ne   (cs) (fm-wrap "ne"  cs))
+    (defn fm-lt   (cs) (fm-wrap "lt"  cs))
+    (defn fm-le   (cs) (fm-wrap "le"  cs))
+    (defn fm-gt   (cs) (fm-wrap "gt"  cs))
+    (defn fm-ge   (cs) (fm-wrap "ge"  cs))
+    (defn fm-and  (cs) (fm-wrap "and" cs))
+    (defn fm-or   (cs) (fm-wrap "or"  cs))
+    (defn fm-not  (cs) (fm-wrap "not" cs))
+    (defn fm-if   (cs) (fm-wrap "if"  cs))
+    (defn fm-ife  (cs) (fm-wrap "if"  cs))
+    (defn fm-do   (cs) (fm-wrap "do"  cs))
+    (defn fm-seq  (cs) (fm-wrap "do"  cs))
+    (defn fm-let  (cs) (fm-wrap "let" cs))
+    (defn fm-ret  (cs) (fm-wrap "return" cs))
+    (defn fm-loc  (cs) (head cs))
+    (defn fm-mem  (cs) (str_concat (head cs) (str_concat "." (head (tail cs)))))
+    (defn fm-idx  (cs) (fm-wrap "index" cs))
+    (defn fm-asn  (cs) (fm-wrap "set" cs))
+    (defn fm-id   (cs) (head cs))
+    (defn fm-fnd  (cs) (fm-wrap "defn" cs))
+    (defn fm-fnc  (cs)
+        ;; head is callee, tail is args — emit as (callee args...)
+        (str_concat "(" (str_concat (head cs)
+                        (if (nil? (tail cs)) ")"
+                            (str_concat " " (str_concat (fm-sj (tail cs)) ")"))))))
+
+    (let form-templates
+        (list
+            (list F-PLUS fm-plus) (list F-MIN fm-min) (list F-MUL fm-mul)
+            (list F-DIV fm-div) (list F-MOD fm-mod)
+            (list F-EQ fm-eq) (list F-NE fm-ne) (list F-LT fm-lt)
+            (list F-LE fm-le) (list F-GT fm-gt) (list F-GE fm-ge)
+            (list F-AND fm-and) (list F-OR fm-or) (list F-NOT fm-not)
+            (list F-IF fm-if) (list F-IFE fm-ife)
+            (list F-DO fm-do) (list F-SEQ fm-seq) (list F-LET fm-let)
+            (list F-RET fm-ret)
+            (list F-LOC fm-loc) (list F-MEM fm-mem) (list F-IDX fm-idx)
+            (list F-ASN fm-asn) (list F-ID fm-id)
+            (list F-FND fm-fnd) (list F-FNC fm-fnc)))
+)
