@@ -16,6 +16,7 @@ requirements:
 done_when:
   - Super-ideas excluded from pickup, child-ideas ranked normally
   - pytest api/tests/test_idea_hierarchy_super_child.py passes
+test: "cd api && python -m pytest -q tests/test_super_idea_rollup.py"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
