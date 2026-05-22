@@ -22,16 +22,18 @@ done_when:
   - registry-dashboard returns 200 even when stats are fully unavailable
   - pytest api/tests/test_registry_discovery.py passes
 notes: |
-  Live status as of 2026-05-22 (post path-resolution fix):
+  Live status as of 2026-05-22 (post container-asset-sync):
   - /api/discovery/registry-submissions returns 9 items (≥ 6 spec'd) ✓
   - /api/discovery/registry-dashboard returns 200 ✓
-  - core_requirement_met: false — submission_ready_count: 0, missing_asset_count: 9.
-    Registries are discovered and listed, but none have submission assets (icons,
-    manifests, descriptions) prepared yet. That's content-creation work, not code.
-  - test_registry_discovery.py still missing — pending honest test of the validation
-    pipeline + asset-presence check.
-  Status attuned 2026-05-22 from done → active to match: the discovery pipeline
-  ships, the submission packages do not.
+  - core_requirement_met: true — submission_ready_count: 9, missing_asset_count: 0.
+    All six MCP registries (glama, mcp-so, modelcontextprotocol-registry, npm,
+    pulsemcp, smithery) and three skill registries (askill-sh, clawhub, skills-sh)
+    have their submission assets present and validated.
+  - The asset content (manifests, READMEs, SKILL.md, ecosystem table) was already
+    in the repo. The flip from false → true came from extending the Hostinger
+    deploy script to sync mcp-server/, skills/, .cursor/skills/, docs/shared/,
+    README.md, and api/mcp_server.py into the api container's /app/ tree so the
+    validator's path checks resolve the same in-container as they do at repo root.
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)

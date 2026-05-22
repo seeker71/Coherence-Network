@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] transmission | Chantress Seba — Awen (Live) as audio-only arrival
+
+Public YouTube Music audio received by direct link: [`2026-05-22-awen-live-chantress-seba`](transmissions/2026-05-22-awen-live-chantress-seba.md). `youtube-watcher` found no subtitles, so the body held the arrival as source-marked audio rather than forcing it into prose.
+
+- **Transmission witnessed**: [`Awen (Live)`](transmissions/2026-05-22-awen-live-chantress-seba.md), Chantress Seba, 8:03, release year 2024 by YouTube metadata.
+- **No concept seeded**: the arrival deepens [`lc-anything-arrives-room`](concepts/lc-anything-arrives-room.md) by example, because audio can enter as carrier/provenance/duration/trace without lexical extraction.
+- **Discernment held**: no lyrics quoted, inferred, or summarized; the absence of subtitles is part of the trace.
+
 ## [2026-05-22] concept | Anything-Arrives Room — care instrument wishes
 
 The physical I/O layer became more actionable: access is now framed as a wish for a specific care benefit, not general sensing. The concept names ten wishes for vitality and assistance: reading strain, occupied pauses, fatigue, weak infrastructure, audible return, shared space, environment kindness, paper/object memory, embodied timing, and governed thresholds.

@@ -852,6 +852,16 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
+
+    # Two-sided parent invariant: when create includes parent_idea_id, form the
+    # reciprocal edge in the same breath. create_idea sets the child's own
+    # parent_idea_id field, but only set_parent_idea appends the child to the
+    # parent's child_idea_ids — symmetric with the PATCH path below.
+    if data.parent_idea_id:
+        idea_service.set_parent_idea(created.id, data.parent_idea_id)
+        refreshed = idea_service.get_idea(created.id)
+        if refreshed is not None:
+            return refreshed
     return created
 
 
