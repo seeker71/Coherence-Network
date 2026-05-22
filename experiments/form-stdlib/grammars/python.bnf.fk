@@ -241,6 +241,47 @@
                             (cap-get caps "value"))))
 
     ;; ──────────────────────────────────────────────────────────────────
+    ;; Expanded Python emitters: call, attribute, if/while/for/return
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let PY-BNF-CALL    (make_nodeid 1 2 99 52))
+    (let PY-BNF-ATTR    (make_nodeid 1 2 99 53))
+    (let PY-BNF-IF      (make_nodeid 1 2 99 54))
+    (let PY-BNF-WHILE   (make_nodeid 1 2 99 55))
+    (let PY-BNF-FOR     (make_nodeid 1 2 99 56))
+    (let PY-BNF-RETURN  (make_nodeid 1 2 99 57))
+
+    (defn py-bnf-emit-call (caps)
+        (intern_node PY-BNF-CALL
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "arg"))))
+
+    (defn py-bnf-emit-attr (caps)
+        (intern_node PY-BNF-ATTR
+                      (list (intern_trivial_string (cap-get caps "base"))
+                            (intern_trivial_string (cap-get caps "field")))))
+
+    (defn py-bnf-emit-if-stmt (caps)
+        (intern_node PY-BNF-IF
+                      (list (cap-get caps "cond")
+                            (cap-get caps "body"))))
+
+    (defn py-bnf-emit-while-stmt (caps)
+        (intern_node PY-BNF-WHILE
+                      (list (cap-get caps "cond")
+                            (cap-get caps "body"))))
+
+    (defn py-bnf-emit-for-stmt (caps)
+        (intern_node PY-BNF-FOR
+                      (list (intern_trivial_string (cap-get caps "var"))
+                            (cap-get caps "iter")
+                            (cap-get caps "body"))))
+
+    (defn py-bnf-emit-return-stmt (caps)
+        (intern_node PY-BNF-RETURN
+                      (list (cap-get caps "expr"))))
+
+    ;; ──────────────────────────────────────────────────────────────────
     ;; Part 3 — the BNF grammar text
     ;; ──────────────────────────────────────────────────────────────────
     ;; Reading aloud:
@@ -283,21 +324,41 @@
   keyword AND and
   keyword OR or
   keyword NOT not
+  keyword IF if
+  keyword ELSE else
+  keyword WHILE while
+  keyword FOR for
+  keyword IN in
+  keyword RETURN return
+  keyword CLASS class
+  keyword LAMBDA lambda
+  keyword TRUE True
+  keyword FALSE False
+  keyword NONE None
 }
 
 rules {
   module       ::= statement+                                  => py-bnf-emit-module ;
-  statement    ::= import-as | import-bare | from-stmt | def-stmt | assign-stmt ;
+  statement    ::= import-as | import-bare | from-stmt | def-stmt | if-stmt
+                 | while-stmt | for-stmt | return-stmt | assign-stmt | expr-stmt ;
   import-as    ::= IMPORT IDENT AS IDENT                       => py-bnf-emit-import-as ;
   import-bare  ::= IMPORT IDENT                                 => py-bnf-emit-import-bare ;
   from-stmt    ::= FROM IDENT IMPORT IDENT                      => py-bnf-emit-from-import ;
   def-stmt     ::= DEF IDENT LPAREN RPAREN COLON                => py-bnf-emit-def ;
+  if-stmt      ::= IF cond:expression COLON body:expression     => py-bnf-emit-if-stmt ;
+  while-stmt   ::= WHILE cond:expression COLON body:expression  => py-bnf-emit-while-stmt ;
+  for-stmt     ::= FOR var:IDENT IN iter:expression COLON body:expression => py-bnf-emit-for-stmt ;
+  return-stmt  ::= RETURN expr:expression                       => py-bnf-emit-return-stmt ;
   assign-stmt  ::= name:IDENT EQUALS value:expression           => py-bnf-emit-assign-expr ;
+  expr-stmt    ::= expression ;
   ;; BMF-style: ONE Expression rule + precedence DATA in Form code.
   expression   ::= lhs:primary-expr (op:binary-op rhs:primary-expr)* => py-bnf-emit-expression ;
   binary-op    ::= OR | AND | EQEQ | NEQ | LE | GE | LT | GT
                  | PLUS | MINUS | STARSTAR | SLASHSLASH | STAR | SLASH | PERCENT ;
-  primary-expr ::= int-lit | str-lit | ident-expr | paren-expr ;
+  ;; primary alternatives: call/attr first (most specific), then literals.
+  primary-expr ::= call-expr | attr-expr | int-lit | str-lit | ident-expr | paren-expr ;
+  call-expr    ::= name:IDENT LPAREN arg:expression RPAREN      => py-bnf-emit-call ;
+  attr-expr    ::= base:IDENT DOT field:IDENT                   => py-bnf-emit-attr ;
   paren-expr   ::= LPAREN expr:expression RPAREN                => py-bnf-emit-paren-expr ;
   int-lit      ::= value:INT                                    => py-bnf-emit-int-expr ;
   str-lit      ::= value:STRING                                 => py-bnf-emit-str-expr ;
@@ -323,6 +384,12 @@ rules {
               (list "py-bnf-emit-str-expr"         py-bnf-emit-str-expr)
               (list "py-bnf-emit-ident-expr"       py-bnf-emit-ident-expr)
               (list "py-bnf-emit-paren-expr"       py-bnf-emit-paren-expr)
+              (list "py-bnf-emit-call"             py-bnf-emit-call)
+              (list "py-bnf-emit-attr"             py-bnf-emit-attr)
+              (list "py-bnf-emit-if-stmt"          py-bnf-emit-if-stmt)
+              (list "py-bnf-emit-while-stmt"       py-bnf-emit-while-stmt)
+              (list "py-bnf-emit-for-stmt"         py-bnf-emit-for-stmt)
+              (list "py-bnf-emit-return-stmt"      py-bnf-emit-return-stmt)
               (list "py-bnf-emit-passthrough"      py-bnf-emit-passthrough)))
 
     (let py-bnf-grammar
