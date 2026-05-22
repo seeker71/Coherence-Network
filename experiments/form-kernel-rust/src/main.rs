@@ -706,6 +706,19 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // Byte-level file read — returns a list of ints (0-255), one per
+        // byte. Pair with `nth` for byte-at-index access. The codec stays
+        // universal across text and binary formats: text grammars walk a
+        // string with char_at + ord; binary grammars walk a byte-list with
+        // nth. Same shape.
+        self.register_native("read_file_bytes", cat_call(), |_, _, args| {
+            match fs::read(args[0].as_str()) {
+                Ok(bytes) => Value::List(
+                    bytes.into_iter().map(|b| Value::Int(b as i64)).collect()
+                ),
+                Err(_) => Value::Null,
+            }
+        });
 
         // --- Substrate write surface ------------------------------------
         // Form code holds NodeIDs as values (Value::Nid) and uses these

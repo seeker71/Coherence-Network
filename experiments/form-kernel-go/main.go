@@ -734,6 +734,21 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VStr, Str: string(b)}
 	})
+	// Byte-level file read — returns a list of ints (0-255), one per byte.
+	// Pair with `nth` for byte-at-index access. The codec stays universal
+	// across text and binary formats: text grammars walk a string with
+	// char_at + ord; binary grammars walk a byte-list with nth. Same shape.
+	k.registerNative("read_file_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		b, err := os.ReadFile(args[0].Str)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		out := make([]Value, len(b))
+		for i, by := range b {
+			out[i] = Value{Kind: VInt, Int: int64(by)}
+		}
+		return Value{Kind: VList, List: out}
+	})
 
 	// --- Substrate write surface ----------------------------------------
 	// All attributed as WITNESS — the substrate attesting to its own
