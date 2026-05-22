@@ -20,6 +20,7 @@ done_when:
   - Full chain code-review to deploy to verify to validated works end-to-end
   - No orphaned reviewing ideas with no active task
   - pytest api/tests/test_pipeline_phase_split.py passes
+test: "cd api && python -m pytest -q tests/test_flow_pipeline.py"
 ---
 
 > **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
