@@ -17,6 +17,7 @@ requirements:
 done_when:
   - Exact computed values verified against known inputs in tests
   - pytest api/tests/test_grounded_cost_value_measurement.py passes
+test: "cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.py"
 ---
 
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
