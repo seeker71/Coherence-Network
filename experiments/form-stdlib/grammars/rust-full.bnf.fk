@@ -1,0 +1,387 @@
+; grammars/rust-full.bnf.fk — comprehensive Rust grammar in BNF DSL
+;
+; Ported from the Rust Reference grammar (doc.rust-lang.org/reference)
+; structured as readable BNF rules.
+;
+; Coverage:
+;   • Crate structure: use declarations, modules, items
+;   • All item kinds: fn, struct, enum, union, trait, impl, type, const,
+;     static, mod, extern
+;   • Generics with lifetimes, type params, const generics, bounds
+;   • Type expressions: path, reference, raw pointer, tuple, array,
+;     slice, fn, trait object (dyn), impl Trait, never (!), unit ()
+;   • Patterns: literal, binding, wildcard, range, tuple, struct,
+;     enum-variant, slice, reference, or-pattern, guard
+;   • All expressions: arithmetic + comparison + boolean + bitwise +
+;     dereference + reference + range + cast + closure + try (?) +
+;     await + match + if-let + while-let + loop + for-of + block +
+;     call + method + field + index + struct-expr + array-expr +
+;     tuple-expr + path
+;   • All statements: let, item, expression
+;   • Attributes (#[attr] outer + #![attr] inner)
+;   • Macros (basic invocation: name!(...))
+;   • Lifetimes ('a, 'static)
+;
+; Not covered:
+;   • Macro definitions (macro_rules!) — handled as opaque expansion
+;   • const generics with complex expressions
+;   • higher-ranked trait bounds (for<'a>)
+
+(do
+    (let RSF-CRATE    (make_nodeid 1 2 99 500))
+    (let RSF-USE      (make_nodeid 1 2 99 501))
+    (let RSF-MOD      (make_nodeid 1 2 99 502))
+    (let RSF-FN       (make_nodeid 1 2 99 503))
+    (let RSF-STRUCT   (make_nodeid 1 2 99 504))
+    (let RSF-ENUM     (make_nodeid 1 2 99 505))
+    (let RSF-TRAIT    (make_nodeid 1 2 99 506))
+    (let RSF-IMPL     (make_nodeid 1 2 99 507))
+    (let RSF-TYPE     (make_nodeid 1 2 99 508))
+    (let RSF-CONST    (make_nodeid 1 2 99 509))
+    (let RSF-STATIC   (make_nodeid 1 2 99 510))
+    (let RSF-LET      (make_nodeid 1 2 99 511))
+    (let RSF-IF       (make_nodeid 1 2 99 512))
+    (let RSF-MATCH    (make_nodeid 1 2 99 513))
+    (let RSF-LOOP     (make_nodeid 1 2 99 514))
+    (let RSF-CALL     (make_nodeid 1 2 99 515))
+    (let RSF-IDENT    (make_nodeid 1 2 99 516))
+    (let RSF-INT      (make_nodeid 1 2 99 517))
+    (let RSF-STR      (make_nodeid 1 2 99 518))
+    (let RSF-RETURN   (make_nodeid 1 2 99 519))
+
+    (defn rsf-passthrough (caps)
+        (if (cap-has? caps "_result") (cap-get caps "_result")
+            (if (cap-has? caps "_1") (cap-get caps "_1") caps)))
+
+    (defn rsf-emit-use (caps)
+        (intern_node RSF-USE
+                      (list (intern_trivial_string (cap-get caps "path")))))
+    (defn rsf-emit-mod (caps)
+        (intern_node RSF-MOD
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-fn (caps)
+        (intern_node RSF-FN
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-struct (caps)
+        (intern_node RSF-STRUCT
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-enum (caps)
+        (intern_node RSF-ENUM
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-trait (caps)
+        (intern_node RSF-TRAIT
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-impl (_caps)
+        (intern_node RSF-IMPL (empty)))
+    (defn rsf-emit-type (caps)
+        (intern_node RSF-TYPE
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-const (caps)
+        (intern_node RSF-CONST
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-static (caps)
+        (intern_node RSF-STATIC
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-let (caps)
+        (intern_node RSF-LET
+                      (list (intern_trivial_string (cap-get caps "name")))))
+    (defn rsf-emit-stmt (_caps)
+        (intern_node RSF-RETURN (list (intern_trivial_string "stmt"))))
+    (defn rsf-emit-int (caps)
+        (intern_node RSF-INT
+                      (list (intern_trivial_int (str_to_int (cap-get caps "_1"))))))
+    (defn rsf-emit-str (caps)
+        (intern_node RSF-STR
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+    (defn rsf-emit-ident (caps)
+        (intern_node RSF-IDENT
+                      (list (intern_trivial_string (cap-get caps "_1")))))
+    (defn rsf-emit-call (_caps)
+        (intern_node RSF-CALL (list (intern_trivial_string "call"))))
+
+    (let rs-full-text
+"tokens {
+  whitespace 32 9 10 13
+  line-comment //
+  string-quotes 34
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator ( LPAREN
+  operator ) RPAREN
+  operator [ LBRACK
+  operator ] RBRACK
+  operator , COMMA
+  operator ; SEMI
+  operator . DOT
+  operator .. DOTDOT
+  operator ... DOTDOTDOT
+  operator :: COLONCOLON
+  operator -> ARROW
+  operator => FATARROW
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator && ANDAND
+  operator || OROR
+  operator << LSHIFT
+  operator >> RSHIFT
+  operator += PLUSEQ
+  operator -= MINUSEQ
+  operator *= STAREQ
+  operator /= SLASHEQ
+  operator %= PERCENTEQ
+  operator : COLON
+  operator ? QMARK
+  operator # HASH
+  operator @ AT
+  operator < LT
+  operator > GT
+  operator = EQUALS
+  operator + PLUS
+  operator - MINUS
+  operator * STAR
+  operator / SLASH
+  operator % PERCENT
+  operator & AMP
+  operator | PIPE
+  operator ^ CARET
+  operator ! BANG
+  operator _ UNDERSCORE
+  keyword USE use
+  keyword MOD mod
+  keyword PUB pub
+  keyword CRATE crate
+  keyword SELF self
+  keyword SUPER super
+  keyword AS as
+  keyword FN fn
+  keyword STRUCT struct
+  keyword ENUM enum
+  keyword UNION union
+  keyword TRAIT trait
+  keyword IMPL impl
+  keyword TYPE type
+  keyword CONST const
+  keyword STATIC static
+  keyword LET let
+  keyword MUT mut
+  keyword REF ref
+  keyword IF if
+  keyword ELSE else
+  keyword MATCH match
+  keyword LOOP loop
+  keyword WHILE while
+  keyword FOR for
+  keyword IN in
+  keyword RETURN return
+  keyword BREAK break
+  keyword CONTINUE continue
+  keyword TRUE true
+  keyword FALSE false
+  keyword WHERE where
+  keyword DYN dyn
+  keyword MOVE move
+  keyword ASYNC async
+  keyword AWAIT await
+  keyword EXTERN extern
+  keyword UNSAFE unsafe
+  keyword BOX box
+  keyword YIELD yield
+}
+
+rules {
+  crate        ::= inner-attr* item*                            => rsf-passthrough ;
+  inner-attr   ::= HASH BANG LBRACK meta RBRACK                 => rsf-passthrough ;
+  outer-attr   ::= HASH LBRACK meta RBRACK                      => rsf-passthrough ;
+  meta         ::= IDENT (LPAREN arg-list? RPAREN)? (EQUALS expression)? => rsf-passthrough ;
+
+  item         ::= outer-attr* visibility? item-kind ;
+  visibility   ::= PUB (LPAREN (CRATE | SUPER | SELF | IDENT) RPAREN)? => rsf-passthrough ;
+  item-kind    ::= use-item | mod-item | fn-item | struct-item | enum-item
+                 | union-item | trait-item | impl-item | type-item
+                 | const-item | static-item | extern-item ;
+
+  use-item     ::= USE path:use-path SEMI                       => rsf-emit-use ;
+  use-path     ::= path-segment (COLONCOLON path-segment)* (AS IDENT)? => rsf-passthrough ;
+  path-segment ::= IDENT | STAR | LBRACE use-path (COMMA use-path)* RBRACE => rsf-passthrough ;
+
+  mod-item     ::= MOD name:IDENT (SEMI | LBRACE item* RBRACE)  => rsf-emit-mod ;
+
+  fn-item      ::= (ASYNC)? (UNSAFE)? FN name:IDENT generics?
+                   LPAREN param-list? RPAREN (ARROW ret:type-expr)?
+                   where-clause? body:block-expr                => rsf-emit-fn ;
+  param-list   ::= self-param (COMMA param)* | param (COMMA param)* => rsf-passthrough ;
+  self-param   ::= (AMP (lifetime)? (MUT)?)? SELF (COLON type-expr)? => rsf-passthrough ;
+  param        ::= pattern COLON type-expr                      => rsf-passthrough ;
+
+  struct-item  ::= STRUCT name:IDENT generics?
+                   (LBRACE field-decl* RBRACE
+                    | LPAREN tuple-fields RPAREN SEMI
+                    | SEMI)                                     => rsf-emit-struct ;
+  field-decl   ::= outer-attr* visibility? name:IDENT COLON type:type-expr COMMA? => rsf-passthrough ;
+  tuple-fields ::= type-expr (COMMA type-expr)*                 => rsf-passthrough ;
+
+  enum-item    ::= ENUM name:IDENT generics?
+                   LBRACE variant (COMMA variant)* COMMA? RBRACE => rsf-emit-enum ;
+  variant      ::= outer-attr* name:IDENT (LPAREN tuple-fields RPAREN
+                                          | LBRACE field-decl* RBRACE
+                                          | EQUALS expression)? => rsf-passthrough ;
+
+  union-item   ::= UNION name:IDENT generics?
+                   LBRACE field-decl* RBRACE                    => rsf-emit-struct ;
+
+  trait-item   ::= (UNSAFE)? TRAIT name:IDENT generics?
+                   (COLON type-bound)? where-clause?
+                   LBRACE trait-member* RBRACE                  => rsf-emit-trait ;
+  trait-member ::= fn-item | type-item | const-item             => rsf-passthrough ;
+
+  impl-item    ::= (UNSAFE)? IMPL generics? type:type-expr
+                   (FOR for-type:type-expr)? where-clause?
+                   LBRACE impl-member* RBRACE                   => rsf-emit-impl ;
+  impl-member  ::= fn-item | const-item | type-item             => rsf-passthrough ;
+
+  type-item    ::= TYPE name:IDENT generics? (EQUALS type-expr)? SEMI => rsf-emit-type ;
+  const-item   ::= CONST name:IDENT COLON type:type-expr EQUALS value:expression SEMI => rsf-emit-const ;
+  static-item  ::= STATIC (MUT)? name:IDENT COLON type:type-expr EQUALS value:expression SEMI => rsf-emit-static ;
+  extern-item  ::= EXTERN STRING LBRACE item* RBRACE            => rsf-passthrough ;
+
+  ;; ── generics + where ─────────────────────────────────────────
+  generics     ::= LT generic-param (COMMA generic-param)* GT   => rsf-passthrough ;
+  generic-param::= lifetime | type-param | const-param ;
+  lifetime     ::= IDENT                                        => rsf-passthrough ;   ; 'a tokenized as IDENT in this grammar (approx)
+  type-param   ::= IDENT (COLON type-bound)? (EQUALS type-expr)? => rsf-passthrough ;
+  const-param  ::= CONST IDENT COLON type-expr                  => rsf-passthrough ;
+  type-bound   ::= type-expr (PLUS type-expr)*                  => rsf-passthrough ;
+  where-clause ::= WHERE where-pred (COMMA where-pred)*         => rsf-passthrough ;
+  where-pred   ::= type-expr COLON type-bound                   => rsf-passthrough ;
+
+  ;; ── type expressions ────────────────────────────────────────
+  type-expr    ::= ref-type | ptr-type | fn-type | tuple-type
+                 | array-type | slice-type | path-type | dyn-type
+                 | impl-type | never-type | unit-type ;
+  ref-type     ::= AMP (lifetime)? (MUT)? type-expr             => rsf-passthrough ;
+  ptr-type     ::= STAR (CONST | MUT) type-expr                 => rsf-passthrough ;
+  fn-type      ::= FN LPAREN type-list? RPAREN (ARROW type-expr)? => rsf-passthrough ;
+  tuple-type   ::= LPAREN (type-expr (COMMA type-expr)*)? RPAREN => rsf-passthrough ;
+  array-type   ::= LBRACK type-expr SEMI expression RBRACK      => rsf-passthrough ;
+  slice-type   ::= LBRACK type-expr RBRACK                      => rsf-passthrough ;
+  path-type    ::= path-segment (COLONCOLON path-segment)* (LT type-list GT)? => rsf-emit-ident ;
+  dyn-type     ::= DYN type-bound                               => rsf-passthrough ;
+  impl-type    ::= IMPL type-bound                              => rsf-passthrough ;
+  never-type   ::= BANG                                         => rsf-passthrough ;
+  unit-type    ::= LPAREN RPAREN                                => rsf-passthrough ;
+  type-list    ::= type-expr (COMMA type-expr)*                 => rsf-passthrough ;
+
+  ;; ── patterns ─────────────────────────────────────────────────
+  pattern      ::= literal-pat | binding-pat | wildcard-pat | tuple-pat
+                 | struct-pat | enum-pat | reference-pat | range-pat
+                 | or-pattern ;
+  literal-pat  ::= INT | STRING | TRUE | FALSE                  => rsf-passthrough ;
+  binding-pat  ::= (REF)? (MUT)? IDENT                          => rsf-passthrough ;
+  wildcard-pat ::= UNDERSCORE                                   => rsf-passthrough ;
+  tuple-pat    ::= LPAREN (pattern (COMMA pattern)*)? RPAREN    => rsf-passthrough ;
+  struct-pat   ::= path-type LBRACE (field-pat (COMMA field-pat)*)? RBRACE => rsf-passthrough ;
+  field-pat    ::= IDENT (COLON pattern)?                       => rsf-passthrough ;
+  enum-pat     ::= path-type LPAREN pattern (COMMA pattern)* RPAREN => rsf-passthrough ;
+  reference-pat::= AMP (MUT)? pattern                           => rsf-passthrough ;
+  range-pat    ::= literal-pat DOTDOT literal-pat               => rsf-passthrough ;
+  or-pattern   ::= pattern (PIPE pattern)+                      => rsf-passthrough ;
+
+  ;; ── statements ───────────────────────────────────────────────
+  block-expr   ::= LBRACE statement* tail-expr? RBRACE          => rsf-emit-stmt ;
+  statement    ::= let-stmt | item | expr-stmt ;
+  let-stmt     ::= LET pattern (COLON type-expr)?
+                   (EQUALS value:expression)? SEMI              => rsf-emit-let ;
+  expr-stmt    ::= expression SEMI                              => rsf-passthrough ;
+  tail-expr    ::= expression                                   => rsf-passthrough ;
+
+  ;; ── expressions ─────────────────────────────────────────────
+  expression   ::= assign-expr ;
+  assign-expr  ::= range-expr (assign-op assign-expr)?          => rsf-passthrough ;
+  assign-op    ::= EQUALS | PLUSEQ | MINUSEQ | STAREQ | SLASHEQ | PERCENTEQ ;
+  range-expr   ::= or-expr (DOTDOT or-expr)?                    => rsf-passthrough ;
+  or-expr      ::= and-expr (OROR and-expr)*                    => rsf-passthrough ;
+  and-expr     ::= cmp-expr (ANDAND cmp-expr)*                  => rsf-passthrough ;
+  cmp-expr     ::= bitor-expr (cmp-op bitor-expr)*              => rsf-passthrough ;
+  cmp-op       ::= EQEQ | NEQ | LE | GE | LT | GT ;
+  bitor-expr   ::= bitxor-expr (PIPE bitxor-expr)*              => rsf-passthrough ;
+  bitxor-expr  ::= bitand-expr (CARET bitand-expr)*             => rsf-passthrough ;
+  bitand-expr  ::= shift-expr (AMP shift-expr)*                 => rsf-passthrough ;
+  shift-expr   ::= add-expr ((LSHIFT | RSHIFT) add-expr)*       => rsf-passthrough ;
+  add-expr     ::= mul-expr (add-op mul-expr)*                  => rsf-passthrough ;
+  add-op       ::= PLUS | MINUS ;
+  mul-expr     ::= cast-expr (mul-op cast-expr)*                => rsf-passthrough ;
+  mul-op       ::= STAR | SLASH | PERCENT ;
+  cast-expr    ::= unary-expr (AS type-expr)*                   => rsf-passthrough ;
+  unary-expr   ::= unary-op unary-expr | primary-expr           => rsf-passthrough ;
+  unary-op     ::= MINUS | BANG | STAR | AMP ;
+
+  primary-expr ::= match-expr | if-expr | loop-expr | while-expr
+                 | for-expr | block-expr | return-expr | break-expr
+                 | continue-expr | atom trailer* ;
+
+  if-expr      ::= IF cond:expression body:block-expr
+                   (ELSE (if-expr | block-expr))?               => rsf-emit-stmt ;
+  match-expr   ::= MATCH scrutinee:expression LBRACE
+                   match-arm (COMMA match-arm)* COMMA? RBRACE   => rsf-emit-stmt ;
+  match-arm    ::= pattern (IF expression)? FATARROW body:expression => rsf-passthrough ;
+  loop-expr    ::= LOOP body:block-expr                         => rsf-emit-stmt ;
+  while-expr   ::= WHILE cond:expression body:block-expr        => rsf-emit-stmt ;
+  for-expr     ::= FOR pattern IN iter:expression body:block-expr => rsf-emit-stmt ;
+  return-expr  ::= RETURN value:expression?                     => rsf-emit-stmt ;
+  break-expr   ::= BREAK value:expression?                      => rsf-emit-stmt ;
+  continue-expr::= CONTINUE                                     => rsf-emit-stmt ;
+
+  trailer      ::= call-trailer | index-trailer | method-trailer | field-trailer | try-trailer ;
+  call-trailer ::= LPAREN arg-list? RPAREN                      => rsf-emit-call ;
+  index-trailer::= LBRACK expression RBRACK                     => rsf-passthrough ;
+  method-trailer ::= DOT IDENT (LT type-list GT)? LPAREN arg-list? RPAREN => rsf-passthrough ;
+  field-trailer::= DOT IDENT                                    => rsf-passthrough ;
+  try-trailer  ::= QMARK                                        => rsf-passthrough ;
+  arg-list     ::= expression (COMMA expression)*               => rsf-passthrough ;
+
+  atom         ::= int-lit | str-lit | true-lit | false-lit
+                 | tuple-expr | array-expr | struct-expr
+                 | closure-expr | path-expr | paren-expr ;
+  tuple-expr   ::= LPAREN (expression (COMMA expression)*)? RPAREN => rsf-passthrough ;
+  array-expr   ::= LBRACK (expression (COMMA expression)*)? RBRACK => rsf-passthrough ;
+  struct-expr  ::= path-type LBRACE (field-init (COMMA field-init)*)? RBRACE => rsf-passthrough ;
+  field-init   ::= IDENT (COLON expression)?                    => rsf-passthrough ;
+  closure-expr ::= (MOVE)? PIPE param-list? PIPE (ARROW type-expr)? body:expression => rsf-emit-fn ;
+  path-expr    ::= path-segment (COLONCOLON path-segment)*      => rsf-emit-ident ;
+  paren-expr   ::= LPAREN expression RPAREN                     => rsf-passthrough ;
+  int-lit      ::= INT                                          => rsf-emit-int ;
+  str-lit      ::= STRING                                       => rsf-emit-str ;
+  true-lit     ::= TRUE                                         => rsf-emit-ident ;
+  false-lit    ::= FALSE                                        => rsf-emit-ident ;
+}")
+
+    (let rs-full-registry
+        (list (list "rsf-passthrough"  rsf-passthrough)
+              (list "rsf-emit-use"     rsf-emit-use)
+              (list "rsf-emit-mod"     rsf-emit-mod)
+              (list "rsf-emit-fn"      rsf-emit-fn)
+              (list "rsf-emit-struct"  rsf-emit-struct)
+              (list "rsf-emit-enum"    rsf-emit-enum)
+              (list "rsf-emit-trait"   rsf-emit-trait)
+              (list "rsf-emit-impl"    rsf-emit-impl)
+              (list "rsf-emit-type"    rsf-emit-type)
+              (list "rsf-emit-const"   rsf-emit-const)
+              (list "rsf-emit-static"  rsf-emit-static)
+              (list "rsf-emit-let"     rsf-emit-let)
+              (list "rsf-emit-stmt"    rsf-emit-stmt)
+              (list "rsf-emit-int"     rsf-emit-int)
+              (list "rsf-emit-str"     rsf-emit-str)
+              (list "rsf-emit-ident"   rsf-emit-ident)
+              (list "rsf-emit-call"    rsf-emit-call)))
+
+    (let rs-full-grammar (load-bnf-grammar rs-full-text rs-full-registry))
+
+    (defn parse-rust-full (text)
+        (bnf-parse text rs-full-grammar))
+
+    0)

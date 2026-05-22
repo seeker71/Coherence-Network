@@ -276,50 +276,148 @@ rules {
   module       ::= statement ;
   statement    ::= simple-stmt | compound-stmt ;
 
-  simple-stmt  ::= import-stmt | from-import | return-stmt | pass-stmt
-                 | break-stmt | continue-stmt | assign-stmt | expr-stmt ;
+  ;; ── simple statements ─────────────────────────────────────────
+  simple-stmt  ::= import-stmt | from-import | return-stmt | raise-stmt
+                 | del-stmt | yield-stmt | global-stmt | nonlocal-stmt
+                 | assert-stmt | pass-stmt | break-stmt | continue-stmt
+                 | aug-assign | annotated-assign | assign-stmt | expr-stmt ;
 
-  import-stmt  ::= IMPORT name:IDENT                            => pyf-emit-import ;
-  from-import  ::= FROM module:IDENT IMPORT name:IDENT          => pyf-emit-from-import ;
-  return-stmt  ::= RETURN value:expression                      => pyf-emit-return ;
-  pass-stmt    ::= PASS                                        => pyf-emit-pass ;
-  break-stmt   ::= BREAK                                       => pyf-emit-pass ;
-  continue-stmt::= CONTINUE                                    => pyf-emit-pass ;
-  assign-stmt  ::= target:IDENT EQUALS value:expression         => pyf-emit-assign ;
-  expr-stmt    ::= expression                                  => pyf-passthrough ;
+  import-stmt  ::= IMPORT name:dotted-name (AS alias:IDENT)?           => pyf-emit-import ;
+  from-import  ::= FROM module:dotted-name IMPORT name:IDENT (COMMA IDENT)* (AS alias:IDENT)?  => pyf-emit-from-import ;
+  from-star    ::= FROM module:dotted-name IMPORT STAR                  => pyf-emit-from-import ;
+  dotted-name  ::= IDENT (DOT IDENT)*                                  => pyf-passthrough ;
 
-  compound-stmt::= func-def | class-def | if-stmt | while-stmt | for-stmt
-                 | try-stmt ;
+  return-stmt  ::= RETURN value:expression                              => pyf-emit-return ;
+  raise-stmt   ::= RAISE (value:expression)? (FROM cause:expression)?   => pyf-emit-pass ;
+  del-stmt     ::= DEL target:expression                                => pyf-emit-pass ;
+  yield-stmt   ::= YIELD value:expression                               => pyf-emit-pass ;
+  global-stmt  ::= GLOBAL name:IDENT (COMMA IDENT)*                     => pyf-emit-pass ;
+  nonlocal-stmt::= NONLOCAL name:IDENT (COMMA IDENT)*                   => pyf-emit-pass ;
+  assert-stmt  ::= ASSERT cond:expression (COMMA msg:expression)?       => pyf-emit-pass ;
+  pass-stmt    ::= PASS                                                 => pyf-emit-pass ;
+  break-stmt   ::= BREAK                                                => pyf-emit-pass ;
+  continue-stmt::= CONTINUE                                             => pyf-emit-pass ;
 
-  func-def     ::= DEF name:IDENT LPAREN RPAREN COLON body:simple-stmt  => pyf-emit-func-def ;
-  class-def    ::= CLASS name:IDENT COLON body:simple-stmt              => pyf-emit-class-def ;
-  if-stmt      ::= IF cond:expression COLON body:simple-stmt            => pyf-emit-pass ;
-  while-stmt   ::= WHILE cond:expression COLON body:simple-stmt         => pyf-emit-pass ;
-  for-stmt     ::= FOR target:IDENT IN iter:expression COLON body:simple-stmt => pyf-emit-pass ;
-  try-stmt     ::= TRY COLON body:simple-stmt                           => pyf-emit-pass ;
+  ;; assignment forms — order matters: annotated/aug before simple
+  annotated-assign ::= target:IDENT COLON type:expression EQUALS value:expression  => pyf-emit-assign ;
+  aug-assign   ::= target:IDENT aug-op value:expression                 => pyf-emit-assign ;
+  aug-op       ::= PLUSEQ | MINUSEQ | STAREQ | SLASHEQ | PERCENTEQ ;
+  assign-stmt  ::= target:IDENT EQUALS value:expression                 => pyf-emit-assign ;
+  expr-stmt    ::= expression                                           => pyf-passthrough ;
 
-  expression   ::= or-expr ;
-  or-expr      ::= and-expr (OR and-expr)*                     => pyf-passthrough ;
-  and-expr     ::= cmp-expr (AND cmp-expr)*                    => pyf-passthrough ;
-  cmp-expr     ::= sum-expr (cmp-op sum-expr)?                 => pyf-passthrough ;
-  cmp-op       ::= EQEQ | NEQ | LT | GT | LE | GE | IN | IS ;
-  sum-expr     ::= mul-expr (add-op mul-expr)*                 => pyf-passthrough ;
+  ;; ── compound statements ──────────────────────────────────────
+  ;; Bodies are single-line for now; multi-statement indented bodies
+  ;; need the indent-aware engine extension (separate breath).
+  compound-stmt::= decorated | func-def | class-def | if-stmt | while-stmt
+                 | for-stmt | try-stmt | with-stmt | async-def ;
+
+  decorated    ::= decorator+ (func-def | class-def | async-def)        => pyf-passthrough ;
+  decorator    ::= AT expr:dotted-name (LPAREN RPAREN)?                 => pyf-emit-decorator ;
+
+  func-def     ::= DEF name:IDENT LPAREN params:param-list? RPAREN
+                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+  async-def    ::= ASYNC DEF name:IDENT LPAREN params:param-list? RPAREN
+                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+  param-list   ::= param (COMMA param)*                                 => pyf-passthrough ;
+  param        ::= STAR STAR name:IDENT
+                 | STAR name:IDENT
+                 | name:IDENT (COLON type:expression)? (EQUALS dflt:expression)?  => pyf-passthrough ;
+
+  class-def    ::= CLASS name:IDENT (LPAREN bases:arg-list? RPAREN)?
+                   COLON body:simple-stmt                               => pyf-emit-class-def ;
+
+  if-stmt      ::= IF cond:expression COLON body:simple-stmt
+                   elif-clause* else-clause?                            => pyf-emit-pass ;
+  elif-clause  ::= ELIF cond:expression COLON body:simple-stmt          => pyf-passthrough ;
+  else-clause  ::= ELSE COLON body:simple-stmt                          => pyf-passthrough ;
+
+  while-stmt   ::= WHILE cond:expression COLON body:simple-stmt
+                   else-clause?                                         => pyf-emit-pass ;
+
+  for-stmt     ::= FOR target:IDENT IN iter:expression COLON body:simple-stmt
+                   else-clause?                                         => pyf-emit-pass ;
+
+  try-stmt     ::= TRY COLON body:simple-stmt except-clause+
+                   else-clause? finally-clause?                         => pyf-emit-pass ;
+  except-clause::= EXCEPT (exc:expression (AS alias:IDENT)?)?
+                   COLON body:simple-stmt                               => pyf-passthrough ;
+  finally-clause ::= FINALLY COLON body:simple-stmt                     => pyf-passthrough ;
+
+  with-stmt    ::= WITH with-item (COMMA with-item)* COLON
+                   body:simple-stmt                                     => pyf-emit-pass ;
+  with-item    ::= expr:expression (AS alias:IDENT)?                    => pyf-passthrough ;
+
+  ;; ── expressions (full precedence ladder, low→high) ──────────
+  expression   ::= ternary ;
+  ternary      ::= or-expr (IF cond:or-expr ELSE else:expression)?      => pyf-passthrough ;
+  or-expr      ::= and-expr (OR and-expr)*                              => pyf-passthrough ;
+  and-expr     ::= not-expr (AND not-expr)*                             => pyf-passthrough ;
+  not-expr     ::= NOT not-expr | cmp-expr                              => pyf-passthrough ;
+  cmp-expr     ::= bitor-expr (cmp-op bitor-expr)*                      => pyf-passthrough ;
+  cmp-op       ::= EQEQ | NEQ | LE | GE | LT | GT
+                 | IS NOT | IS | NOT IN | IN ;
+  bitor-expr   ::= bitxor-expr (PIPE bitxor-expr)*                      => pyf-passthrough ;
+  bitxor-expr  ::= bitand-expr (CARET bitand-expr)*                     => pyf-passthrough ;
+  bitand-expr  ::= shift-expr (AMP shift-expr)*                         => pyf-passthrough ;
+  shift-expr   ::= sum-expr ((LSHIFT | RSHIFT) sum-expr)*               => pyf-passthrough ;
+  sum-expr     ::= mul-expr (add-op mul-expr)*                          => pyf-passthrough ;
   add-op       ::= PLUS | MINUS ;
-  mul-expr     ::= unary-expr (mul-op unary-expr)*             => pyf-passthrough ;
-  mul-op       ::= STAR | SLASH | PERCENT | SLASHSLASH ;
-  unary-expr   ::= primary-expr ;
-  primary-expr ::= call-expr | attr-expr | int-lit | str-lit
-                 | none-lit | true-lit | false-lit
-                 | ident-expr | paren-expr ;
-  call-expr    ::= IDENT LPAREN RPAREN                         => pyf-emit-call ;
-  attr-expr    ::= IDENT DOT IDENT                             => pyf-emit-attr ;
-  paren-expr   ::= LPAREN expression RPAREN                    => pyf-emit-paren ;
-  int-lit      ::= INT                                         => pyf-emit-int ;
-  str-lit      ::= STRING                                      => pyf-emit-str ;
-  none-lit     ::= NONE                                        => pyf-emit-none ;
-  true-lit     ::= TRUE                                        => pyf-emit-true ;
-  false-lit    ::= FALSE                                       => pyf-emit-false ;
-  ident-expr   ::= IDENT                                       => pyf-emit-ident ;
+  mul-expr     ::= unary-expr (mul-op unary-expr)*                      => pyf-passthrough ;
+  mul-op       ::= STAR | SLASH | PERCENT | SLASHSLASH | AT ;
+  unary-expr   ::= unary-op unary-expr | power-expr                     => pyf-passthrough ;
+  unary-op     ::= MINUS | PLUS | TILDE ;
+  power-expr   ::= await-expr (STARSTAR unary-expr)?                    => pyf-passthrough ;
+  await-expr   ::= AWAIT primary-expr | primary-expr                    => pyf-passthrough ;
+
+  primary-expr ::= atom trailer*                                        => pyf-passthrough ;
+  trailer      ::= call-trailer | subscript-trailer | attr-trailer ;
+  call-trailer ::= LPAREN arg-list? RPAREN                              => pyf-passthrough ;
+  subscript-trailer ::= LBRACK subscript-content RBRACK                 => pyf-passthrough ;
+  subscript-content ::= slice | expression ;
+  slice        ::= (start:expression)? COLON (stop:expression)? (COLON step:expression)? => pyf-passthrough ;
+  attr-trailer ::= DOT IDENT                                            => pyf-passthrough ;
+  arg-list     ::= arg (COMMA arg)*                                     => pyf-passthrough ;
+  arg          ::= name:IDENT EQUALS value:expression
+                 | STAR STAR value:expression
+                 | STAR value:expression
+                 | value:expression                                     => pyf-passthrough ;
+
+  atom         ::= none-lit | true-lit | false-lit | int-lit | str-lit
+                 | list-lit | dict-lit | set-lit | tuple-lit
+                 | listcomp | dictcomp | setcomp | genexp
+                 | lambda-expr | yield-expr
+                 | paren-expr | ident-expr ;
+
+  list-lit     ::= LBRACK arg-list? RBRACK                              => pyf-emit-list-lit ;
+  dict-lit     ::= LBRACE dict-items? RBRACE                            => pyf-emit-dict-lit ;
+  set-lit      ::= LBRACE arg-list RBRACE                               => pyf-emit-list-lit ;
+  tuple-lit    ::= LPAREN expression COMMA arg-list? RPAREN             => pyf-emit-list-lit ;
+  dict-items   ::= dict-item (COMMA dict-item)*                         => pyf-passthrough ;
+  dict-item    ::= key:expression COLON value:expression                => pyf-passthrough ;
+
+  listcomp     ::= LBRACK item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACK                         => pyf-emit-list-lit ;
+  dictcomp     ::= LBRACE key:expression COLON value:expression
+                   FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACE                         => pyf-emit-dict-lit ;
+  setcomp      ::= LBRACE item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RBRACE                         => pyf-emit-list-lit ;
+  genexp       ::= LPAREN item:expression FOR target:IDENT IN iter:expression
+                   (IF cond:expression)? RPAREN                         => pyf-emit-list-lit ;
+
+  lambda-expr  ::= LAMBDA params:param-list? COLON body:expression      => pyf-emit-func-def ;
+  yield-expr   ::= YIELD value:expression                               => pyf-passthrough ;
+  paren-expr   ::= LPAREN expression RPAREN                             => pyf-emit-paren ;
+
+  ;; ── atomic literals ─────────────────────────────────────────
+  call-expr    ::= IDENT LPAREN RPAREN                                  => pyf-emit-call ;
+  attr-expr    ::= IDENT DOT IDENT                                      => pyf-emit-attr ;
+  int-lit      ::= INT                                                  => pyf-emit-int ;
+  str-lit      ::= STRING                                               => pyf-emit-str ;
+  none-lit     ::= NONE                                                 => pyf-emit-none ;
+  true-lit     ::= TRUE                                                 => pyf-emit-true ;
+  false-lit    ::= FALSE                                                => pyf-emit-false ;
+  ident-expr   ::= IDENT                                                => pyf-emit-ident ;
 }")
 
     (let py-full-registry

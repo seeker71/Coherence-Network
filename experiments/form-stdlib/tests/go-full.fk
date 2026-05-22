@@ -1,0 +1,22 @@
+; tests/go-full.fk — comprehensive Go grammar
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/go-full.bnf.fk
+;
+; Each probe is a complete Go source-file (package-clause + optional decl).
+
+(do
+    (defn parsed? (r) (if (gt (len (node_children r)) 0) 1 0))
+
+    (let g1 (parsed? (parse-go-full "package main")))
+    (let g2 (parsed? (parse-go-full "package main
+import \"fmt\"")))
+    (let g3 (parsed? (parse-go-full "package main
+var x = 1")))
+    (let g4 (parsed? (parse-go-full "package main
+const Tag = 2")))
+    (let g5 (parsed? (parse-go-full "package main
+type Kernel struct{}")))
+    (let g6 (parsed? (parse-go-full "package main
+func main() {}")))
+
+    (add g1 (add g2 (add g3 (add g4 (add g5 g6))))))
