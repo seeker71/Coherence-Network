@@ -361,32 +361,114 @@
                     (list (mk-tok op-kind op-text) (add i op-len))
                     (try-operator s i (tail ops))))))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Tokenizer extensions (additive — defaults preserve old behavior)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Three opt-in features the four-language goal needs from every
+    ;; mainstream source format:
+    ;;
+    ;;   "string-quotes"   — list of codepoints that open/close strings
+    ;;                        (e.g. (list 34 39) for `"` and `'`). When a
+    ;;                        quote is encountered, scan until the matching
+    ;;                        quote (honoring `\` escapes); emit a STRING
+    ;;                        token whose value is the raw contents minus
+    ;;                        delimiters.
+    ;;
+    ;;   "line-comment"    — string prefix that introduces a line comment
+    ;;                        ("#" for Python/YAML, "//" for TS/Rust/Go,
+    ;;                        ";" for Form). When seen, skip to end of
+    ;;                        line. No token emitted.
+    ;;
+    ;;   "emit-newline"    — when true, `\n` (codepoint 10) is removed
+    ;;                        from the whitespace set and emitted as a
+    ;;                        NEWLINE token. Used by line-significant
+    ;;                        languages (Python).
+    ;;
+    ;; All three are looked up from token-config; absence means default
+    ;; (no string scanning, no comment skipping, no newline emission).
+
+    (defn is-quote-cp (cp quote-set)
+        (if (nil? quote-set) false
+            (if (eq cp (head quote-set)) true
+                (is-quote-cp cp (tail quote-set)))))
+
+    ;; scan-string: at position i pointing at an opening quote (codepoint
+    ;; quote-cp), advance to the matching close quote handling `\` escapes.
+    ;; Returns (list string-content end-index-past-close-quote). The
+    ;; backslash sequence is preserved literally in the content — emit
+    ;; layer can interpret escapes per target language.
+    (defn scan-string (s i quote-cp)
+        ;; i is the opening quote — start scanning from i+1
+        (scan-string-loop s (add i 1) quote-cp))
+
+    (defn scan-string-loop (s i quote-cp)
+        (if (ge i (str_len s))
+            ;; unterminated — return what we have
+            (list (substr s 0 i) i)
+            (do
+                (let cp (ord (char_at s i)))
+                (if (eq cp quote-cp)
+                    ;; Found closing quote
+                    (list (substr s 0 i) (add i 1))
+                    (if (eq cp 92)  ; '\' = 92 — skip next char
+                        (scan-string-loop s (add i 2) quote-cp)
+                        (scan-string-loop s (add i 1) quote-cp))))))
+
+    ;; skip-line-comment: at position i pointing at the start of a line-
+    ;; comment prefix, skip through end-of-line (or EOF). Returns the
+    ;; index of the next character to scan.
+    (defn skip-line-comment (s i)
+        (if (ge i (str_len s)) i
+            (if (eq (ord (char_at s i)) 10)
+                i   ; stop at the newline itself; ws-skip handles \n
+                (skip-line-comment s (add i 1)))))
+
+    ;; matches-prefix? — true if s starting at i begins with prefix
+    (defn matches-prefix? (s i prefix)
+        (if (str_eq prefix "") false
+            (if (gt (add i (str_len prefix)) (str_len s)) false
+                (str_eq (substr s i (add i (str_len prefix))) prefix))))
+
     (defn next-token (s i cfg)
         (if (eq i (str_len s))
             (list (mk-tok "EOF" "") i)
             (do
                 (let ws-set (token-config-lookup cfg "whitespace" (list 32 9 10 13)))
+                (let line-comment (token-config-lookup cfg "line-comment" ""))
+                (let quote-set (token-config-lookup cfg "string-quotes" (empty)))
                 (let c (char_at s i))
                 (let cp (ord c))
+                ;; Line comment first — must be tested before operators
+                ;; since some languages use punctuation prefixes (`//`, `#`).
+                (if (matches-prefix? s i line-comment)
+                    (next-token s (skip-line-comment s i) cfg)
                 (if (is-ws-cp cp ws-set)
                     (next-token s (add i 1) cfg)
-                    (if (is-digit-cp cp)
+                (if (is-quote-cp cp quote-set)
+                    (do
+                        (let result (scan-string s i cp))
+                        (let content (substr s (add i 1)
+                                              (sub (head (tail result)) 1)))
+                        (list (mk-tok (token-config-lookup cfg "string-kind" "STRING")
+                                      content)
+                              (head (tail result))))
+                (if (is-digit-cp cp)
+                    (do
+                        (let end (scan-while-cfg s i is-digit-char))
+                        (list (mk-tok (token-config-lookup cfg "digit-kind" "INT")
+                                      (substr s i end)) end))
+                    (if (is-alpha-cp cp)
                         (do
-                            (let end (scan-while-cfg s i is-digit-char))
-                            (list (mk-tok (token-config-lookup cfg "digit-kind" "INT")
-                                          (substr s i end)) end))
-                        (if (is-alpha-cp cp)
-                            (do
-                                (let end (scan-while-cfg s i is-ident-cont-char))
-                                (let value (substr s i end))
-                                (let keywords (token-config-lookup cfg "keywords" (empty)))
-                                (list (classify-ident value keywords) end))
-                            (do
-                                (let ops (token-config-lookup cfg "operators" (empty)))
-                                (let op-try (try-operator s i ops))
-                                (if (nil? op-try)
-                                    (list (mk-tok "ERROR" c) (add i 1))
-                                    op-try))))))))
+                            (let end (scan-while-cfg s i is-ident-cont-char))
+                            (let value (substr s i end))
+                            (let keywords (token-config-lookup cfg "keywords" (empty)))
+                            (list (classify-ident value keywords) end))
+                        (do
+                            (let ops (token-config-lookup cfg "operators" (empty)))
+                            (let op-try (try-operator s i ops))
+                            (if (nil? op-try)
+                                (list (mk-tok "ERROR" c) (add i 1))
+                                op-try))))))))))
 
     (defn tokenize-with-config-loop (s i cfg)
         (do

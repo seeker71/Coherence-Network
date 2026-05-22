@@ -1,0 +1,104 @@
+; tests/engine-strings.fk — exercise engine.fk's string + comment +
+; multi-quote tokenizer extensions on the native kernel.
+;
+; preludes: form-stdlib/engine.fk
+;
+; The universal-tokenizer needed three opt-in features for any
+; mainstream source language to round-trip cleanly:
+;
+;   "string-quotes"  — list of opening-quote codepoints; scan to
+;                      matching close honoring `\` escapes
+;   "line-comment"   — string prefix that skips to end of line
+;   "string-kind"    — emit kind for STRING tokens (default "STRING")
+;
+; This test wires the smallest grammar that exercises each feature and
+; sums integer-coded outcomes so the three sibling kernels validate
+; byte-identical behavior.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 1 — double-quoted string scans cleanly
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let cfg-str
+        (list (list "whitespace" (list 32 9 10 13))
+              (list "string-quotes" (list 34))
+              (list "string-kind" "STRING")))
+
+    (let toks-1 (tokenize-with-config "\"hello\"" cfg-str))
+    ;; toks-1 = [(STRING "hello") (EOF "")]
+    (let probe-1 (str_len (head (tail (head toks-1)))))   ; → 5 ("hello")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 2 — escape sequences preserved (raw)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The tokenizer keeps `\<x>` literal in the value; the emit layer
+    ;; per language interprets escapes. So "a\"b" surfaces as a\"b
+    ;; (string-length 4 — a, backslash, quote, b).
+
+    (let toks-2 (tokenize-with-config "\"a\\\"b\"" cfg-str))
+    (let probe-2 (str_len (head (tail (head toks-2)))))   ; → 4
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 3 — line comment skipped, next token emerges
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let cfg-cmt
+        (list (list "whitespace" (list 32 9 10 13))
+              (list "line-comment" "#")
+              (list "digit-kind" "INT")))
+
+    (let toks-3
+        (tokenize-with-config "# header comment
+42" cfg-cmt))
+    ;; First non-EOF token should be (INT "42")
+    (let probe-3 (str_to_int (head (tail (head toks-3)))))   ; → 42
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 4 — multi-character comment marker (`//` for TS/Rust/Go)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let cfg-slash
+        (list (list "whitespace" (list 32 9 10 13))
+              (list "line-comment" "//")
+              (list "digit-kind" "INT")))
+
+    (let toks-4
+        (tokenize-with-config "// the answer
+7" cfg-slash))
+    (let probe-4 (str_to_int (head (tail (head toks-4)))))   ; → 7
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 5 — single-quoted strings (extends quote set)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let cfg-both
+        (list (list "whitespace" (list 32 9 10 13))
+              (list "string-quotes" (list 34 39))   ; " and '
+              (list "string-kind" "STRING")))
+
+    (let toks-5 (tokenize-with-config "'ok'" cfg-both))
+    (let probe-5 (str_len (head (tail (head toks-5)))))   ; → 2 ("ok")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 6 — backward compat: no string-quotes / no line-comment
+    ;; configured → tokenizer behaves exactly as the pre-extension form
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let cfg-old
+        (list (list "whitespace" (list 32 9 10 13))
+              (list "digit-kind" "INT")))
+
+    (let toks-6 (tokenize-with-config "13" cfg-old))
+    (let probe-6 (str_to_int (head (tail (head toks-6)))))   ; → 13
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Sum probes — sibling kernels must agree on every digit
+    ;; 5 + 4 + 42 + 7 + 2 + 13 = 73
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (add probe-1
+         (add probe-2
+              (add probe-3
+                   (add probe-4
+                        (add probe-5 probe-6))))))
