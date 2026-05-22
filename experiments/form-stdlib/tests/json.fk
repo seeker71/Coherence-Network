@@ -1,5 +1,7 @@
 ; tests/json.fk — exercise JSON parser end-to-end
 ;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/json.fk
+;
 ; Loaded via:
 ;   bin-go core.fk cell-trace.fk grammars/json.fk tests/json.fk
 

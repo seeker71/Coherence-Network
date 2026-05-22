@@ -1,5 +1,7 @@
 ; tests/png.fk — exercise PNG parser end-to-end
 ;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/png.fk
+;
 ; Loaded via:
 ;   bin-go core.fk cell-trace.fk grammars/png.fk tests/png.fk
 ;

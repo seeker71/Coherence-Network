@@ -1,4 +1,6 @@
 ; tests/rust.fk — exercise rust.fk file-header subset
+;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/rust.fk
 (do
     (let sample
         (str_concat "use std::collections::HashMap;

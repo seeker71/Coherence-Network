@@ -1,4 +1,6 @@
 ; tests/typescript.fk — exercise typescript.fk file-header subset
+;
+; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/typescript.fk
 
 (do
     (let sample

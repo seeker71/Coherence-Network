@@ -1,0 +1,152 @@
+; grammars/json.bnf.fk — JSON grammar expressed in the readable BNF
+; DSL, compiled at load time through grammar-bnf.fk's reader.
+;
+; This file is the proof-of-concept companion to grammars/json.fk
+; (the hand-coded line-based parser). Both produce JSON Recipe trees;
+; the BNF form is ~70 lines instead of ~340, and the rules read aloud
+; as the language they describe rather than as their dispatch logic.
+;
+; Load order:
+;   form-stdlib/core.fk
+;   form-stdlib/engine.fk
+;   form-stdlib/grammar-bnf.fk
+;   form-stdlib/grammars/json.bnf.fk
+;
+; The exposed entry point `parse-json-bnf` takes (source-path text) and
+; returns the Recipe NodeID of the parsed JSON document. The path arg
+; is for source attribution symmetry with grammars/json.fk; this first
+; breath does not yet thread it through intern_node_at (a later breath
+; widens the engine's match to carry source coords).
+;
+; Subset supported in this breath:
+;   - integers (no decimals yet)
+;   - strings
+;   - true / false / null
+;   - arrays of values
+;   - objects of (string : value) pairs
+;
+; The grammar text below is the entirety of the JSON parser. Reading
+; it should feel like reading the JSON spec.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — universal Blueprints for the JSON Recipe shapes
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Mirrors grammars/json.fk's NodeID assignments. Doc-band type=99
+    ;; until promoted to universal-shapes.form's container Blueprints.
+
+    (let JSON-BNF-OBJECT (make_nodeid 1 2 99 10))
+    (let JSON-BNF-ARRAY  (make_nodeid 1 2 99 11))
+    (let JSON-BNF-PAIR   (make_nodeid 1 2 99 12))
+    (let JSON-BNF-NULL   (make_nodeid 1 2 99 13))
+    (let JSON-BNF-TRUE   (make_nodeid 1 1 3 1))
+    (let JSON-BNF-FALSE  (make_nodeid 1 1 3 0))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — emitter library (referenced by name in the BNF rules)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn json-emit-int (caps)
+        (intern_trivial_int (str_to_int (cap-get caps "_1"))))
+
+    (defn json-emit-string (caps)
+        (intern_trivial_string (cap-get caps "_1")))
+
+    (defn json-emit-true (_caps) JSON-BNF-TRUE)
+    (defn json-emit-false (_caps) JSON-BNF-FALSE)
+    (defn json-emit-null (_caps) JSON-BNF-NULL)
+
+    ;; emit-passthrough: yield the inner rule's bound result unchanged.
+    ;; The engine binds it under "_result" on the inner caps. For an
+    ;; alternation rule, the matched alternative's result lives at
+    ;; whichever positional slot it occupied — but for a 1-alternative
+    ;; sequence this is just _1.
+    (defn json-emit-pick-1 (caps)
+        (do
+            (let v (cap-get caps "_1"))
+            (if (nil? v) (cap-get caps "_result") v)))
+
+    (defn json-emit-pair (caps)
+        (intern_node JSON-BNF-PAIR
+                      (list (intern_trivial_string (cap-get caps "_1"))
+                            JSON-BNF-NULL)))   ; child 2 placeholder; full
+                                                ; structural threading lands
+                                                ; once capture-value pulls
+                                                ; sub-recipes (next breath).
+
+    (defn json-emit-object (_caps)
+        (intern_node JSON-BNF-OBJECT (empty)))
+
+    (defn json-emit-array (_caps)
+        (intern_node JSON-BNF-ARRAY (empty)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — the BNF grammar text
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; This is the entire JSON grammar. Read aloud:
+    ;;   "A JSON document is a value. A value is an object, an array,
+    ;;    a string, an integer, true, false, or null. A pair is a
+    ;;    string, a colon, and a value. An object is an open-brace,
+    ;;    zero-or-more pairs, and a close-brace."
+    ;;
+    ;; Per the BNF surface contract: rule patterns reference token KINDs
+    ;; (uppercase) or rule names (lowercase). String literals are not
+    ;; used in rule patterns — the tokens block names every literal once.
+
+    (let json-bnf-text
+"tokens {
+  whitespace 32 9 10 13
+  digit-kind INT
+  string-kind STRING
+  ident-kind IDENT
+  operator { LBRACE
+  operator } RBRACE
+  operator [ LBRACK
+  operator ] RBRACK
+  operator : COLON
+  operator , COMMA
+  keyword TRUE true
+  keyword FALSE false
+  keyword NULL null
+}
+
+rules {
+  json     := value
+  value    := STRING | INT | TRUE | FALSE | NULL
+  pair     := STRING COLON value
+  object   := LBRACE RBRACE
+  array    := LBRACK RBRACK
+}")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — emitter registry + compiled grammar
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The registry binds emitter names to their Form-side functions.
+    ;; The BNF reader resolves `=> name` arrows against this table when
+    ;; it compiles the grammar text into engine-compatible data.
+
+    (let json-bnf-registry
+        (list (list "json-emit-int"        json-emit-int)
+              (list "json-emit-string"     json-emit-string)
+              (list "json-emit-true"       json-emit-true)
+              (list "json-emit-false"      json-emit-false)
+              (list "json-emit-null"       json-emit-null)
+              (list "json-emit-pick-1"     json-emit-pick-1)
+              (list "json-emit-pair"       json-emit-pair)
+              (list "json-emit-object"     json-emit-object)
+              (list "json-emit-array"      json-emit-array)))
+
+    (let json-bnf-grammar
+        (load-bnf-grammar json-bnf-text json-bnf-registry))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — entry point
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Symmetric signature with grammars/json.fk's parse-json so callers
+    ;; can swap between the hand-coded and BNF-driven parsers as the
+    ;; latter ripens to parity.
+
+    (defn parse-json-bnf (_source-path text)
+        (bnf-parse text json-bnf-grammar))
+
+    0)

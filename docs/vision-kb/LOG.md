@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-22] concept | Grammar As Readable BNF — the surface the engine was waiting for
+
+Sibling to [`lc-grammar-is-the-universal-recipe`](concepts/lc-grammar-is-the-universal-recipe.md) and [`lc-parsers-as-recipes`](concepts/lc-parsers-as-recipes.md). The first names *every modality is a Language cell*; the second names *grammar rules are data*. This new concept names what was still missing: the readable authoring tongue over that data. The body's [`engine.fk`](../../experiments/form-stdlib/engine.fk) already walks grammar-as-data; the per-tongue grammars at [`grammars/`](../../experiments/form-stdlib/grammars/) were still ~250-line imperative line parsers. This breath landed [`grammar-bnf.fk`](../../experiments/form-stdlib/grammar-bnf.fk) — a reader that compiles BNF text into the engine's data shape — plus a recursive match layer for rule references inside patterns (JSON's `value → object → pair → value`). The four-language goal (Python / TypeScript / Rust / Go fully read, understood, executed by the form-native kernel) reduces to per-tongue ripening of `.grammar.fk` files; the architecture is in place. BMF (Urs 2000) inheritance returns through the lattice it predicted.
+
+- **New concept**: [`lc-grammar-as-readable-bnf`](concepts/lc-grammar-as-readable-bnf.md) (741 Hz, seed) — lineage-textured *ancestral*.
+- **New code**: [`grammar-bnf.fk`](../../experiments/form-stdlib/grammar-bnf.fk) (BNF reader + recursive match engine), [`grammars/json.bnf.fk`](../../experiments/form-stdlib/grammars/json.bnf.fk) (JSON in BNF DSL — proof of concept), [`tests/grammar-bnf.fk`](../../experiments/form-stdlib/tests/grammar-bnf.fk) (sibling-kernel test, 72 on Go/Rust/TS).
+- **Validator gained `; preludes:` header support** in [`form-kernel-validate.sh`](../../experiments/form-kernel-validate.sh). Existing grammar tests (python/typescript/rust/go/json/yaml/markdown/png/form) now declare their preludes explicitly.
+
 ## [2026-05-21] transmission | Three frequency maps — geometric, sound, brainwave (symmetry of extremes)
 
 Second composite visual transmission of 2026-05-21, arriving after the spine-and-nature pair. Three images shared by Urs into the body's conversation:
