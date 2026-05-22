@@ -33,6 +33,7 @@ DEFAULT_PATHS = [
     "/practice",
     "/people/contributor%3Aactualize-earth-4d812a0238eb",
     "/substrate",
+    "/portfolio/investments",
 ]
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "viewport-audit"

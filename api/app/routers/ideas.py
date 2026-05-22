@@ -481,6 +481,7 @@ class StakeRequest(BaseModel):
     provider_id: str | None = None
     amount_cc: float
     rationale: str | None = None
+    dry_run: bool = False
 
 
 def _resolve_contributor(contributor_id: str | None, provider: str | None, provider_id: str | None) -> str:
@@ -503,8 +504,32 @@ def _resolve_contributor(contributor_id: str | None, provider: str | None, provi
 
 
 @router.post("/ideas/{idea_id}/stake", summary="Stake CC on an idea. Identify by contributor_id or provider+provider_id")
-async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
-    """Stake CC on an idea. Identify by contributor_id or provider+provider_id."""
+async def stake_on_idea(idea_id: str, body: StakeRequest, dry_run: bool = Query(False)) -> dict:
+    """Stake CC on an idea. Identify by contributor_id or provider+provider_id.
+
+    When ``dry_run`` is true (either as a query param or in the body), return
+    the same projection as GET /api/ideas/{idea_id}/invest-preview without
+    recording the stake. Enables ``coh invest --dry-run``.
+    """
+    # dry_run flag can come from query string or request body.
+    is_dry_run = dry_run or body.dry_run
+    if is_dry_run:
+        from app.services import investment_service
+        preview = investment_service.compute_preview(idea_id)
+        if preview is None:
+            raise HTTPException(status_code=404, detail=f"Idea not found: {idea_id}")
+        return {
+            "dry_run": True,
+            "stake": {
+                "amount_cc": body.amount_cc,
+                "contributor": body.contributor_id,
+                "rationale": body.rationale,
+                "record": None,
+            },
+            "preview": preview,
+            "message": f"Dry run — would stake {body.amount_cc} CC on {idea_id}",
+        }
+
     staker_id = _resolve_contributor(body.contributor_id, body.provider, body.provider_id)
     try:
         return stake_compute_service.execute_stake(

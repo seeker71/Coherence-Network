@@ -1,13 +1,25 @@
 ---
 idea_id: identity-and-onboarding
-status: active
+status: done
 source:
   - file: api/app/services/stake_compute_service.py
     symbols: [compute_next_tasks_for_idea()]
   - file: api/app/services/contribution_ledger_service.py
     symbols: [CC ledger]
+  - file: api/app/services/investment_service.py
+    symbols: [compute_positions(), compute_portfolio(), compute_preview(), compute_history()]
+  - file: api/app/services/time_pledge_service.py
+    symbols: [create_pledge(), fulfill_pledge(), cc_equivalent_for_hours()]
+  - file: api/app/routers/investments.py
+    symbols: [invest-preview, investments, investment-history, pledges, pledges/fulfill]
+  - file: api/app/routers/ideas.py
+    symbols: [stake_on_idea() with dry_run]
+  - file: web/components/InvestModal.tsx
+    symbols: [InvestModal, InvestButton]
+  - file: web/app/portfolio/investments/page.tsx
+    symbols: [portfolio positions page]
   - file: web/app/invest/page.tsx
-    symbols: [investment UI]
+    symbols: [investment garden UI]
 requirements:
   - GET /api/ideas/{idea_id}/invest-preview returns ROI projection
   - GET /api/contributors/{id}/investments returns all positions with summary
@@ -22,14 +34,20 @@ done_when:
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
 notes: |
-  Live: web/app/invest/page.tsx renders at /invest (200 in production).
-  Pending: api/app/routers/investments.py, api/app/services/investment_service.py,
-  api/app/services/time_pledge_service.py, web/app/portfolio/investments/page.tsx,
-  web/components/InvestModal.tsx — none of these files exist yet.
-  /api/ideas/{idea_id}/invest-preview, /api/contributors/{id}/investments,
-  /api/contributors/{id}/investment-history, /api/contributors/{id}/pledges all
-  return 404. test_investments.py does not exist.
-  Status attuned 2026-05-22 from done → active to match what the body actually holds.
+  Live (2026-05-22): web/app/invest/page.tsx renders at /invest. The full
+  investment surface now exists end-to-end:
+  - GET /api/ideas/{idea_id}/invest-preview returns ROI projection
+  - GET /api/contributors/{id}/investments returns positions + summary
+  - GET /api/contributors/{id}/investment-history returns CC flow timeline
+  - POST /api/contributors/{id}/pledges creates a time pledge with cc_equivalent
+  - POST /api/contributors/{id}/pledges/{pledge_id}/fulfill records CC return
+  - POST /api/ideas/{idea_id}/stake supports dry_run (body or query)
+  - web/components/InvestModal.tsx opens from /ideas cards with ROI preview
+  - web/app/portfolio/investments/page.tsx renders positions table
+  Underlying contract carried by api/app/services/investment_service.py
+  (pure position-computer over the ledger) and time_pledge_service.py
+  (hours -> CC at 500 CC/hour). 6 strange-minimal flow tests live in
+  api/tests/test_investments.py. Status returned to done.
 ---
 
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
