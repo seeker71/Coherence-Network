@@ -1,0 +1,69 @@
+; tests/markdown-stream.fk — sibling-parity probe for the push-style
+; markdown parser.
+;
+; Same fixture as tests/markdown.fk; the streaming variant should emit
+; exactly the same number of block-cells as the pull variant produces
+; under DOC-DOC, and each cell should carry source attribution. The
+; document-wrapper is the only structural difference.
+;
+; Invoke (both kernels must agree):
+;   bin-go core.fk cell-trace.fk cell-stream.fk \
+;          grammars/markdown.fk grammars/markdown-stream.fk \
+;          tests/markdown-stream.fk
+
+(do
+    (let sample-md
+        (str_concat "# Coherence Network"
+        (str_concat "
+
+" (str_concat "The substrate carries every cell as a content-addressed Recipe."
+        (str_concat "
+
+" (str_concat "## Architecture"
+        (str_concat "
+
+" (str_concat "Three sibling kernels in Rust, Go, TypeScript."
+        (str_concat "
+
+" "## Status")))))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Pull-variant baseline: count blocks under DOC-DOC
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let pull-doc (parse-markdown "README.md" sample-md))
+    (let pull-count (len (node_children pull-doc)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Push-variant: count handler invocations via fold
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; count-handler: ignores the cell, increments state. The cell
+    ;; is in front of us, gets observed, falls away — no list grows.
+
+    (defn count-handler (state cell) (add state 1))
+    (let push-count (parse-markdown-stream "README.md" sample-md 0 count-handler))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Attribution probe: first cell's source-string length.
+    ;; A cons-handler that keeps only the first cell pushed gives us a
+    ;; handle to inspect its attribution. State = (first-or-nil, _).
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn first-handler (state cell)
+        (if (nil? state) cell state))
+
+    (let first-pushed (parse-markdown-stream "README.md" sample-md
+                                              (empty) first-handler))
+    (let attr-len (str_len (cell-source first-pushed)))   ; "README.md:1:1" = 13
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe: parity gate — push-count MUST equal pull-count.
+    ;; If equal: contributes pull-count to the sum. If not: contributes
+    ;; 0 so the divergence shows as a smaller-than-expected total.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let parity (if (eq pull-count push-count) pull-count 0))
+
+    ;; sum: pull-count + push-count + parity + attr-len
+    ;;    = N + N + N + 13
+    (add pull-count (add push-count (add parity attr-len))))

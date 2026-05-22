@@ -1,0 +1,39 @@
+; tests/png.fk — exercise PNG parser end-to-end
+;
+; Loaded via:
+;   bin-go core.fk cell-trace.fk grammars/png.fk tests/png.fk
+;
+; Fixture: form-samples/tiny.png — minimal valid PNG (1x1 black, 45 bytes):
+; signature + IHDR (13 data bytes) + IEND (0 data bytes). Two chunks total.
+
+(do
+    (let bs (read_file_bytes "form-samples/tiny.png"))
+    (let file (parse-png "form-samples/tiny.png" bs))
+
+    (let chunks (node_children file))
+
+    ;; --- probe 1: chunk count = 2 (IHDR + IEND) -----------------------
+    (let probe-1 (len chunks))                              ; → 2
+
+    ;; --- probe 2: first chunk's first child = "IHDR" ------------------
+    (defn type-of-chunk (c) (head (node_children c)))
+    (let first-type (type-of-chunk (head chunks)))
+    (let probe-2 (if (str_eq (node_value first-type) "IHDR") 10 0))   ; → 10
+
+    ;; --- probe 3: last chunk's first child = "IEND" -------------------
+    (defn last-of (xs)
+        (if (nil? (tail xs)) (head xs)
+            (last-of (tail xs))))
+    (let last-type (type-of-chunk (last-of chunks)))
+    (let probe-3 (if (str_eq (node_value last-type) "IEND") 100 0))   ; → 100
+
+    ;; --- probe 4: root carries source attribution ---------------------
+    (let probe-4 (if (str_eq (cell-source file) "") 0 1000))         ; → 1000
+
+    ;; --- probe 5: IHDR length child = 13 ------------------------------
+    (defn length-of-chunk (c) (head (tail (node_children c))))
+    (let ihdr-len (length-of-chunk (head chunks)))
+    (let probe-5 (if (eq (node_value ihdr-len) 13) 10000 0))          ; → 10000
+
+    ;; sum: 2 + 10 + 100 + 1000 + 10000 = 11112
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 probe-5)))))
