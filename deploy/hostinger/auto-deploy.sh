@@ -178,6 +178,9 @@ sync_substrate_content() {
   if [[ -d "$REPO_DIR/docs/lineage" ]]; then
     docker compose cp "$REPO_DIR/docs/lineage" api:/app/docs/lineage 2>&1 | tee -a "$LOG_FILE"
   fi
+  if [[ -d "$REPO_DIR/docs/breath" ]]; then
+    docker compose cp "$REPO_DIR/docs/breath" api:/app/docs/breath 2>&1 | tee -a "$LOG_FILE"
+  fi
   # Single-file evidence the registry-submissions endpoint reads at import
   # time. Without this copy /app/docs/registry-submissions.json is missing
   # and the endpoint returns items:[] (core_requirement_met:false) even
