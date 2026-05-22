@@ -323,6 +323,36 @@ async def test_set_parent_idea_reparents_both_sides():
         assert super_b_after["child_idea_ids"].count(child) == 1
 
 
+@pytest.mark.asyncio
+async def test_create_idea_with_parent_forms_edge_immediately():
+    """POST /api/ideas with parent_idea_id must form the two-sided edge in one
+    breath — no follow-up PATCH required.
+
+    Strange-minimal case: one parent, one child created via POST carrying
+    parent_idea_id. With the bug, child.parent_idea_id is set but the parent's
+    child_idea_ids stays empty (the reciprocal edge was deferred to PATCH).
+    The single assertion that fails under the bug is the parent-side read.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        parent_id = _uid("parent-create")
+        child_id = _uid("child-create")
+
+        await _create_idea(c, idea_id=parent_id, idea_type="super")
+        # No PATCH — the parent edge must land at POST time.
+        await _create_idea(c, idea_id=child_id, parent_idea_id=parent_id, idea_type="child")
+
+        # Child side: own pointer set.
+        child_body = (await c.get(f"/api/ideas/{child_id}")).json()
+        assert child_body["parent_idea_id"] == parent_id
+
+        # Parent side: child appears in child_idea_ids without any PATCH.
+        parent_body = (await c.get(f"/api/ideas/{parent_id}")).json()
+        assert child_id in parent_body["child_idea_ids"], (
+            "create_idea with parent_idea_id did not form the reciprocal edge; "
+            "parent.child_idea_ids is missing the child"
+        )
+
+
 # ---------------------------------------------------------------------------
 # idea-hierarchy-super-child spec — super-ideas excluded from pickup
 # ---------------------------------------------------------------------------
