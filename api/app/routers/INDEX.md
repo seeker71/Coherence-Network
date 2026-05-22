@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 128
+**Total files**: 129
 
 | File | Purpose |
 |---|---|
@@ -80,6 +80,7 @@
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
 | [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
+| [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
 | [lenses.py](lenses.py) | Worldview lens registry — spec-181. |
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
 | [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 229
+**Total files**: 231
 
 | File | Purpose |
 |---|---|
@@ -141,6 +141,7 @@
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
 | [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
+| [investment_service.py](investment_service.py) | Investment service — positions, ROI projection, history. |
 | [ip_registration_service.py](ip_registration_service.py) | IP registration service — Story Protocol SDK integration (pending). |
 | [lens_translation_service.py](lens_translation_service.py) | Idea lens translations — spec-181 style responses, cache, and ROI counters. |
 | [locale_projection.py](locale_projection.py) | Shared locale projection for API responses. |
@@ -217,6 +218,7 @@
 | [telegram_diagnostics.py](telegram_diagnostics.py) | In-memory diagnostics for Telegram webhook and send_reply — inspect via GET /api/agent/telegram/diagnostics. |
 | [telegram_report_formatter.py](telegram_report_formatter.py) | Formatting helpers for Telegram status/task replies. |
 | [telemetry_persistence_service.py](telemetry_persistence_service.py) | DB-backed telemetry persistence for automation usage and friction events. |
+| [time_pledge_service.py](time_pledge_service.py) | Time pledge service — convert pledged labor hours into CC equivalents. |
 | [traceability_service.py](traceability_service.py) | spec: full-code-traceability |
 | [translate_service.py](translate_service.py) | Concept translation service — reframe ideas and concepts through worldview lenses. |
 | [translation_cache_service.py](translation_cache_service.py) | Concept views — equal-status language renderings of a concept, idea, or |

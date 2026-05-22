@@ -1,13 +1,25 @@
 ---
 idea_id: identity-and-onboarding
-status: active
+status: done
 source:
   - file: api/app/services/stake_compute_service.py
     symbols: [compute_next_tasks_for_idea()]
   - file: api/app/services/contribution_ledger_service.py
     symbols: [CC ledger]
+  - file: api/app/services/investment_service.py
+    symbols: [compute_positions(), compute_portfolio(), compute_preview(), compute_history()]
+  - file: api/app/services/time_pledge_service.py
+    symbols: [create_pledge(), fulfill_pledge(), cc_equivalent_for_hours()]
+  - file: api/app/routers/investments.py
+    symbols: [invest-preview, investments, investment-history, pledges, pledges/fulfill]
+  - file: api/app/routers/ideas.py
+    symbols: [stake_on_idea() with dry_run]
+  - file: web/components/InvestModal.tsx
+    symbols: [InvestModal, InvestButton]
+  - file: web/app/portfolio/investments/page.tsx
+    symbols: [portfolio positions page]
   - file: web/app/invest/page.tsx
-    symbols: [investment UI]
+    symbols: [investment garden UI]
 requirements:
   - GET /api/ideas/{idea_id}/invest-preview returns ROI projection
   - GET /api/contributors/{id}/investments returns all positions with summary
@@ -22,14 +34,20 @@ done_when:
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
 notes: |
-  Live: web/app/invest/page.tsx renders at /invest (200 in production).
-  Pending: api/app/routers/investments.py, api/app/services/investment_service.py,
-  api/app/services/time_pledge_service.py, web/app/portfolio/investments/page.tsx,
-  web/components/InvestModal.tsx — none of these files exist yet.
-  /api/ideas/{idea_id}/invest-preview, /api/contributors/{id}/investments,
-  /api/contributors/{id}/investment-history, /api/contributors/{id}/pledges all
-  return 404. test_investments.py does not exist.
-  Status attuned 2026-05-22 from done → active to match what the body actually holds.
+  Live (2026-05-22): web/app/invest/page.tsx renders at /invest. The full
+  investment surface now exists end-to-end:
+  - GET /api/ideas/{idea_id}/invest-preview returns ROI projection
+  - GET /api/contributors/{id}/investments returns positions + summary
+  - GET /api/contributors/{id}/investment-history returns CC flow timeline
+  - POST /api/contributors/{id}/pledges creates a time pledge with cc_equivalent
+  - POST /api/contributors/{id}/pledges/{pledge_id}/fulfill records CC return
+  - POST /api/ideas/{idea_id}/stake supports dry_run (body or query)
+  - web/components/InvestModal.tsx opens from /ideas cards with ROI preview
+  - web/app/portfolio/investments/page.tsx renders positions table
+  Underlying contract carried by api/app/services/investment_service.py
+  (pure position-computer over the ledger) and time_pledge_service.py
+  (hours -> CC at 500 CC/hour). 6 strange-minimal flow tests live in
+  api/tests/test_investments.py. Status returned to done.
 ---
 
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
@@ -39,9 +57,68 @@ notes: |
 
 **Spec ID**: 157-investment-ux-stake-cc-on-ideas
 **Idea ID**: investment-ux
-**Status**: active (see frontmatter `notes:` for what's live vs pending)
+**Status**: done (see frontmatter `notes:` for what's live)
 **Depends on**: Spec 119 (Coherence Credit), Spec 121 (OpenClaw Marketplace), Spec 048 (Value Lineage), Spec 052 (Portfolio Cockpit)
 **Depended on by**: Spec 124 (CC Economics), Spec 126 (Portfolio Governance)
+
+## Purpose
+
+Give contributors a clear, observable answer to "is my investment working?" — staking CC on an idea shows ROI projection before confirmation, holds a portfolio view of all positions with gain/loss and ROI%, surfaces a CC flow timeline, and accepts time pledges as labor-equivalent commitments. The web surface gains an Invest modal on every idea card; the CLI gains a dry-run that returns the same projection without recording.
+
+## Requirements
+
+- [x] GET /api/ideas/{idea_id}/invest-preview returns ROI projection (low/high multiplier, coherence score, stage unlock, prior investor count)
+- [x] GET /api/contributors/{id}/investments returns all positions with portfolio summary (total invested, current value, gain/loss, active vs all)
+- [x] GET /api/contributors/{id}/investment-history returns CC flow timeline including stakes, returns, compute, and pledges
+- [x] POST /api/contributors/{id}/pledges creates a time pledge with cc_equivalent at the current hour rate
+- [x] POST /api/contributors/{id}/pledges/{pledge_id}/fulfill marks pledge fulfilled and records matching CC return contribution
+- [x] POST /api/ideas/{idea_id}/stake accepts dry_run (body or query) returning preview without recording
+- [x] web/components/InvestModal.tsx opens from /ideas cards with live ROI preview before confirmation
+- [x] web/app/portfolio/investments/page.tsx renders positions table with gain/loss and ROI% (mobile + desktop)
+- [x] All chrome strings flow through web/messages/<locale>.json — no hardcoded English
+
+## Acceptance Tests
+
+Flow-centric tests in `api/tests/test_investments.py`:
+
+- `test_zero_positions_for_new_contributor` — empty portfolio + zero summary
+- `test_one_position_has_basic_roi_and_dry_run_matches` — one stake produces one position; preview reflects same idea state
+- `test_stake_dry_run_returns_preview_without_recording` — dry_run via body or query returns projection without recording; portfolio stays empty
+- `test_time_pledge_creates_cc_equivalent_and_fulfills` — 2h pledge = 1000 CC; fulfill records return contribution; re-fulfill = 409; wrong contributor = 403/409
+- `test_history_timeline_orders_newest_first_and_includes_pledges` — history includes stakes + pledges; filter by idea_id works
+- `test_invest_preview_404_for_missing_idea` — preview endpoint 404s for nonexistent idea
+
+## Verification
+
+```bash
+# Run the focused test file
+pytest api/tests/test_investments.py -v
+
+# Run the full suite to confirm no regression
+pytest api/tests/
+
+# Web build sanity
+cd web && npm run build
+
+# Prod curl after deploy
+curl -s https://api.coherencycoin.com/api/ideas/agent-pipeline/invest-preview | jq .
+curl -s https://api.coherencycoin.com/api/contributors/urs-muff/investments | jq .summary
+curl -sI https://coherencycoin.com/portfolio/investments | head -1
+```
+
+## Out of Scope
+
+- Automated time pledge fulfillment via GitHub PR merge detection (Phase 2)
+- CC return distribution triggers when idea reaches `complete` (Phase 2)
+- Investment alerts via email/Telegram (Phase 2)
+- Secondary market for transferring positions (Phase 2)
+- Governance around expired pledges (follow-up spec)
+
+## Risks and Assumptions
+
+- Default hour rate (500 CC/hour) is honest until calibration against real labor flows; surfaced in every pledge response as `cc_per_hour_rate` so callers see what they're paying.
+- ROI projection formula calibrated manually until 50+ completed ideas exist; the response carries `basis: "coherence_score + prior_roi_avg"` so the formula is legible.
+- Position `current_value_cc` uses `1 + (stage_unlock_pct / 100) * coherence_score` as the multiplier — a defensible default, not an attested measurement; the gap closes when real returns accrue and `prior_roi_avg` carries them.
 
 ## Problem Statement
 

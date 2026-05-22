@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 55
+**Total files**: 56
 
 | File | Purpose |
 |---|---|
@@ -43,6 +43,7 @@
 | [graph_zoom.py](graph_zoom.py) | Pydantic response models for fractal zoom navigation (Spec 182). |
 | [idea.py](idea.py) | Idea portfolio models for federated prioritization. |
 | [import_stack.py](import_stack.py) | Import stack models — spec 022. |
+| [investment.py](investment.py) | Investment models — positions, portfolio, time pledges, history events. |
 | [lens_translation.py](lens_translation.py) | Pydantic models for worldview lens registry and translations (spec-181). |
 | [marketplace.py](marketplace.py) | Marketplace models for the OpenClaw Idea Marketplace (spec 121). |
 | [membership.py](membership.py) | Pydantic models for workspace membership (team edges). |
