@@ -118,6 +118,43 @@
     (defn ts-bnf-emit-paren (caps)
         (cap-get caps "expr"))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Expanded TS — let / const / if / while / for / call
+    ;; ──────────────────────────────────────────────────────────────────
+    (let TS-BNF-LET   (make_nodeid 1 2 99 65))
+    (let TS-BNF-CONST (make_nodeid 1 2 99 66))
+    (let TS-BNF-IF    (make_nodeid 1 2 99 67))
+    (let TS-BNF-WHILE (make_nodeid 1 2 99 68))
+    (let TS-BNF-FOR   (make_nodeid 1 2 99 69))
+    (let TS-BNF-CALL  (make_nodeid 1 2 99 70))
+    (let TS-BNF-ATTR  (make_nodeid 1 2 99 71))
+
+    (defn ts-bnf-emit-let (caps)
+        (intern_node TS-BNF-LET
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+    (defn ts-bnf-emit-const-decl (caps)
+        (intern_node TS-BNF-CONST
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+    (defn ts-bnf-emit-if (caps)
+        (intern_node TS-BNF-IF
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+    (defn ts-bnf-emit-while (caps)
+        (intern_node TS-BNF-WHILE
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+    (defn ts-bnf-emit-for (caps)
+        (intern_node TS-BNF-FOR
+                      (list (cap-get caps "cond") (cap-get caps "body"))))
+    (defn ts-bnf-emit-call (caps)
+        (intern_node TS-BNF-CALL
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "arg"))))
+    (defn ts-bnf-emit-attr (caps)
+        (intern_node TS-BNF-ATTR
+                      (list (intern_trivial_string (cap-get caps "base"))
+                            (intern_trivial_string (cap-get caps "field")))))
+
     ;; Emitters
     (defn ts-bnf-emit-import-named (caps)
         ;; IMPORT LBRACE IDENT RBRACE FROM STRING — _3=name, _6=module
@@ -186,13 +223,27 @@
   keyword FROM from
   keyword AS as
   keyword CONST const
+  keyword LET let
   keyword FUNCTION function
   keyword TYPE type
+  keyword IF if
+  keyword ELSE else
+  keyword WHILE while
+  keyword FOR for
+  keyword RETURN return
+  keyword CLASS class
+  keyword INTERFACE interface
 }
 
 rules {
   module        ::= statement+ => ts-bnf-emit-module ;
-  statement     ::= import-named | import-ns | import-default | export-const | export-fn ;
+  statement     ::= import-named | import-ns | import-default | export-const | export-fn
+                  | let-decl | const-decl | if-stmt | while-stmt | for-stmt ;
+  let-decl      ::= LET name:IDENT EQUALS value:expression           => ts-bnf-emit-let ;
+  const-decl    ::= CONST name:IDENT EQUALS value:expression         => ts-bnf-emit-const-decl ;
+  if-stmt       ::= IF LPAREN cond:expression RPAREN body:expression => ts-bnf-emit-if ;
+  while-stmt    ::= WHILE LPAREN cond:expression RPAREN body:expression => ts-bnf-emit-while ;
+  for-stmt      ::= FOR LPAREN cond:expression RPAREN body:expression  => ts-bnf-emit-for ;
   import-named  ::= IMPORT LBRACE IDENT RBRACE FROM STRING        => ts-bnf-emit-import-named ;
   import-ns     ::= IMPORT STAR AS IDENT FROM STRING               => ts-bnf-emit-import-ns ;
   import-default ::= IMPORT IDENT FROM STRING                       => ts-bnf-emit-import-default ;
@@ -202,7 +253,9 @@ rules {
   expression    ::= lhs:primary-expr (op:binary-op rhs:primary-expr)* => ts-bnf-emit-expression ;
   binary-op     ::= TEQ | TNEQ | EQEQ | NEQ | LE | GE | LT | GT
                   | ANDAND | OROR | PLUS | MINUS | STAR | SLASH | PERCENT ;
-  primary-expr  ::= int-lit | str-lit | ident-expr | paren-expr ;
+  primary-expr  ::= call-expr | attr-expr | int-lit | str-lit | ident-expr | paren-expr ;
+  call-expr     ::= name:IDENT LPAREN arg:expression RPAREN          => ts-bnf-emit-call ;
+  attr-expr     ::= base:IDENT DOT field:IDENT                       => ts-bnf-emit-attr ;
   paren-expr    ::= LPAREN expr:expression RPAREN                  => ts-bnf-emit-paren ;
   int-lit       ::= value:INT                                       => ts-bnf-emit-int-lit ;
   str-lit       ::= value:STRING                                    => ts-bnf-emit-str-lit ;
@@ -220,7 +273,14 @@ rules {
               (list "ts-bnf-emit-int-lit"        ts-bnf-emit-int-lit)
               (list "ts-bnf-emit-str-lit"        ts-bnf-emit-str-lit)
               (list "ts-bnf-emit-ident-expr"     ts-bnf-emit-ident-expr)
-              (list "ts-bnf-emit-paren"          ts-bnf-emit-paren)))
+              (list "ts-bnf-emit-paren"          ts-bnf-emit-paren)
+              (list "ts-bnf-emit-let"            ts-bnf-emit-let)
+              (list "ts-bnf-emit-const-decl"     ts-bnf-emit-const-decl)
+              (list "ts-bnf-emit-if"             ts-bnf-emit-if)
+              (list "ts-bnf-emit-while"          ts-bnf-emit-while)
+              (list "ts-bnf-emit-for"            ts-bnf-emit-for)
+              (list "ts-bnf-emit-call"           ts-bnf-emit-call)
+              (list "ts-bnf-emit-attr"           ts-bnf-emit-attr)))
 
     (let ts-bnf-grammar
         (load-bnf-grammar ts-bnf-text ts-bnf-registry))
