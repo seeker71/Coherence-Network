@@ -1,40 +1,39 @@
-; tests/go-bnf.fk — exercise go.bnf.fk
+; tests/go-bnf.fk — exercise go.bnf.fk with multi-stmt
 ;
 ; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/go.bnf.fk
 
 (do
-    ;; Probe 1: package main
+    (defn first-stmt (root) (head (node_children root)))
+
     (let r1 (parse-go-bnf "t.go" "package main"))
-    (let kids-1 (node_children r1))
-    (let pkg-name (node_value (head kids-1)))
-    (let probe-1 (str_len pkg-name))                       ; → 4 ("main")
+    (let pkg-name (node_value (head (node_children (first-stmt r1)))))
+    (let probe-1 (str_len pkg-name))
 
-    ;; Probe 2: import "fmt"
     (let r2 (parse-go-bnf "t.go" "import \"fmt\""))
-    (let kids-2 (node_children r2))
-    (let imp-path (node_value (head kids-2)))
-    (let probe-2 (str_len imp-path))                       ; → 3 ("fmt")
+    (let imp-path (node_value (head (node_children (first-stmt r2)))))
+    (let probe-2 (str_len imp-path))
 
-    ;; Probe 3: func main()
     (let r3 (parse-go-bnf "t.go" "func main()"))
-    (let kids-3 (node_children r3))
-    (let fn-name (node_value (head kids-3)))
-    (let probe-3 (str_len fn-name))                        ; → 4 ("main")
+    (let fn-name (node_value (head (node_children (first-stmt r3)))))
+    (let probe-3 (str_len fn-name))
 
-    ;; Probe 4: type Kernel struct
     (let r4 (parse-go-bnf "t.go" "type Kernel struct"))
-    (let kids-4 (node_children r4))
-    (let type-name (node_value (head kids-4)))
-    (let probe-4 (str_len type-name))                      ; → 6 ("Kernel")
+    (let type-name (node_value (head (node_children (first-stmt r4)))))
+    (let probe-4 (str_len type-name))
 
-    ;; Probe 5: var Version = 1
     (let r5 (parse-go-bnf "t.go" "var Version = 1"))
-    (let kids-5 (node_children r5))
-    (let var-name (node_value (head kids-5)))
-    (let probe-5 (str_len var-name))                       ; → 7 ("Version")
+    (let var-name (node_value (head (node_children (first-stmt r5)))))
+    (let probe-5 (str_len var-name))
 
-    ;; Sum: 4 + 3 + 4 + 6 + 7 = 24
+    ;; Probe 6 — multi-statement Go file (4 statements)
+    (let r6 (parse-go-bnf "t.go" "package main
+import \"fmt\"
+type Kernel struct
+func main()"))
+    (let probe-6 (len (node_children r6)))               ; → 4
+
     (add probe-1
          (add probe-2
               (add probe-3
-                   (add probe-4 probe-5)))))
+                   (add probe-4
+                        (add probe-5 probe-6))))))

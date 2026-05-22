@@ -10,11 +10,25 @@
 ;   - "string" / `raw` literals
 
 (do
+    (let GO-BNF-MODULE  (make_nodeid 1 2 99 79))
     (let GO-BNF-PACKAGE (make_nodeid 1 2 99 80))
     (let GO-BNF-IMPORT  (make_nodeid 1 2 99 81))
     (let GO-BNF-FUNC    (make_nodeid 1 2 99 82))
     (let GO-BNF-TYPE    (make_nodeid 1 2 99 83))
     (let GO-BNF-VAR     (make_nodeid 1 2 99 84))
+
+    (defn go-bnf-rev-step (acc x) (cons x acc))
+    (defn go-bnf-reverse (xs) (foldl go-bnf-rev-step (empty) xs))
+    (defn go-bnf-collect-results (items)
+        (if (nil? items) (empty)
+            (cons (cap-get (head items) "_result")
+                  (go-bnf-collect-results (tail items)))))
+    (defn go-bnf-emit-module (caps)
+        (do
+            (let first-stmt (cap-get caps "_result"))
+            (let rest-items (go-bnf-reverse (cap-get caps "items")))
+            (let all-stmts (cons first-stmt (go-bnf-collect-results rest-items)))
+            (intern_node GO-BNF-MODULE all-stmts)))
 
     (defn go-bnf-emit-package (caps)
         ;; PACKAGE IDENT — _2=name
@@ -74,7 +88,7 @@
 }
 
 rules {
-  module      ::= statement ;
+  module      ::= statement+ => go-bnf-emit-module ;
   statement   ::= package-stmt | import-stmt | func-stmt | type-stmt | var-stmt ;
   package-stmt ::= PACKAGE IDENT                          => go-bnf-emit-package ;
   import-stmt  ::= IMPORT STRING                           => go-bnf-emit-import ;
@@ -88,7 +102,8 @@ rules {
               (list "go-bnf-emit-import"      go-bnf-emit-import)
               (list "go-bnf-emit-func"        go-bnf-emit-func)
               (list "go-bnf-emit-type-struct" go-bnf-emit-type-struct)
-              (list "go-bnf-emit-var"         go-bnf-emit-var)))
+              (list "go-bnf-emit-var"         go-bnf-emit-var)
+              (list "go-bnf-emit-module"      go-bnf-emit-module)))
 
     (let go-bnf-grammar
         (load-bnf-grammar go-bnf-text go-bnf-registry))
