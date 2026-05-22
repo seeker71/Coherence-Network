@@ -1,0 +1,53 @@
+; grammars/typescript-exec.fk — TypeScript EXECUTE walker
+
+(do
+    (let TS-EXEC-MODULE     (make_nodeid 1 2 99 59))
+    (let TS-EXEC-IMPORT     (make_nodeid 1 2 99 60))
+    (let TS-EXEC-IMPORT-NS  (make_nodeid 1 2 99 61))
+    (let TS-EXEC-IMPORT-DEF (make_nodeid 1 2 99 62))
+    (let TS-EXEC-EXPORT-CONST (make_nodeid 1 2 99 63))
+    (let TS-EXEC-EXPORT-FN  (make_nodeid 1 2 99 64))
+    (let TS-EXEC-LET        (make_nodeid 1 2 99 65))
+    (let TS-EXEC-CONST      (make_nodeid 1 2 99 66))
+
+    (defn ts-exec-is? (n c) (node_eq (node_category n) c))
+    (defn ts-exec-bind (env n v) (cons (list n v) env))
+
+    (defn ts-exec-stmt (stmt env)
+        (do
+            (let kids (node_children stmt))
+            (if (ts-exec-is? stmt TS-EXEC-IMPORT)
+                (do (print (str_concat "import: " (node_value (head kids)))) env)
+            (if (ts-exec-is? stmt TS-EXEC-IMPORT-NS)
+                (do (print (str_concat "import-ns: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "module"))
+            (if (ts-exec-is? stmt TS-EXEC-IMPORT-DEF)
+                (do (print (str_concat "import-default: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "module"))
+            (if (ts-exec-is? stmt TS-EXEC-EXPORT-CONST)
+                (do (print (str_concat "export const: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "value"))
+            (if (ts-exec-is? stmt TS-EXEC-EXPORT-FN)
+                (do (print (str_concat "export function: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "function"))
+            (if (ts-exec-is? stmt TS-EXEC-LET)
+                (do (print (str_concat "let: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "value"))
+            (if (ts-exec-is? stmt TS-EXEC-CONST)
+                (do (print (str_concat "const: " (node_value (head kids))))
+                    (ts-exec-bind env (node_value (head kids)) "value"))
+                env)))))))))
+
+    (defn ts-exec-iter (stmts env)
+        (if (nil? stmts) env
+            (ts-exec-iter (tail stmts) (ts-exec-stmt (head stmts) env))))
+
+    (defn ts-execute (root)
+        (do
+            (let final-env
+                (if (ts-exec-is? root TS-EXEC-MODULE)
+                    (ts-exec-iter (node_children root) (empty))
+                    (ts-exec-stmt root (empty))))
+            (len final-env)))
+
+    0)
