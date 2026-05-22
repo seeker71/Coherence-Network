@@ -1,0 +1,39 @@
+; tests/typescript-bnf.fk — exercise typescript.bnf.fk
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/typescript.bnf.fk
+
+(do
+    ;; Probe 1: import { NodeID } from './substrate';
+    (let r1 (parse-typescript-bnf "t.ts" "import { NodeID } from \"./substrate\""))
+    (let kids-1 (node_children r1))
+    (let probe-1 (len kids-1))                              ; → 2
+
+    ;; Probe 2: import * as fs from 'fs';
+    (let r2 (parse-typescript-bnf "t.ts" "import * as fs from \"fs\""))
+    (let kids-2 (node_children r2))
+    (let alias-val (node_value (head kids-2)))
+    (let probe-2 (str_len alias-val))                       ; → 2 ("fs")
+
+    ;; Probe 3: import React from 'react';
+    (let r3 (parse-typescript-bnf "t.ts" "import React from \"react\""))
+    (let kids-3 (node_children r3))
+    (let name-val (node_value (head kids-3)))
+    (let probe-3 (str_len name-val))                        ; → 5 ("React")
+
+    ;; Probe 4: export const VERSION = 1;
+    (let r4 (parse-typescript-bnf "t.ts" "export const VERSION = 1"))
+    (let kids-4 (node_children r4))
+    (let const-name (node_value (head kids-4)))
+    (let probe-4 (str_len const-name))                      ; → 7 ("VERSION")
+
+    ;; Probe 5: export function init(): void
+    (let r5 (parse-typescript-bnf "t.ts" "export function init(): void"))
+    (let kids-5 (node_children r5))
+    (let fn-name (node_value (head kids-5)))
+    (let probe-5 (str_len fn-name))                         ; → 4 ("init")
+
+    ;; Sum: 2 + 2 + 5 + 7 + 4 = 20
+    (add probe-1
+         (add probe-2
+              (add probe-3
+                   (add probe-4 probe-5)))))
