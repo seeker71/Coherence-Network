@@ -30,10 +30,14 @@
     ;; Recipe-shape predicates — keyed by Blueprint NodeID
     ;; ──────────────────────────────────────────────────────────────────
 
+    (let PY-EXEC-MODULE       (make_nodeid 1 2 99 40))
     (let PY-EXEC-IMPORT       (make_nodeid 1 2 99 41))
     (let PY-EXEC-FROM-IMPORT  (make_nodeid 1 2 99 42))
     (let PY-EXEC-FUNCTION-DEF (make_nodeid 1 2 99 43))
     (let PY-EXEC-ASSIGN       (make_nodeid 1 2 99 44))
+
+    (defn py-exec-is-module? (n)
+        (node_eq (node_category n) PY-EXEC-MODULE))
 
     (defn py-exec-is-import? (n)
         (node_eq (node_category n) PY-EXEC-IMPORT))
@@ -105,9 +109,23 @@
     ;; single-statement; the helper scales transparently when grammar
     ;; widens to `statement*`.
 
+    ;; py-exec-iter-stmts: walk a list of statement Recipes, threading
+    ;; the env. Returns the final env after the last statement.
+    (defn py-exec-iter-stmts (stmts env)
+        (if (nil? stmts) env
+            (py-exec-iter-stmts (tail stmts)
+                                 (py-exec-stmt (head stmts) env))))
+
+    ;; py-execute: walk the root Recipe. If it's a module (composite of
+    ;; statements), iterate its children. Otherwise treat it as a single
+    ;; statement Recipe (backward-compat for one-statement parses).
     (defn py-execute (root)
         (do
-            (let final-env (py-exec-stmt root (py-exec-env-empty 0)))
+            (let final-env
+                (if (py-exec-is-module? root)
+                    (py-exec-iter-stmts (node_children root)
+                                         (py-exec-env-empty 0))
+                    (py-exec-stmt root (py-exec-env-empty 0))))
             (len final-env)))
 
     0)
