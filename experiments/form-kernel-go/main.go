@@ -848,6 +848,44 @@ func (k *Kernel) registerNatives() {
 		k.sourceAttr = make(map[NodeID]sourceLoc)
 		return Value{Kind: VNull}
 	})
+	// serialize-recipe — walk a Recipe tree, emit a flat byte list as
+	// Value::Int per byte. Format per node: 5 big-endian u32s
+	// (pkg, level, ty, inst, children_count) + recursive children.
+	// Trivials: children_count=0, NodeID encoded directly.
+	// Composites: (pkg, level, ty, inst) is the CATEGORY; the composite
+	// NodeID is reconstructed at deserialize via intern.
+	k.registerNative("serialize-recipe", catWitness(), func(k *Kernel, args []Value) Value {
+		bytes := []byte{}
+		bytes = serializeNid(k, args[0].Nid, bytes)
+		out := make([]Value, len(bytes))
+		for i, b := range bytes {
+			out[i] = Value{Kind: VInt, Int: int64(b)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// deserialize-recipe — read byte list back into a Recipe tree.
+	// Composites re-intern so the resulting NodeIDs match the original
+	// identities by content-addressing.
+	k.registerNative("deserialize-recipe", catWitness(), func(k *Kernel, args []Value) Value {
+		bytes := make([]byte, len(args[0].List))
+		for i, v := range args[0].List {
+			bytes[i] = byte(v.Int)
+		}
+		nid, _ := deserializeNid(k, bytes, 0)
+		return Value{Kind: VNodeID, Nid: nid}
+	})
+	// write_file_bytes — sibling of read_file_bytes; writes a byte list.
+	k.registerNative("write_file_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		bytes := make([]byte, len(args[1].List))
+		for i, v := range args[1].List {
+			bytes[i] = byte(v.Int)
+		}
+		err := os.WriteFile(args[0].Str, bytes, 0644)
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(len(bytes))}
+	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)
@@ -1615,4 +1653,68 @@ func runBench() {
 		)
 		_ = nativeResult // silence unused-write warning for the loop's last value
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Form binary artifact format helpers
+// ---------------------------------------------------------------------------
+// Per-node serialization: 5 big-endian u32s (pkg, level, ty, inst, count)
+// + recursive children. Sibling of the Rust kernel's serialize_nid /
+// deserialize_nid. Same byte layout.
+
+func pushU32(bytes []byte, v uint32) []byte {
+	return append(bytes, byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
+}
+
+func readU32(bytes []byte, pos int) (uint32, int) {
+	v := (uint32(bytes[pos]) << 24) |
+		(uint32(bytes[pos+1]) << 16) |
+		(uint32(bytes[pos+2]) << 8) |
+		uint32(bytes[pos+3])
+	return v, pos + 4
+}
+
+func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
+	kids := k.children(nid)
+	if len(kids) == 0 {
+		// Trivial leaf — NodeID IS the value (inst encodes it).
+		bytes = pushU32(bytes, nid.Pkg)
+		bytes = pushU32(bytes, nid.Level)
+		bytes = pushU32(bytes, nid.Type)
+		bytes = pushU32(bytes, nid.Inst)
+		bytes = pushU32(bytes, 0)
+		return bytes
+	}
+	// Composite — serialize CATEGORY (not the intern-counter NodeID).
+	// The composite is reconstructed via k.intern(category, children).
+	cat := k.category(nid)
+	bytes = pushU32(bytes, cat.Pkg)
+	bytes = pushU32(bytes, cat.Level)
+	bytes = pushU32(bytes, cat.Type)
+	bytes = pushU32(bytes, cat.Inst)
+	bytes = pushU32(bytes, uint32(len(kids)))
+	for _, c := range kids {
+		bytes = serializeNid(k, c, bytes)
+	}
+	return bytes
+}
+
+func deserializeNid(k *Kernel, bytes []byte, pos int) (NodeID, int) {
+	var pkg, level, ty, inst, count uint32
+	pkg, pos = readU32(bytes, pos)
+	level, pos = readU32(bytes, pos)
+	ty, pos = readU32(bytes, pos)
+	inst, pos = readU32(bytes, pos)
+	count, pos = readU32(bytes, pos)
+	if count == 0 {
+		return NodeID{Pkg: pkg, Level: level, Type: ty, Inst: inst}, pos
+	}
+	category := NodeID{Pkg: pkg, Level: level, Type: ty, Inst: inst}
+	children := make([]NodeID, count)
+	for i := uint32(0); i < count; i++ {
+		var c NodeID
+		c, pos = deserializeNid(k, bytes, pos)
+		children[i] = c
+	}
+	return k.intern(category, children), pos
 }

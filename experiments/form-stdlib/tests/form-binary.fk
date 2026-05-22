@@ -1,0 +1,36 @@
+; tests/form-binary.fk — Recipe serialize/deserialize round-trip
+
+(do
+    (let CAT-PLUS     (make_nodeid 1 2 12 1))
+    (let CAT-MULTIPLY (make_nodeid 1 2 12 3))
+
+    (let leaf (intern_trivial_int 42))
+    (let leaf-bytes (serialize-recipe leaf))
+    (let leaf-restored (deserialize-recipe leaf-bytes))
+    (let probe-1 (if (node_eq leaf leaf-restored) 1 0))
+    (let probe-2 (len leaf-bytes))
+
+    (let plus (intern_node CAT-PLUS (list (intern_trivial_int 7) (intern_trivial_int 3))))
+    (let plus-bytes (serialize-recipe plus))
+    (let plus-restored (deserialize-recipe plus-bytes))
+    (let probe-3 (if (node_eq plus plus-restored) 1 0))
+    (let probe-4 (len plus-bytes))
+
+    (let nested (intern_node CAT-MULTIPLY
+                              (list (intern_trivial_int 5)
+                                    (intern_node CAT-PLUS
+                                                  (list (intern_trivial_int 4)
+                                                        (intern_trivial_int 6))))))
+    (let nested-bytes (serialize-recipe nested))
+    (let nested-restored (deserialize-recipe nested-bytes))
+    (let probe-5 (if (node_eq nested nested-restored) 1 0))
+    (let probe-6 (len nested-bytes))
+
+    (let path "/tmp/form-binary-test.bin")
+    (let written (write_file_bytes path plus-bytes))
+    (let probe-7 written)
+    (let loaded (read_file_bytes path))
+    (let loaded-recipe (deserialize-recipe loaded))
+    (let probe-8 (if (node_eq plus loaded-recipe) 1 0))
+
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 (add probe-5 (add probe-6 (add probe-7 probe-8))))))))
