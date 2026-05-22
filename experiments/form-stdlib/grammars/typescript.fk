@@ -191,7 +191,7 @@
                             (parse-decl text line-no source-path "var" 3)
                             (intern_trivial_string text)))))))
 
-    (defn parse-block (ln source-path)
+    (defn ts-parse-block (ln source-path)
         (do
             (let text (line-text ln))
             (let line-no (line-num ln))
@@ -202,19 +202,19 @@
                     (parse-export trimmed line-no source-path)
                     (parse-statement-text trimmed line-no source-path)))))
 
-    (defn parse-blocks (lines source-path acc)
+    (defn ts-ts-parse-blocks (lines source-path acc)
         (if (nil? lines) (reverse-acc acc)
             (do
                 (let ln (head lines))
                 (let text (line-text ln))
                 (if (or (is-blank? text) (is-line-comment? text))
-                    (parse-blocks (tail lines) source-path acc)
-                    (parse-blocks (tail lines) source-path
-                                  (cons (parse-block ln source-path) acc))))))
+                    (ts-ts-parse-blocks (tail lines) source-path acc)
+                    (ts-ts-parse-blocks (tail lines) source-path
+                                  (cons (ts-parse-block ln source-path) acc))))))
 
     (defn parse-typescript (source-path text)
         (do
             (let lines (lines-from-source text))
-            (let blocks (parse-blocks lines source-path (empty)))
+            (let blocks (ts-ts-parse-blocks lines source-path (empty)))
             (intern_node_at TS-MODULE blocks source-path 1 1)))
 )

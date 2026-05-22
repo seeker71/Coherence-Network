@@ -136,19 +136,19 @@
     (defn parse-markdown (source-path text)
         (do
             (let lines (lines-from-source text))
-            (let blocks (parse-blocks lines source-path))
+            (let blocks (md-md-parse-blocks lines source-path))
             (intern_node_at DOC-DOC blocks source-path 1 1)))
 
-    (defn parse-blocks (lines source-path)
+    (defn md-md-parse-blocks (lines source-path)
         (if (nil? lines) (empty)
             (do
                 (let ln (head lines))
                 (let text (line-text ln))
                 (if (is-blank-line? text)
-                    (parse-blocks (tail lines) source-path)
+                    (md-md-parse-blocks (tail lines) source-path)
                     (if (is-heading-line? text)
                         (cons (parse-heading ln source-path)
-                              (parse-blocks (tail lines) source-path))
+                              (md-md-parse-blocks (tail lines) source-path))
                         (if (starts-with-fence? text)
                             (parse-fence lines source-path)
                             (parse-paragraph lines source-path)))))))
@@ -176,7 +176,7 @@
                                   (list (intern_trivial_string lang)
                                         (intern_trivial_string content))
                                   source-path line-no 1)
-                  (parse-blocks rest source-path))))
+                  (md-md-parse-blocks rest source-path))))
 
     (defn collect-fence-content (lines acc)
         (if (nil? lines)
@@ -210,7 +210,7 @@
             (cons (intern_node_at DOC-PARAGRAPH
                                   (list (intern_trivial_string combined))
                                   source-path line-no 1)
-                  (parse-blocks rest source-path))))
+                  (md-md-parse-blocks rest source-path))))
 
     (defn collect-paragraph-lines (lines acc)
         (if (nil? lines)

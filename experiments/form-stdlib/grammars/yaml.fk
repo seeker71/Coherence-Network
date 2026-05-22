@@ -104,20 +104,20 @@
     (defn parse-yaml (source-path text)
         (do
             (let lines (lines-from-source text))
-            (let blocks (parse-blocks lines source-path (empty)))
+            (let blocks (yml-yml-parse-blocks lines source-path (empty)))
             (intern_node_at YAML-DOC blocks source-path 1 1)))
 
-    (defn parse-blocks (lines source-path acc)
+    (defn yml-yml-parse-blocks (lines source-path acc)
         (if (nil? lines) (reverse-acc acc)
             (do
                 (let ln (head lines))
                 (let text (line-text ln))
                 (if (or (is-blank? text) (is-comment? text))
-                    (parse-blocks (tail lines) source-path acc)
+                    (yml-yml-parse-blocks (tail lines) source-path acc)
                     (if (starts-with-dash? text)
-                        (parse-blocks (tail lines) source-path
+                        (yml-yml-parse-blocks (tail lines) source-path
                                       (cons (parse-list-item ln source-path) acc))
-                        (parse-blocks (tail lines) source-path
+                        (yml-yml-parse-blocks (tail lines) source-path
                                       (cons (parse-pair ln source-path) acc)))))))
 
     (defn parse-pair (ln source-path)
