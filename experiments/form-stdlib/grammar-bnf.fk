@@ -254,10 +254,14 @@
                                    (bnf-tok-kws st)
                                    (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "keyword")
+                ;; "keyword KIND value" — store as (value kind) pair so
+                ;; engine.fk's classify-ident emits the right token KIND
+                ;; for grammars to match against by name.
                 (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
                                    (bnf-tok-sk st) (bnf-tok-ik st)
                                    (bnf-tok-ops st)
-                                   (cons (head (tail rest)) (bnf-tok-kws st))
+                                   (cons (list (head (tail rest)) (head rest))
+                                         (bnf-tok-kws st))
                                    (bnf-tok-sq st) (bnf-tok-lc st))
             (if (str_eq kind "string-quotes")
                 ;; List of codepoints to honor as string-opening quotes
@@ -488,7 +492,27 @@
                 (list (head (tail (head registry))))
                 (bnf-registry-lookup (tail registry) name))))
 
-    (defn bnf-default-passthrough (caps) caps)
+    ;; Presence check needed because `(nil? value)` returns true for any
+    ;; non-list (including NodeIDs and functions), since Form's `nil?`
+    ;; is `(eq (len v) 0)`. We can't tell "no key" from "key bound to a
+    ;; NodeID" with cap-get alone.
+    (defn cap-has? (caps name)
+        (if (nil? caps) false
+            (if (str_eq (head (head caps)) name)
+                true
+                (cap-has? (tail caps) name))))
+
+    ;; bnf-default-passthrough: for a rule with no explicit emit action,
+    ;; propagate the inner rule's Recipe upward. The engine binds inner
+    ;; rule results under "_result"; for a sub-pattern that captured a
+    ;; literal, the value is at "_1". Pick whichever is set, falling
+    ;; through to the bare caps list as last resort.
+    (defn bnf-default-passthrough (caps)
+        (if (cap-has? caps "_result")
+            (cap-get caps "_result")
+            (if (cap-has? caps "_1")
+                (cap-get caps "_1")
+                caps)))
 
     (defn bnf-resolve-action (action-name registry)
         (if (str_eq action-name "")
