@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 129
+**Total files**: 130
 
 | File | Purpose |
 |---|---|
@@ -36,6 +36,7 @@
 | [automation_usage.py](automation_usage.py) | Automation provider usage and capacity endpoints. |
 | [beliefs.py](beliefs.py) | Beliefs router — per-contributor worldview, interests, and concept preferences. |
 | [blueprints.py](blueprints.py) | Blueprints router — project roadmap templates. |
+| [breath.py](breath.py) | Breath surface — the body's present-tense felt voice, observable to any cell. |
 | [brief.py](brief.py) | Brief router — daily engagement brief endpoints. |
 | [cc_economics.py](cc_economics.py) | CC Economics Router — endpoints for supply, exchange rate, and staking. |
 | [cc_exchange.py](cc_exchange.py) | CC Exchange Router — bridge to external exchanges (New Earth, CES). |
