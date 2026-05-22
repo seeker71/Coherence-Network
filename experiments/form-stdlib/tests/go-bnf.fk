@@ -53,11 +53,39 @@ const Tag = 2
 func main() { }"))
     (let probe-8 (len (node_children r8)))                    ; → 6 top-level decls
 
-    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 = 34
+    ;; Probe 9 — expression parsing with precedence: `1 + 2 * 3` should
+    ;; parse as BIN(+, 1, BIN(*, 2, 3))
+    (let r9 (parse-go-bnf "t.go" "func f() { return 1 + 2 * 3 }"))
+    (let func9 (first-stmt r9))
+    (let body9 (head (tail (node_children func9))))
+    (let return-stmt-9 (head (node_children body9)))
+    (let return-expr-9 (head (node_children return-stmt-9)))
+    (let probe-9 (if (node_eq (node_category return-expr-9)
+                              (make_nodeid 1 2 99 95))
+                     1 0))                                ; → 1 (BIN-EXPR)
+
+    ;; Probe 10 — parenthesized expression
+    (let r10 (parse-go-bnf "t.go" "func g() { return (1 + 2) }"))
+    (let func10 (first-stmt r10))
+    (let body10 (head (tail (node_children func10))))
+    (let return-stmt-10 (head (node_children body10)))
+    (let return-expr-10 (head (node_children return-stmt-10)))
+    (let probe-10 (if (node_eq (node_category return-expr-10)
+                               (make_nodeid 1 2 99 97))
+                      1 0))                               ; → 1 (PAREN-EXPR)
+
+    ;; Probe 11 — comparison expression in if condition
+    (let r11 (parse-go-bnf "t.go" "func h() { if x == 1 { } }"))
+    (let probe-11 (len (node_children r11)))              ; → 1
+
+    ;; Sum: 4 + 3 + 3 + 6 + 7 + 4 + 1 + 6 + 1 + 1 + 1 = 37
     (add probe-1
          (add probe-2
               (add probe-3
                    (add probe-4
                         (add probe-5
                              (add probe-6
-                                  (add probe-7 probe-8))))))))
+                                  (add probe-7
+                                       (add probe-8
+                                            (add probe-9
+                                                 (add probe-10 probe-11)))))))))))
