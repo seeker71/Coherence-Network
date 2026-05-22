@@ -1,0 +1,158 @@
+; line-grammar.fk — the shared helpers every line-based grammar reaches for
+;
+; Digested from 6 file-header grammars (markdown.fk, json.fk, yaml.fk,
+; python.fk, typescript.fk, rust.fk, go.fk) shipped Oct 2026-05-21
+; through 2026-05-22 morning. Each grammar duplicated ~50 lines of
+; lines-from-source / trim / is-blank? / find-from / split-on / etc.
+; Extracted here so the grammars become thin: just their unique
+; dispatch + emission logic.
+;
+; What the digest revealed:
+;   1. Line-based parsing is the dominant pattern for text formats —
+;      tokens are lines, not individual characters.
+;   2. The numeric type=99 doc-band emerged organically and works.
+;   3. Source attribution flows through every grammar without resistance
+;      (intern_node_at on every line-derived Recipe).
+;   4. Comment styles vary (// for ts/rust/go, # for python/yaml, ; for
+;      form) but the SHAPE is identical: "trim leading ws, check first
+;      char". Each grammar defines its own is-comment? via the shared
+;      starts-with? / char_at primitives — no parameterization needed.
+;   5. The form .fk language is sufficient for all 8 grammars without
+;      needing any kernel extensions beyond intern_node_at + node_eq.
+;
+; This file lives at form-stdlib/line-grammar.fk (one level above
+; grammars/) so all per-tongue grammars can load it as a shared layer
+; between core.fk and the grammar itself.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; string slicing
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; character predicates (codepoint-level)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn is-ws-cp (cp)
+        (or (eq cp 32) (or (eq cp 9) (or (eq cp 10) (eq cp 13)))))
+
+    (defn is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
+
+    (defn is-alpha-cp (cp)
+        (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+                (eq cp 95))))
+
+    (defn is-ident-cont-cp (cp)
+        (or (is-alpha-cp cp) (is-digit-cp cp)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; whitespace trimming
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn trim-leading-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-cp (ord (char_at s 0)))
+                (trim-leading-ws (substr s 1 (str_len s)))
+                s)))
+
+    (defn trim-trailing-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-cp (ord (char_at s (sub (str_len s) 1))))
+                (trim-trailing-ws (substr s 0 (sub (str_len s) 1)))
+                s)))
+
+    (defn trim (s) (trim-leading-ws (trim-trailing-ws s)))
+
+    (defn is-blank? (text) (eq (str_len (trim text)) 0))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; lines-from-source: byte stream → list of (text, line-num) pairs
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Splits on \n. The newline char itself is not included in the
+    ;; resulting line text. Line numbers are 1-indexed. A trailing
+    ;; newline produces no extra empty line; a source without trailing
+    ;; newline still emits its final partial line.
+
+    (defn rev-step (acc x) (cons x acc))
+    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+
+    (defn lines-from-source (s)
+        (lines-loop s 0 0 1 (empty)))
+
+    (defn lines-loop (s i start line acc)
+        (if (eq i (str_len s))
+            (if (gt i start)
+                (reverse-acc (cons (list (substr s start i) line) acc))
+                (reverse-acc acc))
+            (if (eq (ord (char_at s i)) 10)
+                (lines-loop s (add i 1) (add i 1) (add line 1)
+                            (cons (list (substr s start i) line) acc))
+                (lines-loop s (add i 1) start line acc))))
+
+    (defn line-text (ln) (head ln))
+    (defn line-num  (ln) (head (tail ln)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; prefix detection
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn starts-with? (text prefix)
+        (if (lt (str_len text) (str_len prefix)) false
+            (str_eq (substr text 0 (str_len prefix)) prefix)))
+
+    ;; starts-with-keyword? — like starts-with? but requires that the
+    ;; character immediately after the prefix is whitespace, so we don't
+    ;; match `funky` as starting-with-keyword `fun`. Returns false if
+    ;; the prefix exactly equals the whole text (no separator).
+    (defn starts-with-keyword? (text kw)
+        (and (starts-with? text kw)
+             (and (gt (str_len text) (str_len kw))
+                  (is-ws-cp (ord (char_at text (str_len kw)))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; substring search
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn find-from (s needle start)
+        (find-loop s needle start))
+
+    (defn find-loop (s needle i)
+        (if (gt (add i (str_len needle)) (str_len s)) (sub 0 1)
+            (if (str_eq (substr s i (add i (str_len needle))) needle) i
+                (find-loop s needle (add i 1)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; split on substring
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Splits text on every occurrence of sep. Empty leading/trailing
+    ;; pieces are preserved (matches Python's str.split semantics).
+
+    (defn split-on (s sep)
+        (split-on-loop s sep 0 (empty)))
+
+    (defn split-on-loop (s sep i acc)
+        (do
+            (let pos (find-from s sep i))
+            (if (lt pos 0)
+                (reverse-acc (cons (substr s i (str_len s)) acc))
+                (split-on-loop s sep (add pos (str_len sep))
+                                (cons (substr s i pos) acc)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; pick-min: smallest non-negative value, with fallback
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Used by grammars to find the earliest of multiple delimiters
+    ;; (e.g. "where does this identifier end? at the first space or
+    ;; brace, whichever comes first").
+
+    (defn pick-min (a b fallback)
+        (if (lt a 0)
+            (if (lt b 0) fallback b)
+            (if (lt b 0) a
+                (if (lt a b) a b))))
+)
