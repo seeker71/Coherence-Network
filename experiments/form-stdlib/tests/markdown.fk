@@ -1,5 +1,7 @@
 ; tests/markdown.fk — exercise markdown parser end-to-end
 ;
+; preludes: form-stdlib/grammars/markdown.fk
+;
 ; (Note: this loads grammars/markdown.fk explicitly since the
 ; form-kernel-validate.sh convention loads form-stdlib/<base>.fk
 ; but markdown lives under form-stdlib/grammars/. Invoke via:

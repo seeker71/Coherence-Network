@@ -95,7 +95,16 @@ else
         for f in form-stdlib/tests/*.fk; do
             base="$(basename "$f" .fk)"
             module="form-stdlib/${base}.fk"
-            if [[ -f "$module" && "$module" != "$f" ]]; then
+            # A test file may declare extra preludes via a header line:
+            #   ; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+            # When present, those modules load between core.fk and the test
+            # (in the order declared). The same-name convention still works
+            # — modules referenced by the header replace the auto-prepend.
+            preludes=$(grep -E '^; preludes:' "$f" 2>/dev/null | head -1 | sed 's/^; preludes://' || true)
+            if [[ -n "$preludes" ]]; then
+                # shellcheck disable=SC2086
+                run_siblings "stdlib/$(basename "$f")" "form-stdlib/core.fk" $preludes "$f"
+            elif [[ -f "$module" && "$module" != "$f" ]]; then
                 run_siblings "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$module" "$f"
             else
                 run_siblings "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$f"

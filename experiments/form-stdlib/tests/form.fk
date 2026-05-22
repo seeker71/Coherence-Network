@@ -1,5 +1,7 @@
 ; tests/form.fk — exercise form.fk S-expression parser end-to-end
 ;
+; preludes: form-stdlib/grammars/form.fk
+;
 ; The self-host probe: parse small .fk fragments into Recipe trees
 ; without going through the kernel's bootstrap reader.
 

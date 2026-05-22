@@ -1,0 +1,612 @@
+; grammar-bnf.fk — read BNF-style grammar text → engine.fk data shape
+;
+; The body's engine.fk already accepts grammars as data:
+;   (list (list "tokens" token-config) (list "rules" parse-rules))
+;
+; What this file adds is the readable surface — a BNF text file (the
+; tongue Backus 1959 / Naur 1960 named and BMF 2000 made executable)
+; that compiles down to that data tuple. The per-tongue grammars stop
+; being ~250 lines of imperative dispatch and become ~30 lines of
+; declarative rules a human can scan.
+;
+; The surface:
+;
+;   tokens {
+;     whitespace 32 9 10 13
+;     digit-kind INT
+;     string-kind STRING
+;     ident-kind IDENT
+;     operator { LBRACE
+;     operator } RBRACE
+;     operator [ LBRACK
+;     operator ] RBRACK
+;     operator : COLON
+;     operator , COMMA
+;     keyword TRUE true
+;     keyword FALSE false
+;     keyword NULL null
+;   }
+;
+;   rules {
+;     json     := value
+;     value    := object | array | STRING | INT | TRUE | FALSE | NULL
+;     pair     := STRING COLON value             => emit-pair
+;     object   := LBRACE pairs RBRACE            => emit-object
+;     pairs    := pair (COMMA pair)*             => emit-list
+;     array    := LBRACK elements RBRACK         => emit-array
+;     elements := value (COMMA value)*           => emit-list
+;   }
+;
+; Reading rules:
+;   `:=` is "is composed of"; `=>` is "becomes (via emitter)"
+;   `|` separates alternatives, `*` is zero-or-more, `?` is optional,
+;   `(...)` groups. Pattern atoms are token KINDs (uppercase) or rule
+;   names (lowercase). String literals are not used in rule patterns —
+;   the tokens block names every literal once.
+;
+; Output (engine.fk-compatible):
+;   token-config — same shape engine.fk's tokenize-with-config consumes
+;   parse-rules — list of (rule-name pattern action-fn) tuples; the
+;     action-fn is looked up by name in an emitter registry the caller
+;     supplies, so the grammar file stays pure data while the emit
+;     side stays substrate-resident behavior.
+;
+; Load order: core.fk → engine.fk → grammar-bnf.fk
+;
+; Naming discipline: all line/string helpers carry a `bnf-` prefix to
+; avoid colliding with line-grammar.fk's exports (which differ in arity
+; from engine.fk's same-name internals). Match primitives reuse
+; engine.fk; the new "rule" pattern arm + recursive driver are appended
+; in Part 10.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — line/string helpers (bnf-prefixed to stay collision-free)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn bnf-substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (bnf-substr s (add a 1) b))))
+
+    (defn bnf-is-ws-cp (cp)
+        (or (eq cp 32) (or (eq cp 9) (or (eq cp 10) (eq cp 13)))))
+
+    (defn bnf-is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
+
+    (defn bnf-is-alpha-cp (cp)
+        (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+                (eq cp 95))))
+
+    (defn bnf-trim-leading-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (bnf-is-ws-cp (ord (char_at s 0)))
+                (bnf-trim-leading-ws (bnf-substr s 1 (str_len s)))
+                s)))
+
+    (defn bnf-trim-trailing-ws (s)
+        (if (eq (str_len s) 0) s
+            (if (bnf-is-ws-cp (ord (char_at s (sub (str_len s) 1))))
+                (bnf-trim-trailing-ws (bnf-substr s 0 (sub (str_len s) 1)))
+                s)))
+
+    (defn bnf-trim (s) (bnf-trim-leading-ws (bnf-trim-trailing-ws s)))
+
+    (defn bnf-is-blank? (text) (eq (str_len (bnf-trim text)) 0))
+
+    (defn bnf-starts-with? (text prefix)
+        (if (lt (str_len text) (str_len prefix)) false
+            (str_eq (bnf-substr text 0 (str_len prefix)) prefix)))
+
+    (defn bnf-find-from (s needle start)
+        (bnf-find-loop s needle start))
+
+    (defn bnf-find-loop (s needle i)
+        (if (gt (add i (str_len needle)) (str_len s)) (sub 0 1)
+            (if (str_eq (bnf-substr s i (add i (str_len needle))) needle) i
+                (bnf-find-loop s needle (add i 1)))))
+
+    (defn bnf-rev-step (acc x) (cons x acc))
+    (defn bnf-reverse (xs) (foldl bnf-rev-step (empty) xs))
+
+    ;; Walk source string → list of line texts (newline-stripped).
+    ;; Line numbers preserved as (text line-no) pairs.
+    (defn bnf-lines (s) (bnf-lines-loop s 0 0 1 (empty)))
+
+    (defn bnf-lines-loop (s i start line acc)
+        (if (eq i (str_len s))
+            (if (gt i start)
+                (bnf-reverse (cons (list (bnf-substr s start i) line) acc))
+                (bnf-reverse acc))
+            (if (eq (ord (char_at s i)) 10)
+                (bnf-lines-loop s (add i 1) (add i 1) (add line 1)
+                                 (cons (list (bnf-substr s start i) line) acc))
+                (bnf-lines-loop s (add i 1) start line acc))))
+
+    (defn bnf-line-text (ln) (head ln))
+
+    ;; comment marker: ';' (Form-native) — same convention as .fk files
+    (defn bnf-is-comment? (text)
+        (do
+            (let trimmed (bnf-trim-leading-ws text))
+            (if (eq (str_len trimmed) 0) false
+                (eq (ord (char_at trimmed 0)) 59))))   ; ';' = 59
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — block detection
+    ;; ──────────────────────────────────────────────────────────────────
+
+    ;; line opens a block named `name` when trimmed is "<name> {"
+    (defn bnf-block-open? (text name)
+        (do
+            (let trimmed (bnf-trim text))
+            (and (bnf-starts-with? trimmed name)
+                 (and (gt (str_len trimmed) 0)
+                      (eq (ord (char_at trimmed (sub (str_len trimmed) 1))) 123)))))
+
+    (defn bnf-block-close? (text)
+        (str_eq (bnf-trim text) "}"))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — whitespace-split a line into fields
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn bnf-fields-loop (s i start acc)
+        (if (eq i (str_len s))
+            (if (gt i start)
+                (bnf-reverse (cons (bnf-substr s start i) acc))
+                (bnf-reverse acc))
+            (if (bnf-is-ws-cp (ord (char_at s i)))
+                (if (gt i start)
+                    (bnf-fields-loop s (add i 1) (add i 1)
+                                      (cons (bnf-substr s start i) acc))
+                    (bnf-fields-loop s (add i 1) (add i 1) acc))
+                (bnf-fields-loop s (add i 1) start acc))))
+
+    (defn bnf-fields (text)
+        (bnf-fields-loop (bnf-trim-leading-ws text) 0 0 (empty)))
+
+    (defn bnf-parse-int-fields (fs)
+        (if (nil? fs) (empty)
+            (cons (str_to_int (head fs))
+                  (bnf-parse-int-fields (tail fs)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — tokens-block state machine
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Lines inside the tokens block:
+    ;;   "whitespace <cp1> <cp2> ..."    → set ws-cps
+    ;;   "digit-kind <KIND>"              → set digit-kind
+    ;;   "string-kind <KIND>"             → set string-kind
+    ;;   "ident-kind <KIND>"              → set ident-kind
+    ;;   "operator <text> <KIND>"         → accumulate operators
+    ;;   "keyword <KIND> <text>"          → accumulate keywords
+    ;;
+    ;; State shape: (ws-cps digit-kind string-kind ident-kind ops kws)
+    ;;
+    ;; Engine.fk's tokenize matches keywords by text (engine's
+    ;; classify-ident), so the keyword KIND is informational; we
+    ;; surface only the text in the engine's keyword list.
+
+    (defn bnf-tok-state-empty (_x)
+        (list (list 32 9 10 13)
+              "INT" "STRING" "IDENT"
+              (empty) (empty)))
+
+    (defn bnf-tok-ws    (st) (head st))
+    (defn bnf-tok-di    (st) (head (tail st)))
+    (defn bnf-tok-sk    (st) (head (tail (tail st))))
+    (defn bnf-tok-ik    (st) (head (tail (tail (tail st)))))
+    (defn bnf-tok-ops   (st) (head (tail (tail (tail (tail st))))))
+    (defn bnf-tok-kws   (st) (head (tail (tail (tail (tail (tail st)))))))
+
+    (defn bnf-mk-tok-state (ws di sk ik ops kws)
+        (list ws di sk ik ops kws))
+
+    (defn bnf-cons-op (operators text kind)
+        (cons (list text kind) operators))
+
+    (defn bnf-tok-line-step (st fs)
+        (do
+            (let kind (head fs))
+            (let rest (tail fs))
+            (if (str_eq kind "whitespace")
+                (bnf-mk-tok-state (bnf-parse-int-fields rest)
+                                   (bnf-tok-di st) (bnf-tok-sk st)
+                                   (bnf-tok-ik st) (bnf-tok-ops st)
+                                   (bnf-tok-kws st))
+            (if (str_eq kind "digit-kind")
+                (bnf-mk-tok-state (bnf-tok-ws st) (head rest)
+                                   (bnf-tok-sk st) (bnf-tok-ik st)
+                                   (bnf-tok-ops st) (bnf-tok-kws st))
+            (if (str_eq kind "string-kind")
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (head rest) (bnf-tok-ik st)
+                                   (bnf-tok-ops st) (bnf-tok-kws st))
+            (if (str_eq kind "ident-kind")
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (bnf-tok-sk st) (head rest)
+                                   (bnf-tok-ops st) (bnf-tok-kws st))
+            (if (str_eq kind "operator")
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (bnf-tok-sk st) (bnf-tok-ik st)
+                                   (bnf-cons-op (bnf-tok-ops st)
+                                                 (head rest) (head (tail rest)))
+                                   (bnf-tok-kws st))
+            (if (str_eq kind "keyword")
+                (bnf-mk-tok-state (bnf-tok-ws st) (bnf-tok-di st)
+                                   (bnf-tok-sk st) (bnf-tok-ik st)
+                                   (bnf-tok-ops st)
+                                   (cons (head (tail rest)) (bnf-tok-kws st)))
+                st))))))))
+
+    (defn bnf-finalize-token-config (st)
+        (list
+            (list "whitespace" (bnf-tok-ws st))
+            (list "digit-kind" (bnf-tok-di st))
+            (list "string-kind" (bnf-tok-sk st))
+            (list "ident-kind" (bnf-tok-ik st))
+            (list "operators"  (bnf-reverse (bnf-tok-ops st)))
+            (list "keywords"   (bnf-reverse (bnf-tok-kws st)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 5 — pattern tokenizer
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Splits a rule-line's pattern text into atomic tokens. The
+    ;; structural metachars are `(` `)` `|` `*` `?`. Everything else
+    ;; that's alnum/dash/underscore forms an identifier atom.
+
+    (defn bnf-is-pat-ident-cp (cp)
+        (or (bnf-is-alpha-cp cp)
+            (or (bnf-is-digit-cp cp)
+                (eq cp 45))))   ; '-' = 45
+
+    (defn bnf-pat-scan-ident (s i)
+        (if (eq i (str_len s)) i
+            (if (bnf-is-pat-ident-cp (ord (char_at s i)))
+                (bnf-pat-scan-ident s (add i 1))
+                i)))
+
+    (defn bnf-pat-tokens-loop (s i acc)
+        (if (eq i (str_len s))
+            (bnf-reverse acc)
+            (do
+                (let cp (ord (char_at s i)))
+                (if (bnf-is-ws-cp cp)
+                    (bnf-pat-tokens-loop s (add i 1) acc)
+                (if (eq cp 40)  ; '('
+                    (bnf-pat-tokens-loop s (add i 1) (cons "(" acc))
+                (if (eq cp 41)  ; ')'
+                    (bnf-pat-tokens-loop s (add i 1) (cons ")" acc))
+                (if (eq cp 124) ; '|'
+                    (bnf-pat-tokens-loop s (add i 1) (cons "|" acc))
+                (if (eq cp 42)  ; '*'
+                    (bnf-pat-tokens-loop s (add i 1) (cons "*" acc))
+                (if (eq cp 63)  ; '?'
+                    (bnf-pat-tokens-loop s (add i 1) (cons "?" acc))
+                (if (bnf-is-pat-ident-cp cp)
+                    (do
+                        (let end (bnf-pat-scan-ident s i))
+                        (bnf-pat-tokens-loop s end
+                                              (cons (bnf-substr s i end) acc)))
+                    (bnf-pat-tokens-loop s (add i 1) acc)))))))))))
+
+    (defn bnf-tokenize-pattern (text)
+        (bnf-pat-tokens-loop text 0 (empty)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 6 — atom-list → engine pattern data
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Pattern grammar (the surface this reader recognizes):
+    ;;   alt    := seq ( '|' seq )*
+    ;;   seq    := atom+
+    ;;   atom   := IDENT postfix?
+    ;;          |  '(' alt ')' postfix?
+    ;;   postfix:= '*' | '?'
+    ;;
+    ;; Uppercase IDENT → token-kind reference wrapped in capture by
+    ;; position (so the action function can pull captures by "_1",
+    ;; "_2", ...). Lowercase IDENT → rule reference (handled by the
+    ;; recursive engine in Part 10).
+
+    (defn bnf-first-upper? (s)
+        (and (gt (str_len s) 0)
+             (and (ge (ord (char_at s 0)) 65)
+                  (le (ord (char_at s 0)) 90))))
+
+    (defn bnf-mk-pair (r rest) (list r rest))
+    (defn bnf-pair-recipe (p) (head p))
+    (defn bnf-pair-rest (p) (head (tail p)))
+
+    (defn bnf-cap-name (pos)
+        (str_concat "_" (int_to_str pos)))
+
+    (defn bnf-parse-atom (toks pos)
+        (if (nil? toks) (bnf-mk-pair (list "literal" "EOF" "") toks)
+            (do
+                (let t (head toks))
+                (if (str_eq t "(")
+                    (bnf-parse-group (tail toks) pos)
+                    (bnf-parse-atom-ident t (tail toks) pos)))))
+
+    (defn bnf-parse-group (toks pos)
+        (do
+            (let inner (bnf-parse-alt toks pos))
+            (let inner-pat (bnf-pair-recipe inner))
+            (let after (bnf-pair-rest inner))
+            (let after-paren
+                (if (and (gt (len after) 0) (str_eq (head after) ")"))
+                    (tail after) after))
+            (bnf-apply-postfix inner-pat after-paren pos)))
+
+    (defn bnf-parse-atom-ident (name toks pos)
+        (do
+            (let atom-pat
+                (if (bnf-first-upper? name)
+                    (list "capture" (bnf-cap-name pos)
+                          (list "literal" name ""))
+                    (list "rule" name)))
+            (bnf-apply-postfix atom-pat toks pos)))
+
+    (defn bnf-apply-postfix (pat toks _pos)
+        (if (nil? toks) (bnf-mk-pair pat toks)
+            (if (str_eq (head toks) "*")
+                (bnf-mk-pair (list "star" pat) (tail toks))
+                (if (str_eq (head toks) "?")
+                    (bnf-mk-pair (list "opt" pat) (tail toks))
+                    (bnf-mk-pair pat toks)))))
+
+    (defn bnf-parse-seq-loop (toks pos acc)
+        (if (nil? toks) (bnf-mk-pair (bnf-finalize-seq acc) toks)
+            (do
+                (let t (head toks))
+                (if (or (str_eq t "|") (str_eq t ")"))
+                    (bnf-mk-pair (bnf-finalize-seq acc) toks)
+                    (do
+                        (let one (bnf-parse-atom toks pos))
+                        (bnf-parse-seq-loop (bnf-pair-rest one)
+                                             (add pos 1)
+                                             (cons (bnf-pair-recipe one) acc)))))))
+
+    (defn bnf-parse-seq (toks pos)
+        (bnf-parse-seq-loop toks pos (empty)))
+
+    (defn bnf-finalize-seq (acc)
+        (do
+            (let ordered (bnf-reverse acc))
+            (if (eq (len ordered) 1)
+                (head ordered)
+                (cons "sequence" ordered))))
+
+    (defn bnf-parse-alt-loop (toks pos alts)
+        (do
+            (let first-seq (bnf-parse-seq toks pos))
+            (let pat (bnf-pair-recipe first-seq))
+            (let after (bnf-pair-rest first-seq))
+            (if (and (gt (len after) 0) (str_eq (head after) "|"))
+                (bnf-parse-alt-loop (tail after) pos (cons pat alts))
+                (do
+                    (let all (bnf-reverse (cons pat alts)))
+                    (if (eq (len all) 1)
+                        (bnf-mk-pair (head all) after)
+                        (bnf-mk-pair (cons "choice" all) after))))))
+
+    (defn bnf-parse-alt (toks pos)
+        (bnf-parse-alt-loop toks pos (empty)))
+
+    (defn bnf-parse-pattern (atom-list)
+        (bnf-pair-recipe (bnf-parse-alt atom-list 1)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 7 — rule-line splitter
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; "  pair := STRING COLON value => emit-pair "
+    ;;   → ("pair", "STRING COLON value", "emit-pair")
+    ;; Action half is optional (empty string when absent).
+
+    (defn bnf-split-on (text sep)
+        (do
+            (let pos (bnf-find-from text sep 0))
+            (if (lt pos 0)
+                (list text "")
+                (list (bnf-substr text 0 pos)
+                      (bnf-substr text (add pos (str_len sep)) (str_len text))))))
+
+    (defn bnf-parse-rule-line (text)
+        (do
+            (let def-split (bnf-split-on text ":="))
+            (let name (bnf-trim (head def-split)))
+            (let body (head (tail def-split)))
+            (let act-split (bnf-split-on body "=>"))
+            (let pattern-text (bnf-trim (head act-split)))
+            (let action-name (bnf-trim (head (tail act-split))))
+            (list name pattern-text action-name)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 8 — emitter registry + rule assembly
+    ;; ──────────────────────────────────────────────────────────────────
+
+    ;; Registry lookup returns a 1-element list wrapping the function
+    ;; on success, empty list on failure. We can't use `nil?` directly
+    ;; on the function value because Form's `(len fn)` returns 0 for
+    ;; non-list values, so `(nil? fn)` would yield true and route every
+    ;; resolution to the passthrough fallback.
+    (defn bnf-registry-lookup (registry name)
+        (if (nil? registry) (empty)
+            (if (str_eq (head (head registry)) name)
+                (list (head (tail (head registry))))
+                (bnf-registry-lookup (tail registry) name))))
+
+    (defn bnf-default-passthrough (caps) caps)
+
+    (defn bnf-resolve-action (action-name registry)
+        (if (str_eq action-name "")
+            bnf-default-passthrough
+            (do
+                (let found (bnf-registry-lookup registry action-name))
+                (if (nil? found) bnf-default-passthrough (head found)))))
+
+    (defn bnf-build-rule (line registry)
+        (do
+            (let parts (bnf-parse-rule-line line))
+            (let name (head parts))
+            (let pattern-text (head (tail parts)))
+            (let action-name (head (tail (tail parts))))
+            (let pat-atoms (bnf-tokenize-pattern pattern-text))
+            (let pattern (bnf-parse-pattern pat-atoms))
+            (let action (bnf-resolve-action action-name registry))
+            (list name pattern action)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 9 — top-level reader: text → grammar data tuple
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn bnf-read-loop (lines state tok-st rules registry)
+        (if (nil? lines)
+            (list (bnf-finalize-token-config tok-st) (bnf-reverse rules))
+            (do
+                (let ln (head lines))
+                (let text (bnf-line-text ln))
+                (let trimmed (bnf-trim text))
+                (if (or (bnf-is-blank? trimmed) (bnf-is-comment? trimmed))
+                    (bnf-read-loop (tail lines) state tok-st rules registry)
+                (if (str_eq state "outside")
+                    (if (bnf-block-open? trimmed "tokens")
+                        (bnf-read-loop (tail lines) "tokens" tok-st rules registry)
+                    (if (bnf-block-open? trimmed "rules")
+                        (bnf-read-loop (tail lines) "rules" tok-st rules registry)
+                        (bnf-read-loop (tail lines) state tok-st rules registry)))
+                (if (str_eq state "tokens")
+                    (if (bnf-block-close? trimmed)
+                        (bnf-read-loop (tail lines) "outside" tok-st rules registry)
+                        (bnf-read-loop (tail lines) state
+                                        (bnf-tok-line-step tok-st (bnf-fields trimmed))
+                                        rules registry))
+                    (if (bnf-block-close? trimmed)
+                        (bnf-read-loop (tail lines) "outside" tok-st rules registry)
+                        (bnf-read-loop (tail lines) state tok-st
+                                        (cons (bnf-build-rule trimmed registry) rules)
+                                        registry))))))))
+
+    ;; load-bnf-grammar: text + emitter registry → engine-compatible
+    ;; grammar tuple: ((tokens token-config) (rules parse-rules))
+    (defn load-bnf-grammar (text registry)
+        (do
+            (let lines (bnf-lines text))
+            (let initial-st (bnf-tok-state-empty 0))
+            (let parts (bnf-read-loop lines "outside" initial-st (empty) registry))
+            (let tokens (head parts))
+            (let rules (head (tail parts)))
+            (list (list "tokens" tokens)
+                  (list "rules"  rules))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 10 — recursive match engine (rules-aware)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; engine.fk handles flat top-level rule sequences. BNF grammars need
+    ;; rule references *inside* patterns (JSON's `value` references
+    ;; `object` references `pair` references `value` again). This engine
+    ;; threads the rules table through match so the "rule" pattern arm
+    ;; can recurse. Re-uses engine.fk's cap-* / mk-match / mk-fail /
+    ;; match-literal / capture-value / tokenize-with-config / wrap-program.
+
+    (defn bnf-find-rule (rules name)
+        (if (nil? rules) (empty)
+            (if (str_eq (head (head rules)) name)
+                (head rules)
+                (bnf-find-rule (tail rules) name))))
+
+    (defn bnf-match-pattern (p stream rules)
+        (do
+            (let tag (head p))
+            (if (str_eq tag "literal")
+                (match-literal p stream)
+            (if (str_eq tag "sequence")
+                (bnf-match-sequence (tail p) stream rules (cap-empty 0))
+            (if (str_eq tag "choice")
+                (bnf-match-choice (tail p) stream rules)
+            (if (str_eq tag "capture")
+                (bnf-match-capture (head (tail p)) (head (tail (tail p))) stream rules)
+            (if (str_eq tag "star")
+                (bnf-match-star (head (tail p)) stream rules (empty))
+            (if (str_eq tag "opt")
+                (bnf-match-opt (head (tail p)) stream rules)
+            (if (str_eq tag "rule")
+                (bnf-match-rule (head (tail p)) stream rules)
+                (mk-fail (str_concat "unknown pattern: " tag)))))))))))
+
+    (defn bnf-match-sequence (children stream rules acc-caps)
+        (if (nil? children)
+            (mk-match acc-caps stream)
+            (do
+                (let m (bnf-match-pattern (head children) stream rules))
+                (if (fail? m) m
+                    (bnf-match-sequence (tail children)
+                                         (match-rest m) rules
+                                         (cap-merge acc-caps (match-caps m)))))))
+
+    (defn bnf-match-choice (alternatives stream rules)
+        (if (nil? alternatives)
+            (mk-fail "no alternative matched")
+            (do
+                (let m (bnf-match-pattern (head alternatives) stream rules))
+                (if (match? m) m
+                    (bnf-match-choice (tail alternatives) stream rules)))))
+
+    (defn bnf-match-capture (name child stream rules)
+        (do
+            (let m (bnf-match-pattern child stream rules))
+            (if (fail? m) m
+                (mk-match (cap-set (match-caps m) name
+                                    (capture-value m stream))
+                          (match-rest m)))))
+
+    (defn bnf-match-star (child stream rules collected)
+        (do
+            (let m (bnf-match-pattern child stream rules))
+            (if (fail? m)
+                (mk-match (cap-set (cap-empty 0) "items" collected) stream)
+                (bnf-match-star child (match-rest m) rules
+                                 (cons (match-caps m) collected)))))
+
+    (defn bnf-match-opt (child stream rules)
+        (do
+            (let m (bnf-match-pattern child stream rules))
+            (if (fail? m) (mk-match (cap-empty 0) stream) m)))
+
+    ;; bnf-match-rule: look up rule by name, recurse on its pattern,
+    ;; apply its action on success. The action's result is bound under
+    ;; the key "_result" so callers can pluck it.
+    (defn bnf-match-rule (name stream rules)
+        (do
+            (let rule (bnf-find-rule rules name))
+            (if (nil? rule) (mk-fail (str_concat "no such rule: " name))
+                (do
+                    (let pattern (head (tail rule)))
+                    (let action (head (tail (tail rule))))
+                    (let m (bnf-match-pattern pattern stream rules))
+                    (if (fail? m) m
+                        (do
+                            (let recipe (action (match-caps m)))
+                            (mk-match (cap-set (cap-empty 0) "_result" recipe)
+                                      (match-rest m))))))))
+
+    ;; bnf-parse: text + grammar → root Recipe.
+    ;; Convention: the entry rule is the first rule in the rules list.
+    (defn bnf-parse (text grammar)
+        (do
+            (let tokens (tokenize-with-config text (grammar-tokens grammar)))
+            (let rules (grammar-rules grammar))
+            (if (nil? rules) (wrap-program (empty))
+                (do
+                    (let start-name (head (head rules)))
+                    (let m (bnf-match-pattern (list "rule" start-name)
+                                               tokens rules))
+                    (if (match? m)
+                        (cap-get (match-caps m) "_result")
+                        (do
+                            (print (str_concat "bnf-parse: "
+                                                (head (tail m))))
+                            (wrap-program (empty))))))))
+
+    0)
