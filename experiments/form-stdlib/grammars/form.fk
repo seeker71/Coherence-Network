@@ -1,0 +1,203 @@
+; grammars/form.fk — Form (.fk) S-expression parser in pure Form
+;
+; The self-host moment: parse .fk source into Recipe trees WITHOUT
+; using the kernel's bootstrap reader. Once parity proven, the
+; tokenize_sexp / readSexpr / buildVerb code in form-kernel-{rust,go,ts}
+; (~250 lines per kernel, ~750 lines total) can compost — the kernel
+; receives interned NodeID trees from form.fk parse directly.
+;
+; Grammar (the simplest in this stdlib):
+;   expr  := atom | list
+;   list  := '(' expr* ')'
+;   atom  := INT | STRING | IDENT
+;
+; INT     := [-]?digit+
+; STRING  := '"' (any-non-quote-or-escaped)* '"'
+; IDENT   := any-non-whitespace-non-paren-non-quote sequence
+; COMMENT := ';' to end of line (skipped)
+;
+; Each parsed Recipe carries (file, line, col) attribution via
+; intern_node_at — the satsang's self-knowing primitive in action.
+
+(do
+    ;; --- universal form-source category NodeIDs -------------------
+    ;; Numeric type=99 doc-band, parallel to markdown/json/yaml.
+
+    (let FORM-LIST   (make_nodeid 1 2 99 30))   ; an S-expression list
+    (let FORM-IDENT  (make_nodeid 1 2 99 31))   ; an identifier atom
+
+    ;; --- char predicates ------------------------------------------
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn is-ws-cp (cp)
+        (or (eq cp 32) (or (eq cp 9) (or (eq cp 10) (eq cp 13)))))
+
+    (defn is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
+    (defn is-paren-cp (cp) (or (eq cp 40) (eq cp 41)))
+
+    (defn is-atom-cont-cp (cp)
+        ;; Identifiers continue until ws, paren, quote, or semicolon.
+        (and (not-cp-is cp 32) (and (not-cp-is cp 9)
+        (and (not-cp-is cp 10) (and (not-cp-is cp 13)
+        (and (not-cp-is cp 40) (and (not-cp-is cp 41)
+        (and (not-cp-is cp 34) (not-cp-is cp 59)))))))))
+
+    (defn not-cp-is (a b) (if (eq a b) false true))
+
+    ;; --- line-aware position helpers ------------------------------
+    ;; Walks the source byte-by-byte tracking (line, col) as it goes.
+    ;; Token positions are recorded for source attribution.
+
+    (defn count-line (s i target)
+        (count-line-loop s 0 target 1))
+
+    (defn count-line-loop (s i target line)
+        (if (ge i target) line
+            (if (eq (ord (char_at s i)) 10)
+                (count-line-loop s (add i 1) target (add line 1))
+                (count-line-loop s (add i 1) target line))))
+
+    (defn count-col (s i target)
+        ;; col = chars since previous newline (or BOF).
+        (count-col-loop s 0 target 1))
+
+    (defn count-col-loop (s i target col)
+        (if (ge i target) col
+            (if (eq (ord (char_at s i)) 10)
+                (count-col-loop s (add i 1) target 1)
+                (count-col-loop s (add i 1) target (add col 1)))))
+
+    ;; --- skip whitespace + comments ------------------------------
+
+    (defn skip-ws-comments (s i)
+        (if (eq i (str_len s)) i
+            (do
+                (let cp (ord (char_at s i)))
+                (if (is-ws-cp cp)
+                    (skip-ws-comments s (add i 1))
+                    (if (eq cp 59)   ; ';'
+                        (skip-ws-comments s (skip-comment s i))
+                        i)))))
+
+    (defn skip-comment (s i)
+        (if (eq i (str_len s)) i
+            (if (eq (ord (char_at s i)) 10)
+                (add i 1)
+                (skip-comment s (add i 1)))))
+
+    ;; --- atom scanning -------------------------------------------
+
+    (defn scan-atom-end (s i)
+        ;; Walk until non-atom char.
+        (if (eq i (str_len s)) i
+            (if (is-atom-cont-cp (ord (char_at s i)))
+                (scan-atom-end s (add i 1))
+                i)))
+
+    (defn scan-string-end (s i)
+        ;; Walks from i+1 (past opening quote) to closing quote.
+        (if (eq i (str_len s)) i
+            (if (eq (ord (char_at s i)) 34)   ; closing '"'
+                (add i 1)
+                (if (and (eq (ord (char_at s i)) 92)   ; '\' escape
+                         (lt (add i 1) (str_len s)))
+                    (scan-string-end s (add i 2))
+                    (scan-string-end s (add i 1))))))
+
+    (defn is-int-atom? (s start end)
+        ;; Returns true if substring is all digits (with optional leading -).
+        (if (eq start end) false
+            (do
+                (let first (ord (char_at s start)))
+                (let body-start (if (eq first 45) (add start 1) start))
+                (and (lt body-start end)
+                     (all-digits? s body-start end)))))
+
+    (defn all-digits? (s i end)
+        (if (eq i end) true
+            (if (is-digit-cp (ord (char_at s i)))
+                (all-digits? s (add i 1) end)
+                false)))
+
+    ;; --- mk-pair helpers for (recipe, next-i) returns -------------
+
+    (defn mk-pair (r i) (list r i))
+    (defn pair-r (p) (head p))
+    (defn pair-i (p) (head (tail p)))
+
+    ;; --- recursive descent ---------------------------------------
+
+    (defn parse-expr (s i source-path)
+        (do
+            (let i (skip-ws-comments s i))
+            (if (eq i (str_len s))
+                (mk-pair (intern_trivial_int 0) i)   ; EOF sentinel
+                (do
+                    (let cp (ord (char_at s i)))
+                    (if (eq cp 40)   ; '(' — list
+                        (parse-list s (add i 1) source-path i)
+                        (if (eq cp 34)   ; '"' — string
+                            (parse-string s i source-path)
+                            (parse-atom s i source-path)))))))
+
+    (defn parse-list (s i source-path open-pos)
+        (do
+            (let line-no (count-line s 0 open-pos))
+            (let col-no  (count-col  s 0 open-pos))
+            (parse-list-elements s i source-path line-no col-no (empty))))
+
+    (defn parse-list-elements (s i source-path line col acc)
+        (do
+            (let i (skip-ws-comments s i))
+            (if (eq i (str_len s))
+                ;; unclosed list — return what we have
+                (mk-pair (intern_node_at FORM-LIST (reverse-acc acc) source-path line col) i)
+                (if (eq (ord (char_at s i)) 41)   ; ')'
+                    (mk-pair (intern_node_at FORM-LIST (reverse-acc acc) source-path line col)
+                             (add i 1))
+                    (do
+                        (let pair (parse-expr s i source-path))
+                        (parse-list-elements s (pair-i pair) source-path line col
+                                              (cons (pair-r pair) acc)))))))
+
+    (defn parse-string (s i source-path)
+        (do
+            (let end (scan-string-end s (add i 1)))
+            (let content (substr s (add i 1) (sub end 1)))
+            (mk-pair (intern_trivial_string content) end)))
+
+    (defn parse-atom (s i source-path)
+        (do
+            (let end (scan-atom-end s i))
+            (let text (substr s i end))
+            (if (is-int-atom? s i end)
+                (mk-pair (intern_trivial_int (str_to_int text)) end)
+                (do
+                    (let line-no (count-line s 0 i))
+                    (let col-no  (count-col  s 0 i))
+                    (mk-pair (intern_node_at FORM-IDENT
+                                              (list (intern_trivial_string text))
+                                              source-path line-no col-no)
+                              end)))))
+
+    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+    (defn rev-step (acc x) (cons x acc))
+
+    ;; --- top-level entry -----------------------------------------
+
+    (defn parse-form (source-path text)
+        (parse-form-loop text 0 source-path (empty)))
+
+    (defn parse-form-loop (s i source-path acc)
+        (do
+            (let i (skip-ws-comments s i))
+            (if (eq i (str_len s))
+                (reverse-acc acc)
+                (do
+                    (let pair (parse-expr s i source-path))
+                    (parse-form-loop s (pair-i pair) source-path
+                                      (cons (pair-r pair) acc))))))
+)
