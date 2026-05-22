@@ -14,6 +14,7 @@ requirements:
 done_when:
   - pytest api/tests/test_unified_sqlite_store.py passes
   - pytest api/tests/test_schema_init_fastpath.py passes
+test: "cd api && python -m pytest -q tests/test_persistence_contract_config.py"
 ---
 
 > **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)

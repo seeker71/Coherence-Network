@@ -17,6 +17,7 @@ done_when:
   - determine_task_type uses correct IdeaStage enum values
   - Bridge skips ideas with existing task in pending/running/completed/done
   - pytest api/tests/test_idea_lifecycle_closure.py passes
+test: "cd api && python -m pytest -q tests/test_idea_lifecycle_closure.py"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)

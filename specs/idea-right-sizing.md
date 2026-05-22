@@ -19,6 +19,7 @@ done_when:
   - Right-sizing report returns valid health counts for 10+ ideas
   - Dry-run apply previews changes without writing
   - pytest api/tests/test_right_sizing.py passes
+test: "cd api && python -m pytest -q tests/test_right_sizing.py"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)

@@ -16,6 +16,8 @@ done_when:
   - "coherencycoin.com/pipeline loads and shows live task flow"
   - "/pipeline shows per-provider success rates"
   - "/pipeline shows active node names and task counts"
+proof: operational
+proof_note: "Web /pipeline and /tasks render live in production; the CLI surfaces (coh tasks, coh task) are exercised by humans daily. The spec is entirely UI-shape and CLI output formatting — flow tests against text output would be brittle without proving the human-facing behavior."
 constraints:
   - "No new database tables required for R4 (compute on-the-fly or cache in memory)"
   - "CLI must remain zero-dependency (no new npm packages)"
