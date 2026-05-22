@@ -1,0 +1,53 @@
+; tests/emit-all-targets.fk — exercise the universal emit dispatcher
+; across all 14 emit targets named in the goal:
+;   python, typescript, go, rust, json, yaml, markdown,
+;   sql, xml, html, css, image, audio, video, model
+; (15 entries — markdown's templates live in grammars/markdown.fk)
+;
+; Load order (in one bin-go invocation):
+;   core, emit-engine, codec,
+;   grammars/json, grammars/yaml, grammars/markdown,
+;   emit,
+;   emits/{json,yaml,python,typescript,go,rust,form,sql,xml,html,css,image,audio,video,model},
+;   tests/emit-all-targets
+;
+; The probe shape: parse a small JSON sample, register all targets in
+; ONE registry, fan-out via emit-all. Sum returned: target-count.
+
+(do
+    (let registry
+        (list
+            (list "json"        json-templates)
+            (list "yaml"        yaml-templates)
+            (list "markdown"    markdown-templates)
+            (list "python"      python-templates)
+            (list "typescript"  typescript-templates)
+            (list "go"          go-templates)
+            (list "rust"        rust-templates)
+            (list "form"        form-templates)
+            (list "sql"         sql-templates)
+            (list "xml"         xml-templates)
+            (list "html"        html-templates)
+            (list "css"         css-templates)
+            (list "image"       image-templates)
+            (list "audio"       audio-templates)
+            (list "video"       video-templates)
+            (list "model"       model-templates)))
+
+    ;; ── Probe 1: registry holds 16 targets ──
+    (let names (list-targets registry))
+    (let probe-1 (len names))                  ; → 16
+
+    ;; ── Probe 2: emit-all fans the same cell to every target ──
+    (let cell (parse-json "all.json" "[1,2,3]"))
+    (let fan-out (emit-all cell registry))
+    (let probe-2 (len fan-out))                ; → 16
+
+    ;; ── Probe 3: every fan-out entry has non-empty emitted text ──
+    (defn count-nonempty (acc entry)
+        (if (gt (str_len (head (tail entry))) 0)
+            (add acc 1) acc))
+    (let probe-3 (foldl count-nonempty 0 fan-out))   ; → 16 (every target produced something)
+
+    ;; Sum: 16 + 16 + 16 = 48
+    (add probe-1 (add probe-2 probe-3)))

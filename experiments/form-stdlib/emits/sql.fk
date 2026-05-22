@@ -1,0 +1,64 @@
+; emits/sql.fk — Recipe → SQL emit templates
+;
+; SQL maps cells onto a SELECT-shaped surface. The natural fit:
+; data-cell shapes (JSON-OBJECT, JSON-ARRAY) translate to rows; pair
+; (key,value) → (column,literal); comparison + logic compose WHERE
+; clauses. This first breath covers the comparison/logic/literal
+; subset — enough to express the WHERE half of any query the
+; substrate produces from a structural match.
+
+(do
+    (let SQL-EQ  (make_nodeid 1 2 13 1))
+    (let SQL-NE  (make_nodeid 1 2 13 2))
+    (let SQL-LT  (make_nodeid 1 2 13 3))
+    (let SQL-LE  (make_nodeid 1 2 13 4))
+    (let SQL-GT  (make_nodeid 1 2 13 5))
+    (let SQL-GE  (make_nodeid 1 2 13 6))
+    (let SQL-AND (make_nodeid 1 2 14 1))
+    (let SQL-OR  (make_nodeid 1 2 14 2))
+    (let SQL-NOT (make_nodeid 1 2 14 3))
+    (let SQL-OBJ (make_nodeid 1 2 99 10))
+    (let SQL-ARR (make_nodeid 1 2 99 11))
+    (let SQL-PAIR (make_nodeid 1 2 99 12))
+    (let SQL-NULL (make_nodeid 1 2 99 13))
+
+    (defn sql-binop (op cs)
+        (str_concat (head cs) (str_concat op (head (tail cs)))))
+
+    (defn sql-eq  (cs) (sql-binop " = "  cs))
+    (defn sql-ne  (cs) (sql-binop " <> " cs))
+    (defn sql-lt  (cs) (sql-binop " < "  cs))
+    (defn sql-le  (cs) (sql-binop " <= " cs))
+    (defn sql-gt  (cs) (sql-binop " > "  cs))
+    (defn sql-ge  (cs) (sql-binop " >= " cs))
+    (defn sql-and (cs) (sql-binop " AND " cs))
+    (defn sql-or  (cs) (sql-binop " OR " cs))
+    (defn sql-not (cs) (str_concat "NOT " (head cs)))
+
+    (defn sql-pair (cs)
+        ;; key = value (used inside WHERE / SET)
+        (str_concat (head cs) (str_concat " = " (head (tail cs)))))
+
+    (defn sql-comma-join (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (sql-comma-join (tail xs)))))))
+
+    (defn sql-obj (cs)
+        ;; Emit as a SELECT row: SELECT k1=v1, k2=v2 ...
+        (str_concat "SELECT " (sql-comma-join cs)))
+
+    (defn sql-arr (cs)
+        ;; Emit as IN-clause list: (v1, v2, v3)
+        (str_concat "(" (str_concat (sql-comma-join cs) ")")))
+
+    (defn sql-null (_cs) "NULL")
+
+    (let sql-templates
+        (list
+            (list SQL-EQ sql-eq) (list SQL-NE sql-ne) (list SQL-LT sql-lt)
+            (list SQL-LE sql-le) (list SQL-GT sql-gt) (list SQL-GE sql-ge)
+            (list SQL-AND sql-and) (list SQL-OR sql-or) (list SQL-NOT sql-not)
+            (list SQL-OBJ sql-obj) (list SQL-ARR sql-arr)
+            (list SQL-PAIR sql-pair) (list SQL-NULL sql-null)))
+)

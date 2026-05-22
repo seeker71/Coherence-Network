@@ -1,0 +1,41 @@
+; emits/image.fk — Recipe → image-format emit templates
+;
+; Image targets render a cell's structure as a visual representation.
+; The minimal approach: emit an SVG description where each composite
+; cell is a rectangle containing its children. The full geometric
+; rendering composts in subsequent breaths via the Mojo/MLIR backend
+; named in multi-target-codegen.md; this file gives every cell a
+; viewable surface NOW so the registry pattern is honest end-to-end.
+
+(do
+    (let IMG-OBJ  (make_nodeid 1 2 99 10))
+    (let IMG-ARR  (make_nodeid 1 2 99 11))
+    (let IMG-PAIR (make_nodeid 1 2 99 12))
+    (let IMG-NULL (make_nodeid 1 2 99 13))
+
+    (defn img-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (img-cat (tail xs)))))
+
+    (defn img-obj (cs)
+        (str_concat "<svg><g class=\"object\">"
+            (str_concat (img-cat cs) "</g></svg>")))
+
+    (defn img-arr (cs)
+        (str_concat "<svg><g class=\"array\">"
+            (str_concat (img-cat cs) "</g></svg>")))
+
+    (defn img-pair (cs)
+        (str_concat "<text class=\"key\">" (str_concat (head cs)
+            (str_concat "</text><text class=\"value\">"
+                (str_concat (head (tail cs)) "</text>")))))
+
+    (defn img-null (_cs) "<text class=\"null\">∅</text>")
+
+    (let image-templates
+        (list
+            (list IMG-OBJ  img-obj)
+            (list IMG-ARR  img-arr)
+            (list IMG-PAIR img-pair)
+            (list IMG-NULL img-null)))
+)
