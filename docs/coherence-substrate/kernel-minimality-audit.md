@@ -50,7 +50,7 @@ recipes are fully typed with hardware types.* — Urs, 2026-05-22 night.
 | `len` | Recursive: `(defn len (xs) (if (nil? xs) 0 (add 1 (len (tail xs)))))` |
 | `nth` | Recursive: `(defn nth (xs n) (if (eq n 0) (head xs) (nth (tail xs) (sub n 1))))` |
 | `range` | Recursive: `(defn range (a b) (if (ge a b) (empty) (cons a (range (add a 1) b))))` |
-| `sum` | Foldl: `(defn sum (xs) (foldl plus 0 xs))` — already in core.fk |
+| ~~`sum`~~ | **COMPOSTED 2026-05-22** — core.fk's `(defn sum (xs) (foldl plus 0 xs))` covers it; lists.fk/higher.fk/numeric.fk tests verified sibling-parity-identical (220/53/208) after removal |
 | `min` | Foldl: `(defn min (xs) (foldl min2 (head xs) (tail xs)))` |
 | `max` | Foldl: `(defn max (xs) (foldl max2 (head xs) (tail xs)))` |
 | `abs` | Conditional: `(defn abs (n) (if (negative? n) (sub 0 n) n))` — already in core.fk |
