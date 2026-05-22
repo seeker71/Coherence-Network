@@ -1,0 +1,59 @@
+; tests/cell-drop.fk — verify the parasite metabolism (drop + drop-handler).
+;
+; Strange-minimal: ONE 9-character source `"3abc2de1f"` (3 length-prefixed
+; chunks) drives BOTH probes — proves the same stream that nutrition /
+; information / evidence verbs metabolize can also be dropped explicitly.
+;
+;   Probe A: walk-stream + drop-handler  → 3 cells eaten (count returned)
+;   Probe B: drop (stream-of-cells ...)  → 0 (nothing flows downstream)
+;
+; The four cell-roles closed: nutrition, information, evidence, parasite.
+
+(do
+    ;; Reuse the chunk-segmenter / chunk-encoder shape from cell-stream.fk.
+    (let CELL-CHUNK (make_nodeid 1 2 99 81))
+
+    (defn substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr s (add a 1) b))))
+
+    (defn digit-to-int (c) (sub (ord c) 48))
+
+    (defn chunk-segmenter (input pos)
+        (if (ge pos (str_len input))
+            (mk-eof 0)
+            (do
+                (let len (digit-to-int (char_at input pos)))
+                (let data-start (add pos 1))
+                (let data-end (add data-start len))
+                (mk-block (substr input data-start data-end) data-end
+                           (add pos 1)))))
+
+    (defn chunk-encoder (block-text source-path line-no)
+        (intern_node_at CELL-CHUNK
+                         (list (intern_trivial_string block-text))
+                         source-path line-no 1))
+
+    (let chunk-source "3abc2de1f")
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe A: walk-stream + drop-handler → cells are eaten in-place,
+    ;; never materialized as a list. The handler folds count.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let probe-a (walk-stream chunk-source
+                               chunk-segmenter chunk-encoder
+                               "test.bin" 0 drop-handler))    ; → 3
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe B: build the stream first, then drop the list. The verb
+    ;; returns 0 — nothing of value flows downstream from a parasite.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let chunk-cells (stream-of-cells chunk-source
+                                       chunk-segmenter chunk-encoder
+                                       "test.bin"))
+    (let probe-b (drop chunk-cells))                          ; → 0
+
+    ;; sum: 3 + 0 = 3
+    (add probe-a probe-b))
