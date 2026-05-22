@@ -1,0 +1,26 @@
+; tests/rust.fk — exercise rust.fk file-header subset
+(do
+    (let sample
+        (str_concat "use std::collections::HashMap;
+" (str_concat "pub use crate::module;
+" (str_concat "mod helper;
+" (str_concat "// comment
+" (str_concat "pub fn run(arg: u32) -> u32 {
+" (str_concat "struct Recipe { children: Vec<u32> }
+" "impl Recipe {")))))))
+
+    (let file (parse-rust "kernel.rs" sample))
+    (let kids (node_children file))
+    (let probe-1 (len kids))                              ; → 6
+
+    (defn count-attributed (xs)
+        (if (nil? xs) 0
+            (if (str_eq (cell-source (head xs)) "")
+                (count-attributed (tail xs))
+                (add 1 (count-attributed (tail xs))))))
+    (let probe-2 (count-attributed kids))                 ; → 6
+
+    (let probe-3 (str_len (cell-source file)))            ; → length "kernel.rs:1:1" = 13
+
+    ;; sum: 6 + 6 + 13 = 25
+    (add probe-1 (add probe-2 probe-3)))
