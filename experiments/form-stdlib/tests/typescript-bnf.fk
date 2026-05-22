@@ -17,9 +17,12 @@
     (let name-val (node_value (head (node_children (first-stmt r3)))))
     (let probe-3 (str_len name-val))
 
-    (let r4 (parse-typescript-bnf "t.ts" "export const VERSION = 1"))
-    (let const-name (node_value (head (node_children (first-stmt r4)))))
-    (let probe-4 (str_len const-name))
+    ;; TS expression now uses universal MATH emit — walk_recipe evaluates
+    (let r4 (parse-typescript-bnf "t.ts" "export const VERSION = 1 + 2 * 3"))
+    (let kids-4 (node_children (first-stmt r4)))
+    (let const-name (node_value (head kids-4)))
+    (let value-recipe (head (tail kids-4)))
+    (let probe-4 (add (str_len const-name) (walk_recipe value-recipe))) ; 7 + 7 = 14
 
     (let r5 (parse-typescript-bnf "t.ts" "export function init(): void"))
     (let fn-name (node_value (head (node_children (first-stmt r5)))))

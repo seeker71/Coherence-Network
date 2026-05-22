@@ -138,10 +138,10 @@
                             (intern_trivial_string (cap-get caps "_4")))))
 
     (defn ts-bnf-emit-export-const (caps)
-        ;; EXPORT CONST IDENT EQUALS value — _3=name, _5=value
+        ;; EXPORT CONST name:IDENT EQUALS value:expression
         (intern_node TS-BNF-EXPORT-CONST
-                      (list (intern_trivial_string (cap-get caps "_3"))
-                            (intern_trivial_string (cap-get caps "_5")))))
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
 
     (defn ts-bnf-emit-export-fn (caps)
         ;; EXPORT FUNCTION IDENT LPAREN RPAREN COLON IDENT — _3=name, _7=ret-type
@@ -164,8 +164,22 @@
   operator , COMMA
   operator ; SEMI
   operator : COLON
+  operator === TEQ
+  operator !== TNEQ
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator < LT
+  operator > GT
+  operator && ANDAND
+  operator || OROR
   operator = EQUALS
+  operator + PLUS
+  operator - MINUS
   operator * STAR
+  operator / SLASH
+  operator % PERCENT
   operator . DOT
   keyword IMPORT import
   keyword EXPORT export
@@ -182,8 +196,17 @@ rules {
   import-named  ::= IMPORT LBRACE IDENT RBRACE FROM STRING        => ts-bnf-emit-import-named ;
   import-ns     ::= IMPORT STAR AS IDENT FROM STRING               => ts-bnf-emit-import-ns ;
   import-default ::= IMPORT IDENT FROM STRING                       => ts-bnf-emit-import-default ;
-  export-const  ::= EXPORT CONST IDENT EQUALS INT                  => ts-bnf-emit-export-const ;
+  export-const  ::= EXPORT CONST name:IDENT EQUALS value:expression => ts-bnf-emit-export-const ;
   export-fn     ::= EXPORT FUNCTION IDENT LPAREN RPAREN COLON IDENT => ts-bnf-emit-export-fn ;
+  ;; BMF-style expression — universal MATH/COMPARE emit
+  expression    ::= lhs:primary-expr (op:binary-op rhs:primary-expr)* => ts-bnf-emit-expression ;
+  binary-op     ::= TEQ | TNEQ | EQEQ | NEQ | LE | GE | LT | GT
+                  | ANDAND | OROR | PLUS | MINUS | STAR | SLASH | PERCENT ;
+  primary-expr  ::= int-lit | str-lit | ident-expr | paren-expr ;
+  paren-expr    ::= LPAREN expr:expression RPAREN                  => ts-bnf-emit-paren ;
+  int-lit       ::= value:INT                                       => ts-bnf-emit-int-lit ;
+  str-lit       ::= value:STRING                                    => ts-bnf-emit-str-lit ;
+  ident-expr    ::= name:IDENT                                      => ts-bnf-emit-ident-expr ;
 }")
 
     (let ts-bnf-registry
@@ -192,7 +215,12 @@ rules {
               (list "ts-bnf-emit-import-default" ts-bnf-emit-import-default)
               (list "ts-bnf-emit-export-const"   ts-bnf-emit-export-const)
               (list "ts-bnf-emit-export-fn"      ts-bnf-emit-export-fn)
-              (list "ts-bnf-emit-module"         ts-bnf-emit-module)))
+              (list "ts-bnf-emit-module"         ts-bnf-emit-module)
+              (list "ts-bnf-emit-expression"     ts-bnf-emit-expression)
+              (list "ts-bnf-emit-int-lit"        ts-bnf-emit-int-lit)
+              (list "ts-bnf-emit-str-lit"        ts-bnf-emit-str-lit)
+              (list "ts-bnf-emit-ident-expr"     ts-bnf-emit-ident-expr)
+              (list "ts-bnf-emit-paren"          ts-bnf-emit-paren)))
 
     (let ts-bnf-grammar
         (load-bnf-grammar ts-bnf-text ts-bnf-registry))

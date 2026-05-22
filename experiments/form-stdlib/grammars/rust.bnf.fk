@@ -30,6 +30,92 @@
             (let all-stmts (cons first-stmt (rs-bnf-collect-results rest-items)))
             (intern_node RS-BNF-MODULE all-stmts)))
 
+    ;; Universal Blueprints + BMF-style precedence-as-data — same shape
+    ;; Python and Go landed on.
+    (let RS-UNIV-MATH-PLUS  (make_nodeid 1 2 12 1))
+    (let RS-UNIV-MATH-MINUS (make_nodeid 1 2 12 2))
+    (let RS-UNIV-MATH-MUL   (make_nodeid 1 2 12 3))
+    (let RS-UNIV-MATH-DIV   (make_nodeid 1 2 12 4))
+    (let RS-UNIV-CMP-EQ     (make_nodeid 1 2 13 1))
+    (let RS-UNIV-CMP-NEQ    (make_nodeid 1 2 13 2))
+    (let RS-UNIV-CMP-LT     (make_nodeid 1 2 13 3))
+    (let RS-UNIV-CMP-LE     (make_nodeid 1 2 13 4))
+    (let RS-UNIV-CMP-GT     (make_nodeid 1 2 13 5))
+    (let RS-UNIV-CMP-GE     (make_nodeid 1 2 13 6))
+
+    (defn rs-bnf-op-to-blueprint (op)
+        (if (str_eq op "+") RS-UNIV-MATH-PLUS
+        (if (str_eq op "-") RS-UNIV-MATH-MINUS
+        (if (str_eq op "*") RS-UNIV-MATH-MUL
+        (if (str_eq op "/") RS-UNIV-MATH-DIV
+        (if (str_eq op "==") RS-UNIV-CMP-EQ
+        (if (str_eq op "!=") RS-UNIV-CMP-NEQ
+        (if (str_eq op "<")  RS-UNIV-CMP-LT
+        (if (str_eq op "<=") RS-UNIV-CMP-LE
+        (if (str_eq op ">")  RS-UNIV-CMP-GT
+        (if (str_eq op ">=") RS-UNIV-CMP-GE
+            RS-UNIV-MATH-PLUS)))))))))))
+
+    (let rs-bnf-binop-prec-table
+        (list
+            (list "||" 4) (list "&&" 5)
+            (list "==" 8) (list "!=" 8) (list "<" 9) (list ">" 9)
+            (list "<=" 9) (list ">=" 9)
+            (list "+" 11) (list "-" 11)
+            (list "*" 12) (list "/" 12) (list "%" 12)))
+
+    (defn rs-bnf-lookup-prec (table text)
+        (if (nil? table) 0
+            (if (str_eq (head (head table)) text)
+                (head (tail (head table)))
+                (rs-bnf-lookup-prec (tail table) text))))
+
+    (defn rs-bnf-climb (lhs items table min-prec)
+        (if (nil? items) (list lhs items)
+            (do
+                (let item (head items))
+                (let op (cap-get item "op"))
+                (let op-prec (rs-bnf-lookup-prec table op))
+                (if (lt op-prec min-prec)
+                    (list lhs items)
+                    (do
+                        (let rhs (cap-get item "rhs"))
+                        (let rest-after (tail items))
+                        (let inner (rs-bnf-climb rhs rest-after table
+                                                   (add op-prec 1)))
+                        (let inner-rhs (head inner))
+                        (let after-inner (head (tail inner)))
+                        (let new-lhs
+                            (intern_node (rs-bnf-op-to-blueprint op)
+                                          (list lhs inner-rhs)))
+                        (rs-bnf-climb new-lhs after-inner table min-prec))))))
+
+    (defn rs-bnf-emit-expression (caps)
+        (do
+            (let lhs (cap-get caps "lhs"))
+            (let raw-items (cap-get caps "items"))
+            (if (nil? raw-items) lhs
+                (do
+                    (let ordered (rs-bnf-reverse raw-items))
+                    (let result (rs-bnf-climb lhs ordered
+                                               rs-bnf-binop-prec-table 0))
+                    (head result)))))
+
+    (defn rs-bnf-emit-int-lit (caps)
+        (intern_trivial_int (str_to_int (cap-get caps "value"))))
+    (defn rs-bnf-emit-str-lit (caps)
+        (intern_trivial_string (cap-get caps "value")))
+    (defn rs-bnf-emit-ident-expr (caps)
+        (intern_trivial_string (cap-get caps "name")))
+    (defn rs-bnf-emit-paren (caps)
+        (cap-get caps "expr"))
+
+    (let RS-BNF-LET (make_nodeid 1 2 99 75))
+    (defn rs-bnf-emit-let (caps)
+        (intern_node RS-BNF-LET
+                      (list (intern_trivial_string (cap-get caps "name"))
+                            (cap-get caps "value"))))
+
     (defn rs-bnf-emit-use (caps)
         ;; USE IDENT SEMI — _2=path-leaf-name (multi-segment lost here;
         ;; expanded in a later breath with a path-grammar sub-rule)
@@ -83,6 +169,20 @@
   operator ; SEMI
   operator : COLON
   operator . DOT
+  operator == EQEQ
+  operator != NEQ
+  operator <= LE
+  operator >= GE
+  operator <  LT
+  operator >  GT
+  operator && ANDAND
+  operator || OROR
+  operator =  EQUALS
+  operator +  PLUS
+  operator -  MINUS
+  operator *  STAR
+  operator /  SLASH
+  operator %  PERCENT
   keyword PUB pub
   keyword USE use
   keyword MOD mod
@@ -95,13 +195,22 @@
 
 rules {
   module      ::= statement+ => rs-bnf-emit-module ;
-  statement   ::= pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
+  statement   ::= let-stmt | pub-use | use-stmt | mod-stmt | pub-fn | fn-stmt | struct-stmt ;
+  let-stmt    ::= LET name:IDENT EQUALS value:expression SEMI => rs-bnf-emit-let ;
   pub-use     ::= PUB USE IDENT SEMI               => rs-bnf-emit-pub-use ;
   use-stmt    ::= USE IDENT SEMI                    => rs-bnf-emit-use ;
   mod-stmt    ::= MOD IDENT SEMI                    => rs-bnf-emit-mod ;
   pub-fn      ::= PUB FN IDENT LPAREN RPAREN        => rs-bnf-emit-pub-fn ;
   fn-stmt     ::= FN IDENT LPAREN RPAREN            => rs-bnf-emit-fn ;
   struct-stmt ::= STRUCT IDENT                      => rs-bnf-emit-struct ;
+  expression  ::= lhs:primary-expr (op:binary-op rhs:primary-expr)* => rs-bnf-emit-expression ;
+  binary-op   ::= EQEQ | NEQ | LE | GE | LT | GT | ANDAND | OROR
+                | PLUS | MINUS | STAR | SLASH | PERCENT ;
+  primary-expr ::= int-lit | str-lit | ident-expr | paren-expr ;
+  paren-expr  ::= LPAREN expr:expression RPAREN   => rs-bnf-emit-paren ;
+  int-lit     ::= value:INT                        => rs-bnf-emit-int-lit ;
+  str-lit     ::= value:STRING                     => rs-bnf-emit-str-lit ;
+  ident-expr  ::= name:IDENT                       => rs-bnf-emit-ident-expr ;
 }")
 
     (let rs-bnf-registry
@@ -111,7 +220,13 @@ rules {
               (list "rs-bnf-emit-pub-fn"  rs-bnf-emit-pub-fn)
               (list "rs-bnf-emit-fn"      rs-bnf-emit-fn)
               (list "rs-bnf-emit-struct"  rs-bnf-emit-struct)
-              (list "rs-bnf-emit-module"  rs-bnf-emit-module)))
+              (list "rs-bnf-emit-module"  rs-bnf-emit-module)
+              (list "rs-bnf-emit-let"     rs-bnf-emit-let)
+              (list "rs-bnf-emit-expression" rs-bnf-emit-expression)
+              (list "rs-bnf-emit-int-lit"  rs-bnf-emit-int-lit)
+              (list "rs-bnf-emit-str-lit"  rs-bnf-emit-str-lit)
+              (list "rs-bnf-emit-ident-expr" rs-bnf-emit-ident-expr)
+              (list "rs-bnf-emit-paren"   rs-bnf-emit-paren)))
 
     (let rs-bnf-grammar
         (load-bnf-grammar rs-bnf-text rs-bnf-registry))
