@@ -159,9 +159,11 @@
                 (do
                     (let name (node_value (head kids)))
                     (let value-expr (head (tail kids)))
-                    ;; Evaluate the expression Recipe (int arithmetic /
-                    ;; comparison / boolean / paren / ident lookup).
-                    (let value-int (py-exec-eval-expr value-expr env))
+                    ;; The form runtime IS the executor. Per Urs:
+                    ;; "once we have form cells, form runtime can exec".
+                    ;; Grammar emits universal MATH / COMPARE Recipes;
+                    ;; walk_recipe natively evaluates the expression tree.
+                    (let value-int (walk_recipe value-expr))
                     (let value-str (int_to_str value-int))
                     (print (str_concat "assign: " (str_concat name (str_concat " = " value-str))))
                     (py-exec-env-bind env name value-str))
