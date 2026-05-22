@@ -1,0 +1,66 @@
+; grammars/go-exec.fk — Go EXECUTE walker
+;
+; Same shape Python's walker landed on (breath 6, then universal-emit
+; in breath 15). Iterates a parsed Go module's statements; for each
+; statement Recipe, prints what it does and threads an env.
+;
+; Expressions inside statements (return-stmt's expr, var's value) are
+; walked via the kernel's walk_recipe — the form runtime IS the
+; executor for the value layer; this walker handles only the
+; statement-level dispatch.
+
+(do
+    (let GO-EXEC-MODULE     (make_nodeid 1 2 99 79))
+    (let GO-EXEC-PACKAGE    (make_nodeid 1 2 99 80))
+    (let GO-EXEC-IMPORT     (make_nodeid 1 2 99 81))
+    (let GO-EXEC-FUNC       (make_nodeid 1 2 99 82))
+    (let GO-EXEC-TYPE       (make_nodeid 1 2 99 83))
+    (let GO-EXEC-VAR        (make_nodeid 1 2 99 84))
+    (let GO-EXEC-CONST      (make_nodeid 1 2 99 85))
+    (let GO-EXEC-SHORT-VAR  (make_nodeid 1 2 99 103))
+
+    (defn go-exec-is? (n cat) (node_eq (node_category n) cat))
+
+    (defn go-exec-env-bind (env n v) (cons (list n v) env))
+
+    (defn go-exec-stmt (stmt env)
+        (do
+            (let kids (node_children stmt))
+            (if (go-exec-is? stmt GO-EXEC-PACKAGE)
+                (do (print (str_concat "package: " (node_value (head kids)))) env)
+            (if (go-exec-is? stmt GO-EXEC-IMPORT)
+                (do (print (str_concat "import: " (node_value (head kids)))) env)
+            (if (go-exec-is? stmt GO-EXEC-VAR)
+                (do
+                    (let name (node_value (head kids)))
+                    (print (str_concat "var: " name))
+                    (go-exec-env-bind env name "value"))
+            (if (go-exec-is? stmt GO-EXEC-CONST)
+                (do
+                    (let name (node_value (head kids)))
+                    (print (str_concat "const: " name))
+                    (go-exec-env-bind env name "value"))
+            (if (go-exec-is? stmt GO-EXEC-SHORT-VAR)
+                (do
+                    (let name (node_value (head kids)))
+                    (print (str_concat "short-var: " name))
+                    (go-exec-env-bind env name "value"))
+            (if (go-exec-is? stmt GO-EXEC-FUNC)
+                (do (print (str_concat "func: " (node_value (head kids)))) env)
+            (if (go-exec-is? stmt GO-EXEC-TYPE)
+                (do (print (str_concat "type: " (node_value (head kids)))) env)
+                env)))))))))
+
+    (defn go-exec-iter (stmts env)
+        (if (nil? stmts) env
+            (go-exec-iter (tail stmts) (go-exec-stmt (head stmts) env))))
+
+    (defn go-execute (root)
+        (do
+            (let final-env
+                (if (go-exec-is? root GO-EXEC-MODULE)
+                    (go-exec-iter (node_children root) (empty))
+                    (go-exec-stmt root (empty))))
+            (len final-env)))
+
+    0)

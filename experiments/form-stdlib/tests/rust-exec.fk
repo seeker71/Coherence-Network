@@ -1,0 +1,12 @@
+; tests/rust-exec.fk — Rust EXECUTE pipeline proof
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/rust.bnf.fk form-stdlib/grammars/rust-exec.fk
+
+(do
+    (let result (parse-rust-bnf "lib.rs" "use std;
+mod helper;
+struct Recipe
+fn run()
+let x = 1 + 2 * 3;"))
+    (let n (rs-execute result))
+    n)

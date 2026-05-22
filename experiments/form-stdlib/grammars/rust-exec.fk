@@ -1,0 +1,47 @@
+; grammars/rust-exec.fk — Rust EXECUTE walker
+
+(do
+    (let RS-EXEC-MODULE  (make_nodeid 1 2 99 69))
+    (let RS-EXEC-USE     (make_nodeid 1 2 99 70))
+    (let RS-EXEC-PUB-USE (make_nodeid 1 2 99 71))
+    (let RS-EXEC-MOD     (make_nodeid 1 2 99 72))
+    (let RS-EXEC-FN      (make_nodeid 1 2 99 73))
+    (let RS-EXEC-STRUCT  (make_nodeid 1 2 99 74))
+    (let RS-EXEC-LET     (make_nodeid 1 2 99 75))
+
+    (defn rs-exec-is? (n c) (node_eq (node_category n) c))
+    (defn rs-exec-bind (env n v) (cons (list n v) env))
+
+    (defn rs-exec-stmt (stmt env)
+        (do
+            (let kids (node_children stmt))
+            (if (rs-exec-is? stmt RS-EXEC-USE)
+                (do (print (str_concat "use: " (node_value (head kids)))) env)
+            (if (rs-exec-is? stmt RS-EXEC-PUB-USE)
+                (do (print (str_concat "pub use: " (node_value (head kids)))) env)
+            (if (rs-exec-is? stmt RS-EXEC-MOD)
+                (do (print (str_concat "mod: " (node_value (head kids)))) env)
+            (if (rs-exec-is? stmt RS-EXEC-FN)
+                (do (print (str_concat "fn: " (node_value (head kids))))
+                    (rs-exec-bind env (node_value (head kids)) "function"))
+            (if (rs-exec-is? stmt RS-EXEC-STRUCT)
+                (do (print (str_concat "struct: " (node_value (head kids))))
+                    (rs-exec-bind env (node_value (head kids)) "type"))
+            (if (rs-exec-is? stmt RS-EXEC-LET)
+                (do (print (str_concat "let: " (node_value (head kids))))
+                    (rs-exec-bind env (node_value (head kids)) "value"))
+                env))))))))
+
+    (defn rs-exec-iter (stmts env)
+        (if (nil? stmts) env
+            (rs-exec-iter (tail stmts) (rs-exec-stmt (head stmts) env))))
+
+    (defn rs-execute (root)
+        (do
+            (let final-env
+                (if (rs-exec-is? root RS-EXEC-MODULE)
+                    (rs-exec-iter (node_children root) (empty))
+                    (rs-exec-stmt root (empty))))
+            (len final-env)))
+
+    0)
