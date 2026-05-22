@@ -31,8 +31,15 @@ mod helper;
 struct Recipe"))
     (let probe-6 (len (node_children r6)))               ; → 3
 
+    ;; Probe 7 — let with expression: `let x = 1 + 2 * 3;` walks to 7
+    (let r7 (parse-rust-bnf "t.rs" "let x = 1 + 2 * 3;"))
+    (let stmt-7 (first-stmt r7))
+    (let value-7 (head (tail (node_children stmt-7))))
+    (let probe-7 (walk_recipe value-7))                  ; → 7
+
     (add probe-1
          (add probe-2
               (add probe-3
                    (add probe-4
-                        (add probe-5 probe-6))))))
+                        (add probe-5
+                             (add probe-6 probe-7)))))))
