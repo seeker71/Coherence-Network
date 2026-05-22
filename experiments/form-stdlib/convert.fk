@@ -1,0 +1,142 @@
+; convert.fk — the unified file-to-cells converter
+;
+; The goal Urs set (2026-05-22):
+;   "all repo files can be converted using a machine native kernel-cli
+;    and form binary artifacts and form source with form native grammar
+;    rules streaming into form cells with full traceability to which
+;    recipe and which cells were involved and which source coordinate
+;    each cell was originated from"
+;
+; This file is the single entry point: (convert path) reads the file,
+; identifies its format from the extension, dispatches to the right
+; grammar's parser, returns the resulting cell-tree with source
+; attribution already stamped via intern_node_at on every interior cell.
+;
+; Each grammar's parser is independently developed in grammars/{format}.fk
+; and remains responsible for the format-specific tokenization + cell
+; emission. This file is just the dispatcher — keeps the surface
+; minimal, the per-format work focused.
+;
+; Loading: requires core.fk + cell-trace.fk + all grammars/*.fk to be
+; loaded before this file. The kernel-cli convention is:
+;
+;   bin-go form-stdlib/core.fk \
+;          form-stdlib/cell-trace.fk \
+;          form-stdlib/grammars/markdown.fk \
+;          form-stdlib/grammars/json.fk \
+;          form-stdlib/grammars/yaml.fk \
+;          form-stdlib/grammars/form.fk \
+;          form-stdlib/grammars/python.fk \
+;          form-stdlib/grammars/typescript.fk \
+;          form-stdlib/grammars/rust.fk \
+;          form-stdlib/grammars/go.fk \
+;          form-stdlib/convert.fk \
+;          <invoking-script.fk>
+;
+; Future: a small wrapper script (scripts/form-convert.sh) packages
+; this into a one-line invocation: `form-convert <path>` returns the
+; root cell's NodeID and optional formatted output.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — file extension extraction
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walks the path backwards from the end, returning everything
+    ;; after the last '.' or empty string if no dot. Handles paths with
+    ;; multiple dots ("foo.bar.json" → "json") correctly.
+
+    (defn substr-c (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (substr-c s (add a 1) b))))
+
+    (defn last-dot-pos (s i best)
+        (if (lt i 0) best
+            (if (eq (ord (char_at s i)) 46)   ; '.' = 46
+                (last-dot-pos s (sub i 1) i)
+                (last-dot-pos s (sub i 1) best))))
+
+    (defn file-extension (path)
+        (do
+            (let pos (last-dot-pos path (sub (str_len path) 1) (sub 0 1)))
+            (if (lt pos 0) ""
+                (substr-c path (add pos 1) (str_len path)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — format dispatch
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Each branch loads the appropriate grammar's parser. Unknown
+    ;; extensions fall through to a sentinel "unknown-format" cell
+    ;; so the caller can detect + react rather than silently failing.
+
+    (let UNKNOWN-FORMAT (make_nodeid 1 2 99 100))
+
+    (defn convert (path)
+        (do
+            (let content (read_file path))
+            (let ext (file-extension path))
+            (if (str_eq ext "md")    (parse-markdown   path content)
+            (if (str_eq ext "json")  (parse-json       path content)
+            (if (str_eq ext "yml")   (parse-yaml       path content)
+            (if (str_eq ext "yaml")  (parse-yaml       path content)
+            (if (str_eq ext "fk")    (form-as-cell     path content)
+            (if (str_eq ext "py")    (parse-python     path content)
+            (if (str_eq ext "ts")    (parse-typescript path content)
+            (if (str_eq ext "tsx")   (parse-typescript path content)
+            (if (str_eq ext "rs")    (parse-rust       path content)
+            (if (str_eq ext "go")    (parse-go         path content)
+                (intern_node_at UNKNOWN-FORMAT
+                                (list (intern_trivial_string ext)
+                                      (intern_trivial_string path))
+                                path 1 1)))))))))))))
+
+    ;; form.fk parser's top-level returns a LIST of top-level expressions;
+    ;; we wrap it in a single composite cell so convert always returns ONE
+    ;; root cell regardless of grammar.
+    (let FORM-FILE-ROOT (make_nodeid 1 2 99 101))
+
+    (defn form-as-cell (path content)
+        (intern_node_at FORM-FILE-ROOT
+                        (parse-form path content)
+                        path 1 1))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — convert-stream: push-style variant
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; For long files or pipelines: rather than building the full cell-
+    ;; tree first, parse and immediately feed each block to a handler.
+    ;; Currently a thin wrapper — when the grammars themselves use
+    ;; walk-stream natively, the energy stays bounded to the current
+    ;; block. (markdown-stream.fk lands the streaming variant for
+    ;; markdown; other grammars follow the same shape.)
+
+    (defn convert-and-walk (path handler init-state)
+        (do
+            (let root (convert path))
+            (let kids (node_children root))
+            (walk-block-list kids handler init-state)))
+
+    (defn walk-block-list (cells handler state)
+        (if (nil? cells) state
+            (walk-block-list (tail cells)
+                              handler
+                              (handler state (head cells)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — convert + summary stats
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A common operational use: convert a file and report (cell-count,
+    ;; total-children-sum, first-cell-source-attribution). Returns a
+    ;; 3-element list for sibling-parity probing.
+
+    (defn count-cell (acc cell) (add acc 1))
+    (defn sum-children (acc cell) (add acc (len (node_children cell))))
+
+    (defn convert-summary (path)
+        (do
+            (let root (convert path))
+            (let kids (node_children root))
+            (let count (foldl count-cell 0 kids))
+            (let kid-sum (foldl sum-children 0 kids))
+            (let first-src (if (nil? kids) "" (cell-source (head kids))))
+            (list count kid-sum first-src)))
+)

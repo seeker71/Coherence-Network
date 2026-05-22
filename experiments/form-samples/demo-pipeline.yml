@@ -1,0 +1,5 @@
+name: CI
+on: push
+jobs: build
+- step1
+- step2
