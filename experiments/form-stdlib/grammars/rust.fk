@@ -177,7 +177,7 @@
                             (parse-impl text line-no source-path)
                             (intern_trivial_string text)))))))
 
-    (defn parse-block (ln source-path)
+    (defn rs-parse-block (ln source-path)
         (do
             (let text (line-text ln))
             (let line-no (line-num ln))
@@ -186,19 +186,19 @@
                 (parse-pub-stmt trimmed line-no source-path)
                 (parse-stmt-text trimmed line-no source-path))))
 
-    (defn parse-blocks (lines source-path acc)
+    (defn rs-rs-parse-blocks (lines source-path acc)
         (if (nil? lines) (reverse-acc acc)
             (do
                 (let ln (head lines))
                 (let text (line-text ln))
                 (if (or (is-blank? text) (is-line-comment? text))
-                    (parse-blocks (tail lines) source-path acc)
-                    (parse-blocks (tail lines) source-path
-                                  (cons (parse-block ln source-path) acc))))))
+                    (rs-rs-parse-blocks (tail lines) source-path acc)
+                    (rs-rs-parse-blocks (tail lines) source-path
+                                  (cons (rs-parse-block ln source-path) acc))))))
 
     (defn parse-rust (source-path text)
         (do
             (let lines (lines-from-source text))
-            (let blocks (parse-blocks lines source-path (empty)))
+            (let blocks (rs-rs-parse-blocks lines source-path (empty)))
             (intern_node_at RS-FILE blocks source-path 1 1)))
 )
