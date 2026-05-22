@@ -1,0 +1,43 @@
+; grammars/jsx.bnf.fk — minimal JSX grammar for .tsx region streaming
+;
+; A JSX element: <Tag>content</Tag>. The outer .tsx grammar delegates
+; to this grammar via @jsx in a pattern when it sees a `<`. Both
+; grammars share the same token stream (LANGLE / RANGLE / IDENT /
+; SLASH all tokenized by the outer's config).
+
+(do
+    (let JSX-ELEMENT (make_nodeid 1 2 99 110))
+    (let JSX-TEXT    (make_nodeid 1 2 99 111))
+
+    (defn jsx-emit-element (caps)
+        (intern_node JSX-ELEMENT
+                      (list (intern_trivial_string (cap-get caps "tag"))
+                            (intern_trivial_string (cap-get caps "text")))))
+
+    (defn jsx-emit-text (caps)
+        (intern_node JSX-TEXT
+                      (list (intern_trivial_string (cap-get caps "value")))))
+
+    (let jsx-text
+"tokens {
+  whitespace 32 9 10 13
+  ident-kind IDENT
+  operator < LANGLE
+  operator > RANGLE
+  operator / SLASH
+}
+
+rules {
+  element ::= LANGLE tag:IDENT RANGLE text:IDENT LANGLE SLASH IDENT RANGLE => jsx-emit-element ;
+}")
+
+    (let jsx-registry
+        (list (list "jsx-emit-element" jsx-emit-element)
+              (list "jsx-emit-text"    jsx-emit-text)))
+
+    (let jsx-grammar (load-bnf-grammar jsx-text jsx-registry))
+
+    ;; Register the JSX grammar so outer .tsx grammars can reference @jsx
+    (let bnf-grammar-registry (bnf-register-grammar "jsx" jsx-grammar))
+
+    0)
