@@ -1,0 +1,20 @@
+; tests/tsx-region.fk — proof of the user's original example:
+; "CSS or .tsx file have different grammar for different parts...
+;  stream any source part using any recipe"
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/jsx.bnf.fk form-stdlib/grammars/tsx.bnf.fk
+;
+; Parses `let x = <h1>hello</h1>` via the .tsx grammar. The outer
+; grammar handles the TypeScript-style assignment; @jsx delegates the
+; JSX element to a separate grammar registered in the global registry.
+
+(do
+    (let result (parse-tsx-bnf "app.tsx" "let x = <h1>hello</h1>"))
+    (let kids (node_children result))
+    (let name (node_value (head kids)))
+    (let jsx-recipe (head (tail kids)))
+    (let jsx-kids (node_children jsx-recipe))
+    (let tag (node_value (head jsx-kids)))
+    (let text (node_value (head (tail jsx-kids))))
+    ;; Sum string-lengths: "x"(1) + "h1"(2) + "hello"(5) = 8
+    (add (str_len name) (add (str_len tag) (str_len text))))
