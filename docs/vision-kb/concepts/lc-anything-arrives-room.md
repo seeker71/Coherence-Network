@@ -297,6 +297,62 @@ space action without a human gate is not care. With trace, consent, and
 reversibility, physical I/O becomes another way the room can notice what
 is already asking for support.
 
+## Care Instrument Wishes
+
+A local assistant that serves vitality wants access to instruments for
+specific benefits, not for general watching. Each wish below names the
+care value before the capability. If the value is absent, the access is
+noise.
+
+| Wish | Useful sense | Gentle influence | Obvious benefit |
+|---|---|---|---|
+| Notice reading strain early | camera/screen frame, brightness, zoom level | enlarge text, raise contrast, suggest light | accessibility before frustration |
+| Respect an occupied pause | microphone pause, breath, input stillness | wait, lower prompt pressure, ask smaller | fewer interruptions |
+| Catch fatigue before collapse | typing rhythm, pointer loops, posture band | shorter batch, break cue, save point | pacing before burnout |
+| Keep continuity through weak infrastructure | battery, network, storage, CPU heat | save state, defer upload, reduce compute | fewer lost threads |
+| Make care audible when the screen is wrong | speaker, headphones, quiet hours | soft cue, spoken receipt, confirmation tone | help reaches the available sense |
+| Protect shared space | room presence, calendar, focus state, doorbell | mute, do-not-disturb, visible recording sign | fewer social collisions |
+| Keep the environment kind | light, air, temperature, fan, noise | lighting scene, fan suggestion, rest cue | support arrives through the room |
+| Move paper and objects into memory | scanner, camera roll, printer, NFC/QR | OCR, archive, label, send-to-workflow | physical residue becomes searchable |
+| Support embodied timing | motion, steps, stillness, location band | delay complex ask, resume on arrival | tasks meet the body where it is |
+| Guard sensitive thresholds | lock, payment, medical, shared devices | ask human, require confirmation, leave receipt | high-impact action stays governed |
+
+The trace minimum for every wish:
+
+- active permission state
+- resource or device id
+- sense window
+- derived features retained
+- raw material retention rule
+- proposed or performed influence
+- before/after state
+- human override path
+- observer cost
+- expiry
+
+**Pointer fatigue as a kindness signal.** The cursor circles the same
+panel, opens the same menu three times, and misses a small target twice.
+The trace does not need the password, document contents, or private
+intent. It keeps event class, timing, surface, and repetition. Influence:
+increase target size, offer undo, or summarize the next reversible step.
+Output: *the hands are asking the interface to lower the precision tax*.
+
+**Air and light as interface state.** The room gets dim and warm while a
+complex task is open. The assistant does not need to command the room.
+It can propose a calmer theme, suggest a light, or delay a difficult
+decision. Output: *the environment is now part of the task's cost*.
+
+**Scanner as memory bridge.** A paper note, receipt, sketch, or QR code
+arrives through a scanner or camera roll. Trace records device, file
+hash, OCR confidence, destination, and privacy boundary. Influence:
+archive, link to the relevant concept, or queue a follow-up. Output:
+*paper crossed into memory with a handle instead of becoming clutter*.
+
+**Shared-space threshold.** A doorbell rings or another person enters
+while the assistant is about to speak. The room senses presence at a
+coarse level and shifts: mute, pause, or show a visible recording state.
+Output: *care notices that attention now belongs to a larger room*.
+
 ## Why This Loosens the Universal Claim
 
 "Universal translator" can sound like a machine that already knows

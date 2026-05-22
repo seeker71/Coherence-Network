@@ -624,6 +624,114 @@ defn power_network_care_trace = local_resource_transaction(
     "assistance changed pace before the machine disappeared"
 );
 
+defn pointer_fatigue_kindness_trace = local_resource_transaction(
+    "keyboard, pointer, and touch event classes",
+    "physical-io-input",
+    "both",
+    "event classes and timing only; no secrets, document text, or raw key contents retained",
+    [
+        "same menu opened three times",
+        "small target missed twice",
+        "cursor circles one panel",
+    ],
+    [
+        "increase target size",
+        "offer undo",
+        "summarize next reversible step",
+    ],
+    ["precision demand high"],
+    ["interface lowers precision tax"],
+    "medium interpretation cost; high care value when raw content is excluded",
+    ["fatigue", "ergonomics", "reversibility", "interface-care"],
+    [
+        "pointer moved from input stream to fatigue witness",
+        "misses moved from user error to precision tax",
+        "influence stayed local to the affected surface",
+    ],
+    "the hands are asking the interface to lower the precision tax"
+);
+
+defn environment_kindness_trace = local_resource_transaction(
+    "light, air, temperature, fan, and noise sensors",
+    "physical-io-environment",
+    "both",
+    "local environment bands; shared-space changes require human gate",
+    [
+        "room light drops",
+        "temperature rises",
+        "noise band increases",
+    ],
+    [
+        "offer calmer theme",
+        "suggest light or fan",
+        "delay difficult decision",
+    ],
+    ["complex task open in rising environmental cost"],
+    ["task pacing adjusted and environment suggestion offered"],
+    "medium social cost; environment may belong to more than one person",
+    ["environment", "task-cost", "pacing", "shared-space"],
+    [
+        "room state moved from background to task cost",
+        "heat and dimness moved from comfort to attention budget",
+        "influence stayed proposal-first",
+    ],
+    "the environment is now part of the task's cost"
+);
+
+defn scanner_memory_bridge_trace = local_resource_transaction(
+    "scanner, camera roll, printer, NFC, or QR input",
+    "physical-io-paper-object",
+    "both",
+    "local media import with file hash, destination, and privacy boundary",
+    [
+        "paper note or receipt appears",
+        "OCR confidence recorded",
+        "destination concept or workflow suggested",
+    ],
+    [
+        "archive file",
+        "link to relevant concept",
+        "queue follow-up",
+    ],
+    ["physical residue unindexed"],
+    ["object has hash, summary, and destination"],
+    "medium privacy cost; high continuity benefit when raw media stays scoped",
+    ["memory-bridge", "archive", "searchability", "physical-residue"],
+    [
+        "paper moved from clutter to memory object",
+        "hash moved from checksum to handle",
+        "destination bounded the influence",
+    ],
+    "paper crossed into memory with a handle instead of becoming clutter"
+);
+
+defn shared_space_threshold_trace = local_resource_transaction(
+    "presence, doorbell, focus state, and visible recording state",
+    "physical-io-shared-space",
+    "both",
+    "coarse presence only; shared-space influence remains visible and reversible",
+    [
+        "doorbell or room entry detected",
+        "assistant speech pending",
+        "recording or listening state visible",
+    ],
+    [
+        "mute",
+        "pause response",
+        "show visible recording sign",
+    ],
+    ["assistant about to speak into private context"],
+    ["assistant pauses or makes state visible"],
+    "high social cost; coarse sensing and explicit indicators keep care clean",
+    ["shared-space", "attention", "privacy-boundary", "visible-state"],
+    [
+        "presence moved from interruption to boundary signal",
+        "pending speech moved from output to social action",
+        "visible state carried the care contract",
+    ],
+    "care notices that attention now belongs to a larger room"
+);
+
 # ---------------------------------------------------------------------
 # Part 4 -- operating rule
 # ---------------------------------------------------------------------
@@ -666,4 +774,8 @@ defn physical_io_care_traces() = [
     speaker_gentle_return_trace,
     wearable_kind_schedule_trace,
     power_network_care_trace,
+    pointer_fatigue_kindness_trace,
+    environment_kindness_trace,
+    scanner_memory_bridge_trace,
+    shared_space_threshold_trace,
 ];
