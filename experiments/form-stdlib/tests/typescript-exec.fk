@@ -1,0 +1,11 @@
+; tests/typescript-exec.fk — TypeScript EXECUTE pipeline proof
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/typescript.bnf.fk form-stdlib/grammars/typescript-exec.fk
+
+(do
+    (let result (parse-typescript-bnf "app.ts" "import React from \"react\"
+let count = 1
+const VERSION = 1 + 2 * 3
+export const APP = \"hello\""))
+    (let n (ts-execute result))
+    n)
