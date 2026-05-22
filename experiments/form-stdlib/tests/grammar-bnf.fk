@@ -30,7 +30,7 @@
     ;; Probe 2 — rule-line splitter
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let p4-parts (bnf-parse-rule-line "pair := STRING COLON value => emit-pair"))
+    (let p4-parts (bnf-parse-rule-line "pair ::= STRING COLON value => emit-pair ;"))
     (let probe-4 (if (and (str_eq (head p4-parts) "pair")
                           (str_eq (head (tail (tail p4-parts))) "emit-pair"))
                      1 0))                              ; → 1
@@ -60,7 +60,7 @@
            digit-kind INT
          }
          rules {
-           start := INT => emit-int
+           start ::= INT => emit-int ;
          }")
 
     (let grammar-1 (load-bnf-grammar bnf-text-1 registry-1))
@@ -96,8 +96,8 @@
            digit-kind INT
          }
          rules {
-           start := inner => emit-start
-           inner := INT => emit-inner
+           start ::= inner => emit-start ;
+           inner ::= INT => emit-inner ;
          }")
 
     (let grammar-2 (load-bnf-grammar bnf-text-2 registry-2))
@@ -105,13 +105,41 @@
     (let probe-7 (walk_recipe result-2))                ; → 17
 
     ;; ──────────────────────────────────────────────────────────────────
+    ;; Probe 6 — multi-line rule (BMF surface: `;` terminator lets a
+    ;; rule's pattern span as many lines as the author prefers)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The rule spans three lines; the parser must join them on `;`.
+
+    (defn emit-multi (caps)
+        (intern_trivial_int (str_to_int (cap-get caps "_1"))))
+
+    (let registry-3 (list (list "emit-multi" emit-multi)))
+
+    (let bnf-text-3
+        "tokens {
+           whitespace 32 9 10 13
+           digit-kind INT
+         }
+         rules {
+           start ::=
+               INT
+               => emit-multi
+               ;
+         }")
+
+    (let grammar-3 (load-bnf-grammar bnf-text-3 registry-3))
+    (let result-3 (bnf-parse "55" grammar-3))
+    (let probe-8 (walk_recipe result-3))                ; → 55
+
+    ;; ──────────────────────────────────────────────────────────────────
     ;; Sum the probes — sibling kernels must agree on every digit
     ;; ──────────────────────────────────────────────────────────────────
-    ;; 3 + 3 + 5 + 1 + 1 + 42 + 17 = 72
+    ;; 3 + 3 + 5 + 1 + 1 + 42 + 17 + 55 = 127
 
     (add probe-1
          (add probe-2
               (add probe-3
                    (add probe-4
                         (add probe-5
-                             (add probe-6 probe-7)))))))
+                             (add probe-6
+                                  (add probe-7 probe-8))))))))

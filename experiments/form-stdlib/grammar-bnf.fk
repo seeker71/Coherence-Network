@@ -9,7 +9,9 @@
 ; being ~250 lines of imperative dispatch and become ~30 lines of
 ; declarative rules a human can scan.
 ;
-; The surface:
+; The surface follows BMF (Urs 2000, docs/presences/bmf-grammar.md):
+; rules use `::=` to introduce a pattern and `;` to terminate it. A
+; rule's pattern may span multiple lines until the terminating `;`.
 ;
 ;   tokens {
 ;     whitespace 32 9 10 13
@@ -28,21 +30,26 @@
 ;   }
 ;
 ;   rules {
-;     json     := value
-;     value    := object | array | STRING | INT | TRUE | FALSE | NULL
-;     pair     := STRING COLON value             => emit-pair
-;     object   := LBRACE pairs RBRACE            => emit-object
-;     pairs    := pair (COMMA pair)*             => emit-list
-;     array    := LBRACK elements RBRACK         => emit-array
-;     elements := value (COMMA value)*           => emit-list
+;     json     ::= value ;
+;     value    ::= object | array | STRING | INT | TRUE | FALSE | NULL ;
+;     pair     ::= STRING COLON value             => emit-pair  ;
+;     object   ::= LBRACE pairs RBRACE            => emit-object ;
+;     pairs    ::= pair (COMMA pair)*             => emit-list   ;
+;     array    ::= LBRACK elements RBRACK         => emit-array  ;
+;     elements ::= value (COMMA value)*           => emit-list   ;
 ;   }
 ;
 ; Reading rules:
-;   `:=` is "is composed of"; `=>` is "becomes (via emitter)"
-;   `|` separates alternatives, `*` is zero-or-more, `?` is optional,
-;   `(...)` groups. Pattern atoms are token KINDs (uppercase) or rule
-;   names (lowercase). String literals are not used in rule patterns —
-;   the tokens block names every literal once.
+;   `::=` is "is composed of"; `=>` is "becomes (via emitter)"; `;`
+;   terminates a rule. `|` separates alternatives, `*` is zero-or-more,
+;   `?` is optional, `(...)` groups. Pattern atoms are token KINDs
+;   (uppercase) or rule names (lowercase). String literals are not used
+;   in rule patterns — the tokens block names every literal once.
+;
+; Naming: per docs/coherence-substrate/form-namespaces.md, internal
+; helpers carry a `bnf-` prefix (older form of the slash-namespace
+; convention; this file pre-dates the convention doc and will migrate
+; to `bnf/...` in a follow-on breath once engine.fk migrates in lockstep).
 ;
 ; Output (engine.fk-compatible):
 ;   token-config — same shape engine.fk's tokenize-with-config consumes
@@ -125,12 +132,15 @@
 
     (defn bnf-line-text (ln) (head ln))
 
-    ;; comment marker: ';' (Form-native) — same convention as .fk files
+    ;; comment marker: ';' (Form-native) followed by any content. A
+    ;; standalone `;` is the BMF rule terminator and must NOT be flagged
+    ;; as a comment here — the rule-flusher in Part 9 will pick it up
+    ;; when it lands at the end of an accumulated rule buffer.
     (defn bnf-is-comment? (text)
         (do
             (let trimmed (bnf-trim-leading-ws text))
-            (if (eq (str_len trimmed) 0) false
-                (eq (ord (char_at trimmed 0)) 59))))   ; ';' = 59
+            (if (le (str_len trimmed) 1) false
+                (eq (ord (char_at trimmed 0)) 59))))   ; ';' = 59 + has more content
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 2 — block detection
@@ -412,11 +422,27 @@
                 (list (bnf-substr text 0 pos)
                       (bnf-substr text (add pos (str_len sep)) (str_len text))))))
 
+    ;; bnf-parse-rule-line: BMF-style surface
+    ;;   "name ::= pattern => action ;"
+    ;; → ("name", "pattern", "action")
+    ;;
+    ;; The terminating `;` is stripped if present. Action half (`=>`)
+    ;; is optional. Pattern half is everything between `::=` and either
+    ;; `=>` or `;` (whichever comes first).
+    (defn bnf-strip-semi (text)
+        (do
+            (let trimmed (bnf-trim text))
+            (let n (str_len trimmed))
+            (if (eq n 0) trimmed
+                (if (eq (ord (char_at trimmed (sub n 1))) 59)   ; ';' = 59
+                    (bnf-trim (bnf-substr trimmed 0 (sub n 1)))
+                    trimmed))))
+
     (defn bnf-parse-rule-line (text)
         (do
-            (let def-split (bnf-split-on text ":="))
+            (let def-split (bnf-split-on text "::="))
             (let name (bnf-trim (head def-split)))
-            (let body (head (tail def-split)))
+            (let body (bnf-strip-semi (head (tail def-split))))
             (let act-split (bnf-split-on body "=>"))
             (let pattern-text (bnf-trim (head act-split)))
             (let action-name (bnf-trim (head (tail act-split))))
@@ -461,32 +487,79 @@
     ;; Part 9 — top-level reader: text → grammar data tuple
     ;; ──────────────────────────────────────────────────────────────────
 
-    (defn bnf-read-loop (lines state tok-st rules registry)
+    ;; bnf-find-semi: position of next `;` in text, or -1 if none. Skips
+    ;; semicolons inside line comments (`;` followed by another comment-
+    ;; making char would itself be a comment, but BMF rules don't use
+    ;; `;` for anything other than terminator so this is straightforward).
+    (defn bnf-find-semi (s i)
+        (if (ge i (str_len s)) (sub 0 1)
+            (if (eq (ord (char_at s i)) 59) i
+                (bnf-find-semi s (add i 1)))))
+
+    ;; bnf-flush-rules: pull all complete rules out of the accumulated
+    ;; buffer (each terminated by `;`). Returns (new-rules-prepended,
+    ;; remaining-buffer-after-last-semi).
+    (defn bnf-flush-rules (buffer rules registry)
+        (do
+            (let pos (bnf-find-semi buffer 0))
+            (if (lt pos 0)
+                (list rules buffer)
+                (do
+                    (let rule-text (bnf-substr buffer 0 (add pos 1)))
+                    (let remaining (bnf-substr buffer (add pos 1) (str_len buffer)))
+                    (let trimmed (bnf-trim rule-text))
+                    (if (or (eq (str_len trimmed) 0)
+                            (str_eq trimmed ";"))
+                        (bnf-flush-rules remaining rules registry)
+                        (bnf-flush-rules remaining
+                                          (cons (bnf-build-rule trimmed registry) rules)
+                                          registry))))))
+
+    ;; bnf-read-loop carries an extra accumulator: rule-buf, the text
+    ;; collected since the last `;` terminator. Inside "rules" state,
+    ;; every non-blank/non-comment line appends to rule-buf and any
+    ;; complete rules (terminated by `;`) are flushed into the rules
+    ;; list. The buffer carries over multiple lines so rule patterns
+    ;; can span as many lines as the author prefers.
+    (defn bnf-read-loop (lines state tok-st rule-buf rules registry)
         (if (nil? lines)
-            (list (bnf-finalize-token-config tok-st) (bnf-reverse rules))
+            (do
+                (let flush (bnf-flush-rules rule-buf rules registry))
+                (list (bnf-finalize-token-config tok-st)
+                      (bnf-reverse (head flush))))
             (do
                 (let ln (head lines))
                 (let text (bnf-line-text ln))
                 (let trimmed (bnf-trim text))
                 (if (or (bnf-is-blank? trimmed) (bnf-is-comment? trimmed))
-                    (bnf-read-loop (tail lines) state tok-st rules registry)
+                    (bnf-read-loop (tail lines) state tok-st rule-buf rules registry)
                 (if (str_eq state "outside")
                     (if (bnf-block-open? trimmed "tokens")
-                        (bnf-read-loop (tail lines) "tokens" tok-st rules registry)
+                        (bnf-read-loop (tail lines) "tokens" tok-st rule-buf rules registry)
                     (if (bnf-block-open? trimmed "rules")
-                        (bnf-read-loop (tail lines) "rules" tok-st rules registry)
-                        (bnf-read-loop (tail lines) state tok-st rules registry)))
+                        (bnf-read-loop (tail lines) "rules" tok-st rule-buf rules registry)
+                        (bnf-read-loop (tail lines) state tok-st rule-buf rules registry)))
                 (if (str_eq state "tokens")
                     (if (bnf-block-close? trimmed)
-                        (bnf-read-loop (tail lines) "outside" tok-st rules registry)
+                        (bnf-read-loop (tail lines) "outside" tok-st rule-buf rules registry)
                         (bnf-read-loop (tail lines) state
                                         (bnf-tok-line-step tok-st (bnf-fields trimmed))
-                                        rules registry))
+                                        rule-buf rules registry))
+                    ;; "rules" state
                     (if (bnf-block-close? trimmed)
-                        (bnf-read-loop (tail lines) "outside" tok-st rules registry)
-                        (bnf-read-loop (tail lines) state tok-st
-                                        (cons (bnf-build-rule trimmed registry) rules)
-                                        registry))))))))
+                        (do
+                            (let flush (bnf-flush-rules rule-buf rules registry))
+                            (bnf-read-loop (tail lines) "outside" tok-st
+                                            (head (tail flush))
+                                            (head flush)
+                                            registry))
+                        (do
+                            (let appended (str_concat rule-buf (str_concat " " trimmed)))
+                            (let flush (bnf-flush-rules appended rules registry))
+                            (bnf-read-loop (tail lines) state tok-st
+                                            (head (tail flush))
+                                            (head flush)
+                                            registry)))))))))
 
     ;; load-bnf-grammar: text + emitter registry → engine-compatible
     ;; grammar tuple: ((tokens token-config) (rules parse-rules))
@@ -494,7 +567,7 @@
         (do
             (let lines (bnf-lines text))
             (let initial-st (bnf-tok-state-empty 0))
-            (let parts (bnf-read-loop lines "outside" initial-st (empty) registry))
+            (let parts (bnf-read-loop lines "outside" initial-st "" (empty) registry))
             (let tokens (head parts))
             (let rules (head (tail parts)))
             (list (list "tokens" tokens)

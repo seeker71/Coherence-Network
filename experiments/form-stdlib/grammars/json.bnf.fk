@@ -111,11 +111,11 @@
 }
 
 rules {
-  json     := value
-  value    := STRING | INT | TRUE | FALSE | NULL
-  pair     := STRING COLON value
-  object   := LBRACE RBRACE
-  array    := LBRACK RBRACK
+  json     ::= value ;
+  value    ::= STRING | INT | TRUE | FALSE | NULL ;
+  pair     ::= STRING COLON value ;
+  object   ::= LBRACE RBRACE ;
+  array    ::= LBRACK RBRACK ;
 }")
 
     ;; ──────────────────────────────────────────────────────────────────
