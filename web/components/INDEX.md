@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 50
+**Total files**: 51
 
 | File | Purpose |
 |---|---|
@@ -17,6 +17,7 @@
 | [FirstTimeWelcome.tsx](FirstTimeWelcome.tsx) | _no top-of-file purpose_ |
 | [InspiredByPreview.tsx](InspiredByPreview.tsx) | _no top-of-file purpose_ |
 | [InspiredByRail.tsx](InspiredByRail.tsx) | _no top-of-file purpose_ |
+| [InvestModal.tsx](InvestModal.tsx) | _no top-of-file purpose_ |
 | [InviteBanner.tsx](InviteBanner.tsx) | _no top-of-file purpose_ |
 | [InviteFriend.tsx](InviteFriend.tsx) | _no top-of-file purpose_ |
 | [KinActivity.tsx](KinActivity.tsx) | _no top-of-file purpose_ |
