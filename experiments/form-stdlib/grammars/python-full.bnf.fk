@@ -270,6 +270,8 @@
   keyword YIELD yield
   keyword ASYNC async
   keyword AWAIT await
+  keyword INDENT __indent__
+  keyword DEDENT __dedent__
 }
 
 rules {
@@ -315,16 +317,18 @@ rules {
   decorator    ::= AT expr:dotted-name (LPAREN RPAREN)?                 => pyf-emit-decorator ;
 
   func-def     ::= DEF name:IDENT LPAREN params:param-list? RPAREN
-                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+                   (ARROW ret:expression)? COLON
+                   (INDENT body:statement+ DEDENT | body:simple-stmt)   => pyf-emit-func-def ;
   async-def    ::= ASYNC DEF name:IDENT LPAREN params:param-list? RPAREN
-                   (ARROW ret:expression)? COLON body:simple-stmt       => pyf-emit-func-def ;
+                   (ARROW ret:expression)? COLON
+                   (INDENT body:statement+ DEDENT | body:simple-stmt)   => pyf-emit-func-def ;
   param-list   ::= param (COMMA param)*                                 => pyf-passthrough ;
   param        ::= STAR STAR name:IDENT
                  | STAR name:IDENT
                  | name:IDENT (COLON type:expression)? (EQUALS dflt:expression)?  => pyf-passthrough ;
 
   class-def    ::= CLASS name:IDENT (LPAREN bases:arg-list? RPAREN)?
-                   COLON body:simple-stmt                               => pyf-emit-class-def ;
+                   COLON (INDENT body:statement+ DEDENT | body:simple-stmt) => pyf-emit-class-def ;
 
   if-stmt      ::= IF cond:expression COLON body:simple-stmt
                    elif-clause* else-clause?                            => pyf-emit-pass ;
@@ -445,7 +449,109 @@ rules {
 
     (let py-full-grammar (load-bnf-grammar py-full-text py-full-registry))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Indent preprocessor
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Transforms Python source by injecting visible `__indent__` and
+    ;; `__dedent__` marker words at every indent boundary. The existing
+    ;; tokenizer recognizes them as keywords (declared in the tokens
+    ;; block above) and emits INDENT/DEDENT tokens the grammar matches.
+    ;;
+    ;; Algorithm: walk lines; track indent depth via leading-space
+    ;; count. On each non-blank line:
+    ;;   • new depth > top of stack → push, prepend `__indent__`
+    ;;   • new depth < top of stack → pop while top > new, each pop
+    ;;     prepends `__dedent__`
+    ;;   • equal → no marker
+    ;; At end of input, prepend `__dedent__` for each remaining stack
+    ;; level (close all open blocks).
+
+    (defn pyf-count-leading-spaces (s i n)
+        (if (ge i (str_len s)) n
+            (do
+                (let cp (ord (char_at s i)))
+                (if (or (eq cp 32) (eq cp 9))
+                    (pyf-count-leading-spaces s (add i 1) (add n 1))
+                    n))))
+
+    (defn pyf-line-rest (s start)
+        ;; Return (text-of-line, position-after-newline)
+        (pyf-line-rest-loop s start start))
+
+    (defn pyf-line-rest-loop (s start i)
+        (if (ge i (str_len s)) (list (substr s start i) i)
+            (if (eq (ord (char_at s i)) 10)
+                (list (substr s start i) (add i 1))
+                (pyf-line-rest-loop s start (add i 1)))))
+
+    (defn pyf-is-blank-line (line)
+        ;; True if line is all whitespace
+        (pyf-is-blank-loop line 0))
+
+    (defn pyf-is-blank-loop (s i)
+        (if (ge i (str_len s)) true
+            (do
+                (let cp (ord (char_at s i)))
+                (if (or (eq cp 32) (eq cp 9))
+                    (pyf-is-blank-loop s (add i 1))
+                    false))))
+
+    (defn pyf-repeat-dedents (n)
+        (if (le n 0) ""
+            (str_concat "__dedent__ " (pyf-repeat-dedents (sub n 1)))))
+
+    ;; Walk lines; build output string with indent markers
+    (defn pyf-preprocess-loop (s i stack out)
+        (if (ge i (str_len s))
+            ;; End of input — close all open blocks
+            (str_concat out (pyf-repeat-dedents (sub (len stack) 1)))
+            (do
+                (let line-pair (pyf-line-rest s i))
+                (let line (head line-pair))
+                (let next-i (head (tail line-pair)))
+                (if (pyf-is-blank-line line)
+                    ;; Skip blank lines — no indent change
+                    (pyf-preprocess-loop s next-i stack
+                                          (str_concat out "\n"))
+                    (do
+                        (let depth (pyf-count-leading-spaces line 0 0))
+                        (let top (head stack))
+                        (if (gt depth top)
+                            ;; INDENT
+                            (pyf-preprocess-loop s next-i (cons depth stack)
+                                                  (str_concat out
+                                                              (str_concat " __indent__ "
+                                                                          (str_concat line "\n"))))
+                        (if (lt depth top)
+                            ;; DEDENT one or more levels
+                            (do
+                                (let popped (pyf-pop-to-depth stack depth 0))
+                                (let new-stack (head popped))
+                                (let pops (head (tail popped)))
+                                (pyf-preprocess-loop s next-i new-stack
+                                                      (str_concat out
+                                                                  (str_concat " "
+                                                                              (str_concat (pyf-repeat-dedents pops)
+                                                                                          (str_concat line "\n"))))))
+                            ;; Same level
+                            (pyf-preprocess-loop s next-i stack
+                                                  (str_concat out
+                                                              (str_concat line "\n"))))))))))
+
+    (defn pyf-pop-to-depth (stack target n-popped)
+        (if (le (head stack) target) (list stack n-popped)
+            (pyf-pop-to-depth (tail stack) target (add n-popped 1))))
+
+    (defn pyf-preprocess (text)
+        (pyf-preprocess-loop text 0 (list 0) ""))
+
     (defn parse-python-full (text)
         (bnf-parse text py-full-grammar))
+
+    ;; parse-python-full-indented preprocesses Python source to inject
+    ;; INDENT/DEDENT markers, then parses. The grammar can match
+    ;; multi-statement bodies via `INDENT statement+ DEDENT`.
+    (defn parse-python-full-indented (text)
+        (bnf-parse (pyf-preprocess text) py-full-grammar))
 
     0)
