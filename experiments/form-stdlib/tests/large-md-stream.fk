@@ -1,0 +1,56 @@
+; tests/large-md-stream.fk — exercise markdown grammar end-to-end on a
+; real concept file from docs/vision-kb/.
+;
+; Sibling of tests/markdown.fk (which uses a small synthetic 5-block
+; doc). The point of this probe is *scale* — a real 79-line concept
+; file with 19 mixed blocks (headings, paragraphs, YAML frontmatter
+; bars) pulled through the full stack and verified identically across
+; both kernels:
+;
+;   read_file → parse-markdown → node_children → foldl observers
+;
+; Expected probes (both kernels): blocks=19, attributed=19,
+; total-kid-count=25, content-bytes=4191. Sum = 4254.
+;
+; The Rust kernel's main-thread stack (8MB on macOS) caps the recursive
+; parse-blocks at roughly 20-25 blocks before overflow; Go's growable
+; goroutine stacks handle much larger inputs. This file sits well
+; below the Rust ceiling so sibling parity holds. For inputs that
+; exceed the ceiling, grammars/markdown-stream.fk emits the same
+; blocks one at a time without the cons-accumulator — the streaming
+; sibling is the right tool past this scale.
+;
+; Invoke (relative path is from experiments/, where validate.sh and the
+; kernel binaries run):
+;   bin-go form-stdlib/core.fk form-stdlib/cell-trace.fk \
+;          form-stdlib/grammars/markdown.fk \
+;          form-stdlib/tests/large-md-stream.fk
+
+(do
+    (let path "../docs/vision-kb/concepts/lc-w-spanda.md")
+    (let content (read_file path))
+    (let doc (parse-markdown path content))
+    (let blocks (node_children doc))
+
+    ;; --- probe 1: total block count -----------------------------------
+    (let probe-1 (len blocks))
+
+    ;; --- probe 2: count blocks with non-empty source attribution ------
+    ;; (every block emitted by parse-markdown carries source; this
+    ;; should equal probe-1 if attribution is universal)
+    (defn count-attributed (acc cell)
+        (if (str_eq (cell-source cell) "") acc (add acc 1)))
+    (let probe-2 (foldl count-attributed 0 blocks))
+
+    ;; --- probe 3: sum of child counts across all blocks ---------------
+    ;; (heading = 2 kids: level + text; code-block = 2: lang + body;
+    ;;  paragraph = 1: text. Stable count probes block-internal shape.)
+    (defn sum-kid-count (acc cell)
+        (add acc (len (node_children cell))))
+    (let probe-3 (foldl sum-kid-count 0 blocks))
+
+    ;; --- probe 4: raw file size (chars) -------------------------------
+    (let probe-4 (str_len content))
+
+    ;; sum of all four — sibling parity must match exactly across Go + Rust
+    (add probe-1 (add probe-2 (add probe-3 probe-4))))
