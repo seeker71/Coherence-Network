@@ -323,12 +323,16 @@
                     (bnf-pat-tokens-loop s (add i 1) (cons "*" acc))
                 (if (eq cp 63)  ; '?'
                     (bnf-pat-tokens-loop s (add i 1) (cons "?" acc))
+                (if (eq cp 58)  ; ':' — BMF-style tag separator
+                    (bnf-pat-tokens-loop s (add i 1) (cons ":" acc))
+                (if (eq cp 43)  ; '+' — one-or-more postfix
+                    (bnf-pat-tokens-loop s (add i 1) (cons "+" acc))
                 (if (bnf-is-pat-ident-cp cp)
                     (do
                         (let end (bnf-pat-scan-ident s i))
                         (bnf-pat-tokens-loop s end
                                               (cons (bnf-substr s i end) acc)))
-                    (bnf-pat-tokens-loop s (add i 1) acc)))))))))))
+                    (bnf-pat-tokens-loop s (add i 1) acc)))))))))))))
 
     (defn bnf-tokenize-pattern (text)
         (bnf-pat-tokens-loop text 0 (empty)))
@@ -360,13 +364,25 @@
     (defn bnf-cap-name (pos)
         (str_concat "_" (int_to_str pos)))
 
+    ;; bnf-parse-atom: peek for tag prefix `name:atom` (BMF Tag container).
+    ;; When the second token is `:`, the first is the tag name; the atom
+    ;; that follows wraps in (list "tag" name atom-pattern).
     (defn bnf-parse-atom (toks pos)
         (if (nil? toks) (bnf-mk-pair (list "literal" "EOF" "") toks)
             (do
                 (let t (head toks))
+                (if (and (gt (len toks) 1) (str_eq (head (tail toks)) ":"))
+                    ;; Tagged atom: name : pattern
+                    (bnf-parse-tagged t (tail (tail toks)) pos)
                 (if (str_eq t "(")
                     (bnf-parse-group (tail toks) pos)
-                    (bnf-parse-atom-ident t (tail toks) pos)))))
+                    (bnf-parse-atom-ident t (tail toks) pos))))))
+
+    (defn bnf-parse-tagged (tag-name toks pos)
+        (do
+            (let inner (bnf-parse-atom toks pos))
+            (bnf-mk-pair (list "tag" tag-name (bnf-pair-recipe inner))
+                          (bnf-pair-rest inner))))
 
     (defn bnf-parse-group (toks pos)
         (do
@@ -391,9 +407,13 @@
         (if (nil? toks) (bnf-mk-pair pat toks)
             (if (str_eq (head toks) "*")
                 (bnf-mk-pair (list "star" pat) (tail toks))
-                (if (str_eq (head toks) "?")
-                    (bnf-mk-pair (list "opt" pat) (tail toks))
-                    (bnf-mk-pair pat toks)))))
+                (if (str_eq (head toks) "+")
+                    ;; One-or-more = pattern followed by zero-or-more
+                    (bnf-mk-pair (list "sequence" pat (list "star" pat))
+                                  (tail toks))
+                    (if (str_eq (head toks) "?")
+                        (bnf-mk-pair (list "opt" pat) (tail toks))
+                        (bnf-mk-pair pat toks))))))
 
     (defn bnf-parse-seq-loop (toks pos acc)
         (if (nil? toks) (bnf-mk-pair (bnf-finalize-seq acc) toks)
@@ -655,7 +675,12 @@
                 (bnf-match-opt (head (tail p)) stream rules)
             (if (str_eq tag "rule")
                 (bnf-match-rule (head (tail p)) stream rules)
-                (mk-fail (str_concat "unknown pattern: " tag)))))))))))
+            (if (str_eq tag "tag")
+                ;; (list "tag" name pattern) — match pattern, bind result
+                ;; under `name`. BMF Tag-container equivalent.
+                (bnf-match-tag (head (tail p)) (head (tail (tail p)))
+                                stream rules)
+                (mk-fail (str_concat "unknown pattern: " tag))))))))))))
 
     (defn bnf-match-sequence (children stream rules acc-caps)
         (if (nil? children)
@@ -695,6 +720,29 @@
         (do
             (let m (bnf-match-pattern child stream rules))
             (if (fail? m) (mk-match (cap-empty 0) stream) m)))
+
+    ;; bnf-match-tag: BMF's Tag container. Match the inner pattern; bind
+    ;; the matched value under the named tag. The value extraction is
+    ;; pattern-shape-aware:
+    ;;   - If inner is `(capture "_<n>" ...)`, the captured value sits
+    ;;     at "_<n>" in the inner caps — pluck it directly.
+    ;;   - If inner is `(rule ...)`, the result lives at "_result".
+    ;;   - Otherwise, fall back to capture-value on the consumed token.
+    (defn bnf-match-tag (name child stream rules)
+        (do
+            (let m (bnf-match-pattern child stream rules))
+            (if (fail? m) m
+                (do
+                    (let inner-caps (match-caps m))
+                    (let inner-tag (head child))
+                    (let bound-value
+                        (if (str_eq inner-tag "capture")
+                            (cap-get inner-caps (head (tail child)))
+                        (if (str_eq inner-tag "rule")
+                            (cap-get inner-caps "_result")
+                            (capture-value m stream))))
+                    (mk-match (cap-set inner-caps name bound-value)
+                              (match-rest m))))))
 
     ;; bnf-match-rule: look up rule by name, recurse on its pattern,
     ;; apply its action on success. The action's result is bound under
