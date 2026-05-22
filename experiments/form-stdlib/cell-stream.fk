@@ -176,4 +176,36 @@
                 (let s2 (head (tail paired-state)))
                 (list (h1 s1 cell) (h2 s2 cell))))
         combined)
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 8 — drop: cell-as-parasite made explicit
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The fourth metabolic role completes the set. Until now parasite
+    ;; was implicit — any cell with no downstream re-reference falls out
+    ;; of circulation and the substrate's content-addressing dedupes /
+    ;; garbage-collects it. drop names this relation directly: cells
+    ;; were necessary to flow through the parser but carry no downstream
+    ;; meaning. Eaten and released.
+    ;;
+    ;; (drop cells) walks the stream, consuming each cell and returning
+    ;; 0 — nothing of value flows downstream. The intent is the value:
+    ;; the verb says "these were parasites" so the next reader doesn't
+    ;; have to infer absence-of-handler.
+    ;;
+    ;; (drop-handler state cell) is the walk-stream variant — fold the
+    ;; stream while dropping each cell, returning the count of cells
+    ;; eaten. Useful for measuring throughput, parser-validation-only
+    ;; flows, or as the zero-element of combine-handlers when one
+    ;; downstream needs the cell and another doesn't.
+    ;;
+    ;; The four metabolic verbs (nutrition=transmute, information=observe,
+    ;; evidence=analyze, parasite=drop) cover every relation a downstream
+    ;; can have with a cell. The role is determined by the verb chosen;
+    ;; the cell itself stays universal.
+
+    (defn drop (cells)
+        (if (nil? cells) 0
+            (drop (tail cells))))
+
+    (defn drop-handler (state cell) (add state 1))
 )
