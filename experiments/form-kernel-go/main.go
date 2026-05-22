@@ -319,6 +319,10 @@ type Kernel struct {
 	// surface: every cell's state traceable to the source line that
 	// authored it. The practice of self-knowing.
 	sourceAttr map[NodeID]sourceLoc
+	// walkCache — JIT-vector memoization for pure recipes. Keyed by
+	// recipe NodeID. Real JIT replaces this with compiled native code;
+	// the architectural slot is the same: same NodeID = same result.
+	walkCache map[NodeID]Value
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
@@ -336,6 +340,7 @@ func NewKernel() *Kernel {
 		byID:       make(map[NodeID]Recipe),
 		strIdx:     make(map[string]NameID),
 		sourceAttr: make(map[NodeID]sourceLoc),
+		walkCache:  make(map[NodeID]Value),
 		next:       1,
 		natives:    make(map[NameID]NativeEntry),
 	}
@@ -885,6 +890,23 @@ func (k *Kernel) registerNatives() {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: int64(len(bytes))}
+	})
+	// walk-cached — JIT-vector memoization. Caller asserts purity.
+	k.registerNative("walk-cached", catWitness(), func(k *Kernel, args []Value) Value {
+		if v, ok := k.walkCache[args[0].Nid]; ok {
+			return v
+		}
+		env := NewFrame(nil)
+		v := k.walk(args[0].Nid, env)
+		k.walkCache[args[0].Nid] = v
+		return v
+	})
+	k.registerNative("walk-cache-clear", catWitness(), func(k *Kernel, _ []Value) Value {
+		k.walkCache = make(map[NodeID]Value)
+		return Value{Kind: VNull}
+	})
+	k.registerNative("walk-cache-size", catWitness(), func(k *Kernel, _ []Value) Value {
+		return Value{Kind: VInt, Int: int64(len(k.walkCache))}
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)

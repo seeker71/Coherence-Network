@@ -1,0 +1,39 @@
+; tests/jit-cache.fk — verify walk-cached + cache observability.
+;
+; JIT-vector via memoization: same recipe NodeID returns cached
+; result in O(1) on subsequent calls. Cache observable + clearable.
+
+(do
+    (let CAT-PLUS     (make_nodeid 1 2 12 1))
+    (let CAT-MULTIPLY (make_nodeid 1 2 12 3))
+
+    (let r1 (intern_node CAT-PLUS (list (intern_trivial_int 7) (intern_trivial_int 3))))
+    (let r2 (intern_node CAT-MULTIPLY (list (intern_trivial_int 5) (intern_trivial_int 4))))
+
+    (walk-cache-clear)
+
+    ;; --- probe 1: walk-cached computes correctly first time ------
+    (let v1 (walk-cached r1))                              ; → 10
+    (let probe-1 v1)
+
+    ;; --- probe 2: same recipe returns same value (cached) --------
+    (let v2 (walk-cached r1))                              ; → 10
+    (let probe-2 v2)
+
+    ;; --- probe 3: cache holds 1 entry after one unique recipe ---
+    (let probe-3 (walk-cache-size))                        ; → 1
+
+    ;; --- probe 4: second unique recipe expands cache to 2 --------
+    (let v3 (walk-cached r2))                              ; → 20
+    (let probe-4 (walk-cache-size))                        ; → 2
+
+    ;; --- probe 5: clear resets cache ----------------------------
+    (walk-cache-clear)
+    (let probe-5 (walk-cache-size))                        ; → 0
+
+    ;; --- probe 6: repeated calls after clear recompute correctly
+    (let v4 (walk-cached r1))                              ; → 10
+    (let probe-6 v4)
+
+    ;; sum: 10 + 10 + 1 + 2 + 0 + 10 = 33
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 (add probe-5 probe-6))))))

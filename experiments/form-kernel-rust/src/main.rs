@@ -144,6 +144,14 @@ pub(crate) struct Kernel {
     // The satsang-load-bearing surface: every cell's state is traceable
     // back to the source line of the recipe that authored it.
     source_attr: HashMap<NodeID, (NameID, u32, u32)>,
+    // walk_cache — JIT-vector memoization: pure recipes (no I/O, no
+    // external state) can have their walk result cached by NodeID.
+    // Content-addressing means same recipe shape → same NodeID, so
+    // cache lookups are O(1) by structure. Real JIT compiles to
+    // native code; memoization skips redundant interpretation.
+    // For now: opt-in via `walk-cached` native; not used by default
+    // `walk_recipe` to avoid invalidating semantics for impure recipes.
+    walk_cache: HashMap<NodeID, Value>,
     strs: Vec<String>,
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
@@ -362,6 +370,7 @@ impl Kernel {
             by_shape: HashMap::new(),
             by_id: HashMap::new(),
             source_attr: HashMap::new(),
+            walk_cache: HashMap::new(),
             strs: Vec::new(),
             str_idx: HashMap::new(),
             next_inst: 1,
@@ -869,6 +878,38 @@ impl Kernel {
             let mut sub_arena = Arena::new();
             let env = sub_arena.new_frame(None);
             walk(k, &mut sub_arena, args[0].as_nid(), env)
+        });
+        // walk-cached — JIT-vector memoization. Caller asserts the
+        // recipe is pure (no I/O, no external state). Result cached
+        // by recipe NodeID. Subsequent calls return O(1) from cache
+        // instead of re-walking the tree. Demonstrates the JIT slot:
+        // once a recipe is identified as a hot path (via framebuffer
+        // observation), its result can be cached / pre-compiled.
+        // Real JIT replaces this cache with native machine code; the
+        // architectural shape stays the same.
+        self.register_native("walk-cached", cat_witness(), |k, _, args| {
+            let nid = args[0].as_nid();
+            if let Some(v) = k.walk_cache.get(&nid) {
+                return v.clone();
+            }
+            let mut sub_arena = Arena::new();
+            let env = sub_arena.new_frame(None);
+            let v = walk(k, &mut sub_arena, nid, env);
+            k.walk_cache.insert(nid, v.clone());
+            v
+        });
+        // walk-cache-clear — reset the memoization cache. Use when
+        // the substrate state changes in ways that would invalidate
+        // cached results (e.g. native re-registration).
+        self.register_native("walk-cache-clear", cat_witness(), |k, _, _| {
+            k.walk_cache.clear();
+            Value::Null
+        });
+        // walk-cache-size — number of cached recipes. Useful for
+        // observability — when paired with framebuffer-events, lets
+        // tooling compare "recipes seen" vs "recipes JIT-cached".
+        self.register_native("walk-cache-size", cat_witness(), |k, _, _| {
+            Value::Int(k.walk_cache.len() as i64)
         });
 
         // native_blueprint — read a native's Form category from inside Form.
