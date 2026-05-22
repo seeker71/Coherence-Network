@@ -40,6 +40,8 @@
     (let PYC-CLASS        (make_nodeid 1 2 99 134))   ; (name)
     (let PYC-DOCSTRING    (make_nodeid 1 2 99 135))   ; (text)
     (let PYC-NAME-LIST    (make_nodeid 1 2 99 136))   ; list of name strings
+    (let PYC-DEF-FULL     (make_nodeid 1 2 99 137))   ; (name, params, ret-type)
+    (let PYC-PARAM-LIST   (make_nodeid 1 2 99 138))   ; opaque text for now
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Character-class helpers (codepoints)
@@ -247,6 +249,55 @@
                     (list "sequence" pyc-ident-start
                           (list "star" pyc-ident-cont)))))
 
+    ;; def-with-params: `def NAME (P1: T1, P2: T2) -> RT:`
+    ;;
+    ;; Discipline: parameters and types are read as opaque chars-up-to-
+    ;; matching-paren / chars-up-to-colon. Structural extraction of each
+    ;; param (name, type, default) is a later breath; this rule's job is
+    ;; recognizing the whole shape WITHOUT a tokenizer fighting it.
+    ;;
+    ;; Real-line target: from substrate_strings.py line 61:
+    ;;   def intern_string_instance(session: Session, value: str) -> int:
+
+    (let pyc-not-rparen
+        (list "not" (list "char" ")")))
+
+    (let pyc-not-colon
+        (list "not" (list "char" ":")))
+
+    (let pyc-paren-body
+        (list "star" (list "sequence" pyc-not-rparen (list "any"))))
+
+    (let pyc-return-arrow
+        (list "sequence"
+              pyc-skip-spaces
+              (list "string" "->")
+              pyc-skip-spaces
+              (list "capture" "ret"
+                    (list "star" (list "sequence" pyc-not-colon (list "any"))))))
+
+    (let pyc-def-full-rule
+        (list "sequence"
+              (list "string" "def")
+              (list "sequence" pyc-space-char pyc-skip-spaces)
+              (list "cut")
+              (list "capture" "name"
+                    (list "sequence" pyc-ident-start
+                          (list "star" pyc-ident-cont)))
+              pyc-skip-spaces
+              (list "char" "(")
+              (list "capture" "params" pyc-paren-body)
+              (list "char" ")")
+              (list "opt" pyc-return-arrow)
+              pyc-skip-spaces
+              (list "char" ":")))
+
+    (defn pyc-emit-def-full (caps)
+        (intern_node PYC-DEF-FULL
+                      (list (intern_trivial_string (pyc-cap-get caps "name"))
+                            (intern_trivial_string (pyc-cap-get caps "params"))
+                            (intern_trivial_string (pyc-cap-get caps "ret")))))
+
     ;; def-header: `def NAME ():`
     (let pyc-def-rule
         (list "sequence"
@@ -268,6 +319,7 @@
         (list
             (list "from_import"  pyc-from-import-rule  pyc-emit-from-import)
             (list "multi_import" pyc-multi-import-rule pyc-emit-multi-import)
+            (list "def_full"     pyc-def-full-rule     pyc-emit-def-full)
             (list "def_header"   pyc-def-rule          pyc-emit-def)
             (list "class_decl"   pyc-class-rule        pyc-emit-class)
             (list "docstring"    pyc-docstring-rule    pyc-emit-docstring)))
@@ -287,5 +339,8 @@
 
     (defn parse-py-docstring (text)
         (cm-parse text python-chars-rules "docstring"))
+
+    (defn parse-py-def-full (text)
+        (cm-parse text python-chars-rules "def_full"))
 
     0)

@@ -59,10 +59,35 @@
     ;; "Substrate string-table.\nCross-process stable." = 45
     (let probe-7 (str_len body))
 
-    ;; Sum: 14 + 23 + 22 + 3 + 20 + 18 + 45 = 145
+    ;; Probe 8: def with params + types + return — the literal line
+    ;; from substrate_strings.py:61
+    (let p8 (parse-py-def-full
+              "def intern_string_instance(session: Session, value: str) -> int:"))
+    (let kids-8 (node_children p8))
+    (let dname (node_value (head kids-8)))
+    (let dparams (node_value (head (tail kids-8))))
+    (let dret (node_value (head (tail (tail kids-8)))))
+    ;; name "intern_string_instance" = 22
+    ;; params "session: Session, value: str" = 28
+    ;; ret "int" = 3
+    ;; sum = 53
+    (let probe-8 (add (str_len dname)
+                       (add (str_len dparams) (str_len dret))))
+
+    ;; Probe 9: def with no return annotation (just params)
+    (let p9 (parse-py-def-full "def list_strings(session: Session):"))
+    (let kids-9 (node_children p9))
+    (let dname9 (node_value (head kids-9)))
+    (let dret9 (node_value (head (tail (tail kids-9)))))
+    ;; "list_strings" = 12, ret = "" (no arrow), total = 12
+    (let probe-9 (add (str_len dname9) (str_len dret9)))
+
+    ;; Sum: 145 + 53 + 12 = 210
     (add probe-1
          (add probe-2
               (add probe-3
                    (add probe-4
                         (add probe-5
-                             (add probe-6 probe-7)))))))
+                             (add probe-6
+                                  (add probe-7
+                                       (add probe-8 probe-9))))))))))
