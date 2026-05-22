@@ -1,0 +1,254 @@
+; grammars/markdown-stream.fk — push-style markdown parser using walk-stream
+;
+; Urs's teaching (2026-05-22): "for grammar rules, if each rule can
+; generate cells and place them inside the stream of cells flowing
+; through that keeps the overall footprint minimal and the energy is
+; used for just what is in front of us right now."
+;
+; markdown.fk's parse-blocks cons-accumulates every block into a list
+; then wraps the list inside DOC-DOC. The whole document lives in
+; memory at once after parsing — DOM-style.
+;
+; This sibling collapses the same recognizer into a SAX-style emitter:
+; each block is interned the moment its boundary is found and pushed
+; to a handler callback. No accumulator list, no DOC-DOC wrapper. The
+; parser's working set is one block at a time, independent of stream
+; length.
+;
+; The segmenter walks the source line-by-line and returns the next
+; block's text + next-pos. The encoder dispatches by leading shape
+; (heading / fence / paragraph) into markdown.fk's existing parse-*
+; helpers — same recognition logic, same source attribution, same
+; Blueprint identity. Only the outer loop changes.
+;
+; LOAD ORDER: this file requires markdown.fk loaded first (for the
+; line-helpers, classifiers, and parse-* recipes) and cell-stream.fk
+; (for walk-stream + seg-result builders). The validate harness loads
+; whatever you pass on the command line; tests/markdown-stream.fk
+; brings all three in order.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 1 — line-aware position walking
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The segmenter walks byte-positions in the source string and must
+    ;; report the 1-based line number for each block's first line. We
+    ;; count newlines from BOF to the block's start; cheap enough for
+    ;; the working-set guarantee (no accumulator outlives one block).
+
+    (defn ms-count-newlines-to (s end)
+        (ms-nl-loop s 0 end 1))
+
+    (defn ms-nl-loop (s i end line)
+        (if (ge i end) line
+            (if (eq (ord (char_at s i)) 10)
+                (ms-nl-loop s (add i 1) end (add line 1))
+                (ms-nl-loop s (add i 1) end line))))
+
+    ;; Walk forward from pos to the next newline (or EOF); return the
+    ;; position just AFTER that newline (or EOF). One line consumed.
+
+    (defn ms-skip-line (s pos)
+        (if (ge pos (str_len s)) pos
+            (if (eq (ord (char_at s pos)) 10)
+                (add pos 1)
+                (ms-skip-line s (add pos 1)))))
+
+    ;; The line text between pos and the next newline (or EOF), excluding
+    ;; the trailing newline itself.
+
+    (defn ms-line-text (s pos)
+        (ms-line-text-loop s pos pos))
+
+    (defn ms-line-text-loop (s start i)
+        (if (ge i (str_len s))
+            (substr s start i)
+            (if (eq (ord (char_at s i)) 10)
+                (substr s start i)
+                (ms-line-text-loop s start (add i 1)))))
+
+    ;; Skip leading blank lines from pos; return new pos (may be EOF).
+
+    (defn ms-skip-blanks (s pos)
+        (if (ge pos (str_len s)) pos
+            (if (is-blank-line? (ms-line-text s pos))
+                (ms-skip-blanks s (ms-skip-line s pos))
+                pos)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 2 — block-shape segmenter
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; (markdown-block-segmenter input pos) → seg-result
+    ;;
+    ;; Walks forward from pos:
+    ;;   1. skip blank lines
+    ;;   2. classify the first non-blank line (heading / fence / para)
+    ;;   3. consume exactly that block's lines, return (text, end-pos, line-no)
+    ;;
+    ;; Block text is the substring from block-start to block-end (the
+    ;; raw lines, joined by newlines as they appeared in the source).
+
+    (defn markdown-block-segmenter (input pos)
+        (do
+            (let start (ms-skip-blanks input pos))
+            (if (ge start (str_len input))
+                (mk-eof 0)
+                (do
+                    (let first (ms-line-text input start))
+                    (let line-no (ms-count-newlines-to input start))
+                    (if (is-heading-line? first)
+                        ;; heading = exactly one line
+                        (mk-block first (ms-skip-line input start) line-no)
+                        (if (starts-with-fence? first)
+                            (ms-consume-fence input start line-no)
+                            (ms-consume-paragraph input start line-no)))))))
+
+    ;; Fence: from opening ``` through (and including) the closing ```,
+    ;; or to EOF if no close. Block text = all of those lines, joined.
+
+    (defn ms-consume-fence (input start line-no)
+        (do
+            (let after-open (ms-skip-line input start))
+            (let close-pos (ms-find-fence-close input after-open))
+            (mk-block (substr input start close-pos) close-pos line-no)))
+
+    (defn ms-find-fence-close (input pos)
+        (if (ge pos (str_len input)) pos
+            (if (starts-with-fence? (ms-line-text input pos))
+                (ms-skip-line input pos)
+                (ms-find-fence-close input (ms-skip-line input pos)))))
+
+    ;; Paragraph: consecutive non-blank, non-heading, non-fence lines.
+
+    (defn ms-consume-paragraph (input start line-no)
+        (do
+            (let end (ms-paragraph-end input start))
+            (mk-block (substr input start end) end line-no)))
+
+    (defn ms-paragraph-end (input pos)
+        (if (ge pos (str_len input)) pos
+            (do
+                (let text (ms-line-text input pos))
+                (if (or (is-blank-line? text)
+                        (or (is-heading-line? text)
+                            (starts-with-fence? text)))
+                    pos
+                    (ms-paragraph-end input (ms-skip-line input pos))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 3 — block encoder: classify + intern
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; (markdown-block-encoder block-text source-path line-no) → NodeID
+    ;;
+    ;; The block-text always begins with its first line (heading hashes,
+    ;; opening fence, or first paragraph word). Classify on that first
+    ;; line and dispatch to a small variant of parse-heading / parse-
+    ;; fence / parse-paragraph that operates on the raw block text rather
+    ;; than the pre-tokenized line list. Same Blueprints, same attribution.
+
+    (defn ms-first-line (text)
+        (ms-first-line-loop text 0))
+
+    (defn ms-first-line-loop (text i)
+        (if (ge i (str_len text)) text
+            (if (eq (ord (char_at text i)) 10)
+                (substr text 0 i)
+                (ms-first-line-loop text (add i 1)))))
+
+    (defn ms-rest-after-first-line (text)
+        (ms-rest-loop text 0))
+
+    (defn ms-rest-loop (text i)
+        (if (ge i (str_len text)) ""
+            (if (eq (ord (char_at text i)) 10)
+                (substr text (add i 1) (str_len text))
+                (ms-rest-loop text (add i 1)))))
+
+    (defn ms-encode-heading (first source-path line-no)
+        (do
+            (let level (count-hashes first 0))
+            (let content (trim-whitespace
+                            (substr first (add level 1) (str_len first))))
+            (intern_node_at DOC-HEADING
+                            (list (intern_trivial_int level)
+                                  (intern_trivial_string content))
+                            source-path line-no 1)))
+
+    (defn ms-encode-fence (block-text first source-path line-no)
+        (do
+            (let lang (trim-whitespace
+                          (substr first 3 (str_len first))))
+            (let body (ms-rest-after-first-line block-text))
+            ;; body still carries the trailing fence + maybe a trailing
+            ;; newline; strip both for parity with parse-fence's content.
+            (let stripped (ms-strip-trailing-fence body))
+            (intern_node_at DOC-CODE-BLOCK
+                            (list (intern_trivial_string lang)
+                                  (intern_trivial_string stripped))
+                            source-path line-no 1)))
+
+    (defn ms-strip-trailing-fence (s)
+        (do
+            (let trimmed (trim-trailing-ws s))
+            (let n (str_len trimmed))
+            (if (and (ge n 3)
+                     (and (eq (ord (char_at trimmed (sub n 3))) 96)
+                          (and (eq (ord (char_at trimmed (sub n 2))) 96)
+                               (eq (ord (char_at trimmed (sub n 1))) 96))))
+                (trim-trailing-ws (substr trimmed 0 (sub n 3)))
+                trimmed)))
+
+    (defn ms-encode-paragraph (block-text source-path line-no)
+        (do
+            (let joined (ms-join-paragraph block-text))
+            (intern_node_at DOC-PARAGRAPH
+                            (list (intern_trivial_string joined))
+                            source-path line-no 1)))
+
+    ;; Paragraph lines join with a single space (parity with parse-
+    ;; paragraph's join-line-texts).
+    (defn ms-join-paragraph (s)
+        (ms-join-loop s 0 0 ""))
+
+    (defn ms-join-loop (s i start acc)
+        (if (ge i (str_len s))
+            (if (gt i start)
+                (if (eq (str_len acc) 0)
+                    (substr s start i)
+                    (str_concat acc (str_concat " " (substr s start i))))
+                acc)
+            (if (eq (ord (char_at s i)) 10)
+                (do
+                    (let line (substr s start i))
+                    (let next-acc
+                        (if (eq (str_len acc) 0) line
+                            (str_concat acc (str_concat " " line))))
+                    (ms-join-loop s (add i 1) (add i 1) next-acc))
+                (ms-join-loop s (add i 1) start acc))))
+
+    (defn markdown-block-encoder (block-text source-path line-no)
+        (do
+            (let first (ms-first-line block-text))
+            (if (is-heading-line? first)
+                (ms-encode-heading first source-path line-no)
+                (if (starts-with-fence? first)
+                    (ms-encode-fence block-text first source-path line-no)
+                    (ms-encode-paragraph block-text source-path line-no)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Part 4 — top-level push entry
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; (parse-markdown-stream source-path text init-state handler) → final-state
+    ;;
+    ;; handler: (state cell) → new-state. Each block-cell is delivered
+    ;; exactly once, in source order. No DOC-DOC wrapper is created;
+    ;; the document IS the sequence of handler calls.
+
+    (defn parse-markdown-stream (source-path text init-state handler)
+        (walk-stream text
+                     markdown-block-segmenter
+                     markdown-block-encoder
+                     source-path
+                     init-state
+                     handler))
+)
