@@ -832,6 +832,22 @@ func (k *Kernel) registerNatives() {
 			{Kind: VInt, Int: int64(loc.Col)},
 		}}
 	})
+	// framebuffer-events — return all NodeIDs with source attribution.
+	// The source_attr side-map IS the framebuffer. Observer-side
+	// tracing: emitter pays one hashmap insert per intern_node_at;
+	// observer pays the cost of walking this list when it analyzes.
+	k.registerNative("framebuffer-events", catWitness(), func(k *Kernel, _ []Value) Value {
+		out := make([]Value, 0, len(k.sourceAttr))
+		for nid := range k.sourceAttr {
+			out = append(out, Value{Kind: VNodeID, Nid: nid})
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// framebuffer-clear — reset the framebuffer for bounded windows.
+	k.registerNative("framebuffer-clear", catWitness(), func(k *Kernel, _ []Value) Value {
+		k.sourceAttr = make(map[NodeID]sourceLoc)
+		return Value{Kind: VNull}
+	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)

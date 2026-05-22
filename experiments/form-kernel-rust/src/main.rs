@@ -808,6 +808,25 @@ impl Kernel {
                 None => Value::List(vec![]),
             }
         });
+        // framebuffer-events — return all NodeIDs that have source
+        // attribution recorded. The substrate's source_attr side-map
+        // IS the framebuffer: every intern_node_at write becomes a
+        // discoverable trace event. Observer-side tracing: the
+        // EMITTER pays only the side-map write (~O(1)); the OBSERVER
+        // pays the cost of walking + filtering this list when it
+        // wants to analyze hot-spots or flow.
+        self.register_native("framebuffer-events", cat_witness(), |k, _, _| {
+            Value::List(
+                k.source_attr.keys().copied().map(Value::Nid).collect()
+            )
+        });
+        // framebuffer-clear — reset the framebuffer. Useful for
+        // bounded observation windows (subscribe → do work →
+        // analyze → clear → next window).
+        self.register_native("framebuffer-clear", cat_witness(), |k, _, _| {
+            k.source_attr.clear();
+            Value::Null
+        });
         // walk_recipe — evaluate a NodeID in a fresh root frame. Returns
         // the value the recipe produces. Use case: Form code builds a
         // recipe via intern_node, then walks it to get the runtime result.

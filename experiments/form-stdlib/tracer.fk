@@ -1,0 +1,126 @@
+; tracer.fk — observer-side trace analysis on the framebuffer
+;
+; The goal's tracing piece: "minimal tracing overhead that put the
+; tracing cost on the observer / tracer not the tracing emitting
+; recipe coordinates (optionally) into the memory substrate
+; (framebuffer) that can be used for hot-spot and flow analysis."
+;
+; The framebuffer IS the source_attr side-map in the kernel. The
+; emitter pays ONE hashmap insert per `intern_node_at` call (already
+; the existing cost — no new overhead). Observers pay the cost of
+; walking `framebuffer-events` and aggregating when they want
+; analysis. Zero-observer flows pay nothing beyond the side-map
+; write that was already happening.
+;
+; This file provides the observer vocabulary:
+;   - hotspots: which source lines authored the most cells?
+;   - flow: ordered sequence of cell creations in this observation window
+;   - with-trace: window helper — clear, do work, return events
+;   - count-by-file: aggregate by source file
+;   - count-by-line: aggregate by source (file:line)
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; with-trace: bounded observation window
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Clear the framebuffer, run the work-recipe, return the events
+    ;; that were emitted during it. Caller analyzes the returned list.
+    ;;
+    ;; Usage:
+    ;;   (let events (with-trace (fn (_) (parse-markdown "foo.md" text))))
+    ;;   (let hot (hotspots events))
+
+    (defn with-trace (work-fn)
+        (do
+            (framebuffer-clear)
+            (work-fn 0)
+            (framebuffer-events)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; count-by-file: aggregate cell-count per source file
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; For each cell in events, pull its node_source (file, line, col),
+    ;; group by file, return list of (file, count) pairs.
+
+    (defn cell-file (cell)
+        (do
+            (let src (node_source cell))
+            (if (nil? src) "" (head src))))
+
+    (defn cell-line (cell)
+        (do
+            (let src (node_source cell))
+            (if (nil? src) 0 (head (tail src)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; bucket: simple associative list of (key, count)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Caller folds events into a bucket via bucket-add. bucket-get
+    ;; looks up a key. bucket-keys returns just the keys.
+
+    (defn bucket-empty (_x) (empty))
+
+    (defn bucket-add (bucket key)
+        (bucket-add-loop bucket key (empty)))
+
+    (defn bucket-add-loop (bucket key seen)
+        (if (nil? bucket)
+            ;; key not found — add fresh entry with count 1
+            (reverse-acc-list (cons (list key 1) seen))
+            (do
+                (let entry (head bucket))
+                (if (str_eq (head entry) key)
+                    ;; increment this entry's count, append rest unchanged
+                    (concat-lists
+                        (reverse-acc-list seen)
+                        (cons (list key (add (head (tail entry)) 1))
+                              (tail bucket)))
+                    (bucket-add-loop (tail bucket) key (cons entry seen))))))
+
+    (defn reverse-acc-list (xs)
+        (if (nil? xs) (empty)
+            (concat-lists (reverse-acc-list (tail xs)) (list (head xs)))))
+
+    (defn concat-lists (a b)
+        (if (nil? a) b
+            (cons (head a) (concat-lists (tail a) b))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; count-by-file: fold events into file-keyed bucket
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn count-by-file-step (bucket cell)
+        (bucket-add bucket (cell-file cell)))
+
+    (defn count-by-file (events)
+        (foldl count-by-file-step (empty) events))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; hotspots: top file by count
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Returns (file, count) for the file with the most cells.
+
+    (defn hot-max-step (current entry)
+        (if (gt (head (tail entry)) (head (tail current)))
+            entry current))
+
+    (defn hotspots (events)
+        (do
+            (let buckets (count-by-file events))
+            (if (nil? buckets) (list "" 0)
+                (foldl hot-max-step (head buckets) (tail buckets)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; flow: ordered list of source-strings for each event
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Maps each event to its "file:line:col" source string. Useful
+    ;; for replaying the order of cell creations.
+
+    (defn flow-source (cell)
+        (cell-source cell))   ; from cell-trace.fk
+
+    (defn flow (events)
+        (if (nil? events) (empty)
+            (cons (flow-source (head events))
+                  (flow (tail events)))))
+)

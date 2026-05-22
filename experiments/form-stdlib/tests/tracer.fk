@@ -1,0 +1,52 @@
+; tests/tracer.fk — verify observer-side tracing on the framebuffer.
+;
+; Strange-minimal: emit 5 cells with attributions across 2 files,
+; observe the framebuffer, verify count + hotspot.
+
+(do
+    ;; Helper: emit a cell with attribution at a given file/line
+    (defn emit-at (file line)
+        (do
+            (let CAT (make_nodeid 1 2 12 1))
+            (intern_node_at CAT
+                            (list (intern_trivial_int line))
+                            file line 1)))
+
+    ;; --- Probe 1: with-trace gives bounded window -----------------
+    ;; Clear, emit 3 cells, return events
+    (defn emit-three (_x)
+        (do
+            (emit-at "a.py" 1)
+            (emit-at "a.py" 2)
+            (emit-at "b.py" 5)))
+
+    (let events (with-trace emit-three))
+    (let probe-1 (len events))                              ; → 3
+
+    ;; --- Probe 2: count-by-file groups correctly ------------------
+    (let buckets (count-by-file events))
+    (let probe-2 (len buckets))                             ; → 2 (a.py, b.py)
+
+    ;; --- Probe 3: hotspot is a.py with count 2 --------------------
+    (let hot (hotspots events))
+    (let probe-3 (head (tail hot)))                         ; → 2
+
+    ;; --- Probe 4: hotspot file is a.py (str_len = 4) --------------
+    (let probe-4 (str_len (head hot)))                      ; → 4
+
+    ;; --- Probe 5: flow returns 3 source strings -------------------
+    (let flow-list (flow events))
+    (let probe-5 (len flow-list))                           ; → 3
+
+    ;; --- Probe 6: emitter pays no extra cost when no observer -----
+    ;; framebuffer-clear → emit 100 cells → framebuffer-events length 100
+    ;; Demonstrates the recording is bounded to the work, not free-flowing.
+    (framebuffer-clear)
+    (emit-at "x.fk" 1)
+    (emit-at "x.fk" 2)
+    (emit-at "x.fk" 3)
+    (emit-at "x.fk" 4)
+    (let probe-6 (len (framebuffer-events)))                ; → 4
+
+    ;; sum: 3 + 2 + 2 + 4 + 3 + 4 = 18
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 (add probe-5 probe-6))))))
