@@ -84,6 +84,19 @@ def recipe_to_form(session: Session, nid: NodeID) -> str:
         if cat.instance == 1:
             return f"(if {kids[0]} then {kids[1]})"
         return f"(if {kids[0]} then {kids[1]} else {kids[2]})"
+    if cat.type_ == RBasic.BLOCK.value:
+        # RBlock instances: 1=DO, 2=SEQUENCE, 3=LET, 4=WITH
+        if cat.instance == 1:
+            body = "; ".join(kids)
+            return f"do {{ {body} }}"
+        if cat.instance == 2:
+            return "; ".join(kids)
+        if cat.instance == 3:
+            if len(kids) == 2:
+                return f"let {kids[0]} = {kids[1]}"
+            return "let (" + ", ".join(kids) + ")"
+        if cat.instance == 4:
+            return f"with {kids[0]} {{ {kids[1]} }}"
     raise NotImplementedError(
         f"recipe_to_form: verb-category {cat} not yet covered. "
         f"Add one elif arm matching the RBasic.<verb>.value."
