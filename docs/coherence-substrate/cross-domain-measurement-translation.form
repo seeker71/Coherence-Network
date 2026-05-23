@@ -1,0 +1,196 @@
+# cross-domain-measurement-translation.form -- measurable release across carriers
+#
+# Companion to specs/cross-domain-measurement-translation-record.md.
+#
+# The record keeps native measurements honest while making qualitative
+# comparison across domains reversible, traceable, inspectable, and
+# publicly verifiable. The observer who asks for the comparison pays
+# the trace cost.
+
+# ---------------------------------------------------------------------
+# Part 1 -- native measurement
+# ---------------------------------------------------------------------
+
+form native_measurement_shape = {
+    carrier:          ~String,   # light | source | cells | information | insight | nutrition | fertilizer | ...
+    quantity:         ~String,   # the observed value in native terms
+    unit:             ~String,   # lux | commit | bpm | kcal | NPK | byte | count | ...
+    instrument:       ~String,   # sensor, command, assay, witness trace, human observation protocol
+    observed_at:      ~String,
+    evidence:         [~String],
+    uncertainty:      ~String,
+};
+
+defn native_measurement(
+    carrier,
+    quantity,
+    unit,
+    instrument,
+    observed_at,
+    evidence,
+    uncertainty
+) =
+    native_measurement_shape {
+        carrier:     carrier,
+        quantity:    quantity,
+        unit:        unit,
+        instrument:  instrument,
+        observed_at: observed_at,
+        evidence:    evidence,
+        uncertainty: uncertainty,
+    };
+
+# ---------------------------------------------------------------------
+# Part 2 -- translation record
+# ---------------------------------------------------------------------
+
+form cross_domain_measurement_translation_shape = {
+    id:                   ~String,
+    observer:             ~String,
+    verifier:             ~String,
+    resonance_event:      ~String,
+    native_measurements:  [native_measurement_shape],
+    source_domain:        ~String,
+    target_domain:        ~String,
+    translation_recipe:   ~String,
+    preserved:            [~String],
+    lost_or_distorted:    [~String],
+    confidence:           ~String,
+    observer_cost:        ~String,
+    verifier_cost:        ~String,
+    public_trace:         [~String],
+    comparable_output:    ~String,
+    replay_instructions:  [~String],
+};
+
+defn cross_domain_measurement_translation_record(
+    id,
+    observer,
+    verifier,
+    resonance_event,
+    native_measurements,
+    source_domain,
+    target_domain,
+    translation_recipe,
+    preserved,
+    lost_or_distorted,
+    confidence,
+    observer_cost,
+    verifier_cost,
+    public_trace,
+    comparable_output,
+    replay_instructions
+) =
+    cross_domain_measurement_translation_shape {
+        id:                  id,
+        observer:            observer,
+        verifier:            verifier,
+        resonance_event:     resonance_event,
+        native_measurements: native_measurements,
+        source_domain:       source_domain,
+        target_domain:       target_domain,
+        translation_recipe:  translation_recipe,
+        preserved:           preserved,
+        lost_or_distorted:   lost_or_distorted,
+        confidence:          confidence,
+        observer_cost:       observer_cost,
+        verifier_cost:       verifier_cost,
+        public_trace:        public_trace,
+        comparable_output:   comparable_output,
+        replay_instructions: replay_instructions,
+    };
+
+# ---------------------------------------------------------------------
+# Part 3 -- comparability rule
+# ---------------------------------------------------------------------
+
+defn translation_comparability_rule(record) =
+    [
+        "native measurements remain in native units",
+        "translation recipe is named before comparison",
+        "preserved dimensions are explicit",
+        "lost or distorted dimensions are explicit",
+        "observer cost and verifier cost are recorded",
+        "public trace lets another verifier replay or challenge the comparison",
+        "comparable output is qualitative unless a shared unit is proven",
+    ];
+
+# ---------------------------------------------------------------------
+# Part 4 -- example records
+# ---------------------------------------------------------------------
+
+defn light_to_plant_release_example = cross_domain_measurement_translation_record(
+    "light-to-plant-release-example",
+    "observer:field-tender",
+    "verifier:public-reader",
+    "morning sun reaches a shaded leaf after canopy pruning",
+    [
+        native_measurement(
+            "light",
+            "740",
+            "lux",
+            "lux meter at leaf surface",
+            "2026-05-23T08:30:00+08:00",
+            ["photo receipt", "lux reading", "canopy-change note"],
+            "single-point reading; weather and angle affect repeatability"
+        ),
+        native_measurement(
+            "plant",
+            "new growth visible",
+            "qualitative growth marker",
+            "repeat photo protocol",
+            "2026-05-30T08:30:00+08:00",
+            ["before photo", "after photo"],
+            "growth has multiple causes; light is one traced contributor"
+        ),
+    ],
+    "light",
+    "plant-vitality",
+    "available-light-release-to-growth-opportunity",
+    ["blocked potential became available", "carrier changed from photons to growth condition"],
+    ["exact biochemical uptake", "other soil and water contributors"],
+    "medium",
+    "meter reading, photo capture, one-week follow-up",
+    "repeat readings and inspect photo trace",
+    ["public photo pair", "meter reading", "timestamped pruning note"],
+    "resonance released usable light into plant growth conditions",
+    ["repeat lux reading at the same point", "compare photos", "inspect weather notes"]
+);
+
+defn insight_to_commit_release_example = cross_domain_measurement_translation_record(
+    "insight-to-commit-release-example",
+    "observer:codex",
+    "verifier:repo-reviewer",
+    "cross-domain measurement contract becomes clear enough to write",
+    [
+        native_measurement(
+            "insight",
+            "translation contract named",
+            "written synthesis",
+            "conversation trace",
+            "2026-05-23T00:00:00+08:00",
+            ["thread exchange", "spec file"],
+            "insight strength inferred from follow-through"
+        ),
+        native_measurement(
+            "source",
+            "spec and Form record created",
+            "commit/file count",
+            "git diff",
+            "2026-05-23T00:00:00+08:00",
+            ["git diff", "validation commands"],
+            "commit count measures expression, not total value"
+        ),
+    ],
+    "insight",
+    "source",
+    "implicit-knowing-to-executable-contract",
+    ["stuck potential became source tissue", "public replay path exists"],
+    ["private felt sense", "unwritten alternatives"],
+    "high",
+    "attention, writing, validation",
+    "read spec, run validation, inspect diff",
+    ["spec path", "form path", "commit evidence"],
+    "resonance released insight into inspectable source form",
+    ["read source trace", "run spec quality gate", "inspect evidence record"]
+);
