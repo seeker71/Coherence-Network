@@ -1,0 +1,95 @@
+{
+  "date": "2026-05-23",
+  "thread_branch": "codex/cross-domain-measurement-translation-20260523",
+  "commit_scope": "Add the cross-domain measurement translation record spec and Form shape.",
+  "files_owned": [
+    "docs/coherence-substrate/cross-domain-measurement-translation.form",
+    "docs/coherence-substrate/INDEX.md",
+    "ideas/knowledge-and-resonance.md",
+    "specs/cross-domain-measurement-translation-record.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-23_cross_domain_measurement_translation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/validate_spec_quality.py --file specs/cross-domain-measurement-translation-record.md",
+      "python3 scripts/context_budget.py specs/cross-domain-measurement-translation-record.md docs/coherence-substrate/cross-domain-measurement-translation.form",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/coh_substrate.py ingest-paths specs/cross-domain-measurement-translation-record.md docs/coherence-substrate/cross-domain-measurement-translation.form",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_cross_domain_measurement_translation.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The new spec defines a native measurement record and a cross-domain translation record that preserves carrier-native units, names translation recipes, records loss and uncertainty, charges observer/verifier cost, and requires replayable public traces before verification claims. The companion Form file carries the same shape plus light-to-plant and insight-to-source examples. Edges landed through the substrate index, parent idea, generated specs index, and substrate ingest."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation for the spec artifact passed; CI and deploy validation remain pending until PR flow."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "specs/cross-domain-measurement-translation-record.md"
+  ],
+  "task_ids": [
+    "cross-domain-measurement-translation-20260523"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "measurement-carrier-definition",
+        "verification-economics"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec-authoring",
+        "form-record-shaping",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/cross-domain-measurement-translation.form",
+    "docs/vision-kb/concepts/lc-observable-resonance-flow.md",
+    "docs/vision-kb/concepts/lc-observer-pays-the-trace.md",
+    "docs/coherence-substrate/observable-resonance-flow.form",
+    "docs/coherence-substrate/anything-arrives-trace.form",
+    "python3 scripts/validate_spec_quality.py --file specs/cross-domain-measurement-translation-record.md",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "make wellness"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/cross-domain-measurement-translation.form",
+    "docs/coherence-substrate/INDEX.md",
+    "ideas/knowledge-and-resonance.md",
+    "specs/cross-domain-measurement-translation-record.md",
+    "specs/INDEX.md"
+  ],
+  "change_intent": "docs_only"
+}
