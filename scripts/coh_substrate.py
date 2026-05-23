@@ -115,7 +115,12 @@ _INGESTERS = {
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    structured = getattr(args, "structured", False)
+    # Structured-CTOR is the default — CLAUDE.md "New ingest holds the
+    # discipline by default; --flat is the explicit opt-out." The wellness
+    # check has shown 100% of cells with CTORs are structured; this CLI
+    # default now matches that reality. `--structured` remains accepted as
+    # a no-op for backward compat with existing call sites.
+    structured = not getattr(args, "flat", False)
     if args.all:
         rc = 0
         for domain in (
@@ -506,9 +511,18 @@ def main(argv: list[str] | None = None) -> int:
         "--structured",
         action="store_true",
         help=(
-            "Use the composition-discipline structured encoders "
-            "(named-pair LET CTORs + cell-ref/resonance edges authored from "
-            "frontmatter). See docs/coherence-substrate/structural-composition.md."
+            "DEPRECATED no-op: structured is now the default. "
+            "Retained for backward compat with existing call sites. "
+            "Use --flat to opt out of the composition-discipline encoders."
+        ),
+    )
+    p_ingest.add_argument(
+        "--flat",
+        action="store_true",
+        help=(
+            "Opt out of the composition-discipline encoders (CTOR carries "
+            "type-fingerprints only, no values). Used when testing the legacy "
+            "encoding path. See docs/coherence-substrate/structural-composition.md."
         ),
     )
 

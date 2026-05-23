@@ -152,7 +152,8 @@ become clearer. The migration is complete only when:
 3. Docs that show literal category NodeIDs are updated.
 4. The local substrate tables are reset and backfilled from source files:
    `python3 scripts/coh_substrate.py reset --yes` followed by the relevant
-   `python3 scripts/coh_substrate.py ingest ... --structured` commands.
+   `python3 scripts/coh_substrate.py ingest ...` commands (structured-CTOR
+   is the default since 2026-05-23).
 5. `kb-sync-audit --strict` passes against the rebuilt substrate.
 
 The source files are the living tissue. The substrate database is the
