@@ -5,8 +5,29 @@ stage: implementing
 work_type: feature
 pillar: pipeline
 specs:
-  - [unified-agent-cli-flow-patch-on-fail](../specs/unified-agent-cli-flow-patch-on-fail.md)
-  - [agent-execution-lifecycle-hooks](../specs/agent-execution-lifecycle-hooks.md)
+  - unified-agent-cli-flow-patch-on-fail
+  - agent-execution-lifecycle-hooks
+capabilities:
+  - id: coherence-cli-npm
+    title: coherence-cli (npm)
+    description: 35+ commands covering identity, ideas, staking, forking, contributions, ops, and diagnostics. Zero external dependencies beyond Node.js. Works against the public API or a local dev server.
+    surface: cli
+    resonance: 528
+  - id: mcp-server
+    title: MCP server
+    description: 20 typed tools for Claude, Cursor, Windsurf, and other MCP-compatible agents. Tools cover ideas, specs, lineage, identity, and contributions. Each tool has a JSON schema for inputs and outputs.
+    surface: mcp
+    resonance: 528
+  - id: unified-agent-cli-flow
+    title: Unified agent CLI flow (patch-on-fail)
+    description: When a task fails verification, the CLI generates a targeted PATCH (not a full retry) based on the failure diagnostics. Breaks the retry-fail-retry loop.
+    surface: cli
+    resonance: 417
+  - id: agent-execution-lifecycle-hooks
+    title: Agent execution lifecycle hooks
+    description: Pre-execute, post-execute, and on-fail hooks. Validate preconditions, record contributions, capture diagnostics. Composable and task-type-aware.
+    surface: hooks
+    resonance: 639
 ---
 
 # Agent CLI

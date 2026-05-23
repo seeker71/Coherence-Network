@@ -1241,9 +1241,18 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
             return len(_node_children(session, target))
         if field == "value":
             return _trivial_value(session, target)
+        # Fall through to structured-CTOR field-by-name access on a Recipe.
+        # A R_Block.DO whose children are R_Block.LET (the structured-CTOR
+        # shape) walks by key name. This lets the runtime navigate nested
+        # structured frontmatter — `cell.capabilities.children[0].title`
+        # works without explicit walking once both layers fall through.
+        ctor_value = _ctor_field_lookup(session, target, field)
+        if ctor_value is not None:
+            return ctor_value
         raise AttributeError(
             f"Form runtime: NodeID has no field {field!r} "
-            f"(try: package, level, type, instance, category, children, nchildren, value)"
+            f"(try: package, level, type, instance, category, children, "
+            f"nchildren, value, or any LET-binding key in a structured CTOR)"
         )
 
     raise TypeError(
