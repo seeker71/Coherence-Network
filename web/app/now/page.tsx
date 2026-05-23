@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { LiveWitness } from "./LiveWitness";
 
 export const metadata: Metadata = {
   title: "Now — the breath",
@@ -40,13 +41,6 @@ async function loadBreath(): Promise<BreathNow | null> {
   } catch {
     return null;
   }
-}
-
-function witnessColor(overall: string | null): string {
-  if (overall === "breathing") return "text-emerald-300";
-  if (overall === "strained") return "text-amber-300";
-  if (overall === "silent") return "text-rose-300";
-  return "text-muted-foreground";
 }
 
 function Section({
@@ -126,28 +120,7 @@ export default async function NowPage() {
         </p>
       </section>
 
-      <section className="my-8 rounded-lg border border-border/30 bg-card/20 px-4 py-3 text-sm">
-        <span className="text-muted-foreground">Witness — </span>
-        <span className={`font-medium ${witnessColor(breath.witness.overall)}`}>
-          {breath.witness.overall ?? "unreachable"}
-        </span>
-        {breath.witness.silences != null && (
-          <span className="text-muted-foreground">
-            {" · "}silences: {breath.witness.silences}
-          </span>
-        )}
-        {breath.witness.strained_organs.length > 0 && (
-          <span className="text-muted-foreground">
-            {" · "}straining:{" "}
-            <span className="text-amber-300">
-              {breath.witness.strained_organs.join(", ")}
-            </span>
-          </span>
-        )}
-        <span className="text-muted-foreground">
-          {" · "}source: {breath.witness.source}
-        </span>
-      </section>
+      <LiveWitness initial={breath.witness} />
 
       <Section
         heading="Substances arriving"

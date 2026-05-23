@@ -1,14 +1,17 @@
 """Breath surface — the body's present-tense felt voice, observable to any cell."""
 from __future__ import annotations
 
+import asyncio
+import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 
 import httpx
 import yaml
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
@@ -147,6 +150,61 @@ async def breath_now() -> dict[str, Any]:
         "open_placements": _extract_bullets(sections.get("Open placements", "")),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+_STREAM_INTERVAL_SECONDS = 5.0   # how often we re-read the witness
+_STREAM_KEEPALIVE_SECONDS = 25.0  # comment heartbeat — Cloudflare idle is 100s
+
+
+async def _witness_stream(request: Request) -> AsyncIterator[bytes]:
+    """Emit witness state as SSE — one event per cycle, with keepalive comments.
+
+    The browser sees: snapshot now, then any change as it arrives. Cloudflare's
+    100s idle timeout is held off by emitting a `: keepalive` comment every
+    25s when the witness is quiet.
+    """
+    last_witness_key: str | None = None
+    last_emit = 0.0
+    loop = asyncio.get_event_loop()
+    first = True
+
+    while True:
+        if await request.is_disconnected():
+            return
+
+        witness = await _fetch_witness()
+        # Compare only the witness body — the timestamp must not gate emits,
+        # or every cycle would look different and the change-detection collapses.
+        witness_key = json.dumps(witness, sort_keys=True, separators=(",", ":"))
+
+        now = loop.time()
+        if first or witness_key != last_witness_key:
+            payload = json.dumps({
+                "witness": witness,
+                "at": datetime.now(timezone.utc).isoformat(),
+            }, separators=(",", ":"))
+            yield f"event: witness\ndata: {payload}\n\n".encode("utf-8")
+            last_witness_key = witness_key
+            last_emit = now
+            first = False
+        elif now - last_emit >= _STREAM_KEEPALIVE_SECONDS:
+            yield b": keepalive\n\n"
+            last_emit = now
+
+        await asyncio.sleep(_STREAM_INTERVAL_SECONDS)
+
+
+@router.get("/breath/stream", summary="Live witness stream (Server-Sent Events)")
+async def breath_stream(request: Request) -> StreamingResponse:
+    return StreamingResponse(
+        _witness_stream(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",  # ask nginx/Traefik not to buffer
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @router.get("/breath/history", summary="Past breath compositions")
