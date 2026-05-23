@@ -35,6 +35,7 @@ from app.services.substrate import (  # noqa: E402
     form_serialize_cell,
     form_serialize_node_id,
     ingest_concept_file,
+    ingest_git_artifact,
     ingest_guide_file,
     ingest_idea_file,
     ingest_kb_page_file,
@@ -116,6 +117,14 @@ _INGESTERS = {
 
 def cmd_ingest(args: argparse.Namespace) -> int:
     structured = getattr(args, "structured", False)
+    if getattr(args, "artifacts", False):
+        globs = args.paths if args.paths else _ARTIFACT_DEFAULT_GLOBS
+        resolved = _resolve_artifact_paths(globs)
+        if not resolved:
+            print(f"artifacts: no files matched {globs}", file=sys.stderr)
+            return 1
+        print(f"Ingesting {len(resolved)} artifact files [{', '.join(globs)}]")
+        return _ingest_artifact_paths(resolved)
     if args.all:
         rc = 0
         for domain in (
@@ -166,18 +175,111 @@ def _ingest_files(paths: list[Path], *, structured: bool = False) -> int:
             if not path.exists() or path.is_dir():
                 print(f"  skip (not a file): {path}", file=sys.stderr)
                 continue
-            if path.suffix != ".md":
-                print(f"  skip (not .md): {path}", file=sys.stderr)
-                continue
-            domain = _domain_for_path(path)
-            ingester = _INGESTERS.get(domain or "memory", _INGESTERS["memory"])[1]
-            cell, bp_id, ctor_id = ingester(session, path, structured=structured)
-            print(
-                f"  [{domain or 'memory'}] {path.name}: "
-                f"cell_id={cell.cell_id} blueprint={bp_id}"
-            )
+            if path.suffix == ".md":
+                domain = _domain_for_path(path)
+                ingester = _INGESTERS.get(domain or "memory", _INGESTERS["memory"])[1]
+                cell, bp_id, ctor_id = ingester(session, path, structured=structured)
+                print(
+                    f"  [{domain or 'memory'}] {path.name}: "
+                    f"cell_id={cell.cell_id} blueprint={bp_id}"
+                )
+            else:
+                cell, bp_id, _ctor = _ingest_one_artifact(session, path)
+                print(
+                    f"  [artifact] {path.name}: "
+                    f"cell_id={cell.cell_id} blueprint={bp_id}"
+                )
         session.commit()
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Artifact ingest — non-.md files via the ARTIFACT domain
+# ---------------------------------------------------------------------------
+#
+# ingest_git_artifact wants (path, content_hash, size_bytes, mtime). The hash
+# is a stable identity input — re-ingesting the same file content returns the
+# same cell. Truncated to 16 chars by body convention; see _ARTIFACT_KIND_HZ
+# in markdown_frontend.py for the kind→Hz mapping.
+
+
+def _artifact_content_hash(path: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()[:16]
+
+
+def _ingest_one_artifact(session, path: Path):
+    """Ingest a single non-.md path as an ARTIFACT cell.
+
+    Stores `source_path` as the repo-relative path so annotate_path() and
+    /api/substrate/annotate find it under the same name the body uses to
+    refer to it.
+    """
+    try:
+        rel = path.resolve().relative_to(REPO_ROOT)
+    except ValueError:
+        rel = path
+    rel_str = str(rel).replace("\\", "/")
+    stat = path.stat()
+    return ingest_git_artifact(
+        session,
+        path=rel_str,
+        content_hash=_artifact_content_hash(path),
+        size_bytes=stat.st_size,
+        mtime=stat.st_mtime,
+    )
+
+
+# Repo-relative globs the body considers "page-substrate territory" — every
+# Next.js page, every API router, every form runtime. Added here so a single
+# `ingest --artifacts` backfills the surfaces a SubstrateBadge wants to find.
+_ARTIFACT_DEFAULT_GLOBS: list[str] = [
+    "web/app/**/page.tsx",
+    "web/app/**/layout.tsx",
+    "web/components/**/*.tsx",
+    "web/lib/**/*.ts",
+    "api/app/routers/*.py",
+    "api/app/services/*.py",
+]
+
+
+def _resolve_artifact_paths(globs: list[str]) -> list[Path]:
+    """Expand globs against REPO_ROOT, return existing files only."""
+    out: list[Path] = []
+    seen: set[str] = set()
+    for pattern in globs:
+        for p in REPO_ROOT.glob(pattern):
+            if not p.is_file():
+                continue
+            key = str(p.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(p)
+    return sorted(out)
+
+
+def _ingest_artifact_paths(paths: list[Path]) -> int:
+    success = fail = 0
+    with session_scope() as session:
+        for path in paths:
+            try:
+                cell, bp_id, _ctor = _ingest_one_artifact(session, path)
+                success += 1
+                if success <= 3 or success % 25 == 0:
+                    rel = path.resolve().relative_to(REPO_ROOT)
+                    print(f"  [{success}] {rel}: bp={bp_id}")
+            except Exception as exc:  # noqa: BLE001
+                fail += 1
+                print(f"  ! failed {path}: {exc}", file=sys.stderr)
+        session.commit()
+    print(f"artifacts: {success} ingested, {fail} failed")
+    return 0 if fail == 0 else 1
 
 
 def _domain_for_path(path: Path) -> str | None:
@@ -502,6 +604,15 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--language-views", action="store_true")
     p_ingest.add_argument("--kb-pages", action="store_true")
     p_ingest.add_argument("--all", action="store_true", help="Backfill all substrate markdown domains")
+    p_ingest.add_argument(
+        "--artifacts",
+        action="store_true",
+        help=(
+            "Ingest non-.md source files as ARTIFACT cells. With no paths, "
+            "walks page.tsx + routers/services + lib defaults so /api/substrate/page "
+            "can annotate any web route or API router. Pass explicit globs as paths."
+        ),
+    )
     p_ingest.add_argument(
         "--structured",
         action="store_true",
@@ -1729,24 +1840,34 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
-            if not path.exists() or path.is_dir() or path.suffix != ".md":
+            if not path.exists() or path.is_dir():
                 skipped += 1
                 continue
-            domain = _domain_for_path(path)
-            if domain is None:
-                skipped += 1
-                continue
-            try:
-                # Resolve to absolute so source_path stays consistent across
-                # callers (the hook, manual annotate, the file-only path).
-                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
-                    session, path.resolve(), structured=structured
-                )
-                success += 1
-                print(f"  [{domain}] {path.name}: bp={bp_id}")
-            except Exception as exc:
-                failed += 1
-                print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
+            if path.suffix == ".md":
+                domain = _domain_for_path(path)
+                if domain is None:
+                    skipped += 1
+                    continue
+                try:
+                    cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
+                        session, path.resolve(), structured=structured
+                    )
+                    success += 1
+                    print(f"  [{domain}] {path.name}: bp={bp_id}")
+                except Exception as exc:
+                    failed += 1
+                    print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
+            else:
+                # Non-.md files land as ARTIFACT cells so page.tsx and
+                # routers/*.py stay in sync with the body. Idempotent by
+                # content-hash; re-ingesting unchanged files is a no-op.
+                try:
+                    cell, bp_id, _ctor = _ingest_one_artifact(session, path)
+                    success += 1
+                    print(f"  [artifact] {path.name}: bp={bp_id}")
+                except Exception as exc:
+                    failed += 1
+                    print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
         session.commit()
 
     print(f"\ningest-paths: {success} ingested, {skipped} skipped, {failed} failed")

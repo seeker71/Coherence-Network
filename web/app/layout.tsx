@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
+import { SubstrateBadge } from "@/components/SubstrateBadge";
 import { AnonymousMeetingTrace } from "@/components/AnonymousMeetingTrace";
 
 import SiteHeader from "@/components/site_header";
@@ -130,6 +131,7 @@ export default async function RootLayout({
                 <RouteEditablePageContent />
               </main>
               <MobileBottomNav />
+              <SubstrateBadge />
             </ExpertModeProvider>
           </ThemeProvider>
         </MessagesProvider>
