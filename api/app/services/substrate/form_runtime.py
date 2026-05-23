@@ -494,6 +494,65 @@ def _builtin_bool_value(nid: Any) -> bool:
     return v
 
 
+def _builtin_file_exists(path: Any) -> bool:
+    """Does the file at `path` exist on disk?
+
+    Form predicate for spec recipes — `done_when: - form: file_exists("X")`.
+    The result is content-addressed by the runtime, so two evaluations of
+    the same expression intern to the same Recipe NodeID. The substrate's
+    cache IS the body's persistent record of "what does this assertion
+    return for this path."
+    """
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_exists: path must be string, got {type(path).__name__}")
+    return _Path(path).exists()
+
+
+def _builtin_file_contains(path: Any, needle: Any) -> bool:
+    """Does the file at `path` contain the substring `needle`?
+
+    The honest baseline for spec-symbol resolution. The wellness check uses
+    a smarter language-aware regex; this is the substrate-native check that
+    runs from any Form expression. False when the file doesn't exist.
+    """
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_contains: path must be string, got {type(path).__name__}")
+    if not isinstance(needle, str):
+        raise TypeError(f"file_contains: needle must be string, got {type(needle).__name__}")
+    p = _Path(path)
+    if not p.is_file():
+        return False
+    try:
+        return needle in p.read_text(errors="replace")
+    except OSError:
+        return False
+
+
+def _builtin_file_size(path: Any) -> int:
+    """Size of `path` in bytes. 0 when path does not exist (not an error —
+    spec predicates may want to compose `file_size("X") > 0` without
+    a missing-file exception interrupting evaluation)."""
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_size: path must be string, got {type(path).__name__}")
+    p = _Path(path)
+    if not p.is_file():
+        return 0
+    try:
+        return p.stat().st_size
+    except OSError:
+        return 0
+
+
+def _builtin_symbol_in_file(path: Any, symbol: Any) -> bool:
+    """Alias for file_contains keyed by a symbol-named string. Semantic
+    clarity for spec.source predicates: `symbol_in_file(file, "ingest_one")`
+    reads naturally as 'does ingest_one resolve in file?'"""
+    return _builtin_file_contains(path, symbol)
+
+
 def _builtin_ask(*args: Any) -> dict[str, Any]:
     """`ask(agent_id, question, choices=[], context={})` — open a human question.
 
@@ -582,6 +641,15 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     # Host effects — bridge Form execution into the agent question channel.
     "ask": _builtin_ask,
     "await_answer": _builtin_await_answer,
+    # Filesystem facts — the predicates spec recipes need to assert about
+    # the body's structural reality. Result is content-addressed; the
+    # substrate's cache holds the answer once evaluated. See
+    # docs/coherence-substrate/spec-as-playable-recipe.form (S4 — these
+    # builtins close the predicate vocabulary for `done_when:` items).
+    "file_exists": _builtin_file_exists,
+    "file_contains": _builtin_file_contains,
+    "file_size": _builtin_file_size,
+    "symbol_in_file": _builtin_symbol_in_file,
 }
 
 
