@@ -102,9 +102,25 @@ def derive_form_predicates(fm: dict) -> list[str]:
     # test: pytest invocation — extract test targets
     test = fm.get("test")
     if isinstance(test, str) and "pytest" in test:
-        # Find tests/<path>.py or tests/<path>.py::test_name patterns
-        for tgt in re.findall(r"\b(tests/\S+\.py(?:::[A-Za-z_]\w*)?)", test):
-            full = f"api/{tgt}"
+        # Match any path ending in tests/...py (optionally with ::test_name)
+        # — catches `tests/test_X.py`, `api/tests/test_X.py`,
+        # `mcp-server/tests/test_X.py`, `experiments/X/tests/test_X.py`, etc.
+        # Strip leading "cd api &&" context: if the spec test command does
+        # `cd api && pytest tests/X.py`, the target is `api/tests/X.py`.
+        cd_prefix = ""
+        m_cd = re.search(r"^cd\s+(\S+)\s*&&", test)
+        if m_cd:
+            cd_prefix = m_cd.group(1).strip("/") + "/"
+        # Find every <path>tests/<file>.py(::test_name)? in the command
+        for tgt in re.findall(r"(\S*tests/\S+\.py(?:::[A-Za-z_]\w*)?)", test):
+            # If the match starts with a known repo root prefix, use as-is;
+            # otherwise prepend the cd-prefix (or leave bare for cwd-relative).
+            if tgt.startswith(("api/", "mcp-server/", "experiments/", "web/", "scripts/")):
+                full = tgt
+            elif cd_prefix and not tgt.startswith(cd_prefix):
+                full = cd_prefix + tgt
+            else:
+                full = tgt
             preds.append(f'pytest_passes("{full}")')
 
     return preds

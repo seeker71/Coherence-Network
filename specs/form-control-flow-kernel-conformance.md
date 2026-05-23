@@ -36,6 +36,7 @@ done_when:
   - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_python_kernel_passes_control_flow_vector")'
   - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_rust_go_and_typescript_kernels_pass_control_flow_vector")'
   - 'pytest_passes("api/tests/test_kernel_conformance_harness.py")'
+  - 'pytest_passes("tests/test_kernel_conformance_harness.py")'
 test: "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-core-builtins.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --kernel typescript --json && cd api && .venv/bin/pytest tests/test_kernel_conformance_harness.py -q"
 constraints:
   - "Do not claim Rust, Go, or TypeScript implement the full Form language."

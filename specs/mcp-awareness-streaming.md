@@ -39,6 +39,7 @@ done_when:
   - 'symbol_in_file("api/app/routers/task_activity_routes.py", "task_stream")'
   - 'pytest_passes("api/tests/test_awareness_streaming.py")'
   - 'pytest_passes("api/tests/test_morning_coherence_brief.py")'
+  - 'pytest_passes("mcp-server/tests/test_awareness_streaming.py")'
 test: "python3 -m pytest mcp-server/tests/test_awareness_streaming.py api/tests/test_morning_coherence_brief.py -q"
 constraints:
   - "Use existing API streaming/message endpoints; do not invent a parallel streaming backend."
