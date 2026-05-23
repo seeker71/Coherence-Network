@@ -368,6 +368,157 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+HZ_BANDS = {
+    174: "ground",      396: "tending",       417: "transmutation",
+    528: "vitality",    639: "transmission",  741: "consciousness",
+    852: "resonance",   963: "wholeness",     432: "neutral",
+}
+
+
+def cmd_execute_idea(args: argparse.Namespace) -> int:
+    """Run an idea-recipe end-to-end through the substrate.
+
+    Walks the idea's structured CTOR: anchor → capabilities (each with its
+    surface and resonance band) → linked specs → for each spec, its `test`
+    command → actually invoke the test commands and report PASS/FAIL.
+
+    This is the answer to "can we run an idea recipe similar to how we'd
+    implement it after speccing it?" The recipe IS the executable form;
+    the runtime walks its structure and dispatches concrete actions
+    (substrate lookup, then subprocess) at each step.
+
+    Concrete scope today: dispatches the `test` field of each linked spec.
+    Future: capabilities could dispatch by `surface` (cli/mcp/hooks/...)
+    and resonance could select which arms fire — the dispatch table is
+    already substrate-resident; the surface-specific handlers are the
+    next layer of work.
+    """
+    import subprocess
+
+    from app.services.substrate.kernel import lookup_cell
+    from app.services.substrate.form_runtime import (
+        _resolve_access, _node_children, _trivial_value,
+    )
+    from app.services.substrate.category import RType
+
+    slug = args.slug
+    with session_scope() as session:
+        idea = lookup_cell(session, "idea", slug)
+        if idea is None:
+            print(f"@idea({slug}) not found in substrate", file=sys.stderr)
+            print(f"(if not yet ingested, run: coh substrate ingest ideas/{slug}.md)", file=sys.stderr)
+            return 1
+
+        print(f"═══ Executing idea-recipe: @idea({slug}) ═══")
+        print()
+        # Frontmatter anchors — always present
+        for field in ("title", "pillar", "stage", "work_type"):
+            try:
+                v = _resolve_access(session, idea, field)
+                print(f"  {field:10s}: {v}")
+            except AttributeError:
+                pass
+        print()
+
+        # Capabilities — typed dispatch table if present
+        try:
+            caps_seq = _resolve_access(session, idea, "capabilities")
+            caps = _node_children(session, caps_seq)
+            if caps:
+                print(f"— {len(caps)} capabilities (substrate-resident dispatch table) —")
+                for i, cap in enumerate(caps):
+                    try:
+                        cap_id = _resolve_access(session, cap, "id")
+                        cap_title = _resolve_access(session, cap, "title")
+                        surface = _resolve_access(session, cap, "surface")
+                        resonance = _resolve_access(session, cap, "resonance")
+                        band = HZ_BANDS.get(resonance, "?")
+                        print(f"  [{i}] {cap_id}")
+                        print(f"      title:     {cap_title}")
+                        print(f"      surface:   {surface}")
+                        print(f"      resonance: {resonance} Hz / {band}")
+                    except AttributeError:
+                        print(f"  [{i}] (capability has non-standard shape)")
+                print()
+        except AttributeError:
+            print("— idea has no typed `capabilities:` block (prose-only) —")
+            print()
+
+        # Specs — walk to linked spec cells
+        try:
+            specs_seq = _resolve_access(session, idea, "specs")
+        except AttributeError:
+            print("— idea has no `specs:` list —")
+            return 0
+
+        spec_slugs = []
+        # Two shapes seen in the wild:
+        #   1. specs: SEQUENCE of slug-strings  (the structured form — agent-cli)
+        #   2. specs: single string (legacy: `- [link](path)` markdown rendered
+        #      flat by the tolerant YAML fallback because the markdown-link
+        #      syntax breaks strict YAML parsing).
+        # The structured form is what (B) named as the rewriting target.
+        if isinstance(specs_seq, str):
+            import re as _re
+            # Extract slug from each `[slug](../specs/slug.md)` link
+            spec_slugs = _re.findall(r"\[([a-z0-9][a-z0-9-]*)\]\(\.\./specs/", specs_seq)
+            if spec_slugs:
+                print(
+                    "  (specs in legacy markdown-link format — "
+                    "rewriting to slug-list lets the substrate hold them as a SEQUENCE)"
+                )
+        else:
+            for spec_ref in _node_children(session, specs_seq):
+                if spec_ref.type_ in (RType.STRING, RType.SLUG):
+                    spec_slugs.append(_trivial_value(session, spec_ref))
+
+        print(f"— {len(spec_slugs)} linked spec(s) —")
+        for s_slug in spec_slugs:
+            print(f"  · @spec({s_slug})")
+        print()
+
+        # For each spec, walk to its test command
+        test_cmds = []
+        for s_slug in spec_slugs:
+            spec = lookup_cell(session, "spec", s_slug)
+            if spec is None:
+                print(f"  @spec({s_slug}): NOT FOUND in substrate (try `coh substrate ingest`)")
+                continue
+            try:
+                test_cmd = _resolve_access(session, spec, "test")
+                if test_cmd:
+                    test_cmds.append((s_slug, test_cmd))
+            except AttributeError:
+                pass
+
+        if not test_cmds:
+            print("— no spec carries a `test:` command — nothing to execute —")
+            return 0
+
+        # Run the tests — actual end-to-end execution
+        print(f"— running {len(test_cmds)} substrate-declared test(s) —")
+        any_failed = False
+        for s_slug, cmd in test_cmds:
+            print(f"  exec: @spec({s_slug}).test")
+            print(f"        $ {cmd}")
+            if args.dry_run:
+                print(f"        → DRY-RUN (no subprocess invoked)")
+                continue
+            r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            last_line = ""
+            if r.stdout:
+                last_line = r.stdout.strip().split("\n")[-1]
+            elif r.stderr:
+                last_line = r.stderr.strip().split("\n")[-1]
+            status = "PASS" if r.returncode == 0 else "FAIL"
+            print(f"        → {status}  ({last_line[:80]})")
+            if r.returncode != 0:
+                any_failed = True
+        print()
+        print(f"═══ idea-recipe executed end-to-end via substrate ═══")
+        return 1 if any_failed else 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute a Form expression — actually run the recipe, return a value.
 
@@ -554,6 +705,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_run.add_argument("expression")
 
+    p_exec = sub.add_parser(
+        "execute",
+        help=(
+            "Run an idea-recipe end-to-end through the substrate: walks the "
+            "idea's structured CTOR (capabilities, specs) and dispatches the "
+            "test commands its linked specs declare."
+        ),
+    )
+    p_exec.add_argument("slug", help="Idea slug (e.g. agent-cli)")
+    p_exec.add_argument(
+        "--dry-run", action="store_true",
+        help="Walk and print the dispatch plan without invoking the test commands.",
+    )
+
     p_disc = sub.add_parser(
         "discover",
         help="Surface clusters, outliers, and cross-domain shape collisions",
@@ -690,6 +855,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_form(args)
     if args.cmd == "run":
         return cmd_run(args)
+    if args.cmd == "execute":
+        return cmd_execute_idea(args)
     if args.cmd == "discover":
         return cmd_discover(args)
     if args.cmd == "sense":
