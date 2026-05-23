@@ -20,6 +20,12 @@ done_when:
   - "GET /api/ideas/health returns GovernanceHealth JSON with all seven metrics"
   - "All tests in api/tests/test_governance_health.py pass"
   - "governance_score is between 0.0 and 1.0 inclusive"
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'file_exists("api/app/services/idea_governance_views.py")'
+  - 'symbol_in_file("api/app/services/idea_governance_views.py", "compute_governance_health")'
+  - 'file_exists("api/app/models/idea.py")'
+  - 'symbol_in_file("api/app/models/idea.py", "GovernanceHealth")'
+  - 'pytest_passes("api/tests/test_governance_health.py")'
 test: "cd api && python -m pytest tests/test_governance_health.py -x -v"
 constraints:
   - "Do not modify existing idea endpoints or their response schemas"

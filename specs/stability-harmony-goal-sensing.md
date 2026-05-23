@@ -17,6 +17,15 @@ done_when:
   - "GET /api/energy/recommend?current_goal=create%20stability%20and%20harmony returns goal_recipe.id=stability-harmony"
   - "The recipe form includes breathe(longer_exhale) and source concepts from the Geometry of Stability ingest"
   - "api/tests/test_flow_vitality.py::test_energy_invitations_and_fallback_witness_flow passes"
+  - 'file_exists("api/app/routers/energy_sensing.py")'
+  - 'symbol_in_file("api/app/routers/energy_sensing.py", "energy_recommendations")'
+  - 'file_exists("api/app/services/energy_goal_recipe_service.py")'
+  - 'symbol_in_file("api/app/services/energy_goal_recipe_service.py", "goal_seeks_stability_or_harmony")'
+  - 'symbol_in_file("api/app/services/energy_goal_recipe_service.py", "stability_harmony_recipe")'
+  - 'symbol_in_file("api/app/services/energy_goal_recipe_service.py", "stability_harmony_invitation")'
+  - 'file_exists("api/tests/test_flow_vitality.py")'
+  - 'symbol_in_file("api/tests/test_flow_vitality.py", "test_energy_invitations_and_fallback_witness_flow")'
+  - 'pytest_passes("api/tests/test_flow_vitality.py::test_energy_invitations_and_fallback_witness_flow")'
 test: "cd api && python -m pytest -q tests/test_flow_vitality.py::test_energy_invitations_and_fallback_witness_flow"
 constraints:
   - "Default recommendations remain available when current_goal is omitted"

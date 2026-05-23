@@ -1,6 +1,6 @@
 ---
 idea_id: story-influence-rooms
-status: draft
+status: active
 priority: high
 source:
   - file: docs/field/urs/output/chronological_story_with_frequency.md
@@ -15,6 +15,13 @@ requirements:
 done_when:
   - "Story readers can reach works, authors, teachers, practices, and trusted research from the story itself."
   - "Tests verify every embedded trace API link resolves."
+  - 'file_exists("docs/field/urs/output/chronological_story_with_frequency.md")'
+  - 'file_exists("docs/field/urs/anchors/influence_anchors.json")'
+  - 'file_exists("docs/field/urs/anchors/manual_reading_anchors.json")'
+  - 'file_exists("docs/lineage/urs-contribution-profile.graph.json")'
+  - 'file_exists("api/tests/test_field_story_agent_surface.py")'
+  - 'pytest_passes("api/tests/test_field_story_agent_surface.py")'
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_agent_surface.py tests/test_field_story_trace_index.py"
 constraints:
   - "Do not add raw private archives or authenticated service state."

@@ -32,6 +32,33 @@ done_when:
   - Approved change requests auto-apply
   - GET /api/messages/inbox/{contributor_id} returns messages
   - All tests pass
+  - 'file_exists("api/app/routers/onboarding.py")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "register")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "get_session")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "list_contributors")'
+  - 'file_exists("api/app/services/onboarding_service.py")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "register")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "resolve_session")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "list_contributors")'
+  - 'file_exists("api/app/routers/governance.py")'
+  - 'symbol_in_file("api/app/routers/governance.py", "create_change_request")'
+  - 'symbol_in_file("api/app/routers/governance.py", "cast_vote")'
+  - 'file_exists("api/app/services/governance_service.py")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "create_change_request")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "cast_vote")'
+  - 'file_exists("api/app/routers/contributor_identity.py")'
+  - 'symbol_in_file("api/app/routers/contributor_identity.py", "link_identity")'
+  - 'symbol_in_file("api/app/routers/contributor_identity.py", "get_identities")'
+  - 'file_exists("api/app/routers/memberships.py")'
+  - 'symbol_in_file("api/app/routers/memberships.py", "list_members")'
+  - 'symbol_in_file("api/app/routers/memberships.py", "invite_member")'
+  - 'symbol_in_file("api/app/routers/memberships.py", "accept_invite")'
+  - 'file_exists("api/app/routers/messages.py")'
+  - 'symbol_in_file("api/app/routers/messages.py", "send_message")'
+  - 'symbol_in_file("api/app/routers/messages.py", "get_inbox")'
+  - 'pytest_passes("api/tests/test_governance_change_flow.py")'
+  - 'pytest_passes("api/tests/test_flow_memberships.py")'
+  - 'pytest_passes("api/tests/test_flow_messages.py")'
 test: "python3 -m pytest api/tests/test_governance_change_flow.py api/tests/test_flow_memberships.py api/tests/test_flow_messages.py -q"
 ---
 

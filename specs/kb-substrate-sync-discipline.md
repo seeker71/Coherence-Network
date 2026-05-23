@@ -16,6 +16,14 @@ done_when:
   - "A substrate audit command reports missing, stale, path-drift, wrong-domain, and duplicate-id concept rows."
   - "The audit can prune reviewed stale or wrong-domain live NamedCells."
   - "KB/substrate guidance is documented in substrate and KB maintenance docs."
+  - 'file_exists("scripts/coh_substrate.py")'
+  - 'symbol_in_file("scripts/coh_substrate.py", "cmd_kb_sync_audit")'
+  - 'symbol_in_file("scripts/coh_substrate.py", "cmd_ingest_paths")'
+  - 'file_exists("docs/coherence-substrate/agents-tending-edges.md")'
+  - 'symbol_in_file("docs/coherence-substrate/agents-tending-edges.md", "Living")'
+  - 'file_exists("docs/vision-kb/SCHEMA.md")'
+  - 'symbol_in_file("docs/vision-kb/SCHEMA.md", "After")'
+  - 'symbol_in_file("docs/vision-kb/SCHEMA.md", "Deepening")'
 test: "python3 -m py_compile scripts/coh_substrate.py && python3 scripts/coh_substrate.py kb-sync-audit --strict"
 constraints:
   - "Do not add a new persistent table."

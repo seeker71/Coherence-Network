@@ -19,6 +19,13 @@ done_when:
   - "Repeated failures: `attention.repeated_failures` is true when the three most recently completed tasks (by completion ..."
   - "Low success rate: `attention.low_success_rate` is true when metrics over the rolling window (e.g. 7 days) have at lea..."
   - "Heuristic thresholds (stuck minutes, consecutive failure count, success-rate window and minimum sample) are configura..."
+  - 'file_exists("api/app/services/agent_service_list.py")'
+  - 'symbol_in_file("api/app/services/agent_service_list.py", "get_attention_tasks")'
+  - 'symbol_in_file("api/app/services/agent_service_list.py", "get_review_summary")'
+  - 'file_exists("api/app/services/agent_service_pipeline_status.py")'
+  - 'symbol_in_file("api/app/services/agent_service_pipeline_status.py", "attention")'
+  - 'symbol_in_file("api/app/services/agent_service_pipeline_status.py", "status")'
+  - 'pytest_passes("api/tests/test_agent_pipeline_status_diagnostics_api.py")'
 test: "python3 -m pytest api/tests/test_agent_pipeline_status_diagnostics_api.py -x -v"
 constraints:
   - "changes scoped to listed files only"

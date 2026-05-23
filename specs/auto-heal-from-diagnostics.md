@@ -22,6 +22,14 @@ done_when:
   - "heal task context includes source_task_id, error_category, retry_count"
   - "GET /api/agent/auto-heal/stats returns correct shape"
   - "all tests pass"
+  - 'file_exists("api/app/services/auto_heal_service.py")'
+  - 'symbol_in_file("api/app/services/auto_heal_service.py", "HEAL_STRATEGIES")'
+  - 'symbol_in_file("api/app/services/auto_heal_service.py", "maybe_create_heal_task")'
+  - 'file_exists("api/app/routers/agent_auto_heal_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_auto_heal_routes.py", "heal")'
+  - 'file_exists("api/app/services/agent_service_task_derive.py")'
+  - 'symbol_in_file("api/app/services/agent_service_task_derive.py", "heal")'
+  - 'pytest_passes("api/tests/test_auto_heal_service.py")'
 test: "cd api && python -m pytest tests/test_auto_heal_service.py -q"
 constraints:
   - "do not modify agent_service_crud.py or existing task creation logic"

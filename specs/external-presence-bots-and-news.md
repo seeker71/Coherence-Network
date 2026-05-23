@@ -31,6 +31,35 @@ done_when:
   - Discord and Telegram adapters functional
   - Translation endpoint callable
   - All tests pass
+  - 'file_exists("api/app/routers/news.py")'
+  - 'symbol_in_file("api/app/routers/news.py", "get_news_feed")'
+  - 'symbol_in_file("api/app/routers/news.py", "get_news_resonance")'
+  - 'symbol_in_file("api/app/routers/news.py", "add_news_source")'
+  - 'file_exists("api/app/services/news_ingestion_service.py")'
+  - 'symbol_in_file("api/app/services/news_ingestion_service.py", "fetch_feeds")'
+  - 'symbol_in_file("api/app/services/news_ingestion_service.py", "get_cached_items")'
+  - 'symbol_in_file("api/app/services/news_ingestion_service.py", "extract_trending_keywords")'
+  - 'file_exists("api/app/services/news_resonance_service.py")'
+  - 'symbol_in_file("api/app/services/news_resonance_service.py", "compute_resonance")'
+  - 'symbol_in_file("api/app/services/news_resonance_service.py", "extract_keywords")'
+  - 'symbol_in_file("api/app/services/news_resonance_service.py", "ResonanceMatch")'
+  - 'symbol_in_file("api/app/services/news_resonance_service.py", "IdeaResonanceResult")'
+  - 'file_exists("api/app/routers/discord_votes.py")'
+  - 'symbol_in_file("api/app/routers/discord_votes.py", "vote_on_question")'
+  - 'file_exists("api/app/services/telegram_adapter.py")'
+  - 'symbol_in_file("api/app/services/telegram_adapter.py", "send_alert")'
+  - 'symbol_in_file("api/app/services/telegram_adapter.py", "send_reply")'
+  - 'symbol_in_file("api/app/services/telegram_adapter.py", "is_configured")'
+  - 'symbol_in_file("api/app/services/telegram_adapter.py", "parse_command")'
+  - 'file_exists("api/app/services/translate_service.py")'
+  - 'symbol_in_file("api/app/services/translate_service.py", "translate_idea")'
+  - 'symbol_in_file("api/app/services/translate_service.py", "translate_concept")'
+  - 'symbol_in_file("api/app/services/translate_service.py", "TranslateLens")'
+  - 'file_exists("api/app/routers/geolocation.py")'
+  - 'symbol_in_file("api/app/routers/geolocation.py", "set_location")'
+  - 'symbol_in_file("api/app/routers/geolocation.py", "get_location")'
+  - 'symbol_in_file("api/app/routers/geolocation.py", "nearby")'
+  - 'pytest_passes("api/tests/test_flow_core_api.py")'
 test: "python3 -m pytest api/tests/test_flow_core_api.py -q"
 ---
 

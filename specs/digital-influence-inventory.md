@@ -14,6 +14,9 @@ acceptance:
   - "The field story manifest exposes both human-readable and machine-readable digital influence inventory artifacts."
   - "Tests verify the full YouTube history span, missing 2023/early-2024 attention, and publication language that allows watch/listen history to be public."
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
+done_when:
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
+
 ---
 
 # Digital Influence Inventory

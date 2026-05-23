@@ -14,6 +14,14 @@ done_when:
   - "python3 -m pytest -v api/tests/test_frequency_profile_contributor_alias.py passes"
   - "python3 -m pytest -v api/tests/test_import_lineage_edges.py passes"
   - "production GET /api/profile/seeker71 returns the derived contributor profile after deploy"
+  - 'file_exists("api/app/services/frequency_profile_service.py")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "resolve_entity_id")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "get_profile")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "profile_hash")'
+  - 'file_exists("scripts/import_lineage.py")'
+  - 'symbol_in_file("scripts/import_lineage.py", "replay")'
+  - 'pytest_passes("api/tests/test_frequency_profile_contributor_alias.py")'
+  - 'pytest_passes("api/tests/test_import_lineage_edges.py")'
 test: "python3 -m pytest -v api/tests/test_frequency_profile_contributor_alias.py api/tests/test_import_lineage_edges.py"
 constraints:
   - "No person-specific profile UI branch."

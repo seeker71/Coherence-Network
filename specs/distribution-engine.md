@@ -23,6 +23,13 @@ done_when:
   - "Coherence weighting: higher coherence = higher payout multiplier"
   - "Handles zero contributions (empty payout list)"
   - "Handles zero weighted cost (empty payout list)"
+  - 'file_exists("api/app/routers/distributions.py")'
+  - 'symbol_in_file("api/app/routers/distributions.py", "create_distribution")'
+  - 'file_exists("api/app/services/distribution_engine.py")'
+  - 'file_exists("api/app/models/distribution.py")'
+  - 'symbol_in_file("api/app/models/distribution.py", "Distribution")'
+  - 'symbol_in_file("api/app/models/distribution.py", "Payout")'
+  - 'pytest_passes("api/tests/test_distribution_engine.py")'
 test: "cd api && python3 -m pytest tests/test_distribution_engine.py -x -v"
 constraints:
   - "changes scoped to listed files only"

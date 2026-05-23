@@ -16,6 +16,10 @@ done_when:
   - "Auto-track GitHub workflow uses the same normalized estimator model to reduce inflated payload values."
   - "Contributions web page displays effective normalized cost and highlights raw-to-normalized adjustment when present."
   - "Tests cover estimator behavior and GitHub contribution route normalization."
+  - 'file_exists("api/app/services/contribution_cost_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost_with_provenance")'
+  - 'pytest_passes("api/tests/test_contribution_cost_service.py")'
 test: "python3 -m pytest api/tests/test_contribution_cost_service.py -x -v"
 constraints:
   - "changes scoped to listed files only"

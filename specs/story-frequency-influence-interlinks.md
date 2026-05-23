@@ -1,6 +1,6 @@
 ---
 idea_id: story-frequency-influence-interlinks
-status: draft
+status: active
 priority: high
 source:
   - file: docs/field/urs/output/chronological_story_with_frequency.md
@@ -15,6 +15,14 @@ requirements:
 done_when:
   - "The chronological story includes direct trace links for significant works and primary listening authors."
   - "Karl May stories and Der Lederstrumpf resolve through the significant-work selector."
+  - 'file_exists("docs/field/urs/output/chronological_story_with_frequency.md")'
+  - 'file_exists("docs/field/urs/tools/build_trace_indexes.py")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "SIGNIFICANT_WORK_RULES")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "build_significant_work_indexes")'
+  - 'file_exists("api/tests/test_field_story_agent_surface.py")'
+  - 'file_exists("api/tests/test_field_story_trace_index.py")'
+  - 'pytest_passes("api/tests/test_field_story_agent_surface.py")'
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_agent_surface.py tests/test_field_story_trace_index.py"
 constraints:
   - "Do not claim exact chapter matches until chapter notes or lawful chapter summaries exist."

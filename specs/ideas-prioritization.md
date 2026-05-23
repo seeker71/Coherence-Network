@@ -29,6 +29,28 @@ done_when:
   - "PATCH /api/ideas/{id} — Update idea validation fields (404 if not found)"
   - "GET /api/ideas/storage — Report structured storage backend and row counts"
   - "Filter support for unvalidated ideas only"
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "list_ideas")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "get_idea")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "get_idea_tags_catalog")'
+  - 'file_exists("api/app/services/idea_read.py")'
+  - 'symbol_in_file("api/app/services/idea_read.py", "list_ideas")'
+  - 'file_exists("api/app/services/idea_scoring.py")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_score")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_with_score")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_build_cost_vector")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_build_value_vector")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_marginal_cc_return")'
+  - 'symbol_in_file("api/app/services/idea_scoring.py", "_softmax_weights")'
+  - 'file_exists("api/app/models/idea.py")'
+  - 'symbol_in_file("api/app/models/idea.py", "Idea")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaWithScore")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaPortfolioResponse")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaSummary")'
+  - 'file_exists("api/app/models/coherence_credit.py")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "CostVector")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ValueVector")'
+  - 'pytest_passes("api/tests/test_idea_scoring.py")'
 test: "cd api && pytest -q tests/test_idea_scoring.py"
 constraints:
   - "changes scoped to listed files only"

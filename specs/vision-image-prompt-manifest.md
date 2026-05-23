@@ -21,6 +21,15 @@ done_when:
   - "Prompt manifest covers all current vision images."
   - "Asset validation includes prompt-record coverage."
   - "Manifest regeneration dry-run can target one stable image path."
+  - 'file_exists("docs/visuals/prompts.json")'
+  - 'symbol_in_file("docs/visuals/prompts.json", "vision")'
+  - 'file_exists("docs/visuals/regeneration_profiles.json")'
+  - 'symbol_in_file("docs/visuals/regeneration_profiles.json", "dynamic")'
+  - 'file_exists("scripts/generate_visuals.py")'
+  - 'symbol_in_file("scripts/generate_visuals.py", "generate_from_manifest")'
+  - 'symbol_in_file("scripts/generate_visuals.py", "compose_manifest_prompt")'
+  - 'file_exists("scripts/audit_vision_image_candidates.py")'
+  - 'symbol_in_file("scripts/audit_vision_image_candidates.py", "audit_records")'
 test: "python3 scripts/check_generated_vision_assets.py --allow-untracked"
 constraints:
   - "Do not replace image assets in this change."

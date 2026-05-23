@@ -16,6 +16,12 @@ done_when:
   - "coherencycoin.com/pipeline loads and shows live task flow"
   - "/pipeline shows per-provider success rates"
   - "/pipeline shows active node names and task counts"
+  - 'file_exists("web/app/nodes/page.tsx")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "node")'
+  - 'file_exists("web/app/tasks/page.tsx")'
+  - 'symbol_in_file("web/app/tasks/page.tsx", "task")'
+  - 'file_exists("web/app/tasks/[task_id]/page.tsx")'
+  - 'symbol_in_file("web/app/tasks/[task_id]/page.tsx", "task")'
 proof: operational
 proof_note: "Web /pipeline and /tasks render live in production; the CLI surfaces (coh tasks, coh task) are exercised by humans daily. The spec is entirely UI-shape and CLI output formatting — flow tests against text output would be brittle without proving the human-facing behavior."
 constraints:

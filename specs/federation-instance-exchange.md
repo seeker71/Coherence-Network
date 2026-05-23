@@ -31,6 +31,28 @@ done_when:
   - "POST /api/federation/sync with an unregistered source_instance_id returns FederationSyncResult with rejected = item count and governance_requests_created=0"
   - "federation_sync_history rows include the proposals_received column; ALTER TABLE migration applies in place on older snapshots"
   - "all federation + governance tests pass"
+  - 'file_exists("api/app/routers/federation.py")'
+  - 'symbol_in_file("api/app/routers/federation.py", "register_instance")'
+  - 'symbol_in_file("api/app/routers/federation.py", "list_instances")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_instance")'
+  - 'symbol_in_file("api/app/routers/federation.py", "receive_payload")'
+  - 'file_exists("api/app/services/federation_service.py")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "register_instance")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "list_instances")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "get_instance")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "receive_payload")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "list_sync_history")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "check_trust_level")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "_ensure_federation_sync_history_columns")'
+  - 'file_exists("api/app/services/governance_service.py")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "_apply_change_request")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "create_change_request")'
+  - 'file_exists("api/app/models/federation.py")'
+  - 'symbol_in_file("api/app/models/federation.py", "FederatedInstance")'
+  - 'symbol_in_file("api/app/models/federation.py", "FederatedPayload")'
+  - 'symbol_in_file("api/app/models/federation.py", "FederationSyncResult")'
+  - 'pytest_passes("api/tests/test_federation_substance.py")'
+  - 'pytest_passes("api/tests/test_federation_layer.py")'
 test: "cd api && python -m pytest tests/test_federation_substance.py tests/test_federation_layer.py -q"
 constraints:
   - "The API never writes peer-authored substance into the deployed corpus on its own — substance is held by governance and walked into the repo by a maintainer"

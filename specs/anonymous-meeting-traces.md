@@ -25,6 +25,22 @@ done_when:
   - "API tests prove same-source second meetings, surfaces, duration, and folding into contributor_id."
   - "Web static test proves the root layout mounts the silent trace component without geolocation or user-agent collection."
   - "Spec, API, web test, and build checks pass."
+  - 'file_exists("api/app/routers/meetings.py")'
+  - 'symbol_in_file("api/app/routers/meetings.py", "record_anonymous_meeting_trace")'
+  - 'symbol_in_file("api/app/routers/meetings.py", "list_anonymous_meeting_traces")'
+  - 'file_exists("api/app/services/meeting_service.py")'
+  - 'symbol_in_file("api/app/services/meeting_service.py", "sense_meeting")'
+  - 'symbol_in_file("api/app/services/meeting_service.py", "capture_meeting_resonance")'
+  - 'file_exists("api/app/services/anonymous_meeting_trace_service.py")'
+  - 'symbol_in_file("api/app/services/anonymous_meeting_trace_service.py", "record_anonymous_meeting_trace")'
+  - 'symbol_in_file("api/app/services/anonymous_meeting_trace_service.py", "list_anonymous_meeting_traces")'
+  - 'file_exists("web/components/AnonymousMeetingTrace.tsx")'
+  - 'symbol_in_file("web/components/AnonymousMeetingTrace.tsx", "AnonymousMeetingTrace")'
+  - 'file_exists("api/tests/test_anonymous_meeting_traces.py")'
+  - 'symbol_in_file("api/tests/test_anonymous_meeting_traces.py", "test_anonymous_meeting_trace_remembers_source_surfaces_and_duration")'
+  - 'file_exists("web/tests/anonymous-meeting-trace.test.ts")'
+  - 'symbol_in_file("web/tests/anonymous-meeting-trace.test.ts", "anonymous")'
+  - 'pytest_passes("api/tests/test_anonymous_meeting_traces.py")'
 test: "cd api && python3 -m pytest tests/test_anonymous_meeting_traces.py -q && cd ../web && npm test -- tests/anonymous-meeting-trace.test.ts"
 constraints:
   - "Do not store IP address, precise location, raw visitor key, raw session key, or user agent."

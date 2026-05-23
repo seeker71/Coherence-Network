@@ -20,6 +20,13 @@ done_when:
   - Full chain code-review to deploy to verify to validated works end-to-end
   - No orphaned reviewing ideas with no active task
   - pytest api/tests/test_pipeline_phase_split.py passes
+  - 'file_exists("api/app/models/agent.py")'
+  - 'file_exists("api/app/services/pipeline_advance_service.py")'
+  - 'symbol_in_file("api/app/services/pipeline_advance_service.py", "phase")'
+  - 'file_exists("api/scripts/run_cli_task_flow_matrix.py")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "PASS_FAIL")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "review")'
+  - 'pytest_passes("api/tests/test_flow_pipeline.py")'
 test: "cd api && python -m pytest -q tests/test_flow_pipeline.py"
 ---
 

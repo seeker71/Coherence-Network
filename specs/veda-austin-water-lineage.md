@@ -12,6 +12,7 @@ done_when:
   - "manifest JSON validates"
   - "lineage importer dry-run reports the expected nodes and edges"
   - "production profile shows the added source-backed water lineage after replay"
+  - 'file_exists("docs/lineage/urs-contribution-profile.graph.json")'
 test: "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json"
 constraints:
   - "Do not store transcript text or long Gaia page excerpts."

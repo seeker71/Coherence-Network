@@ -17,6 +17,11 @@ done_when:
   - All 9 integration tests in api/tests/test_onboarding.py pass
   - Fresh token session returns trust_level tofu
   - ROI endpoint returns valid shape with spec_ref spec-168
+  - 'file_exists("api/app/services/onboarding_service.py")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "register")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "resolve_session")'
+  - 'file_exists("api/app/routers/onboarding.py")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "onboarding")'
 test:
   - "pytest api/tests/test_onboarding.py -v"
 ---
