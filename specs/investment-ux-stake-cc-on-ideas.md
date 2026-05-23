@@ -11,7 +11,7 @@ source:
   - file: api/app/services/time_pledge_service.py
     symbols: [create_pledge(), fulfill_pledge(), cc_equivalent_for_hours()]
   - file: api/app/routers/investments.py
-    symbols: [invest-preview, investments, investment-history, pledges, pledges/fulfill]
+    symbols: [get_invest_preview(), get_portfolio(), get_investment_history(), create_pledge(), list_pledges(), fulfill_pledge()]
   - file: api/app/routers/ideas.py
     symbols: [stake_on_idea() with dry_run]
   - file: web/components/InvestModal.tsx
@@ -33,6 +33,7 @@ done_when:
   - Web /ideas shows Invest button opening modal with ROI data
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
+test: "pytest -q api/tests/test_investments.py"
 notes: |
   Live (2026-05-22): web/app/invest/page.tsx renders at /invest. The full
   investment surface now exists end-to-end:

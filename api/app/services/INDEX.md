@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 231
+**Total files**: 232
 
 | File | Purpose |
 |---|---|
@@ -219,6 +219,7 @@
 | [telegram_report_formatter.py](telegram_report_formatter.py) | Formatting helpers for Telegram status/task replies. |
 | [telemetry_persistence_service.py](telemetry_persistence_service.py) | DB-backed telemetry persistence for automation usage and friction events. |
 | [time_pledge_service.py](time_pledge_service.py) | Time pledge service — convert pledged labor hours into CC equivalents. |
+| [timeout_adaptive_service.py](timeout_adaptive_service.py) | Data-driven task timeout samples and recommendations. |
 | [traceability_service.py](traceability_service.py) | spec: full-code-traceability |
 | [translate_service.py](translate_service.py) | Concept translation service — reframe ideas and concepts through worldview lenses. |
 | [translation_cache_service.py](translation_cache_service.py) | Concept views — equal-status language renderings of a concept, idea, or |

@@ -16,7 +16,7 @@
 | Coherence endpoint support | ✅ Complete |
 | Import stack support (lockfile + requirements) | ✅ Complete |
 | Agent orchestration endpoints | ✅ Complete |
-| Production deployment | ⚠️ Blocked (Railway account/project unavailable) |
+| Production deployment | ✅ Active (public API + web contract passing; legacy Railway URL remains unavailable) |
 | Pipeline monitoring + attention workflow | 🚧 In progress |
 | Full unattended effectiveness loop | 🚧 In progress |
 
@@ -24,14 +24,15 @@
 
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
-| API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
+| API | Current public API | https://api.coherencycoin.com | ✅ Active (`/api/health` 200; deployed SHA verified 2026-05-23) |
+| API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-05-23) |
 | Web | Hostinger (current) | https://coherencycoin.com | ✅ Active |
 
 ### Deployment Health
-- API health endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
+- API health endpoint: ✅ Reachable at https://api.coherencycoin.com/api/health; legacy Railway URL still returns HTTP 404
 - Web root: ✅ Reachable on current public domain
-- Web API health page: ⚠️ Likely failing due to blocked API
-- CORS configuration: ⚙️ Pending new hosting cutover for API
+- Web API health page: ✅ Reachable
+- CORS configuration: ✅ Allows https://coherencycoin.com
 
 ## Specs Implemented (Selected)
 
@@ -63,7 +64,7 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 
 ## Validation Snapshot
 
-- API endpoint set is implemented and locally testable; public deployment is currently blocked pending new hosting cutover.
+- API endpoint set is implemented, locally testable, and publicly verified on the current API/web domains.
 - Test suite remains the release gate.
 - Overnight pipeline remains the main autonomous execution path.
 

@@ -22,8 +22,7 @@ done_when:
   - Agent runner logs timeout=adaptive or timeout=fixed on every task pickup
   - Resume tasks have is_resume=true and prepend partial output to direction
   - pytest api/tests/test_timeout_adaptive_service.py passes
-test:
-  - "pytest -q api/tests/test_timeout_adaptive_service.py"
+test: "pytest -q api/tests/test_timeout_adaptive_service.py"
 ---
 
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)

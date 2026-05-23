@@ -17,8 +17,7 @@ done_when:
   - All 9 integration tests in api/tests/test_onboarding.py pass
   - Fresh token session returns trust_level tofu
   - ROI endpoint returns valid shape with spec_ref spec-168
-test:
-  - "pytest api/tests/test_onboarding.py -v"
+test: "pytest api/tests/test_onboarding.py -v"
 ---
 
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
@@ -101,4 +100,3 @@ This spec realizes part of the `identity-and-onboarding` idea. The full purpose,
 
 - Anything outside the files named in this spec's source map.
 - Concerns owned by sibling specs in the same idea cluster.
-
