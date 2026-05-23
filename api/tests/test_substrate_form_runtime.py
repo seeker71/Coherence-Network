@@ -447,6 +447,58 @@ def test_unknown_field_raises(session):
         form_execute_text(session, '@memory("test memory").not_a_field')
 
 
+def _seed_structured_memory_cell(session):
+    """Create a memory cell with the structured-CTOR encoder so .field()
+    fall-through can walk LET-bindings by key."""
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: structured test memory
+description: cell with structured-CTOR for field-by-name access
+type: feedback
+---
+
+Body of the memory.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+
+def test_structured_ctor_field_by_name(session):
+    """Frontmatter keys interned via structured-CTOR are reachable as
+    cell fields directly. The human reads YAML, the substrate walks LET,
+    the AI bridges — same value across all three voices.
+    """
+    _seed_structured_memory_cell(session)
+    # `name` is a builtin cell field; `description` and `type` fall through
+    # to the structured-CTOR LET-binding walk.
+    assert form_execute_text(
+        session, '@memory("structured test memory").description'
+    ) == "cell with structured-CTOR for field-by-name access"
+    assert form_execute_text(
+        session, '@memory("structured test memory").type'
+    ) == "feedback"
+
+
+def test_structured_ctor_unknown_field_still_raises(session):
+    """Field-by-name fall-through is additive: when no LET-binding matches,
+    the AttributeError still fires (and now lists the structured-CTOR
+    pathway in its hint)."""
+    _seed_structured_memory_cell(session)
+    with pytest.raises(AttributeError, match="frontmatter key"):
+        form_execute_text(
+            session, '@memory("structured test memory").not_a_real_field'
+        )
+
+
 def test_child_out_of_range_raises(session):
     _seed_memory_cell(session)
     with pytest.raises(IndexError):

@@ -1132,6 +1132,49 @@ def _trivial_value(session: Session, nid: NodeID) -> Any:
     )
 
 
+def _ctor_field_lookup(session: Session, ctor: Any, field: str) -> Any:
+    """Walk a structured CTOR (R_Block.DO of R_Block.LET) for a named field.
+
+    Returns the decoded value of the LET binding whose key matches `field`,
+    or None if the CTOR is not in structured-LET shape, or no binding
+    matches. Composite values are returned as their NodeID (so the caller
+    can walk further); trivial values are decoded.
+
+    The shape this walks is what `frontmatter_to_structured_ctor` produces:
+
+        do {
+            let "idea_id" = "...";   # LET[SLUG, STRING]
+            let "title"   = "...";   # LET[SLUG, STRING]
+            ...
+        }
+    """
+    if ctor is None or not isinstance(ctor, NodeID):
+        return None
+    from app.services.substrate.category import RBasic
+    ctor_cat = _node_category(session, ctor)
+    if ctor_cat.type_ != RBasic.BLOCK.value:
+        return None
+    for let_nid in _node_children(session, ctor):
+        let_cat = _node_category(session, let_nid)
+        if let_cat.type_ != RBasic.BLOCK.value or let_cat.instance != 3:
+            continue  # not a LET
+        let_kids = _node_children(session, let_nid)
+        if len(let_kids) != 2:
+            continue
+        try:
+            key = _trivial_value(session, let_kids[0])
+        except (ValueError, AttributeError):
+            continue
+        if key != field:
+            continue
+        # Match — decode the value if trivial, else return the NodeID.
+        try:
+            return _trivial_value(session, let_kids[1])
+        except (ValueError, AttributeError):
+            return let_kids[1]
+    return None
+
+
 def _resolve_access(session: Session, target: Any, field: str) -> Any:
     """Field access on a Cell, Blueprint NodeID, Recipe NodeID, or dict.
 
@@ -1166,9 +1209,19 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
             return target.domain
         if field == "source":
             return target.source_path
+        # Fall through to structured-CTOR field-by-name access.
+        # If the cell's CTOR is a R_Block.DO whose children are R_Block.LET
+        # recipes (the structured-CTOR shape since 2026-05-23), walk the
+        # LET-bindings looking for one whose key matches `field`. This is
+        # what makes `@idea(realization).title` work: the human reads YAML,
+        # the substrate walks LET, the AI bridges — same value, three voices.
+        ctor_value = _ctor_field_lookup(session, target.ctor, field)
+        if ctor_value is not None:
+            return ctor_value
         raise AttributeError(
             f"Form runtime: cell has no field {field!r} "
-            f"(try: blueprint, ctor, base, access, name, domain, source)"
+            f"(try: blueprint, ctor, base, access, name, domain, source, "
+            f"or any frontmatter key from the structured CTOR)"
         )
 
     if isinstance(target, NodeID):
