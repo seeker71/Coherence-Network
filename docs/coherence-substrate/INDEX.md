@@ -33,6 +33,7 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `docs/coherence-substrate/trace-symbol-spaces-proof.fk` | Native kernel proof that reads the raw trace witness and verifies the current-breath active recipe pattern |
 | `docs/coherence-substrate/anything-arrives-trace.form` | Translation-as-contact trace shape plus concrete example traces for arbitrary streams entering before fixed symbols |
 | `docs/coherence-substrate/observable-resonance-flow.form` | External interaction flow shape: arrival, information spectrum, language spend, observer spend, shared pattern, yield after contact, and next routing |
+| `docs/coherence-substrate/cross-domain-measurement-translation.form` | Cross-domain measurement translation record: native units, translation recipe, loss accounting, observer/verifier cost, public trace, and replay instructions |
 | `docs/coherence-substrate/agents-using-substrate.md` | Agent guide — when and how to ground reasoning |
 | `docs/coherence-substrate/agents-tending-presence-pages.md` | Composting static `/people/{slug}` directories into graph-rendered presence pages |
 | `docs/coherence-substrate/language-cells.md` | Languages as substrate cells — ingestion grammars + emission templates as data; cross-language identity via content-addressing; N+M transpilation |
