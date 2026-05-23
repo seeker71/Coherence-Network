@@ -441,6 +441,48 @@ def test_arithmetic_on_tree_walk_result(session):
     assert form_execute_text(session, src) == (n - 1) * 2
 
 
+def test_file_fact_builtins_evaluate_from_form(session):
+    """File-fact predicates run as Form expressions against the disk.
+    These are the predicate vocabulary spec `done_when:` items use when
+    they're written as Form rather than prose. Result is content-addressed;
+    two evaluations of the same expression intern to the same Recipe NodeID.
+    """
+    # Pick a file the test runner is certain about — its own source file.
+    test_file_form = '"api/tests/test_substrate_form_runtime.py"'
+
+    # file_exists
+    assert form_execute_text(
+        session, f'file_exists({test_file_form})'
+    ) is True
+    assert form_execute_text(
+        session, 'file_exists("api/this/file/does/not/exist.py")'
+    ) is False
+
+    # file_contains (this test file contains the test function's name)
+    assert form_execute_text(
+        session,
+        f'file_contains({test_file_form}, "test_file_fact_builtins_evaluate_from_form")',
+    ) is True
+
+    # symbol_in_file (alias)
+    assert form_execute_text(
+        session,
+        f'symbol_in_file({test_file_form}, "test_file_fact_builtins_evaluate_from_form")',
+    ) is True
+
+    # Composition — Form `&&` with two file-fact predicates
+    expr = (
+        f'(file_exists({test_file_form}) '
+        f'&& file_contains({test_file_form}, "test_file_fact_builtins_evaluate_from_form"))'
+    )
+    assert form_execute_text(session, expr) is True
+
+    # file_size graceful on missing
+    assert form_execute_text(
+        session, 'file_size("api/this/file/does/not/exist.py")'
+    ) == 0
+
+
 def test_unknown_field_raises(session):
     _seed_memory_cell(session)
     with pytest.raises(AttributeError):
