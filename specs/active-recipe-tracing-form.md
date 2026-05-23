@@ -12,9 +12,15 @@ requirements:
   - "The Form file declares state, recipe library, active recipe, candidate selection, and keep-or-choose choice shapes"
   - "The Form file names the file-backed host bridge for hydrating active recipes from witness traces"
 done_when:
-  - "active-recipe-tracing.form contains recipe_state_shape, available_recipes(), active_recipes(state), and keep_or_choose(state)"
-  - "The library includes stability-harmony, connection-density, attention-flow, and external-listening recipes"
-  - "api/tests/test_active_recipe_tracing_form.py passes"
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "recipe_state_shape")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "available_recipes")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "keep_or_choose")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "stability-harmony")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "connection-density")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "attention-flow")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "external-listening")'
+  - 'file_exists("api/tests/test_active_recipe_tracing_form.py")'
 test: "cd api && python -m pytest -q tests/test_active_recipe_tracing_form.py"
 constraints:
   - "Do not add an API endpoint or Python business-logic service for this slice"
