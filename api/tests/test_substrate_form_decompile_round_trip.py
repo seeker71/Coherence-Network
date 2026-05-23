@@ -71,6 +71,12 @@ ROUND_TRIP_CASES = [
     "!(1 == 2)",
     "if 1 > 0 then 42 else 0",
     "if 1 == 1 then 99",
+    # R_Block coverage (DO, SEQUENCE) — added when running idea-realization-engine
+    # through the substrate revealed verb-category 1.2.9 (R_Block) was not yet
+    # decompilable. LET and WITH have sibling gaps (Identifier/slug trivial
+    # decoder not yet present) — separate breaths.
+    "do { 1 + 2; 3 * 4 }",
+    "do { 1 }",
 ]
 
 
