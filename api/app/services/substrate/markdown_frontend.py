@@ -551,27 +551,70 @@ def body_to_access_recipe(
     return rid
 
 
+def section_content_to_word_sequence(
+    session: Session, content: str
+) -> Optional[NodeID]:
+    """Tokenize a section's prose into a SEQUENCE of word-cell refs + punct.
+
+    Each word token becomes a substrate word-cell via `ingest_word_cell`
+    (idempotent — same (lemma, POS) interns to the same cell). Each punct
+    token becomes a small typed-token leaf. The sequence is composed via
+    `list_recipe`.
+
+    Returns the SEQUENCE NodeID, or None if content tokenizes to nothing.
+
+    This is the (D-deeper) closure: section content is no longer an opaque
+    string-recipe; it's a walkable SEQUENCE where each element is itself
+    a content-addressed word-cell with (lemma, POS, hz, semantic_field).
+    Cross-idea queries like *"find all ideas whose body contains the word
+    'tend' (hz=396 tending)"* become substrate-native.
+    """
+    if not content or not content.strip():
+        return None
+    tokens = tokenize_words(content)
+    if not tokens:
+        return None
+
+    elements: List[NodeID] = []
+    for t in tokens:
+        if t.get("kind") == "word":
+            word_cell, _, _ = ingest_word_cell(
+                session,
+                lemma=t["lemma"],
+                pos=t["pos"],
+                hz=t["hz"],
+                semantic_field=t["field"],
+                surface=t.get("surface"),
+            )
+            if word_cell is not None and word_cell.cell_id is not None:
+                elements.append(
+                    NodeID(1, Level.TRIVIAL, RType.REF, word_cell.cell_id)
+                )
+        elif t.get("kind") == "punct":
+            # Punct as a small string-recipe leaf — round-trip preserves
+            # the surface character.
+            elements.append(substrate_string_recipe(session, t.get("surface", "")))
+
+    if not elements:
+        return None
+    return list_recipe(session, elements)
+
+
 def body_to_section_recipe(
     session: Session, body: str
 ) -> Optional[NodeID]:
     """Parse `## H2` sections of a markdown body into a structured recipe.
 
     Returns an R_Block.DO whose children are R_Block.LET bindings keyed by
-    section heading (e.g. "Key Capabilities", "What Success Looks Like"),
-    each mapping to the section's prose content as a string-recipe.
-
-    This is the smallest version of (D) section-as-SEQUENCE — heading-level
-    only, no word-cell ingest yet. With it, `cell.body.children[N]` walks
-    into named sections, and a follow-up breath can extend each section's
-    string-recipe into a SEQUENCE of word-cells via tokenize_words +
-    intern_word_cell (the existing prose-as-recipe pipeline).
+    section heading. Each section's content is a R_Block.SEQUENCE of
+    word-cell refs and punct tokens (via section_content_to_word_sequence)
+    — section prose is walkable down to the word.
 
     Returns None if no `## ` headings are found — caller should keep using
     body_to_access_recipe in that case.
     """
     if not body:
         return None
-    # Split on H2 boundaries. Each section: (heading_text, content).
     pattern = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
     matches = list(pattern.finditer(body))
     if not matches:
@@ -585,7 +628,11 @@ def body_to_section_recipe(
         content_start = m.end()
         content_end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
         content = body[content_start:content_end].strip()
-        v_recipe = substrate_string_recipe(session, content)
+        v_recipe = section_content_to_word_sequence(session, content)
+        if v_recipe is None:
+            # Empty section — keep an empty string-recipe so the LET still
+            # exists for navigation. The heading itself is the signal.
+            v_recipe = substrate_string_recipe(session, "")
         pair = named_field_recipe(session, heading, v_recipe)
         pairs.append(pair)
 

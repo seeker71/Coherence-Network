@@ -499,16 +499,58 @@ def test_structured_ctor_unknown_field_still_raises(session):
         )
 
 
-def test_body_sections_walkable_as_named_recipes(session):
-    """Body `## H2` sections are interned as LET-bindings under cell.body,
-    making the previously-opaque content-hash leaf structurally walkable.
-    Each section binds heading→content; the tree extends as the body has
-    sections.
+def test_body_section_content_is_word_cell_sequence(session):
+    """Section content is now a R_Block.SEQUENCE of word-cell refs (and
+    punct leaves), not an opaque string. Each unique (lemma, POS) interns
+    once; the substrate becomes word-queryable across ideas/specs/concepts.
 
-    This is (D) at section-level — heading structure with prose-as-string.
-    A follow-up breath can extend each section's string into a SEQUENCE of
-    word-cells via tokenize_words + intern_word_cell (the existing
-    prose-as-recipe pipeline).
+    Verifies (D-deeper) — body prose down to the word level.
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    from app.services.substrate.kernel import NodeID
+    from app.services.substrate.category import RType
+    from app.services.substrate.form_runtime import _node_children, _trivial_value
+    import tempfile, os
+    body = """---
+name: word-level section test
+description: test cell
+type: feedback
+---
+
+## First Section
+
+Hello world from this section.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    body_ctor = form_execute_text(
+        session, '@memory("word-level section test").body'
+    )
+    # body.children = [LET("First Section", SEQUENCE [...word-cells...])]
+    let_pair = _node_children(session, body_ctor)[0]
+    let_kids = _node_children(session, let_pair)
+    heading = _trivial_value(session, let_kids[0])
+    assert heading == "First Section"
+    seq = let_kids[1]
+    elements = _node_children(session, seq)
+    # "Hello world from this section." → 5 word tokens + 1 punct
+    word_refs = [e for e in elements if e.type_ == RType.REF]
+    assert len(word_refs) >= 5, f"expected ≥5 word-cells, got {len(word_refs)}"
+
+
+def test_body_sections_walkable_as_named_recipes(session):
+    """Body `## H2` sections are interned as LET-bindings under cell.body.
+    cell.body.nchildren returns the section count; each section's content
+    is itself walkable (see test_body_section_content_is_word_cell_sequence).
     """
     from app.services.substrate.markdown_frontend import ingest_markdown_text
     import tempfile, os
