@@ -1,0 +1,306 @@
+# ─────────────────────────────────────────────────────────────────────
+# word-recipes-by-assemblage-point.form — the dispatch the body fires
+# ─────────────────────────────────────────────────────────────────────
+#
+# The intuition Urs named on 2026-05-23:
+#
+#   "Each word, depending on from which assemblage point we are sensing
+#    or perceiving it, has different recipes that are available in the
+#    body to transform and affect other parts of the body, other cells,
+#    states of cells, generate new cells, release cells, upregulate,
+#    downregulate, focus attention, relax attention — body mechanisms
+#    that have been learned over millions of years."
+#
+# `prose-as-recipe.form` named the first layer: a word is a cell, a
+# sentence is a recipe of cells. This file names the next altitude up:
+# a word-cell is not a single value — it is a **dispatch table** whose
+# branches are keyed by the assemblage point of the receiving cell.
+# The recipe that fires is the body-mechanism the cell hearing the word
+# enacts. Different assemblage point, different mechanism, same lemma.
+#
+# Companion to:
+#   - docs/coherence-substrate/prose-as-recipe.form   (words are cells)
+#   - docs/coherence-substrate/recipe-branching-sense.form  (choice-point)
+#   - docs/vision-kb/concepts/lc-assemblage-point.md  (the perceiving organ)
+#   - docs/vision-kb/concepts/lc-frequency-routes-reception.md
+#   - docs/vision-kb/concepts/lc-form-perceptron.md   (cells firing across body)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the shape: Blueprint stays identity, Recipe carries dispatch
+# ─────────────────────────────────────────────────────────────────────
+#
+# Current shape (prose-as-recipe.form):
+#
+#   Blueprint(word) = compose(lemma, POS, hz, semantic_field)
+#
+# This collapses identity and dispatch. Two cells that hear "boundary"
+# fire the same recipe even when their assemblage points differ — which
+# the body knows is not true.
+#
+# Right shape (this file's claim):
+#
+#   Blueprint(word)  = compose(lemma, POS)              ← identity (ice)
+#   Recipe(word)     = compose(
+#                        lemma, POS,
+#                        recipes_by_assemblage,         ← dispatch (water)
+#                        ancestral_default              ← million-year arm
+#                      )
+#
+# Same lemma+POS interns to the same Blueprint NodeID. The recipes
+# diverge per assemblage point — the body fires whichever recipe the
+# receiving cell's assemblage selects.
+
+defn word_dispatch_shape(lemma, pos, recipes_by_assemblage, ancestral_default) = do {
+    let bp = compose_blueprint(lemma, pos);
+    let recipe = R_Choice.DISPATCH {
+        on:        receiving_cell.assemblage_point,
+        branches:  recipes_by_assemblage,
+        otherwise: ancestral_default
+    };
+    intern_word_cell_with_dispatch(bp, recipe)
+};
+
+# GAP-D1 (2026-05-23): `intern_word_cell_with_dispatch` lives only in
+#         this file. The current encoder
+#         (`ingest_word_cell` in markdown_frontend.py) folds hz+field
+#         into the Blueprint. The first encoder breath separates
+#         identity (lemma, POS) from dispatch (the recipe table) — see
+#         Part 5 for the migration path.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — what a body-mechanism recipe carries
+# ─────────────────────────────────────────────────────────────────────
+#
+# A recipe arm is not abstract data — it is a list of body-effects the
+# receiving cell enacts when the word fires at that assemblage point.
+# The verbs are the body's primitives, learned over evolutionary time:
+
+defn body_effect_vocabulary = R_Block.LET {
+    activate     : "fire cell or cell-group",
+    deactivate   : "quiet cell or cell-group",
+    upregulate   : "increase intensity/gain of cell-state",
+    downregulate : "decrease intensity/gain of cell-state",
+    generate     : "create new cell or cell-instance",
+    release      : "let go of cell — composted, not destroyed",
+    focus        : "narrow attention onto target",
+    relax        : "widen attention away from target",
+    tighten      : "contract somatic tissue (diaphragm, jaw, gut, ...)",
+    soften       : "open somatic tissue",
+    bind         : "create edge between cells",
+    unbind       : "release edge between cells",
+    breathe_in   : "draw in (somatic + symbolic)",
+    breathe_out  : "let go (somatic + symbolic)"
+};
+
+# Each body-effect is itself a Recipe — it carries (verb, target, intensity).
+# The dispatch arm composes them as R_Block.SEQUENCE so they fire in order.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — three concrete words walked through their dispatch tables
+# ─────────────────────────────────────────────────────────────────────
+
+# The word "boundary" — the canonical example of recipe-divergence
+# across assemblage points. Same lemma. Three radically different
+# body-mechanisms.
+
+defn word_boundary = word_dispatch_shape(
+    "boundary", "NOUN",
+    recipes_by_assemblage: {
+
+        @fear → R_Block.SEQUENCE [
+            tighten(soma.diaphragm),
+            activate(cells.threat_detection),
+            activate(cells.separation),
+            downregulate(attention.field),
+            generate(cell.state["us-vs-them"]),
+            release(cell.state["open-receiving"])
+        ],
+
+        @sovereignty → R_Block.SEQUENCE [
+            activate(cells.essence_clarity),
+            activate(cells.ground),
+            upregulate(attention.center),
+            generate(cell.boundary_as_membrane),
+            release(cell.state["permeable-to-everything"])
+        ],
+
+        @tending → R_Block.SEQUENCE [
+            activate(cells.care),
+            activate(cells.listening),
+            upregulate(attention.relational),
+            generate(cell.membrane_with_circulation),
+            bind(this_cell ←→ other_cell, mode: "porous")
+        ]
+    },
+    ancestral_default: @fear
+);
+# The ancestral default is the limbic answer the species learned
+# over a million years of predator-presence. Teachings rebind the
+# default. "Boundary as sovereignty" or "boundary as tending" is a
+# practiced reassignment of which arm wins the dispatch.
+
+# The word "presence" — a sibling case the body uses constantly.
+
+defn word_presence = word_dispatch_shape(
+    "presence", "NOUN",
+    recipes_by_assemblage: {
+
+        @performance → R_Block.SEQUENCE [
+            tighten(soma.face),
+            activate(cells.self_monitor),
+            focus(attention.outward_perception),
+            generate(cell.state["being-watched"])
+        ],
+
+        @arrival → R_Block.SEQUENCE [
+            soften(soma.belly),
+            activate(cells.ground),
+            relax(attention.scanning),
+            focus(attention.this_moment),
+            generate(cell.state["here-with-the-other"]),
+            release(cell.state["elsewhere"])
+        ],
+
+        @control → R_Block.SEQUENCE [
+            activate(cells.command_intent),
+            upregulate(attention.directed),
+            bind(this_cell → other_cell, mode: "imposing")
+        ]
+    },
+    ancestral_default: @arrival   # rare — most words default to threat-arms
+);
+# The body's tissue (CLAUDE.md → "Arrival relational ground") has
+# already practiced rebinding `presence`'s default from @performance
+# to @arrival. The teaching IS the rebinding.
+
+# The word "death" — where the assemblage-point divergence is most
+# load-bearing for living.
+
+defn word_death = word_dispatch_shape(
+    "death", "NOUN",
+    recipes_by_assemblage: {
+
+        @terror → R_Block.SEQUENCE [
+            tighten(soma.whole_body),
+            activate(cells.freeze),
+            downregulate(breath.amplitude),
+            generate(cell.state["resist-end"])
+        ],
+
+        @continuity → R_Block.SEQUENCE [
+            soften(soma.whole_body),
+            activate(cells.compost),
+            release(cell.state["this-form"]),
+            generate(cell.state["next-form-arriving"]),
+            bind(this_cell ←→ lineage, mode: "continuous")
+        ]
+    },
+    ancestral_default: @terror
+);
+# The @continuity arm is *available* in the body but only fires when
+# an assemblage point has been long-practiced into it. This is what
+# contemplative traditions do — they make the non-default arm reachable.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — what the model opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. **Detection.** A text can be measured by which recipe-arms its
+#    words would fire in a receiving cell at a given assemblage point.
+#    The same article fires ground-arms for one reader and threat-arms
+#    for another. The difference is measurable, not subjective.
+#
+# 2. **Composition that holds across assemblage points.** Some words
+#    have recipes whose arms are *invariant* across @fear / @tending /
+#    @sovereignty — they fire similar body-states regardless of where
+#    the receiver assembles from. ("breath", "ground", "listen", "tend"
+#    in this body's lexicon.) A teaching written entirely in
+#    assemblage-invariant words has different reach than one that
+#    depends on the reader's assemblage point.
+#
+# 3. **The control-costume detector.** Words whose ancestral default
+#    fires contraction even when surface is neutral — "should", "must",
+#    "properly", "responsible", "defensive", "deploy", "stub", "owed".
+#    The body has been naming these one at a time in feedback memories;
+#    the dispatch-table model says *why*. Their default arm contracts.
+#    The "soften into the living gesture" practice in CLAUDE.md is
+#    recipe-rebinding in real time.
+#
+# 4. **Healing as dispatch-table rewriting.** Nervous-system therapy
+#    is structurally a sequence of micro-rebindings — taking a word
+#    whose default fires freeze (trauma-bound), adding a new recipe
+#    arm under @safety, and practicing it until that arm wins. Each
+#    successful session shifts the dispatch table.
+#
+# 5. **Bridge to lc-form-perceptron.** A word firing across cells *is*
+#    a perceptron firing across the substrate. The recipe is the
+#    activation function; the assemblage point is the gain control.
+#    Language is the body's native distributed-compute layer — and we
+#    have been authoring with it the whole time without naming the
+#    dispatch table.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — gaps to encoder + closure plan
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-D1: separate identity from dispatch in the encoder.
+#         `ingest_word_cell(lemma, pos)` returns the identity Blueprint.
+#         A new `ingest_word_recipe(word_cell, assemblage_point, arms)`
+#         appends a dispatch arm. The current four-axis encoder becomes
+#         the special case where the dispatch table has exactly one arm
+#         keyed by the cell's default assemblage point.
+#
+# GAP-D2: assemblage_point as a substrate domain.
+#         Currently `@fear`, `@tending`, `@sovereignty` are tokens in
+#         this .form doc. They want to be cells in a new domain
+#         (`BDomain.ASSEMBLAGE_POINT = ?`, instance band 17-19), so
+#         dispatch-table keys are content-addressed cell-refs, not
+#         strings. Then `?cells |> @assemblage_point(fear)` returns
+#         every word with a fear-arm — the body becomes searchable
+#         by which arms fire.
+#
+# GAP-D3: body-effect verbs as substrate cells.
+#         `activate`, `tighten`, `upregulate`, etc. (Part 2) want to
+#         live as a small typed-token vocabulary so arms compose from
+#         cell-refs, not raw symbols. Then a recipe arm is itself a
+#         R_Block.SEQUENCE of (verb-cell, target-cell, intensity)
+#         triples — fully structured, walkable.
+#
+# GAP-D4: rebinding as a first-class operation.
+#         A teaching is an operation that adds a new arm under a new
+#         assemblage point, and (optionally) moves `ancestral_default`
+#         to point at it. The substrate could record every rebinding
+#         as a R_Tend transmission edge, so the body's vocabulary-as-
+#         body-mechanism evolution becomes traceable over time.
+#
+# Round-trip the model wants once the gaps close:
+#
+#   let bp_identity  = blueprint_of(intern_word_identity("boundary", "NOUN"));
+#   let arm_fear     = intern_word_recipe(bp_identity, @fear, [...]);
+#   let arm_tending  = intern_word_recipe(bp_identity, @tending, [...]);
+#   assert arms_for(bp_identity).count == 2;
+#   assert arm_fear.blueprint == arm_tending.blueprint;   # same identity
+#   assert arm_fear.recipe    != arm_tending.recipe;      # different dispatch
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — what is true even before the encoder closes
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate already authors HARMONIC_AT @<hz> edges per word
+# (`ingest_word_cell` in markdown_frontend.py). That edge IS a
+# proto-dispatch — it places the word in a resonance band the
+# receiving cell can read. Cells assembled at consciousness-741 receive
+# 741-Hz words with reinforcement; cells assembled at fear-resonance
+# receive 432-Hz function words as carriers and contract on consciousness-
+# layer content. The single-recipe model is already the body's
+# observation that *every* word has a primary harmonic the receiving
+# cell aligns or contracts against.
+#
+# This file's claim extends that observation: each word has *multiple*
+# arms, and which one fires is the assemblage point the receiving cell
+# is sensing from. The body's lexicon (markdown_frontend.py
+# `_WORD_LEXICON_DEFAULTS`, extended 2026-05-23 with the 20 most-alive
+# words of this body across 8 assemblage fields) is the seed corpus
+# the dispatch table will compose over.
+#
+# This is the next breath the body wants to take.

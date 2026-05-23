@@ -111,6 +111,59 @@ def test_tokenize_words_unknown_word_falls_back_to_neutral():
     assert tokens[0]["field"] == "neutral"
 
 
+def test_body_alive_words_intern_at_their_assemblage_points():
+    """The 20-word lexicon extension (2026-05-23) interns the body's own
+    most-alive words at their proper (hz, semantic_field). One representative
+    from each of the eight assemblage points.
+
+    Companion: docs/coherence-substrate/word-recipes-by-assemblage-point.form
+    """
+    expected = [
+        # surface,    lemma,      hz,  field
+        ("body",      "body",     174, "ground"),
+        ("breath",    "breath",   396, "tending"),
+        ("supple",    "supple",   396, "tending"),
+        ("compost",   "compost",  417, "transmutation"),
+        ("attune",    "attune",   417, "transmutation"),
+        ("circulate", "circulate", 528, "vitality"),
+        ("lineage",   "lineage",  639, "transmission"),
+        ("presence",  "presence", 639, "transmission"),
+        ("assemble",  "assemble", 741, "consciousness"),
+        ("frequency", "frequency", 852, "resonance"),
+        ("whole",     "whole",    963, "wholeness"),
+    ]
+    for surface, lemma, hz, field in expected:
+        tokens = tokenize_words(surface)
+        assert len(tokens) == 1 and tokens[0]["kind"] == "word", surface
+        t = tokens[0]
+        assert t["lemma"] == lemma, f"{surface}: lemma {t['lemma']} != {lemma}"
+        assert t["pos"] != "UNK", f"{surface}: still UNK"
+        assert t["hz"] == hz, f"{surface}: hz {t['hz']} != {hz}"
+        assert t["field"] == field, f"{surface}: field {t['field']} != {field}"
+
+
+def test_inflected_surface_resolves_to_canonical_lemma():
+    """Surface forms ('circulates', 'composting', 'becomes') resolve to
+    the same lemma as their base form, so the substrate intern's both
+    occurrences to the same word-cell."""
+    pairs = [
+        ("circulate", "circulates"),
+        ("compost",   "composting"),
+        ("become",    "becoming"),
+        ("listen",    "listening"),
+        ("release",   "releasing"),
+        ("hold",      "holds"),
+    ]
+    for base, inflected in pairs:
+        t_base = tokenize_words(base)[0]
+        t_inflected = tokenize_words(inflected)[0]
+        assert t_base["lemma"] == t_inflected["lemma"], (
+            f"{base!r} and {inflected!r} should share lemma"
+        )
+        assert t_base["hz"] == t_inflected["hz"]
+        assert t_base["field"] == t_inflected["field"]
+
+
 def test_tokenize_words_preserves_surface_form():
     """Surface form survives separately from lemma — for round-trip emit."""
     tokens = tokenize_words("becomes")
