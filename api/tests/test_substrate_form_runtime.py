@@ -499,6 +499,62 @@ def test_structured_ctor_unknown_field_still_raises(session):
         )
 
 
+def test_body_sections_walkable_as_named_recipes(session):
+    """Body `## H2` sections are interned as LET-bindings under cell.body,
+    making the previously-opaque content-hash leaf structurally walkable.
+    Each section binds heading→content; the tree extends as the body has
+    sections.
+
+    This is (D) at section-level — heading structure with prose-as-string.
+    A follow-up breath can extend each section's string into a SEQUENCE of
+    word-cells via tokenize_words + intern_word_cell (the existing
+    prose-as-recipe pipeline).
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: body sections test
+description: cell with multi-section body
+type: feedback
+---
+
+Intro paragraph (before any heading).
+
+## First Section
+
+First section content.
+
+## Second Section
+
+Second section content with more text.
+
+## Third Section
+
+Third section content.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    # body is a substrate-resident structured recipe.
+    body_ctor = form_execute_text(
+        session, '@memory("body sections test").body'
+    )
+    assert isinstance(body_ctor, NodeID)
+
+    # Three sections.
+    assert form_execute_text(
+        session, '@memory("body sections test").body.nchildren'
+    ) == 3
+
+
 def test_nested_structured_ctor_navigation(session):
     """Nested frontmatter (list-of-dict) becomes a walkable substrate tree;
     LET-binding access on Recipe NodeIDs lets the runtime navigate inside.
