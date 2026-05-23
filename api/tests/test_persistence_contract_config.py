@@ -7,7 +7,7 @@ from app.services import (
     persistence_contract_service,
     unified_db,
 )
-from app.services.telemetry_persistence_service import db as telemetry_service_db
+from app.services.telemetry_persistence import db as telemetry_service_db
 
 
 def test_persistence_contract_auto_ignores_dev_sqlite(set_config) -> None:
