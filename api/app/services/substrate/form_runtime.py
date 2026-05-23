@@ -1120,9 +1120,15 @@ def _trivial_value(session: Session, nid: NodeID) -> Any:
         return nid.instance - 1 if nid.instance > 0 else 0
     if nid.type_ == RType.STRING:
         return lookup_string_value(session, nid.instance) or ""
+    if nid.type_ == RType.SLUG:
+        # Slugs share the substrate_strings interning table with strings;
+        # they differ in type-tag (identity-role vs content-role) but the
+        # surface decoding is the same lookup. Letting `let x = 42` round-trip
+        # required this arm; without it, the Identifier child x stays opaque.
+        return lookup_string_value(session, nid.instance) or ""
     raise ValueError(
         f"Form runtime: .value has no decoder for RType={nid.type_} "
-        f"(supported: NULL, BOOL, INTEGER, STRING)"
+        f"(supported: NULL, BOOL, INTEGER, STRING, SLUG)"
     )
 
 

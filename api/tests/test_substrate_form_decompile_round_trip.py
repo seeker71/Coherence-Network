@@ -71,10 +71,17 @@ ROUND_TRIP_CASES = [
     "!(1 == 2)",
     "if 1 > 0 then 42 else 0",
     "if 1 == 1 then 99",
-    # R_Block coverage (DO, SEQUENCE) — added when running idea-realization-engine
-    # through the substrate revealed verb-category 1.2.9 (R_Block) was not yet
-    # decompilable. LET and WITH have sibling gaps (Identifier/slug trivial
-    # decoder not yet present) — separate breaths.
+    # R_Block coverage (DO, SEQUENCE) — added when running
+    # idea-realization-engine through the substrate revealed
+    # verb-category 1.2.9 (R_Block) was not yet decompilable.
+    #
+    # LET (instance=3) and WITH (instance=4) decompile arms are present in
+    # form_decompile.py but their round-trip needs an upstream fix:
+    # Identifier children intern as `type_=7, instance=<large>` (looks
+    # content-hash-based, not the conventional substrate_strings/SLUG path).
+    # Adding RType.SLUG to _trivial_value (done in this PR) covers the
+    # conventional case but the Form parser's Identifier encoding is
+    # different. Next-breath work.
     "do { 1 + 2; 3 * 4 }",
     "do { 1 }",
 ]
