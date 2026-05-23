@@ -553,6 +553,30 @@ def _builtin_symbol_in_file(path: Any, symbol: Any) -> bool:
     return _builtin_file_contains(path, symbol)
 
 
+def _builtin_pytest_passes(test_target: Any) -> bool:
+    """Run pytest against `test_target` and return True iff exit code is 0.
+
+    `test_target` is the same string the spec.test field uses — e.g.,
+    "api/tests/test_X.py" or "api/tests/test_Y.py::test_specific".
+    This is impure (it runs a subprocess) — unlike file_exists / contains
+    which are pure functions of disk state. Two evaluations may give
+    different answers (test behavior can change). The runtime does not
+    auto-cache impure results; the caller chooses when to re-evaluate.
+
+    Returns False on missing pytest, missing file, or non-zero exit.
+    """
+    import subprocess
+    if not isinstance(test_target, str):
+        raise TypeError(f"pytest_passes: target must be string, got {type(test_target).__name__}")
+    # Use python3 -m pytest to avoid `python` vs `python3` shell-PATH ambiguity.
+    cmd = ["python3", "-m", "pytest", "-q", test_target]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0
+
+
 def _builtin_ask(*args: Any) -> dict[str, Any]:
     """`ask(agent_id, question, choices=[], context={})` — open a human question.
 
@@ -650,6 +674,10 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     "file_contains": _builtin_file_contains,
     "file_size": _builtin_file_size,
     "symbol_in_file": _builtin_symbol_in_file,
+    # Impure (subprocess) — runs pytest and returns the boolean exit-code-zero.
+    # Spec.test fields become Form predicates; done_when items can include
+    # behavioral assertions, not just file-shape ones.
+    "pytest_passes": _builtin_pytest_passes,
 }
 
 
