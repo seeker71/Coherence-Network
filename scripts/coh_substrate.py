@@ -375,6 +375,230 @@ HZ_BANDS = {
 }
 
 
+def _ctor_walk_field(session, ctor_nid, field):
+    """Walk a structured-CTOR R_Block.DO for a LET-binding by key name.
+    Returns the value NodeID, or None if not found. Used when a cell-builtin
+    accessor (`.source`, etc.) would shadow a frontmatter key of the same name.
+    """
+    from app.services.substrate.category import RBasic
+    from app.services.substrate.form_runtime import (
+        _node_children, _node_category, _trivial_value,
+    )
+    if ctor_nid is None:
+        return None
+    for let_nid in _node_children(session, ctor_nid):
+        let_cat = _node_category(session, let_nid)
+        if let_cat.type_ != RBasic.BLOCK.value or let_cat.instance != 3:
+            continue
+        kids = _node_children(session, let_nid)
+        if len(kids) != 2:
+            continue
+        try:
+            key = _trivial_value(session, kids[0])
+        except (ValueError, AttributeError):
+            continue
+        if key == field:
+            return kids[1]
+    return None
+
+
+def _decode_source_entries(session, source_nid):
+    """Decode the frontmatter `source:` SEQUENCE into a list of
+    (file_path, [symbols]) tuples. Each entry is a R_Block.DO carrying
+    LET(file, ...) + LET(symbols, SEQUENCE) bindings.
+    """
+    from app.services.substrate.form_runtime import _node_children, _trivial_value
+    from app.services.substrate.category import RType
+    if source_nid is None:
+        return []
+    out = []
+    for entry in _node_children(session, source_nid):
+        file_path = None
+        symbols = []
+        # Walk this entry's LET children for file/symbols keys
+        for let_nid in _node_children(session, entry):
+            kids = _node_children(session, let_nid)
+            if len(kids) != 2:
+                continue
+            try:
+                key = _trivial_value(session, kids[0])
+            except (ValueError, AttributeError):
+                continue
+            if key == "file":
+                try:
+                    file_path = _trivial_value(session, kids[1])
+                except (ValueError, AttributeError):
+                    pass
+            elif key == "symbols":
+                # symbols is a SEQUENCE of strings (or a single string if YAML
+                # flattened). Try both.
+                if kids[1].type_ in (RType.STRING, RType.SLUG):
+                    try:
+                        symbols = [_trivial_value(session, kids[1])]
+                    except (ValueError, AttributeError):
+                        pass
+                else:
+                    for sym_ref in _node_children(session, kids[1]):
+                        if sym_ref.type_ in (RType.STRING, RType.SLUG):
+                            try:
+                                symbols.append(_trivial_value(session, sym_ref))
+                            except (ValueError, AttributeError):
+                                pass
+        if file_path:
+            out.append((file_path, symbols))
+    return out
+
+
+def cmd_execute_dispatch(args: argparse.Namespace) -> int:
+    """Route `coh substrate execute <slug>` to the right domain handler.
+    Auto-detects: tries idea first, then spec. The slug shape is the only
+    needed input; the substrate already knows which domain owns each name.
+    """
+    from app.services.substrate.kernel import lookup_cell
+    slug = args.slug
+    with session_scope() as session:
+        idea = lookup_cell(session, "idea", slug)
+        if idea is not None:
+            return cmd_execute_idea(args)
+        spec = lookup_cell(session, "spec", slug)
+        if spec is not None:
+            return cmd_execute_spec(args, spec)
+        print(
+            f"No @idea({slug}) or @spec({slug}) found in substrate.\n"
+            f"(if not yet ingested, run: coh substrate ingest <path>)",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
+    """Run a spec-recipe through the substrate.
+
+    Walking a spec's recipe IS running it. The spec carries claims:
+      - source: files (must exist) and symbols (must resolve in their files)
+      - requirements: predicates the implementation must satisfy
+      - done_when: testable conditions
+      - test: command that validates the whole
+
+    "Implementation" is what makes these claims true. For an unimplemented
+    spec, the source files won't exist yet, symbols can't resolve, the test
+    command fails. Each of those is the *honest run* of the recipe — the
+    recipe says what should be; running it says what is.
+    """
+    import subprocess
+    from pathlib import Path
+
+    from app.services.substrate.form_runtime import (
+        _resolve_access, _node_children, _trivial_value,
+    )
+    from app.services.substrate.category import RType
+
+    with session_scope() as session:
+        # Re-lookup with session-bound state for the walk.
+        from app.services.substrate.kernel import lookup_cell
+        s_cell = lookup_cell(session, "spec", spec.name)
+        if s_cell is None:
+            print(f"@spec({spec.name}) not found", file=sys.stderr)
+            return 1
+
+        slug = s_cell.name
+        print(f"═══ Executing spec-recipe: @spec({slug}) ═══")
+        print()
+        for field in ("id", "idea_id", "status", "priority"):
+            v = _ctor_walk_field(session, s_cell.ctor, field)
+            if v is not None and v.type_ in (RType.STRING, RType.SLUG):
+                try:
+                    print(f"  {field:10s}: {_trivial_value(session, v)}")
+                except (ValueError, AttributeError):
+                    pass
+        print()
+
+        # Source claims — files + symbols
+        source_nid = _ctor_walk_field(session, s_cell.ctor, "source")
+        entries = _decode_source_entries(session, source_nid) if source_nid else []
+
+        files_present, files_missing = [], []
+        symbols_resolved, symbols_missing = [], []
+        if entries:
+            print(f"— source: claims ({len(entries)} entries) —")
+            for fp, syms in entries:
+                p = Path(fp)
+                if p.exists():
+                    files_present.append(fp)
+                    body = p.read_text(errors="replace") if p.is_file() else ""
+                    for sym in syms:
+                        # Cheap symbol resolution: substring presence.
+                        # The wellness check uses a smarter regex for python/ts;
+                        # this is the honest baseline.
+                        bare = sym.split("(")[0].strip()
+                        if bare and bare in body:
+                            symbols_resolved.append((fp, sym))
+                        else:
+                            symbols_missing.append((fp, sym))
+                    print(f"  ✓ {fp}  [{len(syms)} symbol(s)]")
+                else:
+                    files_missing.append(fp)
+                    print(f"  ✗ MISSING: {fp}  [{len(syms)} symbol(s) cannot resolve]")
+            n_files = len(entries)
+            n_syms = sum(len(s) for _, s in entries)
+            print()
+            print(f"  files present : {len(files_present)}/{n_files}")
+            print(f"  symbols resolve: {len(symbols_resolved)}/{n_syms}")
+            print()
+        else:
+            print("— source: not in structured form (legacy markdown text) —")
+            print()
+
+        # Test command
+        test_nid = _ctor_walk_field(session, s_cell.ctor, "test")
+        test_cmd = None
+        if test_nid is not None and test_nid.type_ == RType.STRING:
+            try:
+                test_cmd = _trivial_value(session, test_nid)
+            except (ValueError, AttributeError):
+                pass
+
+        # Run the test if it exists AND all source files are present
+        if test_cmd:
+            print(f"— test command —")
+            print(f"  $ {test_cmd}")
+            if files_missing:
+                print(
+                    f"  → SKIPPED  ({len(files_missing)} source file(s) missing; "
+                    f"recipe declares them but body has not yet realized them)"
+                )
+            elif args.dry_run:
+                print(f"  → DRY-RUN (no subprocess invoked)")
+            else:
+                r = subprocess.run(test_cmd, shell=True, capture_output=True, text=True)
+                last = ""
+                if r.stdout:
+                    last = r.stdout.strip().split("\n")[-1]
+                elif r.stderr:
+                    last = r.stderr.strip().split("\n")[-1]
+                status = "PASS" if r.returncode == 0 else "FAIL"
+                print(f"  → {status}  ({last[:80]})")
+        else:
+            print("— spec has no `test:` field —")
+        print()
+
+        # Verdict
+        n_files = len(entries)
+        n_syms = sum(len(s) for _, s in entries)
+        if not entries:
+            print("═══ spec-recipe walked (no structured source: to validate) ═══")
+        else:
+            file_ratio = len(files_present) / n_files if n_files else 0
+            sym_ratio = (len(symbols_resolved) / n_syms) if n_syms else 1.0
+            level = "REALIZED" if file_ratio == 1.0 and sym_ratio == 1.0 else (
+                "PARTIAL" if file_ratio > 0 else "ASPIRATIONAL"
+            )
+            print(f"═══ spec-recipe state: {level} "
+                  f"({len(files_present)}/{n_files} files, "
+                  f"{len(symbols_resolved)}/{n_syms} symbols) ═══")
+        return 0
+
+
 def cmd_execute_idea(args: argparse.Namespace) -> int:
     """Run an idea-recipe end-to-end through the substrate.
 
@@ -856,7 +1080,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "run":
         return cmd_run(args)
     if args.cmd == "execute":
-        return cmd_execute_idea(args)
+        return cmd_execute_dispatch(args)
     if args.cmd == "discover":
         return cmd_discover(args)
     if args.cmd == "sense":
