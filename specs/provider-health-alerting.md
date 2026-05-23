@@ -18,6 +18,12 @@ done_when:
   - "Provider health transition to degraded is detected from a strict last-5 success-rate check (<0.50)."
   - "A single friction event is created per degradation transition with provider and last-5 evidence."
   - "Optional Telegram notification is emitted only when enabled and only on newly-created health events."
+  - 'file_exists("api/app/services/automation_usage_service.py")'
+  - 'symbol_in_file("api/app/services/automation_usage_service.py", "provider")'
+  - 'file_exists("api/app/services/collective_health_service.py")'
+  - 'symbol_in_file("api/app/services/collective_health_service.py", "health")'
+  - 'file_exists("api/app/routers/agent_status_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_status_routes.py", "health")'
 proof: operational
 constraints:
   - "no new notification providers; use existing adapter/service only"

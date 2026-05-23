@@ -13,6 +13,9 @@ acceptance:
   - "The field story manifest exposes both human-readable and machine-readable breath-cycle artifacts."
   - "Tests verify the YouTube source count, unroomed influence candidates, and all trace links emitted in the report."
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
+done_when:
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
+
 ---
 
 # Influence Breath Cycle

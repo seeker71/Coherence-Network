@@ -24,6 +24,24 @@ done_when:
   - "A follow-up implementation can add tracker adapters without changing the executor contract."
   - "A follow-up implementation can expose active, blocked, retrying, review-ready, and deploy-ready work from one status surface."
   - "Existing AGENTS.md and task-card constraints remain the source of truth until a machine-readable workflow file is implemented."
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "task")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "task")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "task")'
+  - 'file_exists("api/scripts/project_manager.py")'
+  - 'file_exists("api/scripts/agent_runner.py")'
+  - 'symbol_in_file("api/scripts/agent_runner.py", "executor")'
+  - 'symbol_in_file("api/scripts/agent_runner.py", "task")'
+  - 'symbol_in_file("api/scripts/agent_runner.py", "task")'
+  - 'file_exists("api/app/services/agent_service_pipeline_status.py")'
+  - 'symbol_in_file("api/app/services/agent_service_pipeline_status.py", "pipeline")'
+  - 'file_exists("api/app/models/agent.py")'
+  - 'symbol_in_file("api/app/models/agent.py", "ControlPlaneTask")'
+  - 'symbol_in_file("api/app/models/agent.py", "ControlPlaneProof")'
+  - 'file_exists("api/tests/test_agent_control_plane.py")'
+  - 'symbol_in_file("api/tests/test_agent_control_plane.py", "control-plane")'
+  - 'symbol_in_file("api/tests/test_agent_control_plane.py", "follow-through")'
+  - 'symbol_in_file("api/tests/test_agent_control_plane.py", "orchestration")'
 test: "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"
 constraints:
   - "Planning spec only; no runtime behavior changes in this task."

@@ -18,6 +18,13 @@ done_when:
   - "Document output: score 0.0–1.0 per project"
   - "Document pitfalls: gaming prevention, contribution-type balance"
   - "Add weights stub (all equal or placeholder) — actual weights are decision gate"
+  - 'file_exists("api/app/services/coherence_service.py")'
+  - 'symbol_in_file("api/app/services/coherence_service.py", "compute_coherence")'
+  - 'file_exists("api/app/routers/coherence.py")'
+  - 'symbol_in_file("api/app/routers/coherence.py", "coherence")'
+  - 'file_exists("api/app/services/coherence_signal_depth_service.py")'
+  - 'symbol_in_file("api/app/services/coherence_signal_depth_service.py", "signal")'
+  - 'pytest_passes("api/tests/test_cc_scoring.py")'
 test: "python3 -m pytest api/tests/test_cc_scoring.py -x -v"
 constraints:
   - "changes scoped to listed files only"

@@ -28,6 +28,27 @@ done_when:
   - POST /api/federation/nodes/{id}/messages sends targeted message
   - POST /api/federation/broadcast sends to all nodes
   - All tests pass
+  - 'file_exists("api/app/routers/federation.py")'
+  - 'symbol_in_file("api/app/routers/federation.py", "register_node")'
+  - 'symbol_in_file("api/app/routers/federation.py", "heartbeat_node")'
+  - 'symbol_in_file("api/app/routers/federation.py", "list_nodes")'
+  - 'symbol_in_file("api/app/routers/federation.py", "post_measurement_summaries")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_strategies")'
+  - 'symbol_in_file("api/app/routers/federation.py", "send_message")'
+  - 'symbol_in_file("api/app/routers/federation.py", "broadcast_message")'
+  - 'file_exists("api/app/services/federation_service.py")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "register_or_update_node")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "heartbeat_node")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "store_measurement_summaries")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "compute_and_store_strategies")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "record_strategy_effectiveness")'
+  - 'file_exists("api/app/services/node_identity_service.py")'
+  - 'symbol_in_file("api/app/services/node_identity_service.py", "get_or_create_node_id")'
+  - 'symbol_in_file("api/app/services/node_identity_service.py", "get_node_metadata")'
+  - 'file_exists("api/app/routers/openclaw_node_bridge.py")'
+  - 'symbol_in_file("api/app/routers/openclaw_node_bridge.py", "openclaw_node_bridge")'
+  - 'symbol_in_file("api/app/routers/openclaw_node_bridge.py", "pump_out")'
+  - 'pytest_passes("api/tests/test_flow_core_api.py")'
 test: "python3 -m pytest api/tests/test_flow_core_api.py -q"
 ---
 

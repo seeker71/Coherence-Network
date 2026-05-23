@@ -19,6 +19,11 @@ done_when:
   - "GET /api/gates/main-head — Get current main branch status"
   - "Integrates with GitHub API for PR status, checks, approvals"
   - "Supports polling with timeout for async CI completion"
+  - 'file_exists("api/app/services/release_gate_service.py")'
+  - 'symbol_in_file("api/app/services/release_gate_service.py", "evaluate_pr_to_public_report")'
+  - 'file_exists("api/app/routers/gates.py")'
+  - 'symbol_in_file("api/app/routers/gates.py", "gate")'
+  - 'pytest_passes("api/tests/test_release_gate_service.py")'
 test: "cd api && python3 -m pytest tests/test_release_gate_service.py -x -v"
 constraints:
   - "changes scoped to listed files only"

@@ -23,6 +23,14 @@ done_when:
   - "CLI supports the 15 core commands listed in this spec."
   - "`npm ls --production` in `cli/` returns empty (zero dependencies)."
   - "`identity setup` successfully guides a new user to a valid local identity."
+  - 'file_exists("cli/bin/coh.mjs")'
+  - 'symbol_in_file("cli/bin/coh.mjs", "CLI")'
+  - 'file_exists("cli/lib/commands/ideas.mjs")'
+  - 'symbol_in_file("cli/lib/commands/ideas.mjs", "ideas")'
+  - 'file_exists("cli/lib/commands/tasks.mjs")'
+  - 'symbol_in_file("cli/lib/commands/tasks.mjs", "task")'
+  - 'file_exists("cli/lib/commands/nodes.mjs")'
+  - 'symbol_in_file("cli/lib/commands/nodes.mjs", "node")'
 test: "cd cli && npm pack --dry-run"
 constraints:
   - "No external runtime dependencies allowed."

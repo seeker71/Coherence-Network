@@ -12,6 +12,9 @@ done_when:
   - "bash syntax validation passes for the deploy script"
   - "the deploy script contains an explicit remote-tracking refspec fetch for the target branch"
   - "the deploy script contains an explicit target fetch fallback before git cat-file fails"
+  - 'file_exists("deploy/hostinger/auto-deploy.sh")'
+  - 'symbol_in_file("deploy/hostinger/auto-deploy.sh", "TARGET_SHA")'
+  - 'symbol_in_file("deploy/hostinger/auto-deploy.sh", "git")'
 test: "bash -n deploy/hostinger/auto-deploy.sh"
 constraints:
   - "Do not change workflow secrets, SSH targets, compose services, or public verification semantics."

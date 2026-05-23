@@ -21,6 +21,8 @@ done_when:
   - "startup reap covers tasks from any runner with last_seen_at > 30 min old"
   - "a friction event (or dedicated reap event) is posted each time the reap cycle fires"
   - "all five verification scenarios below pass against production API"
+  - 'file_exists("api/app/services/smart_reaper_service.py")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "timeout")'
 test: "pytest -q api/tests/ -k reaper"
 constraints:
   - "do not change the 15-minute age threshold without a separate spec approval"

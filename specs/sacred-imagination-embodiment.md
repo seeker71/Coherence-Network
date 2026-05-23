@@ -16,6 +16,10 @@ done_when:
   - "The concept file exists with source provenance and cross-references."
   - "The resource digest points to the embodied concept."
   - "INDEX.md, LOG.md, and the coherence-substrate record the new concept."
+  - 'file_exists("docs/vision-kb/concepts/lc-sacred-imagination.md")'
+  - 'file_exists("docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md")'
+  - 'file_exists("docs/vision-kb/INDEX.md")'
+  - 'file_exists("docs/vision-kb/LOG.md")'
 test: "for id in lc-perception-as-interface lc-play lc-field-sensing lc-expressing lc-inner-travel lc-trust-as-gateway lc-presence-over-protection lc-assemblage-point lc-relationships-as-mirrors; do test -f docs/vision-kb/concepts/$id.md; done"
 constraints:
   - "Do not store or quote the full YouTube transcript."

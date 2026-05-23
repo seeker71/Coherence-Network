@@ -17,6 +17,12 @@ requirements:
 done_when:
   - Exact computed values verified against known inputs in tests
   - pytest api/tests/test_grounded_cost_value_measurement.py passes
+  - 'file_exists("api/app/services/grounded_measurement_service.py")'
+  - 'symbol_in_file("api/app/services/grounded_measurement_service.py", "compute_grounded_cost")'
+  - 'symbol_in_file("api/app/services/grounded_measurement_service.py", "compute_grounded_value")'
+  - 'file_exists("api/app/services/grounded_idea_metrics_service.py")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_idea_metrics")'
+  - 'pytest_passes("api/tests/test_grounded_cost_value_measurement.py")'
 test: "cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.py"
 ---
 

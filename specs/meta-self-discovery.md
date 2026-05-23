@@ -19,6 +19,14 @@ done_when:
   - "`coverage_pct` is consistent across `/endpoints?has_trace=false` count and `/coverage` report."
   - "No 500 errors on any meta endpoint under valid input."
   - "Meta router is registered in `main.py` with tag `meta`."
+  - 'file_exists("api/app/services/meta_service.py")'
+  - 'file_exists("api/app/routers/meta.py")'
+  - 'file_exists("api/app/models/meta.py")'
+  - 'symbol_in_file("api/app/models/meta.py", "EndpointNode")'
+  - 'symbol_in_file("api/app/models/meta.py", "ModuleNode")'
+  - 'symbol_in_file("api/app/models/meta.py", "MetaEndpointsResponse")'
+  - 'symbol_in_file("api/app/models/meta.py", "MetaGraphResponse")'
+  - 'pytest_passes("api/tests/test_flow_core_api.py")'
 test: "cd api && python -m pytest -q tests/test_flow_core_api.py -k meta"
 ---
 

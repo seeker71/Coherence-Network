@@ -20,6 +20,25 @@ done_when:
   - "Focused MCP tests cover stream parsing and dispatch endpoint routing."
   - "Morning brief collector tests cover node/message collection without the live API."
   - "Spec, MCP tests, and morning collector tests pass."
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "decode_sse_events")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "api_sse")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "dispatch")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "TOOLS")'
+  - 'file_exists("scripts/morning_coherence_brief.py")'
+  - 'symbol_in_file("scripts/morning_coherence_brief.py", "collect_brief")'
+  - 'symbol_in_file("scripts/morning_coherence_brief.py", "render_text")'
+  - 'file_exists("api/app/routers/federation.py")'
+  - 'symbol_in_file("api/app/routers/federation.py", "publish_diagnostic")'
+  - 'symbol_in_file("api/app/routers/federation.py", "subscribe_diagnostics")'
+  - 'symbol_in_file("api/app/routers/federation.py", "send_message")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_messages")'
+  - 'symbol_in_file("api/app/routers/federation.py", "node_event_stream")'
+  - 'file_exists("api/app/routers/task_activity_routes.py")'
+  - 'symbol_in_file("api/app/routers/task_activity_routes.py", "task_events_sse")'
+  - 'symbol_in_file("api/app/routers/task_activity_routes.py", "task_stream")'
+  - 'pytest_passes("api/tests/test_awareness_streaming.py")'
+  - 'pytest_passes("api/tests/test_morning_coherence_brief.py")'
 test: "python3 -m pytest mcp-server/tests/test_awareness_streaming.py api/tests/test_morning_coherence_brief.py -q"
 constraints:
   - "Use existing API streaming/message endpoints; do not invent a parallel streaming backend."

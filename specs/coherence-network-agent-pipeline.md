@@ -30,6 +30,11 @@ done_when:
   - "GET /api/pipeline/status returns live pipeline metrics"
   - "--once, --dry-run, and --interval flags work correctly"
   - "All tests pass"
+  - 'file_exists("api/app/services/pipeline_service.py")'
+  - 'file_exists("api/app/services/pipeline_pulse_service.py")'
+  - 'file_exists("api/app/services/pipeline_advance_service.py")'
+  - 'pytest_passes("api/tests/test_agent_pipeline.py")'
+  - 'pytest_passes("api/tests/test_pipeline_router.py")'
 test: "cd api && python -m pytest tests/test_agent_pipeline.py tests/test_pipeline_router.py -q"
 constraints:
   - "changes scoped to listed files only"

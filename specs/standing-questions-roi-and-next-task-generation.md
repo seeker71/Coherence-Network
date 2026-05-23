@@ -22,6 +22,23 @@ done_when:
   - "Every idea includes the standing improvement/measurement question."
   - "Inventory exposes `question_roi` and `answer_roi` for question rows."
   - "API can suggest and optionally create the next highest-ROI task from answered questions."
+  - 'file_exists("api/app/services/idea_standing_questions.py")'
+  - 'symbol_in_file("api/app/services/idea_standing_questions.py", "STANDING_QUESTION_TEXT")'
+  - 'symbol_in_file("api/app/services/idea_standing_questions.py", "_ensure_standing_questions")'
+  - 'symbol_in_file("api/app/services/idea_standing_questions.py", "_prune_internal_standing_questions")'
+  - 'file_exists("api/app/services/idea_write_ops.py")'
+  - 'symbol_in_file("api/app/services/idea_write_ops.py", "add_question")'
+  - 'file_exists("api/app/services/idea_lifecycle_ops.py")'
+  - 'symbol_in_file("api/app/services/idea_lifecycle_ops.py", "answer_question")'
+  - 'file_exists("api/app/routers/inventory.py")'
+  - 'symbol_in_file("api/app/routers/inventory.py", "next_highest_roi_task")'
+  - 'file_exists("api/app/services/inventory_service.py")'
+  - 'symbol_in_file("api/app/services/inventory_service.py", "next_highest_roi_task_from_answered_questions")'
+  - 'file_exists("api/app/models/idea.py")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaQuestion")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaQuestionCreate")'
+  - 'pytest_passes("api/tests/test_idea_standing_questions.py")'
+  - 'pytest_passes("api/tests/test_idea_scoring.py")'
 test: "cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_idea_scoring.py -x -v"
 constraints:
   - "changes scoped to listed files only"

@@ -17,6 +17,11 @@ requirements:
 done_when:
   - Unit tests verify exact metric computations from known inputs
   - pytest api/tests/test_grounded_idea_portfolio_metrics.py passes
+  - 'file_exists("api/app/services/grounded_idea_metrics_service.py")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_idea_metrics")'
+  - 'file_exists("api/app/routers/agent_grounded_metrics_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_grounded_metrics_routes.py", "grounded")'
+  - 'pytest_passes("api/tests/test_edge_cases_regression.py::test_idea_grounded_metrics")'
 test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_grounded_metrics"
 ---
 

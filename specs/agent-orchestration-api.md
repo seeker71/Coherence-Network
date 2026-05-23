@@ -28,6 +28,23 @@ done_when:
   - "GET /api/agent/tasks/attention — List tasks with status needs_decision or failed only"
   - "GET /api/agent/tasks/count — Lightweight counts (total, by_status) for dashboards"
   - "GET /api/agent/tasks/{id} — Get task by id (full shape: command, output, progress_pct, current_step, decision_prompt,..."
+  - 'file_exists("api/app/routers/agent_tasks_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_tasks_routes.py", "create_task")'
+  - 'symbol_in_file("api/app/routers/agent_tasks_routes.py", "list_tasks")'
+  - 'symbol_in_file("api/app/routers/agent_tasks_routes.py", "get_task")'
+  - 'symbol_in_file("api/app/routers/agent_tasks_routes.py", "update_task")'
+  - 'file_exists("api/app/services/agent_service_crud.py")'
+  - 'symbol_in_file("api/app/services/agent_service_crud.py", "create_task")'
+  - 'symbol_in_file("api/app/services/agent_service_crud.py", "get_task")'
+  - 'symbol_in_file("api/app/services/agent_service_crud.py", "update_task")'
+  - 'file_exists("api/app/services/agent_service_list.py")'
+  - 'symbol_in_file("api/app/services/agent_service_list.py", "list_tasks")'
+  - 'file_exists("api/app/models/agent.py")'
+  - 'symbol_in_file("api/app/models/agent.py", "AgentTaskCreate")'
+  - 'symbol_in_file("api/app/models/agent.py", "AgentTaskUpdate")'
+  - 'symbol_in_file("api/app/models/agent.py", "TaskStatus")'
+  - 'symbol_in_file("api/app/models/agent.py", "TaskType")'
+  - 'pytest_passes("api/tests/test_agent_integration_api.py")'
 test: "python3 -m pytest api/tests/test_agent_integration_api.py -x -v"
 constraints:
   - "changes scoped to listed files only"

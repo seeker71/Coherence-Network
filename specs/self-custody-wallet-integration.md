@@ -42,6 +42,36 @@ done_when:
   - "Visiting /settings/wallet without a contributor_id in localStorage shows the 'Set up your contributor first' prompt linking to /join."
   - "Visiting /settings/wallet with a contributor_id renders the Connect Wallet button and Linked wallets section."
   - "All tests in api/tests/test_views_and_wallets.py covering wallet flows pass."
+  - 'file_exists("api/app/routers/wallets.py")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "WalletConnectRequest")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "WalletVerifyRequest")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "connect_wallet")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "verify_wallet")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "lookup_by_address")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "list_wallets")'
+  - 'symbol_in_file("api/app/routers/wallets.py", "disconnect_wallet")'
+  - 'file_exists("api/app/services/wallet_service.py")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "WalletRecord")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "connect_wallet")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "verify_wallet")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "get_wallets")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "get_contributor_by_wallet")'
+  - 'symbol_in_file("api/app/services/wallet_service.py", "disconnect_wallet")'
+  - 'file_exists("api/app/services/onboarding_service.py")'
+  - 'file_exists("api/app/adapters/postgres_models.py")'
+  - 'file_exists("api/tests/test_views_and_wallets.py")'
+  - 'symbol_in_file("api/tests/test_views_and_wallets.py", "wallet")'
+  - 'file_exists("web/app/settings/wallet/page.tsx")'
+  - 'symbol_in_file("web/app/settings/wallet/page.tsx", "WalletSettingsPage")'
+  - 'file_exists("web/components/wallet/WalletConnect.tsx")'
+  - 'symbol_in_file("web/components/wallet/WalletConnect.tsx", "WalletConnect")'
+  - 'file_exists("web/components/wallet/WalletProvider.tsx")'
+  - 'symbol_in_file("web/components/wallet/WalletProvider.tsx", "WalletProvider")'
+  - 'file_exists("web/lib/wallet-config.ts")'
+  - 'symbol_in_file("web/lib/wallet-config.ts", "chains")'
+  - 'symbol_in_file("web/lib/wallet-config.ts", "walletConfig")'
+  - 'file_exists("docs/how-to-use-wallets.md")'
+  - 'pytest_passes("api/tests/test_views_and_wallets.py")'
 test: "cd api && python3 -m pytest tests/test_views_and_wallets.py -q -k wallet"
 constraints:
   - "Platform NEVER stores private keys; only wallet addresses (and optional ed25519 public keys in a future spec)."

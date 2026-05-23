@@ -22,6 +22,17 @@ done_when:
   - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "external-listening")'
   - 'file_exists("api/tests/test_active_recipe_tracing_form.py")'
   - 'pytest_passes("api/tests/test_active_recipe_tracing_form.py")'
+  - 'file_exists("docs/coherence-substrate/active-recipe-tracing.form")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_state_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_cell_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_choice_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "available_recipes")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes_from_trace")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "keep_or_choose")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_declares_state_library_and_choice")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_library_can_keep_or_choose")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_points_trace_persistence_to_existing_gap")'
 test: "cd api && python -m pytest -q tests/test_active_recipe_tracing_form.py"
 constraints:
   - "Do not add an API endpoint or Python business-logic service for this slice"

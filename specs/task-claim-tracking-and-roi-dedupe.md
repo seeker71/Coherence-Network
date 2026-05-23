@@ -16,6 +16,9 @@ done_when:
   - "Agent runner sends a stable worker identifier when claiming tasks."
   - "ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating dup..."
   - "Implementation-request question sync uses active-task deduplication and task fingerprints."
+  - 'file_exists("api/app/services/contribution_cost_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost_with_provenance")'
+  - 'pytest_passes("api/tests/test_agent_task_claims.py")'
 test: "python3 -m pytest api/tests/test_agent_task_claims.py -x -v"
 constraints:
   - "changes scoped to listed files only"

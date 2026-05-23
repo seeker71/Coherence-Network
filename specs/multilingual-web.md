@@ -1,6 +1,6 @@
 ---
 idea_id: external-presence
-status: draft
+status: active
 source:
   - file: web/app/layout.tsx
     symbols: [RootLayout]
@@ -65,6 +65,61 @@ done_when:
   - "coh translate submit {entity-id} --lang es --file translation.md posts a human translation"
   - "Locale coverage visible on /settings/translations: per-locale counts of machine vs. human vs. stale"
   - "All new and existing tests pass (api and web)"
+  - 'file_exists("web/app/layout.tsx")'
+  - 'symbol_in_file("web/app/layout.tsx", "RootLayout")'
+  - 'file_exists("web/middleware.ts")'
+  - 'symbol_in_file("web/middleware.ts", "middleware")'
+  - 'file_exists("web/next.config.ts")'
+  - 'symbol_in_file("web/next.config.ts", "nextConfig")'
+  - 'file_exists("api/app/models/translation.py")'
+  - 'symbol_in_file("api/app/models/translation.py", "EntityView")'
+  - 'symbol_in_file("api/app/models/translation.py", "GlossaryEntry")'
+  - 'file_exists("api/app/models/lens_translation.py")'
+  - 'symbol_in_file("api/app/models/lens_translation.py", "LensTranslation")'
+  - 'file_exists("api/app/services/translation_cache_service.py")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "write_view")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "canonical_view")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "all_canonical_views")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "find_anchor")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "is_stale")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "list_history")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "glossary_for")'
+  - 'symbol_in_file("api/app/services/translation_cache_service.py", "upsert_glossary_entry")'
+  - 'file_exists("api/app/services/translator_service.py")'
+  - 'symbol_in_file("api/app/services/translator_service.py", "translate_markdown")'
+  - 'symbol_in_file("api/app/services/translator_service.py", "build_glossary_prompt")'
+  - 'symbol_in_file("api/app/services/translator_service.py", "SUPPORTED_LOCALES")'
+  - 'file_exists("api/app/services/concept_translation_service.py")'
+  - 'symbol_in_file("api/app/services/concept_translation_service.py", "translate_concept")'
+  - 'symbol_in_file("api/app/services/concept_translation_service.py", "get_cached_translation")'
+  - 'file_exists("api/app/services/lens_translation_service.py")'
+  - 'symbol_in_file("api/app/services/lens_translation_service.py", "translate_via_lens")'
+  - 'file_exists("api/app/routers/locales.py")'
+  - 'symbol_in_file("api/app/routers/locales.py", "list_locales")'
+  - 'symbol_in_file("api/app/routers/locales.py", "get_glossary")'
+  - 'symbol_in_file("api/app/routers/locales.py", "patch_glossary")'
+  - 'file_exists("api/app/routers/translations.py")'
+  - 'symbol_in_file("api/app/routers/translations.py", "submit_translation")'
+  - 'symbol_in_file("api/app/routers/translations.py", "list_translations_for_entity")'
+  - 'file_exists("api/app/routers/concepts.py")'
+  - 'symbol_in_file("api/app/routers/concepts.py", "get_concept")'
+  - 'file_exists("api/app/routers/contributions.py")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "create_contribution")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "get_contribution")'
+  - 'file_exists("cli/lib/commands/translate.mjs")'
+  - 'symbol_in_file("cli/lib/commands/translate.mjs", "handleTranslate")'
+  - 'symbol_in_file("cli/lib/commands/translate.mjs", "submitTranslation")'
+  - 'symbol_in_file("cli/lib/commands/translate.mjs", "showHistory")'
+  - 'file_exists("web/app/settings/translations/page.tsx")'
+  - 'symbol_in_file("web/app/settings/translations/page.tsx", "TranslationsCoveragePage")'
+  - 'file_exists("docs/vision-kb/glossary/de.md")'
+  - 'symbol_in_file("docs/vision-kb/glossary/de.md", "anchor")'
+  - 'file_exists("docs/vision-kb/glossary/es.md")'
+  - 'symbol_in_file("docs/vision-kb/glossary/es.md", "anchor")'
+  - 'file_exists("docs/vision-kb/glossary/id.md")'
+  - 'symbol_in_file("docs/vision-kb/glossary/id.md", "anchor")'
+  - 'pytest_passes("api/tests/test_locale.py")'
+  - 'pytest_passes("api/tests/test_translation_cache.py")'
 test: "cd api && python -m pytest tests/test_locale.py tests/test_translation_cache.py -q && cd ../web && npm run test"
 constraints:
   - "Never mutate source markdown — translations are additive rows keyed by (target_lang, source_hash)"

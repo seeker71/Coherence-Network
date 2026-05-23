@@ -21,6 +21,14 @@ done_when:
   - "new variants get exploration priority until 5 samples"
   - "GET /api/agent/prompt-ab/stats returns valid JSON with per-variant ROI"
   - "all tests pass"
+  - 'file_exists("api/app/services/prompt_ab_roi_service.py")'
+  - 'symbol_in_file("api/app/services/prompt_ab_roi_service.py", "record_prompt_outcome")'
+  - 'symbol_in_file("api/app/services/prompt_ab_roi_service.py", "select_variant")'
+  - 'symbol_in_file("api/app/services/prompt_ab_roi_service.py", "get_variant_stats")'
+  - 'file_exists("api/app/services/slot_selection_service.py")'
+  - 'symbol_in_file("api/app/services/slot_selection_service.py", "SlotSelector")'
+  - 'file_exists("api/app/routers/agent_prompt_ab_routes.py")'
+  - 'pytest_passes("api/tests/test_prompt_ab_roi.py")'
 test: "cd api && python -m pytest tests/test_prompt_ab_roi.py -q"
 constraints:
   - "no database changes (JSON file store only)"

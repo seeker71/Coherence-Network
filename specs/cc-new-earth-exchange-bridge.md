@@ -26,6 +26,29 @@ done_when:
   - POST /api/cc/exchange/swap/{id}/confirm settles the swap
   - Treasury coherence score remains >= 1.0 after swaps
   - All existing CC tests continue passing
+  - 'file_exists("api/app/services/cc_exchange_adapter.py")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "ExchangeAdapter")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "NewEarthAdapter")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "CESAdapter")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "initiate_swap")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "confirm_swap")'
+  - 'file_exists("api/app/models/cc_exchange.py")'
+  - 'symbol_in_file("api/app/models/cc_exchange.py", "ExchangeQuote")'
+  - 'symbol_in_file("api/app/models/cc_exchange.py", "SwapRequest")'
+  - 'symbol_in_file("api/app/models/cc_exchange.py", "SwapResult")'
+  - 'symbol_in_file("api/app/models/cc_exchange.py", "SwapConfirmation")'
+  - 'symbol_in_file("api/app/models/cc_exchange.py", "AdapterInfo")'
+  - 'file_exists("api/app/routers/cc_exchange.py")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "list_adapters")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "get_quote")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "initiate_swap")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "get_swap")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "confirm_swap")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "get_history")'
+  - 'file_exists("api/app/services/cc_treasury_service.py")'
+  - 'symbol_in_file("api/app/services/cc_treasury_service.py", "record_swap_out")'
+  - 'symbol_in_file("api/app/services/cc_treasury_service.py", "record_swap_in")'
+  - 'pytest_passes("api/tests/test_cc_exchange.py")'
 test: python -m pytest api/tests/test_cc_exchange.py -v
 constraints:
   - No unbacked CC may be created through swaps

@@ -16,6 +16,15 @@ done_when:
   - "Meeting capture returns persisted meeting, participant, and concept-part resonance records."
   - "Recall returns person and agent resonance rows with concept_part fields and summary grouping."
   - "cd api && pytest -q tests/test_meeting_resonance_capture.py passes."
+  - 'file_exists("api/app/routers/meetings.py")'
+  - 'symbol_in_file("api/app/routers/meetings.py", "capture_meeting_resonance")'
+  - 'symbol_in_file("api/app/routers/meetings.py", "list_meeting_resonance")'
+  - 'file_exists("api/app/services/meeting_service.py")'
+  - 'symbol_in_file("api/app/services/meeting_service.py", "capture_meeting_resonance")'
+  - 'symbol_in_file("api/app/services/meeting_service.py", "list_meeting_resonance")'
+  - 'file_exists("api/tests/test_meeting_resonance_capture.py")'
+  - 'symbol_in_file("api/tests/test_meeting_resonance_capture.py", "test_capture_meeting_resonance_for_people_and_agents")'
+  - 'pytest_passes("api/tests/test_meeting_resonance_capture.py")'
 test: "cd api && pytest -q tests/test_meeting_resonance_capture.py"
 constraints:
   - "Use the existing graph tables; do not add a new database table."

@@ -13,6 +13,11 @@ done_when:
   - "The Form record shape names native measurements, translation recipe, loss accounting, observer cost, verifier cost, public trace, and replay instructions."
   - "The spec quality gate passes for specs/cross-domain-measurement-translation-record.md."
   - "The new spec is reachable from ideas/knowledge-and-resonance.md and specs/INDEX.md."
+  - 'file_exists("docs/coherence-substrate/cross-domain-measurement-translation.form")'
+  - 'symbol_in_file("docs/coherence-substrate/cross-domain-measurement-translation.form", "native_measurement_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/cross-domain-measurement-translation.form", "cross_domain_measurement_translation_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/cross-domain-measurement-translation.form", "cross_domain_measurement_translation_record")'
+  - 'symbol_in_file("docs/coherence-substrate/cross-domain-measurement-translation.form", "translation_comparability_rule")'
 test: "python3 scripts/validate_spec_quality.py --file specs/cross-domain-measurement-translation-record.md && python3 scripts/context_budget.py specs/cross-domain-measurement-translation-record.md docs/coherence-substrate/cross-domain-measurement-translation.form"
 constraints:
   - "Do not collapse all carriers into one numeric score unless the translation recipe proves a shared unit."

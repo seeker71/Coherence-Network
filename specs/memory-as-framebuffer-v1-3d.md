@@ -29,6 +29,33 @@ done_when:
   - "Walking up to a cell (shift+scroll-in or W key) changes LOD smoothly; the same cell remains identifiable across all 5 LOD levels (substrate-hash continuity, even before substrate-render-fabric lands — for v1 just the CellHandle is preserved)."
   - "Pressing H from any LOD/position returns the camera to the canonical home view in <1 second."
   - "tests/lod_scale_factor.rs passes: scale ratios match √10 ± 0.01."
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/scene3d.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "Scene3D")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "Camera")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "build_scene_from_framebuffer")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/lod.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "Lod")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "LodLevel")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "scale_factor")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "transition_at")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/navigate.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "walk")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "fly")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "orbit")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "scale_zoom")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "frame_selection")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "follow_through_time")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render3d.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "render_scene")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "project_to_2d")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "software_rasterizer")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/preview.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/preview.rs", "PreviewWindow")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs", "interactive")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs", "test_lod_uses_sqrt10_scale_factor")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs", "test_transitions_preserve_identity")'
 test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release lod"
 constraints:
   - "Builds on memory-as-framebuffer-v0 (and v1-pointers if pointer cells are present). Existing 2D mp4 pipeline remains as fallback when no display is available."

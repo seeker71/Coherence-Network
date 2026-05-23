@@ -20,6 +20,17 @@ done_when:
   - "Vitest proves guidance changes after a new movement is received"
   - "The /signals page renders a dynamic living signal instrument"
   - "npm run build completes successfully in web/"
+  - 'file_exists("specs/living-signal-layer.md")'
+  - 'symbol_in_file("specs/living-signal-layer.md", "living")'
+  - 'file_exists("web/lib/living-signal.ts")'
+  - 'symbol_in_file("web/lib/living-signal.ts", "senseLivingField")'
+  - 'symbol_in_file("web/lib/living-signal.ts", "receiveMovement")'
+  - 'file_exists("web/tests/integration/living-signal.test.ts")'
+  - 'symbol_in_file("web/tests/integration/living-signal.test.ts", "living")'
+  - 'file_exists("web/components/living-signal/LivingSignalInstrument.tsx")'
+  - 'symbol_in_file("web/components/living-signal/LivingSignalInstrument.tsx", "LivingSignalInstrument")'
+  - 'file_exists("web/app/signals/page.tsx")'
+  - 'symbol_in_file("web/app/signals/page.tsx", "SignalsPage")'
 test: "cd web && npm run test -- tests/integration/living-signal.test.ts"
 constraints:
   - "Keep this slice client-side with no backend routes or persistence"

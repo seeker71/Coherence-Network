@@ -18,6 +18,11 @@ done_when:
   - Resolution JSONL contains heal_task_id when present on prior issue
   - Resolved array capped at 50 with correct FIFO eviction
   - pytest api/tests/test_monitor_resolution.py passes
+  - 'file_exists("api/app/services/auto_heal_service.py")'
+  - 'symbol_in_file("api/app/services/auto_heal_service.py", "heal")'
+  - 'file_exists("api/app/services/pipeline_advance_service.py")'
+  - 'symbol_in_file("api/app/services/pipeline_advance_service.py", "completion")'
+  - 'pytest_passes("api/tests/test_monitor_resolution.py")'
 test: "cd api && python -m pytest -q tests/test_monitor_resolution.py"
 ---
 

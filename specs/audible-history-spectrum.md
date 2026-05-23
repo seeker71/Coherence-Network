@@ -13,6 +13,9 @@ acceptance:
   - "The trace includes library, purchase, and visible listen-history row counts and monthly author/series/work waves."
   - "API tests verify Ryk Brown and the source counts from the captured Audible body."
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
+done_when:
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
+
 ---
 
 # Audible History Spectrum

@@ -18,6 +18,9 @@ done_when:
   - "enrich_upstream_measurement updates raw_signals with chain_effectiveness"
   - "GET /api/agent/task-chains/stats returns valid JSON with aggregate metrics"
   - "all tests pass"
+  - 'file_exists("api/app/services/task_activity_service.py")'
+  - 'symbol_in_file("api/app/services/task_activity_service.py", "task")'
+  - 'pytest_passes("api/tests/test_task_chain_correlation.py")'
 test: "cd api && python -m pytest tests/test_task_chain_correlation.py -q"
 constraints:
   - "do not modify grounded_measurement_service.py internals (only call its public API)"

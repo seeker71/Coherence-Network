@@ -27,6 +27,8 @@ done_when:
   - "DELETE /api/agent/tasks/batch?status=running,failed&confirm=compost returns 400 with refusal listing 'running' (alive)"
   - "After compost, the body's task counts reflect the release; pulse witness still breathing; needs_decision and completed records untouched"
   - "All tests pass"
+  - 'pytest_passes("api/tests/test_task_compost_batch.py")'
+  - 'pytest_passes("api/tests/test_agent_tasks_routes.py")'
 test: "cd api && python -m pytest tests/test_task_compost_batch.py tests/test_agent_tasks_routes.py -v"
 constraints:
   - "Changes scoped to api/app/routers/agent_tasks_routes.py + api/app/services/agent_service_crud.py + new test file tests/test_task_compost_batch.py"
