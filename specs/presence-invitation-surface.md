@@ -1,6 +1,6 @@
 ---
 idea_id: presence-invitation-surface
-status: active
+status: done
 source:
   - file: api/app/services/presence_invitation_service.py
     symbols: [invite_presence, get_presence]

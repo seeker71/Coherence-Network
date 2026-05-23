@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/substrate/form_runtime.py
     symbols: [_builtin_ask(), _builtin_await_answer(), form_execute_text()]

@@ -1,6 +1,6 @@
 ---
 idea_id: story-influence-rooms
-status: active
+status: done
 priority: high
 source:
   - file: docs/field/urs/output/chronological_story_with_frequency.md

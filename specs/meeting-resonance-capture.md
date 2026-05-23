@@ -1,6 +1,6 @@
 ---
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: api/app/routers/meetings.py
     symbols: [capture_meeting_resonance(), list_meeting_resonance()]

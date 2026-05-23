@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/routers/agent_external_encounters.py
     symbols: [create_external_agent_encounter(), list_external_agent_encounters(), link_external_agent_encounter_task()]

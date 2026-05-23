@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/agent_service.py
     symbols: [get_agent_invitation()]

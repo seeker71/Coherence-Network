@@ -1,6 +1,6 @@
 ---
 idea_id: living-lineage
-status: active
+status: done
 source:
   - file: docs/field/urs/tools/build_trace_indexes.py
     symbols: [compact_volume(), influence_spectrum(), backtrace_samples(), build_indexes()]

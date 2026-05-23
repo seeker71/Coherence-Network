@@ -1,6 +1,6 @@
 ---
 idea_id: home-content-contribution-attribution
-status: active
+status: done
 source:
   - file: api/app/routers/translations.py
     symbols: [submit_translation()]

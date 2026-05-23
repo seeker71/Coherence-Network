@@ -1,7 +1,7 @@
 ---
 id: financial-integration
 idea_id: financial-integration-fiat-bridge
-status: active
+status: done
 priority: high
 source:
   - file: api/app/services/cc_economics_service.py

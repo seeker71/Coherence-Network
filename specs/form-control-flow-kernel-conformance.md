@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: docs/coherence-substrate/kernel-conformance/form-control-flow.json
     symbols: [form-control-flow]

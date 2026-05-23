@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/routers/agent_question_routes.py
     symbols: [create_question_route(), list_questions_route(), question_events_sse(), answer_question_route()]

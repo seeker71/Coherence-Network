@@ -1,7 +1,7 @@
 ---
 id: stability-harmony-goal-sensing
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: api/app/routers/energy_sensing.py
     symbols: [energy_recommendations]
