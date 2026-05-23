@@ -21,6 +21,7 @@ done_when:
   - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "attention-flow")'
   - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "external-listening")'
   - 'file_exists("api/tests/test_active_recipe_tracing_form.py")'
+  - 'pytest_passes("api/tests/test_active_recipe_tracing_form.py")'
 test: "cd api && python -m pytest -q tests/test_active_recipe_tracing_form.py"
 constraints:
   - "Do not add an API endpoint or Python business-logic service for this slice"
