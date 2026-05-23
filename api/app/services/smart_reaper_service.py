@@ -141,7 +141,10 @@ def build_resume_direction(original_direction: str, partial_output: str) -> str:
     truncated = partial_output[:MAX_PARTIAL_IN_DIRECTION]
     if len(partial_output) > MAX_PARTIAL_IN_DIRECTION:
         truncated += "\n[truncated]"
-    prefix = "Previous attempt produced this partial work [attached]. Continue from where it left off.\n\n---\n"
+    prefix = (
+        "RESUME FROM TIMEOUT\n"
+        "Previous attempt produced this partial work [attached]. Continue from where it left off.\n\n---\n"
+    )
     resume = prefix + truncated
     if original_direction:
         resume += f"\n\n---\nOriginal direction:\n{original_direction[:1000]}"
