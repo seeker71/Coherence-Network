@@ -499,6 +499,77 @@ def test_structured_ctor_unknown_field_still_raises(session):
         )
 
 
+def test_nested_structured_ctor_navigation(session):
+    """Nested frontmatter (list-of-dict) becomes a walkable substrate tree;
+    LET-binding access on Recipe NodeIDs lets the runtime navigate inside.
+
+    YAML frontmatter:
+        capabilities:
+          - id: cli
+            title: command line
+            resonance: 528
+          - id: mcp
+            title: model context protocol
+            resonance: 528
+
+    Substrate shape (after structured ingest):
+        capabilities (LET value) → R_Block.SEQUENCE
+            ├── R_Block.DO { LET("id", "cli"), LET("title", "..."), ... }
+            └── R_Block.DO { LET("id", "mcp"), LET("title", "..."), ... }
+
+    Runtime navigation:
+        cell.capabilities.children[0].title  →  "command line"
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: nested test cell
+description: test nested-structured-ctor navigation
+type: feedback
+capabilities:
+  - id: cli
+    title: command line
+    resonance: 528
+  - id: mcp
+    title: model context protocol
+    resonance: 528
+---
+
+Body.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    # Cell.capabilities returns the SEQUENCE NodeID.
+    caps = form_execute_text(
+        session, '@memory("nested test cell").capabilities'
+    )
+    assert isinstance(caps, NodeID)
+
+    # Sequence has 2 children.
+    assert form_execute_text(
+        session, '@memory("nested test cell").capabilities.nchildren'
+    ) == 2
+
+    # First capability's `title` is accessible via LET-walking on the
+    # Recipe NodeID.
+    first = form_execute_text(
+        session, '@memory("nested test cell").capabilities.child(0)'
+    )
+    from app.services.substrate.form_runtime import _resolve_access
+    assert _resolve_access(session, first, "id") == "cli"
+    assert _resolve_access(session, first, "title") == "command line"
+    assert _resolve_access(session, first, "resonance") == 528
+
+
 def test_child_out_of_range_raises(session):
     _seed_memory_cell(session)
     with pytest.raises(IndexError):
