@@ -97,6 +97,34 @@ def recipe_to_form(session: Session, nid: NodeID) -> str:
             return "let (" + ", ".join(kids) + ")"
         if cat.instance == 4:
             return f"with {kids[0]} {{ {kids[1]} }}"
+    if cat.type_ == RBasic.RESONANCE.value:
+        # RResonance instances: 1=SHAPES, 2=HARMONIC_AT, 3=BRIDGES,
+        # 4=EMBEDS_IN, 5=NEAR, 6=POLAR_TO, 7=CARRIES_RATIO
+        verbs = {
+            1: "SHAPES", 2: "HARMONIC_AT", 3: "BRIDGES", 4: "EMBEDS_IN",
+            5: "NEAR", 6: "POLAR_TO", 7: "CARRIES_RATIO",
+        }
+        verb = verbs.get(cat.instance, f"RESONANCE_{cat.instance}")
+        if len(kids) == 2:
+            return f"({kids[0]} -{verb}-> {kids[1]})"
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.REALIZE.value:
+        # RRealize instances: 1=REALIZE, 2=PARTIAL_REALIZE, 3=SUPERSEDE
+        # (Other instances fall through with a verb-tagged form preserving
+        # round-trip identity for the substrate even when the surface name
+        # isn't fully canonical.)
+        verbs = {1: "REALIZE", 2: "PARTIAL_REALIZE", 3: "SUPERSEDE"}
+        verb = verbs.get(cat.instance, f"REALIZE_{cat.instance}")
+        if len(kids) == 2:
+            return f"({kids[0]} -{verb}-> {kids[1]})"
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.TEND.value:
+        # RTend covers tend/attune/compost/release — body-relational verbs.
+        # Verb names follow the RTend enum; unknown instances stay tagged
+        # for round-trip identity.
+        if len(kids) == 1:
+            return f"TEND_{cat.instance}({kids[0]})"
+        return f"TEND_{cat.instance}({', '.join(kids)})"
     raise NotImplementedError(
         f"recipe_to_form: verb-category {cat} not yet covered. "
         f"Add one elif arm matching the RBasic.<verb>.value."
