@@ -1,6 +1,6 @@
 ---
 idea_id: close-awareness-gaps
-status: active
+status: done
 source:
   - file: api/app/routers/federation.py
     symbols: [get_messages(), get_message_by_id()]

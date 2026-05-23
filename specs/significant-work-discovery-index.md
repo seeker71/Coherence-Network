@@ -1,6 +1,6 @@
 ---
 idea_id: significant-work-discovery-index
-status: active
+status: done
 priority: high
 source:
   - file: docs/field/urs/tools/build_trace_indexes.py

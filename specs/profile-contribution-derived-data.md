@@ -1,6 +1,6 @@
 ---
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: api/app/services/frequency_profile_service.py
     symbols: [resolve_entity_id(), get_profile(), profile_hash()]

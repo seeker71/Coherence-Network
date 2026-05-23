@@ -1,6 +1,6 @@
 ---
 idea_id: self-custody-wallet-integration
-status: active
+status: done
 source:
   - file: api/app/routers/wallets.py
     symbols: [WalletConnectRequest, WalletVerifyRequest, connect_wallet, verify_wallet, lookup_by_address, list_wallets, disconnect_wallet]

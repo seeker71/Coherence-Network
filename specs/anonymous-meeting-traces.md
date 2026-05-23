@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/routers/meetings.py
     symbols: [record_anonymous_meeting_trace(), list_anonymous_meeting_traces()]

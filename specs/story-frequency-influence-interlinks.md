@@ -1,6 +1,6 @@
 ---
 idea_id: story-frequency-influence-interlinks
-status: active
+status: done
 priority: high
 source:
   - file: docs/field/urs/output/chronological_story_with_frequency.md

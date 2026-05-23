@@ -1,7 +1,7 @@
 ---
 id: active-recipe-tracing-form
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: docs/coherence-substrate/active-recipe-tracing.form
     symbols: [recipe_state_shape, recipe_cell_shape, recipe_choice_shape, available_recipes, active_recipes, active_recipes_from_trace, keep_or_choose]
