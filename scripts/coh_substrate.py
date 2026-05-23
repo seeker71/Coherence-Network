@@ -549,6 +549,58 @@ def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
             print("— source: not in structured form (legacy markdown text) —")
             print()
 
+        # done_when: items — try to evaluate each as a Form predicate.
+        # Items that parse as Form expressions evaluate to true/false
+        # against the live substrate. Items that don't parse are honest
+        # prose claims and display as-is.
+        done_when_nid = _ctor_walk_field(session, s_cell.ctor, "done_when")
+        if done_when_nid is not None:
+            from app.services.substrate.form_runtime import form_execute_text
+            items = _node_children(session, done_when_nid) if hasattr(done_when_nid, "type_") else []
+            evaluated = 0
+            passing = 0
+            prose_lines = []
+            form_lines = []
+            for item in items:
+                if not hasattr(item, "type_"):
+                    continue
+                if item.type_ not in (RType.STRING, RType.SLUG):
+                    continue
+                try:
+                    text = _trivial_value(session, item)
+                except (ValueError, AttributeError):
+                    continue
+                if not isinstance(text, str):
+                    continue
+                # Attempt evaluation. If parse fails or evaluates to a
+                # non-boolean value, treat as prose.
+                try:
+                    result = form_execute_text(session, text)
+                except Exception:
+                    prose_lines.append(text)
+                    continue
+                evaluated += 1
+                if result is True:
+                    passing += 1
+                    form_lines.append(("✓", text, "True"))
+                elif result is False:
+                    form_lines.append(("✗", text, "False"))
+                else:
+                    form_lines.append(("→", text, repr(result)))
+            if items:
+                total = len(items)
+                print(
+                    f"— done_when: ({total} item(s); {evaluated} Form-evaluable, "
+                    f"{passing}/{evaluated} passing) —"
+                )
+                for mark, text, val in form_lines:
+                    short = text if len(text) <= 78 else text[:75] + "..."
+                    print(f"  {mark} {short}   = {val}")
+                for text in prose_lines:
+                    short = text if len(text) <= 78 else text[:75] + "..."
+                    print(f"  · {short}  (prose claim — not Form-evaluable)")
+                print()
+
         # Test command
         test_nid = _ctor_walk_field(session, s_cell.ctor, "test")
         test_cmd = None
