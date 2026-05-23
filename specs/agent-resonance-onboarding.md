@@ -75,6 +75,7 @@ done_when:
   - 'file_exists("mcp-server/server.json")'
   - 'pytest_passes("api/tests/test_agent_invitation.py")'
   - 'pytest_passes("api/tests/test_awareness_streaming.py")'
+  - 'pytest_passes("mcp-server/tests/test_awareness_streaming.py")'
 test: "python3 -m pytest api/tests/test_agent_invitation.py mcp-server/tests/test_awareness_streaming.py -q && python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md"
 constraints:
   - "Only change files listed in this spec plus generated README/server metadata for the MCP tool count."
