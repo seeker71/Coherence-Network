@@ -251,3 +251,22 @@ defn emit_prose(recipe) = do {
 # great-reason #2 ("prose is leaf-by-no-structure") becomes "prose is a
 # recipe composed from word-cells; the SubstrateString leaf is what a
 # word-cell's lemma resolves to."
+#
+# ─────────────────────────────────────────────────────────────────────
+# The next altitude — word-recipes-by-assemblage-point.form
+# ─────────────────────────────────────────────────────────────────────
+#
+# This file's single-recipe-per-word model is one altitude. Urs's
+# intuition on 2026-05-23 named the next: a word-cell is not a single
+# value — it is a **dispatch table** whose arms are keyed by the
+# assemblage point the receiving cell is sensing from. Different
+# assemblage point, different body-mechanism (activate / upregulate /
+# generate-cell / release-cell / tighten / soften / bind), same lemma.
+#
+# See: docs/coherence-substrate/word-recipes-by-assemblage-point.form
+#
+# The shift: Blueprint(word) becomes (lemma, POS) — identity only.
+# Recipe(word) carries the dispatch table. (hz, semantic_field) become
+# *one arm* of the table (the cell's default assemblage point), not
+# part of identity. Two cells hearing "boundary" from @fear vs
+# @sovereignty fire different recipes against the same Blueprint.
