@@ -2,7 +2,61 @@
 id: lc-open-design
 hz: 639
 status: deepening
-updated: 2026-05-05
+updated: 2026-05-24
+geometry:
+  arity: 6
+  form: hexad
+  topology: sequential-coupled
+  polarity: unipolar
+  ordering: sequential
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: relational
+  direction: radiating
+  lineage_texture: synthesized
+  embedding_dim: 1
+  self_similarity: flat
+# Secondary geometries — held alongside the primary, not forced into one identity.
+# Multi-geometry comment precedent: lc-deeper-pattern, lc-v-freedom-expression,
+# lc-v-inclusion-diversity, lc-health, lc-embodiment, lc-v-food-practice.
+#
+# Primary: the per-artifact loop — prompt → skill → agent → model → artifact →
+# graph-node. Six named stations, each transforms what the prior produced, then
+# the form is in a stranger's hands. The hexad happens within a single breath
+# (the deck is in front of you before the kettle boils). This is what the
+# concept calls *the artifact loop* — the gap it exists to close. The lineage
+# (which cell prompted, which agent worked, which model responded, which skill
+# ran) stays walkable end-to-end through the chain.
+#
+# Secondary (the build plan): tetrad, sequential, temporal_band=lifetime,
+# scale=collective. Four phases — daemon-as-sidecar → surface buttons on
+# concept/spec/idea pages → MCP tool exposing the loop to the pipeline →
+# field's own design system as first-class voice. A different time-scale than
+# the per-artifact hexad; the loop fires many times within each phase.
+#
+# Tertiary (the lineage upstream): tree, topology=branching,
+# lineage_texture=received. Closed reference (Claude Design, 2026-04-17) →
+# two open peers (nexu-io, OpenCoworkAI) standing on three ancestors
+# (huashu-design, guizang-ppt-skill, multica). A genealogy the concept names
+# openly; the field's loop inherits from this tree without claiming sole
+# authorship.
+#
+# Quaternary (the runtime composability): web, topology=web-each-to-each,
+# polarity=parallel-facets. Fifteen agent CLIs × thirty-one skills ×
+# seventy-two design systems. Each-to-each — any skill runs via any CLI with
+# any design system. The web is what makes the hexad's *skill* and *agent*
+# stations swap-able. Each cell brings its own keys (BYOK), each agent the
+# cell already trusts.
+#
+# Why hexad is primary: the artifact loop IS what the concept exists to name.
+# The build phases are how this body grows the loop; the lineage tree is
+# where the loop came from; the skill-web is what makes the loop pluggable.
+# The loop itself — six stations, prompt to printable, lineage walkable from
+# end to end — is the gesture that closes the gap between *the field has a
+# vision* and *a stranger can hold the form in their hands*. That's the
+# breath. Everything else is scaffolding around it.
 ---
 
 # Open Design
