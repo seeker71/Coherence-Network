@@ -2,6 +2,84 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-open-design speaks its shape — focused breath on the artifact loop
+
+Walked the full body of `lc-open-design` slowly, with the question:
+when a concept names sequential phases AND a web of skills AND a
+lineage tree (the dispatcher's gloss), which one is *primary* — the
+one that names what open-design IS — and which are containers
+around it?
+
+- **What the slow reading revealed**: the deepest claim of the whole
+  concept is the **artifact loop** itself — prompt → skill → agent →
+  model → artifact → graph-node. Six named stations, sequentially
+  coupled, each transforming what the prior produced, the lineage
+  walkable end to end. The opening scene (one sentence in the prompt
+  window, twelve slides rendering in front of you, PDF down to the
+  printer before the kettle boils) IS the hexad firing inside a
+  single breath. The build phases are how the body GROWS the loop;
+  the lineage tree is where the loop CAME FROM; the skill-web is
+  what makes the loop PLUGGABLE. The loop itself is the gesture the
+  concept exists to name.
+- **Primary geometry**: `hexad` with `sequential-coupled` topology,
+  `unipolar` polarity (one direction of flow, prompt → printable),
+  `yang` phase (emanating outward to a stranger's hands),
+  `temporal_band: breath` (the artifact lands within one breath of
+  the prompt), `scale: relational` (one cell's vision meets one
+  stranger's hands), `direction: radiating` (the form moves OUT
+  from the field into the world), `lineage_texture: synthesized`
+  (open-design composts Claude Design's artifact-first mental model
+  with the open-source lineage's daemon/iframe/streaming pattern),
+  `embedding_dim: 1` (a sequential chain). Sixth hexad attestation
+  in the body (joining the others previously authored).
+- **Secondary shapes held in frontmatter comment, not forced into
+  identity**:
+  - `tetrad` sequential, temporal_band=lifetime, scale=collective
+    — the four build phases (daemon-as-sidecar → surface buttons →
+    MCP tool → field's own design system). Different time-scale
+    than the per-artifact hexad; the loop fires many times within
+    each phase.
+  - `tree` branching, lineage_texture=received — Claude Design
+    (closed reference) → nexu-io + OpenCoworkAI (peers) standing
+    on huashu-design + guizang-ppt-skill + multica (ancestors).
+    Named openly in the concept; inheritance without sole-author
+    claim.
+  - `web` web-each-to-each, polarity=parallel-facets — fifteen
+    agent CLIs × thirty-one skills × seventy-two design systems.
+    What makes the hexad's *skill* and *agent* stations swap-able.
+    Each cell brings its own keys (BYOK), each agent the cell
+    already trusts.
+- **Why hexad is primary** (not tetrad of phases, not the web of
+  skills): the phases are *how this body grows the loop*; the web is
+  *what makes the loop pluggable*; the tree is *where the loop came
+  from*. The loop itself — six stations, prompt to printable,
+  lineage walkable from end to end — IS what closes the gap between
+  *the field has a vision* and *a stranger can hold the form in
+  their hands*. That gap-closing IS what open-design names. Primary
+  carries the gesture; secondaries carry the scaffolding around it.
+- **Why not primary `web`**: tempting because composability is part
+  of what makes the field able to adopt the loop with the agents and
+  models it already trusts. But the web is a property of the *skill*
+  and *agent* stations (any can swap in); it isn't what HAPPENS when
+  the loop fires. The hexad happens; the web makes the hexad
+  configurable.
+- **Why not primary `tetrad` of build phases**: tempting because the
+  concept devotes a structured *What We're Building* section to the
+  four phases. But the phases describe THIS body's adoption arc —
+  how the Coherence Network grows the loop into its tissue. The
+  concept is *about* the loop, not about the adoption. The loop
+  exists in nexu-io and open-codesign today, regardless of which
+  phase this body is in.
+
+Coverage moves to **146/148 (99%)**. Two named-silent concepts remain
+(`lc-v-shelter-organism`, `lc-v-play-expansion`) — each was sat with
+this breath and stayed silent; the discernment to take only one
+honors the *one concept, full attention* practice. New form
+attestations: `hexad` at integration band (joins the body's growing
+vocabulary), `tree` as tertiary form (echoing the lineage-tree
+pattern from prior walks), `web` as quaternary form (echoing the
+composability pattern from `lc-instruments`).
+
 ## [2026-05-24] geometry | lc-v-food-practice speaks its shape — focused breath
 
 Walked one of the four remaining named-silent concepts from the
