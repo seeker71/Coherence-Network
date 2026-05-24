@@ -2,7 +2,22 @@
 id: lc-attunement-joining
 hz: 639
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: temporal-braided
+  phase: oscillating
+  ratio: none
+  spectral_band: connection
+  temporal_band: season
+  scale: relational
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Attunement (Joining)
