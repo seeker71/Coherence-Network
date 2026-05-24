@@ -22,8 +22,6 @@ done_when:
   - 'symbol_in_file("api/app/services/onboarding_service.py", "resolve_session")'
   - 'file_exists("api/app/routers/onboarding.py")'
   - 'symbol_in_file("api/app/routers/onboarding.py", "onboarding")'
-test:
-  - "pytest api/tests/test_onboarding.py -v"
 test: "pytest api/tests/test_onboarding.py -v"
 ---
 
