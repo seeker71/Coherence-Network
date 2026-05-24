@@ -14,19 +14,34 @@ The spec's `source:` block claims three named functions for this file:
   - `compute_cc_flow(asset_id, reads, asset_concept_weights,
                      reader_concept_weights) -> dict`
 
-These live as in-process pure-logic surfaces alongside the DB-backed sensing
-above — the same sibling pattern used by evidence_service and
-ip_registration_service. Existing callers that pass `(asset_id, concept_id,
-contributor_id)` keep working; new-shape callers pass `reader_id`,
-`read_type`, and the concept resonance snapshot as keyword args. The
-in-process event log is what the settlement batch reads from.
+Two backends for the per-read event log:
+
+  - **memory** (default in test): a module-level dict. Fast, no DB hit.
+  - **lineage** (default in prod): persisted as ``UsageEventRecord`` rows
+    via ``value_lineage_service.add_usage_event`` with ``source="read"``
+    and a synthetic ``lineage_id = "asset:{asset_id}"``. Survives
+    process restart — settlement on day N+1 can still read events
+    recorded on day N.
+
+Selection is driven by env var ``READ_TRACKING_BACKEND`` (``"memory"``
+| ``"lineage"``) and overridable at runtime via ``use_backend()``. The
+spec R5 line — "Read events create usage events on the asset's value
+lineage link" — names the lineage path as canonical; memory is the
+test escape hatch.
+
+Existing callers that pass ``(asset_id, concept_id, contributor_id)``
+keep working; new-shape callers pass ``reader_id``, ``read_type``, and
+the concept resonance snapshot as keyword args. Both backends produce
+the same return shape from ``record_read`` and the same response shape
+from ``get_daily_aggregates``.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as datetime_time, timedelta, timezone
 from typing import Any, Dict, List, Mapping, Optional
 from uuid import uuid4
 
@@ -98,18 +113,60 @@ class AssetViewEvent(Base):
 # Public API — daily aggregated reads
 # ---------------------------------------------------------------------------
 
-# In-process event log keyed by asset_id. Populated by record_read() so the
-# spec-claimed get_daily_aggregates / compute_cc_flow surfaces can read back
-# what was recorded without round-tripping through the DB. This pattern
-# matches the sibling story-protocol services (evidence_service,
-# ip_registration_service) — pure logic first, graph-backed persistence
-# arrives in a follow-up breath.
+# In-process event log keyed by asset_id. The memory backend uses this
+# directly; the lineage backend writes through to value_lineage_service
+# (UsageEventRecord rows persisted in unified_db).
 _READ_EVENTS: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
 
 # Default base CC per read when the caller doesn't specify one. Real callers
 # derive this from cc_economics_service; paid reads override with the
 # payment_token's amount.
 DEFAULT_BASE_CC = 1.0
+
+
+# ---------------------------------------------------------------------------
+# Backend toggle (memory | lineage)
+# ---------------------------------------------------------------------------
+
+BACKEND_MEMORY = "memory"
+BACKEND_LINEAGE = "lineage"
+_VALID_BACKENDS = {BACKEND_MEMORY, BACKEND_LINEAGE}
+
+
+def _default_backend() -> str:
+    """Pick the default backend from env. ``READ_TRACKING_BACKEND=lineage``
+    forces the persistent path; anything else (including unset) defaults
+    to memory so test suites stay fast and isolated. Production is
+    expected to set the env var to ``lineage`` in its compose config.
+    """
+    raw = os.environ.get("READ_TRACKING_BACKEND", BACKEND_MEMORY).strip().lower()
+    return raw if raw in _VALID_BACKENDS else BACKEND_MEMORY
+
+
+_BACKEND: str = _default_backend()
+
+
+def use_backend(name: str) -> None:
+    """Set the active backend at runtime. Used by tests that exercise the
+    lineage path without touching env. Invalid names raise.
+    """
+    global _BACKEND
+    name = name.strip().lower()
+    if name not in _VALID_BACKENDS:
+        raise ValueError(f"unknown read-tracking backend: {name!r}")
+    _BACKEND = name
+
+
+def current_backend() -> str:
+    return _BACKEND
+
+
+def _asset_lineage_id(asset_id: str) -> str:
+    """Synthetic lineage id keyed by asset. Read events are persisted under
+    this key so the asset->events lookup is direct without requiring a
+    pre-existing LineageLinkRecord per asset.
+    """
+    return f"asset:{asset_id}"
 
 
 def record_read(
@@ -154,6 +211,7 @@ def record_read(
         cc_amount = float(base_cc) if read_type == "paid" else 0.0
 
     snapshot = dict(concept_resonance_snapshot) if concept_resonance_snapshot else None
+    now = datetime.now(timezone.utc)
     event = {
         "asset_id": asset_id,
         "reader_id": effective_reader,
@@ -162,9 +220,41 @@ def record_read(
         "cc_amount": cc_amount,
         "concept_resonance_snapshot": snapshot,
         "concept_id": concept_id,
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": now,
     }
-    _READ_EVENTS[asset_id].append(event)
+
+    if _BACKEND == BACKEND_LINEAGE:
+        # Persistent path — write as a UsageEventRecord row so the event
+        # survives process restart. Best-effort: if the lineage layer
+        # isn't reachable (DB down, schema not migrated yet), fall back
+        # to the memory log so the read path stays non-blocking.
+        try:
+            from app.models.value_lineage import UsageEventCreate
+            from app.services import value_lineage_service
+
+            value_lineage_service.add_usage_event(
+                _asset_lineage_id(asset_id),
+                UsageEventCreate(
+                    source="read",
+                    metric="reads",
+                    value=float(cc_amount or 0.0),
+                    asset_id=asset_id,
+                    reader_id=effective_reader,
+                    read_type=read_type,
+                    cc_amount=float(cc_amount or 0.0),
+                    payment_token=payment_token,
+                    concept_resonance_snapshot=snapshot,
+                ),
+                require_link=False,
+            )
+        except Exception as e:
+            log.warning(
+                "read_tracking: lineage backend write failed for %s, falling back to memory: %s",
+                asset_id, e,
+            )
+            _READ_EVENTS[asset_id].append(event)
+    else:
+        _READ_EVENTS[asset_id].append(event)
 
     # DB-backed daily counter — best-effort, swallowed exceptions keep the
     # read path non-blocking even when the DB layer isn't ready (e.g. in
@@ -579,10 +669,18 @@ def get_daily_aggregates(
     paid = 0
     free = 0
 
-    asset_ids = [asset_id] if asset_id is not None else list(_READ_EVENTS.keys())
+    # Source the event log from the active backend. The lineage backend
+    # queries persisted UsageEventRecord rows scoped to the target day;
+    # the memory backend reads the in-process dict.
+    if _BACKEND == BACKEND_LINEAGE:
+        events_by_asset = _load_lineage_events_for_day(target_day, asset_id)
+        asset_ids = [asset_id] if asset_id is not None else list(events_by_asset.keys())
+    else:
+        events_by_asset = _READ_EVENTS
+        asset_ids = [asset_id] if asset_id is not None else list(_READ_EVENTS.keys())
 
     for aid in asset_ids:
-        events = _READ_EVENTS.get(aid, [])
+        events = events_by_asset.get(aid, [])
         day_events = [
             e for e in events
             if e["timestamp"].date() == target_day
@@ -682,16 +780,79 @@ def compute_cc_flow(
 
 
 def get_read_events(asset_id: str) -> List[Dict[str, Any]]:
-    """Return the in-process event log for an asset. Primarily for tests
-    and for the settlement batch worker before graph-backed persistence
-    lands. Callers must not mutate the returned list.
+    """Return the event log for an asset across the active backend.
+    Callers must not mutate the returned list.
     """
+    if _BACKEND == BACKEND_LINEAGE:
+        try:
+            from app.services import value_lineage_service
+
+            events = value_lineage_service.query_read_events(asset_id=asset_id)
+            return [_lineage_event_to_dict(e) for e in events]
+        except Exception as e:
+            log.warning("read_tracking: lineage read failed for %s: %s", asset_id, e)
+            return []
     return list(_READ_EVENTS.get(asset_id, []))
 
 
+def _lineage_event_to_dict(ev: Any) -> Dict[str, Any]:
+    """Project a value_lineage UsageEvent back to the dict shape that
+    record_read returns and the settlement batch reads. Field-for-field
+    so a memory-mode caller and a lineage-mode caller see the same keys.
+    """
+    return {
+        "asset_id": ev.asset_id,
+        "reader_id": ev.reader_id,
+        "read_type": ev.read_type or "free",
+        "payment_token": ev.payment_token,
+        "cc_amount": float(ev.cc_amount) if ev.cc_amount is not None else 0.0,
+        "concept_resonance_snapshot": dict(ev.concept_resonance_snapshot) if ev.concept_resonance_snapshot else None,
+        "concept_id": None,  # lineage events don't carry concept_id directly
+        "timestamp": ev.captured_at,
+    }
+
+
+def _load_lineage_events_for_day(
+    target_day: date, asset_id: Optional[str] = None
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Fetch persisted read events for a day from value_lineage and
+    project them into the {asset_id: [event_dict, ...]} shape that the
+    in-memory aggregator expects. Day boundaries are UTC.
+    """
+    try:
+        from app.services import value_lineage_service
+    except Exception:
+        return {}
+
+    since = datetime.combine(target_day, datetime_time.min, tzinfo=timezone.utc)
+    until = since + timedelta(days=1)
+    try:
+        events = value_lineage_service.query_read_events(
+            asset_id=asset_id, since=since, until=until
+        )
+    except Exception as e:
+        log.warning("read_tracking: lineage daily query failed: %s", e)
+        return {}
+
+    bucket: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for ev in events:
+        if ev.asset_id is None:
+            continue
+        bucket[ev.asset_id].append(_lineage_event_to_dict(ev))
+    return bucket
+
+
 def _reset_for_tests() -> None:
-    """Clear in-process event log. The DB-backed counter is untouched —
-    the test session manages its own DB lifecycle. Mirrors the pattern
-    used by evidence_service and ip_registration_service.
+    """Clear the event log for the active backend. The DB-backed daily
+    counter is untouched — the test session manages its own DB lifecycle.
+    Both backends are cleared so tests can flip between them within a
+    single session without leaking state.
     """
     _READ_EVENTS.clear()
+    try:
+        from app.services import value_lineage_service
+        value_lineage_service._delete_read_events_for_tests()
+    except Exception:
+        # value_lineage may not be ready in pure-logic test envs that
+        # don't spin up unified_db; that's fine.
+        pass

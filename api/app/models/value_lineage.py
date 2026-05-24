@@ -47,6 +47,13 @@ class UsageEventCreate(BaseModel):
     source: str = Field(min_length=1)
     metric: str = Field(min_length=1)
     value: float = Field(ge=0.0)
+    # story-protocol-integration R5 — read events ride this shape:
+    asset_id: Optional[str] = None
+    reader_id: Optional[str] = None
+    read_type: Optional[Literal["free", "paid"]] = None
+    cc_amount: Optional[float] = None
+    payment_token: Optional[str] = None
+    concept_resonance_snapshot: Optional[dict[str, float]] = None
 
 
 class UsageEvent(UsageEventCreate):
