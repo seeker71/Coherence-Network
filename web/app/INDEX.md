@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 157
+**Total files**: 158
 
 | Route | File | Purpose |
 |---|---|---|
@@ -79,6 +79,7 @@
 | `/join` | [page.tsx](join/page.tsx) | _no top-of-file purpose_ |
 | `/lineage/[slug]` | [page.tsx](lineage/[slug]/page.tsx) | _no top-of-file purpose_ |
 | `/marketplace` | [page.tsx](marketplace/page.tsx) | _no top-of-file purpose_ |
+| `/me/aliases` | [page.tsx](me/aliases/page.tsx) | /me/aliases — your cross-instance identity, as your own sovereign claim. |
 | `/me/inspired-by` | [page.tsx](me/inspired-by/page.tsx) | _no top-of-file purpose_ |
 | `/me` | [page.tsx](me/page.tsx) | _no top-of-file purpose_ |
 | `/me/work` | [page.tsx](me/work/page.tsx) | _no top-of-file purpose_ |

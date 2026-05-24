@@ -347,6 +347,53 @@ def list_aliases(local_contributor_id: str) -> list[dict]:
         ]
 
 
+def recognition_summary() -> dict:
+    """Fleet-level aggregate counts for the federation page.
+
+    Returns counts without exposing any individual contributor identity:
+      - local_contributors_with_pubkey: how many local contributors have
+        claimed a pubkey
+      - cross_instance_recognitions: total CrossInstanceIdentityRecord rows
+        on this instance
+      - per_peer_counts: for each peer we have recognitions with, the
+        number of distinct (local_contributor_id, peer_contributor_id)
+        pairs we recognize
+
+    Individual identities live behind /api/federation/identity/aliases/{id};
+    this surface is for the public federation overview.
+    """
+    _ensure_schema()
+    with _session() as s:
+        local_count = s.query(ContributorPubkey).count()
+        total_recognitions = s.query(CrossInstanceIdentityRecord).count()
+
+        # Per-peer breakdown: distinct (local_contributor_id, peer_contributor_id)
+        # pairs per peer instance. recognize_peer_identity already enforces
+        # idempotency on that tuple per peer, so a SELECT of the three columns
+        # is already distinct-by-construction; we count in Python to stay
+        # portable across sqlite (test) and postgres (prod) without dialect
+        # tricks like func.concat.
+        pair_rows = s.query(
+            CrossInstanceIdentityRecord.peer_instance_id,
+            CrossInstanceIdentityRecord.local_contributor_id,
+            CrossInstanceIdentityRecord.peer_contributor_id,
+        ).all()
+        counts: dict[str, set[tuple[str, str]]] = {}
+        for peer_id, local_id, peer_contrib in pair_rows:
+            counts.setdefault(peer_id, set()).add((local_id, peer_contrib))
+        per_peer = [
+            {"peer_instance_id": peer_id, "count": len(pairs)}
+            for peer_id, pairs in counts.items()
+        ]
+        per_peer.sort(key=lambda r: (-r["count"], r["peer_instance_id"]))
+
+    return {
+        "local_contributors_with_pubkey": int(local_count),
+        "cross_instance_recognitions": int(total_recognitions),
+        "per_peer_counts": per_peer,
+    }
+
+
 __all__ = [
     "ClaimRejection",
     "RotationRejection",
@@ -358,4 +405,5 @@ __all__ = [
     "find_contributor_by_pubkey",
     "list_aliases",
     "recognize_peer_identity",
+    "recognition_summary",
 ]

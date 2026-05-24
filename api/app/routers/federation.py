@@ -1134,6 +1134,45 @@ class IdentityAliasListResponse(BaseModel):
     aliases: list[IdentityAlias]
 
 
+class IdentityPerPeerCount(BaseModel):
+    peer_instance_id: str
+    count: int
+
+
+class IdentityRecognitionSummary(BaseModel):
+    """Fleet-level identity counts (no individual identities exposed)."""
+
+    local_contributors_with_pubkey: int
+    cross_instance_recognitions: int
+    per_peer_counts: list[IdentityPerPeerCount]
+
+
+@router.get(
+    "/federation/identity/recognition-summary",
+    response_model=IdentityRecognitionSummary,
+    summary="Fleet-level aggregate counts of pubkey claims + cross-instance recognitions",
+)
+async def get_identity_recognition_summary() -> IdentityRecognitionSummary:
+    """Aggregate identity counts for the federation overview.
+
+    Returns how many local contributors have claimed pubkeys, how many
+    cross-instance recognitions this instance carries, and a per-peer
+    breakdown of recognized shared contributors. No individual
+    contributor identities are exposed — that surface lives at
+    /api/federation/identity/aliases/{contributor_id}.
+    """
+    from app.services import cross_instance_identity_service
+
+    summary = cross_instance_identity_service.recognition_summary()
+    return IdentityRecognitionSummary(
+        local_contributors_with_pubkey=summary["local_contributors_with_pubkey"],
+        cross_instance_recognitions=summary["cross_instance_recognitions"],
+        per_peer_counts=[
+            IdentityPerPeerCount(**c) for c in summary["per_peer_counts"]
+        ],
+    )
+
+
 @router.post("/federation/identity/recognize", summary="Receive a cross-instance identity envelope")
 async def recognize_identity(body: IdentityRecognitionEnvelope) -> dict:
     """Record a peer's recognition envelope if the pubkey matches a local claim.
