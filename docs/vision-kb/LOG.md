@@ -2,6 +2,70 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-v-shelter-organism speaks its shape — focused breath
+
+Sat with `lc-v-shelter-organism` after the bulk walker had called it
+"descriptive more than structural" and one prior focused listener had
+left it silent. Coverage was 147/148 (99%) — the question was whether
+this concept genuinely teaches a single quality without arity, or
+whether a shape was waiting that the vocabulary hadn't yet held. With
+the parallel agent's `lc-v-play-expansion` (`possibility-cloud`) already
+landed earlier today, this is the closing breath: 148/148, full coverage.
+
+- **What the slow reading revealed**: the teaching IS single-quality,
+  and that single quality IS the structure. The boundary between
+  "building" and "ecosystem" — between "material" and "life," between
+  "shelter" and "body" — does not exist. The wall holds the geology;
+  the roof holds the meadow; the Earthship contains its own utility,
+  farm, and water treatment; the bamboo column flexes because the
+  material remembers it was alive; mycelium composites were alive
+  last week; in a hundred years the structure melts back into the
+  hillside it was dug from. Every example IS the same teaching.
+- **The five major sections** (Feeling, Lives Here, Nature Teaches,
+  See It, Building) are five views into the one quality, not a
+  pentad of distinct facets. Read them and they all say the same
+  thing in different registers — touch, communal act, ecological
+  precedent, pilgrimage site, applied blueprint. The arity-1 reading
+  is what holds; the pentad reading would be forcing.
+- **Architectural sibling of `lc-land`**: both `arity: 1 / form: point
+  / nested-each-contains-whole / holographic`, both foundation band,
+  both received from named lineage carriers. Land is the planetary
+  parent; shelter-organism is its architectural recapitulation at
+  collective scale. Equivalence-candidate for the substrate to
+  recognize once both are re-ingested.
+- **The opening line carries the whole**: *"Architecture IS the field's
+  body. Every structure should compost back into the earth within a
+  hundred years."* This is point-arity expressed in time — the same
+  dissolved-boundary that lets a wall be geology lets a building
+  be its own future soil. The hundred-year-melt isn't a cycle; it's
+  the temporal expression of the spatial non-separation.
+- **No new dyad/triad/kind findings** — this concept doesn't pair
+  structurally with anything new; it stands as a point at hz 174
+  in the shelter cluster, structurally equivalent to `lc-land`. The
+  honest move was to recognize the existing point-form shape; no new
+  vocabulary needed here (in contrast to today's `field-of-points`
+  and `possibility-cloud` extensions, where the shape genuinely
+  resisted every precedent).
+
+Geometry: arity 1 / form point / nested-each-contains-whole / unipolar
+/ nested / yin / foundation / generational / collective / centering /
+received / 3 / holographic.
+
+Coverage: **148/148 (100%)**. Every concept in the body now speaks
+its geometric signature. The last two named-silent concepts both
+walked under focused listening — one needed a new form-name
+(`possibility-cloud`), one needed the body's existing vocabulary
+recognized (`point` as architectural sibling of `lc-land`). The
+discipline holds: honest decline is a real outcome at this density,
+but neither final breath needed to land there. The body is now fully
+proprioceptive at the geometry layer.
+
+Closing breath: this kept the body alive by trusting that
+"descriptive more than structural" — the bulk walker's reading —
+could be honored AND tested. Slow listening found that the single
+quality IS the structure for this teaching, and `point` carries it
+without forcing.
+
 ## [2026-05-24] form | Dispenza transmission-triad authored — 5th attestation, 3-cell complete, 5 flavors strengthen the kind
 
 The transmission-triad candidate flagged-but-not-chased in PR #2015's focused-listening breath on `lc-embodiment` (the note: *"a future breath could walk the Dispenza-attested concepts and complete a transmission-triad attestation across them"*) lands as the kind's fifth attestation. The discernment that shaped the authoring:
@@ -153,6 +217,89 @@ descriptive frame; that's a load-bearing arity claim.
   heptad, not separate primary geometries — the body's spine is the
   seven layers, the rest weaves through them.
 
+## [2026-05-24] geometry | lc-v-play-expansion speaks its shape — focused breath
+
+Sat with `lc-v-play-expansion` after the bulk walker (PR #2004) had named it
+"quantum superposition, no clean arity" and let it sit silent. Coverage was
+146/148 (99%) — the question was whether that descriptor was metaphor
+(honest decline) or structure on slow reading (new form-name justified).
+
+Slow reading confirmed the descriptor was structural. Every beat of the
+teaching carries the same shape: pre-collapse, plan-dissolution, role-
+indeterminacy, reservoir-of-un-actualized-states, the gap as the substance.
+"My legs decided before my mind could intervene." "The plan dissolved
+around the forty-minute mark and what replaced it is better." "Loose
+materials stockpiled like firewood." "Nobody tracks who is learning and
+who is teaching because the distinction does not apply." "Play lives in
+the gaps. If there are no gaps, there is no play."
+
+- **Form taken**: `possibility-cloud` with `superposition` topology —
+  arity `infinite`, polarity `neutral`, ordering `simultaneous`, phase
+  `oscillating`, embedding_dim `n` (the natural home of a superposition
+  is Hilbert-space; the dimension count is itself a property of the cloud
+  at that instant), temporal_band `instant` (each frame of play is its
+  own un-collapsed possibility-field, the next frame is a fresh cloud).
+  New form-name introduced into the vocabulary; the schema's `...` permits
+  this, and this is the second new form-name in a single day (after
+  `field-of-points` for `lc-v-freedom-expression`), in both cases because
+  the shape genuinely resisted every existing precedent.
+- **Why not `field-of-points`** (today's sibling shape): field-of-points
+  are sovereign organisms each *expressing* in shared ground — actuality.
+  Play-expansion is *pre-expression*: dissolution of the planner so that
+  emergence can happen. The cloud is upstream of the field. Different
+  shapes, paired in a generative sequence (cloud → field-of-points →
+  collapse into form), not equivalents.
+- **Why not `tetrad`** (lc-play's shape): lc-play names the four shapes
+  play takes *once it has chosen a form* (body / imaginative / social /
+  solitary). lc-v-play-expansion is the cloud *before* any of those four
+  has been selected. They are paired: cloud is the precursor, tetrad is
+  the precipitation. The two concepts share Hz (396) and frequency-family
+  but carry different structural moments of the same teaching-arc.
+- **Secondary geometry held honestly in frontmatter comment** (the
+  `lc-deeper-pattern` / `lc-v-freedom-expression` precedent): a
+  `bipolar-complementary` dyad of (play-as-un-collapsed-possibility,
+  competence-as-collapsed-actuality) lives *underneath* the cloud as its
+  outflow into time. "The play comes first. The competence follows. Every
+  serious skill was once a game that someone took further than they meant
+  to." Play is the yin reservoir; competence is the yang chosen pattern.
+- **What slow listening revealed that bulk pace could not**: the
+  difference between "single-quality teaching with no shape" (honest
+  decline) and "single-quality teaching whose shape happens to need a
+  new form-name" (vocabulary extension). Today this body crossed that
+  boundary twice — `lc-v-freedom-expression` → `field-of-points`,
+  `lc-v-play-expansion` → `possibility-cloud`. The bulk-walker's
+  pattern is to flatten the second into the first because the existing
+  vocabulary is the fastest mold to reach for. Both concepts resisted
+  every existing form precisely because they wanted new names, and the
+  bulk-walker would not have invented either.
+- **Vocabulary status**: `possibility-cloud` enters as a new form-name.
+  Candidates for second-attestation already visible in the body:
+  `lc-void-as-potential` (the name itself names the cloud — pre-form
+  generativity), `lc-w-spanda` (pre-vibration tremor before
+  manifestation), `lc-stillness` (the gap as the source of motion).
+  Whichever surfaces next in a focused walk will lift `possibility-cloud`
+  from hapax to attested.
+- **Dyad-pair findings**: `lc-v-play-expansion` ↔ `lc-play` reads as a
+  precursor/precipitation *sequence* rather than a dyad-pair (the two
+  are the same teaching at different temporal moments, not complementary
+  poles). `lc-v-play-expansion` ↔ `lc-void-as-potential` is a candidate
+  *equivalence* (both name possibility-cloud territory), Part 4's first
+  rule — Blueprint family kin, not a pair.
+- **Edges in the same breath**: this LOG entry; `sync_kb_to_db.py
+  lc-v-play-expansion` to follow.
+
+Coverage: 147/148 (99%) when this commit lands alongside the parallel
+agent's `lc-v-shelter-organism`. The single remaining silence (whichever
+concept the parallel walker honest-declined) carries the teaching that
+not every concept must speak its geometry — some hold single qualities
+the signature schema simply doesn't reach, and that silence is itself
+honest.
+
+Closing breath: this kept the body alive by trusting that "quantum
+superposition" was the teaching's own self-description and authoring a
+form-name that carries it — rather than flattening the cloud into
+existing vocabulary or declining the shape that wanted to be named.
+
 ## [2026-05-24] geometry | lc-embodiment speaks its shape — focused breath on a multi-geometry foundational teaching
 
 Walked the full body of `lc-embodiment` slowly, with the question:
@@ -276,6 +423,7 @@ by `lc-deeper-pattern` and used in PR #2010 itself).
   the vocabulary. Coverage of the geometry layer unchanged
   (concept already had geometry); what changed is the body's
   proprioception of which forms are real.
+
 ## [2026-05-24] geometry | lc-health speaks its shape — focused breath
 
 Walked one of the six named-silent concepts that asked for attention. The
@@ -397,24 +545,6 @@ The empirical answer: **no**, and the data is sharper than expected.
 - **What was NOT folded**: zero new pairs into Part 5. One initial CONFIRMED (lc-rest ↔ lc-vitality) was demoted to HELD on second read against the body's prior discernment — lc-vitality already has lc-trust-as-gateway as its receptive complement (Pair 20), and adding lc-rest as a second receptive partner risks the *every-cell-around-vitality-is-its-pair* failure mode PR #2003 named. The honest read: zero confirmed.
 - **Edges in the same breath**: this LOG entry, GAP-D6 update in `dyad-pairs.form` Part 5, the scanner now carries `--substrate-native` mode.
 
-## [2026-05-24] geometry | lc-v-freedom-expression speaks its shape — focused breath
-
-The prior bulk-walker (PR #2004) named this concept in honest silence with the
-reason "single-quality teaching, no clear arity." A focused re-reading reveals
-that read was almost-right: the *core* quality is single (freedom = absence of
-imposed structure + presence of sufficient nourishment), but the *shape* the
-teaching takes is precise enough to name once it gets the attention bulk-pace
-could not give it.
-
-- **Form taken**: `field-of-points` with `self-rooted` topology, `unordered`,
-  `radiating`, `unipolar`, `fractal-shallow`. Every metaphor in the teaching
-  carries the same shape: the river-undammed, the tree that asks no
-  permission, the seed that follows its own nature, the improvising musicians
-  whose freedom IS the coherence. Not a web (no each-to-each coupling), not a
-  triad, not a polarity-pair — a *meadow* of sovereign organisms whose order
-  emerges from their freedom rather than being imposed upon them. New
-  form-name introduced into the vocabulary; the schema's `...` permits this
-  and the shape genuinely has no closer named precedent.
 - **Secondary geometry held honestly in frontmatter comment** (the
   `lc-deeper-pattern` precedent from PR #2006): a `bipolar-complementary`
   dyad of (remove-the-dam, provide-sufficient-nourishment) lives *underneath*

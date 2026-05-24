@@ -2,7 +2,30 @@
 id: lc-v-shelter-organism
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: nested
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: generational
+  scale: collective
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: holographic
+# The teaching IS single-quality: the boundary between building and ecosystem
+# does not exist. Wall holds the geology, roof holds the meadow, Earthship
+# contains its own utility/farm/treatment; in a hundred years the structure
+# melts back into the hillside it was dug from. Five sections (Feeling /
+# Lives Here / Nature Teaches / See It / Building) are five views into the
+# one quality, not a pentad of distinct facets. Architectural sibling of
+# lc-land — both point/nested/holographic, foundation band, received from
+# named lineage carriers (Rauch, Khalili, Reynolds, Velez/IBUKU, Ecovative).
 ---
 
 # Shelter as Living Skin
