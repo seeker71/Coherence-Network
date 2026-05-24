@@ -142,6 +142,10 @@ constraints:
 
 Connect asset creation, content delivery, and value distribution to three external protocols: Story Protocol for IP registration and derivative royalties, x402 for HTTP-native micropayments on content reads, and Arweave/IPFS for permanent verifiable storage. Together these turn every community-contributed asset (blueprint, article, 3D model, research paper) into a registered intellectual property that earns CC when read, pays royalties when derived from, and persists permanently with cryptographic proof of integrity. Without this integration, assets live only on our server, have no on-chain provenance, and cannot participate in the broader IP economy.
 
+## Related specs (same `idea_id: value-attribution`)
+
+- [asset-renderer-plugin](asset-renderer-plugin.md) — the asset's lifecycle on the way out: pluggable MIME-typed renderers, render-event logging, and per-render CC split between asset creator / renderer creator / host node. This spec carries the lifecycle on the way in (IP registration, storage, settlement). Each render-event logged by `asset-renderer-plugin` flows into the daily aggregation handled by `settlement_service` here.
+
 ## Requirements
 
 - [ ] **R1**: When a contributor creates an asset via `POST /api/assets`, the system queues an async job that registers the asset as an IP Asset on Story Protocol, stores the returned IP Asset ID on the asset's graph node property `sp_ip_id`, and sets `ip_status` to `registered`. If registration fails, `ip_status` is `failed` and the asset remains usable without IP registration.

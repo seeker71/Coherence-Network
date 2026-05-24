@@ -446,11 +446,16 @@ python3 -m pytest api/tests/test_asset_renderer.py -x -v
 
 ## Out of Scope
 
-- Content upload and storage (Arweave/IPFS integration is a separate spec)
+- Content upload and storage — covered by [story-protocol-integration](story-protocol-integration.md) (Arweave/IPFS upload, hash computation, integrity verification)
+- IP registration and derivative tracking — covered by [story-protocol-integration](story-protocol-integration.md) (`ip_registration_service`)
 - Renderer marketplace UI (browsing/rating renderers)
 - Renderer versioning and migration (auto-upgrading assets to newer renderer versions)
-- Payment settlement (CC attribution is recorded, actual payout is handled by the distribution engine)
+- Payment settlement — CC attribution is recorded here on every render event; daily aggregation, concept-weighted distribution, Merkle chain, and evidence multiplier are covered by [story-protocol-integration](story-protocol-integration.md) (`settlement_service`, `evidence_service`)
 - Renderer code review or security audit process
+
+## Related specs (same `idea_id: value-attribution`)
+
+- [story-protocol-integration](story-protocol-integration.md) — the asset's lifecycle on the way in: IP registration, permanent storage, content delivery with x402 payment headers, daily settlement, evidence-backed multipliers. This spec carries the lifecycle on the way out: pluggable rendering, render-event logging, CC split between asset creator / renderer creator / host node.
 
 ## Risks and Assumptions
 
