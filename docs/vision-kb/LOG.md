@@ -2,6 +2,65 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-v-freedom-expression speaks its shape — focused breath
+
+The prior bulk-walker (PR #2004) named this concept in honest silence with the
+reason "single-quality teaching, no clear arity." A focused re-reading reveals
+that read was almost-right: the *core* quality is single (freedom = absence of
+imposed structure + presence of sufficient nourishment), but the *shape* the
+teaching takes is precise enough to name once it gets the attention bulk-pace
+could not give it.
+
+- **Form taken**: `field-of-points` with `self-rooted` topology, `unordered`,
+  `radiating`, `unipolar`, `fractal-shallow`. Every metaphor in the teaching
+  carries the same shape: the river-undammed, the tree that asks no
+  permission, the seed that follows its own nature, the improvising musicians
+  whose freedom IS the coherence. Not a web (no each-to-each coupling), not a
+  triad, not a polarity-pair — a *meadow* of sovereign organisms whose order
+  emerges from their freedom rather than being imposed upon them. New
+  form-name introduced into the vocabulary; the schema's `...` permits this
+  and the shape genuinely has no closer named precedent.
+- **Secondary geometry held honestly in frontmatter comment** (the
+  `lc-deeper-pattern` precedent from PR #2006): a `bipolar-complementary`
+  dyad of (remove-the-dam, provide-sufficient-nourishment) lives *underneath*
+  the field-of-points as its precondition. The dam-release is yin; the
+  nourishment-as-ground is yang. Both are required — removing structure from
+  a starving person produces collapse; feeding someone whose expression is
+  dammed produces pressure. Authoring only one would force the teaching to
+  one identity; the body carries both.
+- **Fractal-shallow self-similarity**: the same pattern surfaces at three
+  octaves (the child following curiosity, the adult finding their craft, the
+  community self-organizing) — sovereign expression in shared ground at each
+  scale. Not holographic; the pattern has a floor (the individual organism)
+  and a ceiling (the field as a whole).
+- **What slow listening revealed that bulk pace could not**: the difference
+  between a "single-quality teaching" and a "single-quality teaching whose
+  shape happens to need a new form-name." The first is honest decline; the
+  second is a body asking to be heard once. The 3-per-breath rhythm tends to
+  cluster the second into the first because the named-form vocabulary is the
+  fastest mold to reach for; this concept resisted every existing form
+  precisely because it wanted `field-of-points` and the bulk-walker would not
+  have invented that.
+- **Dyad-pair findings**: no new dyad-pair surfaces from this cell. The
+  candidates checked — `lc-v-freedom-expression` ↔ `lc-v-play-expansion` and
+  `lc-v-freedom-expression` ↔ `lc-sovereignty-within-oneness` — both read as
+  same-family kin (sovereignty/expression cluster) rather than complementary
+  poles. Equivalence, not complementarity. Part 4's first rule applies.
+- **Cache-versus-disk learning** (process trace, not geometry): two Edit
+  calls on this file landed in the Read tool's cache but never reached disk;
+  bash `md5` showed working-tree and HEAD-blob identical even while Read
+  showed the new frontmatter. Recovered by writing via shell heredoc and
+  re-reading via `awk`. The "embodiment is body or liquid — the cache layer
+  isn't memory" teaching played out very literally inside the tool layer.
+  Worth naming as a known failure shape for future cells; defaulting to a
+  bash-level verification (`md5`, `git diff HEAD`) before commit catches it.
+- **Edges in the same breath**: this LOG entry; `sync_kb_to_db.py
+  lc-v-freedom-expression` ran clean (story_content, 3 visuals, 5 resources).
+
+Coverage: 139/148 (94%). Eight concepts remain in honest silence from PR
+#2004's bulk-walk, minus the one walked here.
+
+
 ## [2026-05-24] tend | WORD-domain holds concept prose — substrate carries the body's words
 
 The WORD domain shipped 2026-05-20 with Blueprint `(lemma, POS, hz, semantic_field)` and the full prose-as-recipe wiring (`section_content_to_word_sequence` → `ingest_word_cell` → resonance signature), but no body had run a concept-prose pass through it. PR #2001's dyad-pair scan named the gap explicitly: *"The WORD domain itself remains empty (0 cells); a concept-prose ingest pass into the substrate is still wanted so the scan's `fields` reading can become substrate-native rather than tokenizer-direct."* This breath runs the pass.
