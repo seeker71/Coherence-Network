@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 210
+**Total files**: 211
 
 | File | Purpose |
 |---|---|
@@ -68,6 +68,7 @@
 | [test_federation_substance.py](test_federation_substance.py) | Federation substance payload — round-trip test. |
 | [test_federation_substrate_exchange.py](test_federation_substrate_exchange.py) | Acceptance tests for the federated substrate canonical exchange. |
 | [test_federation_value_flow.py](test_federation_value_flow.py) | Acceptance tests for the federated value flow. |
+| [test_federation_value_flow_e2e.py](test_federation_value_flow_e2e.py) | End-to-end federated value flow across two sovereign instances. |
 | [test_field_story_agent_surface.py](test_field_story_agent_surface.py) | _no top-of-file purpose_ |
 | [test_field_story_runtime_docs.py](test_field_story_runtime_docs.py) | _no top-of-file purpose_ |
 | [test_field_story_trace_index.py](test_field_story_trace_index.py) | _no top-of-file purpose_ |
