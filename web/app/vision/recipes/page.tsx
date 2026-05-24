@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ClipboardCheck, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
+import { RecipeComposer } from "./RecipeComposer";
 
 export const metadata: Metadata = {
   title: "Transmission Recipes | The Living Collective",
@@ -227,6 +228,13 @@ export default function TransmissionRecipesPage() {
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
+                href="#composer"
+                className="inline-flex items-center gap-2 rounded-lg border border-violet-500/25 bg-violet-500/10 px-5 py-3 text-sm font-medium text-violet-200 transition-colors hover:bg-violet-500/20"
+              >
+                Make a card
+                <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
                 href="#payloads"
                 className="inline-flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-5 py-3 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-500/20"
               >
@@ -258,6 +266,8 @@ export default function TransmissionRecipesPage() {
         </div>
         <RecipeCard />
       </section>
+
+      <RecipeComposer />
 
       <section id="payloads" className="border-y border-stone-800/35">
         <div className="mx-auto max-w-6xl space-y-8 px-6 py-16 md:py-24">
