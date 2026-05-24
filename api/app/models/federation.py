@@ -388,3 +388,98 @@ class CapabilityAlignment(BaseModel):
     shared_substrate_canonicals: list[str] = Field(default_factory=list)
     unique_to_self: dict[str, list[str]] = Field(default_factory=dict, description="Capabilities self has that peer lacks, keyed by capability kind.")
     unique_to_peer: dict[str, list[str]] = Field(default_factory=dict, description="Capabilities peer has that self lacks, keyed by capability kind.")
+
+
+# ---------------------------------------------------------------------------
+# Federated substrate canonical exchange — freedom-preserving discovery
+# ---------------------------------------------------------------------------
+#
+# Two instances meeting at the substrate altitude. Neither imports the
+# other; each exposes its interned canonical Blueprints, and content-
+# addressing (sha256 over name + role_slots) lets the peer test for
+# structural alignment without surrendering autonomy.
+#
+# Status taxonomy ("attestation outcome"):
+#   - "aligned"    — peer carries this canonical with the same content_hash
+#   - "diverged"   — peer carries this canonical name with a different hash
+#   - "discovered" — peer carries a canonical this instance does not have
+#
+# All three are sovereign attestations: alignment is not absorption,
+# divergence is not error, discovery is not import.
+
+ALIGNMENT_STATUSES = frozenset({"aligned", "diverged", "discovered"})
+
+
+class CanonicalShapeOut(BaseModel):
+    """One canonical recipe-shape as exposed across the federation wire."""
+    canonical_name: str
+    role_slots: list[str] = Field(default_factory=list)
+    modality_tags: list[str] = Field(default_factory=list)
+    blueprint: dict | None = Field(
+        default=None,
+        description="Blueprint NodeID as {package, level, type, instance} when this instance has interned the shape",
+    )
+    content_hash: str = Field(
+        description="sha256 hex of canonical_name + role_slots tuple — deterministic across instances",
+    )
+    interned: bool = Field(
+        default=False,
+        description="True when this instance carries the canonical cell locally",
+    )
+    member_count: int = Field(
+        default=0,
+        description="Number of per-modality cells sharing this canonical's Blueprint on this instance",
+    )
+
+
+class CanonicalShapesListResponse(BaseModel):
+    """Full inventory of this instance's canonical recipe-shapes."""
+    instance_id: str | None = None
+    canonicals: list[CanonicalShapeOut] = Field(default_factory=list)
+    count: int = 0
+
+
+class CanonicalDiscoverResponse(BaseModel):
+    """Single-shape lookup — does THIS instance carry this canonical?"""
+    canonical_name: str
+    found: bool
+    content_hash: str | None = None
+    blueprint: dict | None = None
+
+
+class PeerCanonicalEntry(BaseModel):
+    """One canonical as reported by a peer in an exchange payload."""
+    canonical_name: str = Field(min_length=1)
+    role_slots: list[str] = Field(default_factory=list)
+    modality_tags: list[str] = Field(default_factory=list)
+    content_hash: str = Field(min_length=1)
+
+
+class CanonicalExchangeRequest(BaseModel):
+    """Inbound: a peer's canonical inventory for structural attestation."""
+    peer_instance_id: str = Field(
+        min_length=1,
+        description="Sovereign identifier for the peer — used as the partition key in the attestation mirror",
+    )
+    peer_endpoint_url: str | None = None
+    canonicals: list[PeerCanonicalEntry] = Field(default_factory=list)
+
+
+class CanonicalAttestationOut(BaseModel):
+    """One attestation row — how this instance views a peer's canonical."""
+    peer_instance_id: str
+    canonical_name: str
+    peer_content_hash: str
+    local_content_hash: str | None = None
+    alignment_status: str = Field(description="aligned | diverged | discovered")
+    observed_at: str
+
+
+class CanonicalExchangeResponse(BaseModel):
+    """Outbound: the per-canonical attestation outcomes after an exchange."""
+    peer_instance_id: str
+    received: int = 0
+    aligned: int = 0
+    diverged: int = 0
+    discovered: int = 0
+    attestations: list[CanonicalAttestationOut] = Field(default_factory=list)
