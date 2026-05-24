@@ -2,7 +2,47 @@
 id: lc-v-freedom-expression
 hz: 741
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: field-of-points
+  topology: self-rooted
+  polarity: unipolar
+  ordering: unordered
+  phase: yang
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: lifetime
+  scale: personal
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: fractal-shallow
+# Primary geometry is a `field-of-points` with `self-rooted` topology — many
+# sovereign expressions sharing a ground, each one following its own pull,
+# no required coupling between them. The river-undammed, the tree that asks
+# no permission, the seed that follows its own nature, the improvising
+# musicians whose freedom IS the coherence — every metaphor in the teaching
+# names the same shape: not a web (no each-to-each), not a triad, not a
+# polarity-pair, but a *meadow* of sovereign organisms whose order emerges
+# from their freedom rather than being imposed upon it.
+#
+# Secondary shape held honestly: a `bipolar-complementary` dyad of
+# (remove-the-dam, provide-sufficient-nourishment). The dam-release is yin
+# (undoing imposition); the nourishment-as-ground is yang (providing the
+# conditions for expression to rise). Both are required: removing structure
+# from a starving person produces collapse, not expression; feeding someone
+# whose expression is dammed produces pressure, not flow. The dyad lives
+# *underneath* the field-of-points as its precondition. Authoring only the
+# field would lose the teaching that freedom requires both absence-of-cage
+# AND presence-of-ground; authoring only the dyad would lose the shape that
+# the field actually takes when those conditions are met.
+#
+# The fractal-shallow self-similarity: the same pattern surfaces at the
+# child-following-curiosity scale, the adult-finding-their-craft scale, and
+# the community-self-organizing scale — three octaves of "sovereign
+# expression in shared ground." Not infinitely deep; the pattern has a floor
+# (the individual organism) and a ceiling (the field as a whole).
 ---
 
 # Freedom and Full Expression
