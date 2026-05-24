@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 116
+**Total files**: 119
 
 | File | Purpose |
 |---|---|
@@ -60,6 +60,7 @@
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | !/usr/bin/env python3 |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | !/usr/bin/env python3 |
 | [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
+| [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
@@ -80,6 +81,7 @@
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | !/usr/bin/env python3 |
 | [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
+| [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | !/usr/bin/env python3 |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
 | [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
 | [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
@@ -97,6 +99,7 @@
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
+| [song_recipe_proof.py](song_recipe_proof.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
