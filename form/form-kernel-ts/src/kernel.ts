@@ -440,6 +440,8 @@ export class Kernel {
   private sourceAttr = new Map<string, { file: NameID; line: number; col: number }>();
   private importSeq = 1;
   private walkCache = new Map<string, Value>();
+  private walkCacheHits = 0;
+  private walkCacheMisses = 0;
   private activeRoots: NodeID[] = [];
 
   // String table — substrate strings + identifier names share this table.
@@ -1381,7 +1383,11 @@ export class Kernel {
           const key = nodeKey(root);
           if (cache) {
             const cached = k.walkCache.get(key);
-            if (cached !== undefined) return cached;
+            if (cached !== undefined) {
+              k.walkCacheHits++;
+              return cached;
+            }
+            k.walkCacheMisses++;
           }
           const value = walk(k, root, new Frame(null));
           if (cache) k.walkCache.set(key, value);
@@ -1398,17 +1404,27 @@ export class Kernel {
         return sequential(k.trace === undefined);
       }
       const out: Value[] = new Array(roots.length);
-      const workerCount = Math.min(workers, roots.length);
-      for (let worker = 0; worker < workerCount; worker++) {
-        for (let i = worker; i < roots.length; i += workerCount) {
-          const root = roots[i]!;
-          const key = nodeKey(root);
-          const cached = k.walkCache.get(key);
-          out[i] = cached ?? walk(k, root, new Frame(null));
+      const jobs: Array<[number, NodeID]> = [];
+      for (let i = 0; i < roots.length; i++) {
+        const root = roots[i]!;
+        const cached = k.walkCache.get(nodeKey(root));
+        if (cached !== undefined) {
+          k.walkCacheHits++;
+          out[i] = cached;
+        } else {
+          k.walkCacheMisses++;
+          jobs.push([i, root]);
         }
       }
-      for (let i = 0; i < roots.length; i++) {
-        k.walkCache.set(nodeKey(roots[i]!), out[i]!);
+      const workerCount = Math.min(workers, roots.length);
+      for (let worker = 0; worker < workerCount; worker++) {
+        for (let i = worker; i < jobs.length; i += workerCount) {
+          const [idx, root] = jobs[i]!;
+          out[idx] = walk(k, root, new Frame(null));
+        }
+      }
+      for (const [idx, root] of jobs) {
+        k.walkCache.set(nodeKey(root), out[idx]!);
       }
       return { kind: "list", list: out };
     };
@@ -1418,18 +1434,32 @@ export class Kernel {
       const nid = argNodeID(args, 0);
       const key = nodeKey(nid);
       const cached = k.walkCache.get(key);
-      if (cached !== undefined) return cached;
+      if (cached !== undefined) {
+        k.walkCacheHits++;
+        return cached;
+      }
+      k.walkCacheMisses++;
       const value = walk(k, nid, new Frame(null));
       k.walkCache.set(key, value);
       return value;
     });
     this.registerNative("walk-cache-clear", catWitness(), (k, _args) => {
       k.walkCache.clear();
+      k.walkCacheHits = 0;
+      k.walkCacheMisses = 0;
       return { kind: "null" };
     });
     this.registerNative("walk-cache-size", catWitness(), (k, _args) => ({
       kind: "int",
       int: k.walkCache.size,
+    }));
+    this.registerNative("walk-cache-stats", catWitness(), (k, _args) => ({
+      kind: "list",
+      list: [
+        { kind: "int", int: k.walkCacheHits },
+        { kind: "int", int: k.walkCacheMisses },
+        { kind: "int", int: k.walkCache.size },
+      ],
     }));
 
     // native_blueprint — introspection: return a native's Form category.

@@ -157,6 +157,8 @@ pub(crate) struct Kernel {
     // For now: opt-in via `walk-cached` native; not used by default
     // `walk_recipe` to avoid invalidating semantics for impure recipes.
     walk_cache: HashMap<NodeID, Value>,
+    walk_cache_hits: u64,
+    walk_cache_misses: u64,
     import_seq: u32,
     strs: Vec<String>,
     str_idx: HashMap<String, NameID>,
@@ -432,6 +434,8 @@ impl Kernel {
             by_id: HashMap::new(),
             source_attr: HashMap::new(),
             walk_cache: HashMap::new(),
+            walk_cache_hits: 0,
+            walk_cache_misses: 0,
             import_seq: 1,
             strs: Vec::new(),
             str_idx: HashMap::new(),
@@ -737,6 +741,8 @@ impl Kernel {
             by_id: self.by_id.clone(),
             source_attr: self.source_attr.clone(),
             walk_cache: HashMap::new(),
+            walk_cache_hits: 0,
+            walk_cache_misses: 0,
             import_seq: self.import_seq,
             strs: self.strs.clone(),
             str_idx: self.str_idx.clone(),
@@ -968,10 +974,12 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
         let mut out = Vec::with_capacity(roots.len());
         for root in &roots {
             if cache_enabled {
-                if let Some(v) = k.walk_cache.get(root) {
-                    out.push(v.clone());
+                if let Some(v) = k.walk_cache.get(root).cloned() {
+                    k.walk_cache_hits += 1;
+                    out.push(v);
                     continue;
                 }
+                k.walk_cache_misses += 1;
             }
             let mut sub_arena = Arena::new();
             let env = sub_arena.new_frame(None);
@@ -987,9 +995,11 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
     let mut out: Vec<Option<Value>> = vec![None; roots.len()];
     let mut jobs = Vec::<(usize, NodeID)>::new();
     for (idx, root) in roots.iter().copied().enumerate() {
-        if let Some(v) = k.walk_cache.get(&root) {
-            out[idx] = Some(v.clone());
+        if let Some(v) = k.walk_cache.get(&root).cloned() {
+            k.walk_cache_hits += 1;
+            out[idx] = Some(v);
         } else {
+            k.walk_cache_misses += 1;
             jobs.push((idx, root));
         }
     }
@@ -1524,9 +1534,11 @@ impl Kernel {
         // architectural shape stays the same.
         self.register_native("walk-cached", cat_witness(), |k, _, args| {
             let nid = args[0].as_nid();
-            if let Some(v) = k.walk_cache.get(&nid) {
-                return v.clone();
+            if let Some(v) = k.walk_cache.get(&nid).cloned() {
+                k.walk_cache_hits += 1;
+                return v;
             }
+            k.walk_cache_misses += 1;
             let mut sub_arena = Arena::new();
             let env = sub_arena.new_frame(None);
             let v = walk(k, &mut sub_arena, nid, env);
@@ -1538,6 +1550,8 @@ impl Kernel {
         // cached results (e.g. native re-registration).
         self.register_native("walk-cache-clear", cat_witness(), |k, _, _| {
             k.walk_cache.clear();
+            k.walk_cache_hits = 0;
+            k.walk_cache_misses = 0;
             Value::Null
         });
         // walk-cache-size — number of cached recipes. Useful for
@@ -1545,6 +1559,13 @@ impl Kernel {
         // tooling compare "recipes seen" vs "recipes JIT-cached".
         self.register_native("walk-cache-size", cat_witness(), |k, _, _| {
             Value::Int(k.walk_cache.len() as i64)
+        });
+        self.register_native("walk-cache-stats", cat_witness(), |k, _, _| {
+            Value::List(vec![
+                Value::Int(k.walk_cache_hits as i64),
+                Value::Int(k.walk_cache_misses as i64),
+                Value::Int(k.walk_cache.len() as i64),
+            ])
         });
 
         // native_blueprint — read a native's Form category from inside Form.
