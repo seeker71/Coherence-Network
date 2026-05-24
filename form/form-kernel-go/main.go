@@ -358,8 +358,10 @@ type Kernel struct {
 	// walkCache — JIT-vector memoization for pure recipes. Keyed by
 	// recipe NodeID. Real JIT replaces this with compiled native code;
 	// the architectural slot is the same: same NodeID = same result.
-	walkCache   map[NodeID]Value
-	activeRoots []NodeID
+	walkCache       map[NodeID]Value
+	walkCacheHits   uint64
+	walkCacheMisses uint64
+	activeRoots     []NodeID
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
@@ -1221,8 +1223,10 @@ func (k *Kernel) registerNatives() {
 	// walk-cached — JIT-vector memoization. Caller asserts purity.
 	k.registerNative("walk-cached", catWitness(), func(k *Kernel, args []Value) Value {
 		if v, ok := k.walkCache[args[0].Nid]; ok {
+			k.walkCacheHits++
 			return v
 		}
+		k.walkCacheMisses++
 		env := NewFrame(nil)
 		v := k.walk(args[0].Nid, env)
 		k.walkCache[args[0].Nid] = v
@@ -1230,10 +1234,19 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("walk-cache-clear", catWitness(), func(k *Kernel, _ []Value) Value {
 		k.walkCache = make(map[NodeID]Value)
+		k.walkCacheHits = 0
+		k.walkCacheMisses = 0
 		return Value{Kind: VNull}
 	})
 	k.registerNative("walk-cache-size", catWitness(), func(k *Kernel, _ []Value) Value {
 		return Value{Kind: VInt, Int: int64(len(k.walkCache))}
+	})
+	k.registerNative("walk-cache-stats", catWitness(), func(k *Kernel, _ []Value) Value {
+		return Value{Kind: VList, List: []Value{
+			{Kind: VInt, Int: int64(k.walkCacheHits)},
+			{Kind: VInt, Int: int64(k.walkCacheMisses)},
+			{Kind: VInt, Int: int64(len(k.walkCache))},
+		}}
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
@@ -1304,9 +1317,11 @@ func (k *Kernel) registerNatives() {
 			for i, root := range roots {
 				if cache {
 					if cached, ok := k.walkCache[root]; ok {
+						k.walkCacheHits++
 						out[i] = cached
 						continue
 					}
+					k.walkCacheMisses++
 				}
 				out[i] = k.walk(root, NewFrame(nil))
 				if cache {
@@ -1327,29 +1342,35 @@ func (k *Kernel) registerNatives() {
 			return sequential(k.Trace == nil)
 		}
 		out := make([]Value, len(roots))
-		jobs := make(chan int)
+		jobs := make([]int, 0, len(roots))
+		for i, root := range roots {
+			if cached, ok := k.walkCache[root]; ok {
+				k.walkCacheHits++
+				out[i] = cached
+			} else {
+				k.walkCacheMisses++
+				jobs = append(jobs, i)
+			}
+		}
+		jobCh := make(chan int)
 		var wg sync.WaitGroup
 		for w := 0; w < workers; w++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for idx := range jobs {
+				for idx := range jobCh {
 					root := roots[idx]
-					if cached, ok := k.walkCache[root]; ok {
-						out[idx] = cached
-						continue
-					}
 					out[idx] = k.walk(root, NewFrame(nil))
 				}
 			}()
 		}
-		for i := range roots {
-			jobs <- i
+		for _, i := range jobs {
+			jobCh <- i
 		}
-		close(jobs)
+		close(jobCh)
 		wg.Wait()
-		for i, root := range roots {
-			k.walkCache[root] = out[i]
+		for _, i := range jobs {
+			k.walkCache[roots[i]] = out[i]
 		}
 		return Value{Kind: VList, List: out}
 	}

@@ -1,0 +1,22 @@
+; kernel-walk-cache-stats-band.fk - hotspot counters for cached async walks.
+;
+; Two passes over four roots with one duplicate produce:
+;   first pass: 0 hits, 4 misses, 3 cached roots
+;   second pass: 4 hits, 4 misses, 3 cached roots
+
+(do
+    (let PLUS (make_nodeid 1 2 12 1))
+    (let MUL (make_nodeid 1 2 12 3))
+    (let one (intern_trivial_int 1))
+    (let two (intern_trivial_int 2))
+    (let three (intern_trivial_int 3))
+    (let four (intern_trivial_int 4))
+    (let five (intern_trivial_int 5))
+    (let r1 (intern_node PLUS (list two three)))
+    (let r2 (intern_node MUL (list three four)))
+    (let r3 (intern_node MUL (list five five)))
+    (walk-cache-clear)
+    (walk_parallel_cached (list r1 r2 r3 r1) 3)
+    (walk_parallel_cached (list r1 r2 r3 r1) 3)
+    (let stats (walk-cache-stats))
+    (add (nth stats 0) (add (nth stats 1) (nth stats 2))))
