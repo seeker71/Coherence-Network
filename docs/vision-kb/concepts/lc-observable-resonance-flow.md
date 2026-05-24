@@ -171,7 +171,7 @@ Then choose the next move by yield:
 
 ## Cross-References
 
-→ lc-anything-arrives-room, lc-transmission-recipe-atlas, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-frequency-routes-reception, lc-layered-frequency-field, lc-edges-as-vitality, lc-sensing, lc-whole-vitality, lc-tools-as-form-cells
+→ lc-anything-arrives-room, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-frequency-routes-reception, lc-layered-frequency-field, lc-edges-as-vitality, lc-sensing, lc-whole-vitality, lc-tools-as-form-cells
 
 ## Sources to Walk Further
 
