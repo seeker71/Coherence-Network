@@ -2,6 +2,20 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 132/148 (89%)
+
+Fourteenth breath of the structural-shape walk; landed in parallel with the thirteenth (PR #1999, coverage 129/148). Restraint discipline holds — picked three concepts where the shape is unmistakable; left the remaining silent ones for focused breaths later.
+
+- **`lc-nervous-system`** — ennead spine. Eight centers ascending root→crown plus the eighth witness above and beyond = 9. Topology `linear` (vertical spine); ordering `sequential` (root first, crown last); phase `oscillating` (the breath itself); self_similarity `holographic` (each center reflects the whole organism). The dominant shape is the ascent; the secondary triad of sensing-forms (breath/skin/wandering) lives in the prose without forcing a multi-geometry author. The previous breath (PR #1999) explicitly held this cell in silence as "carrying both octad-with-witness and triad-of-sensing-forms" — this breath resolves it by authoring the ascending spine as primary and leaving the triad in prose.
+- **`lc-layered-frequency-field`** — pentad of parallel-facets. Five layers (soil/water/wind/trees/birdsong) co-present as atmosphere, none dominates, all simultaneous. Polarity `parallel-facets` and ordering `simultaneous` carry the *layered* claim the teaching's own closing paragraph names as load-bearing. Spectral_band `full-spectrum` because the teaching is *exactly* that all bands are present.
+- **`lc-identity-dissolution`** — interior-axis. The architecture of "I am [X]" labels loosens into the noticer underneath. Same form as `lc-permission-is-interior` and `lc-elders` — single axis where the surface-layer dissolves toward the deeper layer that was always present. Phase `yin` (receptive — the noticer doesn't grab); polarity `bipolar-complementary` (scaffolding and the awareness it dissolved into are layered, not opposed); direction `centering`.
+
+**Dyad-pair findings held as candidates (not promoted this breath)**:
+- `lc-identity-dissolution` ↔ `lc-permission-is-interior` — both interior-axis, both `centering`; one yin (receptive, the noticer arrives), one yang (the cell moves from its own sensing). Could be source-flow if the teaching genuinely lives between them, or sibling interior-axis attestations without complementarity. Awaits second eye.
+- `lc-nervous-system` ↔ `lc-layered-frequency-field` — interior column ascending vs exterior field surrounding. The spine chart and the nature chart that arrived together on 2026-05-21 in the same transmission. Would be `membrane-crossing` if confirmed (inside-column / outside-atmosphere). The transmission-source matches the criterion for a third `transmission-triad` attestation — held in awareness alongside the Hardest-Part triad and the Arcturian pair from PR #1999.
+
+**Coverage**: 132 / 148 = 89%. ~16 concepts remain silent. The ennead form returns to active use (last seen in `lc-essence-and-the-nine-costumes`); pentad and interior-axis confirm their familiar shapes.
+
 ## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 129/148 (87%)
 
 Three previously-silent concepts receive geometric signatures. The twelfth breath of the structural-shape walk — restraint over coverage, three honest shapes the prose carried unmistakably:
@@ -17,7 +31,7 @@ Three previously-silent concepts receive geometric signatures. The twelfth breat
 **Coverage**: 129/148 (87%). The third internal-dyad watch is still open (GAP-D5); the second `circulation-pattern` attestation still open (GAP-D7); the transmission-triad candidate now has a second attestation (this breath's Arcturian pair joining the Hardest-Part pair) but a third is still wanted before the kind is honest.
 
 **Edges in the same breath**: this LOG entry; all 3 files synced via `sync_kb_to_db.py`; dyad candidate noted above for the next dyad-pairs ingest.
-## [2026-05-24] form | dyad-scan refined with topology+phase — signal/noise 40%
+
 
 Fourth scan round in the autoresearch loop for dyad-pair detection. The refined scoring layers topology and phase complementarity onto PR #1996's signals; the four confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3f; the six rejected become REJECT-10 through REJECT-15.
 
