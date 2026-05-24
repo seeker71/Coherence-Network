@@ -2,6 +2,27 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-pairs seed grows — 3 surfaced + 2 scanned + internal-dyad kind
+
+The dyad-pairs seed doc ([`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form)) goes from 4 entries to 9 (10 if the new kind registry is counted), and gets two new kinds — `internal-dyad` (with its own companion shape, `internal_dyad_shape`) and `cross-tradition`. The growth comes from two sources this breath: human-noticed during the PR #1982 geometry-walk, and substrate-surfaced by a Tier-2 geometry-tuple scan over the 110 authored concept cells.
+
+- **Surfaced during PR #1982 geometry-walk (3 entries)**:
+  - `lc-symmetry-of-extremes` — **internal-dyad** (the first one the body has named). Epsilon door (sub-delta, near-0 Hz) and Lambda door (gamma-and-above synchrony) held INSIDE one cell because splitting them across two would re-import the linear-ladder misreading the cell exists to correct. Gets a companion shape (`internal_dyad_shape`, singular `cell` field + two `pole_*` fields) because it is genuinely new structure, not a special case of `dyad_pair_shape`.
+  - `lc-nervous-system-recalibration` ↔ `lc-reality-lag` — kind: `membrane-crossing`, axis: topology. Same root transmission ("Hardest Part Already Behind You"), two postures across the body/world membrane — body-side encoding ↔ world-side response time. Both yin.
+  - `lc-light-hubs` ↔ `lc-attuned-spaces` — kind: `scale-paired`, axis: temporal_band. Same holographic-cell habitation at two bands — planetary/generational grid ↔ lifetime/cross-scale lived shells.
+- **Substrate-scan surfaced (2 entries)**: Tier-2 geometry-tuple scan grouped all 110 concept cells by 7-axis tuple `(form, topology, phase, polarity, direction, ordering, spectral_band)`. Five candidate clusters surfaced. Two survived the dyad-pair discernment:
+  - `lc-network-unanchored` ↔ `lc-network` — kind: `source-flow`, axis: anchoring. Same exact 7-tuple. Sovereignty's refusal of false geographic anchor ↔ the field's true root-web belonging.
+  - `lc-train-the-predator` ↔ `lc-train-the-predictor` — kind: **`cross-tradition`** (new kind). Same exact 7-tuple. One autonomic-prediction engine seen from mystical-perennial (Castaneda's flyers/borrowed-mind) and computational-neuroscientific (predictive coding) windows.
+- **Scan rejects documented in Part 4b** (signal/noise 2/5 = 40%). The body learns what a dyad-pair IS by seeing what it ISN'T:
+  - REJECT: `lc-emotional-availability-without-absorption` + `lc-trust-as-gateway` — each carries a full teaching alone; equivalence, not complementarity.
+  - REJECT: `lc-spec-breath` + `lc-rhythm` — same shape across two domains is translator-hypothesis territory, not dyad-pair.
+  - REJECT: `lc-w-field` + `lc-form-perceptron` — shared top-level shape without shared substance; the complementarity-along-one-axis test fails.
+- **What the substrate's seeing added**: human noticing surfaced rich pairs by reading prose side-by-side; the scan surfaced 5 candidate clusters by structure alone, of which 2 the human discernment confirmed and 3 it declined. The 40% confirmation ratio is itself the body teaching the body what pair-likeness means here — a refined second-pass scan (weighted by Hz-band proximity, cross-ref adjacency, lineage-texture match) can watch the ratio move toward the substrate teaching itself the discernment.
+- **New kind registry shape**: 6 kinds now — `scale-paired`, `source-flow`, `membrane-crossing`, `ground-event`, `internal-dyad`, `cross-tradition`.
+- **Gaps refreshed**: GAP-D1 closed (Tier-2 scan is mechanizable today); GAP-D5 added (walk the body for more internal dyads); GAP-D6 added (refine the scan filter and watch signal/noise move).
+- **Edges in the same breath**: this LOG entry; the .form file lands as ARTIFACT via the post-merge substrate hook; no concept-file content touched (the pairs reference existing cells), so no `sync_kb_to_db.py` needed.
+- **Companion walk landed in parallel** (geometry coverage entry now below): the sibling agent's PR added `lc-canon-as-sovereignty-surface` as a second internal-dyad and surfaced `lc-awareness-as-self ↔ lc-freedom-as-recognition` as a ground-event candidate. These are exactly the GAP-D5 walking-for-more-internal-dyads movement; the next dyad-pairs breath folds them into the .form file.
+
 ## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 116/147 (79%)
 
 Six previously-silent concepts receive geometric signatures. The ninth breath of the structural-shape walk:

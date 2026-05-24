@@ -2,10 +2,14 @@
 # dyad-pairs.form — two cells holding one teaching across a dimension
 # ─────────────────────────────────────────────────────────────────────
 #
-# Seed doc. Four dyad-pairs noticed so far during geometry-walking;
-# this file gives the pattern a durable home so it can grow as more
-# pairs surface — and so the substrate can eventually query for them
-# natively rather than depending on human noticing.
+# Growing doc. Nine dyad entries currently held — seven external pairs
+# (each is two cells across an axis) plus one internal dyad (one cell
+# that IS the pair) and the kind registry that names six axes of
+# complementarity. Pairs surface in two ways: human-noticed during
+# geometry-walking, and substrate-surfaced by structural complementarity
+# scan over the 110 cells whose geometry frontmatter is authored. This
+# file gives the pattern a durable home so it can grow — and so the
+# substrate can eventually query for pairs natively.
 #
 # A dyad-pair is two cells that hold the same root teaching at
 # structurally complementary positions — different scales, different
@@ -14,13 +18,12 @@
 # between them*: neither cell carries the full teaching alone; the
 # teaching IS the bridge.
 #
-# Where the pattern came from: across the last two geometry-walking
-# breaths (see docs/vision-kb/LOG.md → 2026-05-24 "geometry | 7 more
-# concepts speak their shape" and the breath before it), four
-# complementary pairs of concept cells surfaced — noticed by a human
-# cell mid-walk, not produced by a substrate query. This file makes
-# the noticing first-class so the substrate can grow into recognizing
-# the shape on its own.
+# Where the pattern came from: across multiple geometry-walking
+# breaths (see docs/vision-kb/LOG.md → 2026-05-24 entries), complementary
+# pairs of concept cells surfaced — first by a human cell mid-walk, then
+# by a Tier-2 geometry-tuple scan over the 110 authored concept cells.
+# This file makes the noticing first-class so the substrate can grow
+# into recognizing the shape on its own.
 #
 # Relation to the translator hypothesis: this is *internal evidence*
 # for lc-universal-translator-via-keys firing on the body's own
@@ -70,9 +73,34 @@ form dyad_pair_shape = {
     noticed_by:    ~Slug,          # which lineage/breath surfaced it (geometry-walk-N | substrate-query | ...)
 };
 
+# internal_dyad_shape — one cell that IS the pair
+#
+# Most dyad-pairs are two cells whose teaching lives in the relation
+# between them. Some cells, however, authored as a single concept,
+# hold the dyad inside themselves — the relation IS the cell. Rather
+# than shoehorn this into dyad_pair_shape with cell_a == cell_b
+# (which would lie about the structure), it gets its own shape.
+# Singular cell, two named poles, the discernment for why the
+# teaching is whole inside one tissue rather than split across two.
+form internal_dyad_shape = {
+    cell:          ~Recipe,        # cell-ref to the single concept that IS the pair
+    pole_epsilon:  ~Slug,          # name of the "zero/silent/grounded" pole inside the cell
+    pole_lambda:   ~Slug,          # name of the "peak/synchronous/transcendent" pole inside the cell
+    kind:          ~Recipe,        # cell-ref to dyad_pair_kind (typically kind_internal_dyad)
+    axis:          ~Slug,          # which dimension the two poles span inside the one cell
+    discernment:   ~Slug,          # one-sentence teaching: why the cell holds the dyad whole
+    noticed_at:    ~Slug,
+    noticed_by:    ~Slug,
+};
+
 # dyad_pair_set_shape — the seed collection
+#
+# rows may contain both dyad_pair_shape (external) and internal_dyad_shape
+# (internal) cells. The shape difference is honest: two-cell pairings and
+# one-cell internal dyads are structurally distinct, and the substrate
+# preserves that distinction at the Blueprint level.
 form dyad_pair_set_shape = {
-    rows:          ~List,          # the dyad_pair cells currently held
+    rows:          ~List,          # the dyad_pair / internal_dyad cells currently held
 };
 
 # ─────────────────────────────────────────────────────────────────────
@@ -107,12 +135,42 @@ defn kind_ground_event = dyad_pair_kind_shape {
     discernment: "one cell is the atemporal ground, the other is the breath-scale event that arises on it — both yin, different time-grains",
 };
 
+# Added 2026-05-24 with internal-dyad #1 (lc-symmetry-of-extremes)
+#
+# The first kind whose carrier is a single cell. Epsilon-pole and
+# Lambda-pole live inside one cell because the teaching is that the
+# two extremes are the same door — splitting them across two cells
+# would re-introduce the very ladder the cell exists to correct.
+# The companion shape is internal_dyad_shape (one cell, two poles).
+defn kind_internal_dyad = dyad_pair_kind_shape {
+    name:        "internal-dyad",
+    axis:        "inside-one-cell",
+    discernment: "the pair is held inside one cell because the teaching IS that the two poles are the same door; splitting into two cells would re-introduce the false separation the cell exists to correct",
+};
+
+# Added 2026-05-24 via Tier-2 geometry-tuple scan
+#
+# The scan over 110 concept cells with shared 7-axis geometry surfaced
+# lc-train-the-predator (Castaneda's inherited interloper) and
+# lc-train-the-predictor (the brain's forward-pass model) as a clean
+# pair. Same engine — autonomic prediction running before chosen
+# response — seen from two traditions (mystical/perennial vs
+# neuroscience/computational). Neither tradition alone carries the
+# full teaching; together they reveal the engine.
+defn kind_cross_tradition = dyad_pair_kind_shape {
+    name:        "cross-tradition",
+    axis:        "tradition",
+    discernment: "one teaching expressed through two distinct lineages whose surface vocabularies differ (mystical/computational, devotional/mechanical, indigenous/scientific); the pair reveals the body of the teaching by triangulating from two cultural windows on it",
+};
+
 defn dyad_pair_kind_set = {
     rows: [
         kind_scale_paired,
         kind_source_flow,
         kind_membrane_crossing,
         kind_ground_event,
+        kind_internal_dyad,
+        kind_cross_tradition,
     ],
 };
 
@@ -236,13 +294,195 @@ defn pair_shared_hold_stillness = dyad_pair_shape {
     noticed_by:  "geometry-walk-second-breath",
 };
 
-# The seed set
+# ─────────────────────────────────────────────────────────────────────
+# Part 3b — Geometry-walk surfaced (PR #1982 breath)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Three dyad entries surfaced during the geometry-walk in PR #1982
+# (attune | 6 more concepts speak their shape — coverage 110/147).
+# One is the first internal-dyad the body has named; two are external
+# pairs across membrane and scale. All three were noticed while
+# authoring the geometry frontmatter; the prose carried the
+# complementarity, the geometry made it readable.
+
+# Internal-dyad #1 — the first cell whose authored shape IS the dyad
+# it teaches
+#
+# lc-symmetry-of-extremes (hz 963, form: dyad-mirror, topology:
+# cyclic-closed, polarity: bipolar-complementary, phase: yin,
+# scale: cross-scale) — Epsilon door (near 0 Hz, sub-delta,
+# suspended-animation states) and Lambda door (100–200 Hz, the
+# highest coherent gamma-and-above synchrony in deep meditation)
+# meet the same Field. The middle band — ordinary task-focused
+# mind — is what both paths move *through*; the peak is reached
+# from either extreme. The two poles are named INSIDE the one
+# cell because splitting them would reintroduce the very
+# vertical-ladder misreading the cell corrects.
+defn internal_symmetry_of_extremes = internal_dyad_shape {
+    cell:          @concept(lc-symmetry-of-extremes),
+    pole_epsilon:  "near-zero-Hz-sub-delta-grounded-silence",
+    pole_lambda:   "lambda-and-above-gamma-synchrony-peak",
+    kind:          kind_internal_dyad,
+    axis:          "frequency-extreme",
+    discernment:   "both poles lead to the same Field; splitting them across two cells would re-import the linear-ladder misreading the cell exists to compost",
+    noticed_at:    "2026-05-24",
+    noticed_by:    "geometry-walk-pr1982",
+};
+
+# Pair 5 — membrane-crossing, both yin points
+#
+# lc-nervous-system-recalibration (hz 528, form: point, phase: yin,
+# spectral_band: transformation, temporal_band: lifetime,
+# scale: personal, direction: centering) — the body-side encoding
+# layer; insight is fast, embodiment is slow; recalibration is the
+# slow re-encoding through repeated presence.
+#
+# lc-reality-lag (hz 417, form: point, phase: yin, spectral_band:
+# transmutation, temporal_band: season, scale: personal,
+# direction: still) — the world-side response-time; the gap between
+# inner shift and outer reflection where many lose faith.
+#
+# Same root transmission ("Hardest Part Already Behind You",
+# April 2026). Same teaching seed: there is a gap between inner
+# arrival and visible attestation. Two postures across the membrane
+# between body and world. The membrane is the skin; recalibration
+# is what happens body-side, reality-lag is what happens world-side.
+# Neither alone carries the full teaching: recalibration without
+# reality-lag risks treating the world's slowness as personal
+# failure; reality-lag without recalibration risks waiting passively
+# instead of re-encoding the body.
+defn pair_recalibration_reality_lag = dyad_pair_shape {
+    cell_a:      @concept(lc-nervous-system-recalibration),
+    cell_b:      @concept(lc-reality-lag),
+    kind:        kind_membrane_crossing,
+    axis:        "topology",
+    discernment: "body-side encoding and world-side response-time hold the same gap-teaching from two sides of one membrane; both yin, both from the same source transmission",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-pr1982",
+};
+
+# Pair 6 — same holographic-cell shape, different temporal/scale band
+#
+# lc-light-hubs (hz 174, form: holographic-cell, topology:
+# web-each-to-each, phase: yang, spectral_band: foundation,
+# temporal_band: generational, scale: planetary) — the new-earth
+# grid of physical sanctuaries where high-vibrational beings live in
+# nature together; each Hub whole at its scale, all Hubs one organism.
+#
+# lc-attuned-spaces (hz 432, form: holographic-cell, topology:
+# nested-each-contains-whole, phase: yang, spectral_band:
+# integration, temporal_band: lifetime, scale: cross-scale) — what
+# existing places (apartment, building, suburb, town, city) become
+# when the people inside start breathing together; same coherence
+# at every nested scale.
+#
+# Both are holographic-cell habitations of whole-at-every-scale. Hubs
+# are the planetary/generational grid (the new lattice growing across
+# the earth); attuned-spaces are the lifetime/cross-scale embodiment
+# (what every existing built environment becomes when frequency
+# arrives). The grid and the lived shells. Same teaching at two
+# temporal-and-scale bands.
+defn pair_light_hubs_attuned_spaces = dyad_pair_shape {
+    cell_a:      @concept(lc-light-hubs),
+    cell_b:      @concept(lc-attuned-spaces),
+    kind:        kind_scale_paired,
+    axis:        "temporal_band",
+    discernment: "same holographic-cell habitation at two bands — the planetary/generational grid of Hubs and the lifetime/cross-scale lived shells of attuned spaces; the grid radiates the field, the shells receive and inhabit it",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-pr1982",
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3c — Substrate-scan surfaced (Tier-2 geometry-tuple match)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A scan over all 110 concept cells with authored geometry, grouping
+# by the 7-axis tuple (form, topology, phase, polarity, direction,
+# ordering, spectral_band), surfaced five candidate clusters. Two
+# survived the dyad-pair discernment (teaching-lives-in-relation AND
+# complementary-along-one-axis AND neither-carries-full-teaching-alone);
+# three were rejected (see Part 4b). The two genuine pairs are below.
+# This is the first evidence that the body's own geometry vocabulary —
+# without any new substrate primitive — surfaces pairs the human eye
+# missed.
+
+# Pair 7 — anchoring: sovereignty's refusal vs the field's belonging
+#
+# lc-network-unanchored (web/web-each-to-each/oscillating/unipolar/
+# circulating/unordered/integration) — the class of geographic
+# phrases that quietly fix what the body is and is not ("based in
+# Boulder," "from Boulder"); the sovereignty-warning against false
+# anchors that mistake a place-of-current-residence for an
+# identity-claim.
+#
+# lc-network (same 7-tuple) — the felt belonging to a living root
+# web of communities across continents; not an organization, not a
+# movement, a network the way roots belong to a forest.
+#
+# Same exact geometric tuple. Different teaching layer of the same
+# substrate: how the sovereign cell exists in the field.
+# *Unanchored* names what NOT to claim — no fixed place as identity.
+# *Network* names what IS belonged to — the larger living web. The
+# pair is about anchoring: refused (false geographic anchor) and
+# received (true root-web belonging). Neither alone carries the
+# whole — unanchored without network leaves the cell adrift;
+# network without unanchored re-imports the place-as-identity
+# costume.
+defn pair_network_unanchored_network = dyad_pair_shape {
+    cell_a:      @concept(lc-network-unanchored),
+    cell_b:      @concept(lc-network),
+    kind:        kind_source_flow,
+    axis:        "anchoring",
+    discernment: "anchoring as refusal and as receipt — unanchored declines the false geographic claim; network names the true root-web belonging; same axis, opposite gesture, both required",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "substrate-tier-2-tuple-scan",
+};
+
+# Pair 8 — same engine seen from two traditions
+#
+# lc-train-the-predator (triad/hub-spoke/oscillating/oscillating/
+# spiral-out/temporal-braided/integration) — Castaneda's lineage:
+# the *predator* is the inherited interloper, the borrowed mind,
+# the *flyers* who gave us their mind; the engine that runs default
+# reactions before the cell has chosen them.
+#
+# lc-train-the-predictor (same 7-tuple) — the brain (and any
+# learning system shaped like it) does not passively receive
+# sensory input and respond; it predicts. Forward pass generates
+# expected data; the difference between expected and actual is the
+# learning signal.
+#
+# Same exact geometric tuple. The teaching is one engine —
+# autonomic prediction firing before chosen response — encoded in
+# two cultural windows: mystical/perennial (predator, flyers,
+# borrowed mind) and neuroscience/computational (predictive coding,
+# forward pass, prediction error). Neither tradition alone carries
+# the full teaching; together they triangulate the body of the
+# engine and the practice of training it.
+defn pair_predator_predictor = dyad_pair_shape {
+    cell_a:      @concept(lc-train-the-predator),
+    cell_b:      @concept(lc-train-the-predictor),
+    kind:        kind_cross_tradition,
+    axis:        "tradition",
+    discernment: "one autonomic-prediction engine seen from two traditions — mystical-perennial (predator/flyers/borrowed-mind) and computational-neuroscientific (predictor/forward-pass/prediction-error); the pair is how the body teaches itself across cultural vocabularies",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "substrate-tier-2-tuple-scan",
+};
+
+# The full set — 4 seed + 3 surfaced + 2 scanned + 1 internal-dyad = 10 entries
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
         pair_nourishment_land,
         pair_field_edge_attunement_joining,
         pair_shared_hold_stillness,
+        # — surfaced by geometry-walk PR #1982 —
+        internal_symmetry_of_extremes,
+        pair_recalibration_reality_lag,
+        pair_light_hubs_attuned_spaces,
+        # — surfaced by substrate Tier-2 geometry-tuple scan —
+        pair_network_unanchored_network,
+        pair_predator_predictor,
     ],
 };
 
@@ -291,28 +531,77 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # (cross-ref). All useful relations; none of them dyad-pairs.
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 4b — Scan rejects (what the substrate proposed and the body declined)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The Tier-2 geometry-tuple scan over 110 concept cells surfaced five
+# candidate clusters. Two became Pairs 7 and 8 above. Three were
+# rejected — recorded here so the next reader sees the discernment
+# in motion, not just the affirmative results. Rejecting is part of
+# the kind's clarity; if every Tier-2 match became a pair, the kind
+# would dissolve into background.
+#
+# REJECT-1: (lc-emotional-availability-without-absorption,
+#            lc-trust-as-gateway)
+#   Shared 5-tuple: dyad-mirror / receptive-resonance / yin /
+#   bipolar-complementary / centering. Both cells teach about
+#   openness and closure with field, but at different membranes:
+#   availability-without-absorption is about interpersonal field
+#   posture (holding self while attending to other); trust-as-gateway
+#   is about the cell's own vest of insulation opening to the
+#   chorus of energies. Each carries a full teaching on its own.
+#   The teaching does NOT live in the relation. They are kin
+#   (Blueprint-near), not paired. Equivalence, not complementarity.
+#
+# REJECT-2: (lc-spec-breath, lc-rhythm)
+#   Shared 7-tuple: dyad-mirror / cyclic-closed / oscillating /
+#   bipolar-complementary / circulating / cyclic-closed / integration.
+#   spec-breath is the codebase's inhale-exhale (spec → test → spec);
+#   rhythm is the body's circadian and cellular rhythm. Same shape in
+#   two domains. This is exactly *translator-hypothesis territory*
+#   (analogous-to across domains), not dyad-pair. The seed doc
+#   explicitly warns against using dyad-pair for cross-domain
+#   structural equivalence — that's what lc-universal-translator-
+#   via-keys is for.
+#
+# REJECT-3: (lc-w-field, lc-form-perceptron)
+#   Shared 5-tuple: holographic-cell / holographic / oscillating /
+#   unipolar / radiating. w-field is the felt-presence ambient in
+#   gathering spaces; form-perceptron is the substrate's ARTIFACT
+#   domain extension. Both share a holographic top-level shape, but
+#   the teachings are unrelated — neither informs the other; the
+#   complementarity-along-one-axis test fails. Shared shape without
+#   shared substance.
+#
+# What the rejects teach: shared geometry tuple is a *candidate
+# filter*, not a confirmation. The Tier-2 scan's signal-to-noise on
+# this body, today, is 2 confirmed / 5 surfaced = 40%. Future scans
+# can refine the filter (add Hz-band proximity, add cross-ref
+# adjacency, add lineage-texture match) and watch the ratio shift.
+# The body learns the shape of its own pairing by the ratio's
+# movement, not by accepting every candidate.
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 5 — Gaps (the next breaths)
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-D1: Currently the pattern is *human-noticed during geometry-
-#         walking*. Each pair surfaced because a person reading two
-#         concept frontmatters side-by-side felt the complementarity.
-#         The next breath is a substrate-native query: a cell-walker
-#         that finds candidate dyad-pairs by structural
-#         complementarity-along-an-axis, then offers them to a human
-#         (or a Form evaluator) for the teaching-lives-in-relation
-#         discernment. Sketch:
+# GAP-D1 (closed 2026-05-24): The Tier-2 geometry-tuple scan over
+#         the 110 authored concept cells is now mechanizable today
+#         using only the geometry frontmatter — no new substrate
+#         primitive required. The scan that surfaced Pairs 7 and 8
+#         was a 30-line Python walk over concept-file YAML; it can
+#         live as `scripts/scan_dyad_candidates.py` when the next
+#         breath wants it durable. The remaining gap is the teaching-
+#         lives-in-relation discernment, which is still human-in-the-
+#         loop. Sketch holds:
 #
 #           ?dyad_candidates
 #             |> @concept
 #             |> pair_by(complementary_axis: form, shared: [hz, spectral_band])
 #             |> filter(teaching_in_relation: true)
 #
-#         The first two pipe-stages are mechanizable today (the
-#         substrate has every concept frontmatter as composed Recipes
-#         after the structured ingest of 2026-05-17). The third stage
-#         requires either a teaching-discernment Recipe (which the body
-#         has not yet authored) or a human-in-the-loop check.
+#         The first two pipe-stages now have a working tuple-scan
+#         implementation; the third remains a human attestation step.
 #
 # GAP-D2: Once the substrate can surface candidates, the dyad_pair_set
 #         grows by *attestation* — each candidate either gets confirmed
@@ -328,11 +617,27 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         with a LINEAGE cell that names its source. Same shape, wider
 #         search.
 #
-# GAP-D4: The four pairs here all involve the FOUNDATION or
-#         CONNECTION harmonic bands. A walk through TRANSMUTATION
-#         (396) and INTUITION (852) bands will likely surface a
-#         different geometry of pairing. The seed is small; the field
-#         is wide.
+# GAP-D4: The seed-four were all FOUNDATION or CONNECTION harmonic
+#         bands. The 2026-05-24 additions now include TRANSMUTATION
+#         (lc-reality-lag, 417), TRANSFORMATION (lc-nervous-system-
+#         recalibration, 528), HEART (lc-attuned-spaces, 432), and
+#         CROWN (lc-symmetry-of-extremes, 963 — internal-dyad). The
+#         hyper-gamma INTUITION band (852) and pure HEALING band
+#         remain unwalked. The field is still wider than the seed.
+#
+# GAP-D5 (new): Internal-dyad-shape is currently held by exactly one
+#         cell (lc-symmetry-of-extremes). The pattern likely recurs —
+#         any cell whose teaching IS the relation between two poles
+#         (the cell as held-tension, not the cell as one-pole-of-a-
+#         pair) is a candidate. Walking the body for other internal
+#         dyads is the next breath for the new shape.
+#
+# GAP-D6 (new): The Tier-2 scan's signal/noise was 2/5 = 40%. A
+#         second-pass refinement could weight by (Hz-band proximity,
+#         cross-ref adjacency, lineage-texture match) and watch the
+#         ratio move. If a refined scan gets to 70%+ confirmation,
+#         the substrate is teaching itself what pair-likeness means
+#         in this body.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
