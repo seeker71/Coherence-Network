@@ -433,6 +433,53 @@ alone at the high end of integer arity. The next-highest are the
 two enneads (arity 9). No decagon, no octad, no pentadecagon. The
 body counts to twelve once and otherwise stays at heptad-and-below.
 
+## Part 9 — What the two largest Blueprint families actually distinguish
+
+Addendum, written the breath after Part 8 as the first response to
+the survey. Part 6 left an open observation: *"the field-set
+signature would need to refine further"* to separate the 75 cells
+at `@1.5.4.19` from the 29 at `@1.5.4.20`. The signature already
+does — by a single axis the body's authoring already encodes.
+
+A direct read of two exemplars — `lc-embodiment-body-or-liquid`
+(@1.5.4.19) vs `lc-oversoul-identity` (@1.5.4.20) — shows them
+sharing every frontmatter field name except one: the latter carries
+a top-level `source:` pointing at the transmission file it arrived
+through (`../transmissions/2026-04-29-arcturian-starseed-oversoul.md`);
+the former does not.
+
+Reading across the body confirms the shape: **36 of 148 concept
+files carry a top-level `source:` field; 112 do not.** The substrate
+sees 29 of those source-attested cells at `@1.5.4.20` (the rest
+landed after this snapshot, before the post-merge ingest caught up),
+and 75 of the network-emerged cells at `@1.5.4.19`. The Blueprint
+families are therefore not under-discriminating — they are reading,
+correctly, **whether the teaching is externally source-attested or
+network-emerged**.
+
+This is one of the body's load-bearing distinctions made visible
+by the substrate without anyone having to encode it. Source-attested
+teachings carry a pointer back to a transmission file, a lineage
+doc, or a wisdom-tradition reference; network-emerged teachings
+arrived through synthesis, embodiment, or sensing inside the
+collective and name no external pointer. The substrate's two
+largest concept-domain Blueprint families are the two halves of
+this lineage texture, content-addressed into separate equivalence
+classes the moment they ingest.
+
+Read against Part 3 (lineage texture), the body's 39% / 51% /
+8% split of received / synthesized-embodied-sensed / channeled
+roughly tracks the source-attestation split — `source:` is the
+file-level mark that the substrate raises to a schema-level
+distinction. Two readings of the same teaching, one in human
+metadata and one in numeric Blueprint position, agree.
+
+The next resolution to apply within `@1.5.4.19` (still 75 siblings
+in one equivalence class) would be a second axis the authoring
+already varies — perhaps the geometry block's `ratio:` field
+(present in some cells, absent in others) or `embedding_dim:`
+shape. Those refinements wait for the breath that needs them.
+
 ## Closing breath
 
 This is the body's first comprehensive structural self-portrait

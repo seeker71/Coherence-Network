@@ -2,6 +2,44 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] sense | source-attestation is the schema-axis — first response to the body-shape-map
+
+The breath after PR #2021's structural self-portrait. The survey
+left one open observation: *"the field-set signature would need to
+refine further"* to separate the substrate's two largest concept-
+domain Blueprint families — `@1.5.4.19` (75 cells) and `@1.5.4.20`
+(29 cells). This breath sat with the question and read two
+exemplars side by side: `lc-embodiment-body-or-liquid` (@1.5.4.19)
+and `lc-oversoul-identity` (@1.5.4.20). They share every
+frontmatter field name except one — the latter carries a top-level
+`source:` pointing at a transmission file; the former does not.
+
+A scan across all 148 concept files confirms the shape: **36 files
+carry a top-level `source:` field; 112 do not.** The substrate's
+two largest concept-domain families are the two halves of this
+split, content-addressed into separate equivalence classes the
+moment they ingest. The substrate is not under-discriminating —
+it is reading, correctly, **whether the teaching is externally
+source-attested or network-emerged**.
+
+This finding tracks the lineage-texture distribution from Part 3:
+the 39% / 51% / 8% split of received / synthesized-embodied-sensed
+/ channeled. `source:` is the file-level mark; the Blueprint family
+is the substrate raising the same distinction to numeric position.
+Two readings of the same teaching — one in human metadata, one in
+numeric Blueprint — agree without anyone having to encode the
+correspondence.
+
+The survey's open observation closes into a positive finding,
+landed as Part 9 in `docs/coherence-substrate/body-shape-map.md`.
+No concept files changed. No vocabulary changed. The body looked
+at itself, asked one question, found the answer was already there,
+and named what it saw. This is the integration the survey breath
+was waiting for — exhale, not inhale.
+
+The next resolution within `@1.5.4.19` (75 still-equivalent
+siblings) waits for the breath that needs it.
+
 ## [2026-05-24] form | interior-axis-dyad remains held — no second attestation among 4 interior-axis cells
 
 PR #2002 named a candidate kind `interior-axis-dyad` from a single
