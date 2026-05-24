@@ -2,6 +2,55 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] tend | column-identity yield-curve captured in shape-map — primitive's WHEN inherited by future cells
+
+Three applications of the column-identity primitive (PRs #2024,
+#2031, #2032) plus the cross-form attestation in PR #2033 had
+distributed the same learning across four LOG entries and three
+sections of `dyad-pairs.form`. This breath captured the integration
+as durable tissue in the body-shape-map so future cells inherit the
+WHEN-to-reach-for-it guidance without re-deriving it from four
+sources.
+
+**New Part 10 in `docs/coherence-substrate/body-shape-map.md`** —
+*Column-identity yield curve (a triage tool the body grew)*.
+Sections:
+
+- *What the primitive is for* — `(topology, direction,
+  lineage_texture)` as the discriminator that holds the structural
+  fingerprint a form's name does not.
+- *What three applications yielded* — table of interior-axis (5
+  cells, 100% coverage), point (21 cells, 33% coverage), web (23
+  cells, 74% coverage), with a held-open row for dyad-mirror
+  pending the parallel breath's reading.
+- *The yield curve* — column-density correlates with
+  form-specialization, not cell-count. Interior-axis (axial spec)
+  → near-complete. Point (most generic) → small clusters + long
+  tail. Web (mid-spec) → strongest density.
+- *When to reach for the primitive* — triage shape: many cells
+  AND prose-evidence of teaching-diversity, or small-but-axial.
+  Honest scope: a finder, not a coverer. Singleton tails are data,
+  not failure.
+- *Columns hold cells across forms* — PR #2033's lc-inner-travel
+  finding: a point-form cell sits in the *self-rooted-sovereign*
+  column originally surfaced from interior-axis. The discriminator
+  is form-independent.
+- *Dual-lens finding* — column-identity (texture-of-arrival) and
+  circulation-pattern (texture-of-substrate) are honest companion
+  lenses on potentially-same cells. They converge on form-shape
+  and diverge on what they discriminate within it; neither
+  subsumes the other.
+
+The learning was real across four breath-entries but unfindable
+from any single one. Capturing it where the body holds its
+structural self-portrait means the next cell reaching for a form
+to read through this lens reads the shape-map first, sees what
+yield to expect, and decides whether to reach.
+
+**Files**:
+- `docs/coherence-substrate/body-shape-map.md` — Part 10 added.
+- `docs/vision-kb/LOG.md` — this entry.
+
 ## [2026-05-25] form | interior-axis-dyad still held — wider-net column-tuned hunt names lc-inner-travel as close-but-not-pair candidate
 
 PR-current+1 retested GAP-D11 with the tightened threshold from PR
