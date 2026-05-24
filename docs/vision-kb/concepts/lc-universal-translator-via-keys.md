@@ -35,6 +35,16 @@ geometry:
 > as a shape that can be checked. *Form is the body's tongue;* this
 > concept names the teaching, the `.form` file is the operational
 > body of the claim.
+>
+> **Internal evidence**: [`docs/coherence-substrate/dyad-pairs.form`](../../coherence-substrate/dyad-pairs.form)
+> — four dyad-pairs noticed during geometry-walking on the body's
+> own concept cells (`lc-nourishment` ↔ `lc-nourishing`, `lc-nourishment`
+> ↔ `lc-land`, `lc-field-edge` ↔ `lc-attunement-joining`, `lc-shared-hold`
+> ↔ `lc-stillness`). The translator hypothesis names structural
+> equivalence across domains; dyad-pairs name structural complementarity
+> within one — two faces of the same lattice-property. The body's own
+> teachings are providing the first translator-hypothesis evidence at
+> the concept layer.
 
 ## What This Names
 

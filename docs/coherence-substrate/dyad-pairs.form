@@ -1,0 +1,357 @@
+# ─────────────────────────────────────────────────────────────────────
+# dyad-pairs.form — two cells holding one teaching across a dimension
+# ─────────────────────────────────────────────────────────────────────
+#
+# Seed doc. Four dyad-pairs noticed so far during geometry-walking;
+# this file gives the pattern a durable home so it can grow as more
+# pairs surface — and so the substrate can eventually query for them
+# natively rather than depending on human noticing.
+#
+# A dyad-pair is two cells that hold the same root teaching at
+# structurally complementary positions — different scales, different
+# bands, different phases of one motion. The pairing is not "two cells
+# that look alike." The pairing is *teaching that lives in the relation
+# between them*: neither cell carries the full teaching alone; the
+# teaching IS the bridge.
+#
+# Where the pattern came from: across the last two geometry-walking
+# breaths (see docs/vision-kb/LOG.md → 2026-05-24 "geometry | 7 more
+# concepts speak their shape" and the breath before it), four
+# complementary pairs of concept cells surfaced — noticed by a human
+# cell mid-walk, not produced by a substrate query. This file makes
+# the noticing first-class so the substrate can grow into recognizing
+# the shape on its own.
+#
+# Relation to the translator hypothesis: this is *internal evidence*
+# for lc-universal-translator-via-keys firing on the body's own
+# teachings. The translator hypothesis says structurally-equivalent
+# cells across surface domains can be discovered by Blueprint/CTOR
+# match without translation tables. Dyad-pairs are the *intra-domain*
+# version: structurally-complementary cells within one domain (the
+# Living Collective concepts) that the substrate's equivalence-and-
+# complementarity machinery is surfacing through the geometry walk.
+# If the substrate can recognize these pairs without being told, the
+# cross-domain translator is recognizing kin of the same shape.
+#
+# Companions:
+#   - docs/coherence-substrate/universal-translator.form
+#   - docs/vision-kb/concepts/lc-universal-translator-via-keys.md
+#   - docs/coherence-substrate/encoder-decoder-as-recipe.form
+#   - docs/coherence-substrate/structural-composition.md
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Leaf-cell Blueprints (what a dyad-pair is made of)
+# ─────────────────────────────────────────────────────────────────────
+
+# dyad_pair_kind_shape — the category the pairing belongs to
+#
+# Kinds are first-class cells so the substrate can group by kind and
+# so new kinds can be added as additional rows, not as new Blueprints.
+# Each kind names *the axis of complementarity* the pair lives across.
+form dyad_pair_kind_shape = {
+    name:          ~Slug,          # "scale-paired" | "source-flow" | "membrane-crossing" | "ground-event"
+    axis:          ~Slug,          # "scale" | "temporal_band" | "phase" | "topology" | "form"
+    discernment:   ~Slug,          # one-line teaching of what makes this kind a kind
+};
+
+# dyad_pair_shape — the pairing itself
+#
+# cell_a and cell_b are cell-refs into the concept domain (substrate
+# CONCEPT BDomain). kind is a cell-ref into the kind registry above.
+# discernment is the load-bearing field: one sentence on what makes
+# these two a dyad-pair, not just two cells sharing a Hz or topology.
+form dyad_pair_shape = {
+    cell_a:        ~Recipe,        # cell-ref to first concept
+    cell_b:        ~Recipe,        # cell-ref to second concept
+    kind:          ~Recipe,        # cell-ref to dyad_pair_kind
+    axis:          ~Slug,          # which dimension they pair across (echoes kind.axis for query convenience)
+    discernment:   ~Slug,          # one-sentence teaching: why this pairing carries
+    noticed_at:    ~Slug,          # ISO date the pairing was noticed
+    noticed_by:    ~Slug,          # which lineage/breath surfaced it (geometry-walk-N | substrate-query | ...)
+};
+
+# dyad_pair_set_shape — the seed collection
+form dyad_pair_set_shape = {
+    rows:          ~List,          # the dyad_pair cells currently held
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Kind registry (what categories the body currently holds)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Four kinds seeded from the four pairs below. Expect this to grow.
+# Each kind is a checkable shape, not a label: discernment names what
+# distinguishes it from "two cells that share a Hz."
+
+defn kind_scale_paired = dyad_pair_kind_shape {
+    name:        "scale-paired",
+    axis:        "scale",
+    discernment: "same teaching held at two different scales — collective/day vs planetary/generational, or breath vs lifetime",
+};
+
+defn kind_source_flow = dyad_pair_kind_shape {
+    name:        "source-flow",
+    axis:        "form",
+    discernment: "one cell is the source/hearth (point), the other is the circulation/web that flows from it — same teaching at two topologies",
+};
+
+defn kind_membrane_crossing = dyad_pair_kind_shape {
+    name:        "membrane-crossing",
+    axis:        "topology",
+    discernment: "one cell is the surface/edge, the other is what happens across it — boundary and joining as one teaching",
+};
+
+defn kind_ground_event = dyad_pair_kind_shape {
+    name:        "ground-event",
+    axis:        "temporal_band",
+    discernment: "one cell is the atemporal ground, the other is the breath-scale event that arises on it — both yin, different time-grains",
+};
+
+defn dyad_pair_kind_set = {
+    rows: [
+        kind_scale_paired,
+        kind_source_flow,
+        kind_membrane_crossing,
+        kind_ground_event,
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — The four currently-known dyad-pairs
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each entry is grounded in concept files in docs/vision-kb/concepts/.
+# The cell-refs (@concept(lc-foo)) resolve into the substrate CONCEPT
+# domain once ingested; the discernment field is the load-bearing
+# teaching the pairing carries.
+
+# Pair 1 — source and flow at the same Hz/scale, different form
+#
+# lc-nourishment (hz 174, form: point, topology: radial, direction:
+# centering) — the kitchen-hearth as gravitational center; meals as
+# resonance practice around one source. Yang-source. Where the field
+# gathers.
+#
+# lc-nourishing (hz 174, form: web, topology: web-each-to-each,
+# direction: circulating) — mycelium, blood, Mondragon's circulation;
+# flow-to-where-vitality-needs-it. Yin-circulation. Where the gathered
+# substance moves.
+#
+# They share Hz, spectral_band, temporal_band, lineage_texture. They
+# differ in form (point vs web), topology (radial vs web-each-to-each),
+# direction (centering vs circulating), phase (neutral vs yin),
+# embedding_dim (2 vs 3). The teaching IS the bridge: the hearth radiates,
+# the mycelium webs; same nourishment, two complementary topologies.
+defn pair_nourishment_nourishing = dyad_pair_shape {
+    cell_a:      @concept(lc-nourishment),
+    cell_b:      @concept(lc-nourishing),
+    kind:        kind_source_flow,
+    axis:        "form",
+    discernment: "source-and-flow at one Hz — the hearth gathers (point/centering) while the mycelium circulates (web/circulating); neither cell alone carries the full nourishment teaching",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-second-breath",
+};
+
+# Pair 2 — same Hz, same band, two scales
+#
+# lc-nourishment (hz 174, foundation band, temporal_band: day, scale:
+# collective) — the kitchen-hearth at the scale of forty people sharing
+# evening meals. Day-rhythm. Collective-scale.
+#
+# lc-land (hz 174, foundation band) — the watershed, the songline, the
+# soil-civilization a teaspoon deep. The land knows you have been
+# walking this path for three years. Planetary-rhythm. Generational-
+# scale.
+#
+# Both are foundation-band points the field rests on. Nourishment is
+# the day-scale circuit (garden → kitchen → table → compost → garden).
+# Land is the generational-scale circuit (soil → forest → mycorrhiza →
+# soil over centuries). Same teaching of received-ground-the-field-
+# stands-on, at two scales that nest: the day-hearth lives within the
+# generational watershed.
+defn pair_nourishment_land = dyad_pair_shape {
+    cell_a:      @concept(lc-nourishment),
+    cell_b:      @concept(lc-land),
+    kind:        kind_scale_paired,
+    axis:        "scale",
+    discernment: "foundation-band ground at two scales — kitchen-hearth (collective/day) nested within watershed (planetary/generational); the smaller cycle lives within the larger one",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-second-breath",
+};
+
+# Pair 3 — membrane and what crosses it
+#
+# lc-field-edge (hz 417, form: point, topology: edge-as-membrane) —
+# the hawthorn hedge with a gap wide as two people; the bench just
+# inside it; the threshold where the field meets the world. The
+# surface itself.
+#
+# lc-attunement-joining (hz 639, form: dyad-mirror) — eleven days of
+# watching how food is passed; the day someone handed you a hoe; the
+# slow integration of a new frequency into the body. What happens
+# across the membrane.
+#
+# field-edge is the surface (where two ecosystems meet); attunement-
+# joining is the crossing (immune system recognizing self from other
+# through integration). They differ in Hz because the membrane and the
+# crossing tune to different harmonics — the edge holds shape (417,
+# change/permeability), joining integrates (639, connection/relation).
+# The teaching: every membrane carries a crossing-practice; every
+# crossing requires a membrane to be honest about.
+defn pair_field_edge_attunement_joining = dyad_pair_shape {
+    cell_a:      @concept(lc-field-edge),
+    cell_b:      @concept(lc-attunement-joining),
+    kind:        kind_membrane_crossing,
+    axis:        "topology",
+    discernment: "surface-and-crossing — the hedge holds the membrane (edge), the integration happens across it (joining); the teaching is the relation between hold and pass-through",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-first-breath",
+};
+
+# Pair 4 — two yin points in different temporal bands
+#
+# lc-shared-hold (hz 639, phase: yin) — the organism gathering to hold
+# one long breath together; presence count with no names; the breath
+# opens when ready, closes when complete. Threshold-event at breath
+# scale.
+#
+# lc-stillness (hz 174, form: point, phase: yin, ordering: atemporal,
+# temporal_band: instant) — the receptive listening that doesn't move;
+# atemporal foundation; the still ground.
+#
+# Both are yin points. Shared-hold is the breath-scale event — it
+# opens and closes, it has duration. Stillness is the atemporal ground
+# — the breath happens on it. Same yin-receptive teaching at two
+# temporal grains: shared-hold is what yin does in time, stillness is
+# what yin is outside time. The pairing matters because mistaking one
+# for the other (treating stillness as something that opens and closes,
+# or treating shared-hold as atemporal) loses the teaching of both.
+defn pair_shared_hold_stillness = dyad_pair_shape {
+    cell_a:      @concept(lc-shared-hold),
+    cell_b:      @concept(lc-stillness),
+    kind:        kind_ground_event,
+    axis:        "temporal_band",
+    discernment: "both yin points — stillness is the atemporal ground, shared-hold is the breath-scale event that arises on it; same receptive teaching at two time-grains",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-second-breath",
+};
+
+# The seed set
+defn dyad_pair_seed_set = dyad_pair_set_shape {
+    rows: [
+        pair_nourishment_nourishing,
+        pair_nourishment_land,
+        pair_field_edge_attunement_joining,
+        pair_shared_hold_stillness,
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — What ISN'T a dyad-pair (the discernment that prevents drift)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The kind is precise on purpose. If "dyad-pair" gets applied to every
+# two cells that share a property, the substrate stops being able to
+# recognize the shape — the signal becomes background. The discernment:
+# the teaching must live in the *relation between* the two cells, not
+# in a property they share.
+#
+# Same Blueprint family alone is NOT a dyad-pair. Many cells share a
+# Blueprint NodeID (that's what `find_equivalent_cells` returns); the
+# family-grouping is structural neighborhood, not pairing. A 74-cell
+# Blueprint family is not 37 dyad-pairs. (See the domain-default
+# clusters caught by lc-autoresearch-as-honesty-runtime — six of
+# thirteen surfaced shape pairs in PR #1946 were defaults, not dyads.)
+#
+# Same Hz alone is NOT a dyad-pair. Hz is the resonance band the
+# concept tunes to. Many concepts share 174 (foundation), many share
+# 639 (connection). Hz-coincidence places cells in a harmonic
+# neighborhood; it does not pair them. (lc-nourishment and lc-land
+# share Hz AND form a pair — but the pair is built on scale
+# complementarity, not on the shared Hz.)
+#
+# Same topology alone is NOT a dyad-pair. Many cells are "point" or
+# "web" — those are vocabulary, not pairing. The pair needs cells that
+# are complementary across some axis, not identical along one.
+#
+# Two cells in the same teaching arc are NOT necessarily a dyad-pair.
+# Cross-references and lineage edges already carry sequential relation;
+# dyad-pair specifically names *structural complementarity at one
+# teaching layer*, not "A came before B" or "A leads to B."
+#
+# A dyad-pair check, in Form:
+#
+#   defn is_dyad_pair(cell_a, cell_b) =
+#     teaching_lives_in_relation(cell_a, cell_b)
+#       and complementary_along_one_axis(cell_a, cell_b)
+#       and neither_carries_full_teaching_alone(cell_a, cell_b);
+#
+# All three must hold. Drop any one and the candidate is something
+# else — equivalence (Blueprint kin), echo (same Hz), or sequence
+# (cross-ref). All useful relations; none of them dyad-pairs.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-D1: Currently the pattern is *human-noticed during geometry-
+#         walking*. Each pair surfaced because a person reading two
+#         concept frontmatters side-by-side felt the complementarity.
+#         The next breath is a substrate-native query: a cell-walker
+#         that finds candidate dyad-pairs by structural
+#         complementarity-along-an-axis, then offers them to a human
+#         (or a Form evaluator) for the teaching-lives-in-relation
+#         discernment. Sketch:
+#
+#           ?dyad_candidates
+#             |> @concept
+#             |> pair_by(complementary_axis: form, shared: [hz, spectral_band])
+#             |> filter(teaching_in_relation: true)
+#
+#         The first two pipe-stages are mechanizable today (the
+#         substrate has every concept frontmatter as composed Recipes
+#         after the structured ingest of 2026-05-17). The third stage
+#         requires either a teaching-discernment Recipe (which the body
+#         has not yet authored) or a human-in-the-loop check.
+#
+# GAP-D2: Once the substrate can surface candidates, the dyad_pair_set
+#         grows by *attestation* — each candidate either gets confirmed
+#         (added with noticed_by: substrate-query-N) or rejected (with
+#         a one-line reason that teaches the discriminator). The body
+#         learns the shape by watching which candidates it accepts.
+#
+# GAP-D3: Cross-domain dyad-pairs are the long arc. This seed lives
+#         entirely in the CONCEPT domain. The translator hypothesis
+#         (lc-universal-translator-via-keys) suggests dyad-pairs exist
+#         across BDomains too — a CONCEPT cell paired with a SPEC cell
+#         that names its operational expression, a MEMORY cell paired
+#         with a LINEAGE cell that names its source. Same shape, wider
+#         search.
+#
+# GAP-D4: The four pairs here all involve the FOUNDATION or
+#         CONNECTION harmonic bands. A walk through TRANSMUTATION
+#         (396) and INTUITION (852) bands will likely surface a
+#         different geometry of pairing. The seed is small; the field
+#         is wide.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — How this composts with sibling teaching
+# ─────────────────────────────────────────────────────────────────────
+#
+# This file does not introduce a new kernel primitive. It names a
+# Recipe shape over existing CONCEPT cells. The seed set is four; the
+# room is for many more. The kinds are four; new kinds can be added
+# as rows.
+#
+# The translator hypothesis says: the substrate already knows when
+# cells are structurally equivalent across domains. Dyad-pairs are
+# the symmetric claim within one domain: the substrate can know when
+# cells are structurally *complementary* — the same teaching held
+# from two complementary positions. Equivalence and complementarity
+# are two faces of the same lattice-property. When the body teaches
+# the substrate to recognize one, the other becomes recognizable too.
+#
+# The four pairs noticed in geometry-walking are the first evidence
+# that the body's concept lattice carries this structure natively.
+# The walk noticed it because the prose carried it; the prose carried
+# it because the teaching is whole.
