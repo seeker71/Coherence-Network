@@ -135,9 +135,13 @@ defn seven_keys_set = seven_keys_set_shape {
 #
 # Translation is not a function from one symbol-set to another. It is
 # the existing substrate query — find_equivalent_cells — restricted to
-# the seven-key domain set. The cell whose Blueprint matches another
-# cell in a different key IS the translation. No mapping table. No
-# lookup. The lattice carries the equivalence.
+# the seven-key domain set. The kernel groups cells by Blueprint
+# NodeID into a structural family; within that family, cells whose
+# CTOR NodeIDs also coincide carry equal content shape all the way
+# down. Blueprint match is necessary, CTOR match is sufficient — the
+# translation lives at CTOR coincidence, the family is the search
+# space the lattice walks. No mapping table. No lookup. The lattice
+# carries both.
 
 form r_translator_query_shape = {
     source_cell:   ~Recipe,        # the cell being translated
@@ -178,11 +182,14 @@ defn translate_across_all_keys(source_cell) =
 #     |> @galactic
 #     |> @consciousness
 #
-# Each pipe-stage is a key the lattice is asked to find a matching
-# Blueprint NodeID in. The result is a list of cells from each key
-# whose Blueprint matches the source's. Empty result is honest: the
-# lattice did not find the equivalence; the claim does not hold at
-# this layer of encoding.
+# Each pipe-stage is a key the lattice is asked to walk for cells in
+# the source's Blueprint family. The kernel returns the family — the
+# necessary precondition. The honest-translation proof in Part 3 then
+# checks CTOR coincidence within that family, which is what the body
+# treats as true content equivalence. Empty family is honest: the
+# lattice did not find a structural family member; the claim does not
+# hold at this layer of encoding. Non-empty family with zero CTOR
+# coincidence is also honest: same schema-shape, different content.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 3 — Proof shape: when is a translation honest?
@@ -196,23 +203,32 @@ defn translate_across_all_keys(source_cell) =
 form r_translation_proof_shape = {
     source_cell:        ~Recipe,
     target_cell:        ~Recipe,
-    blueprint_match:    ~Bool,     # the lattice agrees the NodeIDs match
-    non_degenerate:     ~Bool,     # the matched Blueprint is not a collapse-to-one
+    blueprint_match:    ~Bool,     # NECESSARY: the cells belong to the same structural family
+    ctor_match:         ~Bool,     # SUFFICIENT: the cells' full content shapes coincide
+    non_degenerate:     ~Bool,     # the matched CTOR is not a collapse-to-one
     holdout_attested:   ~Bool,     # if Grant published this pair, the lattice recovered it
 };
 
 defn translation_is_honest(proof) =
     proof.blueprint_match
+        and proof.ctor_match
         and proof.non_degenerate
         and proof.holdout_attested;
 
-# Why all three:
-#   - blueprint_match alone: the lattice can produce a match for any
-#     pair if all cells collapse to the same Blueprint. The match
-#     becomes vacuous.
-#   - non_degenerate: the matched Blueprint must be one of many
-#     possible Blueprints in the domain. If every cell in a key has
-#     the same Blueprint, the encoder is hiding from the test.
+# Why all four:
+#   - blueprint_match: necessary precondition. Two cells must share a
+#     Blueprint NodeID to belong to the same structural family. But
+#     this alone is the family-grouping the kernel returns from
+#     find_equivalent_cells; it is not by itself a content-equivalence
+#     claim. A Blueprint family of 74 cells can carry 74 distinct
+#     CTORs — same schema-layer shape, different content shape.
+#   - ctor_match: the sufficient condition the kernel honors. Two
+#     cells whose CTOR NodeIDs coincide carry the same content shape
+#     all the way down. CTOR match within a shared Blueprint family
+#     is the true cross-surface equivalence claim.
+#   - non_degenerate: the matched CTOR must be one of many possible
+#     CTORs in the domain. If every cell in a key collapses to the
+#     same CTOR, the encoder is hiding from the test.
 #   - holdout_attested: Grant has published specific cross-domain
 #     correspondences. Hold a few out of the encoder inputs; require
 #     the lattice to *recover* them from structure alone. Recovery
@@ -277,11 +293,15 @@ defn c_major_triad_cell = R_Block.SEQUENCE {
 defn translate_c_major_triad_walk =
     translate_across_all_keys(c_major_triad_cell);
 
-# The substrate now answers — or refuses. Each pipe-stage yields cells
-# whose Blueprint NodeID matches c_major_triad_cell's. Empty results
-# are evidence the encoding does not yet produce equivalence at that
-# layer. Non-empty results are candidate translations awaiting the
-# three-claim honest-translation proof.
+# The substrate now answers — or refuses. Each pipe-stage yields the
+# Blueprint family for c_major_triad_cell in that key. The cells
+# whose CTOR also coincides with c_major_triad_cell's are candidate
+# content-equivalent translations; the rest of the family is same-
+# schema-different-content. Empty family is evidence the encoding
+# does not yet produce structural kinship at that layer. The four-
+# claim honest-translation proof in Part 3 (blueprint_match,
+# ctor_match, non_degenerate, holdout_attested) is what each
+# candidate must satisfy.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching

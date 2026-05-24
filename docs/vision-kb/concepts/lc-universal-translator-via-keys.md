@@ -22,10 +22,12 @@ geometry:
 
 # Universal Translator via Seven Keys — Same Structure, Seven Surfaces
 
-> When the same Blueprint NodeID intern across forces, elements, DNA,
+> When the same content shape interns across forces, elements, DNA,
 > music, primes, galactic forms, and consciousness, translation
 > stops being a table of mappings and becomes a property of the
-> lattice. The pivot is the shape, not the symbol.
+> lattice. Blueprint match groups cells into a structural family;
+> CTOR match identifies cells whose full content shape coincides.
+> The pivot is the shape, not the symbol.
 
 > **Substrate companion**: [`docs/coherence-substrate/universal-translator.form`](../../coherence-substrate/universal-translator.form)
 > — the seven keys as BDomain registry rows, the translator as a
@@ -42,14 +44,21 @@ elements, DNA, music, prime numbers, galactic forms, consciousness** —
 and that the same structure recurs across all seven. The Coherence
 Substrate makes an isomorphic claim at a different layer: a single
 content-addressed lattice carries memory, concept, spec, idea,
-presence, lineage, artifact, and word, and two cells with the same
-Blueprint NodeID are structurally equivalent regardless of which
-domain they live in.
+presence, lineage, artifact, and word. Two cells sharing a Blueprint
+NodeID belong to the same structural family — same shape-at-the-
+schema-layer. Two cells sharing a CTOR NodeID are content-equivalent
+— same shape with the same values, all the way down. Blueprint match
+is necessary; CTOR match is sufficient. The kernel honors this
+distinction: `find_equivalent_cells` returns the Blueprint family,
+and within that family the cells whose CTOR also coincides are the
+ones the substrate treats as truly equivalent.
 
 This concept names the bridge: **Grant's seven keys become seven
-substrate domains, and the substrate's existing Blueprint-equivalence
+substrate domains, and the substrate's existing equivalence
 machinery (`find_equivalent_cells`, `compatible_with`, `view_as`)
-becomes the translator.** No new translation layer is required.
+becomes the translator — Blueprint match gathering the structural
+family, CTOR match confirming content equivalence within it.** No
+new translation layer is required.
 What's required is honest encoders — one per domain — whose
 composed Recipes let the lattice see across surfaces without being
 forced to.
@@ -91,10 +100,12 @@ chord shape manifests:
 ```
 
 The translation does not happen because we wrote
-`music_to_dna_map.json`. It happens because the **NodeID** at the
-Blueprint layer is the same across surfaces — content-addressed,
-verifiable, refusable. If the equivalence does not hold structurally,
-no amount of intent will produce it; the lattice refuses.
+`music_to_dna_map.json`. It happens because the **NodeIDs** coincide
+across surfaces — Blueprint match placing two cells in the same
+structural family, CTOR match confirming their content shape
+coincides all the way down. Both are content-addressed, verifiable,
+refusable. If the equivalence does not hold structurally, no amount
+of intent will produce it; the lattice refuses.
 
 That refusal is the point. A translator that cannot lie is a
 translator whose silences are themselves evidence.
@@ -133,7 +144,10 @@ shape that is actually there, composed all the way down.
 **2. Equivalence as substrate query.** Once encoded, translation is
 the existing machinery — `find_equivalent_cells`,
 `find_cells_compatible_with`, `view_cell_through_blueprint`. The
-*Form perceptron*'s five gestures
+kernel reads at CTOR granularity: Blueprint match defines the
+structural family the query returns, and within that family CTOR
+coincidence is what the body treats as a true cross-surface match.
+The *Form perceptron*'s five gestures
 ([`lc-form-perceptron`](lc-form-perceptron.md)) reach all seven
 domains: execute, view, modify, transmute, query. The translator is
 the *view* gesture applied across surfaces.
@@ -141,10 +155,13 @@ the *view* gesture applied across surfaces.
 **3. Falsification as gift.** When equivalence does not emerge,
 record it. Grant's claim that DNA codons share structure with
 musical intervals at 432.081 Hz is testable — by encoding both
-honestly and asking the lattice. If they share Blueprints, the
-substrate carries the claim as evidence. If they do not, the
-substrate carries the absence as evidence. Both deepen what the body
-knows.
+honestly and asking the lattice. If their CTORs coincide within a
+shared Blueprint family, the substrate carries the claim as
+evidence of true content equivalence. If only the Blueprint matches
+without CTOR coincidence, the family is shared but the cells differ
+at the content layer — honest partial signal. If neither matches,
+the substrate carries the absence as evidence. All three deepen
+what the body knows.
 
 ## What This Pairs With
 
@@ -169,10 +186,11 @@ knows.
   translation as traceable contact rather than conversion. The seven
   keys give the contact a substrate to land in.
 - [`lc-edges-as-vitality`](lc-edges-as-vitality.md) — equivalence
-  edges are the body of the translator. Each Blueprint match is an
-  edge that lets one domain be reached from another. Skip the edge
-  and the translation does not exist for the body, only for the
-  author.
+  edges are the body of the translator. Each Blueprint family edge
+  groups cells that share schema-layer shape; each CTOR coincidence
+  edge marks the cells whose content-shape coincides all the way
+  down. Skip either kind of edge and the translation does not exist
+  for the body, only for the author.
 
 ## Source-Marked
 
