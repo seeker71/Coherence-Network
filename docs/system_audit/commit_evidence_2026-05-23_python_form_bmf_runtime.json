@@ -1201,9 +1201,31 @@
     "specs/recipes-tuned-by-trace.md",
     "specs/substrate-render-fabric-v0.md",
     "specs/trace-symbol-spaces-form.md",
-    "web/app/network/cells/page.tsx"
+    "web/app/network/cells/page.tsx",
+    "form/form-stdlib/runtime-grammar.fk",
+    "form/form-stdlib/seedbank/encoders/INDEX.md",
+    "form/form-stdlib/seedbank/encoders/modality-frontend.fk",
+    "form/form-stdlib/seedbank/encoders/song-encoder.fk",
+    "form/form-stdlib/seedbank/encoders/strategy-encoder.fk",
+    "form/form-stdlib/seedbank/encoders/teaching-encoder.fk",
+    "form/form-stdlib/seedbank/recipe-distance.fk",
+    "form/form-stdlib/seedbank/tests/recipe-distance.fk",
+    "form/form-stdlib/seedbank/tests/recipe-observer.fk",
+    "form/form-stdlib/tests/binary-import-local-remap.fk",
+    "form/form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+    "form/form-stdlib/tests/python-bmf-full-file-band.fk",
+    "form/form-stdlib/tests/python-bmf-module-parse-band.fk",
+    "form/form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+    "form/form-stdlib/tests/recipe-capsule-abi-band.fk",
+    "form/form-stdlib/tests/source-scanner-escape-band.fk",
+    "form/form-stdlib/tests/substrate-cell-gc-band.fk",
+    "form/form-stdlib/tests/substrate-gc-band.fk",
+    "form/form-stdlib/tests/substrate-temp-arena-band.fk",
+    "seedbank/memory-as-framebuffer-v0/examples/custom_renderer.rs",
+    "seedbank/memory-as-framebuffer-v0/src/render_trait.rs",
+    "seedbank/memory-as-framebuffer-v0/tests/render_trait_smoke.rs"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_feature",
   "proof_commands": [
     "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
@@ -1258,5 +1280,18 @@
     "DCMI Metadata Terms: format, language, source, creator, license, provenance, relation, audience, extent",
     "SKOS Primer: concept labels scoped by language tag, not global names",
     "W3C PROV namespace: entity/source and derivation provenance model"
-  ]
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form runtime and active Form artifacts moved from experiments into active form/ and seedbank/ paths while preserving API/web runtime references in the diff range.",
+    "public_endpoints": [
+      "local Form CLI sibling kernels",
+      "local API/web runtime surfaces touched by the branch"
+    ],
+    "test_flows": [
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/python-bmf-module-parse-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/python-bmf-module-parse-band.fk"
+    ]
+  }
 }
