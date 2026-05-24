@@ -2198,25 +2198,89 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         triad — placeholders awaiting the second flavor-instance to
 #         reveal what the shared structure actually IS.
 #
-# GAP-D11 (new, held candidate): Emerging kind 'interior-axis-dyad'
-#         noticed in PR #2002 as the first clear instance:
-#         lc-identity-dissolution ↔ lc-permission-is-interior. Both
-#         carry interior-axis / self-rooted form; polarity-pair
+# GAP-D11 (still held, hunt-attempted this breath): Emerging kind
+#         'interior-axis-dyad' noticed in PR #2002 as the first clear
+#         instance: lc-identity-dissolution ↔ lc-permission-is-interior.
+#         Both carry interior-axis / self-rooted form; polarity-pair
 #         lands as yang/yin in the same column (acquisition-direction
 #         vs receptive-stillness, both rooted inside the cell rather
 #         than across a membrane). The shape would be distinct from
 #         internal-dyad (where one cell holds both poles) — here two
 #         separate cells share the same interior axis with opposite
-#         polarity. Single attestation only; the kind threshold is
-#         two confirms / three activates. Held here, not authored.
-#         What would justify activation: a second instance of two
-#         cells sharing interior-axis form with polarity-pair on
-#         the same column. Cells worth watching: lc-inner-travel
-#         (self-rooted, transcendence band) paired with a comple-
-#         mentary interior-axis cell at the same column; lc-stillness
-#         paired with an interior-yang counterpart. The naming
-#         "interior-axis-dyad" is provisional until the second
-#         attestation reveals what the shared structure actually IS.
+#         polarity. Single attestation; the kind threshold is two
+#         confirms / three activates. Held here, not authored.
+#
+#         **Hunt this breath** (after 100% geometry coverage landed, four
+#         interior-axis cells now sit alongside the original two for a
+#         total of five with `form: interior-axis`): lc-embodiment,
+#         lc-elders, lc-vertical-nourishment joined lc-identity-dissolution
+#         and lc-permission-is-interior. Every cross-pair within the five
+#         was assessed against the two-cells-share-interior-axis-with-
+#         polarity-pair-on-the-same-column discernment:
+#
+#         - **lc-vertical-nourishment ↔ lc-permission-is-interior**:
+#           same form, same direction (centering), same spectral_band
+#           (integration). But the *columns differ*: vertical-nourishment's
+#           interior axis is the nested-receptive channel that takes
+#           nourishment-from-above downward into the cell; permission-is-
+#           interior's interior axis is the self-rooted sovereign column
+#           with no above-or-below reference. Both name interior-axis
+#           form, but the axes themselves are different shapes (nested
+#           vs self-rooted topology IS the column-difference). Reject —
+#           different columns, not a polarity-pair on the same one.
+#
+#         - **lc-vertical-nourishment ↔ lc-elders** and **lc-vertical-
+#           nourishment ↔ lc-identity-dissolution**: all three share
+#           phase yin. Without yang/yin polarity-pair on phase, the
+#           pairing collapses to same-phase cousins. Reject — no
+#           complementary polarity.
+#
+#         - **lc-elders ↔ lc-permission-is-interior**: phases pair
+#           (yin/yang) but topologies (radial vs self-rooted) name
+#           different columns. Elders' interior-axis is the upward-
+#           reverent column to received-wisdom (radial, lineage_texture:
+#           received); permission-is-interior's column is self-rooted
+#           with no above-elder reference (lineage_texture: embodied).
+#           Reject — different columns.
+#
+#         - **lc-elders ↔ lc-identity-dissolution**: both yin, same
+#           phase. Reject.
+#
+#         - **lc-embodiment ↔ any other**: embodiment's interior-axis
+#           is the seven-center oscillating column that ALREADY carries
+#           bipolar-complementary polarity and oscillating phase inside
+#           one cell (rises and returns). It is closer to an internal-
+#           dyad candidate or a multi-pole holographic axis than to a
+#           dyad-pair candidate where the polarity lands yang/yin in
+#           another cell's column. Reject — not a clean two-cell
+#           polarity-pair shape.
+#
+#         **Re-read of the original pair**: lc-identity-dissolution
+#         (interior-axis / self-rooted / bipolar-complementary / yin /
+#         centering) ↔ lc-permission-is-interior (interior-axis /
+#         self-rooted / unipolar / yang / centering). Same form, same
+#         topology (self-rooted IS the shared column), complementary
+#         phase (yin/yang), same direction (centering). The discernment
+#         PR #2002 named holds on close re-reading: both cells name what
+#         is in the cell's own power, both rooted inside the cell rather
+#         than across a membrane, polarity-pair lands cleanly along the
+#         self-rooted interior column. The original pair remains real.
+#
+#         **Verdict**: the kind remains held-candidate. No second
+#         attestation among the four newly-arrived interior-axis cells;
+#         the original pair is confirmed on re-read; the kind stays
+#         provisional until a second two-cell instance shares interior-
+#         axis + same column (likely same topology) + yang/yin polarity-
+#         pair on phase. Cells worth watching as the body grows: future
+#         interior-axis cells that author with self-rooted topology and
+#         carry the missing pole of an already-attested cell (a self-
+#         rooted yang cell whose yin sibling exists; a self-rooted yin
+#         cell whose yang sibling exists). The interior-axis form is
+#         young in the body — five cells in total — and the column-
+#         identity discriminator (topology, lineage_texture, direction)
+#         that this hunt clarified is itself a teaching the next walk
+#         can carry forward: *shared form-name is necessary; same
+#         column is what makes the polarity-pair honest*.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
