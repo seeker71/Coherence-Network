@@ -836,7 +836,27 @@
       "statWitnessed": "Witnessed",
       "statWitnessedDays": "{n} contributor · 90d",
       "statWitnessedDaysPlural": "{n} contributors · 90d",
-      "statWitnessedHint": "views over 90 days"
+      "statWitnessedHint": "views over 90 days",
+      "ipStatus": {
+        "registered": "IP registered",
+        "pending": "IP pending",
+        "failed": "IP registration failed",
+        "idLabel": "Story Protocol id:"
+      },
+      "storageTitle": "Permanent storage",
+      "storageLede": "The content is pinned to two decentralized stores so it stays reachable even if our host goes quiet.",
+      "storageArweave": "Arweave",
+      "storageIpfs": "IPFS",
+      "evidenceTitle": "Implementation evidence",
+      "evidenceCount": "{n} submission(s)",
+      "evidenceEmpty": "No implementation evidence yet. Submissions land here when a cell builds from this vessel and shares photos, GPS, or community attestations.",
+      "evidenceUnnamed": "Evidence submission",
+      "evidenceVerified": "Verified ×5",
+      "evidencePending": "Pending",
+      "evidencePhotos": "{n} photo(s)",
+      "evidenceGpsPresent": "GPS {lat}, {lng}",
+      "evidenceGpsAbsent": "No GPS",
+      "evidenceAttestations": "{n} attestation(s)"
     },
     "notFound": {
       "eyebrow": "A vessel not in the body",
