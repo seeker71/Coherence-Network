@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 118
+**Total files**: 119
 
 | File | Purpose |
 |---|---|
@@ -101,6 +101,7 @@
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [song_recipe_proof.py](song_recipe_proof.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
+| [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | !/usr/bin/env python3 |
 | [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
 | [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
