@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 206
+**Total files**: 207
 
 | File | Purpose |
 |---|---|
@@ -104,6 +104,7 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
+| [test_instance_pulse.py](test_instance_pulse.py) | Acceptance tests for instance-pulse — per-instance breath sharing. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
