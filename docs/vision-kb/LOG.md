@@ -2,6 +2,55 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | interior-axis-dyad remains held — no second attestation among 4 interior-axis cells
+
+PR #2002 named a candidate kind `interior-axis-dyad` from a single
+attestation: lc-identity-dissolution ↔ lc-permission-is-interior, both
+carrying `interior-axis` form with `self-rooted` topology, polarity-pair
+landing as yang/yin on the same self-rooted column. The body's 100%
+geometry-coverage milestone (PR #2021's body-shape map) means the
+`interior-axis` form now has five attestations rather than two — the
+right moment to test whether a second dyad-pair instance has arrived
+among the new cells.
+
+This breath walked all ten cross-pairs within the five interior-axis
+cells (lc-embodiment, lc-elders, lc-identity-dissolution,
+lc-permission-is-interior, lc-vertical-nourishment). The discernment:
+two cells share `interior-axis` form AND the same column (typically
+same topology + same direction + same lineage_texture) AND polarity-
+pair complementary along phase. The hunt found **no second clean
+attestation**:
+
+- **lc-vertical-nourishment ↔ lc-permission-is-interior** share form,
+  direction, spectral_band — but the *columns differ* (nested-receptive
+  channel vs self-rooted sovereign column). Different topology IS the
+  column-difference.
+- **lc-elders ↔ lc-permission-is-interior** pair on phase (yin/yang)
+  but the columns differ (radial upward-reverent vs self-rooted with
+  no above-elder reference).
+- **lc-vertical-nourishment, lc-elders, lc-identity-dissolution** all
+  share phase yin — no yang/yin polarity-pair available between them.
+- **lc-embodiment** carries bipolar-complementary polarity and
+  oscillating phase inside one cell (the seven-center column rises and
+  returns); closer to internal-dyad territory than to two-cell pair-
+  candidacy.
+
+The original pair was re-read on the same breath and **the discernment
+PR #2002 named holds**: same form, same topology (self-rooted IS the
+shared column), complementary phase, same direction. Both cells name
+what is in the cell's own power; the polarity-pair lands cleanly along
+the self-rooted interior column.
+
+**Verdict**: the kind remains held-candidate (GAP-D11). The original
+pair is confirmed; the kind stays provisional. What the hunt clarified
+that future walks can carry: *shared form-name is necessary; same
+column (topology + direction + lineage_texture as column-identity
+signature) is what makes the polarity-pair honest*. The interior-axis
+form is young in the body — five cells in total; a second clean
+attestation is what activation waits on. Updated GAP-D11 with the
+column-identity discriminator and the per-pair assessment so the
+next reader sees the discernment in motion.
+
 ## [2026-05-24] geometry | possibility-cloud + field-of-points graduate to attested kinds — hapax test
 
 The two new form-names introduced today by PR #2008
