@@ -2,7 +2,7 @@
 idea_id: data-infrastructure
 status: done
 source:
-  - file: api/app/services/telemetry_persistence_service/__init__.py
+  - file: api/app/services/telemetry_persistence/__init__.py
     symbols: [backend_info(), checkpoint()]
 requirements:
   - "When a runtime database URL is configured, runtime telemetry events must be persisted to the database even if `RUNTIME_E"
@@ -12,9 +12,9 @@ done_when:
   - "When a runtime database URL is configured, runtime telemetry events must be persisted to the database even if `RUNTIM..."
   - "`GET /api/health/persistence` must not fail the global persistence contract due to runtime telemetry being file-route..."
   - "Add a regression test proving DB precedence when both `RUNTIME_DATABASE_URL` and `RUNTIME_EVENTS_PATH` are set."
-  - 'file_exists("api/app/services/telemetry_persistence_service/__init__.py")'
-  - 'symbol_in_file("api/app/services/telemetry_persistence_service/__init__.py", "backend_info")'
-  - 'symbol_in_file("api/app/services/telemetry_persistence_service/__init__.py", "checkpoint")'
+  - 'file_exists("api/app/services/telemetry_persistence/__init__.py")'
+  - 'symbol_in_file("api/app/services/telemetry_persistence/__init__.py", "backend_info")'
+  - 'symbol_in_file("api/app/services/telemetry_persistence/__init__.py", "checkpoint")'
   - 'pytest_passes("api/tests/test_runtime_event_store_precedence.py")'
 test: "cd api && pytest -q --ignore=tests/holdout tests/test_runtime_event_store_precedence.py"
 constraints:
@@ -23,7 +23,7 @@ constraints:
 ---
 
 > **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
-> **Source**: [`api/app/services/telemetry_persistence_service/__init__.py`](../api/app/services/telemetry_persistence_service/__init__.py)
+> **Source**: [`api/app/services/telemetry_persistence/__init__.py`](../api/app/services/telemetry_persistence/__init__.py)
 
 # Spec: Runtime Telemetry DB Precedence
 
