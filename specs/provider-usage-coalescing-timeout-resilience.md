@@ -19,8 +19,6 @@ done_when:
   - 'symbol_in_file("api/app/models/automation_usage.py", "UsageAlert")'
   - 'symbol_in_file("api/app/models/automation_usage.py", "ProviderUsageOverview")'
   - 'symbol_in_file("api/app/models/automation_usage.py", "ProviderUsageSnapshot")'
-test:
-  - "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 test: "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 ---
 
