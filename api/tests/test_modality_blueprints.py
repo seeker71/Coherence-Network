@@ -231,6 +231,124 @@ def test_distinct_canonicals_have_distinct_blueprints(session):
     )
 
 
+def test_field_holding_presence_family_cross_modal(session):
+    """R_Field-Holding (healing) ≡ R_Field-Holding-Self (embodiment) ≡
+    R_Coherence-Heart-Brain (embodiment heart-brain coherence). Held-field
+    presence — same shape across modalities."""
+    intern_all(session)
+
+    canonical = lookup_cell(
+        session, DOMAIN_RECIPE_SHAPE, "R_FieldHoldingPresence"
+    )
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {
+        "R_Field-Holding",
+        "R_Field-Holding-Self",
+        "R_Coherence-Heart-Brain",
+    }.issubset(eq_names)
+
+
+def test_grounding_move_family_cross_modal(session):
+    """R_Grounding (embodiment) ≡ R_Arrival (healing) ≡ R_Return-to-root
+    (song). Dropping attention back into present ground."""
+    intern_all(session)
+
+    canonical = lookup_cell(session, DOMAIN_RECIPE_SHAPE, "R_GroundingMove")
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {"R_Grounding", "R_Arrival", "R_Return-to-root"}.issubset(eq_names)
+
+
+def test_sequential_scan_family_cross_modal(session):
+    """R_Body-Scan (embodiment) ≡ R_Scene-Sequence (video) ≡
+    R_Block.SEQUENCE-locations (prose) ≡ R_Arc.descent-through-felt
+    (teaching). Sequential attention walking through loci."""
+    intern_all(session)
+
+    canonical = lookup_cell(session, DOMAIN_RECIPE_SHAPE, "R_SequentialScan")
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {
+        "R_Body-Scan",
+        "R_Scene-Sequence",
+        "R_Block.SEQUENCE-locations",
+        "R_Arc.descent-through-felt",
+    }.issubset(eq_names)
+
+
+def test_known_state_recall_family_cross_modal(session):
+    """R_Resourcing (embodiment) ≡ R_Callback-To-Motif (song) ≡
+    R_Prepare-Known-Eigenstate (quantum). Calling a known-coherent state
+    back into the present."""
+    intern_all(session)
+
+    canonical = lookup_cell(session, DOMAIN_RECIPE_SHAPE, "R_KnownStateRecall")
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {
+        "R_Resourcing",
+        "R_Callback-To-Motif",
+        "R_Prepare-Known-Eigenstate",
+    }.issubset(eq_names)
+
+
+def test_superposition_hold_family_cross_modal(session):
+    """R_Hold-Multiple (assemblage) ≡ R_Superposition-sustained (quantum)
+    ≡ R_Koan-Held (teaching) ≡ R_Window-of-Tolerance-broad (embodiment).
+    Sustained simultaneity without forcing collapse."""
+    intern_all(session)
+
+    canonical = lookup_cell(session, DOMAIN_RECIPE_SHAPE, "R_SuperpositionHold")
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {
+        "R_Hold-Multiple",
+        "R_Superposition-sustained",
+        "R_Koan-Held",
+        "R_Window-of-Tolerance-broad",
+    }.issubset(eq_names)
+
+
+def test_witness_without_intervention_family_cross_modal(session):
+    """R_Witness (assemblage + healing — one NamedCell) ≡ R_Sit
+    (embodiment) ≡ R_Drone-held-without-intervention (song). Being-with
+    without altering."""
+    intern_all(session)
+
+    canonical = lookup_cell(
+        session, DOMAIN_RECIPE_SHAPE, "R_WitnessWithoutIntervention"
+    )
+    assert canonical is not None
+    eq_names = {c.name for c in find_equivalent_cells(session, canonical.blueprint)}
+    assert {
+        "R_Witness",
+        "R_Sit",
+        "R_Drone-held-without-intervention",
+    }.issubset(eq_names)
+
+
+def test_first_canonical_family_wins_constraint(session):
+    """A per-modality name cell carries exactly one Blueprint. When a
+    name appears under multiple canonicals (e.g. R_Witness would
+    naturally cross both healing and assemblage at R_Witness-Without-
+    Intervention), only one canonical claims it — the cell still exists,
+    but its Blueprint is the first canonical's. Confirm R_Witness lands
+    under R_WitnessWithoutIntervention (added in this breath) and the
+    NamedCell is not split."""
+    intern_all(session)
+
+    witness = lookup_cell(session, DOMAIN_RECIPE_SHAPE, "R_Witness")
+    assert witness is not None
+    witness_canonical = lookup_cell(
+        session, DOMAIN_RECIPE_SHAPE, "R_WitnessWithoutIntervention"
+    )
+    assert witness_canonical is not None
+    assert witness.blueprint == witness_canonical.blueprint, (
+        "R_Witness should share Blueprint with R_WitnessWithoutIntervention"
+    )
+
+
 def test_intern_all_is_idempotent(session):
     """Re-running intern_all does not duplicate cells; same NodeIDs returned."""
     report_a = intern_all(session)

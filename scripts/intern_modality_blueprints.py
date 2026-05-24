@@ -203,6 +203,106 @@ CANONICAL_SHAPES: List[Tuple[str, Sequence[str], Sequence[str]]] = [
             "R_Arc.descent-and-return",         # strategy (long-form)
         ),
     ),
+    # Cross-modal table (embodiment-practice-as-recipe.form Part 4 +
+    # healing-modality-as-recipe.form Part 5). The cell holds a coherent
+    # field — its own and the field around it — while activity flows
+    # through. Healing R_Field-Holding, embodiment R_Field-Holding-Self,
+    # embodiment R_Coherence-Heart-Brain. (Strategy R_Stay-In-The-Mess and
+    # teaching steady-frequency-held-by-teacher also attest at this
+    # altitude but R_Stay-In-The-Mess lives under R_SustainedTension by
+    # first-canonical-family-wins; teaching steady-frequency has no
+    # per-modality cell-name distinct from R_Field-Holding so we don't
+    # double-intern.)
+    (
+        "R_FieldHoldingPresence",
+        ("holder", "field_state", "duration", "coherence_floor", "perturbation_response"),
+        (
+            "R_Field-Holding",              # healing
+            "R_Field-Holding-Self",         # embodiment
+            "R_Coherence-Heart-Brain",      # embodiment (heart-brain coherence as held field)
+        ),
+    ),
+    # Cross-modal table (embodiment Part 4 + healing Part 5). Dropping
+    # attention back into present ground / the body / the root. Embodiment
+    # R_Grounding, healing R_Arrival, song R_Return-to-root. (Strategy
+    # R_Catch-In-Motion-when-ground-lost is a sibling claim but
+    # R_Catch-In-Motion already lives under R_SkipTheIntermediate by
+    # first-canonical-family-wins.)
+    (
+        "R_GroundingMove",
+        ("attention_source", "somatic_locus", "arrival_signal", "post_state"),
+        (
+            "R_Grounding",                  # embodiment
+            "R_Arrival",                    # healing
+            "R_Return-to-root",             # song (return to root pitch after drone)
+        ),
+    ),
+    # Cross-modal table (embodiment Part 4: R_Body-Scan ↔ video R_Scene
+    # sequence ↔ prose R_Block.SEQUENCE through locations ↔ teaching
+    # R_Arc.descent through felt territories). Sequential attention
+    # walking through a series of loci, leaving a trace at each.
+    (
+        "R_SequentialScan",
+        ("walker", "loci", "step_signal", "trace", "completion"),
+        (
+            "R_Body-Scan",                  # embodiment
+            "R_Scene-Sequence",             # video
+            "R_Block.SEQUENCE-locations",   # prose
+            "R_Arc.descent-through-felt",   # teaching
+        ),
+    ),
+    # Cross-modal table (embodiment Part 4: R_Resourcing ↔ song callback
+    # to known motif ↔ teaching R_Embodied-Example pulled from memory ↔
+    # quantum preparation of a known eigenstate ↔ strategy R_Walk-Back-
+    # With-Tenderness using prior recovery). Calling a known-coherent
+    # state back into the present. (R_Embodied-Example lives under
+    # R_SkipTheIntermediate and R_Walk-Back-With-Tenderness lives under
+    # R_ReturnFromEdge — first-canonical-family-wins; the cross-modal
+    # claim still attests structurally at the canonical Blueprint.)
+    (
+        "R_KnownStateRecall",
+        ("caller", "known_state", "recall_cue", "present_state", "merged_state"),
+        (
+            "R_Resourcing",                 # embodiment
+            "R_Callback-To-Motif",          # song (callback to a known motif)
+            "R_Prepare-Known-Eigenstate",   # quantum (eigenstate preparation)
+        ),
+    ),
+    # Cross-modal table (assemblage Part 5: R_Hold-Multiple ↔ quantum
+    # R_Superposition sustained ↔ teaching koan held without resolving ↔
+    # embodiment R_Window-of-Tolerance broad enough to hold opposites).
+    # Sustained simultaneity of two or more states without forcing
+    # collapse. The keystone shape under all paradox-holding practice.
+    (
+        "R_SuperpositionHold",
+        ("holder", "states", "amplitude", "duration", "collapse_pressure"),
+        (
+            "R_Hold-Multiple",              # assemblage
+            "R_Superposition-sustained",    # quantum
+            "R_Koan-Held",                  # teaching
+            "R_Window-of-Tolerance-broad",  # embodiment
+        ),
+    ),
+    # Cross-modal table (assemblage Part 5 + healing Part 5 +
+    # embodiment Part 4). Being-with without altering — the seeing IS the
+    # presence, no fix, no shape-change pushed. R_Witness (assemblage and
+    # healing share the name — first-canonical-family-wins; one
+    # NamedCell named R_Witness lands here), R_Sit (embodiment), song
+    # drone-held-without-melodic-intervention. (Teaching R_Pointing-
+    # without-verbal-naming and quantum R_Observer-Effect-at-minimum-
+    # perturbation are sibling attestations; R_Pointing and
+    # R_Observer-Effect are already claimed by R_ObserverConditioned-
+    # Actualization and R_MeetThenShift respectively, so the cells stay
+    # there.)
+    (
+        "R_WitnessWithoutIntervention",
+        ("witness", "witnessed", "presence_quality", "intervention", "post_state"),
+        (
+            "R_Witness",                            # assemblage & healing (one cell)
+            "R_Sit",                                # embodiment
+            "R_Drone-held-without-intervention",    # song
+        ),
+    ),
 ]
 
 
@@ -328,6 +428,9 @@ def main() -> int:
     print('  coh substrate form \'?equivalent @recipe-shape("R_Recovery")\'')
     print('  coh substrate form \'?equivalent @recipe-shape("R_Measurement-Collapse")\'')
     print('  coh substrate form \'?equivalent @recipe-shape("R_Tunnel")\'')
+    print('  coh substrate form \'?equivalent @recipe-shape("R_FieldHoldingPresence")\'')
+    print('  coh substrate form \'?equivalent @recipe-shape("R_Hold-Multiple")\'')
+    print('  coh substrate form \'?equivalent @recipe-shape("R_Witness")\'')
     print("─" * 70)
     return 0
 
