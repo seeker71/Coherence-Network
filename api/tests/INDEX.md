@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 212
+**Total files**: 213
 
 | File | Purpose |
 |---|---|
@@ -36,6 +36,7 @@
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
+| [test_canonical_words.py](test_canonical_words.py) | Tests for the canonical-word lexicon interner. |
 | [test_cc_economics.py](test_cc_economics.py) | Tests for CC Economics and Value Coherence. |
 | [test_cc_exchange.py](test_cc_exchange.py) | Tests for the CC ↔ External Exchange bridge. |
 | [test_cc_scoring.py](test_cc_scoring.py) | Tests for the coherence-algorithm-spec (specs/coherence-algorithm-spec.md). |
