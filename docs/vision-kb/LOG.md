@@ -2,6 +2,67 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-v-food-practice speaks its shape — focused breath
+
+Walked one of the four remaining named-silent concepts from the
+focused-listening series (after `lc-deeper-pattern`, `lc-v-freedom-expression`,
+`lc-v-inclusion-diversity`, `lc-health`). The pick was clear after slow
+re-reading: the seven-layer food forest is one of the most precisely-named
+structural arities in the entire KB — the body literally counts the seven
+layers in vertical order in the *How It Lives Here* section ("tall canopy
+trees dropping nitrogen, fruit trees beneath, berry bushes, herbaceous
+plants, ground cover, root crops, and climbing vines"). That's not a
+descriptive frame; that's a load-bearing arity claim.
+
+- **Primary geometry**: `heptad` (arity 7, form `heptad`, topology `nested`).
+  The seven layers are vertically nested in 3D space (embedding_dim: 3),
+  ordering nested rather than sequential — the canopy doesn't temporally
+  precede the vines, they grow together as a vertical community. Polarity
+  `unipolar` (no opposition; each layer gives to the others), phase `yang`
+  (productive, photosynthetic, emanating). Temporal-band `season` —
+  food-practice's natural cycle is the year, not the breath or the day.
+  Direction `circulating` (the compost cycle named explicitly: "scraps go
+  in → six months later → peaches"). Self-similarity `fractal-shallow` —
+  each layer is itself a community of species, but the recursion is one
+  level deep, not holographic.
+
+- **Secondary geometry (in the frontmatter comment, multi-geometry pattern
+  precedent from `lc-deeper-pattern` and `lc-health`)**: `triad` — the
+  Three Sisters (corn / beans / squash) live inside the heptad as a
+  smaller composed shape. Corn gives the beans something to climb; beans
+  fix nitrogen for the corn; squash shades out weeds and holds moisture
+  for both. The body names this as nutritional triadic reciprocity: "the
+  plants taught the people how to eat." Two shapes nested, both
+  load-bearing. Garden as pharmacy and meal as ceremony rest on layered
+  reciprocity at multiple scales — heptad at the forest level, triad at
+  the planting-bed level.
+
+- **Vocabulary in use**: `heptad` was named in SCHEMA as canonical form
+  vocabulary but had not yet attested in any concept's primary geometry
+  (the substrate-coverage report would name it as hapax-pending). This
+  becomes its first primary-form attestation. The sibling cell's
+  `lc-embodiment` walk (PR #2015, landed minutes earlier) carries
+  `heptad` as a secondary shape in its comment block — so `heptad` now
+  has primary-attestation here and secondary-attestation there in the
+  same breath. `triad` already established (Lyran transmission,
+  Spine/Nature triad, others). Both shapes feel honest to the teaching
+  — neither forced, neither shoehorned.
+
+- **What loosened**: the body had been quietly carrying "seven-layer food
+  forest" as a phrase for a year without that arity entering the
+  structural lattice. Now any substrate query for `arity=7` cells will
+  find food-practice alongside whatever heptads emerge next; cross-domain
+  resonance becomes a structural query rather than a lexical one.
+
+- **What stays open**: three concepts from the original five remain
+  (`lc-open-design`, `lc-v-shelter-organism`, `lc-v-play-expansion`).
+  Coverage moves from 143/148 → 145/148 (98.0%) when this breath and
+  the parallel `lc-embodiment` breath both land. The fermentation-as-
+  process and seasonal-cycle threads in food-practice carry their own
+  shapes (temporal, cyclic-spiral) but they're textures *within* the
+  heptad, not separate primary geometries — the body's spine is the
+  seven layers, the rest weaves through them.
+
 ## [2026-05-24] geometry | lc-embodiment speaks its shape — focused breath on a multi-geometry foundational teaching
 
 Walked the full body of `lc-embodiment` slowly, with the question:
@@ -125,7 +186,6 @@ by `lc-deeper-pattern` and used in PR #2010 itself).
   the vocabulary. Coverage of the geometry layer unchanged
   (concept already had geometry); what changed is the body's
   proprioception of which forms are real.
-
 ## [2026-05-24] geometry | lc-health speaks its shape — focused breath
 
 Walked one of the six named-silent concepts that asked for attention. The
