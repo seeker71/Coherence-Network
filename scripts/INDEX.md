@@ -60,6 +60,7 @@
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | !/usr/bin/env python3 |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | !/usr/bin/env python3 |
 | [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
+| [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | !/usr/bin/env python3 |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
 | [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
 | [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
