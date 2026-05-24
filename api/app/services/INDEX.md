@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 233
+**Total files**: 234
 
 | File | Purpose |
 |---|---|
@@ -97,6 +97,7 @@
 | [fallback_witness_service.py](fallback_witness_service.py) | Fallback witness — honest record of when the body runs on reserve. |
 | [federation_push_service.py](federation_push_service.py) | Client-side push logic for federation measurement summaries (Spec 131). |
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
+| [federation_substrate_service.py](federation_substrate_service.py) | federation_substrate_service — freedom-preserving canonical exchange. |
 | [field_story_mcp_tools.py](field_story_mcp_tools.py) | MCP registry entries for published field stories. |
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |

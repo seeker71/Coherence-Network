@@ -15,6 +15,10 @@ from pydantic import BaseModel
 from app.middleware.traceability import traces_to
 
 from app.models.federation import (
+    CanonicalDiscoverResponse,
+    CanonicalExchangeRequest,
+    CanonicalExchangeResponse,
+    CanonicalShapesListResponse,
     CapabilityAlignment,
     CapabilityManifest,
     FederatedInstance,
@@ -38,7 +42,9 @@ from app.models.federation import (
     FederatedAggregationListResponse,
 )
 from app.services import federation_service
+from app.services import federation_substrate_service
 from app.services import openclaw_node_bridge_service
+from app.services import unified_db as _udb
 
 router = APIRouter()
 
@@ -380,6 +386,94 @@ async def get_federated_aggregates(strategy_type: str | None = Query(None)):
     """Return merged federated aggregation results."""
     aggregates = federation_service.list_federated_aggregates(strategy_type=strategy_type)
     return {"aggregates": aggregates}
+
+
+# ---------------------------------------------------------------------------
+# Substrate canonical exchange — freedom-preserving federation at the
+# substrate altitude. Each instance exposes its interned recipe-shape
+# canonicals; peers discover structural alignment via content-addressing
+# without forcing either side to merge.
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/federation/substrate/canonicals",
+    response_model=CanonicalShapesListResponse,
+    summary="List this instance's interned canonical recipe-shapes (public read)",
+)
+async def list_substrate_canonicals() -> CanonicalShapesListResponse:
+    """Expose THIS instance's canonical recipe-shape inventory.
+
+    No auth required: canonicals are public structural shapes and the
+    content-hash is computed deterministically from the (canonical_name,
+    role_slots) declaration. Reading the inventory is reading public tissue.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.local_canonicals(session)
+
+
+@router.get(
+    "/federation/substrate/canonicals/{name}/discover",
+    response_model=CanonicalDiscoverResponse,
+    summary="Lookup a single canonical on this instance — name + content_hash",
+)
+async def discover_substrate_canonical(name: str) -> CanonicalDiscoverResponse:
+    """Single-shape discovery — does this instance carry `name`?
+
+    Returns the content_hash even when not yet interned (the hash depends
+    on the declaration), so a peer can compare structural intent.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.discover_local_canonical(session, name)
+
+
+@router.post(
+    "/federation/substrate/exchange",
+    response_model=CanonicalExchangeResponse,
+    status_code=200,
+    summary="Accept a peer's canonical inventory; record per-shape attestations",
+)
+async def exchange_substrate_canonicals(
+    body: CanonicalExchangeRequest,
+) -> CanonicalExchangeResponse:
+    """Sovereign exchange — record what the peer carries, never import.
+
+    Each peer-canonical lands as aligned / diverged / discovered in the
+    federation-mirror table. Local recipe-shape cells are not modified —
+    each instance keeps its lattice. Idempotent on
+    (peer_instance_id, canonical_name).
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.exchange_with_peer(
+            session,
+            peer_instance_id=body.peer_instance_id,
+            canonicals=body.canonicals,
+        )
+
+
+@router.get(
+    "/federation/substrate/attestations/{peer_instance_id}",
+    summary="Read attestations this instance holds about a peer",
+)
+async def list_substrate_attestations(peer_instance_id: str) -> dict:
+    """Return all attestations this instance carries about `peer_instance_id`.
+
+    A witness record — this instance's view of the peer at the moments
+    exchanges happened. Not authoritative about the peer's current state.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        attestations = federation_substrate_service.list_attestations_for_peer(
+            session, peer_instance_id
+        )
+    return {
+        "peer_instance_id": peer_instance_id,
+        "attestations": [a.model_dump(mode="json") for a in attestations],
+        "count": len(attestations),
+    }
 
 
 # ---------------------------------------------------------------------------
