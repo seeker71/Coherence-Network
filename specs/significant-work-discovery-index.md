@@ -8,7 +8,7 @@ source:
   - file: api/app/services/field_story_service.py
     symbols: [get_field_story_trace_slice()]
   - file: api/app/services/field_story_mcp_tools.py
-    symbols: [get_field_story_trace()]
+    symbols: [get_field_story_trace_handler, get_field_story_artifact_handler, contribute_field_story_handler]
 requirements:
   - "Significant works are indexed as compact discovery records with aliases, authors, child works, concept links, probe terms, and source boundaries."
   - "Vision concepts can return the works most related to them without loading the full listening event stream."
