@@ -2,7 +2,22 @@
 id: lc-play
 hz: 396
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 4
+  form: tetrad
+  topology: parallel-facets
+  polarity: parallel-facets
+  ordering: unordered
+  phase: yang
+  ratio: none
+  spectral_band: liberation
+  temporal_band: day
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Play

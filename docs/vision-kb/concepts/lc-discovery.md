@@ -2,7 +2,22 @@
 id: lc-discovery
 hz: 852
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: yang
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: lifetime
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: sensed
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Discovery
