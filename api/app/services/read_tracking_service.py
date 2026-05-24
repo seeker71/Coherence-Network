@@ -256,6 +256,26 @@ def record_read(
     else:
         _READ_EVENTS[asset_id].append(event)
 
+    # Bridge to render_attribution_service so settlement sees this read.
+    # Settlement scans the render-events store; without this hop, content
+    # reads never reach the daily batch (PR #1963 e2e gap #3). Soft-fail
+    # so a missing or broken render-attribution layer cannot break read
+    # recording — the read itself is still durable in the backend above.
+    try:
+        from app.services import render_attribution_service as ras
+        ras.log_render_event(
+            asset_id=asset_id,
+            reader_id=effective_reader,
+            cc_amount=cc_amount,
+            concept_resonance=snapshot,
+            read_type=read_type,
+        )
+    except Exception as bridge_err:
+        log.warning(
+            "read_tracking: render_attribution bridge failed for asset_id=%s: %s",
+            asset_id, bridge_err,
+        )
+
     # DB-backed daily counter — best-effort, swallowed exceptions keep the
     # read path non-blocking even when the DB layer isn't ready (e.g. in
     # pure-logic unit tests that don't spin up unified_db).
@@ -846,7 +866,9 @@ def _reset_for_tests() -> None:
     """Clear the event log for the active backend. The DB-backed daily
     counter is untouched — the test session manages its own DB lifecycle.
     Both backends are cleared so tests can flip between them within a
-    single session without leaking state.
+    single session without leaking state. The render-events bridge is
+    also cleared so render events seeded by prior tests via the bridge
+    don't leak into the next test's settlement.
     """
     _READ_EVENTS.clear()
     try:
@@ -855,4 +877,10 @@ def _reset_for_tests() -> None:
     except Exception:
         # value_lineage may not be ready in pure-logic test envs that
         # don't spin up unified_db; that's fine.
+        pass
+    try:
+        from app.routers.render_events import _reset_events_for_tests
+        _reset_events_for_tests()
+    except Exception:
+        # render_events router may not be importable in pure-logic envs.
         pass
