@@ -197,7 +197,8 @@ sufficient — what's missing is *coverage*, not capability.
 → lc-form-python-parity, lc-each-breath-whole, lc-edges-as-vitality,
 lc-recipe-branching-sense, lc-embodiment-body-or-liquid, lc-w-cell,
 lc-w-frequency, lc-w-field, lc-coherence-over-control,
-lc-frequency-routes-reception
+lc-frequency-routes-reception, lc-universal-translator-via-keys,
+lc-autoresearch-as-honesty-runtime
 
 ## Sources to walk further
 
