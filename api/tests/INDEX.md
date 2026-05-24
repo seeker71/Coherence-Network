@@ -129,6 +129,7 @@
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
+| [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |

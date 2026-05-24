@@ -1,9 +1,25 @@
-"""Read sensing service — records asset reads as daily aggregated counters
-and per-contributor view events.
+"""Read sensing service — records asset reads as daily aggregated counters,
+per-contributor view events, and (per spec story-protocol-integration R5+R6)
+per-read events with concept-resonance snapshots feeding the daily settlement.
 
 Every GET of a concept or asset increments a daily counter. Per-contributor
 view events are stored in asset_view_events for CC reward sensing,
 discovery chain tracking, and trending analytics.
+
+The spec's `source:` block claims three named functions for this file:
+
+  - `record_read(asset_id, reader_id, read_type="free", payment_token=None,
+                 concept_resonance_snapshot=None) -> dict`
+  - `get_daily_aggregates(date=None, asset_id=None) -> dict`
+  - `compute_cc_flow(asset_id, reads, asset_concept_weights,
+                     reader_concept_weights) -> dict`
+
+These live as in-process pure-logic surfaces alongside the DB-backed sensing
+above — the same sibling pattern used by evidence_service and
+ip_registration_service. Existing callers that pass `(asset_id, concept_id,
+contributor_id)` keep working; new-shape callers pass `reader_id`,
+`read_type`, and the concept resonance snapshot as keyword args. The
+in-process event log is what the settlement batch reads from.
 """
 
 from __future__ import annotations
@@ -11,7 +27,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Dict, List, Mapping, Optional
 from uuid import uuid4
 
 from sqlalchemy import Boolean, Column, Date, DateTime, Integer, Numeric, String, Text, func
@@ -82,17 +98,80 @@ class AssetViewEvent(Base):
 # Public API — daily aggregated reads
 # ---------------------------------------------------------------------------
 
+# In-process event log keyed by asset_id. Populated by record_read() so the
+# spec-claimed get_daily_aggregates / compute_cc_flow surfaces can read back
+# what was recorded without round-tripping through the DB. This pattern
+# matches the sibling story-protocol services (evidence_service,
+# ip_registration_service) — pure logic first, graph-backed persistence
+# arrives in a follow-up breath.
+_READ_EVENTS: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+
+# Default base CC per read when the caller doesn't specify one. Real callers
+# derive this from cc_economics_service; paid reads override with the
+# payment_token's amount.
+DEFAULT_BASE_CC = 1.0
+
+
 def record_read(
     asset_id: str,
     concept_id: str | None = None,
     contributor_id: str | None = None,
-) -> None:
-    """Increment today's read counter for an asset. Non-blocking."""
-    import json
-    _ensure_ready()
-    today = date.today()
+    *,
+    reader_id: str | None = None,
+    read_type: str = "free",
+    payment_token: str | None = None,
+    concept_resonance_snapshot: Optional[Mapping[str, float]] = None,
+    base_cc: float = DEFAULT_BASE_CC,
+    cc_amount: float | None = None,
+) -> Dict[str, Any]:
+    """Record a single read event (spec story-protocol-integration R5).
 
+    Non-blocking. Returns the event record as a dict.
+
+    Two shapes are supported:
+
+    1. Legacy DB-backed counter shape: ``record_read(asset_id, concept_id,
+       contributor_id)`` — increments today's per-asset row in the
+       ``asset_reads_daily`` table. Used by middleware and the views router.
+
+    2. Story-protocol R5 event shape: ``record_read(asset_id,
+       reader_id=..., read_type='free'|'paid', payment_token=...,
+       concept_resonance_snapshot={...})`` — appends to the in-process
+       event log so the settlement batch can later aggregate.
+
+    Both paths run in the same call. ``reader_id`` falls back to
+    ``contributor_id`` so middleware that already passes the latter still
+    populates the event log. ``cc_amount`` defaults to ``base_cc`` for paid
+    reads and 0 for free reads.
+    """
+    import json
+
+    # Effective reader is reader_id with contributor_id as fallback.
+    effective_reader = reader_id or contributor_id
+
+    # Compute cc_amount from read_type when caller hasn't specified one.
+    if cc_amount is None:
+        cc_amount = float(base_cc) if read_type == "paid" else 0.0
+
+    snapshot = dict(concept_resonance_snapshot) if concept_resonance_snapshot else None
+    event = {
+        "asset_id": asset_id,
+        "reader_id": effective_reader,
+        "read_type": read_type,
+        "payment_token": payment_token,
+        "cc_amount": cc_amount,
+        "concept_resonance_snapshot": snapshot,
+        "concept_id": concept_id,
+        "timestamp": datetime.now(timezone.utc),
+    }
+    _READ_EVENTS[asset_id].append(event)
+
+    # DB-backed daily counter — best-effort, swallowed exceptions keep the
+    # read path non-blocking even when the DB layer isn't ready (e.g. in
+    # pure-logic unit tests that don't spin up unified_db).
+    today = date.today()
     try:
+        _ensure_ready()
         with _session() as s:
             row = s.query(AssetReadDaily).filter_by(asset_id=asset_id, day=today).first()
             if row:
@@ -112,7 +191,9 @@ def record_read(
                 ))
             s.commit()
     except Exception as e:
-        log.warning("read_tracking: failed to record read for %s: %s", asset_id, e)
+        log.debug("read_tracking: DB counter skipped for %s: %s", asset_id, e)
+
+    return event
 
 
 # ---------------------------------------------------------------------------
@@ -471,3 +552,146 @@ def delete_archived_reads(before_date: date) -> int:
         s.commit()
     log.info("read_tracking: deleted %d archived rows before %s", count, before_date)
     return count
+
+
+# ---------------------------------------------------------------------------
+# Spec story-protocol-integration R5 + R6 — pure-logic surfaces
+# ---------------------------------------------------------------------------
+
+def get_daily_aggregates(
+    date: Optional[date] = None,  # noqa: A002 — spec contract uses this name
+    asset_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Aggregate the in-process read event log for a given day (spec R5).
+
+    Returns ``{date, total, unique_readers, paid_reads, free_reads,
+    per_asset: {asset_id: {total, unique_readers, paid_reads,
+    free_reads}}}``. ``date`` defaults to today (UTC). When ``asset_id``
+    is supplied, only that asset is aggregated (still wrapped in
+    per_asset so the response shape is stable across single- and
+    all-asset queries).
+    """
+    target_day = date if date is not None else datetime.now(timezone.utc).date()
+
+    per_asset: Dict[str, Dict[str, Any]] = {}
+    overall_readers: set = set()
+    total = 0
+    paid = 0
+    free = 0
+
+    asset_ids = [asset_id] if asset_id is not None else list(_READ_EVENTS.keys())
+
+    for aid in asset_ids:
+        events = _READ_EVENTS.get(aid, [])
+        day_events = [
+            e for e in events
+            if e["timestamp"].date() == target_day
+        ]
+        if not day_events:
+            # Still surface the asset key when explicitly asked, so callers
+            # can tell "no reads today" apart from "asset never existed".
+            if asset_id is not None:
+                per_asset[aid] = {
+                    "total": 0,
+                    "unique_readers": 0,
+                    "paid_reads": 0,
+                    "free_reads": 0,
+                }
+            continue
+        asset_readers = {
+            e["reader_id"] for e in day_events if e["reader_id"] is not None
+        }
+        asset_paid = sum(1 for e in day_events if e["read_type"] == "paid")
+        asset_free = sum(1 for e in day_events if e["read_type"] == "free")
+        per_asset[aid] = {
+            "total": len(day_events),
+            "unique_readers": len(asset_readers),
+            "paid_reads": asset_paid,
+            "free_reads": asset_free,
+        }
+        total += len(day_events)
+        paid += asset_paid
+        free += asset_free
+        overall_readers.update(asset_readers)
+
+    return {
+        "date": target_day.isoformat(),
+        "total": total,
+        "unique_readers": len(overall_readers),
+        "paid_reads": paid,
+        "free_reads": free,
+        "per_asset": per_asset,
+    }
+
+
+def compute_cc_flow(
+    asset_id: str,
+    reads: List[Mapping[str, Any]],
+    asset_concept_weights: Mapping[str, float],
+    reader_concept_weights: Mapping[str, Mapping[str, float]],
+    base_cc: float = DEFAULT_BASE_CC,
+) -> Dict[str, Any]:
+    """Compute CC flow weighted by reader concept resonance (spec R6).
+
+    For each concept tagged on the asset, the CC contribution from a
+    single reader is ``base_cc * asset_concept_weight *
+    reader_concept_weight``. Per-concept totals sum across all unique
+    readers; ``total_cc`` is the sum across concepts.
+
+    Parameters
+    ----------
+    asset_id
+        The asset being settled. Carried into the result for caller
+        convenience; the math is fully driven by the other arguments.
+    reads
+        Iterable of read-event mappings. Only the ``reader_id`` field is
+        consulted here — uniqueness is computed across the iterable.
+    asset_concept_weights
+        ``{concept_id: weight}`` — the asset's concept tags.
+    reader_concept_weights
+        ``{reader_id: {concept_id: weight}}`` — each reader's resonance
+        profile. Readers absent from this map contribute zero.
+    base_cc
+        Base CC unit per (reader, concept) contribution. Defaults to
+        ``DEFAULT_BASE_CC``.
+
+    Returns
+    -------
+    dict
+        ``{asset_id, total_cc, reader_count, per_concept: {concept_id:
+        cc_amount}}``.
+    """
+    unique_readers = {
+        r.get("reader_id") for r in reads if r.get("reader_id") is not None
+    }
+    per_concept: Dict[str, float] = {}
+    for concept_id, asset_weight in asset_concept_weights.items():
+        concept_total = 0.0
+        for reader in unique_readers:
+            reader_weights = reader_concept_weights.get(reader, {})
+            reader_weight = float(reader_weights.get(concept_id, 0.0))
+            concept_total += base_cc * float(asset_weight) * reader_weight
+        per_concept[concept_id] = concept_total
+
+    return {
+        "asset_id": asset_id,
+        "total_cc": sum(per_concept.values()),
+        "reader_count": len(unique_readers),
+        "per_concept": per_concept,
+    }
+
+
+def get_read_events(asset_id: str) -> List[Dict[str, Any]]:
+    """Return the in-process event log for an asset. Primarily for tests
+    and for the settlement batch worker before graph-backed persistence
+    lands. Callers must not mutate the returned list.
+    """
+    return list(_READ_EVENTS.get(asset_id, []))
+
+
+def _reset_for_tests() -> None:
+    """Clear in-process event log. The DB-backed counter is untouched —
+    the test session manages its own DB lifecycle. Mirrors the pattern
+    used by evidence_service and ip_registration_service.
+    """
+    _READ_EVENTS.clear()
