@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] surface | Transmission Recipes composer
+
+The public recipe doorway can now produce a first artifact in the visitor's hands.
+
+- **New component**: `/vision/recipes` now carries an interactive recipe-card composer with the nine atlas fields, starter cards, coherence progress, clear, and copy.
+- **Embodiment**: a visitor can move from source to card without leaving the page.
+- **Concept edge**: [`lc-transmission-recipe-atlas`](concepts/lc-transmission-recipe-atlas.md) now names the composer as part of the public doorway.
+- **Discernment held**: starter cards preserve proof modes and claim boundaries instead of letting the metaphor outrun the destination domain.
+
 ## [2026-05-24] surface | Transmission Recipes public doorway
 
 The atlas now has a public web surface where a visitor can see the card, walk three complete payloads, and choose from novel pairings with real-world stakes.
