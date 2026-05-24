@@ -390,18 +390,67 @@ def _free_tier_content(content: bytes, mime_type: str) -> str:
     return text[:FREE_TIER_TEXT_PREVIEW_CHARS] + "…"
 
 
-def _has_valid_payment(authorization: str | None) -> bool:
-    """First-iteration x402 token check. Any non-empty Bearer token
-    counts as paid; real facilitator verification (signature check
-    against the x402 chain) lands in a follow-up PR per the
-    Phase 6 plan in specs/story-protocol-integration.md."""
+def _extract_bearer_token(authorization: str | None) -> str | None:
+    """Pull the raw token out of an ``Authorization: Bearer <token>``
+    header. Returns ``None`` when the header is absent or malformed.
+    Paid reads are exactly the ones where this returns a non-empty
+    token; the first-iteration x402 contract is presence of a Bearer
+    token, with real facilitator verification landing in a follow-up."""
     if not authorization:
-        return False
+        return None
     parts = authorization.strip().split(None, 1)
     if len(parts) != 2:
-        return False
+        return None
     scheme, token = parts
-    return scheme.lower() == "bearer" and bool(token.strip())
+    if scheme.lower() != "bearer":
+        return None
+    token = token.strip()
+    return token or None
+
+
+def _resolve_reader_id(
+    request: Request, payment_token: str | None
+) -> str | None:
+    """Determine the reader id for the read event.
+
+    Order of trust:
+      1. Explicit ``X-Reader-Id`` header — set by clients that already
+         know who their user is.
+      2. Synthetic ``paid:<token-prefix>`` for paid reads — the real
+         x402 facilitator integration will replace this with the
+         token's subject claim once the verification path lands.
+      3. ``None`` — anonymous free reads have no reader.
+    """
+    explicit = request.headers.get("X-Reader-Id")
+    if explicit:
+        return explicit
+    if payment_token:
+        return f"paid:{payment_token[:8]}"
+    return None
+
+
+def _parse_concept_resonance(raw: str | None) -> dict[str, float] | None:
+    """Parse the ``X-Concept-Resonance`` header into a snapshot dict.
+
+    The header carries a JSON object of ``{concept_id: weight}``. Any
+    non-numeric weight is skipped — record_read accepts ``None`` if the
+    whole payload is unparseable so the read path stays non-blocking."""
+    if not raw:
+        return None
+    import json
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    snapshot: dict[str, float] = {}
+    for k, v in parsed.items():
+        try:
+            snapshot[str(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return snapshot or None
 
 
 def _payment_address(node: dict) -> str:
@@ -427,6 +476,7 @@ def _payment_address(node: dict) -> str:
 )
 async def get_asset_content(
     asset_id: UUID,
+    request: Request,
     authorization: str | None = Header(default=None),
 ) -> Response:
     """Serve asset content with x402 payment headers (spec R4).
@@ -467,9 +517,30 @@ async def get_asset_content(
     asset_id_str = str(asset_id)
     node_id = node.get("id") or f"asset:{asset_id}"
 
-    if _has_valid_payment(authorization):
+    # Read-event metadata — extract once, forward to record_read in both
+    # the paid and the free branch so get_daily_aggregates partitions
+    # correctly between paid_reads and free_reads.
+    payment_token = _extract_bearer_token(authorization)
+    is_paid = payment_token is not None
+    read_type = "paid" if is_paid else "free"
+    reader_id = _resolve_reader_id(request, payment_token)
+    concept_resonance_snapshot = _parse_concept_resonance(
+        request.headers.get("X-Concept-Resonance")
+    )
+    # Paid reads carry the asset's cc_amount; free reads carry zero so
+    # the settlement layer doesn't credit the creator for a preview.
+    event_cc_amount = float(cc_amount) if is_paid else 0.0
+
+    if is_paid:
         try:
-            read_tracking_service.record_read(asset_id=node_id)
+            read_tracking_service.record_read(
+                asset_id=node_id,
+                reader_id=reader_id,
+                read_type=read_type,
+                payment_token=payment_token,
+                cc_amount=event_cc_amount,
+                concept_resonance_snapshot=concept_resonance_snapshot,
+            )
         except Exception as e:  # non-blocking — read tracking failure mustn't fail delivery
             log.warning("record_read failed for %s: %s", node_id, e)
         try:
@@ -501,7 +572,14 @@ async def get_asset_content(
 
     # Free tier — preview served, read recorded as "free".
     try:
-        read_tracking_service.record_read(asset_id=node_id)
+        read_tracking_service.record_read(
+            asset_id=node_id,
+            reader_id=reader_id,
+            read_type=read_type,
+            payment_token=payment_token,
+            cc_amount=event_cc_amount,
+            concept_resonance_snapshot=concept_resonance_snapshot,
+        )
     except Exception as e:
         log.warning("record_read failed for %s: %s", node_id, e)
     preview = _free_tier_content(content_bytes, mime_type)
