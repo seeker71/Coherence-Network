@@ -70,3 +70,9 @@ cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
 api/.venv/bin/ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/audible_history_spectrum.py
 python3 scripts/validate_spec_quality.py --file specs/audible-history-spectrum.md
 ```
+
+## Verification
+
+```bash
+cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
+```

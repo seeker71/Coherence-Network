@@ -100,14 +100,14 @@ The portfolio governance layer spans seven service files implementing six interl
 
 ## Requirements
 
-1. Governance change requests with voting and auto-apply
-2. Grounded idea metrics (actual_value vs potential_value)
-3. Coherence score from 9+ signals
-4. Right-sizing detection (too_large, too_small, overlap via TF-IDF)
-5. Workspace vitality (6 living-system health signals)
-6. CC economics (treasury, staking, exchange rate, coherence invariant)
-7. Distribution engine for CC payouts
-8. Super-idea rollup criteria with auto-status update
+- [ ] Governance change requests with voting and auto-apply
+- [ ] Grounded idea metrics (actual_value vs potential_value)
+- [ ] Coherence score from 9+ signals
+- [ ] Right-sizing detection (too_large, too_small, overlap via TF-IDF)
+- [ ] Workspace vitality (6 living-system health signals)
+- [ ] CC economics (treasury, staking, exchange rate, coherence invariant)
+- [ ] Distribution engine for CC payouts
+- [ ] Super-idea rollup criteria with auto-status update
 
 ## Acceptance Tests
 

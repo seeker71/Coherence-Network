@@ -256,6 +256,8 @@ cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.py
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 - [ ] Downstream value validation: did review pass? did tests pass after impl?
       Requires cross-task correlation (spec TBD)
 - [ ] Provider-specific cost accuracy: OpenRouter returns cost but accuracy

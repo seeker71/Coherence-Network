@@ -173,6 +173,8 @@ CREATE INDEX idx_rss_snapshot_at ON right_sizing_snapshots(snapshot_at);
 
 ## Files to Create/Modify
 
+- `specs/idea-right-sizing.md`
+
 | File | Change |
 |------|--------|
 | `api/app/models/idea.py` | Add `GranularitySignal` enum; extend `Idea` with `granularity_signal`, `granularity_assessed_at`, `overlap_with_idea_id`, `overlap_score`; add `RightSizingSuggestion`, `RightSizingReport`, `PortfolioHealthCounts`, `TrendInfo` models |

@@ -109,67 +109,8 @@ Heal Completion → Issue Resolution — see `idea_id: pipeline-reliability` for
 | `docs/PIPELINE-MONITORING-AUTOMATED.md` | Document resolution recording, `MONITOR_PERSIST_RESOLVED` env var, `resolved` array semantics, and capping behavior. |
 | `api/app/routers/agent_issues_routes.py` | No change required — already returns file content as-is; `resolved` field passes through automatically. |
 
-### Scenario 2 — Condition clears WITH heal_task_id; heal attributed in JSONL
-
-**Setup**: Monitor has a previous issue for `no_task_running` with `heal_task_id: "task_heal_abc"`.
-
-**Action**:
-```bash
-echo '{"issues":[{"id":"bbb22222","condition":"no_task_running","severity":"high","priority":1,"message":"No task running","suggested_action":"Check pipeline","created_at":"2026-03-28T09:00:00Z","resolved_at":null,"heal_task_id":"task_heal_abc"}],"last_check":"2026-03-28T09:00:00Z","history":[]}' \
-  > api/logs/monitor_issues.json
-
-python3 api/scripts/monitor_pipeline.py --once
-
-grep '"condition": "no_task_running"' api/logs/monitor_resolutions.jsonl | tail -1
-```
-
-**Expected**: Resolution record contains both `"condition": "no_task_running"` AND `"heal_task_id": "task_heal_abc"`. This is the core attribution contract.
-
-**Edge**: If `heal_task_id` was absent from the previous issue, `heal_task_id` must not appear in the resolution record (no null/empty key leakage).
-
-### Scenario 4 — `MONITOR_PERSIST_RESOLVED=1` persists `resolved` array in JSON; capped at 50
-
-**Setup**: `MONITOR_PERSIST_RESOLVED=1` env var set. Previous `monitor_issues.json` has 50 existing resolved entries and one open issue for `api_error` with `heal_task_id: "task_fix_api"`. The condition clears on this run.
-
-**Action**:
-```bash
-# Build file with 50 existing resolved entries + 1 open issue
-python3 - <<'EOF'
-import json, datetime, pathlib
-entries = [{"condition": f"old_cond_{i}", "resolved_at": "2026-03-01T00:00:00Z"} for i in range(50)]
-data = {
-    "issues": [{"id": "ccc33333", "condition": "api_error", "severity": "high", "priority": 1,
-                "message": "API error", "suggested_action": "Check logs",
-                "created_at": "2026-03-28T09:00:00Z", "resolved_at": None,
-                "heal_task_id": "task_fix_api"}],
-    "last_check": "2026-03-28T09:00:00Z", "history": [],
-    "resolved": entries
-}
-pathlib.Path("api/logs/monitor_issues.json").write_text(json.dumps(data))
-EOF
-
-MONITOR_PERSIST_RESOLVED=1 python3 api/scripts/monitor_pipeline.py --once
-
-python3 -c "
-import json
-d = json.load(open('api/logs/monitor_issues.json'))
-r = d.get('resolved', [])
-print('resolved_count:', len(r))
-print('last_entry_condition:', r[-1].get('condition') if r else 'none')
-print('last_entry_has_heal_task_id:', 'heal_task_id' in (r[-1] if r else {}))
-"
-```
-
-**Expected**:
-```
-resolved_count: 50        # capped; oldest entry dropped, new entry appended
-last_entry_condition: api_error
-last_entry_has_heal_task_id: True
-```
-
-The cap ensures the array never exceeds 50 entries regardless of how many conditions resolve over time.
-
-**Edge**: `MONITOR_PERSIST_RESOLVED` not set (or `=0`) → `monitor_issues.json` must NOT contain a `resolved` key after the run (no silent write).
+- `api/app/services/auto_heal_service.py`
+- `api/app/services/pipeline_advance_service.py`
 
 ## Out of Scope
 

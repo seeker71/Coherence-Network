@@ -861,6 +861,8 @@ Manual verification:
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 **Landed in this session (pure logic, external-system-free):**
 - `api/app/services/story_protocol_bridge.py`
 - `compute_concept_weighted_cc_flow()` — R6 (creators earn proportional to reader-concept-resonance overlap)

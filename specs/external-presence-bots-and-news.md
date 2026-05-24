@@ -90,13 +90,13 @@ The external presence layer spans seven source files across four capabilities: n
 
 ## Requirements
 
-1. News ingestion with RSS feed support and resonance matching to ideas
-2. Configurable news sources via API
-3. Discord voting integration
-4. Telegram bot adapter for mobile contributors
-5. Translation service for non-English content
-6. Geolocation for local idea and contributor discovery
-7. OpenClaw node bridge for marketplace integration
+- [ ] News ingestion with RSS feed support and resonance matching to ideas
+- [ ] Configurable news sources via API
+- [ ] Discord voting integration
+- [ ] Telegram bot adapter for mobile contributors
+- [ ] Translation service for non-English content
+- [ ] Geolocation for local idea and contributor discovery
+- [ ] OpenClaw node bridge for marketplace integration
 
 ## Acceptance Tests
 
