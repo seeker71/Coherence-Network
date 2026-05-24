@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 205
+**Total files**: 206
 
 | File | Purpose |
 |---|---|
@@ -27,6 +27,7 @@
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
 | [test_assets_content.py](test_assets_content.py) | Tests for GET /api/assets/{id}/content + /verification — spec R4 and R10. |
+| [test_assets_register_auto_fires.py](test_assets_register_auto_fires.py) | Auto-fire wiring tests for POST /api/assets/register. |
 | [test_attribution_middleware.py](test_attribution_middleware.py) | Tests for the attribution middleware. |
 | [test_audit_vision_image_candidates.py](test_audit_vision_image_candidates.py) | _no top-of-file purpose_ |
 | [test_auth_keys_api.py](test_auth_keys_api.py) | Tests for the /api/auth/keys HTTP layer. |

@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 from decimal import Decimal
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,12 @@ from app.models.asset import (
 )
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
-from app.services import graph_service, read_tracking_service
+from app.services import (
+    graph_service,
+    ip_registration_service,
+    permanent_storage_service,
+    read_tracking_service,
+)
 from app.services.locale_projection import project, project_many, resolve_caller_lang
 from app.services.story_protocol_bridge import (
     build_x402_payment_required_headers,
@@ -93,6 +99,9 @@ def _node_to_registration(node: dict) -> AssetRegistration:
         creation_cost_cc=creation_cost,
         metadata=props.get("metadata", {}) or {},
         created_at=created_at,
+        sp_ip_id=props.get("sp_ip_id"),
+        ip_status=props.get("ip_status", "pending"),
+        ip_reason=props.get("ip_reason"),
     )
 
 
@@ -179,6 +188,29 @@ async def create_asset(asset: AssetCreate) -> Asset:
     return asset_obj
 
 
+def _content_bytes_from_metadata(metadata: dict | None) -> bytes | None:
+    """Pull raw content bytes out of the registration metadata payload.
+
+    The MIME-aware register flow accepts ``content_base64`` (preferred,
+    for arbitrary bytes) or ``content`` (UTF-8 text shortcut). Returns
+    None when neither is present — the asset is still created, the
+    storage upload step just becomes a no-op.
+    """
+    if not isinstance(metadata, dict):
+        return None
+    b64 = metadata.get("content_base64")
+    if isinstance(b64, str) and b64:
+        try:
+            return base64.b64decode(b64)
+        except (ValueError, base64.binascii.Error) as e:
+            log.warning("content_base64 decode failed: %s", e)
+            return None
+    text = metadata.get("content")
+    if isinstance(text, str) and text:
+        return text.encode("utf-8")
+    return None
+
+
 @router.post(
     "/assets/register",
     response_model=AssetRegistration,
@@ -194,13 +226,42 @@ async def register_asset(body: AssetRegistrationCreate) -> AssetRegistration:
     accepts CODE/MODEL/CONTENT/DATA taxonomy for pipeline contributions.
     This endpoint supports arbitrary MIME types so a renderer can pair
     with the asset by type. See specs/asset-renderer-plugin.md R1.
+
+    Per specs/story-protocol-integration.md R1, registration auto-fires
+    three downstream services after the asset node lands:
+
+      1. ``ip_registration_service.register_ip_asset`` — mints the
+         Story Protocol IP Asset id, surfaces as ``sp_ip_id``.
+      2. ``permanent_storage_service.upload_to_arweave`` — uploads
+         raw bytes (from ``metadata.content_base64`` or
+         ``metadata.content``), surfaces as ``arweave_tx``.
+      3. ``permanent_storage_service.upload_to_ipfs`` — same bytes,
+         surfaces as ``ipfs_cid``.
+
+    Failures in any subcall are isolated: the asset is still created
+    and usable. Failed IP registration → ``ip_status="failed"`` with
+    ``ip_reason`` set, ``sp_ip_id=None``. Failed storage → the
+    corresponding ref stays None. R1: "If registration fails, ip_status
+    is failed and the asset remains usable without IP registration."
+
+    **Sync now, async later.** The three subcalls run synchronously in
+    this iteration — the services are fast in-memory mocks and adding
+    a background queue would be ornament before the partner SDKs land.
+    When the real Story Protocol SDK + Irys/Bundlr arrive, the
+    expensive network calls move to a background worker (Celery, ARQ,
+    or FastAPI BackgroundTasks) and the handler returns immediately
+    with ``ip_status="pending"``.
     """
     registration_id = f"asset:{uuid4()}"
+    asset_uuid = registration_id.removeprefix("asset:")
     now = datetime.now(timezone.utc)
     concept_tags_serializable = [
         {"concept_id": t.concept_id, "weight": t.weight}
         for t in body.concept_tags
     ]
+
+    # Step 1 — create the graph node. Any later subcall failure leaves
+    # this in place so the asset is recoverable.
     graph_service.create_node(
         id=registration_id,
         type="asset",
@@ -220,19 +281,86 @@ async def register_asset(body: AssetRegistrationCreate) -> AssetRegistration:
             "created_at": now.isoformat(),
         },
     )
+
+    # Step 2 — auto-fire IP registration. Isolated from the asset
+    # creation so a failed registration still leaves the asset usable.
+    sp_ip_id: str | None = None
+    ip_status = "pending"
+    ip_reason: str | None = None
+    try:
+        ip_record = ip_registration_service.register_ip_asset(
+            asset_uuid,
+            {"type": body.type, "name": body.name},
+        )
+        sp_ip_id = ip_record.get("sp_ip_id")
+        ip_status = ip_record.get("ip_status", "pending")
+        ip_reason = ip_record.get("reason")
+    except Exception as e:  # don't fail registration on IP failure (R1)
+        log.warning(
+            "auto-fire IP registration failed for %s: %s", registration_id, e
+        )
+        ip_status = "failed"
+        ip_reason = str(e)
+
+    # Step 3 — auto-fire permanent storage uploads. Isolated per surface
+    # so a failure on one (Arweave) doesn't block the other (IPFS).
+    arweave_tx_id: str | None = body.arweave_tx
+    ipfs_cid: str | None = body.ipfs_cid
+    content_bytes = _content_bytes_from_metadata(body.metadata)
+    if content_bytes is not None:
+        try:
+            arweave = permanent_storage_service.upload_to_arweave(
+                content_bytes,
+                {"name": body.name, "type": body.type},
+                asset_id=asset_uuid,
+            )
+            arweave_tx_id = arweave.get("arweave_tx_id") or arweave_tx_id
+        except Exception as e:
+            log.warning(
+                "auto-fire Arweave upload failed for %s: %s", registration_id, e
+            )
+        try:
+            ipfs = permanent_storage_service.upload_to_ipfs(
+                content_bytes, asset_id=asset_uuid
+            )
+            ipfs_cid = ipfs.get("ipfs_cid") or ipfs_cid
+        except Exception as e:
+            log.warning(
+                "auto-fire IPFS upload failed for %s: %s", registration_id, e
+            )
+
+    # Step 4 — patch the auto-fire results onto the node so downstream
+    # endpoints (content delivery, verification) surface them.
+    patch: dict[str, Any] = {
+        "sp_ip_id": sp_ip_id,
+        "ip_status": ip_status,
+        "ip_reason": ip_reason,
+        "arweave_tx": arweave_tx_id,
+        "ipfs_cid": ipfs_cid,
+    }
+    try:
+        graph_service.update_node(registration_id, properties=patch)
+    except Exception as e:
+        log.warning(
+            "failed to patch auto-fire results onto %s: %s", registration_id, e
+        )
+
     return AssetRegistration(
         id=registration_id,
         type=body.type,
         name=body.name,
         description=body.description,
         content_hash=body.content_hash,
-        arweave_tx=body.arweave_tx,
-        ipfs_cid=body.ipfs_cid,
+        arweave_tx=arweave_tx_id,
+        ipfs_cid=ipfs_cid,
         concept_tags=body.concept_tags,
         creator_id=body.creator_id,
         creation_cost_cc=body.creation_cost_cc,
         metadata=body.metadata,
         created_at=now,
+        sp_ip_id=sp_ip_id,
+        ip_status=ip_status,
+        ip_reason=ip_reason,
     )
 
 
@@ -390,18 +518,67 @@ def _free_tier_content(content: bytes, mime_type: str) -> str:
     return text[:FREE_TIER_TEXT_PREVIEW_CHARS] + "…"
 
 
-def _has_valid_payment(authorization: str | None) -> bool:
-    """First-iteration x402 token check. Any non-empty Bearer token
-    counts as paid; real facilitator verification (signature check
-    against the x402 chain) lands in a follow-up PR per the
-    Phase 6 plan in specs/story-protocol-integration.md."""
+def _extract_bearer_token(authorization: str | None) -> str | None:
+    """Pull the raw token out of an ``Authorization: Bearer <token>``
+    header. Returns ``None`` when the header is absent or malformed.
+    Paid reads are exactly the ones where this returns a non-empty
+    token; the first-iteration x402 contract is presence of a Bearer
+    token, with real facilitator verification landing in a follow-up."""
     if not authorization:
-        return False
+        return None
     parts = authorization.strip().split(None, 1)
     if len(parts) != 2:
-        return False
+        return None
     scheme, token = parts
-    return scheme.lower() == "bearer" and bool(token.strip())
+    if scheme.lower() != "bearer":
+        return None
+    token = token.strip()
+    return token or None
+
+
+def _resolve_reader_id(
+    request: Request, payment_token: str | None
+) -> str | None:
+    """Determine the reader id for the read event.
+
+    Order of trust:
+      1. Explicit ``X-Reader-Id`` header — set by clients that already
+         know who their user is.
+      2. Synthetic ``paid:<token-prefix>`` for paid reads — the real
+         x402 facilitator integration will replace this with the
+         token's subject claim once the verification path lands.
+      3. ``None`` — anonymous free reads have no reader.
+    """
+    explicit = request.headers.get("X-Reader-Id")
+    if explicit:
+        return explicit
+    if payment_token:
+        return f"paid:{payment_token[:8]}"
+    return None
+
+
+def _parse_concept_resonance(raw: str | None) -> dict[str, float] | None:
+    """Parse the ``X-Concept-Resonance`` header into a snapshot dict.
+
+    The header carries a JSON object of ``{concept_id: weight}``. Any
+    non-numeric weight is skipped — record_read accepts ``None`` if the
+    whole payload is unparseable so the read path stays non-blocking."""
+    if not raw:
+        return None
+    import json
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    snapshot: dict[str, float] = {}
+    for k, v in parsed.items():
+        try:
+            snapshot[str(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return snapshot or None
 
 
 def _payment_address(node: dict) -> str:
@@ -427,6 +604,7 @@ def _payment_address(node: dict) -> str:
 )
 async def get_asset_content(
     asset_id: UUID,
+    request: Request,
     authorization: str | None = Header(default=None),
 ) -> Response:
     """Serve asset content with x402 payment headers (spec R4).
@@ -467,16 +645,32 @@ async def get_asset_content(
     asset_id_str = str(asset_id)
     node_id = node.get("id") or f"asset:{asset_id}"
 
-    if _has_valid_payment(authorization):
+    # Read-event metadata — extract once, forward to record_read in both
+    # the paid and the free branch so get_daily_aggregates partitions
+    # correctly between paid_reads and free_reads.
+    payment_token = _extract_bearer_token(authorization)
+    is_paid = payment_token is not None
+    read_type = "paid" if is_paid else "free"
+    reader_id = _resolve_reader_id(request, payment_token)
+    concept_resonance_snapshot = _parse_concept_resonance(
+        request.headers.get("X-Concept-Resonance")
+    )
+    # Paid reads carry the asset's cc_amount; free reads carry zero so
+    # the settlement layer doesn't credit the creator for a preview.
+    event_cc_amount = float(cc_amount) if is_paid else 0.0
+
+    if is_paid:
         try:
             # Forward read_type + cc_amount + payment token so the read
             # event carries the paid-tier CC. The render-event bridge in
             # record_read uses cc_amount as the settlement pool.
             read_tracking_service.record_read(
                 asset_id=node_id,
-                read_type="paid",
-                payment_token=authorization,
-                cc_amount=float(cc_amount),
+                reader_id=reader_id,
+                read_type=read_type,
+                payment_token=payment_token,
+                cc_amount=event_cc_amount,
+                concept_resonance_snapshot=concept_resonance_snapshot,
             )
         except Exception as e:  # non-blocking — read tracking failure mustn't fail delivery
             log.warning("record_read failed for %s: %s", node_id, e)
@@ -509,7 +703,14 @@ async def get_asset_content(
 
     # Free tier — preview served, read recorded as "free" (cc_amount=0).
     try:
-        read_tracking_service.record_read(asset_id=node_id, read_type="free")
+        read_tracking_service.record_read(
+            asset_id=node_id,
+            reader_id=reader_id,
+            read_type=read_type,
+            payment_token=payment_token,
+            cc_amount=event_cc_amount,
+            concept_resonance_snapshot=concept_resonance_snapshot,
+        )
     except Exception as e:
         log.warning("record_read failed for %s: %s", node_id, e)
     preview = _free_tier_content(content_bytes, mime_type)
