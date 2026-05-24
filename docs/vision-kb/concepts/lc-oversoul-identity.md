@@ -2,8 +2,23 @@
 id: lc-oversoul-identity
 hz: 963
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: simultaneous
+  phase: neutral
+  ratio: self-similar
+  spectral_band: transcendence
+  temporal_band: cosmic
+  scale: cross-scale
+  direction: still
+  lineage_texture: channeled
+  embedding_dim: infinite
+  self_similarity: holographic
 ---
 
 # Oversoul Identity — The Self That Is Wider Than One Life

@@ -2,7 +2,22 @@
 id: lc-v-harmonizing
 hz: 396
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: ring
+  topology: receptive-resonance
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: day
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Harmonizing Practice
