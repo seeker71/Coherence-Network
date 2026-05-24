@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 235
+**Total files**: 237
 
 | File | Purpose |
 |---|---|
@@ -81,6 +81,7 @@
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
 | [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
+| [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
 | [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
@@ -139,6 +140,7 @@
 | [idea_views.py](idea_views.py) | Read-only idea views — lifecycle, activity feed, concept resonance matches. |
 | [idea_write_ops.py](idea_write_ops.py) | Idea CRUD writes — create, update, batch update, slug update, tags, questions. |
 | [identity_providers.py](identity_providers.py) | Identity provider registry — single source of truth for all supported providers. |
+| [identity_signing.py](identity_signing.py) | Ed25519 signing helpers for contributor identity. |
 | [influence_teaching_translator_service.py](influence_teaching_translator_service.py) | Influence teaching translator for field story traces. |
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
 | [instance_pulse_service.py](instance_pulse_service.py) | Instance pulse service — each coherence instance shows its own breath. |

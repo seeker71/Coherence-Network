@@ -64,7 +64,7 @@ import { contribute } from "../lib/commands/contribute.mjs";
 import { handleContent } from "../lib/commands/content.mjs";
 import { ontology } from "../lib/commands/ontology.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
-import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
+import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity, claimPubkey, showAliases } from "../lib/commands/identity.mjs";
 import { setup } from "../lib/commands/setup.mjs";
 import { listNodes, sendMessage, sendCommand, readMessages } from "../lib/commands/nodes.mjs";
 import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
@@ -366,12 +366,14 @@ async function handleIdentity(args) {
   const sub = args[0];
   const subArgs = args.slice(1);
   switch (sub) {
-    case "link":   return linkIdentity(subArgs);
-    case "unlink": return unlinkIdentity(subArgs);
-    case "lookup": return lookupIdentity(subArgs);
-    case "setup":  return setupIdentity();
-    case "set":    return setIdentity(subArgs);
-    default:       return showIdentity();
+    case "link":    return linkIdentity(subArgs);
+    case "unlink":  return unlinkIdentity(subArgs);
+    case "lookup":  return lookupIdentity(subArgs);
+    case "setup":   return setupIdentity();
+    case "set":     return setIdentity(subArgs);
+    case "claim":   return claimPubkey(subArgs);
+    case "aliases": return showAliases();
+    default:        return showIdentity();
   }
 }
 
@@ -723,6 +725,9 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+  identity claim --pubkey <hex> --signature <hex>
+                          Claim an ed25519 pubkey (proves possession)
+  identity aliases        List cross-instance aliases for your contributor
   org                     Show agent hierarchy and reporting lines
   credentials             Manage repo-specific tokens (add, list, remove)
   guide                   Guided experience for new contributors
