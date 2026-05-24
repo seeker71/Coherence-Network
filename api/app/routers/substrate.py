@@ -239,6 +239,146 @@ def get_annotation(path: str = Query(..., description="File path to annotate")) 
         )
 
 
+class PageSubstrateOut(BaseModel):
+    """Substrate footprint for a web route — what cells compose this page.
+
+    Twins here are the *kind cohort*: artifacts that share this file's
+    harmonic band (.tsx with .tsx, .py with .py). Blueprint-equivalence
+    is not a useful discriminator across artifacts — every ARTIFACT cell
+    today shares the same Blueprint shape `(path, kind, hash, size, mtime)`;
+    the per-cell identity lives in the CTOR (which carries content_hash).
+    The kind cohort is the meaningful structural neighborhood — a Recipe
+    over surface form rather than over content.
+    """
+
+    route: str
+    source_path: str | None = None
+    in_substrate: bool = False
+    source: CellOut | None = None
+    twins: list[CellOut] = Field(default_factory=list)
+    twins_count: int = 0
+    twins_kind: str | None = None
+    kind: str | None = None
+    note: str | None = None
+
+
+def _resolve_route_to_page_path(route: str) -> str | None:
+    """Map a Next.js route like `/resonance` → `web/app/resonance/page.tsx`.
+
+    Walks `web/app/` from the repo root. Static segments match exactly;
+    dynamic segments (one path part doesn't resolve) try `[*]` directories.
+    Returns the repo-relative path (POSIX separators) or None if no page
+    file matches.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[3]
+    app_dir = repo_root / "web" / "app"
+    if not app_dir.is_dir():
+        return None
+
+    # Normalize: strip query string, strip trailing slash, root is empty.
+    route = route.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    segments = [s for s in route.split("/") if s]
+
+    current = app_dir
+    for seg in segments:
+        direct = current / seg
+        if direct.is_dir():
+            current = direct
+            continue
+        # Try a dynamic segment ([slug], [id], [...slug], etc.) at this level.
+        match = None
+        if current.is_dir():
+            for child in current.iterdir():
+                if child.is_dir() and child.name.startswith("[") and child.name.endswith("]"):
+                    match = child
+                    break
+        if match is None:
+            return None
+        current = match
+
+    page_file = current / "page.tsx"
+    if not page_file.is_file():
+        return None
+    try:
+        rel = page_file.resolve().relative_to(repo_root)
+    except ValueError:
+        return None
+    return str(rel).replace("\\", "/")
+
+
+@router.get("/page", response_model=PageSubstrateOut, tags=["substrate"])
+def get_page_substrate(
+    route: str = Query(..., description="Web route, e.g. /resonance or /ideas/foo"),
+) -> PageSubstrateOut:
+    """Substrate footprint for a web route.
+
+    Maps the route to its page.tsx, annotates it as an ARTIFACT cell, and
+    returns structural twins — other pages whose Blueprint matches. The
+    badge in the web layout calls this so any page can reveal what cells
+    compose it and which other pages share its shape.
+
+    Returns `in_substrate=False` with a `note` when the page file resolves
+    but its ARTIFACT cell hasn't been ingested yet. Callers render the
+    note quietly rather than treating it as an error.
+    """
+    path = _resolve_route_to_page_path(route)
+    if path is None:
+        return PageSubstrateOut(
+            route=route,
+            source_path=None,
+            in_substrate=False,
+            note="no page.tsx resolves for this route",
+        )
+    kind = path.rsplit(".", 1)[-1] if "." in path else None
+    with session_scope() as session:
+        ann = annotate_path(session, path)
+        if ann.cell is None:
+            return PageSubstrateOut(
+                route=route,
+                source_path=path,
+                in_substrate=False,
+                kind=kind,
+                note="page found on disk but not yet ingested as an ARTIFACT cell",
+            )
+        twin_cells = _kind_cohort_for(session, path, kind, limit=24)
+        return PageSubstrateOut(
+            route=route,
+            source_path=path,
+            in_substrate=True,
+            source=CellOut.from_cell(ann.cell),
+            twins=[CellOut.from_cell(c) for c in twin_cells],
+            twins_count=len(twin_cells),
+            twins_kind=kind,
+            kind=kind,
+        )
+
+
+def _kind_cohort_for(session, source_path: str, kind: str | None, *, limit: int):
+    """Return up to `limit` other artifact cells sharing this kind.
+
+    The kind cohort is the meaningful "structural neighborhood" for an
+    artifact: cells whose file suffix matches. Excludes the source cell
+    itself. Sorted by path for stability across calls.
+    """
+    from app.services.substrate.kernel import _orm_to_cell
+
+    if not kind:
+        return []
+    suffix = f".{kind}"
+    rows = (
+        session.query(SubstrateNamedCellORM)
+        .filter_by(domain="artifact")
+        .filter(SubstrateNamedCellORM.name.endswith(suffix))
+        .filter(SubstrateNamedCellORM.name != source_path)
+        .order_by(SubstrateNamedCellORM.name)
+        .limit(limit)
+        .all()
+    )
+    return [_orm_to_cell(session, r) for r in rows]
+
+
 class CellViewOut(BaseModel):
     cell: CellOut
     view_blueprint: NodeIDOut

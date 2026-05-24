@@ -24,6 +24,7 @@ done_when:
   - 'symbol_in_file("api/app/routers/onboarding.py", "onboarding")'
 test:
   - "pytest api/tests/test_onboarding.py -v"
+test: "pytest api/tests/test_onboarding.py -v"
 ---
 
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
@@ -106,4 +107,3 @@ This spec realizes part of the `identity-and-onboarding` idea. The full purpose,
 
 - Anything outside the files named in this spec's source map.
 - Concerns owned by sibling specs in the same idea cluster.
-

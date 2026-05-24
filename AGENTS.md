@@ -49,6 +49,7 @@ Spec → Test → Implement → CI → Review → Merge
 
 - User-defined deploy flow: when the user asks to deploy, take the shortest end-to-end path that still produces proof: prompt guide, rebase, local proof, evidence validation, push/PR, checks, merge, deploy, public verify.
 - Self-heal rule: when a non-critical failure appears in the chain, repair the concrete failure, rerun the smallest proof command, and continue. Return the exact external blocker plus remediations already applied only when the chain genuinely cannot proceed.
+- Guides are the living instructions; checks are body readings. When a repeated check teaches the same correction, move that awareness into the guide or runtime and keep the check only as the smallest evidence readout that still helps.
 
 1. Worktree-only execution
    - Implementation runs in worktrees; the primary workspace stays read-only.

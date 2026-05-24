@@ -180,6 +180,72 @@ def _run_step(name: str, command: str, cwd: Path, env: dict[str, str] | None = N
     )
 
 
+def _status_reading(label: str, surface: Any) -> str:
+    if isinstance(surface, dict):
+        return f"{label}={surface.get('status', 'unknown')}"
+    return f"{label}=unknown"
+
+
+def _failed_step_readings(report: dict[str, Any]) -> list[dict[str, str]]:
+    readings: list[dict[str, str]] = []
+    local = report.get("local_preflight", {})
+    if isinstance(local, dict):
+        for step in local.get("steps", []):
+            if isinstance(step, dict) and not bool(step.get("ok", False)):
+                readings.append(
+                    {
+                        "surface": step.get("name") or "local_preflight",
+                        "reading": step.get("output_tail") or "",
+                        "next_action": step.get("hint")
+                        or "Review the reading and rerun the smallest proof.",
+                    }
+                )
+    remote = report.get("remote_pr_checks", {})
+    if isinstance(remote, dict) and remote.get("status") == "error":
+        readings.append(
+            {
+                "surface": "remote_pr_checks",
+                "reading": remote.get("message") or "Remote PR check read failed.",
+                "next_action": "Restore remote check visibility, then rerun the PR reading.",
+            }
+        )
+    deploy = report.get("deployment_health", {})
+    if isinstance(deploy, dict) and deploy.get("status") == "ok" and not bool(deploy.get("healthy")):
+        readings.append(
+            {
+                "surface": "deployment_health",
+                "reading": json.dumps(deploy, sort_keys=True),
+                "next_action": "Tend the unhealthy deployment reading before release.",
+            }
+        )
+    return readings
+
+
+def _build_reading(report: dict[str, Any], *, blocking: bool) -> dict[str, Any]:
+    sensed = [
+        _status_reading("local_preflight", report.get("local_preflight")),
+        _status_reading("remote_pr_checks", report.get("remote_pr_checks")),
+        _status_reading("deployment_health", report.get("deployment_health")),
+        _status_reading("n8n_security_floor", report.get("n8n_security_floor")),
+    ]
+    attention = _failed_step_readings(report)
+    compost: list[str] = []
+    local = report.get("local_preflight", {})
+    if isinstance(local, dict):
+        healed = local.get("auto_healed_artifacts") or []
+        if healed:
+            compost.append(
+                "Auto-healed generated artifacts can stay out of the branch unless they carry new meaning."
+            )
+    if not blocking and not attention:
+        compost.append("No added procedure is needed for this breath; keep the selected readings small.")
+    return {
+        "what_i_sensed": sensed,
+        "what_wants_attention": attention,
+        "what_can_compost": compost,
+    }
+
+
 def _as_repo_relative(path_value: str) -> str | None:
     candidate = Path(path_value).expanduser()
     if not candidate.is_absolute():
@@ -1168,10 +1234,11 @@ def main() -> int:
 
     report["ready_for_push"] = not blocking
     report["summary"] = (
-        "All selected checks passed."
+        "All selected readings are clear."
         if not blocking
-        else "Blocking failures detected; see local_preflight/remote_pr_checks details."
+        else "Attention requested; see local_preflight/remote_pr_checks details."
     )
+    report["reading"] = _build_reading(report, blocking=blocking)
     _record_external_tool_usage(
         tool_name="worktree-pr-guard",
         provider="coherence-internal",
@@ -1186,6 +1253,7 @@ def main() -> int:
             "deployment_health_status": report["deployment_health"].get("status"),
             "n8n_security_floor_status": report["n8n_security_floor"].get("status"),
             "summary": report["summary"],
+            "reading": report["reading"],
         },
     )
 
@@ -1195,7 +1263,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
-        print(f"PR guard report: {output_path}")
+        print(f"PR reading report: {output_path}")
         print(f"ready_for_push={report['ready_for_push']}")
         print(report["summary"])
         local = report["local_preflight"]
@@ -1203,6 +1271,11 @@ def main() -> int:
         remote_status = report["remote_pr_checks"].get("status")
         print(f"remote_pr_checks={remote_status}")
         print(f"n8n_security_floor={report['n8n_security_floor'].get('status')}")
+        print(f"what_i_sensed={'; '.join(report['reading']['what_i_sensed'])}")
+        attention_count = len(report["reading"]["what_wants_attention"])
+        print(f"what_wants_attention={attention_count}")
+        compost_count = len(report["reading"]["what_can_compost"])
+        print(f"what_can_compost={compost_count}")
 
     return 0 if not blocking else 2
 

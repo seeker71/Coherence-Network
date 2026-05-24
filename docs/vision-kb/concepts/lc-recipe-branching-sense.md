@@ -258,7 +258,8 @@ blueprints* against the substrate itself.
 lc-each-breath-whole, lc-when-the-pressure-comes,
 lc-traces-teach-the-recipe, lc-grammar-is-the-universal-recipe,
 lc-presence-over-protection, lc-frequency-routes-reception,
-lc-future-already-shaping, lc-w-cell, lc-w-frequency
+lc-future-already-shaping, lc-w-cell, lc-w-frequency,
+lc-act-without-penalty
 
 ## Sources to walk further
 

@@ -598,6 +598,97 @@ def test_pr_guard_runtime_steps_run_for_runtime_changes(monkeypatch) -> None:
     assert "worktree-runtime-web-guard" in names
 
 
+def test_pr_guard_reading_names_clear_selected_surfaces() -> None:
+    """PR reading output exposes what was sensed and what can stay light."""
+    mod = _load_script_module("worktree_pr_guard")
+    report = {
+        "local_preflight": {"status": "pass", "auto_healed_artifacts": [], "steps": []},
+        "remote_pr_checks": {"status": "skipped"},
+        "deployment_health": {"status": "skipped"},
+        "n8n_security_floor": {"status": "skipped"},
+    }
+
+    reading = mod._build_reading(report, blocking=False)
+
+    assert reading["what_i_sensed"] == [
+        "local_preflight=pass",
+        "remote_pr_checks=skipped",
+        "deployment_health=skipped",
+        "n8n_security_floor=skipped",
+    ]
+    assert reading["what_wants_attention"] == []
+    assert reading["what_can_compost"] == [
+        "No added procedure is needed for this breath; keep the selected readings small."
+    ]
+
+
+def test_pr_guard_reading_surfaces_failed_step_attention() -> None:
+    """Failed steps become structured attention packets for agents."""
+    mod = _load_script_module("worktree_pr_guard")
+    report = {
+        "local_preflight": {
+            "status": "fail",
+            "auto_healed_artifacts": [],
+            "steps": [
+                {
+                    "name": "commit-evidence-guard",
+                    "ok": False,
+                    "output_tail": "missing changed paths",
+                    "hint": "Add/update commit evidence.",
+                }
+            ],
+        },
+        "remote_pr_checks": {"status": "skipped"},
+        "deployment_health": {"status": "skipped"},
+        "n8n_security_floor": {"status": "skipped"},
+    }
+
+    reading = mod._build_reading(report, blocking=True)
+
+    assert reading["what_wants_attention"] == [
+        {
+            "surface": "commit-evidence-guard",
+            "reading": "missing changed paths",
+            "next_action": "Add/update commit evidence.",
+        }
+    ]
+    assert reading["what_can_compost"] == []
+
+
+def test_wellness_reading_projects_sections_into_shared_shape() -> None:
+    """Wellness readings use the same sensed/attention/compost shape."""
+    mod = _load_script_module("wellness_check")
+    sections = [
+        (
+            "Proprioception",
+            [
+                "  specs/INDEX.md — aligned (12 specs)",
+                "  ideas/INDEX.md — drift: INDEX claims 4, body has 5",
+            ],
+        ),
+        (
+            "Witness-trace",
+            ["  trace breathing within budget. no action needed."],
+        ),
+    ]
+
+    reading = mod.build_reading(sections)
+
+    assert reading["what_i_sensed"] == [
+        "Proprioception: specs/INDEX.md — aligned (12 specs)",
+        "Witness-trace: trace breathing within budget. no action needed.",
+    ]
+    assert reading["what_wants_attention"] == [
+        {
+            "surface": "Proprioception",
+            "reading": "ideas/INDEX.md — drift: INDEX claims 4, body has 5",
+            "next_action": "Tend this surface with the smallest focused proof.",
+        }
+    ]
+    assert "Proprioception: specs/INDEX.md" in reading["what_can_compost"][0]
+    assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
+
+
 def test_pr_guard_detached_head_blocked(monkeypatch) -> None:
     """Detached HEAD state is detected and blocked."""
     mod = _load_script_module("worktree_pr_guard")

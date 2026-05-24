@@ -1,0 +1,157 @@
+{
+  "date": "2026-05-23",
+  "thread_branch": "codex/tend-attention-20260523",
+  "commit_scope": "Tend current attention signals: substrate sync, spec proof reach, locale parity, timeout proof routes, deployment status, and Thread Gates prevention.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_timeout_routes.py",
+    "api/app/routers/INDEX.md",
+    "api/app/services/timeout_adaptive_service.py",
+    "api/app/services/smart_reaper_service.py",
+    "api/app/services/INDEX.md",
+    "api/tests/test_timeout_adaptive_service.py",
+    "api/tests/test_onboarding.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/INDEX.md",
+    "specs/data-driven-timeout-resume.md",
+    "specs/identity-driven-onboarding-tofu.md",
+    "specs/investment-ux-stake-cc-on-ideas.md",
+    "specs/mcp-skill-registry-submission.md",
+    "specs/provider-usage-coalescing-timeout-resilience.md",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/package-lock.json",
+    "docs/STATUS.md",
+    "MANIFEST.md",
+    "web/components/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-23_attention_tending.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "python3 scripts/coh_substrate.py ingest --all",
+      "python3 scripts/coh_substrate.py kb-sync-audit --strict",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_timeout_adaptive_service.py tests/test_onboarding.py tests/test_automation_usage_api.py tests/test_investments.py tests/test_registry_discovery.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q",
+      "cd api && /opt/homebrew/bin/ruff check app/services/timeout_adaptive_service.py app/services/smart_reaper_service.py app/routers/agent_timeout_routes.py app/routers/agent.py tests/test_timeout_adaptive_service.py tests/test_onboarding.py tests/test_automation_usage_api.py",
+      "cd web && npm run test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm audit fix",
+      "cd web && npm audit --json",
+      "python3 scripts/validate_spec_quality.py --file specs/mcp-skill-registry-submission.md",
+      "python3 scripts/validate_spec_quality.py --file specs/data-driven-timeout-resume.md",
+      "python3 scripts/validate_spec_quality.py --file specs/identity-driven-onboarding-tofu.md",
+      "python3 scripts/validate_spec_quality.py --file specs/provider-usage-coalescing-timeout-resilience.md",
+      "python3 scripts/validate_spec_quality.py --file specs/investment-ux-stake-cc-on-ideas.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "PATH=/Users/ursmuff/source/Coherence-Network/api/.venv/bin:$PATH python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Current attention drift was narrowed and proved locally. Fresh substrate ingestion brings the worktree KB audit to 142/142 concept cells with no missing/stale/path drift. Wellness now reports aligned indexes, source maps, symbol resolution, locale parity across 1738 keys and 4 tongues, and whole chain reach. The three specs that claimed missing tests now have focused proof files; timeout resume now emits the RESUME FROM TIMEOUT marker and exposes sample, metric, and recommendation routes. Deployment status now reflects the current verified public API/web domains while preserving the legacy Railway dead URL as historical drift. Web dependency drift was partially remediated with non-forced npm audit fix; remaining findings are moderate wallet/Next transitive issues requiring semver-major remediation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agent timeout sample/recommendation endpoints are available, timeout resumes carry the RESUME FROM TIMEOUT marker, onboarding and automation usage proof files exist, and the public deployment status reflects the current verified API/web domains.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "api:/api/agent/timeout-samples records timeout samples",
+      "api:/api/agent/timeout-metrics returns efficiency ratio and provider stats",
+      "api:/api/agent/timeout-recommendation returns fixed/adaptive timeout derivation",
+      "web:messages locale parity holds for investment UI keys"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation has passed. CI/PR validation remains pending until the branch is committed, pushed, and checked."
+  },
+  "idea_ids": [
+    "pipeline-reliability",
+    "pipeline-optimization",
+    "identity-and-onboarding",
+    "user-surfaces"
+  ],
+  "spec_ids": [
+    "data-driven-timeout-resume",
+    "identity-driven-onboarding-tofu",
+    "provider-usage-coalescing-timeout-resilience",
+    "investment-ux-stake-cc-on-ideas",
+    "mcp-skill-registry-submission"
+  ],
+  "task_ids": [
+    "attention-tending-20260523"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "attention-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make wellness",
+    "python3 scripts/coh_substrate.py kb-sync-audit --strict",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_timeout_adaptive_service.py tests/test_onboarding.py tests/test_automation_usage_api.py tests/test_investments.py tests/test_registry_discovery.py",
+    "cd web && npm run test -- tests/homepage-presence-lineage.test.ts",
+    "PATH=/Users/ursmuff/source/Coherence-Network/api/.venv/bin:$PATH python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_timeout_routes.py",
+    "api/app/routers/INDEX.md",
+    "api/app/services/timeout_adaptive_service.py",
+    "api/app/services/smart_reaper_service.py",
+    "api/app/services/INDEX.md",
+    "api/tests/test_timeout_adaptive_service.py",
+    "api/tests/test_onboarding.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/INDEX.md",
+    "specs/data-driven-timeout-resume.md",
+    "specs/identity-driven-onboarding-tofu.md",
+    "specs/investment-ux-stake-cc-on-ideas.md",
+    "specs/mcp-skill-registry-submission.md",
+    "specs/provider-usage-coalescing-timeout-resilience.md",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "web/package-lock.json",
+    "docs/STATUS.md",
+    "MANIFEST.md",
+    "web/components/INDEX.md"
+  ],
+  "change_intent": "runtime_fix"
+}

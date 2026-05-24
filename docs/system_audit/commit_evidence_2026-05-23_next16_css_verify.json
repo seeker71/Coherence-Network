@@ -1,0 +1,92 @@
+{
+  "date": "2026-05-23",
+  "thread_branch": "codex/verify-next16-css-assets-20260523",
+  "commit_scope": "Update public deploy verification to recognize Next 16 stylesheet assets emitted under /_next/static/chunks.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_css_assets.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-23_next16_css_verify.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash scripts/test_verify_web_api_css_assets.sh",
+      "bash -n scripts/verify_web_api_deploy.sh scripts/test_verify_web_api_css_assets.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_next16_css_verify.json",
+      "git diff --check"
+    ],
+    "summary": "The deploy verifier now treats both legacy /_next/static/css/*.css and Next 16 /_next/static/chunks/*.css stylesheet links as valid public CSS assets. A shell fixture proves extraction and de-duplication for both path shapes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public deploy verification accepts reachable Next 16 CSS chunk assets instead of failing when no /_next/static/css path exists.",
+    "public_endpoints": [
+      "https://coherencycoin.com/",
+      "https://coherencycoin.com/_next/static/chunks/0c2gci3ey8-6~.css"
+    ],
+    "test_flows": [
+      "fixture: extract_next_css_paths returns css and chunks stylesheet paths once each",
+      "production: verify_web_api_deploy.sh completes after pulse settles"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation is complete. CI/PR validation remains pending until the branch is pushed and checked."
+  },
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "public-verification-framework"
+  ],
+  "task_ids": [
+    "next16-css-verify-20260523"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "attention-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "bash scripts/test_verify_web_api_css_assets.sh",
+    "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_css_assets.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "change_intent": "runtime_fix"
+}
