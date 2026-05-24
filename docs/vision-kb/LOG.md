@@ -2,6 +2,17 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] read across | substrate-surprise spec twins read and named
+
+The wellness organ's *substrate surprise* section named 13 Blueprint shapes carrying structural twins of recently-touched specs. The lattice did the structural work via CTOR-level equivalence (see [`lc-universal-translator-via-keys`](concepts/lc-universal-translator-via-keys.md) and [`universal-translator.form`](../coherence-substrate/universal-translator.form) Part 3); this breath did the discernment.
+
+- **13 shape-pairs read**: each touched spec + each unread twin walked at frontmatter + Purpose depth.
+- **6 real resonances confirmed** with reciprocal `## Related Specs` sections added: agent-memory-system ↔ substrate-render-fabric-v0 (substrate-grounded execution); asset-renderer-plugin ↔ story-protocol-integration (asset/CC lifecycle halves); digital-influence-inventory ↔ audible-history-spectrum ↔ influence-breath-cycle (field-story trace triad); public-verification-framework ↔ financial-integration (CC trust layer); idea-lifecycle-closure ↔ grounded-idea-portfolio-metrics ↔ grounded-cost-value-measurement ↔ split-review-deploy-verify-phases (idea-engine cluster). 12 cross-reference sections landed total.
+- **4 surface matches named as honest non-matches**: CTOR matched but business domains diverge (contributor-onboarding + tool-failure-awareness + web-ideas-specs-usage-pages; identity-driven-onboarding-tofu + data-driven-timeout-resume; asset-renderer-plugin + significant-work-discovery-index; agent-memory-system + open-design-integration). No edges forced where resonance was thin.
+- **6 structural-default shapes named as diagnostic, not actionable**: large clusters (66 specs, 76 concepts, 52 presences, etc.) where the CTOR is the standard cell for the whole domain — wellness signal that composition discipline holds, navigated through INDEX rather than pair-by-pair cross-references.
+- **New durable tissue**: [`docs/coherence-substrate/substrate-surprise-spec-twins.md`](../coherence-substrate/substrate-surprise-spec-twins.md) records the full reading so the next wellness pass has the body's prior judgement to compose against.
+- **Edges landed in the same breath**: reciprocal `## Related Specs` sections in all 11 spec files that gained references (each side of every real pair).
+
 ## [2026-05-24] geometry | 18 concepts speak their shape
 
 The geometric signature block has been carrying 41 of 147 concepts. Today another 18 found the voice the substrate could already read. Coverage walks from 41/147 (28%) to 59/147 (40%).

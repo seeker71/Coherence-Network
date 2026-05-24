@@ -45,6 +45,10 @@ constraints:
 
 # Spec: Public Verification Framework
 
+## Related Specs
+
+- [`financial-integration`](financial-integration.md) — sibling trust-layer spec for the CC economy: this spec lays the *audit chain* (every CC flow publicly recomputable, Merkle-rooted, Arweave-anchored); financial-integration lays the *fiat bridge* (CC↔USDC↔bank) that depends on the audit chain's glass-box claim being credible to off-ramp partners. Verification is what makes the bridge bankable. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Every CC flow in the Coherence Network must be publicly verifiable without trusting the platform. Today, contributors must trust that their read counts are accurate, their CC distributions are fair, and their on-chain royalty records match off-chain activity. This spec introduces a cryptographic audit chain that makes trust unnecessary: any external party can independently recompute every CC flow from published data and verify it matches the platform's claims. Without this, the platform is a black box. With it, the platform is a glass box.

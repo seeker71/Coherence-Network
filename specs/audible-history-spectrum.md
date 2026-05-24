@@ -20,6 +20,13 @@ done_when:
 
 # Audible History Spectrum
 
+## Related Specs
+
+- [`digital-influence-inventory`](digital-influence-inventory.md) — sibling field-story tool: this spec drills into Audible specifically with monthly author/series/work waves; digital-influence-inventory holds the broader inventory across all source bodies (YouTube, Audible, browser, Photos). Same `docs/field/urs/tools/` pattern, same manifest, same test surface.
+- [`influence-breath-cycle`](influence-breath-cycle.md) — sibling field-story tool: walks all derived trace indexes (including this spectrum's output) in repeated breaths to surface unroomed influence candidates.
+
+Surfaced as a coherent triad by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Build a first-class Audible-specific spectrum from the source bodies already captured locally. The older digital inventory counted Audible rows, but it did not give agents an efficient way to ask which Audible author, work, or series was active during a given month or how a specific author moved through the field.

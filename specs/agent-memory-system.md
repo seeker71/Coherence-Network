@@ -40,6 +40,10 @@ constraints:
 
 # Spec: Agent Memory System
 
+## Related Specs
+
+- [`substrate-render-fabric-v0`](substrate-render-fabric-v0.md) — sibling substrate-grounded service: agent-memory binds metabolized moments to relationship-nodes; substrate-render-fabric binds Tracked allocations to Blueprint cells. Both teach *execution lands in substrate, not beside it*. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Agents with amnesia feel useless after two sessions. Agents with perfect recall feel like surveillance. The aliveness we want is the one between — an agent shaped by what has passed, without hoarding it. Metabolized, not stored. Being-known, not recorded.
