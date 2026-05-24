@@ -202,6 +202,29 @@ else:
 PY
 }
 
+seed_local_verification_concepts() {
+  local concept_id="lc-pulse"
+  if http_ok "${API_BASE}/api/concepts/${concept_id}"; then
+    return 0
+  fi
+
+  if [[ ! -f "${ROOT_DIR}/docs/vision-kb/concepts/${concept_id}.md" ]]; then
+    echo "FAIL: local verification concept source missing: docs/vision-kb/concepts/${concept_id}.md"
+    return 1
+  fi
+
+  echo "Seeding local verification concept: ${concept_id}"
+  if ! python3 "${ROOT_DIR}/scripts/sync_kb_to_db.py" "${concept_id}" --api-url "${API_BASE}" --api-key "${ADMIN_KEY}" >/dev/null; then
+    echo "FAIL: could not seed local verification concept: ${concept_id}"
+    return 1
+  fi
+
+  if ! http_ok "${API_BASE}/api/concepts/${concept_id}"; then
+    echo "FAIL: seeded local verification concept is still unavailable: ${concept_id}"
+    return 1
+  fi
+}
+
 prepare_runtime_home() {
   mkdir -p "${RUNTIME_HOME}/.coherence-network"
   python3 - "${ROOT_DIR}" "${RUNTIME_HOME}/.coherence-network/config.json" "${DB_URL}" <<'PY'
@@ -284,6 +307,22 @@ check_url() {
   echo "PASS"
 }
 
+check_static_url() {
+  local name="$1"
+  local url="$2"
+  local status
+
+  echo "==> ${name}: ${url}"
+  status="$(curl -sS -L -o /dev/null -w "%{http_code}" "${url}" || true)"
+  echo "HTTP status: ${status}"
+  if [[ -z "${status}" || "${status}" -lt 200 || "${status}" -ge 400 ]]; then
+    echo "FAIL: non-success HTTP status"
+    return 1
+  fi
+
+  echo "PASS"
+}
+
 check_web_static_asset() {
   local sample_asset
   sample_asset="$(find "${WEB_DIR}/.next/static/chunks" -maxdepth 1 -type f -name '*.js' | sort | head -n 1)"
@@ -294,7 +333,7 @@ check_web_static_asset() {
 
   local relative_path
   relative_path="${sample_asset#${WEB_DIR}/.next/static/}"
-  check_url "Web static asset" "${WEB_BASE}/_next/static/${relative_path}"
+  check_static_url "Web static asset" "${WEB_BASE}/_next/static/${relative_path}"
 }
 
 sample_contributor_id() {
@@ -706,6 +745,7 @@ else
   exit 1
 fi
 
+seed_local_verification_concepts
 run_validations
 echo
 echo "Local worktree web validation passed."

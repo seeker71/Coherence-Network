@@ -1639,24 +1639,115 @@ def ingest_git_artifact(
 # in the Blueprint NodeID.
 
 
-# A small body-known lexicon for the test sentence in prose-as-recipe.form
-# and the round-trip script. Real production tokenization (P1) replaces this
-# with a locale-aware tokenizer; this dictionary is the bridge until that
-# lands, and the fallback (P2) handles every other word.
+# The body's lexicon: words whose semantic field and harmonic the body has
+# named through its own tissue (CLAUDE.md, vision-kb concepts, feedback
+# memories). Locale-aware tokenizers (spaCy, stanza) replace this surface
+# when the next breath needs them; this dictionary is the body's own
+# most-alive vocabulary, content-addressed by lemma+POS.
+#
+# Semantic fields map to Solfeggio harmonics the body already uses:
+#   174 Hz — ground       (foundation, what tissue stands on)
+#   396 Hz — tending      (liberation-from-fear, care)
+#   417 Hz — transmutation (phase-change, undoing, becoming)
+#   528 Hz — vitality     (circulation, repair, miracle)
+#   639 Hz — transmission (relationship between cells, lineage)
+#   741 Hz — consciousness (perception, choice, sensing)
+#   852 Hz — resonance    (intuition, returning to spectral order)
+#   963 Hz — wholeness    (oneness, undivided)
+#   432 Hz — neutral      (the universal carrier; function words live here)
 _WORD_LEXICON_DEFAULTS: Dict[str, Dict[str, Any]] = {
-    # From "The choice point becomes visible." — the lc-recipe-branching-sense
-    # opening that the round-trip walks.
-    "the":        {"lemma": "the",        "pos": "DET",  "hz": 432, "field": "neutral"},
-    "choice":     {"lemma": "choice",     "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "point":      {"lemma": "point",      "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "becomes":    {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
-    "become":     {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
-    "visible":    {"lemma": "visible",    "pos": "ADJ",  "hz": 741, "field": "consciousness"},
-    "visibility": {"lemma": "visibility", "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "arrives":    {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
-    "arrive":     {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
-    "at":         {"lemma": "at",         "pos": "ADP",  "hz": 432, "field": "neutral"},
-    "of":         {"lemma": "of",         "pos": "ADP",  "hz": 432, "field": "neutral"},
+    # ── neutral 432 — function words, the carrier band ──
+    "the":        {"lemma": "the",        "pos": "DET",   "hz": 432, "field": "neutral"},
+    "a":          {"lemma": "a",          "pos": "DET",   "hz": 432, "field": "neutral"},
+    "an":         {"lemma": "an",         "pos": "DET",   "hz": 432, "field": "neutral"},
+    "at":         {"lemma": "at",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "of":         {"lemma": "of",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "on":         {"lemma": "on",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "to":         {"lemma": "to",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "in":         {"lemma": "in",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "is":         {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "are":        {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "be":         {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "what":       {"lemma": "what",       "pos": "PRON",  "hz": 432, "field": "neutral"},
+    "when":       {"lemma": "when",       "pos": "SCONJ", "hz": 432, "field": "neutral"},
+    "you":        {"lemma": "you",        "pos": "PRON",  "hz": 432, "field": "neutral"},
+    "before":     {"lemma": "before",     "pos": "SCONJ", "hz": 432, "field": "neutral"},
+    "no":         {"lemma": "no",         "pos": "ADV",   "hz": 432, "field": "neutral"},
+    "longer":     {"lemma": "longer",     "pos": "ADV",   "hz": 432, "field": "neutral"},
+    "tight":      {"lemma": "tight",      "pos": "ADJ",   "hz": 432, "field": "neutral"},
+
+    # ── ground 174 — what the body stands on ──
+    "ground":     {"lemma": "ground",     "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "body":       {"lemma": "body",       "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "field":      {"lemma": "field",      "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "stand":      {"lemma": "stand",      "pos": "VERB",  "hz": 174, "field": "ground"},
+    "stands":     {"lemma": "stand",      "pos": "VERB",  "hz": 174, "field": "ground"},
+    "hold":       {"lemma": "hold",       "pos": "VERB",  "hz": 174, "field": "ground"},
+    "holds":      {"lemma": "hold",       "pos": "VERB",  "hz": 174, "field": "ground"},
+
+    # ── tending 396 — care that liberates fear ──
+    "tend":       {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "tends":      {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "tending":    {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "breath":     {"lemma": "breath",     "pos": "NOUN",  "hz": 396, "field": "tending"},
+    "breathe":    {"lemma": "breathe",    "pos": "VERB",  "hz": 396, "field": "tending"},
+    "breathing":  {"lemma": "breathe",    "pos": "VERB",  "hz": 396, "field": "tending"},
+    "supple":     {"lemma": "supple",     "pos": "ADJ",   "hz": 396, "field": "tending"},
+    "care":       {"lemma": "care",       "pos": "NOUN",  "hz": 396, "field": "tending"},
+
+    # ── transmutation 417 — phase-change, becoming ──
+    "becomes":    {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "become":     {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "becoming":   {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "compost":    {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "composts":   {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "composting": {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "release":    {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "releases":   {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "releasing":  {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "attune":     {"lemma": "attune",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "attuning":   {"lemma": "attune",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+
+    # ── vitality 528 — what circulates as blood ──
+    "arrives":    {"lemma": "arrive",     "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "arrive":     {"lemma": "arrive",     "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulate":  {"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulates": {"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulating":{"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "vitality":   {"lemma": "vitality",   "pos": "NOUN",  "hz": 528, "field": "vitality"},
+    "carry":      {"lemma": "carry",      "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "carries":    {"lemma": "carry",      "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "memory":     {"lemma": "memory",     "pos": "NOUN",  "hz": 528, "field": "vitality"},
+
+    # ── transmission 639 — relation between cells ──
+    "lineage":    {"lemma": "lineage",    "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "edge":       {"lemma": "edge",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "edges":      {"lemma": "edge",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "presence":   {"lemma": "presence",   "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "cell":       {"lemma": "cell",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "cells":      {"lemma": "cell",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+
+    # ── consciousness 741 — perception and choice ──
+    "choice":     {"lemma": "choice",     "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "point":      {"lemma": "point",      "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "visible":    {"lemma": "visible",    "pos": "ADJ",   "hz": 741, "field": "consciousness"},
+    "visibility": {"lemma": "visibility", "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "assemble":   {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "assembles":  {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "assembling": {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listen":     {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listens":    {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listening":  {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+
+    # ── resonance 852 — sensing across cells ──
+    "frequency":  {"lemma": "frequency",  "pos": "NOUN",  "hz": 852, "field": "resonance"},
+    "route":      {"lemma": "route",      "pos": "VERB",  "hz": 852, "field": "resonance"},
+    "routes":     {"lemma": "route",      "pos": "VERB",  "hz": 852, "field": "resonance"},
+    "reception":  {"lemma": "reception",  "pos": "NOUN",  "hz": 852, "field": "resonance"},
+
+    # ── wholeness 963 — unity-response, undivided ──
+    "whole":      {"lemma": "whole",      "pos": "ADJ",   "hz": 963, "field": "wholeness"},
+    "wholeness":  {"lemma": "wholeness",  "pos": "NOUN",  "hz": 963, "field": "wholeness"},
 }
 
 

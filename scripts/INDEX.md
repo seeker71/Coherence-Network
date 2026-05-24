@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 116
+**Total files**: 117
 
 | File | Purpose |
 |---|---|
@@ -84,6 +84,7 @@
 | [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | !/usr/bin/env python3 |
+| [run_form_practice.py](run_form_practice.py) | !/usr/bin/env python3 |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
 | [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |

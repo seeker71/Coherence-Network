@@ -21,6 +21,7 @@ done_when:
   - 'symbol_in_file("api/app/models/automation_usage.py", "ProviderUsageSnapshot")'
 test:
   - "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
+test: "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 ---
 
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)

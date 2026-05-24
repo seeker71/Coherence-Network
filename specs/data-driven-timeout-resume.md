@@ -30,6 +30,7 @@ done_when:
   - 'symbol_in_file("api/app/services/agent_task_continuation_service.py", "task")'
 test:
   - "pytest -q api/tests/test_timeout_adaptive_service.py"
+test: "pytest -q api/tests/test_timeout_adaptive_service.py"
 ---
 
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
