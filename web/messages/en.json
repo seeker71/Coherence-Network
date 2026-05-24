@@ -1035,7 +1035,49 @@
     "us": "us",
     "both": "both",
     "usOnly": "us only",
-    "peerOnly": "peer only"
+    "peerOnly": "peer only",
+    "value": {
+      "heading": "Cross-instance value flow",
+      "lede": "Assets mirrored from peers stay theirs in authorship. Reads attested by peers are recognized here. Settlement envelopes move CC without any central custodian.",
+      "assets": {
+        "heading": "Federated assets (mirrors)",
+        "empty": "No federated assets mirrored — sovereign content.",
+        "servedFromUs": "Served from us, authored on {peer}",
+        "originAsset": "Origin asset",
+        "paymentAddress": "Creator payment address",
+        "mirroredAt": "Mirrored"
+      },
+      "attestations": {
+        "heading": "Read attestations (incoming)",
+        "lede": "Reads peers attest having served of our assets. We said so → peer said so → verified.",
+        "empty": "No read attestations from peers — we serve only locally so far.",
+        "peerAttests": "{peer} attests",
+        "reads": "{n} reads",
+        "ccAmount": "{amount} CC",
+        "verified": "verified",
+        "unsigned": "shared unsigned",
+        "observed": "Observed",
+        "received": "Received",
+        "asset": "Asset"
+      },
+      "settlement": {
+        "lede": "Each envelope is one peer saying the period's count out loud, signed. CC transfer is a downstream breath; the envelope is the durable claim.",
+        "outbox": {
+          "heading": "Settlement envelopes (outgoing)",
+          "empty": "No settlement envelopes sent yet.",
+          "weOwe": "We owe {amount} CC to {peer}",
+          "period": "Period",
+          "reads": "{n} reads"
+        },
+        "inbox": {
+          "heading": "Settlement envelopes (incoming)",
+          "empty": "No settlement envelopes received yet.",
+          "peerOwesUs": "{peer} owes us {amount} CC",
+          "period": "Period",
+          "reads": "{n} reads"
+        }
+      }
+    }
   },
   "pipeline": {
     "liveView": "Live view",
