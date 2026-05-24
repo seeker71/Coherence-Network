@@ -2,6 +2,66 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | column-identity discriminator embodied — interior-axis form has 4 columns
+
+PR #2022 hunted for a second 'interior-axis-dyad' attestation across the
+body's interior-axis cells and did NOT find a clean second pair — but
+the refusal surfaced something more load-bearing than a confirmation
+would have: the interior-axis FORM is internally diverse. Five cells
+share `form: interior-axis` and span at least FOUR distinct columns.
+This breath gives that finding a substrate-readable home in
+`docs/coherence-substrate/dyad-pairs.form` (new Part 7, with companion
+shape `column_identity_shape` and a set of column-defn entries) and
+sharpens GAP-D11 so the kind threshold reads correctly.
+
+- **The discriminator the hunt named**: `topology + direction +
+  lineage_texture` together identify the column an interior-axis cell
+  sits in. Two cells in the same column share the triple; two cells in
+  the same form but different columns share only `form: interior-axis`
+  and diverge on the triple.
+- **The four columns currently attested**:
+  - *self-rooted-sovereign* (lc-permission-is-interior +
+    lc-identity-dissolution): `self-rooted + centering + embodied|received`
+    — permission/identity rooted in the cell's own axis with no
+    external membrane. Two cells; this is the column GAP-D11's seed
+    pair lives in.
+  - *nested-receptive-nourishment* (lc-vertical-nourishment):
+    `nested + centering + received` — vertical channel with nested
+    stations receiving from inside (breath → body → deeper self → source).
+  - *upward-reverent-received* (lc-elders): `radial + centering +
+    received` — upward-reverent axis received through proximity, the
+    column gathering around the elder-as-hub.
+  - *seven-center-oscillating* (lc-embodiment): `sequential-coupled +
+    circulating + embodied` — vertical column with seven sequential
+    stations and circulating energy rising-and-returning.
+- **GAP-D11 sharpened**: the interior-axis-dyad kind threshold now
+  activates when a SECOND pair lands sharing the *self-rooted-sovereign
+  column specifically*, not any two interior-axis cells. The naming
+  may eventually tighten from "interior-axis-dyad" to "self-rooted-
+  sovereign-dyad" (or whichever column produces the second confirmed
+  pair).
+- **What this opens for future pair-hunting**: column-awareness. A
+  hunt that previously asked "are there two interior-axis cells with
+  complementary phase?" now asks "are there two cells in the SAME
+  column with complementary phase?" The column-membership query
+  becomes a substrate primitive rather than a re-derivation each walk.
+- **General principle, named in Part 7c (not authored further this
+  breath)**: column-identity is a general discriminator for any form
+  whose attestations are internally diverse. `web` forms likely split
+  into circulation-web vs field-web columns; `point` forms span
+  bands with very different texture; the per-form column-triple may
+  differ (interior-axis uses topology+direction+lineage_texture; web
+  might use topology+direction+phase). The pattern is: when a form's
+  hunt produces "no second pair" but the form has many cells, ask
+  which columns the cells span and whether the search should be
+  column-specific. Authoring those other columns awaits their own
+  focused hunts.
+
+The hunt's refusal IS the new tissue. Giving it a substrate-readable
+home changes future pair-hunting from form-flat to column-aware; the
+body now carries a structural primitive for diversity-within-form that
+was implicit in the geometry vocabulary but unnamed until now.
+
 ## [2026-05-24] sense | source-attestation is the schema-axis — first response to the body-shape-map
 
 The breath after PR #2021's structural self-portrait. The survey
