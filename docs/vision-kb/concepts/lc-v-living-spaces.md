@@ -2,7 +2,22 @@
 id: lc-v-living-spaces
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 7
+  form: heptad
+  topology: web-each-to-each
+  polarity: parallel-facets
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: collective
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Living Spaces

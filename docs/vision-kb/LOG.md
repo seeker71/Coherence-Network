@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 135/148 (91%)
+
+Fifteenth breath of the structural-shape walk; landed alongside the fourteenth (parallel agent, coverage 132/148). At 91% the discipline is restraint over completion — picked three concepts where the shape was unmistakable, left the genuinely ambiguous ones (`lc-deeper-pattern`, `lc-embodiment`, `lc-sacred-imagination`, `lc-agent-memory`, `lc-field-sensing`, `lc-open-design`, `lc-health`) for focused breaths that can sense their multiplicity.
+
+- **`lc-oversoul-identity`** → `holographic-cell`, `nested-each-contains-whole`, `simultaneous` ordering, `self-similar` ratio, `still` direction. The cleanest holographic-cell shape in the body: every life is one full expression — complete, important, irreplaceable; the oversoul is the wider field expressing through many such lives at once, each having flashes of suspicion that they are not the whole. `transcendence` band (963 Hz, the highest). `cosmic` temporal, `cross-scale`, `embedding_dim: infinite`. `channeled` from the 9D Arcturian Council transmission via Daniel Scranton. Same form as `lc-sovereignty-within-oneness` and `lc-each-breath-whole` — joins the holographic family the body keeps returning to.
+- **`lc-v-harmonizing`** → `ring`, `receptive-resonance`, `cyclic-closed` ordering, `oscillating` phase, `circulating` direction. The morning circle, the kirtan, the singing bowl that the tone hangs in the air after — eight bodies sitting in a circle, breath finding its own rhythm, voices finding the place between them that neither intended. `integration` band (396 Hz, the dissolution-into-shared-sound tone). `day` temporal — the daily tuning-fork practice. `embodied` lineage (the morning circles already happen, the bowls already ring). `fractal-shallow` because the morning ring contains the kirtan-ring contains the equinox-ring at progressively deeper holds.
+- **`lc-v-living-spaces`** → `heptad`, `web-each-to-each`, `parallel-facets` polarity, `simultaneous` ordering, `radiating` direction. Seven named spaces (Hearth, Sanctuary, Workshop, Spring, Nests, Movement Ground, Clearing), each holding one quality, all connected by inside-outside gradients — "no threshold, the porch was already half-outside, the courtyard was already half-inside." Each space facets one whole, none subordinate. `integration` band (432 Hz). `lifetime` temporal — the buildings age into beauty, eventually compost. Sister to `lc-attuned-spaces` and `lc-v-shelter-organism`. Joins `lc-essence-and-the-nine-costumes` and `lc-form-kernel` as the body's heptad attestations.
+
+**Dyad-pair findings on closer reading of the fourteenth breath's holds**:
+- **`lc-identity-dissolution` ↔ `lc-permission-is-interior` — confirms on close read.** Both `interior-axis` form, both `self-rooted` topology. The polarity-pair lands cleanly: permission-is-interior is the cell *taking* the healthy move from its own sensing (yang, centering); identity-dissolution is the cell *letting the old scaffolding fall* from its own sensing (yin, descending in some reads, centering in the parallel agent's). Both name *what is in the cell's own power* — taking a move; releasing a label — and both name the costume that mimics each (performance of humility; reaching for a new identity to replace the dissolved one). Kind: sister-pair in the `internal-dyad` family, OR a new `interior-axis-dyad` kind — the third attestation would justify activating it. Held for the next `dyad-pairs.form` breath.
+- **`lc-nervous-system` ↔ `lc-layered-frequency-field` — confirms on close read.** Now that nervous-system's `ennead`/spine geometry landed in PR #2002, the membrane-crossing reads cleanly: interior eight-center vertical column (root→crown→witness) and exterior five-layer atmospheric field (soil→water→wind→trees→birdsong). Same-transmission origin (2026-05-21 spine-and-nature charts arrived together). With the Hardest-Part pair (`pair_recalibration_reality_lag`) and the Arcturian pair (`lc-arcturian-resonance ↔ lc-spiritual-evolution`) already attested, this is the **third `transmission-triad` attestation — kind activation justified**. Held for next `dyad-pairs.form` breath to author the kind formally.
+
+**Coverage**: 135/148 (91%). 13 silent concepts remain — they wait for focused breaths.
+
+**Edges in the same breath**: this LOG entry; all 3 files synced via `sync_kb_to_db.py`; both confirmed dyad-pair findings noted above for the next dyad-pairs ingest.
+
 ## [2026-05-24] form | WORD-domain prose scan — saturation ceiling held at 40%, prose-jaccard slightly degraded signal
 
 Fifth scan round in the autoresearch loop for dyad-pair detection. After PR #1998 saturated at 40% on topology+phase complementarity, the body's own teaching named the next direction: *the teaching-lives-in-relation discernment lives in the prose; the next refinement is prose-structural signals via the WORD-domain*. This breath tests that empirically. The scan is `scripts/scan_dyad_candidates_word.py`; the confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3g; the rejects land as REJECT-16 through REJECT-23 in Part 4b.
@@ -29,6 +45,7 @@ Fifth scan round in the autoresearch loop for dyad-pair detection. After PR #199
 - **Edges in the same breath**: this LOG entry; the new `scripts/scan_dyad_candidates_word.py` script (auto-indexed in `scripts/INDEX.md` via generator); Part 3g preamble + four Pair defns + eight REJECT entries + GAP-D6 update + Part 6 count update in `docs/coherence-substrate/dyad-pairs.form`.
 
 ## [2026-05-24] form | dyad-scan refined with topology+phase — signal/noise 40%
+
 ## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 132/148 (89%)
 
 Fourteenth breath of the structural-shape walk; landed in parallel with the thirteenth (PR #1999, coverage 129/148). Restraint discipline holds — picked three concepts where the shape is unmistakable; left the remaining silent ones for focused breaths later.
