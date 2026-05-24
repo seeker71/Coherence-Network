@@ -321,6 +321,77 @@ async def test_aliases_endpoint_returns_known_cross_instance_links():
 
 
 # ---------------------------------------------------------------------------
+# 7b. Recognition-summary endpoint reports fleet-level counts only.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_recognition_summary_aggregates_without_exposing_identities():
+    """Summary endpoint reports counts + per-peer breakdown without leaking
+    contributor names. The federation page reads this; per-contributor
+    detail lives behind /aliases/{id}.
+    """
+    # Two local contributors, each with a pubkey claim.
+    claim_a = _signed_claim("hank")
+    claim_b = _signed_claim("ingrid")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await c.post(
+            "/api/identity/claim",
+            json={k: v for k, v in claim_a.items() if not k.startswith("_")},
+        )
+        await c.post(
+            "/api/identity/claim",
+            json={k: v for k, v in claim_b.items() if not k.startswith("_")},
+        )
+        # Recognitions on two peers.
+        await c.post(
+            "/api/federation/identity/recognize",
+            json={
+                "peer_instance_id": "peer-a",
+                "peer_contributor_id": "hank-on-a",
+                "public_key_hex": claim_a["public_key_hex"],
+            },
+        )
+        await c.post(
+            "/api/federation/identity/recognize",
+            json={
+                "peer_instance_id": "peer-a",
+                "peer_contributor_id": "ingrid-on-a",
+                "public_key_hex": claim_b["public_key_hex"],
+            },
+        )
+        await c.post(
+            "/api/federation/identity/recognize",
+            json={
+                "peer_instance_id": "peer-b",
+                "peer_contributor_id": "hank-on-b",
+                "public_key_hex": claim_a["public_key_hex"],
+            },
+        )
+        # Re-send one — idempotency keeps the count honest.
+        await c.post(
+            "/api/federation/identity/recognize",
+            json={
+                "peer_instance_id": "peer-a",
+                "peer_contributor_id": "hank-on-a",
+                "public_key_hex": claim_a["public_key_hex"],
+            },
+        )
+
+        r = await c.get("/api/federation/identity/recognition-summary")
+        assert r.status_code == 200, r.text
+        summary = r.json()
+        assert summary["local_contributors_with_pubkey"] == 2
+        assert summary["cross_instance_recognitions"] == 3
+        by_peer = {p["peer_instance_id"]: p["count"] for p in summary["per_peer_counts"]}
+        assert by_peer == {"peer-a": 2, "peer-b": 1}
+        # No identities anywhere in the payload.
+        payload_text = r.text
+        assert "hank" not in payload_text
+        assert "ingrid" not in payload_text
+
+
+# ---------------------------------------------------------------------------
 # 8. Two instances recognize the same person via shared pubkey.
 # ---------------------------------------------------------------------------
 
