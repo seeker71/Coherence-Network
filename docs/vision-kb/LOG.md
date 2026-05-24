@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] tend | INDEX drift composted + locale parity at 100%
+
+Two small proprioception surfaces moved to alignment in one breath.
+
+- **INDEX drift (already healed)**: `docs/vision-kb/INDEX.md` now claims 146 and the body holds 146. The count script (`scripts/wellness_check.py`) already filters language-variant files (`lc-nourishing.de.md`) via `p.name.count(".") == 1`, so the wellness-check evidence in the prompt was stale; current `make wellness` shows `vision-kb/INDEX.md — aligned (146 concepts)`. The teaching the filter carries: locale variants are the same concept in another tongue, not separate concepts. The count source-of-truth lives in the script's glob, not in the INDEX's number.
+- **Locale parity (now whole)**: 18 missing keys in each of `de.json`, `es.json`, `id.json` — all in `assets.detail`, all the story-protocol / R9 evidence surface added during recent vessel-page work (IPStatusBadge, StorageLinks, evidence list). Translated honestly into each tongue; key order in JSON now matches `en.json` exactly so the files stay parallel. `make wellness` now reads `every locale aligned with en (1765 keys, 4 tongues)`.
+- **Translation choices the body should hold**: "Arweave", "IPFS", "Story Protocol" stay as proper protocol names across all three tongues. German "Verwirklichungsbeweise" (evidence-of-bringing-into-being) carries the living-relationship sense of "implementation evidence" rather than the admin-flavored literal. Spanish uses tú-form and "vasija" (matching existing voice). Indonesian uses casual register and "wadah" (matching existing voice). Plural forms held simple (`{n} foto(s)`) to mirror the en source's parenthetical style — full ICU pluralization is a separate move when the body wants it.
+
 ## [2026-05-24] read across | substrate-surprise second round, post-filter
 
 The wellness organ's filter (PR #1950, threshold `>50 cells/domain` for domain-default detection) held its first reading. 26 unread cells across 3 surfaced shapes were walked end-to-end and discerned as 1 real teaching seam + 2 sub-domain-defaults.
