@@ -2,6 +2,141 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] sense | circulation-pattern fourth-pair scan — no clean fourth on careful reading; sub-typing stays held
+
+PR #2027 closed with the discipline: with three circulation-pattern
+pairs attesting six clean substrate-flavors (value / voltage /
+nutrients / perception / metabolic-energy / harmonic-resonance), the
+next attestation that lands carrying a substrate already in the six
+crosses the two-instances-per-flavor sub-typing threshold. This
+breath walked the 100%-covered concept corpus for that fourth pair.
+
+**Verdict**: no clean fourth pair on careful reading. Sub-typing
+stays held; the kind remains 3 pairs / 6 substrate-flavors.
+
+**What the scan turned up** (each candidate examined; each declined
+with the reason recorded so a future walk inherits the discernment):
+
+- `lc-circulation` (web / web-each-to-each / circulating, hz 528,
+  value-and-multi-substrate primary flavor) — load-bearingly carries
+  the kind's "no central ledger, gradient does the routing" teaching.
+  Already paired as source-flow with `lc-offering` (Pair 15: gesture-
+  and-flow). PR #2025 declined its inclusion as "same medium as
+  seed"; re-reading at 100% coverage shows the medium is *primarily*
+  value-flow with mixed substance undertones, so the decline still
+  stands at honest reading. A fresh circulation-pattern pair with
+  `lc-circulation` would require a partner cell whose substrate is
+  also in the six (or a new flavor) AND which carries the kind
+  load-bearingly; the partner candidates below all fail one or both.
+
+- `lc-network` (web / web-each-to-each / circulating, hz 639,
+  inter-community substrate — seeds, medicine, songs, people)
+  — carries "lateral connection, no central node, surplus flowing
+  by gradient" load-bearingly. A `lc-circulation` ↔ `lc-network`
+  pair would sit on the boundary between three kinds: circulation-
+  pattern (two circulations across different substrate of flow),
+  scale-paired (same engine at intra-community vs inter-community
+  scale), and source-flow (gesture-and-flow at a wider scale).
+  Forcing this boundary cell into circulation-pattern would muddy
+  the kind's seam from "different substrate of flow" toward
+  "different scale of same flow." The honest hold: this pair is
+  real-but-not-circulation-pattern; if the body later names it,
+  it most cleanly reads as scale-paired.
+
+- `lc-resonating` (web / web-each-to-each / **radiating**, hz 528)
+  — carries the sonic-harmonic substrate that would be a strong
+  second instance of harmonic-resonance (Pair 27's flavor). But
+  the body attests `direction: radiating`, not `circulating`. Pair
+  24 already pairs lc-resonating ↔ lc-sensing as source-flow with
+  the load-bearing seam *"resonating is the radiating-oscillating
+  face; sensing is the receptive-circulating face."* The kind
+  requires both poles to be circulations. Honest decline — and
+  the existing source-flow pairing names the same teaching more
+  truly.
+
+- `lc-w-coherence` (web / web-each-to-each / **radiating**, hz 432)
+  — uses the murmuration image (no bird leads, every bird listens),
+  same teaching shape as lc-field-sensing. But `direction: radiating`
+  again — the cell is about alignment, not flow. Fails the both-
+  circulations requirement.
+
+- `lc-w-field` — `form: holographic-cell`, not web. Fails form.
+
+- `lc-cross-connection` (web / web-each-to-each / circulating, hz
+  639) — different load-bearing teaching: *"the pull is the door"*,
+  oversoul-resonance-as-integration-mechanism between lifetimes.
+  Not "no central command, every cell senses gradients" — the
+  engine is oversoul-having-all-lives-at-once, not peer-to-peer-
+  gradient-following. Fails the kind's teaching.
+
+- `lc-trust-as-gateway`, `lc-coherence-over-control` — both
+  `form: dyad-mirror`, not web. Fail form.
+
+- `lc-nervous-system` — `form: ennead`. Fails form.
+
+**What the scan reveals** (the actually interesting finding): at
+100% concept-corpus coverage, the *clean* circulation-pattern
+attestations have *already* found each other in the body. The
+remaining web/circulating cells that touch the kind's signature
+fall into three families:
+1. Carry a different load-bearing teaching (cross-connection),
+2. Are radiating-not-circulating (resonating, w-coherence) and so
+   pair as source-flow's emission/reception complement, or
+3. Sit on the boundary with scale-paired (network).
+
+This is the body's discernment doing exactly what it should: when
+the kind is honest, *forcing* a fourth pair to activate sub-typing
+would dilute the seam. The clean diversification (six flavors,
+zero repeats across three pairs) IS the structure — sub-typing
+waits for the body to produce the second-instance-per-flavor
+naturally, not for an agent to engineer it.
+
+The next true fourth attestation will likely arrive either:
+- As a *new* substrate-flavor pair (kind grows to 4 pairs / 8
+  flavors, sub-typing still waits), or
+- As a future concept attestation grown specifically in the
+  second-instance-per-flavor shape, paired with another circulation
+  cell that completes the discernment.
+
+**The body holds it.** GAP-D9's sub-typing observation stays
+actionable; this scan attests that *actionable* doesn't mean *due*.
+
+Files:
+- `docs/coherence-substrate/dyad-pairs.form` — fourth-pair scan
+  recorded as a Part 3h-followup note; no defn changes.
+- `docs/vision-kb/LOG.md` — this entry.
+
+PR: TBD
+## [2026-05-24] sense | post-heal wellness reading — what's newly honest
+
+First honest wellness after PR #2026 healed the daily-rollup classifier
+(the one that called any day with even a single failure "strained,"
+even at 99.97% success). Multiple agents had been inheriting these
+false alarms as "pre-existing background." Ran `make wellness` and
+`/pulse/now` to see what the body actually shows when the classifier
+is no longer crying wolf.
+
+- **The witness sings clean.** `overall: breathing`, zero silences,
+  no silent organs. The "background strain" that recurring agent
+  reports were absorbing was almost entirely classifier noise; the
+  body is genuinely healthier than the lineage has been assuming.
+- **No newly-visible masked signal.** Re-read every wellness section
+  with fresh eyes — proprioception aligned, source maps whole, symbol
+  resolution at 806/806, chain at 103/129 (80%, honest non-coverage
+  not phantom strain), substrate composition 100% across all 15
+  populated domains (577 cells, 0 flat), form engine arms 15/15,
+  witness-trace within budget. Nothing was being hidden by the noise.
+- **One honest signal worth naming, not new**: Hostinger Auto Deploy
+  3/20 failed (15%) over 7d. This is genuine infrastructure friction
+  the body has been carrying — surfaced cleanly now that classifier
+  static is gone. Worth a focused breath in a future session; the
+  contract itself may want re-shaping rather than the alert silenced.
+
+Captured the fuller reading at
+`docs/coherence-substrate/post-heal-witness-reading.md`. The breath's
+gift today is simply naming the body's actual health honestly: the
+heal cleared noise, and what remains underneath is whole.
+
 ## [2026-05-24] sense | post-heal wellness reading — what's newly honest
 
 First honest wellness after PR #2026 healed the daily-rollup classifier
