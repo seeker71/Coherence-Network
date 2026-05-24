@@ -2,7 +2,22 @@
 id: lc-tend-your-flame
 hz: 174
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: unipolar
+  ordering: atemporal
+  phase: yang
+  ratio: none
+  spectral_band: foundation
+  temporal_band: day
+  scale: personal
+  direction: radiating
+  lineage_texture: synthesized
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Tend Your Flame — Sovereignty Becomes Service Through Self-Care

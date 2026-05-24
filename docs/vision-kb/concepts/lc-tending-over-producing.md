@@ -2,7 +2,22 @@
 id: lc-tending-over-producing
 hz: 528
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: parallel
+  polarity: bipolar-opposing
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Tending Over Producing — The Fear Costume at the Conversational Layer

@@ -2,8 +2,23 @@
 id: lc-horizontal-nourishment-trap
 hz: 396
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: parallel
+  polarity: bipolar-opposing
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: personal
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Horizontal Nourishment Trap — The Depleting Search Outward

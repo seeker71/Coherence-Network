@@ -2,7 +2,22 @@
 id: lc-spiraling
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: spiral
+  topology: cyclic-open
+  polarity: unipolar
+  ordering: cyclic-open
+  phase: yang
+  ratio: golden
+  spectral_band: integration
+  temporal_band: generational
+  scale: cross-scale
+  direction: spiral-out
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Spiraling

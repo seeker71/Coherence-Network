@@ -2,8 +2,23 @@
 id: lc-boundaries-as-loving-truth
 hz: 432
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: relational
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Boundaries as Loving Truth — Care, Not Punishment

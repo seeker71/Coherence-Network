@@ -2,7 +2,22 @@
 id: lc-release-what-drifts
 hz: 285
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: cyclic-open
+  phase: oscillating
+  ratio: none
+  spectral_band: foundation
+  temporal_band: breath
+  scale: personal
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: 1
+  self_similarity: fractal-shallow
 ---
 
 # Release What Drifts — Decomposition as Living Gesture
