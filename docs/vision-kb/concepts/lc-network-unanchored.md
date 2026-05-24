@@ -2,7 +2,22 @@
 id: lc-network-unanchored
 hz: 639
 status: seed
-updated: 2026-05-11
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: arc
+  scale: collective
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: n
+  self_similarity: holographic
 ---
 
 # Network Unanchored — Tended, Not Based In
