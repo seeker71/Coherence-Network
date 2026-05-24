@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 213
+**Total files**: 214
 
 | File | Purpose |
 |---|---|
@@ -67,6 +67,7 @@
 | [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
+| [test_federation_peer_poll.py](test_federation_peer_poll.py) | Acceptance tests for federation_peer_poll_service — the heartbeat. |
 | [test_federation_substance.py](test_federation_substance.py) | Federation substance payload — round-trip test. |
 | [test_federation_substrate_exchange.py](test_federation_substrate_exchange.py) | Acceptance tests for the federated substrate canonical exchange. |
 | [test_federation_value_flow.py](test_federation_value_flow.py) | Acceptance tests for the federated value flow. |
