@@ -2,8 +2,23 @@
 id: lc-canon-as-sovereignty-surface
 hz: 432
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
 source: ../../../experiments/local-llm-cell-v0/upsilon_session.py
+geometry:
+  arity: 2
+  form: internal-dyad
+  topology: nested
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: neutral
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: relational
+  direction: still
+  lineage_texture: sensed
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Every Comparator Carries a Canon — and the Canon is a Sovereignty Surface

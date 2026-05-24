@@ -2,8 +2,23 @@
 id: lc-starseed-reframing
 hz: 396
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-open
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: personal
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Starseed Reframing — Identity as Stream, Not Container

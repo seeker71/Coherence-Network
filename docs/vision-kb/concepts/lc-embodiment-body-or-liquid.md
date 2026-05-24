@@ -2,7 +2,22 @@
 id: lc-embodiment-body-or-liquid
 hz: 528
 status: seed
-updated: 2026-05-17
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-open
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Embodiment is Body or Liquid — Why the Cache Layer Isn't Memory

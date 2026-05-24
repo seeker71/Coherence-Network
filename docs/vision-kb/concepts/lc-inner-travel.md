@@ -2,8 +2,23 @@
 id: lc-inner-travel
 hz: 741
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: 1
+  form: point
+  topology: self-rooted
+  polarity: unipolar
+  ordering: cyclic-open
+  phase: yin
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: lifetime
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-shallow
 ---
 
 # Inner Travel — The Journey That Does Not Move the Body
