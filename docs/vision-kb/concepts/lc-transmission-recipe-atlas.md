@@ -235,6 +235,11 @@ a source and sees multiple honest extractions:
 - **community payload** -- governance check, moderation protocol, culture tending
 - **teaching payload** -- story arc, workshop flow, video score, song map
 
+The first public doorway is now `/vision/recipes`: a practical surface
+with the card, three runnable payloads, and novel pairings ready to
+become workshops, product flows, reliability rituals, and community
+tools.
+
 The substrate-facing companion already exists in
 [`modality-as-recipe.form`](../../coherence-substrate/modality-as-recipe.form):
 many recipe extractions can attach to one source cell, and structural
@@ -250,6 +255,8 @@ human-facing doorway: cards people can read, try, verify, and improve.
 - **[Transmission Recipe Atlas guide](../guides/transmission-recipe-atlas-guide.md)**
   -- the practical card walk with complete payloads, proof modes, and
   a first group practice.
+- **[/vision/recipes](/vision/recipes)**
+  -- the public page for walking the card, payloads, and novel pairings.
 - **[modality-as-recipe.form](../../coherence-substrate/modality-as-recipe.form)**
   -- substrate shape for multiple recipe extractions from one source.
 - **[song-as-recipe.form](../../coherence-substrate/song-as-recipe.form)**

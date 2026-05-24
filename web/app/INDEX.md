@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 156
+**Total files**: 157
 
 | Route | File | Purpose |
 |---|---|---|
@@ -159,6 +159,7 @@
 | `/vision/lived` | [page.tsx](vision/lived/page.tsx) | _no top-of-file purpose_ |
 | `/vision` | [page.tsx](vision/page.tsx) | _no top-of-file purpose_ |
 | `/vision/realize` | [page.tsx](vision/realize/page.tsx) | _no top-of-file purpose_ |
+| `/vision/recipes` | [page.tsx](vision/recipes/page.tsx) | Transmission recipe public surface - runnable payloads and cross-domain pairings. |
 | `/vitality` | [page.tsx](vitality/page.tsx) | _no top-of-file purpose_ |
 | `/weave` | [page.tsx](weave/page.tsx) | _no top-of-file purpose_ |
 | `/welcome` | [page.tsx](welcome/page.tsx) | /welcome — the naming gesture. A visitor names themselves, the server |
