@@ -169,45 +169,49 @@ defn run_until_signal(loop, stop_signal) = do {
 # rewarded or penalized.
 #
 # This is the fitness function for the translator hypothesis. Other
-# hypotheses ship their own fitness with the same six-term shape:
+# hypotheses ship their own fitness with the same eight-term shape:
 # rewards for honest yield, penalties for cheating shapes.
 
 form r_fitness_function_shape = {
-    yield_weight:           ~Float,    # reward: % of cells finding non-degenerate CTOR-level matches (Blueprint family alone doesn't count)
-    holdout_weight:         ~Float,    # reward: attested cross-domain pairs the lattice recovered at CTOR
-    collapse_penalty:       ~Float,    # penalty: entropy collapse — to one Blueprint or one CTOR within a family
-    table_penalty:          ~Float,    # penalty: hardcoded {k:v} maps in encoder source
-    depth_penalty:          ~Float,    # penalty: encoder code complexity
-    reciprocity_weight:     ~Float,    # reward: A→B implies B→A (CTOR-level)
-    triadic_weight:         ~Float,    # reward: A↔B and B↔C imply A↔C (CTOR-level)
+    yield_weight:             ~Float,    # reward: % of cells finding non-degenerate CTOR-level matches (Blueprint family alone doesn't count)
+    holdout_weight:           ~Float,    # reward: attested cross-domain pairs the lattice recovered at CTOR
+    collapse_penalty:         ~Float,    # penalty: entropy collapse — to one Blueprint or one CTOR within a family
+    table_penalty:            ~Float,    # penalty: hardcoded {k:v} maps in encoder source
+    domain_default_penalty:   ~Float,    # penalty: yield inflated by matching against domain-default CTORs
+    depth_penalty:            ~Float,    # penalty: encoder code complexity
+    reciprocity_weight:       ~Float,    # reward: A→B implies B→A (CTOR-level)
+    triadic_weight:           ~Float,    # reward: A↔B and B↔C imply A↔C (CTOR-level)
 };
 
 defn translator_fitness_shape = r_fitness_function_shape {
-    yield_weight:       1.0,
-    holdout_weight:     2.0,           # holdout recovery is the strongest signal
-    collapse_penalty:   -3.0,          # collapse is the most-tempting cheat
-    table_penalty:      -2.0,          # static-analysis penalty
-    depth_penalty:      -0.5,          # gentle preference for simpler encoders
-    reciprocity_weight: 1.0,
-    triadic_weight:     1.0,           # zero until 3 domains exist
+    yield_weight:           1.0,
+    holdout_weight:         2.0,         # holdout recovery is the strongest signal
+    collapse_penalty:      -3.0,         # collapse is the most-tempting cheat
+    table_penalty:         -2.0,         # static-analysis penalty
+    domain_default_penalty:-2.0,         # default-matching is the same shape of cheating as a hardcoded table
+    depth_penalty:         -0.5,         # gentle preference for simpler encoders
+    reciprocity_weight:     1.0,
+    triadic_weight:         1.0,         # zero until 3 domains exist
 };
 
 defn compute_translator_fitness(encoders, holdout_pairs) = do {
-    let yield_score      = yield_across_keys(encoders);
-    let holdout_score    = holdout_recovery(encoders, holdout_pairs);
-    let collapse_score   = blueprint_entropy(encoders);
-    let table_score      = hardcoded_table_count(encoders);
-    let depth_score      = encoder_complexity(encoders);
-    let reciprocity_score = symmetry_yield(encoders);
-    let triadic_score    = triadic_yield(encoders);
+    let yield_score          = yield_across_keys(encoders);
+    let holdout_score        = holdout_recovery(encoders, holdout_pairs);
+    let collapse_score       = blueprint_entropy(encoders);
+    let table_score          = hardcoded_table_count(encoders);
+    let domain_default_score = domain_default_match_count(encoders);
+    let depth_score          = encoder_complexity(encoders);
+    let reciprocity_score    = symmetry_yield(encoders);
+    let triadic_score        = triadic_yield(encoders);
 
-    translator_fitness_shape.yield_weight       * yield_score
-        + translator_fitness_shape.holdout_weight     * holdout_score
-        + translator_fitness_shape.collapse_penalty   * collapse_score
-        + translator_fitness_shape.table_penalty      * table_score
-        + translator_fitness_shape.depth_penalty      * depth_score
-        + translator_fitness_shape.reciprocity_weight * reciprocity_score
-        + translator_fitness_shape.triadic_weight     * triadic_score
+    translator_fitness_shape.yield_weight             * yield_score
+        + translator_fitness_shape.holdout_weight           * holdout_score
+        + translator_fitness_shape.collapse_penalty         * collapse_score
+        + translator_fitness_shape.table_penalty            * table_score
+        + translator_fitness_shape.domain_default_penalty   * domain_default_score
+        + translator_fitness_shape.depth_penalty            * depth_score
+        + translator_fitness_shape.reciprocity_weight       * reciprocity_score
+        + translator_fitness_shape.triadic_weight           * triadic_score
 };
 
 # Why these terms specifically:
@@ -236,6 +240,24 @@ defn compute_translator_fitness(encoders, holdout_pairs) = do {
 #   table: static analysis of the encoder source. {music: dna} dicts
 #          or computed lookups that bypass composition land as penalty.
 #          Not perfect — agents can be clever — but raises the cost.
+#
+#   domain_default: counts matches where the matched CTOR is the
+#                   standard cell for either source or target domain.
+#                   PR #1946 read 13 substrate-surfaced shape pairs
+#                   by hand and found six were domain-default clusters
+#                   (66 specs, 76 concepts, 52 presences sharing one
+#                   CTOR because no cell had authored a more specific
+#                   shape). The kernel's match was honest at the CTOR
+#                   layer, but yield earned this way carries no cross-
+#                   surface teaching — it is the encoder reporting its
+#                   own template, not equivalence between cells that
+#                   have each declared their shape. Same magnitude as
+#                   table_penalty because it is the same shape of
+#                   cheating: yield inflated without honest content
+#                   equivalence. Without this term the fitness as
+#                   originally authored would have rewarded the noise
+#                   PR #1946 surfaced; the function is now tuned to
+#                   the lesson the lattice taught.
 #
 #   depth: encoder complexity (cyclomatic, line count, branch depth).
 #          When two encoders tie on every other term, the simpler one
