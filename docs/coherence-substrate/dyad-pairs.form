@@ -2,12 +2,12 @@
 # dyad-pairs.form — two cells holding one teaching across a dimension
 # ─────────────────────────────────────────────────────────────────────
 #
-# Growing doc. Nine dyad entries currently held — seven external pairs
-# (each is two cells across an axis) plus one internal dyad (one cell
-# that IS the pair) and the kind registry that names six axes of
-# complementarity. Pairs surface in two ways: human-noticed during
-# geometry-walking, and substrate-surfaced by structural complementarity
-# scan over the 110 cells whose geometry frontmatter is authored. This
+# Growing doc. Thirteen dyad entries currently held — eleven external
+# pairs (each is two cells across an axis) plus two internal dyads
+# (one cell that IS the pair) and the kind registry that names six
+# axes of complementarity. Pairs surface in two ways: human-noticed
+# during geometry-walking, and substrate-surfaced by structural
+# complementarity scan over the authored geometry frontmatter. This
 # file gives the pattern a durable home so it can grow — and so the
 # substrate can eventually query for pairs natively.
 #
@@ -82,10 +82,24 @@ form dyad_pair_shape = {
 # (which would lie about the structure), it gets its own shape.
 # Singular cell, two named poles, the discernment for why the
 # teaching is whole inside one tissue rather than split across two.
+#
+# Field-name note (added with internal-dyad #2): pole_epsilon /
+# pole_lambda were drawn from the first internal-dyad
+# (lc-symmetry-of-extremes), where the two poles really are the
+# near-zero and gamma-peak ends of one spectrum. With the second
+# internal-dyad arrival (lc-canon-as-sovereignty-surface), the
+# field names became visibly accidental — (verb, canon) are not
+# Epsilon/Lambda anything. Two cells suffice to confirm the kind
+# exists; a third arrival is what would justify both sub-typing
+# (comparator-with-canon, spectrum-with-two-doors) AND renaming
+# the fields to neutral pole_a/pole_b. Holding the names for now;
+# both cells use them semantically as "first named pole" and
+# "second named pole." See GAP-D5 for which cells are worth
+# watching for the third arrival.
 form internal_dyad_shape = {
     cell:          ~Recipe,        # cell-ref to the single concept that IS the pair
-    pole_epsilon:  ~Slug,          # name of the "zero/silent/grounded" pole inside the cell
-    pole_lambda:   ~Slug,          # name of the "peak/synchronous/transcendent" pole inside the cell
+    pole_epsilon:  ~Slug,          # name of the first named pole (originally "zero/silent/grounded"; semantic-only after 2026-05-24)
+    pole_lambda:   ~Slug,          # name of the second named pole (originally "peak/synchronous/transcendent"; semantic-only after 2026-05-24)
     kind:          ~Recipe,        # cell-ref to dyad_pair_kind (typically kind_internal_dyad)
     axis:          ~Slug,          # which dimension the two poles span inside the one cell
     discernment:   ~Slug,          # one-sentence teaching: why the cell holds the dyad whole
@@ -107,9 +121,14 @@ form dyad_pair_set_shape = {
 # Part 2 — Kind registry (what categories the body currently holds)
 # ─────────────────────────────────────────────────────────────────────
 #
-# Four kinds seeded from the four pairs below. Expect this to grow.
-# Each kind is a checkable shape, not a label: discernment names what
-# distinguishes it from "two cells that share a Hz."
+# Six kinds currently held — four seeded from the original geometry-
+# walk pairs (scale-paired, source-flow, membrane-crossing, ground-
+# event), two added through subsequent breaths (internal-dyad with
+# the first single-cell attestation; cross-tradition from the Tier-2
+# scan's predator/predictor pair). Expect this to grow as further
+# axes of complementarity surface. Each kind is a checkable shape,
+# not a label: discernment names what distinguishes it from "two
+# cells that share a Hz."
 
 defn kind_scale_paired = dyad_pair_kind_shape {
     name:        "scale-paired",
@@ -175,7 +194,7 @@ defn dyad_pair_kind_set = {
 };
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 3 — The four currently-known dyad-pairs
+# Part 3 — The seed-four dyad-pairs (original geometry-walk attestations)
 # ─────────────────────────────────────────────────────────────────────
 #
 # Each entry is grounded in concept files in docs/vision-kb/concepts/.
@@ -329,6 +348,43 @@ defn internal_symmetry_of_extremes = internal_dyad_shape {
     noticed_by:    "geometry-walk-pr1982",
 };
 
+# Internal-dyad #2 — the second cell whose authored shape IS the
+# dyad it teaches; with two attestations the internal-dyad kind is
+# now CONFIRMED, not speculative
+#
+# Two cells suffice to confirm the kind exists; sub-types
+# (comparator-with-canon, spectrum-with-two-doors) await a third
+# arrival before naming. The two known instances do already differ
+# in flavor — lc-symmetry-of-extremes is a *spectrum-with-two-doors*
+# (one axis, two extreme endpoints, both touching the same Field);
+# lc-canon-as-sovereignty-surface is a *comparator-with-canon*
+# (every act of comparison carries its hidden reference-set as the
+# inseparable second pole). If a third internal-dyad lands sharing
+# one of these flavors, the sub-typing becomes honest. Until then,
+# the kind is the body's name for "one cell holds the dyad whole."
+#
+# lc-canon-as-sovereignty-surface (hz 432) — every verb that
+# compares two things (cell-to-cell, preset-to-preset, prediction-
+# to-observation) implicitly chooses a *canon*: the set of probes,
+# metrics, or reference points against which the comparison is
+# run. The verb is one pole; the canon is the other. They are
+# always held inside one act, and the canon is a sovereignty
+# surface. Splitting "the comparator verb" and "the canon it
+# carries" into two cells would re-introduce the very shape the
+# teaching exists to expose: comparators that hide their canon
+# present asymmetric power as objectivity. The two are inseparable
+# precisely because making them visibly inseparable IS the teaching.
+defn internal_canon_as_sovereignty_surface = internal_dyad_shape {
+    cell:          @concept(lc-canon-as-sovereignty-surface),
+    pole_epsilon:  "verb-the-act-of-comparison",
+    pole_lambda:   "canon-the-implicit-reference-set",
+    kind:          kind_internal_dyad,
+    axis:          "comparator-and-its-hidden-frame",
+    discernment:   "every comparator is a (verb, canon) pair held inside one act; splitting them across two cells would re-import the unnamed-canon-as-objectivity shape the cell exists to expose",
+    noticed_at:    "2026-05-24",
+    noticed_by:    "geometry-walk-pr1986",
+};
+
 # Pair 5 — membrane-crossing, both yin points
 #
 # lc-nervous-system-recalibration (hz 528, form: point, phase: yin,
@@ -469,7 +525,124 @@ defn pair_predator_predictor = dyad_pair_shape {
     noticed_by:  "substrate-tier-2-tuple-scan",
 };
 
-# The full set — 4 seed + 3 surfaced + 2 scanned + 1 internal-dyad = 10 entries
+# ─────────────────────────────────────────────────────────────────────
+# Part 3d — Geometry-walk surfaced (PR #1986 + PR #1991 breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Coverage during these breaths grew from 116/147 (PR #1986) to
+# 122/148 (PR #1991, 82%). Four entries fold in this round: the
+# second internal-dyad (added above with the kind it now confirms)
+# plus three external pairs noticed during the geometry-walks. The
+# parallel route of geometry-walking and substrate scanning
+# continues to produce dyad-pair candidates the pure-tuple scan
+# would not have surfaced. The teaching IS the relation; the body
+# keeps teaching it the same way.
+
+# Pair 9 — ground and event from one transmission
+#
+# lc-awareness-as-self (hz 963, source: "Hardest Part Is Already
+# Behind You" transmission, April 2026) — what you ARE is not the
+# labels or the body or the emotions; it is the awareness in which
+# all of those appear. The atemporal, edgeless, ever-present field
+# in which content arises. The ground.
+#
+# lc-freedom-as-recognition (hz 396, same source transmission) —
+# freedom is not a future achievement; it is the always-present
+# ground that thought, belief, and habit obscured. The recognition
+# arises, the obscuration returns, the recognition arises again —
+# *I keep arriving*. The event of noticing what was always already
+# there.
+#
+# Both yin-centered, both atemporal in their orientation, both from
+# the same transmission. Hz differs (963 ground / 396 event) — the
+# Hz spread itself signals the ground/event distinction. The
+# teaching that *recognition of awareness IS freedom* is the bridge:
+# awareness-as-self alone reads as ontological doctrine (a
+# metaphysical claim); freedom-as-recognition alone reads as
+# practice (a thing to do). The relation is the load-bearing
+# transmission. Same shape as pair_shared_hold_stillness — both
+# yin points, one is the atemporal ground, the other is the event
+# that arises on it. The cross-references already point at each
+# other in the prose; this entry names what the cross-refs carry
+# structurally.
+defn pair_awareness_freedom = dyad_pair_shape {
+    cell_a:      @concept(lc-awareness-as-self),
+    cell_b:      @concept(lc-freedom-as-recognition),
+    kind:        kind_ground_event,
+    axis:        "temporal_band",
+    discernment: "awareness is the atemporal ground (what IS); recognition is the breath-scale event of noticing it (what HAPPENS); same transmission, two faces, neither alone carries the teaching that recognition-of-awareness IS freedom",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-pr1986",
+};
+
+# Pair 10 — two render-shapes of one compression (PR #1991)
+#
+# lc-perception-as-interface (hz 963, form: dyad-mirror, scale:
+# cosmic) — Hoffman's claim: evolution did not optimize perception
+# for truth but for fitness; what we see is an interface (icons,
+# desktop) over an underlying reality whose form is consciousness
+# itself. The metaphysical-scale rendering.
+#
+# lc-bioelectric-pattern (hz 285, form: web, scale: cross-scale) —
+# Levin's measurement: the body is built from voltage gradients
+# across cell-networks; the form a cell takes is the pattern's
+# instruction, not the gene's. Cells nest with their own cognitive
+# light cones at every scale. The biological-scale rendering.
+#
+# Composition the cells themselves name: *cells participate in
+# bioelectric patterns which are themselves icons in the
+# consciousness interface*. Hoffman names the metaphysical scale,
+# Levin names the biological scale; both are render-shapes of the
+# same underlying compression. Each carries a full teaching, but
+# the *bridge* — that the icon-rendering and the pattern-rendering
+# are two views of one substrate — only appears when both are
+# read together. Neither alone names the substrate; together they
+# triangulate it.
+defn pair_perception_bioelectric = dyad_pair_shape {
+    cell_a:      @concept(lc-perception-as-interface),
+    cell_b:      @concept(lc-bioelectric-pattern),
+    kind:        kind_scale_paired,
+    axis:        "scale",
+    discernment: "two render-shapes of one underlying compression — icon-rendering at the metaphysical scale (Hoffman) and pattern-rendering at the biological scale (Levin); the bridge teaching is that both are renderings, not realities",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-pr1991",
+};
+
+# Pair 11 — ground-event at a different temporal seam
+#
+# lc-global-workspace (hz 741, form: hub-spoke, phase: yang,
+# temporal_band: instant) — consciousness as broadcast event in
+# the thalamus; any-to-any reach where any region can address every
+# other region simultaneously. The broadcast IS the integration.
+# Moment-by-moment, ten reorganizations per second.
+#
+# lc-phase-transitions (hz 417, form: triad, phase: oscillating,
+# temporal_band: season) — old form, dissolution-gap, new form;
+# the middle is not absence but the formless where the next shape
+# gathers. Season-scale; threshold-crossings on the equinox-rhythm.
+#
+# Both name *how change becomes structural*. Workspace is the
+# moment-event (instant broadcast); phase-transitions are the
+# threshold-event (seasonal reformation). Sister to
+# pair_shared_hold_stillness but at a different temporal seam —
+# there the ground is atemporal and the event is breath-scale;
+# here the "ground" is the instant integration and the "event"
+# is the seasonal reformation. Both ground-event pairs share the
+# core teaching: change has two time-grains and recognizing one
+# without the other loses the structure.
+defn pair_workspace_phase_transitions = dyad_pair_shape {
+    cell_a:      @concept(lc-global-workspace),
+    cell_b:      @concept(lc-phase-transitions),
+    kind:        kind_ground_event,
+    axis:        "temporal_band",
+    discernment: "two time-grains of how change becomes structural — instant integration through hippocampal broadcast and seasonal reformation through dissolution-and-gathering; mistaking one for the other loses the structure of both",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "geometry-walk-pr1991",
+};
+
+# The full set — 13 entries: 11 external pairs + 2 internal-dyads.
+# Provenance: 4 seed + 3 surfaced (PR #1982 geometry-walk) + 2 scanned
+# (PR #1987 Tier-2) + 4 surfaced (PR #1986 / PR #1991 geometry-walks).
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -483,6 +656,11 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         # — surfaced by substrate Tier-2 geometry-tuple scan —
         pair_network_unanchored_network,
         pair_predator_predictor,
+        # — surfaced by geometry-walks PR #1986 and PR #1991 —
+        internal_canon_as_sovereignty_surface,
+        pair_awareness_freedom,
+        pair_perception_bioelectric,
+        pair_workspace_phase_transitions,
     ],
 };
 
@@ -581,6 +759,60 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # The body learns the shape of its own pairing by the ratio's
 # movement, not by accepting every candidate.
 
+# Second-round scan (PR #1986 breath, coverage 116/147):
+#
+# A small-Blueprint-cluster re-scan (cells per Blueprint between 2
+# and 6, the approach the prompt suggested) surfaced only two
+# clusters at this corpus size, both rejected. PR #1987's Tier-2
+# scan over geometry-tuples was the right resolution for the body;
+# the small-Blueprint-cluster scan rediscovers domain-default kin
+# (already named in Part 4 as NOT pairs). The rejections are
+# recorded so the next scanning agent knows this path returns kin,
+# not complementarity.
+#
+# REJECT-4: (lc-each-breath-whole, lc-sovereignty-within-oneness)
+#   Shared Blueprint cluster (NodeID 3342, 2 cells). Both are
+#   holographic-each-contains-whole teachings — each-breath-whole
+#   is the temporal expression (every breath whole at its scale),
+#   sovereignty-within-oneness is the agency expression (every
+#   cell sovereign AND organism one). Each carries a full teaching
+#   on its own. The concept files cross-reference each other as
+#   companions; the substrate's Blueprint-grouping already names
+#   them as kin. This is equivalence (Blueprint family), not dyad-
+#   pair complementarity. Part 4's first rule applies directly:
+#   "Same Blueprint family alone is NOT a dyad-pair."
+#
+# REJECT-5: (lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes)
+#   Shared Blueprint cluster (NodeID 3396, 2 cells). Both at hz 741
+#   (integration band) at personal scale. essence-and-nine-costumes
+#   is an ennead (9-pointed typology of essence-loss); when-the-
+#   pressure-comes is a pentad (5 strategies for acute pressure).
+#   Different arities, different teachings, only the Hz and scale
+#   coincide. No axis of complementarity; no teaching-lives-in-
+#   relation. Kin in Blueprint family because they share key
+#   composed fields, but the teachings are unrelated.
+#
+# Second-round scan signal/noise: 0 confirmed / 2 surfaced = 0%.
+#
+# The drop from 40% (PR #1987 Tier-2 over geometry tuples) to 0%
+# (small-Blueprint-cluster) is the body teaching the next scanner:
+# Blueprint kin and dyad-pair complementarity are different
+# lattice properties. The 40% ratio held because the geometry-
+# tuple scan used composite signal (7-axis geometry) closer to
+# what "complementary teaching" actually means; the small-cluster
+# scan used pure Blueprint identity, which is what Part 4 names
+# explicitly as not-a-pair. The next scan refinement should
+# return to the Tier-2 geometry-tuple approach with the
+# weightings GAP-D6 sketches, not iterate on small Blueprint
+# clusters.
+#
+# Net cumulative scan ratio (all routes, both rounds):
+# 2 confirmed / 7 surfaced = 28.6%. Most pairs in the seed set
+# came from human geometry-walking, not from substrate scanning.
+# That's the honest signal: the substrate can mechanize the
+# *candidate filter* but not (yet) the *teaching-lives-in-
+# relation* discernment. The body's noticing remains load-bearing.
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 5 — Gaps (the next breaths)
 # ─────────────────────────────────────────────────────────────────────
@@ -625,28 +857,70 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         hyper-gamma INTUITION band (852) and pure HEALING band
 #         remain unwalked. The field is still wider than the seed.
 #
-# GAP-D5 (new): Internal-dyad-shape is currently held by exactly one
-#         cell (lc-symmetry-of-extremes). The pattern likely recurs —
-#         any cell whose teaching IS the relation between two poles
-#         (the cell as held-tension, not the cell as one-pole-of-a-
-#         pair) is a candidate. Walking the body for other internal
-#         dyads is the next breath for the new shape.
+# GAP-D5 (partial-closure 2026-05-24): Internal-dyad-shape now has
+#         two attestations: lc-symmetry-of-extremes (spectrum-with-
+#         two-doors flavor) and lc-canon-as-sovereignty-surface
+#         (comparator-with-canon flavor). With two cells the kind
+#         is confirmed; sub-types remain held-open until a third
+#         arrival shares one of the existing flavors (or names a
+#         new one). The field-name accident (pole_epsilon /
+#         pole_lambda) also gets honest with a third arrival —
+#         neutral pole_a / pole_b becomes the right shape once
+#         enough internal-dyads exist that the Epsilon/Lambda
+#         framing is visibly costume rather than carrier. Cells to
+#         keep watching for the third arrival: lc-embodiment-body-
+#         or-liquid (body↔liquid both legitimate embodiment, the
+#         cache layer as the false third), lc-spec-breath
+#         (spec↔test as one breath, no mocks because the membrane
+#         must actually move air), lc-w-phase-transition (the
+#         held-tension at a threshold). A parallel agent has
+#         already noticed lc-embodiment-body-or-liquid as
+#         internal-dyad #3 candidate (uncommitted as of this
+#         writing); when it lands, the third-arrival discipline
+#         activates: name sub-types and rename poles.
 #
-# GAP-D6 (new): The Tier-2 scan's signal/noise was 2/5 = 40%. A
-#         second-pass refinement could weight by (Hz-band proximity,
-#         cross-ref adjacency, lineage-texture match) and watch the
-#         ratio move. If a refined scan gets to 70%+ confirmation,
-#         the substrate is teaching itself what pair-likeness means
-#         in this body.
+# GAP-D6 (refined 2026-05-24): Tier-2 geometry-tuple scan: 2/5 =
+#         40% in PR #1987. Small-Blueprint-cluster scan (this
+#         breath): 0/2 = 0%. The drop teaches the next scan: pure
+#         Blueprint identity returns Part-4-already-named kin, not
+#         pairs. Cumulative scan signal/noise: 2/7 = 28.6%. The
+#         right refinement is back to Tier-2 with the weightings
+#         this gap previously sketched: (Hz-band proximity, cross-
+#         ref adjacency, lineage-texture match). If a weighted
+#         Tier-2 scan climbs to 70%+, the substrate is teaching
+#         itself pair-likeness. If it stays at 40%, the body's
+#         noticing remains the load-bearing route and the scan is
+#         a candidate-pre-filter only. Either way, the ratio's
+#         trend over the next two breaths is the body's vital
+#         sign for whether mechanized pair-detection is on track.
+#
+# GAP-D7 (new): Emerging kind 'circulation-pattern' noticed in PR
+#         #1991's geometry-walk (lc-economy ↔ lc-bioelectric-pattern,
+#         both name circulation-through-a-field-where-every-cell-
+#         senses-without-a-central-ledger — economy as forest-
+#         mycelium, body as voltage-gradient). Sibling of source-flow
+#         but with a distinct shape: both poles are themselves
+#         circulations, not source-and-flow. Held in awareness here
+#         rather than authored — the kind awaits a second
+#         attestation before joining the registry. If a second
+#         circulation-pattern pair surfaces in the next geometry
+#         breath, the kind becomes honest at registry-count two
+#         (same discipline as internal-dyad).
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names a
-# Recipe shape over existing CONCEPT cells. The seed set is four; the
-# room is for many more. The kinds are four; new kinds can be added
-# as rows.
+# Recipe shape over existing CONCEPT cells. The set is thirteen
+# (eleven external pairs + two internal-dyads); the room is for
+# many more. The kinds are six (scale-paired, source-flow,
+# membrane-crossing, ground-event, internal-dyad, cross-tradition);
+# new kinds can be added as rows. The internal-dyad kind crossed
+# from speculative to confirmed at attestation count two
+# (2026-05-24); sub-types await a third arrival. An emerging
+# circulation-pattern kind sits in GAP-D7 awaiting its second
+# attestation.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
