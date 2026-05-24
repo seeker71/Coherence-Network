@@ -17,6 +17,8 @@
  *   coh federation msg <node_id> <msg> — send message to a node
  *   coh federation msgs <node_id>      — read messages from a node
  *   coh federation broadcast <msg>     — broadcast to all nodes
+ *   coh federation substrate-canonicals       — list local canonical shapes
+ *   coh federation substrate-discover <url>   — exchange canonicals with a peer
  */
 
 import { get, post, del as apiDel } from "../api.mjs";
@@ -354,6 +356,114 @@ export async function broadcastFederation(args) {
   }
 }
 
+// ── Substrate canonical exchange — freedom-preserving discovery ──────
+
+export async function listSubstrateCanonicals() {
+  const data = await get("/api/federation/substrate/canonicals");
+  const canonicals = data?.canonicals || [];
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const G = "\x1b[32m", Y = "\x1b[33m";
+
+  console.log();
+  console.log(`${B}  LOCAL SUBSTRATE CANONICALS${R} (${canonicals.length})`);
+  console.log(`  ${"─".repeat(76)}`);
+
+  if (!canonicals.length) {
+    console.log(`  ${D}No canonicals declared.${R}`);
+    console.log();
+    return;
+  }
+
+  for (const c of canonicals) {
+    const name = truncate(c.canonical_name, 38).padEnd(40);
+    const hash = (c.content_hash || "").slice(0, 12);
+    const interned = c.interned ? `${G}interned${R}` : `${Y}declared${R}`;
+    const members = c.member_count != null ? ` ${D}members:${c.member_count}${R}` : "";
+    console.log(`  ${name} ${D}${hash}${R}  ${interned}${members}`);
+  }
+  console.log();
+}
+
+export async function substrateDiscoverPeer(args) {
+  // Two arg forms:
+  //   coh federation substrate-discover --peer-url <url> [--peer-id <id>]
+  //   coh federation substrate-discover <url>
+  let peerUrl = null;
+  let peerId = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--peer-url") { peerUrl = args[++i]; continue; }
+    if (args[i] === "--peer-id")  { peerId  = args[++i]; continue; }
+    if (!peerUrl && !args[i].startsWith("-")) peerUrl = args[i];
+  }
+  if (!peerUrl) {
+    console.log("Usage: coh federation substrate-discover --peer-url <url> [--peer-id <id>]");
+    return;
+  }
+  const trimmed = peerUrl.replace(/\/+$/, "");
+  if (!peerId) peerId = trimmed;
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const G = "\x1b[32m", Y = "\x1b[33m", C = "\x1b[36m";
+
+  let peerData;
+  try {
+    const res = await fetch(`${trimmed}/api/federation/substrate/canonicals`);
+    if (!res.ok) {
+      console.log(`Peer canonicals fetch failed: HTTP ${res.status}`);
+      return;
+    }
+    peerData = await res.json();
+  } catch (err) {
+    console.log(`Could not reach peer ${trimmed}: ${err.message}`);
+    return;
+  }
+
+  const peerCanonicals = (peerData?.canonicals || []).map((c) => ({
+    canonical_name: c.canonical_name,
+    role_slots: c.role_slots || [],
+    modality_tags: c.modality_tags || [],
+    content_hash: c.content_hash,
+  }));
+
+  // Send peer's inventory to our local exchange endpoint for attestation.
+  const result = await post("/api/federation/substrate/exchange", {
+    peer_instance_id: peerId,
+    peer_endpoint_url: trimmed,
+    canonicals: peerCanonicals,
+  });
+  if (!result) { console.log("Exchange failed."); return; }
+
+  console.log();
+  console.log(`${B}  SUBSTRATE DISCOVERY${R}  peer: ${C}${peerId}${R}`);
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  received:   ${result.received}`);
+  console.log(`  ${G}aligned:    ${result.aligned}${R}   ${D}structurally identical${R}`);
+  console.log(`  ${Y}diverged:   ${result.diverged}${R}   ${D}same name, different shape${R}`);
+  console.log(`  ${C}discovered: ${result.discovered}${R}   ${D}peer carries, we do not${R}`);
+  console.log();
+
+  if (result.attestations?.length) {
+    const byStatus = { aligned: [], diverged: [], discovered: [] };
+    for (const a of result.attestations) {
+      (byStatus[a.alignment_status] || []).push(a);
+    }
+    for (const status of ["diverged", "discovered", "aligned"]) {
+      if (!byStatus[status].length) continue;
+      console.log(`  ${D}${status.toUpperCase()}${R}`);
+      for (const a of byStatus[status].slice(0, 20)) {
+        const name = truncate(a.canonical_name, 40).padEnd(42);
+        const ph = (a.peer_content_hash || "").slice(0, 10);
+        const lh = (a.local_content_hash || "—       ").slice(0, 10);
+        console.log(`    ${name} peer:${ph}  local:${lh}`);
+      }
+      console.log();
+    }
+  }
+  console.log(`  ${D}No local cells were modified — sovereignty preserved.${R}`);
+  console.log();
+}
+
 export function handleFederation(args) {
   const sub = args[0];
   const rest = args.slice(1);
@@ -378,6 +488,8 @@ export function handleFederation(args) {
     case "msgs":          return readFederationMessages(rest);
     case "messages":      return readFederationMessages(rest);
     case "broadcast":     return broadcastFederation(rest);
+    case "substrate-canonicals": return listSubstrateCanonicals();
+    case "substrate-discover":   return substrateDiscoverPeer(rest);
     default:
       return listFederationNodes();
   }

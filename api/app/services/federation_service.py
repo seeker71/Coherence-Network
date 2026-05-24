@@ -180,6 +180,40 @@ class NodeStrategyEffectivenessRecord(Base):
     )
 
 
+class FederatedSubstrateAttestationRecord(Base):
+    """Federation-mirror table for substrate canonical attestations.
+
+    Each row is THIS instance's view of a peer's canonical at a moment in
+    time. Never authoritative for the peer; never authoritative over the
+    local lattice. Sovereignty preserved on both sides — the row only
+    records that an exchange happened and what was sensed.
+
+    alignment_status taxonomy:
+      - aligned    : peer carries this canonical and content_hash matches
+      - diverged   : peer carries this canonical name but content_hash differs
+      - discovered : peer carries a canonical this instance does not have
+    """
+
+    __tablename__ = "federation_substrate_attestations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    peer_instance_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    canonical_name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    peer_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    local_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    alignment_status: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    observed_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index(
+            "idx_fsa_peer_canonical",
+            "peer_instance_id",
+            "canonical_name",
+            unique=True,
+        ),
+    )
+
+
 class FederatedAggregationRecord(Base):
     """Submissions for federated aggregation merging (Spec 143)."""
     __tablename__ = "federation_aggregations"
