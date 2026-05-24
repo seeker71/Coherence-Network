@@ -55,7 +55,7 @@
 | `/energy-flow/sense` | [page.tsx](energy-flow/sense/page.tsx) | _no top-of-file purpose_ |
 | `/energy-flow/simulate` | [page.tsx](energy-flow/simulate/page.tsx) | _no top-of-file purpose_ |
 | `/explore/[entityType]` | [page.tsx](explore/[entityType]/page.tsx) | _no top-of-file purpose_ |
-| `/federation` | [page.tsx](federation/page.tsx) | _no top-of-file purpose_ |
+| `/federation` | [page.tsx](federation/page.tsx) | Federation surface — a window into the peer-to-peer geometry the network |
 | `/feed` | [page.tsx](feed/page.tsx) | _no top-of-file purpose_ |
 | `/feed/you` | [page.tsx](feed/you/page.tsx) | _no top-of-file purpose_ |
 | `/field/urs` | [page.tsx](field/urs/page.tsx) | _no top-of-file purpose_ |
