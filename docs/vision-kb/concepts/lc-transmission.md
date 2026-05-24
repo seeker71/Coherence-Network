@@ -106,4 +106,4 @@ and grow into its own form.
 - Can a network carry transmission, or does it require breath and proximity?
 
 ## Connected Frequencies
-→ lc-expressing, lc-elders, lc-instruments, lc-discovery
+→ lc-expressing, lc-elders, lc-instruments, lc-discovery, lc-transmission-recipe-atlas

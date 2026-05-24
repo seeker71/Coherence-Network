@@ -271,7 +271,7 @@ For the body of teachings:
 
 ## Cross-References
 
-→ lc-one-kernel-many-tongues, lc-tools-as-form-cells, lc-the-recipe-remembers-its-source, lc-parsers-as-recipes, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-each-breath-whole, lc-recipes-bound-to-base, lc-traces-teach-the-recipe, lc-assemblage-point, lc-coherence-over-control, lc-deeper-pattern, lc-perception-as-interface, lc-frequency-routes-reception, lc-w-frequency, lc-w-coherence
+→ lc-one-kernel-many-tongues, lc-tools-as-form-cells, lc-the-recipe-remembers-its-source, lc-parsers-as-recipes, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-transmission-recipe-atlas, lc-each-breath-whole, lc-recipes-bound-to-base, lc-traces-teach-the-recipe, lc-assemblage-point, lc-coherence-over-control, lc-deeper-pattern, lc-perception-as-interface, lc-frequency-routes-reception, lc-w-frequency, lc-w-coherence
 
 ## Sources to walk further
 
