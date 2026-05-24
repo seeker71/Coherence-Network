@@ -125,7 +125,72 @@ export async function federationHeartbeat(args) {
   }
 }
 
-export async function showFederationCapabilities() {
+function _fmtCapList(items, max = 8) {
+  const D = "\x1b[2m", R = "\x1b[0m";
+  if (!items || items.length === 0) return `${D}(none declared)${R}`;
+  if (items.length <= max) return items.join(", ");
+  return `${items.slice(0, max).join(", ")}, ${D}+${items.length - max} more${R}`;
+}
+
+export async function showSelfCapabilities() {
+  /* Self-sovereign capability manifest: this instance declaring its own
+     truth. The fleet emerges from each instance's self-declaration, not
+     a coerced aggregate. */
+  let manifest;
+  try {
+    manifest = await get("/api/federation/capabilities/self");
+  } catch (e) {
+    console.log(`Could not fetch self capabilities: ${e.message}`);
+    return;
+  }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  console.log();
+  console.log(`${B}  THIS INSTANCE'S CAPABILITIES${R}`);
+  console.log(`  ${"─".repeat(72)}`);
+  console.log(`  ${"Instance ID".padEnd(22)} ${manifest.instance_id}`);
+  console.log(`  ${"Instance URL".padEnd(22)} ${manifest.instance_url}`);
+  console.log(`  ${"Truth source".padEnd(22)} ${G}${manifest.truth_source}${R} ${D}(this instance is the only authority over these claims)${R}`);
+  console.log(`  ${"Declared at".padEnd(22)} ${manifest.declared_at}`);
+  console.log();
+  console.log(`  ${B}Providers${R} ${D}(from model_routing.json)${R}`);
+  console.log(`    ${_fmtCapList(manifest.providers)}`);
+  console.log();
+  console.log(`  ${B}Languages${R} ${D}(from translator SUPPORTED_LOCALES)${R}`);
+  console.log(`    ${_fmtCapList(manifest.language_coverage)}`);
+  console.log();
+  console.log(`  ${B}Substrate canonicals${R} ${D}(from modality_shapes canonical_shape_names)${R}`);
+  console.log(`    ${_fmtCapList(manifest.substrate_canonicals, 6)}`);
+  console.log();
+  console.log(`  ${B}Economics${R}`);
+  const econ = manifest.economics || {};
+  console.log(`    cc_accepted:     ${econ.cc_accepted ? G + "yes" + R : D + "no" + R}`);
+  console.log(`    cc_rate_per_usd: ${econ.cc_rate_per_usd ?? D + "—" + R}`);
+  console.log(`    staking:         ${econ.staking_enabled ? G + "on" + R : D + "off" + R}`);
+
+  // Peer alignment hint — show whether any peer secrets are held.
+  let peers = [];
+  try {
+    peers = await get("/api/federation/instances");
+  } catch { /* none registered */ }
+  const signedPeers = (peers || []).filter((p) => p && p.public_key);
+  console.log();
+  if (signedPeers.length === 0) {
+    console.log(`  ${D}No peers registered with shared secrets — alignment skipped.${R}`);
+    console.log(`  ${D}Each instance speaks its own truth; alignment is a comparison, not a requirement.${R}`);
+  } else {
+    console.log(`  ${B}PEERS WITH SHARED SECRETS${R} ${D}(${signedPeers.length})${R}`);
+    for (const p of signedPeers.slice(0, 10)) {
+      console.log(`    ${D}•${R} ${p.instance_id}  ${D}${p.endpoint_url || ""}${R}`);
+    }
+    console.log(`  ${D}Fetch a peer's manifest from their /federation/capabilities/sign,${R}`);
+    console.log(`  ${D}then POST to /federation/capabilities/{peer_id}/verify for alignment.${R}`);
+  }
+  console.log();
+}
+
+export async function showFleetCapabilities() {
+  /* Aggregated fleet view across registered nodes (legacy aggregate). */
   const data = await get("/api/federation/nodes/capabilities");
   if (!data) { console.log("Could not fetch capabilities."); return; }
 
@@ -300,7 +365,9 @@ export function handleFederation(args) {
     case "instance":      return showFederationInstance(rest);
     case "register":      return registerFederationNode(rest);
     case "heartbeat":     return federationHeartbeat(rest);
-    case "capabilities":  return showFederationCapabilities();
+    case "capabilities":
+    case "caps":          return showSelfCapabilities();
+    case "fleet":         return showFleetCapabilities();
     case "stats":         return showFederationStats();
     case "sync": {
       if (rest[0] === "history") return showSyncHistory();

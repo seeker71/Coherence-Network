@@ -73,6 +73,7 @@ import { showNewsFeed, showTrending, showSources, addSource, showNewsResonance }
 import { showTreasury, showDeposits, makeDeposit } from "../lib/commands/treasury.mjs";
 import { listLinks, showLink, showValuation, payoutPreview } from "../lib/commands/lineage.mjs";
 import { listChangeRequests, showChangeRequest, vote, propose } from "../lib/commands/governance.mjs";
+import { handleFederation } from "../lib/commands/federation.mjs";
 import { listServices, showService, showServicesHealth, showServicesDeps } from "../lib/commands/services.mjs";
 import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
 import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
@@ -265,6 +266,7 @@ const COMMANDS = {
    news:          () => handleNews(args),
    treasury:      () => handleTreasury(args),
    lineage:       () => handleLineage(args),
+   federation:    () => handleFederation(args),
    governance:    () => handleGovernance(args),
    services:      () => handleServices(args),
    friction:      () => handleFriction(args),
