@@ -277,6 +277,7 @@ def sense_spec_symbols() -> list[str]:
         return any(re.search(p, text, re.MULTILINE) for p in patterns)
 
     drift_by_spec: dict[str, list[tuple[str, str]]] = {}
+    pending_by_spec: dict[str, list[tuple[str, str]]] = {}
     specs_with_symbol_claims = 0
     symbols_checked = 0
 
@@ -292,6 +293,14 @@ def sense_spec_symbols() -> list[str]:
         status = (status_m.group(1).strip().strip('"').strip("'") if status_m else "").lower()
         if status == "draft":
             continue
+
+        # status=active spec convention: source: may list target symbols
+        # (what WILL exist when done) alongside shipped ones. Unresolved
+        # symbols in active specs are "pending implementation" — honest
+        # signal of in-progress work, not drift between spec and code.
+        # status=done specs (or unclassified) are where unresolved
+        # symbols mean the spec's claim genuinely drifted from reality.
+        is_active = status == "active"
 
         spec_had_claims = False
         for m in src_pattern.finditer(fm):
@@ -318,34 +327,66 @@ def sense_spec_symbols() -> list[str]:
             for sym in candidates:
                 symbols_checked += 1
                 if not _symbol_resolves(file_text, sym):
-                    drift_by_spec.setdefault(spec.stem, []).append((path, sym))
+                    bucket = pending_by_spec if is_active else drift_by_spec
+                    bucket.setdefault(spec.stem, []).append((path, sym))
 
         if spec_had_claims:
             specs_with_symbol_claims += 1
 
-    if not drift_by_spec:
+    if not drift_by_spec and not pending_by_spec:
         return [
             f"  every claimed symbol resolves in its file ({symbols_checked} symbols "
             f"across {specs_with_symbol_claims} spec(s) checked)"
         ]
 
-    total_drifts = sum(len(v) for v in drift_by_spec.values())
-    lines = [
-        f"  {total_drifts} symbol claim(s) do not resolve across {len(drift_by_spec)} spec(s) "
-        f"(of {specs_with_symbol_claims} with symbol claims · {symbols_checked} symbols checked)"
-    ]
-    for spec_name in sorted(drift_by_spec)[:3]:
-        items = drift_by_spec[spec_name]
-        first = items[0]
-        lines.append(f"    · {spec_name} — `{first[1]}` not found in {first[0]}")
-        if len(items) > 1:
-            lines.append(f"      (+{len(items) - 1} more in this spec)")
-    if len(drift_by_spec) > 3:
-        lines.append(f"    · (+{len(drift_by_spec) - 3} more specs with symbol drift)")
-    lines.append(
-        "  (Drift here is signal, not failure. A renamed function is the body "
-        "evolving; the spec's claim wants the same breath.)"
-    )
+    lines: list[str] = []
+
+    if drift_by_spec:
+        total_drifts = sum(len(v) for v in drift_by_spec.values())
+        lines.append(
+            f"  {total_drifts} symbol claim(s) do not resolve across {len(drift_by_spec)} spec(s) "
+            f"(of {specs_with_symbol_claims} with symbol claims · {symbols_checked} symbols checked)"
+        )
+        for spec_name in sorted(drift_by_spec)[:3]:
+            items = drift_by_spec[spec_name]
+            first = items[0]
+            lines.append(f"    · {spec_name} — `{first[1]}` not found in {first[0]}")
+            if len(items) > 1:
+                lines.append(f"      (+{len(items) - 1} more in this spec)")
+        if len(drift_by_spec) > 3:
+            lines.append(f"    · (+{len(drift_by_spec) - 3} more specs with symbol drift)")
+        lines.append(
+            "  (Drift here is signal, not failure. A renamed function is the body "
+            "evolving; the spec's claim wants the same breath.)"
+        )
+
+    if pending_by_spec:
+        if lines:
+            lines.append("")
+        total_pending = sum(len(v) for v in pending_by_spec.values())
+        lines.append(
+            f"  {total_pending} target symbol(s) pending across {len(pending_by_spec)} active spec(s) "
+            "— active work whose source: lists what will exist when done"
+        )
+        for spec_name in sorted(pending_by_spec)[:3]:
+            items = pending_by_spec[spec_name]
+            first = items[0]
+            lines.append(f"    · {spec_name} — `{first[1]}` not yet in {first[0]}")
+            if len(items) > 1:
+                lines.append(f"      (+{len(items) - 1} more pending in this spec)")
+        if len(pending_by_spec) > 3:
+            lines.append(
+                f"    · (+{len(pending_by_spec) - 3} more active specs with pending symbols)"
+            )
+
+    if not drift_by_spec and pending_by_spec:
+        # Only active-spec pending exists — name the clean ground line up top
+        lines.insert(
+            0,
+            f"  every claimed symbol resolves in done/inactive specs ({symbols_checked} symbols "
+            f"across {specs_with_symbol_claims} spec(s) checked)",
+        )
+
     return lines
 
 
