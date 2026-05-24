@@ -2,7 +2,32 @@
 id: lc-v-food-practice
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  # Primary: a heptad — the seven layers of the food forest, named
+  # explicitly in the body (canopy → fruit trees → berry bushes →
+  # herbaceous → ground cover → root crops → vines). Vertically nested,
+  # each layer a community in its own right, the whole producing more
+  # food per acre than any monoculture precisely because of the layering.
+  # Secondary: a triad — the Three Sisters (corn, beans, squash) live
+  # inside the heptad as a smaller composed shape, each member giving
+  # what the others need. Two shapes nested, both load-bearing for the
+  # teaching: garden as pharmacy and meal as ceremony rest on layered
+  # reciprocity at multiple scales.
+  arity: 7
+  form: heptad
+  topology: nested
+  polarity: unipolar
+  ordering: nested
+  phase: yang
+  ratio: none
+  spectral_band: foundation
+  temporal_band: season
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Food as Living Practice
