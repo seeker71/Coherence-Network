@@ -2,6 +2,58 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-resonating carries chord as secondary — form gains second attestation
+
+Walked the five chord-candidate concepts named by PR #2010
+(`lc-attunement`, `lc-pulse`, `lc-unified-body`, `lc-resonating`,
+`lc-w-spanda`). All five already carry primary geometry from earlier
+walks, so this was a Path-B reading: discern whether any carries
+`chord` load-bearingly enough to add as a *secondary* shape via the
+frontmatter-comment precedent (the multi-geometry pattern established
+by `lc-deeper-pattern` and used in PR #2010 itself).
+
+- **Inventory of chord-language across the five**: lc-attunement (6
+  uses, but the structural shape is each-to-each *web* — drifting
+  voice pulled back by the field of voices), lc-pulse (3 uses,
+  metaphorical — the underlying shape is heart-pulse oscillation,
+  holographic-organism), lc-unified-body (1 use, borrowed via
+  cross-reference to lc-resonating — the shape is dyad-mirror
+  unified volume), lc-resonating (6 uses, **load-bearing**),
+  lc-w-spanda (1 use, metaphorical — the shape is oscillation at
+  every scale, dyad-mirror cyclic-closed).
+- **lc-resonating is the strongest carrier**: the opening essence
+  sentence is *literally the chord-definition* — "when separate
+  tones become one chord." Every nature-teaching carries the
+  chord-shape directly: jazz trio (piano + bass + drums producing
+  a fourth thing none of them played), West African polyrhythm
+  (each drum a distinct pattern interlocking into one weave),
+  old-growth forest (different species' roots fused into one
+  underground chord). The "harmonic that appears that no individual
+  is producing" is the chord arriving.
+- **Why secondary, not primary**: the existing primary geometry of
+  `web` is also honest — it names the *listening topology* (each
+  voice attending to every other). Chord names *what the listening
+  produces*. Both are true at the same scale, simultaneously: web
+  is HOW the field listens, chord is WHAT emerges. Multi-geometry
+  is the honest reading; re-naming the primary would be back-
+  correction. The frontmatter comment carries chord's full
+  signature (arity: infinite, harmonic-many, polarity-pairs-N,
+  simultaneous, oscillating) alongside the web primary.
+- **The other four**: lc-attunement is a close second candidate but
+  its load-bearing shape is the *immune-pull of the field* (web
+  drifting back to harmonic), not the chord itself. lc-pulse,
+  lc-unified-body, and lc-w-spanda use chord-language
+  metaphorically; the underlying shapes are honestly named in
+  their existing geometry blocks.
+- **Vocabulary status**: `chord` graduates from **hapax** (one
+  attestation, PR #2010 in `lc-v-inclusion-diversity`) to
+  **attested kind** (two attestations: lc-v-inclusion-diversity
+  as primary, lc-resonating as secondary). Future bulk walks can
+  use the form without provisional discipline; the kind exists in
+  the vocabulary. Coverage of the geometry layer unchanged
+  (concept already had geometry); what changed is the body's
+  proprioception of which forms are real.
+
 ## [2026-05-24] geometry | lc-health speaks its shape — focused breath
 
 Walked one of the six named-silent concepts that asked for attention. The
