@@ -1,0 +1,106 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/transmission-recipe-composer-20260524",
+  "commit_scope": "Add an interactive recipe-card composer to the public Transmission Recipes surface.",
+  "files_owned": [
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/vision/recipes/page.tsx",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_composer.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_composer.json",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "Browser check: http://localhost:3112/vision/recipes desktop 1280x720, fill starter, edit source, copy card",
+      "Browser check: http://localhost:3112/vision/recipes mobile 390x844, composer visible and no main-content overflow",
+      "API_PORT=18100 WEB_PORT=3112 ./scripts/verify_worktree_local_web.sh --start",
+      "git diff --check"
+    ],
+    "summary": "Added an interactive recipe-card composer to /vision/recipes with nine atlas fields, three starter cards, completion progress, clear, and copy. Index check, evidence validation, diff check, production build, desktop/mobile browser interaction checks, and local worktree web/API validation passed. Wellness and pulse were breathing before implementation, with pre-existing source-map and symbol drift unrelated to this page."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 20 https://coherencycoin.com/vision/recipes"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and public route validation remain pending until PR flow completes."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "db-backed-vision-hub-content",
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "transmission-recipe-composer-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "next-breath-request",
+        "cross-domain-recipe-vision"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "interactive-surface-implementation",
+        "browser-validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/vision/recipes/page.tsx",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "npm run build",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make wellness"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_composer.json",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/vision/recipes/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Visitors can use /vision/recipes to compose a recipe card, load starter cards, see completion progress, clear the card, and copy the card as plain text.",
+    "public_endpoints": [
+      "GET /vision/recipes"
+    ],
+    "test_flows": [
+      "Desktop browser check fills a starter card and copies the generated text.",
+      "Mobile browser check confirms the composer stacks correctly without main-content overflow.",
+      "Production build confirms the route compiles."
+    ]
+  }
+}
