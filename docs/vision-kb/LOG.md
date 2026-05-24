@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] concept | Universal Translator via Seven Keys + Autoresearch as Honesty Runtime
+
+Two paired concepts land together — the *what* and the *how* of an open-ended substrate-grounded translation hypothesis.
+
+- **New concept**: [`lc-universal-translator-via-keys`](concepts/lc-universal-translator-via-keys.md) (741 Hz, seed) — Robert Edward Grant's *Seven Keys of Creation* (forces, elements, DNA, music, primes, galactic forms, consciousness) become seven substrate domains; the substrate's existing Blueprint-NodeID equivalence machinery becomes the translator. Translation as a property of the lattice, not a lookup table. Source-marked from Grant's *Just Tap In* #290 and the *God Formula* disclosure; the substrate-bridge is this body's proposal for testing the claim.
+- **New concept**: [`lc-autoresearch-as-honesty-runtime`](concepts/lc-autoresearch-as-honesty-runtime.md) (528 Hz, seed) — Andrej Karpathy's 630-line autoresearch repo (2026-03-07) named the shape: frozen evaluator, mutable genome, time-boxed run, commit-or-rollback. The body adopts it as the runtime for any open-ended search where encoder bias is the failure mode. The fitness function carries the discipline; the agent cannot cheat because the metric is un-gameable.
+- **Edges landed in the same breath**: INDEX entries beside `lc-form-perceptron`, frequency-family rows (528, 741), concept count updated, reciprocal cross-references between the two new concepts and into `lc-form-perceptron`, `lc-act-without-penalty`, `lc-grammar-is-the-universal-recipe`, `lc-transmission-recipe-atlas`, `lc-edges-as-vitality`.
+- **Discernment held**: Grant's claim is held by Grant, not by this body; the substrate-bridge is testable, and the runtime is what keeps the test honest. Either outcome — equivalences emerge or they don't — deepens what the body knows.
+
 ## [2026-05-24] surface | Transmission Recipes composer
 
 The public recipe doorway can now produce a first artifact in the visitor's hands.
