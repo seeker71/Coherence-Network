@@ -182,10 +182,11 @@ form dyad_pair_set_shape = {
 # 2026-05-24 after a second confirmed attestation following the
 # 100%-geometry-coverage milestone (circulation-pattern — sibling
 # of source-flow with both poles as circulations, paired across the
-# substrate-of-flow). Expect this to grow as further axes of
-# complementarity surface. Each kind is a checkable shape, not a
-# label: discernment names what distinguishes it from "two cells
-# that share a Hz."
+# substrate-of-flow; a third attestation landed the same breath
+# raising substrate-flavors to six across three pairs). Expect this
+# to grow as further axes of complementarity surface. Each kind is a
+# checkable shape, not a label: discernment names what distinguishes
+# it from "two cells that share a Hz."
 
 defn kind_scale_paired = dyad_pair_kind_shape {
     name:        "scale-paired",
@@ -258,7 +259,10 @@ defn kind_transmission_triad = dyad_pair_kind_shape {
     discernment: "three cells flowing from one identified source-transmission, each carrying a complementary facet of the same root teaching; the source IS the binding (not pairwise axis); structurally distinct from dyad-pair (different arity, different shape — transmission_triad_shape)",
 };
 
-# Added 2026-05-24 after second confirmed attestation
+# Added 2026-05-24 after second confirmed attestation; third
+# attestation landed the same day raising the substrate-flavor count
+# to six across three pairs (see GAP-D9 and Part 6 for the sub-typing-
+# actionable threshold this crosses).
 #
 # Kind held as awareness-candidate since PR #1991 (seed:
 # lc-economy ↔ lc-bioelectric-pattern). Second attestation surfaced
@@ -266,16 +270,20 @@ defn kind_transmission_triad = dyad_pair_kind_shape {
 # lc-field-sensing — both name circulation through a field where
 # every node senses gradients without consulting a central authority.
 # Two attestations clear the activation threshold the body has been
-# using (same as internal-dyad's crossing in PR #1986). Distinct
-# from source-flow: source-flow has one cell as the source/hearth and
-# the other as the flow from it (point vs web). Circulation-pattern
-# has BOTH poles as circulations — both are webs, both are flows;
-# the complementarity lives in *what circulates* (substance vs
-# information; matter vs awareness; nutrients vs perception).
-# Distinct from cross-tradition: cross-tradition pairs share teaching
-# across cultural windows (mystical/computational); circulation-
-# pattern pairs share teaching across substrate-layers (the medium
-# of flow differs, the engine of distributed sensing is the same).
+# using (same as internal-dyad's crossing in PR #1986). Third
+# attestation: lc-energy ↔ lc-attunement, adding metabolic-energy
+# and harmonic-resonance to the substrate-flavor set already holding
+# value, voltage, nutrients, perception. Distinct from source-flow:
+# source-flow has one cell as the source/hearth and the other as the
+# flow from it (point vs web). Circulation-pattern has BOTH poles as
+# circulations — both are webs, both are flows; the complementarity
+# lives in *what circulates* (substance vs information; matter vs
+# awareness; nutrients vs perception; metabolic energy vs harmonic
+# resonance). Distinct from cross-tradition: cross-tradition pairs
+# share teaching across cultural windows (mystical/computational);
+# circulation-pattern pairs share teaching across substrate-layers
+# (the medium of flow differs, the engine of distributed sensing is
+# the same).
 defn kind_circulation_pattern = dyad_pair_kind_shape {
     name:        "circulation-pattern",
     axis:        "substrate-of-flow",
@@ -1276,7 +1284,10 @@ defn pair_resonating_sensing = dyad_pair_shape {
 # lc-w-mycorrhizal ↔ lc-field-sensing carry the same field-circulation-
 # without-central-ledger teaching across a different substrate-pair
 # (material nutrients ↔ perceptual attention). Two attestations clear
-# the activation threshold the body has been using.
+# the activation threshold the body has been using. A third attestation
+# (Pair 27, lc-energy ↔ lc-attunement) landed the same day across
+# metabolic-energy and harmonic-resonance substrates — six substrate-
+# flavors across three pairs cross the sub-typing-actionable threshold.
 #
 # The kind's discernment names a structurally specific shape:
 # field-wide circulation (not point-to-point), every cell senses
@@ -1380,6 +1391,88 @@ defn pair_mycorrhizal_field_sensing = dyad_pair_shape {
     discernment: "field-circulation-without-central-ledger across two more substrates — material nutrients through fungal network (mycorrhizal) and perceptual attention through human-collective network (field-sensing); the gradient does the routing, the network IS the intelligence; second attestation activates the kind",
     noticed_at:  "2026-05-24",
     noticed_by:  "geometry-walk-100pct-coverage",
+};
+
+# Pair 27 — metabolic-energy circulation ↔ harmonic-resonance circulation
+#         (third attestation; six substrate-flavors clear sub-typing threshold)
+#
+# Third pair surfaced after PR #2025 activated the kind with two
+# attestations. The body's prompt named the discipline: a third pair
+# must carry the kind load-bearingly across two MORE substrate-flavors
+# (not duplicate value/voltage/nutrients/perception) — and the pair
+# itself must be a clean dyad in shape, not a single cell that "fits."
+# Two web-form cells already in the body carry the kind's signature
+# explicitly across substrates the existing four don't touch.
+#
+# lc-energy (hz 417, form: web, topology: cyclic-closed, direction:
+# circulating, polarity: oscillating, scale: collective) — the field's
+# metabolism: thermal mass releasing winter sun through the evening,
+# biogas digester turning yesterday's scraps into today's flame,
+# rocket mass heaters, solar arrays, the dashboard on the common-house
+# wall. The teaching is explicit and load-bearing: *"the system becomes
+# visible, and visibility changes behavior without anyone needing to
+# enforce rules"*; *"surplus wants to move"*; *"there is no 'away.'
+# Everything cycles."* The energy circle meets — not to allocate but
+# to read together what the field has done. The gradient is felt; the
+# flow follows. Material substrate — heat, electricity, biogas,
+# nutrient-cycled-as-fertility — circulating through community-built
+# infrastructure that mirrors a mature forest's net-producer metabolism.
+#
+# lc-attunement (hz 432, form: web, topology: web-each-to-each,
+# direction: circulating, polarity: unipolar, scale: collective) —
+# the field maintaining coherence by sensing which frequencies
+# harmonize. The choir self-corrects without anyone stopping or
+# pointing: *"by the pull of the harmonic, not correction."* The
+# Tuesday tuning session asks one question — *"what's harmonizing,
+# what's creating friction?"* — and the naming itself shifts the
+# frequency. The herd of elephants decides through the body, through
+# infrasound vibrations every member feels through their feet. The
+# coral reef is a *"living membrane that knows itself well enough to
+# recognize what belongs."* No conductor, no committee. The harmonic
+# pull does the allocation. Informational substrate — sonic
+# frequency, harmonic gradient, the field's own self-listening —
+# circulating through the listening cells that ARE the field's
+# self-correction.
+#
+# Same web/circulating topology, both collective-scale, both at the
+# integration/transformation band-pair (417/432), both fractal in
+# self-similarity. They differ in substrate (metabolic-energy vs
+# harmonic-resonance), in Hz (417 transmutation vs 432 integration),
+# in polarity (oscillating vs unipolar), in the precise topology
+# (cyclic-closed loop vs web-each-to-each mesh — cyclic-closed is a
+# specialization of web-each-to-each that adds the "no edge to the
+# loop" teaching, both compatible with the kind's web-form
+# requirement). The teaching IS the bridge: same engine — field-wide
+# circulation where every cell senses the local gradient and the
+# gradient does the allocation — running through two further substrates
+# the existing four pairs don't touch. The seed pair (Pair 25) ran
+# the engine through value-and-attention and voltage-gradients; Pair
+# 26 ran it through fungal-nutrients and human-perception. Pair 27
+# runs it through metabolic-energy (thermal/electrical/biogas through
+# infrastructure) and harmonic-resonance (sonic gradient through
+# choir/herd/membrane). Six substrate-flavors across three pairs,
+# clean diversification — the kind crosses the sub-typing-actionable
+# threshold (same arity GAP-D12 named for transmission-triad).
+#
+# Honest neither-alone: energy without attunement reads as engineering
+# (the dashboard becomes optimization, the metabolism becomes
+# efficiency, the loop loses the listening that makes visibility
+# different from surveillance). Attunement without energy reads as
+# purely social/musical (the choir self-corrects but the material
+# substrate — what the community eats, how it stays warm, where the
+# loop closes — drifts unmetabolized). Together they name the kind's
+# *full breadth* across one organism's body: both the material flow
+# (calories, kilowatts, thermal mass) and the informational flow
+# (harmonic pull, dissonance-resolution, the field's own self-hearing)
+# circulate through the same no-central-ledger pattern.
+defn pair_energy_attunement = dyad_pair_shape {
+    cell_a:      @concept(lc-energy),
+    cell_b:      @concept(lc-attunement),
+    kind:        kind_circulation_pattern,
+    axis:        "substrate-of-flow",
+    discernment: "field-circulation-without-central-ledger across two further substrates — metabolic-energy through community infrastructure (thermal mass, biogas, solar dashboard) and harmonic-resonance through self-listening field (choir, herd, tuning circle); the dashboard makes the gradient visible, the harmonic pull does the correcting; six substrate-flavors across three pairs cross the sub-typing-actionable threshold",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "third-attestation-hunt-after-pr2025",
 };
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1650,8 +1743,12 @@ defn triad_dispenza = transmission_triad_shape {
 };
 
 # The full set — 25 prior + 1 cross-ref-only promotion + 5 transmission-
-# triads = 31 entries (24 external pairs + 2 internal-dyads + 5
-# transmission-triads: 2 complete + 3 partial)
+# triads + 3 circulation-pattern attestations = 34 entries (27 external
+# pairs + 2 internal-dyads + 5 transmission-triads: 2 complete + 3
+# partial). PR #2025 authored circulation-pattern defns but did not
+# bind them into the rows list; this breath threads all three
+# circulation-pattern attestations into the seed-set so the kind's
+# membership is queryable.
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -1695,6 +1792,11 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         triad_grant,
         # — fifth transmission-triad attestation (Dispenza, 3-cell complete) —
         triad_dispenza,
+        # — circulation-pattern attestations (kind activated PR #2025) —
+        pair_economy_bioelectric,
+        pair_mycorrhizal_field_sensing,
+        # — third circulation-pattern attestation (six substrate-flavors) —
+        pair_energy_attunement,
     ],
 };
 
@@ -2273,34 +2375,62 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         the translator concept's sixth claim refers to today's
 #         feature set; this gap is the candidate-direction for tomorrow.
 #
-# GAP-D9 (closed 2026-05-24): circulation-pattern kind activated.
-#         Held as awareness-candidate from PR #1991 with seed
-#         attestation lc-economy ↔ lc-bioelectric-pattern. The
-#         100%-geometry-coverage milestone (PR #2021) made the full
-#         concept corpus structurally legible; the second attestation
-#         surfaced on careful reading of the web-form cells together:
-#         lc-w-mycorrhizal ↔ lc-field-sensing carry the same field-
-#         circulation-without-central-ledger teaching across a
-#         different substrate-pair (material nutrients ↔ perceptual
-#         attention). Two attestations across four substrates —
-#         value-and-attention, voltage-gradients, fungal-nutrients,
-#         human-perception — clear the activation threshold the body
-#         has been using (same as internal-dyad's crossing in
-#         PR #1986). Defn entries live in Part 3h; the kind sits in
-#         the kind registry as kind_circulation_pattern. The seam
-#         distinguishing circulation-pattern from source-flow is
-#         load-bearing: source-flow pairs hearth (point/radial) with
-#         circulation (web/each-to-each) — different topologies of
-#         one nourishment. Circulation-pattern pairs TWO circulations
+# GAP-D9 (closed 2026-05-24; strengthened same breath): circulation-
+#         pattern kind activated and now carries three attestations
+#         across six distinct substrate-flavors. The arc:
+#           - PR #1991: seed (lc-economy ↔ lc-bioelectric-pattern)
+#             — value-and-attention ↔ voltage-gradients.
+#           - PR #2025 (kind activated): lc-w-mycorrhizal ↔
+#             lc-field-sensing — fungal-nutrients ↔ human-perception.
+#             Two attestations across four substrate-flavors crossed
+#             the activation threshold (same as internal-dyad's
+#             crossing in PR #1986).
+#           - This breath (third attestation): lc-energy ↔
+#             lc-attunement — metabolic-energy (thermal/electrical/
+#             biogas through community infrastructure) ↔ harmonic-
+#             resonance (sonic frequency through self-listening
+#             field). Three attestations across six substrate-flavors
+#             reach the sub-typing-actionable threshold (the same
+#             arity GAP-D12 names for transmission-triad's five-
+#             across-five strengthening).
+#
+#         The seam distinguishing circulation-pattern from source-flow
+#         remains load-bearing: source-flow pairs hearth (point/radial)
+#         with circulation (web/each-to-each) — different topologies
+#         of one nourishment. Circulation-pattern pairs TWO circulations
 #         across the substrate of flow — same topology, different
-#         medium. Cells worth watching for the third attestation that
-#         would prompt sub-typing: lc-harmonic-rebalancing (the
-#         ring-of-cells-tuning-themselves shape, noted standalone in
-#         the LOG); lc-nervous-system (the regulatory-flow shape);
-#         lc-discovery (the surfacing-by-resonance shape) — each
-#         carries half the kind's signature and would activate the
-#         second-flavor question if paired honestly with another web-
-#         form cell that completes the substrate-of-flow axis.
+#         medium.
+#
+#         **Sub-typing now actionable.** Three pairs that share *no*
+#         substrate-flavor across them is the signal the kind itself
+#         naturally diversifies along substrate-flavor lines. The next
+#         attestation that lands carrying a substrate ALREADY held by
+#         one of the six (value, voltage, nutrients, perception,
+#         metabolic-energy, harmonic-resonance) crosses the two-
+#         instances-per-flavor sub-typing threshold the body uses
+#         elsewhere; at that breath, *substrate-flavor* becomes the
+#         per-form column-triple for circulation-pattern's web-form
+#         cells (Part 7c names this generalization candidate for `web`
+#         forms specifically). Provisional flavor-family names to
+#         watch the body's prose disclose: material-flow (nutrients,
+#         metabolic-energy) vs informational-flow (perception,
+#         harmonic-resonance, voltage-as-signal) vs value-flow
+#         (economy) — but holding these as candidates only; the
+#         body's discernment carries, not the early grouping.
+#
+#         Cells worth watching for the fourth attestation that would
+#         activate sub-typing by sharing one of the six flavors:
+#         lc-circulation (value-flow re-attestation candidate, though
+#         PR #2025's decline reasoning was "same medium as seed");
+#         lc-nervous-system (the regulatory-flow shape carries
+#         informational substrate, possibly a second harmonic-or-
+#         perceptual-flavor instance); lc-discovery (the surfacing-
+#         by-resonance shape); lc-cross-connection (oversoul-
+#         resonance circulation, possibly a seventh flavor or a
+#         second harmonic-resonance instance depending on how the
+#         body reads it). Each carries part of the signature; the
+#         pair-discernment + substrate-flavor question is what the
+#         next walk should hold.
 #
 # GAP-D10 (closed 2026-05-24): transmission-triad activated. Three
 #         attestations carried the kind across the activation
@@ -2669,8 +2799,8 @@ defn column_identity_set = column_identity_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names
-# Recipe shapes over existing CONCEPT cells. The set is thirty-three
-# (twenty-six external pairs + two internal-dyads + five
+# Recipe shapes over existing CONCEPT cells. The set is thirty-four
+# (twenty-seven external pairs + two internal-dyads + five
 # transmission-triads: two 3-cell complete and three 2-cell partials);
 # the room is for many more. The kinds are eight (scale-paired,
 # source-flow, membrane-crossing, ground-event, internal-dyad,
@@ -2692,7 +2822,14 @@ defn column_identity_set = column_identity_set_shape {
 # sensing) after the 100%-geometry-coverage milestone made the
 # full corpus structurally legible — distinct from source-flow by
 # pairing two circulations across substrate-of-flow rather than
-# point-and-web across topology-of-source. An emerging interior-
+# point-and-web across topology-of-source. A third attestation
+# (lc-energy ↔ lc-attunement) followed in the same breath —
+# metabolic-energy ↔ harmonic-resonance, raising the substrate-
+# flavor count to six across three pairs and crossing the sub-typing-
+# actionable threshold per GAP-D9. The body now carries an empirically
+# attested observation: when a kind grows by *clean* substrate-
+# diversification (every pair touches new ground), the species-
+# under-genus structure becomes visible without forcing. An emerging interior-
 # axis-dyad candidate sits in GAP-D11 with one attestation,
 # sharpened 2026-05-24 (PR #2024) to require the SELF-ROOTED-
 # SOVEREIGN column specifically — per Part 7's column-identity

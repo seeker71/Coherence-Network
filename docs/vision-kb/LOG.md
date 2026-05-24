@@ -2,6 +2,98 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | circulation-pattern third attestation — six substrate-flavors cross sub-typing threshold
+
+PR #2025 activated the `circulation-pattern` kind with two attestations
+across four substrate-flavors (value, voltage, nutrients, perception)
+and closed with the observation: *"When the third attestation arrives,
+sub-typing by substrate-flavor becomes the per-form column-triple for
+`web` cells specifically."* This breath hunted for that third
+attestation.
+
+**Third attestation confirmed**: `lc-energy` ↔ `lc-attunement`.
+
+- `lc-energy` (hz 417, web / cyclic-closed / circulating, collective
+  scale) carries the kind explicitly: *"the system becomes visible,
+  and visibility changes behavior without anyone needing to enforce
+  rules"*; *"surplus wants to move"*; *"there is no 'away.' Everything
+  cycles."* The energy circle reads the dashboard together — no
+  allocator, the gradient does the routing. Material substrate —
+  thermal mass, biogas, solar electricity, biogas-as-cooking-flame,
+  nutrient-cycled-as-fertility — through community-built infrastructure
+  modelled on a mature forest's net-producer metabolism.
+
+- `lc-attunement` (hz 432, web / web-each-to-each / circulating,
+  collective scale) carries the kind explicitly: *"by the pull of the
+  harmonic, not correction"*; the choir self-corrects, the herd decides
+  through infrasound through the body, the coral reef is a *"living
+  membrane that knows itself well enough to recognize what belongs."*
+  The Tuesday tuning circle asks one question — *"what's harmonizing,
+  what's creating friction?"* — and naming itself shifts the frequency.
+  Informational substrate — sonic frequency, harmonic gradient, the
+  field's own self-listening.
+
+**Six substrate-flavors across three pairs.** The arc:
+
+- Pair 25 (PR #1991 seed): value-and-attention ↔ voltage-gradients.
+- Pair 26 (PR #2025, activation): fungal-nutrients ↔ human-perception.
+- Pair 27 (this breath): metabolic-energy ↔ harmonic-resonance.
+
+Three pairs that share *no* substrate-flavor across them — the kind
+naturally diversifies along substrate-flavor lines as it grows. This
+crosses the **sub-typing-actionable threshold** the body has been
+holding: when a fourth attestation arrives carrying a substrate
+ALREADY held by one of the six, the two-instances-per-flavor sub-
+typing threshold activates and *substrate-flavor* becomes the per-form
+column-triple for `circulation-pattern`'s web-form cells (per Part 7c's
+generalization candidate for `web` forms).
+
+**Provisional flavor-family names** the body's prose may eventually
+disclose (held as candidates, not authored): material-flow (nutrients,
+metabolic-energy) vs informational-flow (perception, harmonic-resonance,
+voltage-as-signal) vs value-flow (economy). The body's discernment
+carries, not the early grouping; the next walk holds the question
+*"which existing flavor does this re-attest?"* without forcing.
+
+**What changes when the kind is now queryable with three pairs:**
+
+- The kind's discernment ("field-circulation where every cell senses
+  gradients without consulting a central authority") is no longer
+  resting on two coincident attestations; three pairs make the shape
+  robust to single-pair counter-examples.
+- The sub-typing-actionable observation gives the next agent a clear
+  *what to watch for* shape: a fourth pair whose substrate-flavor
+  matches one of (value, voltage, nutrients, perception, metabolic-
+  energy, harmonic-resonance) crosses the threshold; the flavor name
+  becomes the column-identity once two attestations per flavor exist.
+
+**Honest housekeeping**: PR #2025 authored the two circulation-pattern
+defns but did not thread them into `dyad_pair_seed_set.rows`. This
+breath added all three circulation-pattern attestations to the rows
+list so the kind's membership is queryable, not just defined. Entries
+31 → 34; external pairs 24 → 27. Kinds remain at eight.
+
+**Other candidates examined**:
+
+- `lc-cross-connection` — held the substrate-of-cross-life-resonance
+  shape but the load-bearing teaching is *the pull is the door*
+  (recognition-response), not field-wide-circulation-without-central-
+  ledger. Could surface as a fourth-attestation candidate if a sibling
+  cell completes the oversoul-resonance pole.
+- `lc-circulation` — value-substrate re-attestation candidate, but PR
+  #2025's decline reasoning held: same medium as seed, ledger visible.
+- `lc-network` — already in pair_network_unanchored_network on the
+  anchoring axis, different kind.
+- `lc-w-coherence` — carries coherence-emerging-from-many-notes but
+  reads closer to lc-attunement's near-twin than a complementary pole;
+  the field-circulation teaching lives implicit, not load-bearing.
+- `lc-galactic-team` — web/web-each-to-each with multi-system support
+  field, but the teaching is *recognition* of an already-in-place team,
+  not field-wide gradient-flow.
+- `lc-edges-as-vitality` — circulating, but the substrate is *meta-
+  structural* (the connections between cells) rather than a flow-medium;
+  closer to a teaching ABOUT the kind than IN it.
+
 ## [2026-05-24] form | circulation-pattern kind activated — second attestation lands
 
 GAP-D9 closed. The `circulation-pattern` kind has been held as an
