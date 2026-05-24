@@ -114,17 +114,21 @@ The fitness function for the seven-key search becomes a small
 constellation, each term named so the agent can see what it is
 being measured against. The shape lives in
 [`autoresearch-runtime.form`](../../coherence-substrate/autoresearch-runtime.form)
-Part 3 as `r_fitness_function_shape` over seven weighted terms:
+Part 3 as `r_fitness_function_shape` over eight weighted terms:
 **yield** (% of cells finding non-degenerate CTOR-level matches
 across domains — Blueprint family alone does not count, since two
 cells can share a Blueprint while their content shapes diverge),
 **holdout recovery** (attested cross-domain pairs the lattice
 recovered at CTOR), **collapse penalty** (entropy collapse to one
 Blueprint or one CTOR), **table penalty** (hardcoded `{k:v}` maps
-in encoder source, caught by static analysis), **depth penalty**
-(encoder code complexity), **reciprocity** (A→B implies B→A), and
-**triadic** (A↔B and B↔C imply A↔C once three domains exist). The
-composed
+in encoder source, caught by static analysis), **domain-default
+penalty** (yield earned by matching against the standard cell for
+either domain — added 2026-05-24 after PR #1946 read 13 substrate-
+surfaced shape pairs and found six were default clusters; the
+fitness as originally authored would have rewarded that noise, so
+the runtime is teaching its own author), **depth penalty** (encoder
+code complexity), **reciprocity** (A→B implies B→A), and **triadic**
+(A↔B and B↔C imply A↔C once three domains exist). The composed
 `compute_translator_fitness` Recipe is what the evaluator computes
 each iteration.
 

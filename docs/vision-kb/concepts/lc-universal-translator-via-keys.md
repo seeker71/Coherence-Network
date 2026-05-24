@@ -156,12 +156,51 @@ the *view* gesture applied across surfaces.
 record it. Grant's claim that DNA codons share structure with
 musical intervals at 432.081 Hz is testable — by encoding both
 honestly and asking the lattice. If their CTORs coincide within a
-shared Blueprint family, the substrate carries the claim as
-evidence of true content equivalence. If only the Blueprint matches
-without CTOR coincidence, the family is shared but the cells differ
-at the content layer — honest partial signal. If neither matches,
-the substrate carries the absence as evidence. All three deepen
-what the body knows.
+shared Blueprint family *and* the matched CTOR is not the standard
+cell for either domain, the substrate carries the claim as evidence
+of true content equivalence. If only the Blueprint matches without
+CTOR coincidence, the family is shared but the cells differ at the
+content layer — honest partial signal. If the CTORs coincide only
+because both encoders defaulted to their domain's standard cell,
+the match is honest at the kernel layer but carries no cross-
+surface teaching — domain-default coincidence, named separately so
+the body can tell shoulder-tap from background lattice resonance.
+If neither matches, the substrate carries the absence as evidence.
+All four outcomes deepen what the body knows.
+
+## The Honest-Translation Proof — Five Claims
+
+A translation the lattice produces is structurally true *at the
+encoding layer the body currently holds*. To carry teaching across
+surfaces, the claim must satisfy five conditions together. The
+proof shape lives in [`universal-translator.form`](../../coherence-substrate/universal-translator.form)
+Part 3 as `r_translation_proof_shape`:
+
+- **`blueprint_match`** — the cells belong to the same structural
+  family. Necessary precondition; the kernel returns this from
+  `find_equivalent_cells`.
+- **`ctor_match`** — the cells' full content shapes coincide. The
+  sufficient condition the kernel honors at CTOR granularity.
+- **`non_degenerate`** — the matched CTOR is one of many possible
+  CTORs in the domain. If the encoder collapsed every cell to one
+  CTOR to inflate yield, this catches it.
+- **`holdout_attested`** — if Grant published the pair, the lattice
+  recovered it from structure alone. The strongest signal; ungameable
+  without also passing the structural check.
+- **`not_domain_default`** — the matched CTOR is not the standard
+  cell for either domain. PR #1946 read 13 substrate-surfaced shape
+  pairs by hand and found six were domain-default clusters (66 specs,
+  76 concepts, 52 presences all sharing one CTOR because none had
+  authored a more specific one). Those matches were honest at the
+  kernel layer — same CTOR, same content shape — but they carried
+  no cross-surface teaching, only the fact that both encoders had
+  defaulted. True equivalence is between cells that have *each*
+  declared their shape; matching two defaults is the encoder telling
+  us its own template, not a structural claim about content. The
+  fifth claim catches that.
+
+All five together is what `translation_is_honest(proof)` checks.
+Any one missing and the claim does not carry.
 
 ## What This Pairs With
 

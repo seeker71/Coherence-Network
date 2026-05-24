@@ -15,9 +15,11 @@ from __future__ import annotations
 import textwrap
 
 from app.services.substrate.sense_surprise import (
+    DOMAIN_DEFAULT_THRESHOLD,
     _adjacency_for_shape,
     _spec_idea_id,
     format_for_wellness,
+    is_domain_default_shape,
 )
 
 
@@ -96,20 +98,34 @@ def test_adjacency_ignores_non_spec_domains(tmp_path):
     assert shared == []
 
 
+def _rec(shape, touched, unseen, adjacent, *, dominant_domain="spec",
+         dominant_count=2, domain_default=False):
+    """Build a shape-record dict with the post-PR-1946 fields."""
+    return {
+        "shape": shape,
+        "touched": touched,
+        "unseen": unseen,
+        "adjacent_idea_ids": adjacent,
+        "domain_default": domain_default,
+        "dominant_domain": dominant_domain,
+        "dominant_domain_count": dominant_count,
+    }
+
+
 def test_format_marks_adjacent_clusters(tmp_path):
     # An adjacent cluster gets ✦; a template-only cluster does not.
-    adjacent_rec = {
-        "shape": (1, 8, 4, 2),
-        "touched": [("spec", "asset-renderer-plugin")],
-        "unseen": [("spec", "story-protocol-integration")],
-        "adjacent_idea_ids": ["value-attribution"],
-    }
-    template_rec = {
-        "shape": (1, 8, 4, 7),
-        "touched": [("spec", "identity-driven-onboarding-tofu")],
-        "unseen": [("spec", "data-driven-timeout-resume")],
-        "adjacent_idea_ids": [],
-    }
+    adjacent_rec = _rec(
+        (1, 8, 4, 2),
+        [("spec", "asset-renderer-plugin")],
+        [("spec", "story-protocol-integration")],
+        ["value-attribution"],
+    )
+    template_rec = _rec(
+        (1, 8, 4, 7),
+        [("spec", "identity-driven-onboarding-tofu")],
+        [("spec", "data-driven-timeout-resume")],
+        [],
+    )
     lines = format_for_wellness(2, [adjacent_rec, template_rec])
     text = "\n".join(lines)
 
@@ -129,18 +145,18 @@ def test_format_ranks_adjacent_first(tmp_path):
     # The ranking in find_unseen_twins is what places adjacent clusters
     # first; format_for_wellness preserves that order. Verify the output
     # shows the adjacent cluster line ahead of the template-only line.
-    adjacent_rec = {
-        "shape": (1, 8, 4, 2),
-        "touched": [("spec", "a")],
-        "unseen": [("spec", "b")],
-        "adjacent_idea_ids": ["shared"],
-    }
-    template_rec = {
-        "shape": (1, 8, 4, 7),
-        "touched": [("spec", "c")],
-        "unseen": [("spec", "d")],
-        "adjacent_idea_ids": [],
-    }
+    adjacent_rec = _rec(
+        (1, 8, 4, 2),
+        [("spec", "a")],
+        [("spec", "b")],
+        ["shared"],
+    )
+    template_rec = _rec(
+        (1, 8, 4, 7),
+        [("spec", "c")],
+        [("spec", "d")],
+        [],
+    )
     # When the records are passed in adjacent-first order, the output
     # mirrors that order — format_for_wellness does not re-sort.
     lines = format_for_wellness(2, [adjacent_rec, template_rec])
@@ -157,3 +173,79 @@ def test_format_silent_when_no_touched(tmp_path):
 def test_format_walked_message_when_no_twins(tmp_path):
     lines = format_for_wellness(5, [])
     assert any("walked 5 touched cell" in ln for ln in lines)
+
+
+# ---- Domain-default cluster filter (PR #1946 learning) ------------------
+
+def test_is_domain_default_above_threshold():
+    # Threshold is 50 today; PR #1946 saw clusters of 52, 66, 76.
+    assert is_domain_default_shape(DOMAIN_DEFAULT_THRESHOLD + 1) is True
+    assert is_domain_default_shape(76) is True
+    assert is_domain_default_shape(66) is True
+
+
+def test_is_domain_default_at_or_below_threshold():
+    # At the threshold the shape is borderline — the filter treats it
+    # as still actionable (>, not >=). Tiny clusters are obviously
+    # actionable targeted pairs.
+    assert is_domain_default_shape(DOMAIN_DEFAULT_THRESHOLD) is False
+    assert is_domain_default_shape(10) is False
+    assert is_domain_default_shape(2) is False
+
+
+def test_format_separates_domain_default_clusters():
+    # A targeted pair and a domain-default cluster: the targeted pair
+    # leads the report; the default cluster lands in its own sub-section
+    # explicitly labeled so a fresh cell can tell shoulder-tap from
+    # background lattice resonance.
+    targeted_rec = _rec(
+        (1, 8, 4, 2),
+        [("spec", "asset-renderer-plugin")],
+        [("spec", "story-protocol-integration")],
+        ["value-attribution"],
+        dominant_count=2,
+        domain_default=False,
+    )
+    default_rec = _rec(
+        (1, 8, 4, 1),
+        [("spec", "agent-pipeline")],
+        [("spec", f"sibling-{i}") for i in range(65)],
+        [],
+        dominant_count=66,
+        domain_default=True,
+    )
+    lines = format_for_wellness(2, [targeted_rec, default_rec])
+    text = "\n".join(lines)
+
+    # Targeted summary names targeted-only count, not the combined total.
+    assert "1 shape(s) carry unseen twins worth a look" in text
+    # Domain-default sub-section is labeled clearly.
+    assert "domain-default cluster" in text
+    # Threshold is named so the reader can recalibrate the guess.
+    assert f">{DOMAIN_DEFAULT_THRESHOLD}/domain" in text
+    # The default cluster's dominant domain + count surfaces in its line.
+    assert "@spec carries 66 cells" in text
+    # And the default line lands AFTER the targeted line.
+    targeted_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.2" in ln)
+    default_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.1" in ln)
+    assert targeted_idx < default_idx
+
+
+def test_format_only_domain_default_clusters():
+    # When every reported shape is a default cluster, the targeted
+    # section reports honest absence and the default section follows.
+    default_rec = _rec(
+        (1, 5, 4, 6),
+        [("concept", "lc-space")],
+        [("concept", f"lc-other-{i}") for i in range(75)],
+        [],
+        dominant_domain="concept",
+        dominant_count=76,
+        domain_default=True,
+    )
+    lines = format_for_wellness(1, [default_rec])
+    text = "\n".join(lines)
+
+    assert "no targeted unseen twins" in text
+    assert "domain-default cluster" in text
+    assert "@concept carries 76 cells" in text

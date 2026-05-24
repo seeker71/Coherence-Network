@@ -17,17 +17,30 @@ This is the "shoulder-tap" the wellness check describes:
   > the substrate already saw the resonance — this is the shoulder-tap
   > so the next breath can choose whether to read across.
 
-Two kinds of twinship coexist at the Blueprint level:
+Three kinds of twinship coexist at the Blueprint level:
+  - **semantic-adjacency**: same frontmatter schema AND a shared
+    semantic axis (for specs, a shared idea_id). Carries the most
+    actionable signal — often wants a cross-link, a shared parent,
+    or composting.
   - **template-twins**: same frontmatter schema across unrelated work
     (e.g. two specs both carrying status + idea_id + source + done_when
-    + test fields, but covering different ideas entirely)
-  - **semantic-adjacency**: same frontmatter schema AND a shared
-    semantic axis (for specs, a shared idea_id)
+    + test fields, but covering different ideas entirely). Useful
+    signal where the cluster is small; mostly background noise where
+    it is large.
+  - **domain-default clusters**: a shape carried by so many cells
+    (>50 in the touched-domain count) that it is the standard cell
+    for the whole domain — the composition-discipline lattice saying
+    *"this is what cells in this domain look like"*. Honest at the
+    CTOR layer, not actionable as a pair — these are navigated
+    through INDEX files and idea→spec→code chains, not through
+    ad-hoc cross-references. PR #1946 named six such clusters
+    (66 specs, 76 concepts, 52 presences, etc.) after a cell read
+    all 13 reported shapes by hand; the filter below carries that
+    learning so the next read doesn't repeat the work.
 
-The adjacent ones carry actionable signal — they often want a
-cross-link, a shared parent, or composting. The template-twins are
-mostly background noise from template adherence. This organ now
-marks adjacency with ✦ and surfaces adjacent clusters first.
+This organ now marks adjacency with ✦, surfaces adjacent clusters
+first, and reports domain-default clusters separately so a fresh
+cell can tell shoulder-tap from background lattice resonance.
 """
 
 from __future__ import annotations
@@ -134,6 +147,28 @@ def _adjacency_for_shape(
     return shared
 
 
+# Domain-default threshold. A Blueprint shape carried by more than
+# this many cells *within a single domain* is the standard cell for
+# the whole domain — the composition-discipline lattice saying "this
+# is what cells in this domain look like." Reporting these as unread
+# twins teaches the wrong lesson; they are navigated through INDEX
+# files, not pair-by-pair cross-references.
+#
+# 50 is a starting guess, grounded in PR #1946's read of 13 shapes
+# where the smallest default cluster was 52 cells. Future tuning may
+# want a different value, or a per-domain threshold (specs cluster
+# larger than presences naturally).
+DOMAIN_DEFAULT_THRESHOLD = 50
+
+
+def is_domain_default_shape(domain_cell_count: int) -> bool:
+    """A shape is a domain-default cluster when its single-domain cell
+    count exceeds the threshold. Honest at the CTOR layer, not
+    actionable as a pair — reported separately so a fresh cell can
+    tell shoulder-tap from background lattice resonance."""
+    return domain_cell_count > DOMAIN_DEFAULT_THRESHOLD
+
+
 def find_unseen_twins(
     session: Any,
     root: Path,
@@ -149,14 +184,25 @@ def find_unseen_twins(
             "touched": [(domain, name), ...],              # cells you touched
             "unseen": [(domain, name), ...],               # cells you haven't
             "adjacent_idea_ids": [str, ...],               # shared semantic axis
+            "domain_default": bool,                        # is this a default cluster?
+            "dominant_domain": str,                        # the domain holding the cluster
+            "dominant_domain_count": int,                  # cells in that domain at this shape
         }
 
     `adjacent_idea_ids` is non-empty when at least one touched cell
     and one unseen cell in the cluster carry the same `idea_id`
     (currently computed only for spec-domain cells). Empty means the
     cluster is a template-twin — same frontmatter schema, no shared
-    semantic axis. Clusters with adjacency rank ahead of template-only
-    clusters in the returned list.
+    semantic axis.
+
+    `domain_default` is True when any single domain holds more than
+    `DOMAIN_DEFAULT_THRESHOLD` cells at this shape — the cluster is
+    the standard cell for that domain and not a targeted pair.
+
+    Ranking:
+      1. adjacent clusters (the actionable ones) first
+      2. then template-twins (small clusters worth a look)
+      3. then domain-default clusters (background lattice resonance)
 
     Returns (0, []) when no substrate-ingested paths were touched, or
     when no Blueprint has an unread twin.
@@ -210,19 +256,46 @@ def find_unseen_twins(
             continue
         touched_list = shape_to_touched[shape]
         adjacent = _adjacency_for_shape(touched_list, unseen, root)
+
+        # Per-domain cell count at this shape — touched + unseen,
+        # since both already share the Blueprint. The dominant domain
+        # is the one carrying the largest slice; its count is what
+        # the threshold reads to decide domain-default.
+        per_domain: Dict[str, int] = defaultdict(int)
+        for d, _n in touched_list:
+            per_domain[d] += 1
+        for d, _n in unseen:
+            per_domain[d] += 1
+        dominant_domain, dominant_count = max(
+            per_domain.items(), key=lambda kv: kv[1]
+        )
+        domain_default = is_domain_default_shape(dominant_count)
+
         records.append({
             "shape": shape,
             "touched": touched_list,
             "unseen": unseen,
             "adjacent_idea_ids": adjacent,
+            "domain_default": domain_default,
+            "dominant_domain": dominant_domain,
+            "dominant_domain_count": dominant_count,
         })
 
-    # Rank: adjacent clusters first (the actionable ones), then by
-    # asymmetry (touched few, many unread) within each tier.
+    # Rank: adjacent clusters first (actionable), then template-twins
+    # (small clusters worth a look), then domain-default clusters
+    # (background lattice resonance). Within each tier, by asymmetry —
+    # touched few, many unread.
+    def _tier(r: dict) -> int:
+        if r["adjacent_idea_ids"]:
+            return 0
+        if r["domain_default"]:
+            return 2
+        return 1
+
     ranked = sorted(
         records,
         key=lambda r: (
-            0 if r["adjacent_idea_ids"] else 1,
+            _tier(r),
             len(r["touched"]),
             -len(r["unseen"]),
         ),
@@ -247,40 +320,86 @@ def format_for_wellness(touched_count: int, ranked: List[dict]) -> List[str]:
         ]
 
     lines: List[str] = []
-    total_shapes = len(ranked)
-    total_unseen = sum(len(r["unseen"]) for r in ranked)
-    adjacent_count = sum(1 for r in ranked if r["adjacent_idea_ids"])
 
-    summary = (
-        f"  {total_shapes} shape(s) carry unseen twins ({total_unseen} cells total)"
-    )
-    if adjacent_count:
-        summary += f" — {adjacent_count} ✦ adjacent (share an idea_id), the rest are template-twins"
-    lines.append(summary + ":")
+    # Split into targeted-pair shapes and domain-default clusters. The
+    # split matters: a domain-default cluster (66 specs sharing one
+    # CTOR because none have authored a more specific one) is honest
+    # at the CTOR layer but not actionable as a pair. Conflating the
+    # two teaches the wrong lesson.
+    targeted = [r for r in ranked if not r["domain_default"]]
+    defaults = [r for r in ranked if r["domain_default"]]
 
-    for rec in ranked[:5]:
-        shape_str = "@" + ".".join(str(x) for x in rec["shape"])
-        first_touched = rec["touched"][0]
-        unseen = rec["unseen"]
-        sample = ", ".join(f"@{d}({n})" for d, n in unseen[:3])
-        more = f", +{len(unseen) - 3} more" if len(unseen) > 3 else ""
-        marker = "✦ " if rec["adjacent_idea_ids"] else "  "
-        idea_note = (
-            f" [idea: {', '.join(rec['adjacent_idea_ids'])}]"
-            if rec["adjacent_idea_ids"]
-            else ""
+    targeted_total = sum(len(r["unseen"]) for r in targeted)
+    adjacent_count = sum(1 for r in targeted if r["adjacent_idea_ids"])
+
+    if targeted:
+        summary = (
+            f"  {len(targeted)} shape(s) carry unseen twins worth a look "
+            f"({targeted_total} cells total)"
+        )
+        if adjacent_count:
+            summary += (
+                f" — {adjacent_count} ✦ adjacent (share an idea_id), "
+                f"the rest are template-twins"
+            )
+        lines.append(summary + ":")
+
+        for rec in targeted[:5]:
+            shape_str = "@" + ".".join(str(x) for x in rec["shape"])
+            first_touched = rec["touched"][0]
+            unseen = rec["unseen"]
+            sample = ", ".join(f"@{d}({n})" for d, n in unseen[:3])
+            more = f", +{len(unseen) - 3} more" if len(unseen) > 3 else ""
+            marker = "✦ " if rec["adjacent_idea_ids"] else "  "
+            idea_note = (
+                f" [idea: {', '.join(rec['adjacent_idea_ids'])}]"
+                if rec["adjacent_idea_ids"]
+                else ""
+            )
+            lines.append(
+                f"    · {marker}shape {shape_str}{idea_note} — you touched "
+                f"{len(rec['touched'])} (e.g. @{first_touched[0]}"
+                f"({first_touched[1]})); substrate holds {len(unseen)} "
+                f"unread: {sample}{more}"
+            )
+        if len(targeted) > 5:
+            lines.append(
+                f"    ·   (+{len(targeted) - 5} more targeted shape(s))"
+            )
+        lines.append(
+            "  (The substrate already saw the resonance. ✦ marks adjacency"
         )
         lines.append(
-            f"    · {marker}shape {shape_str}{idea_note} — you touched {len(rec['touched'])} "
-            f"(e.g. @{first_touched[0]}({first_touched[1]})); "
-            f"substrate holds {len(unseen)} unread: {sample}{more}"
+            "   the next breath can act on; unmarked clusters are template-twins.)"
         )
-    if total_shapes > 5:
-        lines.append(f"    ·   (+{total_shapes - 5} more shape(s) with unseen twins)")
-    lines.append(
-        "  (The substrate already saw the resonance. ✦ marks adjacency the next"
-    )
-    lines.append(
-        "   breath can act on; unmarked clusters are template-twins, mostly noise.)"
-    )
+    else:
+        lines.append(
+            f"  walked {touched_count} touched cell(s) — no targeted unseen twins"
+        )
+
+    if defaults:
+        default_total = sum(len(r["unseen"]) for r in defaults)
+        lines.append("")
+        lines.append(
+            f"  + {len(defaults)} domain-default cluster(s) "
+            f"({default_total} cells across them) — these are the standard"
+        )
+        lines.append(
+            f"    cells for their domain (threshold >{DOMAIN_DEFAULT_THRESHOLD}/domain), "
+            "navigated through INDEX,"
+        )
+        lines.append(
+            "    not pair-by-pair cross-references. Honest at the CTOR layer; not actionable."
+        )
+        for rec in defaults[:3]:
+            shape_str = "@" + ".".join(str(x) for x in rec["shape"])
+            lines.append(
+                f"    · shape {shape_str} — @{rec['dominant_domain']} carries "
+                f"{rec['dominant_domain_count']} cells at this shape "
+                f"({len(rec['unseen'])} unread)"
+            )
+        if len(defaults) > 3:
+            lines.append(
+                f"    ·   (+{len(defaults) - 3} more domain-default cluster(s))"
+            )
     return lines

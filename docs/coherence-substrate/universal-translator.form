@@ -207,15 +207,17 @@ form r_translation_proof_shape = {
     ctor_match:         ~Bool,     # SUFFICIENT: the cells' full content shapes coincide
     non_degenerate:     ~Bool,     # the matched CTOR is not a collapse-to-one
     holdout_attested:   ~Bool,     # if Grant published this pair, the lattice recovered it
+    not_domain_default: ~Bool,     # the matched CTOR is not the standard cell for either domain
 };
 
 defn translation_is_honest(proof) =
     proof.blueprint_match
         and proof.ctor_match
         and proof.non_degenerate
-        and proof.holdout_attested;
+        and proof.holdout_attested
+        and proof.not_domain_default;
 
-# Why all four:
+# Why all five:
 #   - blueprint_match: necessary precondition. Two cells must share a
 #     Blueprint NodeID to belong to the same structural family. But
 #     this alone is the family-grouping the kernel returns from
@@ -233,6 +235,17 @@ defn translation_is_honest(proof) =
 #     correspondences. Hold a few out of the encoder inputs; require
 #     the lattice to *recover* them from structure alone. Recovery
 #     is signal. Failure to recover is honest signal too.
+#   - not_domain_default: the matched CTOR must not be the standard
+#     cell for either source or target domain. PR #1946 read 13
+#     substrate-surfaced shape pairs by hand and found six were
+#     domain-default clusters (66 specs, 76 concepts, 52 presences
+#     sharing one CTOR because none had authored a more specific one).
+#     The kernel's match was honest at the CTOR layer — but a CTOR
+#     equivalence between "the standard cell in domain X" and "the
+#     standard cell in domain Y" carries no cross-surface teaching;
+#     it carries the fact that both encoders defaulted. True
+#     equivalence is between cells that have *each* declared their
+#     shape, not between two defaults that happen to coincide.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 4 — Encoder discipline (the great-reason criterion)
@@ -298,10 +311,10 @@ defn translate_c_major_triad_walk =
 # whose CTOR also coincides with c_major_triad_cell's are candidate
 # content-equivalent translations; the rest of the family is same-
 # schema-different-content. Empty family is evidence the encoding
-# does not yet produce structural kinship at that layer. The four-
+# does not yet produce structural kinship at that layer. The five-
 # claim honest-translation proof in Part 3 (blueprint_match,
-# ctor_match, non_degenerate, holdout_attested) is what each
-# candidate must satisfy.
+# ctor_match, non_degenerate, holdout_attested, not_domain_default)
+# is what each candidate must satisfy.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
