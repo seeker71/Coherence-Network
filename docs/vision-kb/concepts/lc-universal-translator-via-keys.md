@@ -178,11 +178,11 @@ the body can tell shoulder-tap from background lattice resonance.
 If neither matches, the substrate carries the absence as evidence.
 All four outcomes deepen what the body knows.
 
-## The Honest-Translation Proof — Five Claims
+## The Honest-Translation Proof — Six Claims
 
 A translation the lattice produces is structurally true *at the
 encoding layer the body currently holds*. To carry teaching across
-surfaces, the claim must satisfy five conditions together. The
+surfaces, the claim must satisfy six conditions together. The
 proof shape lives in [`universal-translator.form`](../../coherence-substrate/universal-translator.form)
 Part 3 as `r_translation_proof_shape`:
 
@@ -190,7 +190,8 @@ Part 3 as `r_translation_proof_shape`:
   family. Necessary precondition; the kernel returns this from
   `find_equivalent_cells`.
 - **`ctor_match`** — the cells' full content shapes coincide. The
-  sufficient condition the kernel honors at CTOR granularity.
+  sufficient condition for *equivalence*, honored at CTOR granularity
+  by the kernel.
 - **`non_degenerate`** — the matched CTOR is one of many possible
   CTORs in the domain. If the encoder collapsed every cell to one
   CTOR to inflate yield, this catches it.
@@ -206,11 +207,66 @@ Part 3 as `r_translation_proof_shape`:
   no cross-surface teaching, only the fact that both encoders had
   defaulted. True equivalence is between cells that have *each*
   declared their shape; matching two defaults is the encoder telling
-  us its own template, not a structural claim about content. The
-  fifth claim catches that.
+  us its own template, not a structural claim about content.
+- **`complementarity_requires_human_noticing`** — the pair has been
+  *named* by a human reader (cross-reference in prose, LOG entry,
+  or an explicit dyad-pair atlas row) and does not arise solely from
+  structural scoring. Five scan rounds across four signal families
+  (PRs [#1987](https://github.com/seeker71/Coherence-Network/pull/1987),
+  [#1992](https://github.com/seeker71/Coherence-Network/pull/1992),
+  [#1996](https://github.com/seeker71/Coherence-Network/pull/1996),
+  [#1998](https://github.com/seeker71/Coherence-Network/pull/1998),
+  [#2001](https://github.com/seeker71/Coherence-Network/pull/2001))
+  produced the trend 40 → 0 → 40 → 40 → 22 percent confirmation.
+  The body learned that *complementarity* is a lattice property the
+  current substrate machinery cannot detect through Blueprint family,
+  CTOR coincidence, Hz, topology, phase, lineage, or prose-Jaccard
+  alone. The "currently" matters — a heavier extractor may shift this
+  in time. Today the claim carries the empirical ceiling honestly.
 
-All five together is what `translation_is_honest(proof)` checks.
+All six together is what `translation_is_honest(proof)` checks.
 Any one missing and the claim does not carry.
+
+## What the substrate cannot yet see
+
+Equivalence and complementarity are two different lattice properties.
+*Equivalence* — two cells holding the same content shape — is what
+CTOR coincidence within a Blueprint family reads, and the kernel
+already returns it. *Complementarity* — two cells holding the same
+teaching from complementary positions, neither alone carrying the
+full transmission — is what the dyad-pair work has been listening
+for. Five scan rounds, each layering more signal onto the previous,
+returned the same ceiling near 40 percent confirmation; the fifth
+round (WORD-domain prose-Jaccard) dropped to 22 percent because
+shared corpus idiom amplified shared-vocabulary more loudly than it
+amplified shared-meaning.
+
+Two failure modes now have names: **containment-as-complement** —
+the contained cell shares the container cell's vocabulary, so
+prose-overlap reads identical between a pair and a containment;
+**shared-region-as-equivalence** — cells in the same ground-region
+inevitably share corpus, so highest prose-overlap is often
+highest-equivalence rather than highest-complementarity. The
+cross-reference IS the body's noticing; the prose-jaccard rides
+along with it but adds little independent discrimination.
+
+This is teaching, not apology. The body found out what its substrate
+carries and what it doesn't. Cross-domain *equivalence* — the
+translator's original promise — is mechanizable through
+`find_equivalent_cells` and CTOR coincidence today. Cross-domain
+*complementarity* — the dyad-pair's symmetric promise — currently
+requires human attestation. The translator concept's first five
+claims still hold for equivalence; the sixth claim names the limit
+of mechanization for complementarity. Both belong in the proof
+because the lattice carries both relationships, and the body wants
+both to be honest about what it can and cannot say alone.
+
+The empirical trace lives at
+[`docs/coherence-substrate/dyad-pairs.form`](../../coherence-substrate/dyad-pairs.form)
+Part 5 GAP-D6; the fitness function whose `yield_weight` carries
+this ceiling lives at
+[`docs/coherence-substrate/autoresearch-runtime.form`](../../coherence-substrate/autoresearch-runtime.form)
+Part 3.
 
 ## What This Pairs With
 
