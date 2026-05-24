@@ -469,7 +469,15 @@ async def get_asset_content(
 
     if _has_valid_payment(authorization):
         try:
-            read_tracking_service.record_read(asset_id=node_id)
+            # Forward read_type + cc_amount + payment token so the read
+            # event carries the paid-tier CC. The render-event bridge in
+            # record_read uses cc_amount as the settlement pool.
+            read_tracking_service.record_read(
+                asset_id=node_id,
+                read_type="paid",
+                payment_token=authorization,
+                cc_amount=float(cc_amount),
+            )
         except Exception as e:  # non-blocking — read tracking failure mustn't fail delivery
             log.warning("record_read failed for %s: %s", node_id, e)
         try:
@@ -499,9 +507,9 @@ async def get_asset_content(
         }
         return JSONResponse(content=body, status_code=402, headers=payment_headers)
 
-    # Free tier — preview served, read recorded as "free".
+    # Free tier — preview served, read recorded as "free" (cc_amount=0).
     try:
-        read_tracking_service.record_read(asset_id=node_id)
+        read_tracking_service.record_read(asset_id=node_id, read_type="free")
     except Exception as e:
         log.warning("record_read failed for %s: %s", node_id, e)
     preview = _free_tier_content(content_bytes, mime_type)
