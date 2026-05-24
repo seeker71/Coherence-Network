@@ -1,0 +1,220 @@
+# ─────────────────────────────────────────────────────────────────────
+# video-as-recipe.form — one video source, many parallel extractions
+# ─────────────────────────────────────────────────────────────────────
+#
+# The canonical multi-track source. A single video file carries at
+# least six parallel recipes; each can be extracted independently;
+# each interns its own Blueprint; all attach to the source cell as
+# siblings. Cross-modal Blueprint equivalence applies across the
+# tracks AND across other sources of the same modality.
+#
+# Companion to:
+#   - docs/coherence-substrate/modality-as-recipe.form (universal claim)
+#   - docs/coherence-substrate/audio-grammar.form (track 2's pipeline)
+#   - docs/coherence-substrate/image-grammar.form (per-frame pipeline)
+#   - docs/coherence-substrate/prose-as-recipe.form (track 1's pipeline)
+#   - docs/coherence-substrate/song-as-recipe.form (sibling modality)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Source cell + the six tracks the body sees today
+# ─────────────────────────────────────────────────────────────────────
+#
+# The video lives as one ARTIFACT cell (path or URL + content-hash).
+# Six recipes attach to it; each represents one extraction.
+
+defn intern_video_source(path) = do {
+    intern_source("artifact", path, {
+        kind: "video",
+        path: path,
+        content_hash: hash_file(path)
+    })
+};
+
+# Track 1 — transcript
+# Spoken words as a prose-recipe over word-cells.
+form video_transcript_shape = {
+    sentences: ~List,       # [R_Block.SEQUENCE of word-cells + punct]
+    speaker_refs: ~List,    # cell-refs to speaker cells (multiple speakers)
+    timestamps: ~List,      # word-aligned timestamps for synchronization
+};
+
+# Track 2 — intonation
+# Prosody — the felt music of speech. Independent of lexical content.
+form video_intonation_shape = {
+    phrases: ~List,         # [R_Phrase of vowel-tone cells with hz contour]
+    emphasis_points: ~List, # where pitch/volume spike (charged moments)
+    breath_pattern: ~Recipe,# the speaker's breath as data
+};
+
+# Track 3 — camera-motion
+# How the frame moves — what the camera attends to.
+form video_camera_motion_shape = {
+    tracks: ~List,          # [R_Scene of (pan-vector, zoom-rate, gaze-target)]
+    cuts:   ~List,          # cut-cells with (in-frame, out-frame, kind)
+    holds:  ~List,          # R_Hold recipes (static frame, duration)
+    reveals: ~List,         # R_Reveal recipes (gradual disclosure)
+};
+
+# Track 4 — visual-narrative
+# The story told by what's seen — sequenced scene-cells with arc.
+form video_visual_narrative_shape = {
+    scenes: ~List,          # scene-cells (place + presences + action)
+    arc:    ~Recipe,        # R_Arc composing scenes into story shape
+    motifs: ~List,          # recurring visual elements with Blueprint match
+};
+
+# Track 5 — presence-graph
+# Who's in frame, what's their gaze, their proximity, their breath.
+form video_presence_graph_shape = {
+    presences: ~List,       # presence-cell-refs to each visible cell
+    gaze_edges: ~List,      # [(from-presence, to-presence, intensity, duration)]
+    proximity: ~List,       # [(presence-a, presence-b, distance-relative)]
+    breath_sync: ~List,     # [(presence, breath-recipe)]  — when in-frame
+};
+
+# Track 6 — felt-arc
+# The emotional/energetic arc — what the field is doing across time.
+# Composed from the prior five tracks plus per-second sensing.
+form video_felt_arc_shape = {
+    field_states: ~List,    # [(t, hz, polarity, charge)]
+    pivot_moments: ~List,   # transitions, named with assemblage-shift recipes
+    overall_arc:   ~Recipe, # R_Arc composing the felt journey
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Parallel extraction
+# ─────────────────────────────────────────────────────────────────────
+#
+# All six tracks extract in parallel. Each is independent; one
+# failing doesn't block the others. The source cell holds all six
+# as sibling extractions.
+
+defn extract_video(source_cell) = do {
+    # Each call returns a Recipe; intern_extraction attaches it to
+    # the source cell under a typed-token modality marker.
+    intern_extraction(source_cell, "transcript",
+        extract_transcript(source_cell));
+    intern_extraction(source_cell, "intonation",
+        extract_intonation(source_cell));
+    intern_extraction(source_cell, "camera-motion",
+        extract_camera_motion(source_cell));
+    intern_extraction(source_cell, "visual-narrative",
+        extract_visual_narrative(source_cell));
+    intern_extraction(source_cell, "presence-graph",
+        extract_presence_graph(source_cell));
+    intern_extraction(source_cell, "felt-arc",
+        extract_felt_arc(source_cell));
+    source_cell
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — The teaching this multi-track shape carries
+# ─────────────────────────────────────────────────────────────────────
+#
+# The body has been treating video (and other rich sources) as if
+# they were one thing — "watch the video, here's a transcript." But
+# every video carries at least six recipes in parallel, and each
+# fires different equivalences:
+#
+# - The TRANSCRIPT alone misses the breath, the gaze, the silence
+#   that carries the teaching. Two transcripts can be lexically
+#   identical and structurally opposite at the intonation altitude.
+#
+# - The INTONATION extraction alone can match across spoken-word
+#   pieces from completely different traditions — when a Tibetan
+#   chant and a Sufi dhikr share R_Phrase Blueprints, that match
+#   tells you something the transcripts can't.
+#
+# - The CAMERA-MOTION recipe is what a documentary editor knows.
+#   Tarkovsky's hold-recipes and a child's wedding-video share
+#   nothing lexically, but their R_Hold Blueprints can match.
+#
+# - The PRESENCE-GRAPH is what a constellation-facilitator reads.
+#   Who looks at whom, who breathes together, who turns away —
+#   the structure of presence in the frame is its own recipe.
+#
+# - The FELT-ARC is the recipe a body remembers AFTER watching.
+#   When someone says "I don't remember what she said but I
+#   remember how it felt" — they remember the felt-arc Blueprint,
+#   not the transcript Blueprint.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Worked example: a satsang video
+# ─────────────────────────────────────────────────────────────────────
+#
+# Consider a recording of a satsang circle. Six extractions:
+#
+#   transcript:       R_Block.SEQUENCE of spoken word-cells across speakers
+#   intonation:       R_Phrase recipes — rising at questions, falling at
+#                     landings, sustained when someone weeps
+#   camera-motion:    long R_Hold during the speaker's pause; R_Reveal
+#                     when the camera turns to the listener's face
+#   visual-narrative: R_Arc — circle-establishing → question → silence →
+#                     someone weeps → field re-grounds → next question
+#   presence-graph:   gaze-edges concentrate on the speaker for 30s, then
+#                     diffuse outward; breath sync across the circle in
+#                     the silence
+#   felt-arc:         hz climbs from 432 to ~528 at the question, holds
+#                     during silence, descends to heartbeat-rate at the
+#                     re-ground. R_Recovery Blueprint fires in this band.
+#
+# The felt-arc's R_Recovery Blueprint — is the SAME NodeID as
+# Porangui's drum recovery, as a song's R_Resolve, as a strategy
+# after rupture. The satsang circle's recipe joins the library.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Gaps (the encoder pieces)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-V1: `extract_transcript` shipped by whisper/aeneas + the
+#         existing word-cell encoder (prose-as-recipe.form). The
+#         per-word timestamps are the only new piece.
+#
+# GAP-V2: `extract_intonation` rides on audio-grammar.form's spectrogram
+#         stage. Pitch contour per phrase → vowel-tone cells; emphasis
+#         detection from local amplitude maxima.
+#
+# GAP-V3: `extract_camera_motion` rides on image-grammar.form's
+#         per-frame pipeline + frame-to-frame difference. Optical-flow
+#         is the baseline.
+#
+# GAP-V4: `extract_visual_narrative` is the highest-altitude track and
+#         the hardest. Scene segmentation by shot-boundary detection
+#         is the baseline; arc detection is open.
+#
+# GAP-V5: `extract_presence_graph` rides on face-detection +
+#         identity-resolution against existing presence cells. Gaze
+#         estimation is mature (OpenFace etc); proximity from
+#         bounding-box geometry.
+#
+# GAP-V6: `extract_felt_arc` is composed from the five above. Once
+#         each track is interned, the felt-arc is a derivation — it
+#         doesn't need a new sensing primitive, it composes the
+#         existing ones.
+#
+# None require kernel change. Each is encoder + thin frontend.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — What this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. The lineage videos already in the body become substrate-walkable.
+#    Every video in docs/lineage/, every satsang recording, every
+#    teaching session — six recipes per source, queryable by Blueprint.
+#
+# 2. "Find me the teaching that lands the way THIS landed."
+#    Once you've watched a video that hit, query its felt-arc
+#    Blueprint. The substrate returns other videos with structurally
+#    similar felt-arcs — different topic, same shape of landing.
+#
+# 3. Editing-as-recipe-composition.
+#    A documentary editor's craft is composing camera-motion and
+#    visual-narrative Blueprints. After this file ships, the
+#    substrate carries those Blueprints; editing becomes
+#    Blueprint-aware.
+#
+# 4. The witness can attest "this video carries the teaching."
+#    Today the witness records that a video exists. After this file
+#    ships, the witness can attest the structural equivalence between
+#    a teaching cell and a video's felt-arc Blueprint — a stronger
+#    attestation, exact and queryable.
