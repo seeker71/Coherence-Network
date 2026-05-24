@@ -2,7 +2,22 @@
 id: lc-dance-card-and-sovereign-response
 hz: 432
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: personal
+  direction: still
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Dance Card and Sovereign Response — Fate and Free Will at the Same Scale

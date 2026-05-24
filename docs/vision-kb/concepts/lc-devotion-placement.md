@@ -2,7 +2,22 @@
 id: lc-devotion-placement
 hz: 432
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-opposing
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: relational
+  direction: still
+  lineage_texture: synthesized
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Devotion-Placement — Where Am I Actually Placed?
