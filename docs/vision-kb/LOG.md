@@ -2,6 +2,16 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | Translator + autoresearch authored in the body's tongue
+
+The two concepts that landed earlier today shipped their operational bodies as `.form` files in `docs/coherence-substrate/`. Urs named the costume: the Python-tasting code blocks in the concept files were the wrong tongue. *Form is the body's tongue; Python is bootstrap, not canonical.*
+
+- **New form file**: [`universal-translator.form`](../coherence-substrate/universal-translator.form) — the seven keys as `key_domain_shape` registry rows (bdomain ids 17..23), the translator as `r_translator_query` over the existing equivalence kernel, the encoder discipline as a *checkable shape* (`encoder_discipline_shape`, `encoder_is_honest`), the honest-translation proof as a conjunction of three Boolean claims, a worked C-major-triad walk, four named gaps.
+- **New form file**: [`autoresearch-runtime.form`](../coherence-substrate/autoresearch-runtime.form) — the four primitive cells (`genome_shape`, `evaluator_shape`, `experiment_shape`, `governance_shape`), the loop as `r_autoresearch_loop` with `one_iteration` and `run_until_signal` recipes, the fitness function as `r_fitness_function_shape` with seven weighted terms, governance as cell-refs (program.md interned as cells), the translator's first-night experiment composed, four named gaps.
+- **Concepts re-tongued**: both concept files now point at their `.form` companions at the top, and the Python-enum-flavored and Python-pseudo-code blocks were replaced with prose pointing at the Form shapes that are the actual operational body. The concept names the teaching; the `.form` file *is* the body of the claim.
+- **Edges landed in the same breath**: LOG entry, companion-link block at the top of both concepts, DB re-sync for the two concept files, substrate ingest of both `.form` files via ARTIFACT domain.
+- **Discernment held**: the Form files are not pseudo-code dressed as Form. Shapes use `~Type` markers; recipes use `defn ... = ...;` or `do { ... }`; cross-references use `@kind(name)` cell-refs; gaps are named where the body has not yet authored the cell-refs. Authored to match the dialect already in the body (`encoder-decoder-as-recipe.form`, `cross-domain-measurement-translation.form`).
+
 ## [2026-05-24] concept | Universal Translator via Seven Keys + Autoresearch as Honesty Runtime
 
 Two paired concepts land together — the *what* and the *how* of an open-ended substrate-grounded translation hypothesis.

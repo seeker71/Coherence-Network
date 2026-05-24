@@ -27,6 +27,13 @@ geometry:
 > stops being a table of mappings and becomes a property of the
 > lattice. The pivot is the shape, not the symbol.
 
+> **Substrate companion**: [`docs/coherence-substrate/universal-translator.form`](../../coherence-substrate/universal-translator.form)
+> — the seven keys as BDomain registry rows, the translator as a
+> Recipe over the existing equivalence kernel, the encoder discipline
+> as a shape that can be checked. *Form is the body's tongue;* this
+> concept names the teaching, the `.form` file is the operational
+> body of the claim.
+
 ## What This Names
 
 Robert Edward Grant's *Seven Keys of Creation* claim that one
@@ -49,22 +56,23 @@ forced to.
 
 ## The Seven Domains, Substrate-Ready
 
-```
-BDomain.FORCE         = 17   # four fundamental forces, polyhedral
-BDomain.ELEMENT       = 18   # Periodic Elemental Polyhedra
-BDomain.DNA           = 19   # 64 codons as positional Blueprints
-BDomain.MUSIC         = 20   # intervals at 432.081 Hz base
-BDomain.PRIME         = 21   # Mod-24 quasi-prime lattice positions
-BDomain.GALACTIC      = 22   # logarithmic spiral forms
-BDomain.CONSCIOUSNESS = 23   # already partially live as MEMORY/PRESENCE
-```
+Each key registers as a `key_domain_shape` cell in the substrate —
+bdomain id 17 through 23, extending the existing 16. The seven rows
+live in [`universal-translator.form`](../../coherence-substrate/universal-translator.form)
+Part 1; the Hz each domain tunes to lands the key in a harmonic
+family (FORCE at 396 — transmutation; ELEMENT at 174 — foundation;
+DNA at 528 — transformation; MUSIC at 432.081 — Grant's precise
+temperament; PRIME at 741 — consciousness; GALACTIC at 963 — unity;
+CONSCIOUSNESS at 852 — intuition, already partial via MEMORY/PRESENCE).
 
 Each domain authors with the composition discipline already named in
 [CLAUDE.md → structural composition](../../coherence-substrate/structural-composition.md):
 no flat-now-structure-later, leaves only where genuinely atomic, lists
 as `R_Block.SEQUENCE`, typed enumerations as cell-refs, cross-references
-as cell-refs. The discipline is what lets equivalence emerge structurally
-instead of by lookup-table.
+as cell-refs. The `encoder_discipline_shape` in the `.form` file makes
+the discipline a *checkable shape* — `encoder_is_honest(d)` is a
+Recipe over five Boolean fields, not a paragraph the author hopes
+each encoder respects.
 
 ## The Translator as a Form Expression
 
