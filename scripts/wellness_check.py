@@ -252,6 +252,15 @@ def sense_spec_symbols() -> list[str]:
             rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:default\s+)?class\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
+            # TS/JS non-exported declarations. `function` is a reserved
+            # word so it doesn't appear in prose as a definition marker;
+            # the `function`-keyword match is safe without `export`.
+            # `const`/`let`/`var` are anchored to line-start (with
+            # optional indentation) so the match stays close to
+            # module-scope shape and doesn't fire on parameter lists
+            # or deeply-nested locals.
+            rf"\b(?:async\s+)?function\s+{re.escape(sym)}\b",
+            rf"^\s*(?:const|let|var)\s+{re.escape(sym)}\s*[:=]",
             rf"^\s*form\s+{re.escape(sym)}\b",         # Form shape
             rf"^\s*defn\s+{re.escape(sym)}\b",         # Form definition
             # Rust — struct, enum, trait, type alias, fn, union, macro
