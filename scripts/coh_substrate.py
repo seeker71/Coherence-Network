@@ -109,7 +109,15 @@ _INGESTERS = {
     "kb_page": (
         KB_PAGE_DIRS,
         ingest_kb_page_file,
-        lambda p: p.suffix == ".md" and p.name not in ("SCHEMA.md",),
+        # LOG.md is the change-log surface (humans + git history); its
+        # monthly rotations live in docs/vision-kb/LOG-archive/ and stay
+        # outside the substrate for the same reason. SCHEMA.md is the
+        # KB's authoring-format guide, not content.
+        lambda p: (
+            p.suffix == ".md"
+            and p.name not in ("SCHEMA.md", "LOG.md")
+            and "LOG-archive" not in p.parts
+        ),
     ),
 }
 
@@ -214,6 +222,8 @@ def _domain_for_path(path: Path) -> str | None:
         "vision-kb" in parts
         and path.suffix == ".md"
         and not {"concepts", "transmissions", "resources", "guides", "glossary"}.intersection(parts)
+        and path.name not in ("LOG.md", "SCHEMA.md")
+        and "LOG-archive" not in parts
     ):
         return "kb_page"
     if "presences" in parts and not path.name.startswith(("INDEX", "README")):
