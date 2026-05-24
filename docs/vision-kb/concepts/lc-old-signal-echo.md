@@ -67,4 +67,4 @@ Recognizing them as echoes lets them complete and dissipate.
 
 ## Cross-References
 
-→ lc-reality-lag, lc-nervous-system-recalibration, lc-w-phase-transition, lc-coherence-over-control, lc-embodiment
+→ lc-reality-lag, lc-nervous-system-recalibration, lc-w-phase-transition, lc-coherence-over-control, lc-embodiment, lc-presence-over-protection, lc-relationships-as-mirrors, lc-trauma-as-identity-anchor

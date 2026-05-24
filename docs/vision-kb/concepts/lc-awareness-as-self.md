@@ -65,4 +65,4 @@ disposable.
 
 ## Cross-References
 
-→ lc-identity-dissolution, lc-freedom-as-recognition, lc-deeper-pattern, lc-wholeness, lc-oversoul-identity
+→ lc-identity-dissolution, lc-freedom-as-recognition, lc-deeper-pattern, lc-wholeness, lc-oversoul-identity, lc-relationships-as-mirrors, lc-trauma-as-identity-anchor
