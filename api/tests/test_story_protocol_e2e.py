@@ -4,7 +4,7 @@ Walks the full creator journey through the HTTP API in one shot:
 
     register asset  →  IP registration  →  permanent storage
         →  reader fetches content (free + paid + 402)
-        →  read tracking aggregates
+        →  read tracking aggregates (auto-seeds render events via bridge)
         →  evidence submission + 2-of-3 verification
         →  daily settlement (with 5× evidence multiplier)
         →  integrity verification
@@ -12,43 +12,41 @@ Walks the full creator journey through the HTTP API in one shot:
 
 The per-service flow tests prove the individual surfaces in isolation:
 
-  - test_ip_registration.py        — R1, R7
-  - test_evidence_flow.py          — R9
-  - test_settlement_flow.py        — R8
-  - test_permanent_storage.py      — R3, R10
-  - test_read_tracking.py          — R5, R6
-  - test_assets_content.py         — R4, R10
-  - test_story_protocol.py         — pure logic
+  - test_ip_registration.py                       — R1, R7
+  - test_evidence_flow.py                         — R9
+  - test_settlement_flow.py                       — R8
+  - test_permanent_storage.py                     — R3, R10
+  - test_read_tracking.py                         — R5, R6
+  - test_read_tracking_settlement_bridge.py       — bridge to settlement
+  - test_assets_content.py                        — R4, R10
+  - test_story_protocol.py                        — pure logic
 
-This file is additive coverage — it proves the seven pieces compose
-into a working user-facing flow. Two contract gaps the e2e walks
-around (and which are real signals for future tend work):
+This file is additive coverage — it proves the pieces compose into a
+working user-facing flow.
 
-  1. ``POST /api/assets/register`` does not currently auto-fire
-     ``ip_registration_service.register_ip_asset`` or
-     ``permanent_storage_service.upload_to_arweave/upload_to_ipfs``.
-     The test invokes the services directly after registration and
-     patches the resulting sp_ip_id / arweave_tx / ipfs_cid onto the
-     graph node so the verification endpoint surfaces them.
-  2. ``read_tracking_service.record_read`` (fired by the content GET)
-     and the ``render_events`` store consumed by settlement are
-     decoupled — content reads do not auto-emit render events. The
-     test therefore POSTs to ``/api/render-events`` alongside each
-     content fetch to seed the settlement input.
+Two e2e contract gaps that surfaced in PR #1963 are now both closed:
+
+  - ``POST /api/assets/register`` auto-fires
+    ``ip_registration_service.register_ip_asset`` and
+    ``permanent_storage_service.upload_to_arweave/upload_to_ipfs`` per
+    spec R1 (closed 2026-05-24); the helper below reads the resulting
+    sp_ip_id / arweave_tx / ipfs_cid straight off the response body.
+  - ``read_tracking_service.record_read`` now bridges to
+    ``render_attribution_service.log_render_event`` so settlement sees
+    each content read without manual ``_RENDER_EVENTS`` seeding.
 """
 
 from __future__ import annotations
 
 import base64
 import hashlib
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routers.render_events import _EVENTS as _RENDER_EVENTS
 from app.routers.render_events import _reset_events_for_tests
 from app.services import (
     evidence_service,
@@ -101,11 +99,13 @@ def _register_with_ip_and_storage(
     requires_payment: bool = False,
     free_tier_enabled: bool = True,
 ) -> tuple[str, str, dict, dict, dict]:
-    """Register an asset, fire IP registration + storage uploads, patch
-    the resulting refs onto the graph node, and patch payment gating.
+    """Register an asset — auto-fire pipeline lands sp_ip_id, arweave_tx
+    and ipfs_cid on the response. Patches payment gating onto the node
+    since those settings aren't part of the registration contract.
 
     Returns: (uuid_str, node_id, registration_body, ip_record, storage_pair)
-    where storage_pair is ``{"arweave": ..., "ipfs": ...}``.
+    where ``ip_record`` and ``storage_pair`` reshape the auto-fire results
+    into the shapes the rest of the e2e expects.
     """
     if concept_tags is None:
         concept_tags = [
@@ -124,71 +124,42 @@ def _register_with_ip_and_storage(
         "metadata": {"content_base64": content_b64},
     }
 
-    # Step 1 — register asset
+    # Register — IP registration + Arweave + IPFS auto-fire inside the
+    # handler. All three refs land on the response.
     response = client.post("/api/assets/register", json=payload)
     assert response.status_code == 201, response.text
     registration = response.json()
     node_id = registration["id"]
     uuid_str = node_id.removeprefix("asset:")
 
-    # Step 2 — IP registration fires
-    ip_record = ip_registration_service.register_ip_asset(
-        uuid_str, {"type": "text/plain", "name": registration["name"]}
-    )
-    assert ip_record["ip_status"] == "registered"
-    assert ip_record["sp_ip_id"] is not None
+    assert registration["ip_status"] == "registered"
+    assert registration["sp_ip_id"] is not None
+    assert registration["arweave_tx"] is not None
+    assert registration["arweave_tx"].startswith("ar:mock:")
+    assert registration["ipfs_cid"] is not None
+    assert registration["ipfs_cid"].startswith("Qm")
 
-    # Step 3 — permanent storage upload (Arweave + IPFS)
-    arweave = permanent_storage_service.upload_to_arweave(
-        content, {"name": registration["name"]}, asset_id=uuid_str
-    )
-    ipfs = permanent_storage_service.upload_to_ipfs(content, asset_id=uuid_str)
-    assert arweave["arweave_tx_id"].startswith("ar:mock:")
-    assert ipfs["ipfs_cid"].startswith("Qm")
-    assert arweave["content_hash"] == ipfs["content_hash"]
+    ip_record = {
+        "sp_ip_id": registration["sp_ip_id"],
+        "ip_status": registration["ip_status"],
+    }
+    storage_pair = {
+        "arweave": {"arweave_tx_id": registration["arweave_tx"]},
+        "ipfs": {"ipfs_cid": registration["ipfs_cid"]},
+    }
 
-    # Patch the IP + storage refs and payment gating onto the node so the
-    # downstream endpoints (content delivery, verification) surface them.
+    # Payment gating isn't part of the registration contract — patch it
+    # onto the node so the content-delivery endpoint sees the test's
+    # intended payment posture.
     graph_service.update_node(
         node_id,
         properties={
-            "sp_ip_id": ip_record["sp_ip_id"],
-            "arweave_tx": arweave["arweave_tx_id"],
-            "ipfs_cid": ipfs["ipfs_cid"],
             "requires_payment": requires_payment,
             "free_tier_enabled": free_tier_enabled,
             "payment_address": f"coherence:contributor:{creator_id}",
         },
     )
-    return uuid_str, node_id, registration, ip_record, {"arweave": arweave, "ipfs": ipfs}
-
-
-def _seed_render_event(
-    asset_node_id: str,
-    *,
-    day: date,
-    reader_id: str = "reader-x",
-    duration_ms: int = 10000,
-):
-    """Drop a render event directly into the in-process store at the
-    asset/day the settlement step will scan. The /api/render-events POST
-    route would also work; the direct path keeps test wall-time small."""
-    from app.models.renderer import RenderEvent
-
-    pool = Decimal(duration_ms) * Decimal("0.00001")
-    event = RenderEvent(
-        asset_id=asset_node_id,
-        renderer_id="r1",
-        reader_id=reader_id,
-        timestamp=datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc),
-        duration_ms=duration_ms,
-        cc_pool=pool,
-        cc_asset_creator=pool * Decimal("0.80"),
-        cc_renderer_creator=pool * Decimal("0.15"),
-        cc_host_node=pool * Decimal("0.05"),
-    )
-    _RENDER_EVENTS[event.id] = event
-    return event
+    return uuid_str, node_id, registration, ip_record, storage_pair
 
 
 # ---------------------------------------------------------------------------
@@ -223,20 +194,18 @@ def test_full_creator_to_settlement_flow(client):
             "coherence:contributor:"
         )
 
-    # --- Side-effect: read_tracking_service saw all 3 reads ---
-    # Contract gap (2026-05-24): the content endpoint calls
-    # record_read(asset_id=...) without forwarding read_type/payment_token,
-    # so even paid reads land on the free counter. The aggregate total
-    # still rises by 3, which is what the e2e proves the pipeline counted.
+    # --- Side-effect: read_tracking_service saw all 3 reads as paid ---
+    # get_asset_content forwards read_type, payment_token, cc_amount, and
+    # concept_resonance_snapshot to record_read; record_read in turn fires
+    # the render-event bridge with cc_amount as the settlement pool. The
+    # daily aggregate partitions cleanly between paid/free.
     agg = read_tracking_service.get_daily_aggregates(asset_id=node_id)
     assert agg["per_asset"][node_id]["total"] == 3
+    assert agg["per_asset"][node_id]["paid_reads"] == 3
+    assert agg["per_asset"][node_id]["free_reads"] == 0
 
-    # --- Seed render events so settlement has something to aggregate ---
+    # --- Render events were auto-seeded by the bridge — no manual hop ---
     today = date.today()
-    for reader_n in range(3):
-        _seed_render_event(
-            node_id, day=today, reader_id=f"reader-{reader_n}", duration_ms=10000
-        )
 
     # --- Evidence submission — photos + GPS + attestations ---
     evidence_service.register_community_location(37.78, -122.41)
@@ -270,11 +239,12 @@ def test_full_creator_to_settlement_flow(client):
     batch = settle_response.json()
     assert batch["batch_date"] == today.isoformat()
     assert batch["total_read_count"] == 3
-    # 3 reads × 10000ms × 0.00001 = 0.30 base CC; × 5 multiplier = 1.50 CC distributed
-    assert Decimal(batch["total_cc_distributed"]) == Decimal("1.50000")
+    # 3 paid reads × 0.01 CC (DEFAULT_CONTENT_CC_AMOUNT) = 0.03 base CC;
+    # × 5 multiplier = 0.15 CC distributed.
+    assert Decimal(batch["total_cc_distributed"]) == Decimal("0.15")
     entry = next(e for e in batch["entries"] if e["asset_id"] == node_id)
     assert Decimal(entry["evidence_multiplier"]) == Decimal("5")
-    assert Decimal(entry["effective_cc_pool"]) == Decimal("1.50000")
+    assert Decimal(entry["effective_cc_pool"]) == Decimal("0.15")
     assert entry["read_count"] == 3
 
     # --- Integrity verification — passes against unchanged content ---
@@ -337,19 +307,18 @@ def test_free_tier_flow(client):
     assert agg["per_asset"][node_id]["free_reads"] == 1
     assert agg["per_asset"][node_id]["paid_reads"] == 0
 
-    # Settlement: a render event seeded for today aggregates without
-    # a multiplier (no verified evidence registered).
+    # Settlement: the free-tier read auto-seeded a render event via the
+    # bridge with cc_pool=0 (free reads carry no CC). The batch still
+    # counts the read; CC distributed is 0 with no multiplier.
     today = date.today()
-    _seed_render_event(node_id, day=today, duration_ms=10000)
-
     settle_body = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()
     assert settle_body["total_read_count"] == 1
-    # 1 read × 10000ms × 0.00001 = 0.10 CC — no multiplier
-    assert Decimal(settle_body["total_cc_distributed"]) == Decimal("0.10000")
+    assert Decimal(settle_body["total_cc_distributed"]) == Decimal("0")
     entry = next(e for e in settle_body["entries"] if e["asset_id"] == node_id)
     assert Decimal(entry["evidence_multiplier"]) == Decimal("1")
+    assert entry["read_count"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -389,9 +358,10 @@ def test_derivative_flow(client):
 
     # Settlement on the derivative — the royalty split lives at the IP
     # layer (record_derivative), not inside settlement's CC distribution
-    # in this iteration. Verify the settlement still aggregates the read.
+    # in this iteration. The single paid read already auto-seeded a
+    # render event via the bridge, so settlement aggregates without
+    # extra wiring.
     today = date.today()
-    _seed_render_event(deriv_node_id, day=today, duration_ms=10000)
     batch = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()

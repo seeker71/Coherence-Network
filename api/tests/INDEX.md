@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 204
+**Total files**: 212
 
 | File | Purpose |
 |---|---|
@@ -27,6 +27,7 @@
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
 | [test_assets_content.py](test_assets_content.py) | Tests for GET /api/assets/{id}/content + /verification — spec R4 and R10. |
+| [test_assets_register_auto_fires.py](test_assets_register_auto_fires.py) | Auto-fire wiring tests for POST /api/assets/register. |
 | [test_attribution_middleware.py](test_attribution_middleware.py) | Tests for the attribution middleware. |
 | [test_audit_vision_image_candidates.py](test_audit_vision_image_candidates.py) | _no top-of-file purpose_ |
 | [test_auth_keys_api.py](test_auth_keys_api.py) | Tests for the /api/auth/keys HTTP layer. |
@@ -49,6 +50,7 @@
 | [test_contributor_journey.py](test_contributor_journey.py) | Acceptance tests for spec: contributor-journey (idea: contributor-experience). |
 | [test_contributor_key_store.py](test_contributor_key_store.py) | DB-backed contributor API key store. |
 | [test_creator_economy.py](test_creator_economy.py) | Tests for creator-economy endpoints — spec R1, R2, R3, R4. |
+| [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
@@ -61,9 +63,13 @@
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
+| [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
 | [test_federation_substance.py](test_federation_substance.py) | Federation substance payload — round-trip test. |
+| [test_federation_substrate_exchange.py](test_federation_substrate_exchange.py) | Acceptance tests for the federated substrate canonical exchange. |
+| [test_federation_value_flow.py](test_federation_value_flow.py) | Acceptance tests for the federated value flow. |
+| [test_federation_value_flow_e2e.py](test_federation_value_flow_e2e.py) | End-to-end federated value flow across two sovereign instances. |
 | [test_field_story_agent_surface.py](test_field_story_agent_surface.py) | _no top-of-file purpose_ |
 | [test_field_story_runtime_docs.py](test_field_story_runtime_docs.py) | _no top-of-file purpose_ |
 | [test_field_story_trace_index.py](test_field_story_trace_index.py) | _no top-of-file purpose_ |
@@ -103,6 +109,7 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
+| [test_instance_pulse.py](test_instance_pulse.py) | Acceptance tests for instance-pulse — per-instance breath sharing. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
@@ -133,6 +140,7 @@
 | [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |
+| [test_read_tracking_settlement_bridge.py](test_read_tracking_settlement_bridge.py) | Tests for the read → render-event bridge. |
 | [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |

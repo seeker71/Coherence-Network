@@ -2,7 +2,22 @@
 id: lc-land
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: nested
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: generational
+  scale: planetary
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Land Embedding

@@ -17,6 +17,8 @@
  *   coh federation msg <node_id> <msg> — send message to a node
  *   coh federation msgs <node_id>      — read messages from a node
  *   coh federation broadcast <msg>     — broadcast to all nodes
+ *   coh federation substrate-canonicals       — list local canonical shapes
+ *   coh federation substrate-discover <url>   — exchange canonicals with a peer
  */
 
 import { get, post, del as apiDel } from "../api.mjs";
@@ -125,7 +127,72 @@ export async function federationHeartbeat(args) {
   }
 }
 
-export async function showFederationCapabilities() {
+function _fmtCapList(items, max = 8) {
+  const D = "\x1b[2m", R = "\x1b[0m";
+  if (!items || items.length === 0) return `${D}(none declared)${R}`;
+  if (items.length <= max) return items.join(", ");
+  return `${items.slice(0, max).join(", ")}, ${D}+${items.length - max} more${R}`;
+}
+
+export async function showSelfCapabilities() {
+  /* Self-sovereign capability manifest: this instance declaring its own
+     truth. The fleet emerges from each instance's self-declaration, not
+     a coerced aggregate. */
+  let manifest;
+  try {
+    manifest = await get("/api/federation/capabilities/self");
+  } catch (e) {
+    console.log(`Could not fetch self capabilities: ${e.message}`);
+    return;
+  }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  console.log();
+  console.log(`${B}  THIS INSTANCE'S CAPABILITIES${R}`);
+  console.log(`  ${"─".repeat(72)}`);
+  console.log(`  ${"Instance ID".padEnd(22)} ${manifest.instance_id}`);
+  console.log(`  ${"Instance URL".padEnd(22)} ${manifest.instance_url}`);
+  console.log(`  ${"Truth source".padEnd(22)} ${G}${manifest.truth_source}${R} ${D}(this instance is the only authority over these claims)${R}`);
+  console.log(`  ${"Declared at".padEnd(22)} ${manifest.declared_at}`);
+  console.log();
+  console.log(`  ${B}Providers${R} ${D}(from model_routing.json)${R}`);
+  console.log(`    ${_fmtCapList(manifest.providers)}`);
+  console.log();
+  console.log(`  ${B}Languages${R} ${D}(from translator SUPPORTED_LOCALES)${R}`);
+  console.log(`    ${_fmtCapList(manifest.language_coverage)}`);
+  console.log();
+  console.log(`  ${B}Substrate canonicals${R} ${D}(from modality_shapes canonical_shape_names)${R}`);
+  console.log(`    ${_fmtCapList(manifest.substrate_canonicals, 6)}`);
+  console.log();
+  console.log(`  ${B}Economics${R}`);
+  const econ = manifest.economics || {};
+  console.log(`    cc_accepted:     ${econ.cc_accepted ? G + "yes" + R : D + "no" + R}`);
+  console.log(`    cc_rate_per_usd: ${econ.cc_rate_per_usd ?? D + "—" + R}`);
+  console.log(`    staking:         ${econ.staking_enabled ? G + "on" + R : D + "off" + R}`);
+
+  // Peer alignment hint — show whether any peer secrets are held.
+  let peers = [];
+  try {
+    peers = await get("/api/federation/instances");
+  } catch { /* none registered */ }
+  const signedPeers = (peers || []).filter((p) => p && p.public_key);
+  console.log();
+  if (signedPeers.length === 0) {
+    console.log(`  ${D}No peers registered with shared secrets — alignment skipped.${R}`);
+    console.log(`  ${D}Each instance speaks its own truth; alignment is a comparison, not a requirement.${R}`);
+  } else {
+    console.log(`  ${B}PEERS WITH SHARED SECRETS${R} ${D}(${signedPeers.length})${R}`);
+    for (const p of signedPeers.slice(0, 10)) {
+      console.log(`    ${D}•${R} ${p.instance_id}  ${D}${p.endpoint_url || ""}${R}`);
+    }
+    console.log(`  ${D}Fetch a peer's manifest from their /federation/capabilities/sign,${R}`);
+    console.log(`  ${D}then POST to /federation/capabilities/{peer_id}/verify for alignment.${R}`);
+  }
+  console.log();
+}
+
+export async function showFleetCapabilities() {
+  /* Aggregated fleet view across registered nodes (legacy aggregate). */
   const data = await get("/api/federation/nodes/capabilities");
   if (!data) { console.log("Could not fetch capabilities."); return; }
 
@@ -289,6 +356,114 @@ export async function broadcastFederation(args) {
   }
 }
 
+// ── Substrate canonical exchange — freedom-preserving discovery ──────
+
+export async function listSubstrateCanonicals() {
+  const data = await get("/api/federation/substrate/canonicals");
+  const canonicals = data?.canonicals || [];
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const G = "\x1b[32m", Y = "\x1b[33m";
+
+  console.log();
+  console.log(`${B}  LOCAL SUBSTRATE CANONICALS${R} (${canonicals.length})`);
+  console.log(`  ${"─".repeat(76)}`);
+
+  if (!canonicals.length) {
+    console.log(`  ${D}No canonicals declared.${R}`);
+    console.log();
+    return;
+  }
+
+  for (const c of canonicals) {
+    const name = truncate(c.canonical_name, 38).padEnd(40);
+    const hash = (c.content_hash || "").slice(0, 12);
+    const interned = c.interned ? `${G}interned${R}` : `${Y}declared${R}`;
+    const members = c.member_count != null ? ` ${D}members:${c.member_count}${R}` : "";
+    console.log(`  ${name} ${D}${hash}${R}  ${interned}${members}`);
+  }
+  console.log();
+}
+
+export async function substrateDiscoverPeer(args) {
+  // Two arg forms:
+  //   coh federation substrate-discover --peer-url <url> [--peer-id <id>]
+  //   coh federation substrate-discover <url>
+  let peerUrl = null;
+  let peerId = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--peer-url") { peerUrl = args[++i]; continue; }
+    if (args[i] === "--peer-id")  { peerId  = args[++i]; continue; }
+    if (!peerUrl && !args[i].startsWith("-")) peerUrl = args[i];
+  }
+  if (!peerUrl) {
+    console.log("Usage: coh federation substrate-discover --peer-url <url> [--peer-id <id>]");
+    return;
+  }
+  const trimmed = peerUrl.replace(/\/+$/, "");
+  if (!peerId) peerId = trimmed;
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const G = "\x1b[32m", Y = "\x1b[33m", C = "\x1b[36m";
+
+  let peerData;
+  try {
+    const res = await fetch(`${trimmed}/api/federation/substrate/canonicals`);
+    if (!res.ok) {
+      console.log(`Peer canonicals fetch failed: HTTP ${res.status}`);
+      return;
+    }
+    peerData = await res.json();
+  } catch (err) {
+    console.log(`Could not reach peer ${trimmed}: ${err.message}`);
+    return;
+  }
+
+  const peerCanonicals = (peerData?.canonicals || []).map((c) => ({
+    canonical_name: c.canonical_name,
+    role_slots: c.role_slots || [],
+    modality_tags: c.modality_tags || [],
+    content_hash: c.content_hash,
+  }));
+
+  // Send peer's inventory to our local exchange endpoint for attestation.
+  const result = await post("/api/federation/substrate/exchange", {
+    peer_instance_id: peerId,
+    peer_endpoint_url: trimmed,
+    canonicals: peerCanonicals,
+  });
+  if (!result) { console.log("Exchange failed."); return; }
+
+  console.log();
+  console.log(`${B}  SUBSTRATE DISCOVERY${R}  peer: ${C}${peerId}${R}`);
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  received:   ${result.received}`);
+  console.log(`  ${G}aligned:    ${result.aligned}${R}   ${D}structurally identical${R}`);
+  console.log(`  ${Y}diverged:   ${result.diverged}${R}   ${D}same name, different shape${R}`);
+  console.log(`  ${C}discovered: ${result.discovered}${R}   ${D}peer carries, we do not${R}`);
+  console.log();
+
+  if (result.attestations?.length) {
+    const byStatus = { aligned: [], diverged: [], discovered: [] };
+    for (const a of result.attestations) {
+      (byStatus[a.alignment_status] || []).push(a);
+    }
+    for (const status of ["diverged", "discovered", "aligned"]) {
+      if (!byStatus[status].length) continue;
+      console.log(`  ${D}${status.toUpperCase()}${R}`);
+      for (const a of byStatus[status].slice(0, 20)) {
+        const name = truncate(a.canonical_name, 40).padEnd(42);
+        const ph = (a.peer_content_hash || "").slice(0, 10);
+        const lh = (a.local_content_hash || "—       ").slice(0, 10);
+        console.log(`    ${name} peer:${ph}  local:${lh}`);
+      }
+      console.log();
+    }
+  }
+  console.log(`  ${D}No local cells were modified — sovereignty preserved.${R}`);
+  console.log();
+}
+
 export function handleFederation(args) {
   const sub = args[0];
   const rest = args.slice(1);
@@ -300,7 +475,9 @@ export function handleFederation(args) {
     case "instance":      return showFederationInstance(rest);
     case "register":      return registerFederationNode(rest);
     case "heartbeat":     return federationHeartbeat(rest);
-    case "capabilities":  return showFederationCapabilities();
+    case "capabilities":
+    case "caps":          return showSelfCapabilities();
+    case "fleet":         return showFleetCapabilities();
     case "stats":         return showFederationStats();
     case "sync": {
       if (rest[0] === "history") return showSyncHistory();
@@ -311,6 +488,8 @@ export function handleFederation(args) {
     case "msgs":          return readFederationMessages(rest);
     case "messages":      return readFederationMessages(rest);
     case "broadcast":     return broadcastFederation(rest);
+    case "substrate-canonicals": return listSubstrateCanonicals();
+    case "substrate-discover":   return substrateDiscoverPeer(rest);
     default:
       return listFederationNodes();
   }

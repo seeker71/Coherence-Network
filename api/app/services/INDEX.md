@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 232
+**Total files**: 237
 
 | File | Purpose |
 |---|---|
@@ -81,6 +81,7 @@
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
 | [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
+| [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
 | [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
@@ -97,6 +98,8 @@
 | [fallback_witness_service.py](fallback_witness_service.py) | Fallback witness — honest record of when the body runs on reserve. |
 | [federation_push_service.py](federation_push_service.py) | Client-side push logic for federation measurement summaries (Spec 131). |
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
+| [federation_substrate_service.py](federation_substrate_service.py) | federation_substrate_service — freedom-preserving canonical exchange. |
+| [federation_value_flow_service.py](federation_value_flow_service.py) | federation_value_flow_service — freedom-preserving CC distribution across instances. |
 | [field_story_mcp_tools.py](field_story_mcp_tools.py) | MCP registry entries for published field stories. |
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |
@@ -137,8 +140,10 @@
 | [idea_views.py](idea_views.py) | Read-only idea views — lifecycle, activity feed, concept resonance matches. |
 | [idea_write_ops.py](idea_write_ops.py) | Idea CRUD writes — create, update, batch update, slug update, tags, questions. |
 | [identity_providers.py](identity_providers.py) | Identity provider registry — single source of truth for all supported providers. |
+| [identity_signing.py](identity_signing.py) | Ed25519 signing helpers for contributor identity. |
 | [influence_teaching_translator_service.py](influence_teaching_translator_service.py) | Influence teaching translator for field story traces. |
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
+| [instance_pulse_service.py](instance_pulse_service.py) | Instance pulse service — each coherence instance shows its own breath. |
 | [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
 | [investment_service.py](investment_service.py) | Investment service — positions, ROI projection, history. |

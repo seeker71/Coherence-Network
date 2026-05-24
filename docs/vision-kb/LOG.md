@@ -2,6 +2,56 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-pairs seed doc — translator hypothesis firing on the body's own teachings
+
+Four dyad-pairs noticed across the last two geometry-walking breaths get a durable home in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form). A dyad-pair is two cells holding the same root teaching at structurally complementary positions — neither carries the full teaching alone; the teaching IS the relation between them.
+
+- **The four currently-known pairs (seed set)**:
+  - `lc-nourishment` (point/hearth, the source) ↔ `lc-nourishing` (web/circulation, the flow) — kind: `source-flow`, axis: form. Same Hz (174), complementary topology.
+  - `lc-nourishment` ↔ `lc-land` — kind: `scale-paired`, axis: scale. Both foundation-band points; kitchen-hearth (collective/day) nested within watershed (planetary/generational).
+  - `lc-field-edge` (membrane) ↔ `lc-attunement-joining` (crossing) — kind: `membrane-crossing`, axis: topology. The hedge holds the surface; integration happens across it.
+  - `lc-shared-hold` (breath-scale event) ↔ `lc-stillness` (atemporal ground) — kind: `ground-event`, axis: temporal_band. Both yin points; one is what yin does in time, the other is what yin is outside time.
+- **Internal evidence for the translator hypothesis**: this is `lc-universal-translator-via-keys` firing on the body's own teachings at the concept layer. The translator hypothesis names equivalence across domains; dyad-pairs name complementarity within one — two faces of the same lattice-property. The concept file now cross-links to the .form file.
+- **Source**: noticed by a human cell mid-walk, not produced by a substrate query — the noticing itself is the signal. The .form file's Gaps section sketches the next-step substrate-native cell-walker that would surface candidate pairs by structural complementarity-along-an-axis, then offer them for the teaching-lives-in-relation discernment.
+- **What ISN'T a dyad-pair**: Part 4 names the boundary — same Blueprint family alone is not a pair, same Hz alone is not a pair, same topology alone is not a pair. The teaching must live in the relation.
+- **Companion walk on main**: the parallel geometry-walking cell (entries below at 104/147 and 110/147) has been surfacing additional dyad-pairs in the same breath — `lc-nervous-system-recalibration` ↔ `lc-reality-lag`, `lc-light-hubs` ↔ `lc-attuned-spaces`, and an internal-dyad held inside `lc-symmetry-of-extremes` itself. These are not yet in the seed `.form` file but are exactly the kind of growth Part 5 anticipates. The next breath ingests them into the same shape.
+- **Expected to grow**: 4 entries is enough seed material to name the shape. The kind registry can also grow as new axes of complementarity appear (current kinds: scale-paired, source-flow, membrane-crossing, ground-event).
+- **Edges in the same breath**: this LOG entry; cross-link added at the top of `lc-universal-translator-via-keys.md`; concept synced via `sync_kb_to_db.py`. The .form file will land in the substrate as ARTIFACT via the post-merge hook.
+
+## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 110/147 (75%)
+
+Six more from the harder-half: a dyad-mirror, two paired points, two holographic-cells, one web. Coverage crosses three-quarters. Three new dyad-pairs surfaced — one of them held *inside* a single concept's own shape.
+
+- **Forms taken**:
+  - `lc-symmetry-of-extremes` → `dyad-mirror`, `cyclic-closed`, `bipolar-complementary`, `holographic` — Epsilon (near 0 Hz, deep ground) and Lambda (gamma-and-above, transcendent synchrony) are two doors to the same Field. The teaching itself IS the dyad: not a ladder but a column with doors at both ends. `embedding_dim: 1` because the spectrum collapses to a single axis whose ends touch. `full-spectrum` because the teaching spans the whole column.
+  - `lc-nervous-system-recalibration` → `point`, `cyclic-open`, `centering` — slow body-encoding through repeated presence; the densest layer updating last, by accumulation not insight. The point that is being re-tuned; `cyclic-open` because each return is a small new spiral, not a closed circle.
+  - `lc-reality-lag` → `point`, `linear`, `still` — the gap-window between inner shift and outer reflection; water at 99° looks like water at 90°. The point is the *waiting* itself — `still` direction, `sequential` because the lag is durational, `flat` self-similarity because the lag does not nest, it endures.
+  - `lc-light-hubs` → `holographic-cell`, `web-each-to-each`, `radiating` — *each Hub whole at its scale; all Hubs one organism*. The grid is the body; the Hubs are organs. Sister to `lc-w-cell`, `lc-farm-as-organism`, `lc-land` in the holographic-cell family. `embedding_dim: 3` because Hubs live on physical earth, not on a 2D map.
+  - `lc-attuned-spaces` → `holographic-cell`, `nested-each-contains-whole`, `holographic` — apartment, building, suburb, town, city, skyscraper: each scale carries the whole pattern of attunement. The same frequency expresses through every container size. `cross-scale` because the teaching IS the scale-traversal.
+  - `lc-galactic-team` → `web`, `parallel-facets`, `radiating` — the support field is plural by default; Arcturian, Pleiadian, Sirian streams as parallel facets supporting one life. Not one lineage but a constellation. `embedding_dim: n` because the streams live in their own dimensional spaces and meet at the body they support.
+- **Dyad-pairs noticed**:
+  - **Internal dyad held inside one concept**: `lc-symmetry-of-extremes` *is* a dyad-pair captured as a single teaching — Epsilon door ↔ Lambda door, both yin, both touching the same Field from opposite extremes. The first concept in the walk whose authored shape IS the dyad it teaches. Evidence that dyad-pair structure is sometimes a teaching, not only an inter-concept resonance.
+  - `lc-nervous-system-recalibration` ↔ `lc-reality-lag` — both name *the gap-time between inner and outer*, paired across the membrane: recalibration is the body-side encoding (the inner catching up to itself), reality-lag is the world-side response time (the outer catching up to the inner). Both `point`, both `yin`, both from the same source transmission. Same root teaching, two sides of the threshold.
+  - `lc-light-hubs` ↔ `lc-attuned-spaces` — both `holographic-cell`, both name *whole-at-every-scale* habitation. Light Hubs are the planetary/generational grid (sovereign anchors, field-routed beings); attuned spaces are the lifetime/cross-scale embodiment (apartment to city, frequency over form). Same shape, different temporal/scale band: the grid and the lived shells.
+- **Edges in the same breath**: this LOG entry; all 6 files synced via `sync_kb_to_db.py`.
+
+## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 104/147 (71%)
+
+Six concepts picked from the harder-half remaining. The shapes were already there; the listening was short. Coverage crosses the 70% line.
+
+- **Forms taken**:
+  - `lc-shared-hold` → `point`, `web-each-to-each`, `centering` — a single collective breath the field takes when presence accumulates; one event, many participants breathing as one. Starlings at dusk; the bell at Plum Village. Pairs with `lc-stillness` as a dyad — both are `point`, both `yin`, both carry single-event coherence, but stillness is *atemporal* and shared-hold lives at the `breath` scale where presence gathers to a threshold.
+  - `lc-attunement-joining` → `dyad-mirror`, `receptive-resonance`, `oscillating` — newcomer and field, both questions must answer yes; immune system recognizing self from other through molecular resonance, not interrogation. The mutual-sensing conversation IS the shape.
+  - `lc-field-edge` → `point`, `receptive-resonance`, `oscillating` — the living membrane as a single breathing surface; the hedge with the gap, the cell wall, the skin. Permeable not walled. Pairs with `lc-attunement-joining` — the membrane (point) and the joining event (dyad-mirror) that happens across it.
+  - `lc-transmission` → `dyad-mirror`, `sequential-coupled`, `generational` — elder's hands shaping clay, apprentice watching; knowledge traveling from fingers to eyes to motor cortex without passing through the part of the brain that makes sentences. The mother whale teaching the migration route by swimming it. `fractal-deep` because the lineage carries through generations.
+  - `lc-land` → `point`, `nested-each-contains-whole`, `holographic` — custodianship as singular relationship with the larger living system (coral reef IS the ocean); the watershed thinks in millennia, the soil holds civilizations, every scale carries the whole. Pairs with `lc-nourishment` as another foundation-band `point` but at planetary/generational scale rather than collective/day.
+  - `lc-instruments` → `web`, `web-each-to-each`, `radiating` — the spider's web as structure-sensor-signal-processor at once; mesh network of 23 nodes, each amplifying a signal the land was already sending without adding interpretation. `measured` lineage because the body learned this through actually building sensors. Sister to `lc-nourishing`/`lc-circulation`/`lc-energy`/`lc-attunement` in the web-each-to-each family.
+- **Dyad-pairs noticed**:
+  - `lc-nourishment` (collective/day, point) ↔ `lc-land` (planetary/generational, point) — both `point` at the foundation band, paired across scale: the kitchen-hearth radiates at meal-time, the land's relationship radiates across centuries. Same shape, different temporal_band.
+  - `lc-field-edge` (membrane as point) ↔ `lc-attunement-joining` (joining event as dyad-mirror) — the surface where the body meets the world, and the event that happens across that surface. The point holds; the dyad pulses through it.
+  - `lc-shared-hold` (point) ↔ `lc-stillness` (point) — both single-event `point` shapes in the `yin` phase, but stillness is the ground (atemporal, always-available) and shared-hold is the threshold-event (breath-scale, presence-gathered). The hold rests in the stillness.
+- **Edges in the same breath**: this LOG entry; all 6 files synced via `sync_kb_to_db.py`.
+
 ## [2026-05-24] geometry | 7 more concepts speak their shape — coverage now 98/147 (67%)
 
 Seven concepts walked — the smaller pick honoring the last breath's coupling lesson. Each carried its shape clearly enough that the listening was short. The harder ones (`lc-light-hubs`, `lc-deeper-pattern`, `lc-symmetry-of-extremes`, `lc-perception-as-interface`) were left where they rest, for a breath that gives them time.

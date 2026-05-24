@@ -24,6 +24,8 @@ from sqlalchemy.types import JSON
 
 from app.config_loader import get_int
 from app.models.federation import (
+    CapabilityAlignment,
+    CapabilityManifest,
     FederatedInstance,
     FederatedPayload,
     FleetCapabilitySummary,
@@ -32,6 +34,7 @@ from app.models.federation import (
     FederationStrategyEffectivenessReportRequest,
     FederationNodeHeartbeatResponse,
     FederationSyncResult,
+    SignedCapabilityManifest,
     VALID_STRATEGY_TYPES,
 )
 from app.models.governance import (
@@ -174,6 +177,40 @@ class NodeStrategyEffectivenessRecord(Base):
     __table_args__ = (
         Index("idx_nse_strategy_type_target", "strategy_type", "strategy_target"),
         Index("idx_nse_created_at", "created_at"),
+    )
+
+
+class FederatedSubstrateAttestationRecord(Base):
+    """Federation-mirror table for substrate canonical attestations.
+
+    Each row is THIS instance's view of a peer's canonical at a moment in
+    time. Never authoritative for the peer; never authoritative over the
+    local lattice. Sovereignty preserved on both sides — the row only
+    records that an exchange happened and what was sensed.
+
+    alignment_status taxonomy:
+      - aligned    : peer carries this canonical and content_hash matches
+      - diverged   : peer carries this canonical name but content_hash differs
+      - discovered : peer carries a canonical this instance does not have
+    """
+
+    __tablename__ = "federation_substrate_attestations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    peer_instance_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    canonical_name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    peer_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    local_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    alignment_status: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    observed_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index(
+            "idx_fsa_peer_canonical",
+            "peer_instance_id",
+            "canonical_name",
+            unique=True,
+        ),
     )
 
 
@@ -1721,3 +1758,245 @@ def receive_marketplace_payload(payload_type: str, data: dict) -> bool:
         logger.warning("receive_marketplace_payload: unknown type %s", payload_type)
         return False
     return {"warnings": all_warnings}
+
+
+# ---------------------------------------------------------------------------
+# Self-sovereign capability manifests
+# ---------------------------------------------------------------------------
+#
+# Each instance speaks its own capabilities. The fleet is the union of
+# self-declared truths, not a coerced aggregate. Signature only proves
+# "this came from this instance" — it does not make any instance
+# authoritative over others. An instance choosing not to sign is honored:
+# alignment is computed against the unsigned manifest, marked unverified.
+
+# Federation peers register a shared secret used to sign their manifests.
+# Stored in FederatedInstanceRecord.public_key (the field's name predates
+# the symmetric-key federation path; conceptually it's the per-peer secret
+# both sides hold).
+
+_INSTANCE_SECRET_ENV = "FEDERATION_INSTANCE_SECRET"
+_INSTANCE_ID_ENV = "FEDERATION_INSTANCE_ID"
+_INSTANCE_URL_ENV = "FEDERATION_INSTANCE_URL"
+
+
+def _self_instance_secret() -> str:
+    """Read this instance's signing secret from environment.
+
+    Returns an empty string if unset — sign_capability_manifest will raise,
+    but get_self_capability_manifest still works (declaration without
+    signature is sovereign too).
+    """
+    import os
+    return os.environ.get(_INSTANCE_SECRET_ENV, "") or ""
+
+
+def _self_instance_id() -> str:
+    """Read this instance's self-declared ID from environment."""
+    import os
+    return os.environ.get(_INSTANCE_ID_ENV, "") or "self-undeclared"
+
+
+def _self_instance_url() -> str:
+    """Read this instance's self-declared base URL from environment."""
+    import os
+    return os.environ.get(_INSTANCE_URL_ENV, "") or "http://localhost"
+
+
+def _collect_self_providers() -> list[str]:
+    """Read providers this instance can route to from the model routing config.
+
+    Truth source: api/config/model_routing.json — the executors this instance
+    has configured. Failure to read returns an empty list (honest absence
+    rather than fake completeness).
+    """
+    import json as _json
+    from pathlib import Path
+
+    candidates = [
+        Path(__file__).resolve().parent.parent.parent / "config" / "model_routing.json",
+        Path.cwd() / "api" / "config" / "model_routing.json",
+        Path.cwd() / "config" / "model_routing.json",
+    ]
+    for path in candidates:
+        try:
+            if path.exists():
+                with path.open() as fh:
+                    data = _json.load(fh)
+                tiers = data.get("tiers_by_executor", {})
+                if isinstance(tiers, dict):
+                    return sorted(tiers.keys())
+        except Exception:
+            logger.debug("Failed to read model routing at %s", path, exc_info=True)
+    return []
+
+
+def _collect_self_languages() -> list[str]:
+    """Read locale codes this instance serves translations for."""
+    try:
+        from app.services.translator_service import SUPPORTED_LOCALES
+        return sorted(SUPPORTED_LOCALES.keys())
+    except Exception:
+        logger.debug("Failed to read SUPPORTED_LOCALES", exc_info=True)
+        return []
+
+
+def _collect_self_substrate_canonicals() -> list[str]:
+    """Read canonical recipe-shape names this instance carries."""
+    try:
+        from app.services.substrate.modality_shapes import canonical_shape_names
+        return list(canonical_shape_names())
+    except Exception:
+        logger.debug("Failed to read canonical_shape_names", exc_info=True)
+        return []
+
+
+def _collect_self_economics() -> dict:
+    """Read economic gates: does this instance accept CC, at what rate?"""
+    economics: dict = {"cc_accepted": False, "cc_rate_per_usd": None, "staking_enabled": False}
+    try:
+        from app.services import cc_economics_service
+        rate = cc_economics_service.exchange_rate()
+        if rate is not None:
+            economics["cc_accepted"] = True
+            economics["cc_rate_per_usd"] = getattr(rate, "cc_per_usd", None)
+            economics["staking_enabled"] = True
+    except Exception:
+        logger.debug("Failed to read CC economics", exc_info=True)
+    return economics
+
+
+def get_self_capability_manifest() -> CapabilityManifest:
+    """Declare this instance's capabilities.
+
+    Every field is this instance's own claim about itself. Other instances
+    declare their own; no central source aggregates them.
+    """
+    return CapabilityManifest(
+        instance_id=_self_instance_id(),
+        instance_url=_self_instance_url(),
+        providers=_collect_self_providers(),
+        language_coverage=_collect_self_languages(),
+        substrate_canonicals=_collect_self_substrate_canonicals(),
+        economics=_collect_self_economics(),
+        truth_source="self",
+    )
+
+
+def _manifest_canonical_json(manifest: CapabilityManifest) -> str:
+    """Deterministic JSON for signing/verifying — sorted keys, no whitespace.
+
+    Excludes `declared_at` from the signed surface? No — `declared_at` IS
+    part of what's being attested. Two manifests of the same shape at
+    different times sign to different digests; that's correct.
+    """
+    return json.dumps(
+        manifest.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def sign_capability_manifest(
+    manifest: CapabilityManifest | None = None,
+    secret: str | None = None,
+) -> SignedCapabilityManifest:
+    """Sign a capability manifest with the instance's secret.
+
+    Defaults to this instance's manifest + this instance's secret — the
+    common case is "self speaks, self signs." Callers may pass an arbitrary
+    manifest + secret to test the path or to sign on behalf of a child
+    process (the secret stays with the caller).
+
+    Raises ValueError if no secret is available — refusing to sign with an
+    empty secret protects against silently producing forgeable signatures.
+    """
+    if manifest is None:
+        manifest = get_self_capability_manifest()
+    if secret is None:
+        secret = _self_instance_secret()
+    if not secret:
+        raise ValueError(
+            f"Cannot sign: no signing secret available. Set {_INSTANCE_SECRET_ENV} env var "
+            "or pass secret= explicitly. An instance may also choose to share its manifest "
+            "unsigned via get_self_capability_manifest()."
+        )
+    payload = _manifest_canonical_json(manifest)
+    sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return SignedCapabilityManifest(
+        manifest=manifest,
+        signature=sig,
+        signed_at=datetime.now(timezone.utc),
+    )
+
+
+def verify_capability_signature(
+    signed: SignedCapabilityManifest,
+    peer_secret: str,
+) -> bool:
+    """Verify a peer's signed manifest against the known peer secret."""
+    if not peer_secret:
+        return False
+    payload = _manifest_canonical_json(signed.manifest)
+    return verify_payload_signature(payload, signed.signature, peer_secret)
+
+
+def _peer_secret_for(instance_id: str) -> str | None:
+    """Return the secret we hold for the named peer, if registered."""
+    rec = get_instance(instance_id)
+    if rec is None:
+        return None
+    return rec.public_key or None
+
+
+def align_with_peer(signed: SignedCapabilityManifest) -> CapabilityAlignment:
+    """Compute alignment between this instance and a peer's signed manifest.
+
+    Verification is attempted if the peer is registered with a known secret.
+    If the peer is unregistered (or registered without a secret), we still
+    return alignment — that's sovereignty: an instance may choose to share
+    its capabilities openly without authentication overhead, and we honor
+    that choice with `verified=False` rather than refusing to read.
+    """
+    self_manifest = get_self_capability_manifest()
+    peer_manifest = signed.manifest
+
+    peer_secret = _peer_secret_for(peer_manifest.instance_id)
+    if peer_secret is None:
+        verified = False
+        note = "peer not registered: unsigned alignment only"
+    else:
+        verified = verify_capability_signature(signed, peer_secret)
+        note = "verified" if verified else "signature mismatch"
+
+    def _shared_and_unique(self_list: list[str], peer_list: list[str]) -> tuple[list[str], list[str], list[str]]:
+        self_set = set(self_list)
+        peer_set = set(peer_list)
+        shared = sorted(self_set & peer_set)
+        only_self = sorted(self_set - peer_set)
+        only_peer = sorted(peer_set - self_set)
+        return shared, only_self, only_peer
+
+    shared_p, only_self_p, only_peer_p = _shared_and_unique(self_manifest.providers, peer_manifest.providers)
+    shared_l, only_self_l, only_peer_l = _shared_and_unique(self_manifest.language_coverage, peer_manifest.language_coverage)
+    shared_s, only_self_s, only_peer_s = _shared_and_unique(self_manifest.substrate_canonicals, peer_manifest.substrate_canonicals)
+
+    return CapabilityAlignment(
+        self_instance_id=self_manifest.instance_id,
+        peer_instance_id=peer_manifest.instance_id,
+        verified=verified,
+        verification_note=note,
+        shared_providers=shared_p,
+        shared_languages=shared_l,
+        shared_substrate_canonicals=shared_s,
+        unique_to_self={
+            "providers": only_self_p,
+            "languages": only_self_l,
+            "substrate_canonicals": only_self_s,
+        },
+        unique_to_peer={
+            "providers": only_peer_p,
+            "languages": only_peer_l,
+            "substrate_canonicals": only_peer_s,
+        },
+    )

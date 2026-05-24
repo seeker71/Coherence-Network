@@ -2,7 +2,22 @@
 id: lc-transmission
 hz: 852
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: temporal-braided
+  phase: yang
+  ratio: none
+  spectral_band: intuition
+  temporal_band: generational
+  scale: relational
+  direction: descending
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-deep
 ---
 
 # Transmission

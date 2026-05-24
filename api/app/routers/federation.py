@@ -15,8 +15,19 @@ from pydantic import BaseModel
 from app.middleware.traceability import traces_to
 
 from app.models.federation import (
+    AssetMirrorManifest,
+    AssetMirrorRecord,
+    CanonicalDiscoverResponse,
+    CanonicalExchangeRequest,
+    CanonicalExchangeResponse,
+    CanonicalShapesListResponse,
+    CapabilityAlignment,
+    CapabilityManifest,
+    ComputeFederatedSharesRequest,
+    ComputeFederatedSharesResponse,
     FederatedInstance,
     FederatedPayload,
+    FederatedReadAttestationListResponse,
     FleetCapabilitySummary,
     FederationNodeHeartbeatRequest,
     FederationNodeHeartbeatResponse,
@@ -29,13 +40,23 @@ from app.models.federation import (
     MeasurementListResponse,
     MeasurementPushRequest,
     MeasurementPushResponse,
+    ReadAttributionAck,
+    ReadAttributionEnvelope,
+    SettlementInboxListResponse,
+    SettlementShareAck,
+    SettlementShareEnvelope,
+    SignedCapabilityManifest,
     VALID_STRATEGY_TYPES,
     FederatedAggregationRequest,
     FederatedAggregationResponse,
     FederatedAggregationListResponse,
 )
 from app.services import federation_service
+from app.services import federation_substrate_service
+from app.services import federation_value_flow_service
+from app.services.federation_value_flow_service import SignatureRejection
 from app.services import openclaw_node_bridge_service
+from app.services import unified_db as _udb
 
 router = APIRouter()
 
@@ -133,6 +154,81 @@ async def delete_node(node_id: str):
 async def get_fleet_capabilities():
     """Return aggregated fleet capability coverage."""
     return federation_service.get_fleet_capability_summary()
+
+
+# ---------------------------------------------------------------------------
+# Self-sovereign capability manifests
+# ---------------------------------------------------------------------------
+#
+# Each instance speaks its own capabilities. These endpoints expose THIS
+# instance's manifest, sign it, and align peer manifests against it — no
+# instance is authoritative over others, no central registry coerces
+# uniformity. The fleet emerges from each instance's self-declaration.
+
+@router.get(
+    "/federation/capabilities/self",
+    response_model=CapabilityManifest,
+    summary="Return this instance's self-declared capability manifest",
+)
+async def get_self_capabilities() -> CapabilityManifest:
+    """Return this instance's self-declared capability manifest.
+
+    Each field's source-of-truth is THIS instance — providers from its
+    local model routing config, languages from its translator service,
+    substrate canonicals from its modality shapes, economics from its CC
+    service. Other instances may carry different shapes; that diversity
+    is the point of federation.
+    """
+    return federation_service.get_self_capability_manifest()
+
+
+@router.post(
+    "/federation/capabilities/sign",
+    response_model=SignedCapabilityManifest,
+    summary="Sign this instance's capability manifest with its secret",
+)
+async def sign_self_capabilities() -> SignedCapabilityManifest:
+    """Sign this instance's capability manifest.
+
+    Uses the FEDERATION_INSTANCE_SECRET env var. Signature is HMAC-SHA256
+    over the canonical-JSON dump of the manifest. Other instances verify
+    against the secret they hold for this instance — verification proves
+    "this came from this instance," it does NOT make this instance
+    authoritative over peers.
+
+    Returns 503 if no signing secret is configured. An instance may still
+    share its manifest unsigned via GET /federation/capabilities/self —
+    sovereignty includes the choice not to sign.
+    """
+    try:
+        return federation_service.sign_capability_manifest()
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post(
+    "/federation/capabilities/{instance_id}/verify",
+    response_model=CapabilityAlignment,
+    summary="Verify a peer's signed manifest and return capability alignment",
+)
+async def verify_peer_capabilities(
+    instance_id: str,
+    signed: SignedCapabilityManifest,
+) -> CapabilityAlignment:
+    """Verify a peer's signed manifest and align it with this instance.
+
+    Returns capability alignment regardless of signature outcome — an
+    unregistered peer (or registered without a known secret) yields
+    `verified=false` with a clear note, not an error. Sovereignty: an
+    instance may share capabilities openly without authentication
+    overhead, and we honor that by reading rather than refusing.
+    """
+    if signed.manifest.instance_id != instance_id:
+        raise HTTPException(
+            status_code=422,
+            detail=f"instance_id path '{instance_id}' does not match manifest '{signed.manifest.instance_id}'",
+        )
+    return federation_service.align_with_peer(signed)
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +398,264 @@ async def get_federated_aggregates(strategy_type: str | None = Query(None)):
     """Return merged federated aggregation results."""
     aggregates = federation_service.list_federated_aggregates(strategy_type=strategy_type)
     return {"aggregates": aggregates}
+
+
+# ---------------------------------------------------------------------------
+# Substrate canonical exchange — freedom-preserving federation at the
+# substrate altitude. Each instance exposes its interned recipe-shape
+# canonicals; peers discover structural alignment via content-addressing
+# without forcing either side to merge.
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/federation/substrate/canonicals",
+    response_model=CanonicalShapesListResponse,
+    summary="List this instance's interned canonical recipe-shapes (public read)",
+)
+async def list_substrate_canonicals() -> CanonicalShapesListResponse:
+    """Expose THIS instance's canonical recipe-shape inventory.
+
+    No auth required: canonicals are public structural shapes and the
+    content-hash is computed deterministically from the (canonical_name,
+    role_slots) declaration. Reading the inventory is reading public tissue.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.local_canonicals(session)
+
+
+@router.get(
+    "/federation/substrate/canonicals/{name}/discover",
+    response_model=CanonicalDiscoverResponse,
+    summary="Lookup a single canonical on this instance — name + content_hash",
+)
+async def discover_substrate_canonical(name: str) -> CanonicalDiscoverResponse:
+    """Single-shape discovery — does this instance carry `name`?
+
+    Returns the content_hash even when not yet interned (the hash depends
+    on the declaration), so a peer can compare structural intent.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.discover_local_canonical(session, name)
+
+
+@router.post(
+    "/federation/substrate/exchange",
+    response_model=CanonicalExchangeResponse,
+    status_code=200,
+    summary="Accept a peer's canonical inventory; record per-shape attestations",
+)
+async def exchange_substrate_canonicals(
+    body: CanonicalExchangeRequest,
+) -> CanonicalExchangeResponse:
+    """Sovereign exchange — record what the peer carries, never import.
+
+    Each peer-canonical lands as aligned / diverged / discovered in the
+    federation-mirror table. Local recipe-shape cells are not modified —
+    each instance keeps its lattice. Idempotent on
+    (peer_instance_id, canonical_name).
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        return federation_substrate_service.exchange_with_peer(
+            session,
+            peer_instance_id=body.peer_instance_id,
+            canonicals=body.canonicals,
+        )
+
+
+@router.get(
+    "/federation/substrate/attestations/{peer_instance_id}",
+    summary="Read attestations this instance holds about a peer",
+)
+async def list_substrate_attestations(peer_instance_id: str) -> dict:
+    """Return all attestations this instance carries about `peer_instance_id`.
+
+    A witness record — this instance's view of the peer at the moments
+    exchanges happened. Not authoritative about the peer's current state.
+    """
+    federation_service._ensure_schema()
+    with _udb.session() as session:
+        attestations = federation_substrate_service.list_attestations_for_peer(
+            session, peer_instance_id
+        )
+    return {
+        "peer_instance_id": peer_instance_id,
+        "attestations": [a.model_dump(mode="json") for a in attestations],
+        "count": len(attestations),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Federated value flow — freedom-preserving CC distribution across instances
+# ---------------------------------------------------------------------------
+#
+# Asset on instance A is mirrored to instance B. B serves a read; B sends A
+# a signed read-attribution envelope. At settlement, A computes B's serving
+# share and sends B a signed settlement envelope (B logs it in its inbox).
+# Each instance is the source-of-truth for its own truths:
+#   - A is authoritative for its assets (origin_asset_id, payment address).
+#   - B is authoritative for its readers (reader_subject).
+# Neither commands the other; attestations are exchanged, not commanded.
+
+
+@router.post(
+    "/federation/value/mirror-asset",
+    response_model=AssetMirrorRecord,
+    status_code=201,
+    summary="Record that we are hosting an asset whose authority lives on another instance",
+)
+async def mirror_asset(manifest: AssetMirrorManifest) -> AssetMirrorRecord:
+    """Record a federation mirror. Idempotent: re-mirroring updates origin fields.
+
+    The mirror table is THIS instance's view of which of our assets actually
+    live somewhere else's authority. Sovereignty: we choose to host; the
+    origin instance remains authoritative for what the asset IS.
+    """
+    return federation_value_flow_service.mirror_asset(manifest)
+
+
+@router.get(
+    "/federation/value/mirrors",
+    response_model=list[AssetMirrorRecord],
+    summary="List federation mirrors (assets here whose authority lives elsewhere)",
+)
+async def list_mirrors(
+    origin_instance_id: str | None = Query(default=None),
+) -> list[AssetMirrorRecord]:
+    """List mirrors, optionally filtered by origin instance."""
+    return federation_value_flow_service.list_mirrors(origin_instance_id=origin_instance_id)
+
+
+@router.post(
+    "/federation/value/read-attribution",
+    response_model=ReadAttributionAck,
+    status_code=201,
+    summary="Accept a signed read-attribution envelope from a serving instance",
+)
+async def receive_read_attribution(
+    envelope: ReadAttributionEnvelope,
+) -> ReadAttributionAck:
+    """Accept an attribution envelope from a peer that served one of our assets.
+
+    Verifies the signature against the secret we hold for the serving
+    instance. On success: records the attestation and bridges the read
+    into local read-tracking under a federated reader_id so settlement
+    sees it. On signature failure: 401 with no record.
+
+    Sovereignty: this instance is authoritative for the asset; the peer is
+    authoritative for the reader. Federation is opt-in on both sides — an
+    unregistered peer is refused (no shared secret = no verifiable claim).
+    """
+    try:
+        return federation_value_flow_service.receive_read_attribution(envelope)
+    except SignatureRejection as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@router.get(
+    "/federation/value/read-attestations",
+    response_model=FederatedReadAttestationListResponse,
+    summary="List read attestations received from peers",
+)
+async def list_read_attestations(
+    asset_origin_id: str | None = Query(default=None),
+    reader_instance_id: str | None = Query(default=None),
+    status: str | None = Query(
+        default=None,
+        description="Filter: received | verified | settled | rejected",
+    ),
+) -> FederatedReadAttestationListResponse:
+    """List federated read attestations stored locally.
+
+    Each attestation is one signed envelope received from a peer. The
+    received-attestations table is our durable claim that the read
+    happened — even if the peer goes offline later.
+    """
+    return federation_value_flow_service.list_read_attestations(
+        asset_origin_id=asset_origin_id,
+        reader_instance_id=reader_instance_id,
+        status=status,
+    )
+
+
+@router.post(
+    "/federation/value/settlement-share/compute",
+    response_model=ComputeFederatedSharesResponse,
+    summary="Compute per-peer settlement envelopes from federated read attestations",
+)
+async def compute_federated_shares(
+    request: ComputeFederatedSharesRequest,
+) -> ComputeFederatedSharesResponse:
+    """Compute settlement envelopes for federated reads in the window.
+
+    For each peer with attestations in [period_start, period_end), produce
+    one signed envelope declaring the peer's serving share. Envelopes are
+    stored in the outbox; transport to the peer is the caller's choice.
+    Default serving share is 20%; an asset-owner may override per request.
+    """
+    return federation_value_flow_service.compute_federated_shares(request)
+
+
+@router.get(
+    "/federation/value/settlement-share/outbox",
+    response_model=list[SettlementShareEnvelope],
+    summary="List settlement envelopes we have computed for peers",
+)
+async def list_outbox(
+    serving_instance_id: str | None = Query(default=None),
+) -> list[SettlementShareEnvelope]:
+    """Walk the outbox of envelopes WE signed for peers.
+
+    Useful both for audit (what did we attest we owed?) and re-transport
+    (peer didn't ack the first time → fetch and re-POST to the peer's
+    `/api/federation/value/settlement-share` endpoint).
+    """
+    return federation_value_flow_service.list_outbox(
+        serving_instance_id=serving_instance_id
+    )
+
+
+@router.post(
+    "/federation/value/settlement-share",
+    response_model=SettlementShareAck,
+    status_code=201,
+    summary="Accept a settlement envelope from a peer that owes us a serving fee",
+)
+async def receive_settlement_share(
+    envelope: SettlementShareEnvelope,
+) -> SettlementShareAck:
+    """Accept a settlement envelope from a peer (we are the serving instance).
+
+    Verifies the signature against the secret we hold for the origin.
+    On success: logs into the inbox. On failure: 401 with no record.
+    CC transfer itself is a downstream breath — the inbox is the durable
+    claim that the peer attested to this share.
+    """
+    try:
+        return federation_value_flow_service.receive_settlement_share(envelope)
+    except SignatureRejection as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@router.get(
+    "/federation/value/settlement-share/inbox",
+    response_model=SettlementInboxListResponse,
+    summary="List settlement envelopes received from peers (we are owed)",
+)
+async def list_inbox(
+    origin_instance_id: str | None = Query(default=None),
+) -> SettlementInboxListResponse:
+    """Walk the inbox of envelopes peers signed and sent to us.
+
+    Each entry is a peer's attestation that they owe us a serving fee for
+    a period. The downstream CC settlement step reads from here.
+    """
+    return federation_value_flow_service.list_inbox(
+        origin_instance_id=origin_instance_id
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -687,4 +1041,71 @@ async def subscribe_diagnostics(node_id: str):
         event_generator(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cross-instance identity recognition — recognize the same person on a peer
+# ---------------------------------------------------------------------------
+
+
+class IdentityRecognitionEnvelope(BaseModel):
+    """A peer telling us: contributor X on my instance shares pubkey Y.
+
+    We do not defer to the peer's claim about who their contributor is —
+    we record that THEIR contributor X carries pubkey Y, and link it to
+    OUR local contributor only if we also have a contributor with that
+    pubkey. Sovereignty stays on both sides; the pubkey is the shared
+    thread.
+    """
+
+    peer_instance_id: str
+    peer_contributor_id: str
+    public_key_hex: str
+
+
+class IdentityAlias(BaseModel):
+    peer_instance_id: str
+    peer_contributor_id: str
+    public_key_hex: str
+    recognized_at: str | None
+    signature_verified: bool
+
+
+class IdentityAliasListResponse(BaseModel):
+    contributor_id: str
+    aliases: list[IdentityAlias]
+
+
+@router.post("/federation/identity/recognize", summary="Receive a cross-instance identity envelope")
+async def recognize_identity(body: IdentityRecognitionEnvelope) -> dict:
+    """Record a peer's recognition envelope if the pubkey matches a local claim.
+
+    If no local contributor has claimed the shared pubkey, we record
+    nothing — we never speculate about who a peer's contributor is on
+    our side. When the pubkey matches, we link the peer's contributor
+    to ours as a cross-instance alias.
+    """
+    from app.services import cross_instance_identity_service
+
+    return cross_instance_identity_service.recognize_peer_identity(
+        peer_instance_id=body.peer_instance_id,
+        peer_contributor_id=body.peer_contributor_id,
+        public_key_hex=body.public_key_hex,
+    )
+
+
+@router.get(
+    "/federation/identity/aliases/{contributor_id}",
+    response_model=IdentityAliasListResponse,
+    summary="List known cross-instance aliases for a local contributor",
+)
+async def list_identity_aliases(contributor_id: str) -> IdentityAliasListResponse:
+    """All peers + their contributor_ids that share a pubkey with this local one."""
+    from app.services import cross_instance_identity_service
+
+    aliases = cross_instance_identity_service.list_aliases(contributor_id)
+    return IdentityAliasListResponse(
+        contributor_id=contributor_id,
+        aliases=[IdentityAlias(**a) for a in aliases],
     )

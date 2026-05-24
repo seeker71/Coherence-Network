@@ -1,4 +1,12 @@
-"""Contributor Identity endpoints — link accounts, verify via OAuth/signature."""
+"""Contributor Identity endpoints — link accounts, verify via OAuth/signature.
+
+Also carries the cross-instance pubkey claim flow at POST /identity/claim.
+The contributor proves possession of their ed25519 keypair by signing a
+canonical payload; the instance verifies the signature and links the
+pubkey to the contributor. Rotation (changing pubkey) requires a
+counter-signature from the old key — identity continuity is the
+contributor's choice, not the instance's permission.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +19,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from app.routers.auth_keys import verify_contributor_key
-from app.services import contributor_identity_service
+from app.services import contributor_identity_service, cross_instance_identity_service
 from app.services.config_service import get_config
 from app.services.identity_providers import registry_as_dict
 
@@ -294,6 +302,54 @@ async def verify_ethereum(body: VerifyEthereumRequest) -> dict:
         "verification_note": verification_note,
         **result,
     }
+
+
+# ---------------------------------------------------------------------------
+# Cross-instance pubkey claim — identity by cryptographic possession
+# ---------------------------------------------------------------------------
+
+
+class PubkeyClaimRequest(BaseModel):
+    """Contributor's signed claim that they hold the private key for a pubkey.
+
+    `claim_payload` carries (contributor_id, public_key_hex, issued_at);
+    `claim_signature` is over the canonical JSON of that payload, signed
+    with the NEW pubkey's private half. For rotation, the contributor
+    also includes `rotation_signature` + `rotation_payload` signed with
+    the OLD pubkey's private half — proving continuity without asking
+    the instance for permission.
+    """
+
+    contributor_id: str
+    public_key_hex: str
+    claim_signature: str
+    claim_payload: dict
+    rotation_signature: str | None = None
+    rotation_payload: dict | None = None
+
+
+@router.post("/claim", summary="Claim an ed25519 pubkey for the contributor")
+async def claim_pubkey(body: PubkeyClaimRequest) -> dict:
+    """Link a contributor to a pubkey after verifying signed proof of possession.
+
+    First-time claim: signature over claim_payload must verify against
+    the new pubkey. Re-claiming the same pubkey is idempotent. Rotating
+    to a different pubkey requires a rotation_signature from the OLD key
+    over a payload that names the old pubkey in `rotates_from`.
+    """
+    try:
+        return cross_instance_identity_service.claim_pubkey(
+            contributor_id=body.contributor_id,
+            public_key_hex=body.public_key_hex,
+            claim_signature=body.claim_signature,
+            claim_payload_dict=body.claim_payload,
+            rotation_signature=body.rotation_signature,
+            rotation_payload_dict=body.rotation_payload,
+        )
+    except cross_instance_identity_service.RotationRejection as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except cross_instance_identity_service.ClaimRejection as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------
