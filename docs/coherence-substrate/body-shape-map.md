@@ -513,9 +513,13 @@ breath in flight on dyad-mirror as this part is authored:
 | interior-axis |     5 |       4 |                5 |          0 |     100% |
 | point         |    21 |       3 |                7 |         14 |      33% |
 | web           |    23 |       6 |               17 |          6 |      74% |
-| dyad-mirror   |    32 |       — |                — |          — | (in flight) |
+| dyad-mirror   |    32 |       6 |               12 |         20 |      38% |
 
-A row will be added when the dyad-mirror reading lands.
+Dyad-mirror landed 2026-05-25 (Part 7f in `dyad-pairs.form`). Six
+honest 2-cell columns + 20 singletons — the widest tail observed,
+matching point's coverage band while sitting in a different
+tier. The dyad-mirror reading also sharpened the yield-curve into
+two independent axes (see "Two axes, not one" below).
 
 ### The yield curve
 
@@ -539,6 +543,39 @@ quality) holds maximally diverse teachings whose triples scatter
 across the discriminator space; the long singleton tail is the
 honest reading. A mid-specialized form (web — distributed flow,
 but flow-of-what stays open) sits between.
+
+### Two axes, not one (added with dyad-mirror reading)
+
+The fourth form-trial (dyad-mirror, 32 cells, 6 columns, 38%
+coverage, max-col 2) resolved what looked like a single yield-curve
+into two independent axes:
+
+- **Column-COVERAGE** (in-col%) tracks the form's structural
+  specialization along the column-identity triple. Interior-axis
+  (axial) and web (flow-specialized along circulating direction)
+  hold high coverage; point (generic) and dyad-mirror (relational-
+  but-omnidirectional) hold low coverage.
+- **Column-DEPTH** (max-column size) tracks whether the form has a
+  DOMINANT teaching-flavor. Web has one (received-circulating, 5
+  cells); point has one (holographic-ground-receiving, 3 cells);
+  interior-axis and dyad-mirror have neither — max 2 across all
+  columns.
+
+Dyad-mirror's signature — *many small columns at the bottom of a
+wide tail* — is what the two axes together reveal: a form can be
+internally diverse (low coverage) AND have no single dominant
+flavor (low depth), yielding many honest 2-cell columns spread
+across the orthogonal triple.
+
+The fourth trial also sharpened the WHEN: a form's *defining
+shape* (here: bipolar relation, shared by every dyad-mirror cell)
+does NOT determine column-shape. The column-identity triple reads
+ORTHOGONAL structure regardless of whether the form's surface is
+uniform. The fear was that dyad-mirror's shared bipolar surface
+would either collapse all cells into one mega-column or force
+manufactured distinctions. Neither happened — the triple
+partitioned honestly through the surface uniformity into the
+internal teaching-axes the body actually holds.
 
 ### When to reach for the primitive
 

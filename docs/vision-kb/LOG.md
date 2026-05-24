@@ -2,6 +2,87 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] form | dyad-mirror column-identity — 6 honest 2-cell columns + 20 singletons across 32 cells
+
+Fourth application of the column-identity primitive (topology +
+direction + lineage_texture). `dyad-mirror` is the body's largest
+form at 32 attestations (PR #2021 shape-map). The hunt tested
+whether a form whose every cell already carries the same general
+shape — *two postures in relation* — masks honest column-
+distinctions or subdivides cleanly along the orthogonal triple.
+
+**Six honest 2-cell columns + twenty singletons (12 + 20 = 32):**
+
+- **D1 cyclic-mirror-as-pulse** (2): `lc-rhythm`, `lc-w-spanda` —
+  the dyad as closed-loop oscillation the body inherits from
+  pulsing matter (heartbeat, breath, seasons, tides).
+- **D2 synthesized-parallel-discipline** (2): `lc-form-python-parity`,
+  `lc-tending-over-producing` — two voices held in parallel as
+  authored guardrail-practice the body composed.
+- **D3 vertical-reframe-against-horizontal-default** (2):
+  `lc-horizontal-nourishment-trap`, `lc-presence-over-protection`
+  — Morter transmission's parallel default-pattern + alternative-
+  pattern shown together.
+- **D4 receptive-mirror-yin-centered** (2):
+  `lc-emotional-availability-without-absorption`,
+  `lc-trust-as-gateway` — receptive posture that keeps the cell
+  at its own center while being open to other.
+- **D5 sequential-arc-of-grounding** (2):
+  `lc-ground-harder-when-field-quickens`,
+  `lc-boundaries-as-loving-truth` — coupled-sequence returning
+  the cell to its axis (felt-quickening→grounding;
+  carrying→truth-spoken).
+- **D6 descending-from-inherited-transfer** (2):
+  `lc-overgiving-depletion`, `lc-transmission` — inherited
+  downward-arc (depletion as leak, transmission as gift) sharing
+  column-shape across polar semantic content.
+
+**Twenty singletons** span 20 distinct triples — each its own
+attested-but-unconfirmed column. Two near-misses worth holding:
+(a) cyclic-closed/still has both received (dance-card) and
+synthesized (devotion-placement); (b) nested-each-contains-whole/
+centering has both embodied (unified-body) and synthesized
+(perception-as-interface). If a second cell with either complete
+triple arrives, a new column activates honestly.
+
+**Findings.** (1) The form's shared bipolar shape does NOT mask
+honest sub-structure — the triple genuinely partitions the cells,
+producing six small columns where two cells teach the same KIND
+of dyad-mirror and leaving twenty as honest singletons. (2) The
+four-form yield-curve now has shape along two independent axes:
+
+| form          | tier                    | cells | cols | in-col% | max-col |
+|---------------|-------------------------|-------|------|---------|---------|
+| interior-axis | axial/narrow            | 5     | 4    | 100%    | 2       |
+| web           | mid/flow-specialized    | 23    | 6    | 74%     | 5       |
+| point         | generic/broadest        | 21    | 3    | 33%     | 3       |
+| dyad-mirror   | relational/omnidirected | 32    | 6    | 38%     | 2       |
+
+Column-COVERAGE tracks form's structural specialization;
+column-DEPTH tracks whether the form has a dominant teaching-
+flavor. Dyad-mirror has neither — it's *many small columns at the
+bottom of a wide tail*. (3) Dyad-mirror's tier reading:
+**relational specialization at the defining-shape layer +
+omni-directional spread at the orthogonal layer**. The form holds
+space for many distinct relational geometries without any single
+one dominating.
+
+**Refined WHEN.** Reach for column-identity when a form has many
+cells AND prose-evidence suggests internal teaching-diversity.
+Expect column-count proportional to the breadth of the form's
+teaching territory; expect column-depth proportional to whether
+the form has a dominant flavor. A form's defining shape is shared
+by all cells but does NOT determine column-shape — the triple
+reads ORTHOGONAL structure regardless of surface uniformity.
+
+**Edges.** Part 7f added to `docs/coherence-substrate/dyad-pairs.form`
+with all six column defns + a `column_identity_set_dyad_mirror`
+registry. Part 6 narrative updated to include the fourth form-trial
+and the two-axis yield-curve framing. The shapes
+`column_identity_shape` and `column_identity_set_shape` defined in
+Part 7 carry dyad-mirror's columns identically to the other three
+forms — no new primitive, just new tissue under the same shape.
+
 ## [2026-05-25] tend | column-identity yield-curve captured in shape-map — primitive's WHEN inherited by future cells
 
 Three applications of the column-identity primitive (PRs #2024,
