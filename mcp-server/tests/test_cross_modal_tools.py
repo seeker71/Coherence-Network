@@ -219,22 +219,25 @@ def test_cross_modal_twins_unknown_canonical_returns_empty(substrate_with_canoni
     assert result.count == 0
 
 
-def test_canonical_families_lists_seven_shapes(substrate_with_canonical_shapes) -> None:
-    """All seven interned canonical shapes appear in the families listing."""
+def test_canonical_families_lists_every_canonical_shape(substrate_with_canonical_shapes) -> None:
+    """Every interned canonical shape appears in the families listing.
+
+    The endpoint pulls its iteration order from
+    `app.services.substrate.modality_shapes.CANONICAL_SHAPES` so the
+    families grow with the substrate. Asserts the keystone leads, the
+    full set is present, and ordering matches declaration order.
+    """
     from app.routers.substrate import get_canonical_families
+    from app.services.substrate import canonical_shape_names
+
+    expected_names = canonical_shape_names()
 
     result = get_canonical_families()
-    assert result.count == 7
+    assert result.count == len(expected_names)
     names = [f.canonical_name for f in result.families]
-    assert names == [
-        "R_ObserverConditionedActualization",
-        "R_Recovery",
-        "R_SustainedTension",
-        "R_ResolutionToSilence",
-        "R_MeetThenShift",
-        "R_SkipTheIntermediate",
-        "R_ReturnFromEdge",
-    ]
+    assert names == expected_names
+    # Keystone leads the ordering.
+    assert names[0] == "R_ObserverConditionedActualization"
     # Each family carries the canonical itself plus its twins
     recovery_family = next(
         f for f in result.families if f.canonical_name == "R_Recovery"

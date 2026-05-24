@@ -17,10 +17,12 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services.substrate import (
+    DOMAIN_RECIPE_SHAPE,
     CellView,
     NamedCell,
     NodeID,
     annotate_path,
+    canonical_shape_names,
     find_cells_compatible_with,
     find_equivalent_cells,
     form_evaluate_text,
@@ -219,9 +221,16 @@ def list_cells(
 # These endpoints expose that cross-modal unity directly, so any agent
 # surface (MCP, web) can ask the substrate "what other modalities carry
 # the shape I am thinking about?" without composing the Form query.
+#
+# The domain name and the list of canonical shape names live in
+# `app.services.substrate.modality_shapes` so this router and the intern
+# script share one source-of-truth. The router previously carried a
+# hand-maintained list that fell out of sync when the canonical set grew
+# from 7 to 13 entries — content-addressing keeps the cells aligned, but
+# the human-readable name list needs the same discipline.
 
 
-CANONICAL_RECIPE_SHAPE_DOMAIN = "recipe-shape"
+CANONICAL_RECIPE_SHAPE_DOMAIN = DOMAIN_RECIPE_SHAPE
 
 
 class CrossModalTwinsOut(BaseModel):
@@ -276,19 +285,12 @@ class CanonicalFamiliesOut(BaseModel):
     count: int = 0
 
 
-# The seven canonical cross-modal shapes interned by
-# scripts/intern_modality_blueprints.py. Listed here so the endpoint
-# returns a stable ordering with the keystone first; the actual cells
-# and Blueprint NodeIDs are read live from the substrate.
-_CANONICAL_SHAPE_NAMES: list[str] = [
-    "R_ObserverConditionedActualization",
-    "R_Recovery",
-    "R_SustainedTension",
-    "R_ResolutionToSilence",
-    "R_MeetThenShift",
-    "R_SkipTheIntermediate",
-    "R_ReturnFromEdge",
-]
+# The canonical cross-modal shapes interned by
+# scripts/intern_modality_blueprints.py. Read from
+# `app.services.substrate.modality_shapes.CANONICAL_SHAPES` so the
+# endpoint returns a stable ordering with the keystone first AND stays
+# in sync as the canonical set grows. The actual cells and Blueprint
+# NodeIDs are read live from the substrate.
 
 
 @router.get(
@@ -310,7 +312,7 @@ def get_canonical_families() -> CanonicalFamiliesOut:
     """
     families: list[CanonicalFamilyOut] = []
     with session_scope() as session:
-        for canonical_name in _CANONICAL_SHAPE_NAMES:
+        for canonical_name in canonical_shape_names():
             cell = lookup_cell(
                 session, CANONICAL_RECIPE_SHAPE_DOMAIN, canonical_name
             )
@@ -364,7 +366,7 @@ def get_modality_for(per_modality_name: str) -> ModalityForOut:
         if cell is None:
             return ModalityForOut(per_modality_name=per_modality_name)
         family_cells = find_equivalent_cells(session, cell.blueprint)
-        canonical_names = {n for n in _CANONICAL_SHAPE_NAMES}
+        canonical_names = set(canonical_shape_names())
         canonical_name = next(
             (c.name for c in family_cells if c.name in canonical_names),
             None,
