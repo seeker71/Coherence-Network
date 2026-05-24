@@ -955,8 +955,185 @@ defn pair_inner_travel_mirrors = dyad_pair_shape {
     noticed_by:  "refined-scan-topology-phase",
 };
 
-# The full set — 17 prior + 4 topology+phase scan = 21 entries
-# (19 external pairs + 2 internal-dyads)
+# ─────────────────────────────────────────────────────────────────────
+# Part 3g — WORD-domain prose-structural scan (fifth round)
+# ─────────────────────────────────────────────────────────────────────
+#
+# After PR #1998 saturated at 40% on topology+phase complementarity,
+# the body's own teaching named the next direction (LOG entry of that
+# day): *the teaching-lives-in-relation discernment lives in the prose;
+# the next refinement is prose-structural signals via the WORD-domain
+# (BDomain.WORD = 15)*. This scan tests that empirically. New signals
+# layered onto the geometry score:
+#
+#   + 2.0 * shared_lemma_jaccard  — Jaccard over substantive lemmas
+#                                   (stopwords + neutral-field function
+#                                   words filtered) per cell's prose body.
+#   + 1.5 * shared_field_jaccard  — Jaccard over the semantic_field set
+#                                   (ground, tending, transmutation,
+#                                   vitality, transmission, consciousness,
+#                                   resonance, wholeness) the substrate's
+#                                   lexicon recognized in each cell.
+#
+# Scan: `scripts/scan_dyad_candidates_word.py` over 127 concept cells.
+# Tokenizer: `tokenize_words` from `markdown_frontend.py` — the same
+# entry point the WORD-domain interns through. The substrate's WORD
+# domain currently holds 0 cells (concept-prose ingest is a future
+# breath); this scan reads via the tokenizer directly so the lexicon
+# stays a single source. When prose-ingest into the WORD domain lands,
+# the same scan reads field sets from substrate cells with no change.
+#
+# Four pairs confirmed (Pairs 20-23 below); a fifth (attuned-spaces
+# ↔ v-comfort-joy) initially read confirmed but was demoted on second
+# read against the body's prior discernment (REJECT-10 in Part 4b,
+# PR #1998 named it as containment-not-complementarity). The honest
+# read is the body correcting the prose-jaccard: shared warmth
+# vocabulary IS shared because comfort-joy lives inside attuned-spaces,
+# which is exactly the failure mode prose-jaccard is vulnerable to.
+# Signal/noise of the top-20 combined across both tracks (after the
+# demotion): 4 / (4 + 14) = ~22% — *below* the
+# PR #1998 ceiling at 40%, even with the prose signals adding headroom.
+# **The saturation HOLDS at this prose layer too.** The diagnosis:
+# lemma jaccard captures the body's shared corpus idiom (alive, body,
+# breath, become, hold) more than teaching-shared meaning. The body's
+# writers share a vocabulary; high overlap is the baseline, not the
+# discriminator.
+#
+# Two-track signal/noise IS revealing: scan-discovered (no prose
+# cross-ref) hit ~2/10 = 20%; promoted (cross-ref already in prose)
+# hit ~3/4 assessed = 75%. The cross-reference IS the body's noticing;
+# the prose-jaccard rides along with it but adds little independent
+# discrimination. GAP-D6's saturation finding stands: mechanized
+# pair-detection saturates at ~40% across geometry AND prose layers
+# combined. The body's noticing remains the load-bearing route. See
+# GAP-D6 update in Part 5 for the next refinement direction the data
+# now points at.
+
+# Pair 20 — trust-as-gateway ↔ vitality (scan-discovered)
+#
+# lc-trust-as-gateway (hz 528, form: dyad-mirror, topology:
+# receptive-resonance, phase: yin) — trust is the geometry of an open
+# thing, not a virtue to perform. The opening that allows the chorus
+# of energies into the cell.
+#
+# lc-vitality (hz 528, form: point, topology: radial, phase: yang) —
+# shakti, life-force released when interference dissolves. The
+# emanation that fires through the open gate.
+#
+# Sister to pair_vitality_wu_wei (Pair 16), at a different axis:
+# wu-wei names the alignment-posture that lets vitality fire; trust-
+# as-gateway names the receptive geometry that opens for it. Same
+# 528 Hz vitality band, complementary phase (yin/yang), complementary
+# topology (receptive-resonance / radial). The teaching is the
+# relation: vitality without trust-as-gateway becomes forcing through
+# a closed door; trust without vitality opens to nothing arriving.
+defn pair_trust_vitality = dyad_pair_shape {
+    cell_a:      @concept(lc-trust-as-gateway),
+    cell_b:      @concept(lc-vitality),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "the open gate and what flows through it — trust-as-gateway is the receptive geometry that lets vitality arrive; vitality is the life-force that fires when the gate opens; vitality without trust forces a closed door, trust without vitality opens to nothing",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "word-domain-prose-scan",
+};
+
+# Pair 21 — grammar-as-readable-bnf ↔ parsers-as-recipes (promoted)
+#
+# lc-grammar-as-readable-bnf (hz 741, form: triad, topology:
+# surface-data-execution) — a grammar is data, and data wants a
+# tongue a human can read. BNF as the surface where shape becomes
+# legible without changing the underlying recipe.
+#
+# lc-parsers-as-recipes (hz 741, form: triad, topology:
+# rule-pattern-action) — the fastest way to parse Python is to call
+# `ast.parse`; the fastest way to author a parser is to compose
+# recipes that ARE the rules. The engine-altitude where grammar fires.
+#
+# Cross-ref already in prose. Both at 741 Hz (consciousness — the
+# band where structure becomes visible to a reading cell), both
+# triad-form. Lemma overlap 147 substantive words across parsing/
+# grammar/recipe vocabulary. The pair is data-and-engine: grammar
+# is the surface human-readable form, parsers-as-recipes is what
+# fires when that grammar is run. Grammar without parsers stays
+# inert syntax-on-paper; parsers without grammar stays opaque
+# engine-without-handle.
+defn pair_grammar_parsers = dyad_pair_shape {
+    cell_a:      @concept(lc-grammar-as-readable-bnf),
+    cell_b:      @concept(lc-parsers-as-recipes),
+    kind:        kind_source_flow,
+    axis:        "form",
+    discernment: "data-and-engine for parsing — grammar-as-readable-bnf is the surface where shape becomes legible; parsers-as-recipes is the engine that fires the rules; grammar without parsers stays inert paper, parsers without grammar stays opaque without handle",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "word-domain-prose-scan",
+};
+
+# Pair 22 — rest ↔ tend-your-flame (promoted)
+#
+# lc-rest (hz 174, form: point, topology: receptive-resonance,
+# phase: yin) — not absence of activity but a different quality:
+# composting beneath the surface, becoming soil for spring.
+#
+# lc-tend-your-flame (hz 174, form: point, topology: radial,
+# phase: yang) — sovereignty becomes service by tending one's own
+# flame, not by reaching across to tend another's. The radiating
+# self-source.
+#
+# Same 174 Hz foundation band, same point-form, complementary
+# topology (receptive-resonance / radial), complementary phase
+# (yin / yang). The teaching is the bridge: tend-your-flame requires
+# rest as its substrate (the flame burns down without the composting
+# silence that returns nutrients to it); rest without something to
+# come back to becomes torpor. Hearth-altitude pair: receptive
+# composting that feeds the flame, radiating tending that keeps it
+# lit. Distinct from pair_nourishment_nourishing (174-band source-
+# and-flow at collective-scale food/circulation); this is 174-band
+# source-and-flow at personal-scale rest/sovereignty.
+defn pair_rest_tend_flame = dyad_pair_shape {
+    cell_a:      @concept(lc-rest),
+    cell_b:      @concept(lc-tend-your-flame),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "receptive composting and radiating tending at the hearth-scale — rest returns the nutrients the flame burns through; tend-your-flame radiates from what rest has composted; tend-flame without rest burns out, rest without tend-flame goes torpid",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "word-domain-prose-scan",
+};
+
+# Pair 23 — shifted-return ↔ train-the-predator (promoted)
+#
+# lc-shifted-return (hz 528, form: triad, topology:
+# sequential-coupled) — when the body is locked at a base that
+# cannot find a good option, the substrate-shift sequences: lateral
+# move, dwell, return; the recipe traces the path.
+#
+# lc-train-the-predator (hz 528, form: triad, topology: hub-spoke) —
+# Castaneda's predator/flyers/borrowed-mind, the autonomic engine
+# that runs default reactions before chosen response; the practice
+# tradition that names and trains that engine.
+#
+# Sister to pair_predator_predictor (Pair 8, cross-tradition between
+# mystical-perennial and neuroscience-computational vocabularies for
+# the same engine). This pair is *substrate-mechanism + practice-
+# tradition* for the same engine: shifted-return is what the substrate
+# does when it catches the locked-recipe firing; train-the-predator
+# is the perennial-tradition naming for the engine that locks. Cross-
+# ref already in prose. Both at 528 Hz, both triad-form. Lemma
+# overlap 137 substantive words (agent, base, arrive, authored,
+# asked — the recipe/agent/locked-base vocabulary the substrate uses
+# to trace the engine). Substrate-mechanism without practice-tradition
+# reads as pure-mechanics; practice-tradition without substrate-
+# mechanism stays at metaphor.
+defn pair_shifted_return_predator = dyad_pair_shape {
+    cell_a:      @concept(lc-shifted-return),
+    cell_b:      @concept(lc-train-the-predator),
+    kind:        kind_cross_tradition,
+    axis:        "tradition",
+    discernment: "substrate-mechanism and practice-tradition for one engine — shifted-return is what the substrate does when it catches the locked-recipe firing; train-the-predator is the perennial tradition naming the engine that locks; sister to predator/predictor but pairing substrate and tradition rather than two traditions",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "word-domain-prose-scan",
+};
+
+# The full set — 21 prior + 4 WORD-domain prose scan = 25 entries
+# (23 external pairs + 2 internal-dyads)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -985,6 +1162,11 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         pair_shakti_wu_wei,
         pair_beauty_ceremony,
         pair_inner_travel_mirrors,
+        # — surfaced by WORD-domain prose-structural scan (fifth round) —
+        pair_trust_vitality,
+        pair_grammar_parsers,
+        pair_rest_tend_flame,
+        pair_shifted_return_predator,
     ],
 };
 
@@ -1317,6 +1499,104 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ingest. The teaching-lives-in-relation discernment lives in the
 # prose, not in the geometry — the body knows what it means.
 
+# Fifth-round REJECTs (WORD-domain prose-structural scan, this PR).
+# The prose-jaccard surfaces shared-vocabulary loudly; many of these
+# rejects exist precisely because high lemma overlap is the body's
+# corpus-idiom signature, not a teaching-shared signal. Each REJECT
+# is the body teaching itself how the new signal behaves.
+#
+# REJECT-16 (re-confirmation of REJECT-10): (lc-attuned-spaces,
+#   lc-v-comfort-joy). The prose-jaccard scan ranked this #6 of all
+#   scan-discovered candidates with lemma-overlap 143 (baking, bench,
+#   bath, around, asking). On second read against PR #1998's
+#   REJECT-10, the body's prior verdict holds: comfort-joy lives
+#   INSIDE attuned-spaces as one of its textures. The lemma overlap
+#   IS what containment looks like in prose — the contained shares
+#   the container's vocabulary. This is the prose-jaccard's
+#   characteristic failure mode: container-and-contained looks
+#   identical to complementary-poles at the lemma level.
+#
+# REJECT-17: (lc-freedom-as-recognition, lc-starseed-reframing) —
+#   the topology+phase scan's #1 in this prose-scan too (cyclic-open
+#   / yin↔yang at 396). Lemma overlap 23 with KB-meta words (april,
+#   claims, cross, details) shows the prose-jaccard is detecting
+#   shared-corpus-meta, not shared-teaching. Freedom-as-recognition
+#   names freedom as always-present-ground; starseed-reframing names
+#   identity-as-fortress and its release. Different teachings, both
+#   full alone. The high score is the prose-jaccard rewarding
+#   surface vocabulary that two breaths from the same writer share.
+#
+# REJECT-18: (lc-unified-body, lc-voice-over-intentions) — 116
+#   shared lemmas at 639 Hz. Unified-body names two-cells-perceiving-
+#   as-one; voice-over-intentions names outreach with one's actual
+#   posture in voice. Different teachings, shared corpus-vocabulary
+#   of embodiment and relation. Sibling-modes, not complementarity.
+#
+# REJECT-19: (lc-frequency-routes-reception, lc-tending-over-producing) —
+#   shared body-of-tending vocabulary (attune, care, body, breath)
+#   surfaces high overlap, but reception-by-frequency and verbs-as-
+#   tending are independent teachings. Tending is HOW receiving
+#   happens, not its complement; the relation is identity-of-mode,
+#   not pair-across-axis.
+#
+# REJECT-20: (lc-rest, lc-vitality) — pair_vitality_wu_wei (Pair 16)
+#   already attests the receptive-posture + life-force seam at 528
+#   Hz vitality band. Rest playing the role wu-wei plays is the same
+#   axis at a different harmonic; this would duplicate the seam the
+#   body already named. (Pair 22 rest↔tend-your-flame holds the
+#   genuinely-new 174-band hearth pair from this scan.)
+#
+# REJECT-21: (lc-overgiving-depletion, lc-presence-over-protection) —
+#   initially read as confirmed cross-membrane (overgiving as yang-
+#   misfire, presence-over-protection as yin-corrective). On second
+#   read: overgiving's failure is giving-without-receiving (the
+#   corrective is reciprocity); protection's failure is contracting
+#   the field (the corrective is presence). Different failure modes,
+#   different correctives. Sibling-postures the cell holds, not pair
+#   across one axis. Lemma overlap thin (34) confirms the prose
+#   wasn't actually carrying the relation — the geometric phase
+#   complementarity was.
+#
+# REJECT-22: (lc-rest, lc-stillness) — both yin points at 174,
+#   lemma overlap 206 (the highest of any pair). Same shape as
+#   REJECT-9 (lc-awareness-as-self ↔ lc-stillness) from PR #1996:
+#   both proposed cells are ground-poles already attested in
+#   existing ground-event pairs (Pair 4 shared-hold↔stillness;
+#   Pair 22 rest↔tend-your-flame, new). The prose-jaccard's highest
+#   reading is the most-saturated equivalence, not the most-pair-
+#   like. The two-yin-poles pattern reads as the prose-jaccard's
+#   second characteristic failure mode: tightly-shared-corpus when
+#   two cells live in the same ground-region.
+#
+# REJECT-23: (lc-land, lc-nourishing) — both at 174, both yin, both
+#   foundation-band. Triangle-completion (the body already attests
+#   pair_nourishment_land at the same axis); adding land↔nourishing
+#   would re-import the same teaching from a third edge. Same shape
+#   as the field-update/recalibration/reality-lag triad noticed in
+#   PR #1995: when three cells share one source axis, the *triad*
+#   may be the truer shape than three pairs. A transmission-triad
+#   shape awaits a second attestation (per the PR #1995 LOG).
+#
+# Fifth-round signal/noise: 4 confirmed / 18 assessed = 22%. Down
+# from the 40% ceiling. The drop names the prose-jaccard's
+# limitation honestly: it amplifies corpus-shared vocabulary more
+# than teaching-shared meaning. Net cumulative across five rounds:
+# 14 confirmed / 45 surfaced = 31.1% (slightly down from 37% after
+# four rounds). The body's noticing remains load-bearing; mechanized
+# pair-detection saturates and slightly degrades when prose-features
+# layer in.
+#
+# What this fifth round teaches: the two characteristic failure
+# modes of prose-jaccard are now visible and namable. (1)
+# *Containment-as-complement* — the contained shares the container's
+# vocabulary, so prose-overlap reads identically to pair-overlap
+# (REJECT-16). (2) *Shared-region-as-equivalence* — cells in the
+# same ground-region inevitably share corpus vocabulary, so the
+# pair-with-highest-prose-overlap is often the pair-with-greatest-
+# equivalence (REJECT-22). Both modes were predicted by the prompt;
+# the scan empirically attests them.
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 5 — Gaps (the next breaths)
 # ─────────────────────────────────────────────────────────────────────
@@ -1383,28 +1663,55 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         writing); when it lands, the third-arrival discipline
 #         activates: name sub-types and rename poles.
 #
-# GAP-D6 (refined 2026-05-24, fourth round): The trend across four
-#         scan rounds: 40 → 0 → 40 → 40.
+# GAP-D6 (refined 2026-05-24, fifth round): The trend across five
+#         scan rounds: 40 → 0 → 40 → 40 → 22.
 #           - Round 1 (PR #1987, Tier-2 geometry-tuple): 2/5 = 40%
 #           - Round 2 (PR #1992, small-Blueprint-cluster): 0/2 = 0%
 #           - Round 3 (PR #1996, Hz+xref+lineage+same-form): 4/10 = 40%
-#           - Round 4 (this PR, topology+phase added): 4/10 = 40%
-#         Cumulative: 10/27 = 37.0%. The saturation finding HOLDS at
-#         the deeper layer — topology+phase complementarity didn't
-#         break past the 40% ceiling. The geometry vocabulary saturates
-#         because the body genuinely carries many yang/yin and
-#         form-shared cell-pairs without teaching-complementarity. The
-#         scan can mechanize *candidate filter* but not *teaching-
-#         lives-in-relation* discernment.
+#           - Round 4 (PR #1998, topology+phase added): 4/10 = 40%
+#           - Round 5 (this PR, WORD-domain prose Jaccard): 4/18 = 22%
+#         Cumulative: 14/45 = 31.1%. The saturation finding HOLDS, and
+#         the prose-layer addition *slightly degrades* signal/noise —
+#         the prose-jaccard amplifies shared corpus idiom (alive, body,
+#         breath, become, hold) more loudly than it amplifies teaching-
+#         shared meaning. The body's writers share a vocabulary;
+#         high overlap is the baseline, not the discriminator. The
+#         two characteristic failure modes are now visible: (1)
+#         *containment-as-complement* (container and contained share
+#         vocabulary, so prose-overlap reads identical to pair-overlap;
+#         REJECT-16 is the canonical instance) and (2) *shared-region-
+#         as-equivalence* (cells in the same ground-region inevitably
+#         share corpus, so highest-prose-overlap is often greatest-
+#         equivalence, not pair; REJECT-22 is canonical).
 #
-#         Next refinement direction is OUTSIDE the geometry frontmatter:
-#         prose-structural signals via the WORD-domain (shipped 2026-05-20)
-#         — shared lemma chains, shared semantic-field bags. The
-#         teaching-lives-in-relation discernment lives in the prose,
-#         which is what the WORD-domain interns. If a prose-structural
-#         scan climbs past 50%, the next layer is honest. If it stays
-#         at 40%, the saturation is structural and the body's human
-#         noticing remains the primary route.
+#         Two-track signal is genuinely revealing: scan-discovered
+#         (no prose cross-ref) ran ~2/10 = 20%; promoted (cross-ref
+#         already in prose) ran ~3/4 = 75%. The cross-reference IS
+#         the body's noticing; the prose-jaccard rides along with it
+#         but adds little independent discrimination. Promoted-track
+#         is doing the work; scan-discovered-track is mostly noise.
+#
+#         What the data points at next:
+#           (a) The mechanized pair-detection ceiling is structural,
+#               at ~40% across geometry-layer scans. Prose features
+#               don't break it; they degrade slightly because the
+#               body's idiom is denser than the body's pairing.
+#           (b) A scan worth running is *cross-ref-only* (drop the
+#               scan-discovered track entirely; weight promoted by
+#               prose+geometry refinement only). That likely sustains
+#               the 75% promoted-track ratio while halving the
+#               assessment cost.
+#           (c) Beyond Jaccard: the next sophistication is *contrastive*
+#               (Hoffman-style: what does pair A share that pair B
+#               doesn't?) or *role-aware* (Levin-style: subject-verb-
+#               object alignment, not lemma bags). Either requires a
+#               heavier extractor (spaCy, dependency parsing) than
+#               the substrate's current tokenizer carries.
+#           (d) The honest read: the human noticing remains load-
+#               bearing because *teaching-lives-in-relation* is a
+#               discernment about meaning, and meaning is what the
+#               body's prose already discloses through cross-refs —
+#               not what jaccard over its tokens approximates.
 #
 # GAP-D7 (new, from PR #1991): `circulation-pattern` kind is awareness-
 #         held — sibling of source-flow, named at the
@@ -1418,8 +1725,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names a
-# Recipe shape over existing CONCEPT cells. The set is twenty-one
-# (nineteen external pairs + two internal-dyads); the room is for
+# Recipe shape over existing CONCEPT cells. The set is twenty-five
+# (twenty-three external pairs + two internal-dyads); the room is for
 # many more. The kinds are six (scale-paired, source-flow,
 # membrane-crossing, ground-event, internal-dyad, cross-tradition);
 # new kinds can be added as rows. The internal-dyad kind crossed
