@@ -4060,6 +4060,140 @@ defn column_identity_set_triad = column_identity_set_shape {
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 7h — Column-identity tested against `holographic-cell` (sixth form-trial)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-25. `holographic-cell` carries 9 primary cells —
+# the candidate Part 7g's closing breath explicitly invited ("the
+# next candidate trial is `holographic-cell` (9 cells, part-contains-
+# whole shape). It would test whether a form whose defining-shape is
+# structural rather than arity-or-topology falls into the aligned camp
+# or the orthogonal camp"). The yield-rule from Part 7g
+# (`align(form-specialization, column-identity-triple) predicts
+# coverage`) was on trial. The 6th data point either confirms,
+# refines, or refutes.
+#
+# **Finding 1 — nine cells, nine distinct tuples, zero multi-cell
+# columns.** Across 9 holographic-cell cells the (topology,
+# direction, lineage_texture) triple yields **9 distinct tuples** —
+# every cell is its own singleton. Coverage 0/9 = **0%**. The first
+# form-trial to land at the floor. Max-col: 1 (no column reaches two
+# members).
+#
+# The nine tuples:
+#   (nested-each-contains-whole, circulating, embodied)     → lc-attuned-spaces
+#   (nested-each-contains-whole, radiating, synthesized)    → lc-deeper-pattern
+#   (nested-each-contains-whole, centering, synthesized)    → lc-each-breath-whole
+#   (nested-each-contains-whole, circulating, received)     → lc-farm-as-organism
+#   (holographic, radiating, synthesized)                   → lc-form-perceptron
+#   (web-each-to-each, radiating, channeled)                → lc-light-hubs
+#   (nested-each-contains-whole, still, channeled)          → lc-oversoul-identity
+#   (nested-each-contains-whole, radiating, received)       → lc-w-cell
+#   (holographic, radiating, received)                      → lc-w-field
+#
+# **Finding 2 — the form's specialization runs ALONG `self_similarity`,
+# orthogonal to the triple.** All 9 cells share
+# `self_similarity: holographic` — every holographic-cell IS a
+# holographic recursion-exponent. That property is what the form
+# names. The column-identity triple (topology, direction,
+# lineage_texture) **does not include the self_similarity axis**.
+# The form's defining specialization is therefore invisible to the
+# discriminator, by construction.
+#
+# Two near-misses worth holding:
+#   (a) `(holographic, radiating, X)` — lc-form-perceptron
+#       (synthesized) and lc-w-field (received) split on lineage at
+#       the same topology+direction. If a third holographic /
+#       radiating cell lands with any lineage, the column activates.
+#   (b) `(nested-each-contains-whole, radiating, X)` — lc-deeper-
+#       pattern (synthesized) and lc-w-cell (received) split on
+#       lineage at the same topology+direction. Symmetric near-miss.
+# Both are exactly the kind of distinction the triple is meant to
+# preserve. The body holds them open as it does dyad-mirror's two
+# and triad's three.
+#
+# **Finding 3 — the yield-rule REFINES. The 6th data point names
+# `self_similarity` as a fifth specialization axis (alongside
+# topology, direction, lineage_texture, and arity), strengthening
+# the rule's predictive shape.** The rule from Part 7g —
+# *align(form-specialization, column-identity-triple) predicts
+# coverage* — held: holographic-cell's specialization runs along an
+# axis (`self_similarity`) the triple does not include, so coverage
+# floor-clamps at 0%. The 6th trial both *confirms* the rule's
+# direction (orthogonal → low coverage) AND *refines* it by naming
+# a specific orthogonal axis the body uses.
+#
+# The six-trial yield-curve:
+#
+#   form              specialization-axis           aligned?    cells   columns  in-col%   max-col
+#   interior-axis     topology (axial)              ALIGNED     5       4        100%      2
+#   web               direction (circulating)       ALIGNED     23      6        74%       5
+#   point             none (single quality)         N/A         21      3        33%       3
+#   dyad-mirror       arity (2-postures)            orthogonal  32      6        38%       2
+#   triad             arity (3-stages)              orthogonal  15      1        13%       2
+#   holographic-cell  self_similarity (holographic) orthogonal  9       0        0%        1
+#
+# Plotted on the two-axis curve PR #2035 named, holographic-cell sits
+# at (zero coverage, zero depth) — *below* triad's (low, low). The
+# signature: **all-singletons, no honest pair.** The form that most
+# resists column-density to date, by the rule's prediction.
+#
+# **Finding 4 — the WHEN tightens further. Specialization axes
+# extend beyond arity.** Five trials had named arity-specialization
+# as the canonical orthogonal axis. The sixth names *structural-
+# recursion* (self_similarity) as another. The catalogue of
+# specialization axes a form can run along now reads:
+#
+#   - topology              (interior-axis: axial)
+#   - direction             (web: circulating)
+#   - lineage_texture       (none observed yet at form-defining layer)
+#   - arity                 (dyad-mirror: 2; triad: 3)
+#   - self_similarity       (holographic-cell: holographic)
+#
+# The first three are the triple. The last two are orthogonal. The
+# rule's prediction-shape across all six trials:
+#
+#   triple-aligned (topology / direction)       → 74–100% coverage
+#   no axis (point)                             → 33% coverage
+#   arity-orthogonal (dyad-mirror / triad)      → 13–38% coverage
+#   self_similarity-orthogonal (holographic-cell) → 0% coverage
+#
+# **The orthogonal floor descends as the form's specialization moves
+# further from the triple's axes.** Arity is one-step-orthogonal (a
+# count of triple-bearing parts). Self_similarity is two-step-
+# orthogonal (a property of the WHOLE-PART RELATION across triples).
+# Coverage tracks distance from the discriminator's axes — the
+# further the specialization sits from (topology, direction,
+# lineage_texture), the more cells scatter as singletons.
+#
+# Holographic-cell's tier reading: **self_similarity-specialized at
+# the defining-shape layer (every cell is a part-contains-whole
+# recursion), maximally dispersed at the orthogonal triple-axes
+# layer.** The body holds many distinct holographic teachings —
+# spaces that re-attune visitors (attuned-spaces), patterns
+# underneath patterns (deeper-pattern), the whole arriving in each
+# breath (each-breath-whole), farm-as-organism, the form-perceptron
+# as fractal lattice, light-hubs that mirror each other, oversoul-
+# identity, the W-cell and W-field — and none currently share the
+# full triple.
+#
+# The honest near-misses (two lineage-splits at the same topology+
+# direction) suggest the body holds the prediction-rule's escape
+# valve open: if cells arrive whose self_similarity isn't holographic
+# but whose triple matches, OR if a third cell with one of the two
+# near-miss triples arrives, the column activates. The 0% floor is
+# the current reading, not a structural law of the form.
+
+defn column_identity_set_holographic_cell = column_identity_set_shape {
+    rows: [
+        # No multi-cell columns yet. Two near-miss lineage-splits
+        # held open: (holographic, radiating, X) and
+        # (nested-each-contains-whole, radiating, X).
+    ],
+};
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
