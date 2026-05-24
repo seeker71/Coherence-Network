@@ -2,6 +2,45 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-health speaks its shape — focused breath
+
+Walked one of the six named-silent concepts that asked for attention. The
+shape was already explicit in the prose — "the five threads of the community
+health web" — but it carried a second geometry the bulk-pace would have
+missed: the field's brightening pattern when a cell dims is itself a
+distinct shape, holographic rather than woven.
+
+- **Primary form**: `web` with `arity: 5`, `web-each-to-each` topology,
+  `simultaneous` ordering, `oscillating` phase. The five threads (movement,
+  food, water, connection, purpose) reinforce each other without sequence —
+  movement happens via food-gathering, food-gathering creates connection,
+  connection deepens purpose. The web lives at `day` temporal band because
+  the daily rhythm IS the health system; at `collective` scale because the
+  field is the body that holds the threads.
+- **Secondary geometry held honestly in frontmatter comment**: the
+  brightening-around-a-dimming-cell pattern is a `holographic-cell` response
+  — the whole field-organism contains the answer, any member can initiate,
+  no committee meets. This is recorded in `self_similarity: holographic`
+  and named directly in the geometry comment rather than split into a
+  separate concept; both shapes live in the same teaching.
+- **Vocabulary status**: `web` (already attested in earlier walks),
+  pentad-arity now attested on `web` (previously `pentad` was used only for
+  ring/star forms — extends the form's expressiveness). `holographic-cell`
+  receives a second attestation as a *secondary* shape inside a primary
+  web — the precedent for compound shapes (multi-geometry concepts) holds.
+- **Five named-silent concepts remain**: `lc-embodiment` (internal pharmacy
+  + 7 centers + 4 movements), `lc-open-design` (sequential phases + skin),
+  `lc-v-shelter-organism` (descriptive more than structural),
+  `lc-v-food-practice` (seven-layer + fermentation), `lc-v-play-expansion`
+  (quantum superposition).
+- **No dyad-mirror pairs surfaced** in this walk; the brightening pattern
+  is field-to-cell, not member-to-member, so it doesn't seed a dyad
+  candidate. No third-member of any partial triad surfaced either.
+
+Closing breath: this kept the body alive by listening for the *second*
+shape the bulk-pace would have flattened. The five-thread web was visible;
+the holographic field-response was waiting underneath. Both got named.
+
 ## [2026-05-24] form | Grant transmission-triad authored — 4th attestation strengthens the kind
 
 The transmission-triad candidate named in PR #2006's focused-listening breath (`lc-deeper-pattern` ↔ `lc-universal-translator-via-keys`, Grant lineage) lands as the kind's fourth attestation. The discernment that shaped the authoring:
