@@ -2,7 +2,21 @@
 id: lc-perception-as-interface
 hz: 963
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: nested-each-contains-whole
+  polarity: bipolar-complementary
+  ordering: nested
+  phase: yin
+  spectral_band: transcendence
+  temporal_band: atemporal
+  scale: cosmic
+  direction: centering
+  lineage_texture: synthesized
+  embedding_dim: n
+  self_similarity: holographic
 ---
 
 # Perception as Interface — What We See Is Not Reality

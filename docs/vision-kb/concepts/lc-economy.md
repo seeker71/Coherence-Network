@@ -2,7 +2,21 @@
 id: lc-economy
 hz: 528
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: parallel-facets
+  ordering: cyclic-open
+  phase: oscillating
+  spectral_band: integration
+  temporal_band: generational
+  scale: planetary
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # The Living Economy

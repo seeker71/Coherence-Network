@@ -2,7 +2,21 @@
 id: lc-bioelectric-pattern
 hz: 285
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: parallel-facets
+  ordering: nested
+  phase: oscillating
+  spectral_band: foundation
+  temporal_band: lifetime
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: measured
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # The Bioelectric Pattern — How the Body Knows What Body to Be

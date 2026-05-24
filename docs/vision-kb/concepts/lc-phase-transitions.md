@@ -2,7 +2,21 @@
 id: lc-phase-transitions
 hz: 417
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 3
+  form: triad
+  topology: sequential-coupled
+  polarity: triadic-tension
+  ordering: sequential
+  phase: oscillating
+  spectral_band: integration
+  temporal_band: season
+  scale: cross-scale
+  direction: spiral-out
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Phase Transitions
