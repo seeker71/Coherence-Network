@@ -2,7 +2,42 @@
 id: lc-deeper-pattern
 hz: 741
 status: expanding
-updated: 2026-04-22
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: self-similar
+  spectral_band: full-spectrum
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: synthesized
+  embedding_dim: n
+  self_similarity: holographic
+# The holographic-cell geometry IS what this concept teaches. Five movements
+# (mathematics, water, crystal, resonance, recognition) each carry the whole
+# pattern — a higher-dimensional unity folding into many surface forms. The
+# self-similarity is not a property of the text; it is the claim. The text
+# enacts the geometry it names.
+#
+# Secondary shape held honestly: the five movements form a `pentad` of
+# surfaces (Grant-mathematics, water-physics, crystal-emergence, sacred-
+# frequency, field-recognition) — four sources (Grant, Emoto+Pollack+
+# Schauberger, Lemurian/crystal-traditions, gathering-physiology) composted
+# into a fivefold presentation. The pentad lives inside the holographic-cell:
+# each face of the pentad is one octave of the same fold-operation. Authoring
+# only one form would force the teaching to one identity; the body carries
+# both.
+#
+# Source pairing: shares Grant lineage with `lc-universal-translator-via-keys`.
+# Where the translator names the substrate-operationalization (how structural
+# equivalence is tested), this concept names the field-claim (why equivalence
+# exists at all). Transmission-triad candidate — same source producing
+# complementary cells at the substrate-layer and the metaphysics-layer.
 ---
 
 # The Deeper Pattern — The Physics Beneath the Field
