@@ -1,0 +1,42 @@
+; document-meaning-ingestion-band.fk - DOC/PPT CFBF containers as Form meaning.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/document-bmf.fk
+
+section [form.action] {
+    let repo_root = form-capsule-root(83, 1, 9, 5);
+    let file_kind = form-dynamic-kind(repo_root, 1);
+    let decoder_kind = form-dynamic-kind(repo_root, 2);
+    let field_kind = form-dynamic-kind(repo_root, 3);
+    let doc_kind = form-dynamic-ref(repo_root, file_kind, 1);
+    let ppt_kind = form-dynamic-ref(repo_root, file_kind, 2);
+    let document_decoder = form-dynamic-ref(repo_root, decoder_kind, 1);
+    let container_field = form-dynamic-ref(repo_root, field_kind, 1);
+
+    def repo_find_field(fields, key) = if nil?(fields) then empty else if node_eq(fsc-repo-field-key(head(fields)), key) then head(fields) else repo_find_field(tail(fields), key);
+    def repo_meaning_node(meaning, key) = fsc-repo-field-value(repo_find_field(fsc-repo-meaning-fields(meaning), key));
+    def score_str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score_int(value, want, score) = if eq(value, want) then score else 0;
+    def score_positive(value, score) = if gt(value, 0) then score else 0;
+    def score_node(value, want, score) = if node_eq(value, want) then score else 0;
+    def doc_format(node) = node_value(nth(node_children(node), 0));
+    def doc_sector_shift(node) = node_value(nth(node_children(node), 1));
+    def doc_mini_sector_shift(node) = node_value(nth(node_children(node), 2));
+    def doc_fat_sectors(node) = node_value(nth(node_children(node), 3));
+    def doc_first_dir_sector(node) = node_value(nth(node_children(node), 4));
+    def document_meaning(container) = fsc-repo-meaning(document_decoder, list(fsc-repo-field-node(container_field, container)));
+
+    let doc_bytes = read_file_bytes("../docs/field/urs/artifacts/master-thesis-2000/backtracking-model-languages.doc");
+    let ppt_bytes = read_file_bytes("../docs/field/urs/artifacts/master-thesis-2000/thesis-defence.ppt");
+    let doc_container = document-parse-cfbf-bytes(doc_bytes);
+    let ppt_container = document-parse-cfbf-bytes(ppt_bytes);
+    let doc_document = fsc-repo-binary-document(doc_kind, doc_bytes, document_meaning(doc_container));
+    let ppt_document = fsc-repo-binary-document(ppt_kind, ppt_bytes, document_meaning(ppt_container));
+    let doc_file = fsc-repo-file-from-bytes("docs/field/urs/artifacts/master-thesis-2000/backtracking-model-languages.doc", doc_kind, "application/msword", doc_bytes, doc_document);
+    let ppt_file = fsc-repo-file-from-bytes("docs/field/urs/artifacts/master-thesis-2000/thesis-defence.ppt", ppt_kind, "application/vnd.ms-powerpoint", ppt_bytes, ppt_document);
+    let stored_doc = fsc-repo-file-sensed(doc_file);
+    let stored_ppt = fsc-repo-file-sensed(ppt_file);
+    let stored_doc_container = repo_meaning_node(fsc-repo-document-structure(stored_doc), container_field);
+    let stored_ppt_container = repo_meaning_node(fsc-repo-document-structure(stored_ppt), container_field);
+
+    sum(list(score_node(fsc-repo-document-kind(stored_doc), doc_kind, 100), score_node(fsc-repo-document-kind(stored_ppt), ppt_kind, 200), score_str(doc_format(stored_doc_container), "cfbf", 300), score_str(doc_format(stored_ppt_container), "cfbf", 400), score_int(doc_sector_shift(stored_doc_container), 9, 500), score_int(doc_mini_sector_shift(stored_doc_container), 6, 600), score_positive(doc_fat_sectors(stored_doc_container), 700), score_positive(doc_first_dir_sector(stored_ppt_container), 800), score_positive(fsc-repo-binary-document-byte-count(stored_doc), 900), score_positive(fsc-repo-binary-document-byte-count(stored_ppt), 1000)));
+}

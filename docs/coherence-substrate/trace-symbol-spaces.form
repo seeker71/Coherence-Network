@@ -79,9 +79,9 @@ form gap_closure_recipe_shape = {
 };
 
 defn raw_trace_source() = trace_source_shape {
-    traces_path:          "experiments/local-llm-cell-v0/_field_traces.jsonl",
-    weights_path:         "experiments/local-llm-cell-v0/_field_weights.jsonl",
-    messages_path:        "experiments/local-llm-cell-v0/_field_messages.jsonl",
+    traces_path:          "seedbank/local-llm-cell-v0/_field_traces.jsonl",
+    weights_path:         "seedbank/local-llm-cell-v0/_field_weights.jsonl",
+    messages_path:        "seedbank/local-llm-cell-v0/_field_messages.jsonl",
     trace_count:          28,
     strategy_trace_count: 15,
     weight_count:         5,
@@ -102,7 +102,7 @@ defn raw_blueprint() = raw_blueprint_shape {
     type: 142425,
     instance: 0,
     architecture_signature: "organ-cell|dim=128|rank=8|bands=8|out=15|senses=saw,heard,felt-inside,felt-outside,thought",
-    derived_by: "experiments/local-llm-cell-v0/substrate_bridge.py::architecture_signature",
+    derived_by: "seedbank/local-llm-cell-v0/substrate_bridge.py::architecture_signature",
 };
 
 # ---------------------------------------------------------------------
@@ -317,8 +317,8 @@ defn observed_tightnesses() = [
         id: "trace-not-yet-substrate-indexed",
         felt: "the witness exists as JSONL but cannot yet be queried as living substrate memory",
         raw_evidence: [
-            "experiments/local-llm-cell-v0/_field_traces.jsonl",
-            "experiments/local-llm-cell-v0/_field_weights.jsonl",
+            "seedbank/local-llm-cell-v0/_field_traces.jsonl",
+            "seedbank/local-llm-cell-v0/_field_weights.jsonl",
             "active-recipe-tracing.form GAP-A1",
             "traces-teach-the-recipe.form GAP-W1"
         ],

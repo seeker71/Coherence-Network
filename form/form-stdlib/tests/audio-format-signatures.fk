@@ -1,0 +1,65 @@
+; audio-format-signatures.fk - byte audio format sensing
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/audio-bmf.fk
+
+(do
+    (defn audio-format (node) (node_value (nth (node_children node) 0)))
+    (defn audio-rate (node) (node_value (nth (node_children node) 1)))
+    (defn audio-channels (node) (node_value (nth (node_children node) 2)))
+    (defn audio-bits (node) (node_value (nth (node_children node) 3)))
+
+    (defn format-score (node want score)
+        (if (str_eq (audio-format node) want) score 0))
+
+    (let wav-bytes
+        (list 82 73 70 70 36 0 0 0 87 65 86 69
+              102 109 116 32 16 0 0 0 1 0 2 0
+              68 172 0 0 16 177 2 0 4 0 16 0))
+
+    (let mp3-bytes
+        (list 73 68 51 4 0 0 0 0 0 0 255 251 0 0))
+
+    (let flac-bytes
+        (list 102 76 97 67 0 0 0 34))
+
+    (let ogg-bytes
+        (list 79 103 103 83 0 2 0 0 0 0 0 0))
+
+    (let aiff-bytes
+        (list 70 79 82 77 0 0 0 34 65 73 70 70
+              67 79 77 77 0 0 0 18 0 2 0 0 0 1 0 16))
+
+    (let m4a-bytes
+        (list 0 0 0 24 102 116 121 112 77 52 65 32
+              0 0 0 0 77 52 65 32))
+
+    (let aac-bytes
+        (list 255 241 80 128 0 31 252))
+
+    (let wav (audio-detect-bytes wav-bytes))
+    (let mp3 (audio-detect-bytes mp3-bytes))
+    (let flac (audio-detect-bytes flac-bytes))
+    (let ogg (audio-detect-bytes ogg-bytes))
+    (let aiff (audio-detect-bytes aiff-bytes))
+    (let m4a (audio-detect-bytes m4a-bytes))
+    (let aac (audio-detect-bytes aac-bytes))
+
+    (let wav-score
+        (add (format-score wav "wav" 10)
+        (add (audio-rate wav)
+        (add (audio-channels wav)
+             (audio-bits wav)))))
+
+    (let mp3-score (format-score mp3 "mp3" 20))
+    (let flac-score (format-score flac "flac" 30))
+    (let ogg-score (format-score ogg "ogg" 40))
+
+    (let aiff-score
+        (add (format-score aiff "aiff" 50)
+        (add (audio-channels aiff)
+             (audio-bits aiff))))
+
+    (let m4a-score (format-score m4a "m4a" 60))
+    (let aac-score (format-score aac "aac" 70))
+
+    (sum (list wav-score mp3-score flac-score ogg-score aiff-score m4a-score aac-score)))

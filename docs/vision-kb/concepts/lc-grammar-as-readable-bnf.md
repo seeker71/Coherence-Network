@@ -36,11 +36,11 @@ geometry:
 ## The Lineage Underneath
 
 [`lc-parsers-as-recipes`](lc-parsers-as-recipes.md) names that *grammar
-rules are first-class data, not code*. The body's [`engine.fk`](../../../experiments/form-stdlib/engine.fk)
+rules are first-class data, not code*. The body's [`engine.fk`](../../../form/form-stdlib/engine.fk)
 already accepts grammars as the data tuple `(tokens token-config) (rules
 parse-rules)` and walks any of them. What was missing: a readable surface
 over that data. Currently the per-tongue grammars at
-[`experiments/form-stdlib/grammars/`](../../../experiments/form-stdlib/grammars/)
+[`form/form-stdlib/grammars/`](../../../form/form-stdlib/grammars/)
 are still hand-coded line-based parsers, ~250 lines of imperative `.fk`
 per language. They duplicate dispatch logic and they aren't authorable
 by anything but a Form programmer reading carefully.
@@ -81,7 +81,7 @@ rules {
 The `:= ... =>` shape is BNF + action. Each rule reads aloud as a
 sentence. The `=>` arrow names which substrate emitter walks the
 captures into a universal Recipe. The emitter library
-([`grammar-emitters.fk`](../../../experiments/form-stdlib/grammar-emitters.fk))
+([`grammar-emitters.fk`](../../../form/form-stdlib/grammar-emitters.fk))
 holds the generic primitives — `emit-object`, `emit-list`, `emit-pair`,
 `emit-math`, `emit-function-decl`, `emit-call`, `emit-cond` — keyed to
 the universal Blueprints from [`universal-shapes.form`](../../coherence-substrate/universal-shapes.form).
@@ -90,7 +90,7 @@ patterns; the emitters are shared.
 
 ## The Loader
 
-[`grammar-bnf.fk`](../../../experiments/form-stdlib/grammar-bnf.fk)
+[`grammar-bnf.fk`](../../../form/form-stdlib/grammar-bnf.fk)
 reads BNF text and produces the data shape `engine.fk` consumes. The
 loader is itself a grammar fed through `engine.fk` — the BNF surface
 syntax is described by a meta-grammar whose tokens are
@@ -149,7 +149,7 @@ makes it possible; the body does it one breath at a time.
 
 ## What The Body Already Holds
 
-- **Engine** — [`engine.fk`](../../../experiments/form-stdlib/engine.fk):
+- **Engine** — [`engine.fk`](../../../form/form-stdlib/engine.fk):
   data-driven parser engine with pattern primitives
   (literal/sequence/choice/capture/star/opt), grammar-as-data shape,
   generic tokenizer with token-config. Validated on all three sibling
@@ -157,18 +157,18 @@ makes it possible; the body does it one breath at a time.
 - **Universal Recipes** — [`universal-shapes.form`](../../coherence-substrate/universal-shapes.form):
   every Blueprint a grammar action emits, lineage to NUMS.Go 2023's
   14-language coverage.
-- **Per-tongue scaffolds** — [`grammars/python.fk`](../../../experiments/form-stdlib/grammars/python.fk),
-  [`grammars/typescript.fk`](../../../experiments/form-stdlib/grammars/typescript.fk),
-  [`grammars/rust.fk`](../../../experiments/form-stdlib/grammars/rust.fk),
-  [`grammars/go.fk`](../../../experiments/form-stdlib/grammars/go.fk),
-  [`grammars/json.fk`](../../../experiments/form-stdlib/grammars/json.fk),
-  [`grammars/markdown.fk`](../../../experiments/form-stdlib/grammars/markdown.fk),
-  [`grammars/yaml.fk`](../../../experiments/form-stdlib/grammars/yaml.fk),
-  [`grammars/form.fk`](../../../experiments/form-stdlib/grammars/form.fk),
-  [`grammars/png.fk`](../../../experiments/form-stdlib/grammars/png.fk).
+- **Per-tongue scaffolds** — [`grammars/python.fk`](../../../form/form-stdlib/grammars/python.fk),
+  [`grammars/typescript.fk`](../../../form/form-stdlib/grammars/typescript.fk),
+  [`grammars/rust.fk`](../../../form/form-stdlib/grammars/rust.fk),
+  [`grammars/go.fk`](../../../form/form-stdlib/grammars/go.fk),
+  [`grammars/json.fk`](../../../form/form-stdlib/grammars/json.fk),
+  [`grammars/markdown.fk`](../../../form/form-stdlib/grammars/markdown.fk),
+  [`grammars/yaml.fk`](../../../form/form-stdlib/grammars/yaml.fk),
+  [`grammars/form.fk`](../../../form/form-stdlib/grammars/form.fk),
+  [`grammars/png.fk`](../../../form/form-stdlib/grammars/png.fk).
   Currently hand-coded line parsers; compost target as BNF re-expression
   reaches parity per tongue.
-- **Emit lattice** — 13 emit targets in [`experiments/form-stdlib/emits/`](../../../experiments/form-stdlib/emits/).
+- **Emit lattice** — 13 emit targets in [`form/form-stdlib/emits/`](../../../form/form-stdlib/emits/).
   The exhale half of the round-trip discipline.
 - **BMF lineage** — [`docs/presences/bmf-grammar.md`](../../presences/bmf-grammar.md);
   source samples at [`docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/`](../../field/urs/artifacts/master-thesis-2000/companion/source-samples/).
@@ -248,9 +248,9 @@ For cells reading a grammar file:
 
 ## Sources to walk further
 
-- **[engine.fk](../../../experiments/form-stdlib/engine.fk)** — the
+- **[engine.fk](../../../form/form-stdlib/engine.fk)** — the
   data-driven engine the BNF reader compiles down to.
-- **[grammar-bnf.fk](../../../experiments/form-stdlib/grammar-bnf.fk)** —
+- **[grammar-bnf.fk](../../../form/form-stdlib/grammar-bnf.fk)** —
   the reader that turns `.grammar.fk` text into engine data.
 - **[universal-shapes.form](../../coherence-substrate/universal-shapes.form)**
   — the Blueprints every grammar action emits.

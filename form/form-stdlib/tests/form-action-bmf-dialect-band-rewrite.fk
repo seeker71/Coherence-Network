@@ -1,0 +1,127 @@
+; form-action-bmf-dialect-band-rewrite.fk - rebuild form-action-dialect-band
+; through BMF objects and executable Form recipe nodes.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-string (value)
+        (form-action-bmf-value "string"
+            (list (fsc-action-src-string value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+    (defn fa-call4 (name a b c d) (fa-call name (list a b c d)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-let (name value)
+        (form-action-bmf-value "let"
+            (list
+                (fsc-action-src-kw "let")
+                (fsc-action-src-name name)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr value)
+                (fsc-action-src-op ";"))))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (let n (fa-ident "n"))
+    (let a (fa-ident "a"))
+    (let b (fa-ident "b"))
+
+    (let action-node-let
+        (fa-let "ACTION_NODE"
+            (fa-call4 "make_nodeid"
+                (fa-int "1")
+                (fa-int "2")
+                (fa-int "101")
+                (fa-int "33"))))
+
+    (let emit-action-int-def
+        (fa-def "emit_action_int" (list "n")
+            (fa-call2 "intern_node"
+                (fa-ident "ACTION_NODE")
+                (fa-call1 "list"
+                    (fa-call1 "intern_trivial_int" n)))))
+
+    (let action-pair-def
+        (fa-def "action_pair" (list "a" "b")
+            (fa-call2 "list" a b)))
+
+    (let action-choose-def
+        (fa-def "action_choose" (list "n")
+            (fa-if
+                (fa-call2 "gt" n (fa-int "4"))
+                (fa-call1 "emit_action_int" n)
+                (fa-call1 "emit_action_int"
+                    (fa-call2 "add" n (fa-int "10"))))))
+
+    (let first-score
+        (fa-call1 "node_value"
+            (fa-call1 "head"
+                (fa-call1 "node_children"
+                    (fa-call1 "action_choose" (fa-int "6"))))))
+
+    (let second-score
+        (fa-call1 "node_value"
+            (fa-call1 "head"
+                (fa-call1 "node_children"
+                    (fa-call1 "action_choose" (fa-int "2"))))))
+
+    (let pair-score
+        (fa-call1 "len"
+            (fa-call2 "action_pair"
+                (fa-string "rule")
+                (fa-string "recipe"))))
+
+    (let final-score
+        (fa-call2 "add"
+            first-score
+            (fa-call2 "add" second-score pair-score)))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list action-node-let emit-action-int-def action-pair-def action-choose-def final-score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

@@ -1,0 +1,249 @@
+; tests/python-bmf-grammar-band.fk - broader Python grammar object rules
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn kid-int (m n)
+        (node_value (result-kid m n)))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    (let decorator-match
+        (py-apply "decorator" (list (py-op "@") (py-name "cache"))))
+    (let decorator-score
+        (add (kid-str-len decorator-match 0) (object-bit decorator-match))) ; 5 + 1 = 6
+
+    (let decorated-def-match
+        (py-apply "decorated-def"
+                  (list (py-op "@") (py-name "wrap")
+                        (py-keyword "def") (py-name "main")
+                        (py-op "(") (py-op ")") (py-op ":"))))
+    (let decorated-def-score
+        (add (child-count decorated-def-match)
+             (kid-str-len decorated-def-match 1))) ; 2 + main = 6
+
+    (let import-many-match
+        (py-apply "import-many2"
+                  (list (py-keyword "import") (py-name "os")
+                        (py-op ",") (py-name "sys"))))
+    (let import-many-score
+        (add (kid-str-len import-many-match 0)
+             (kid-str-len import-many-match 1))) ; os + sys = 5
+
+    (let from-star-match
+        (py-apply "from-import-star"
+                  (list (py-keyword "from") (py-name "typing")
+                        (py-keyword "import") (py-op "*"))))
+    (let from-star-score
+        (add (kid-str-len from-star-match 0)
+             (child-count from-star-match))) ; typing + 1 = 7
+
+    (let raise-from-match
+        (py-apply "raise-from"
+                  (list (py-keyword "raise") (py-name "Error")
+                        (py-keyword "from") (py-name "cause"))))
+    (let raise-from-score
+        (add (kid-str-len raise-from-match 0)
+             (kid-str-len raise-from-match 1))) ; Error + cause = 10
+
+    (let if-else-match
+        (py-apply "if-else-pass"
+                  (list (py-keyword "if") (py-name "ready")
+                        (py-op ":") (py-keyword "pass")
+                        (py-keyword "else") (py-op ":") (py-keyword "pass"))))
+    (let if-else-score
+        (add (kid-str-len if-else-match 0)
+             (child-count if-else-match))) ; ready + 3 = 8
+
+    (let elif-match
+        (py-apply "elif-pass"
+                  (list (py-keyword "if") (py-name "x")
+                        (py-op ":") (py-keyword "pass")
+                        (py-keyword "elif") (py-name "y")
+                        (py-op ":") (py-keyword "pass"))))
+    (let elif-score
+        (add (kid-str-len elif-match 0)
+             (add (kid-str-len elif-match 1)
+                  (child-count elif-match)))) ; x + y + 3 = 5
+
+    (let async-for-match
+        (py-apply "async-for-pass"
+                  (list (py-keyword "async") (py-keyword "for")
+                        (py-name "item") (py-keyword "in") (py-name "stream")
+                        (py-op ":") (py-keyword "pass"))))
+    (let async-for-score
+        (add (kid-str-len async-for-match 0)
+             (add (kid-str-len async-for-match 1)
+                  (child-count async-for-match)))) ; item + stream + 3 = 13
+
+    (let async-with-match
+        (py-apply "async-with-pass"
+                  (list (py-keyword "async") (py-keyword "with")
+                        (py-name "lock") (py-op ":") (py-keyword "pass"))))
+    (let async-with-score
+        (add (kid-str-len async-with-match 0)
+             (child-count async-with-match))) ; lock + 2 = 6
+
+    (let except-as-match
+        (py-apply "except-as-pass"
+                  (list (py-keyword "except") (py-name "ValueError")
+                        (py-keyword "as") (py-name "exc")
+                        (py-op ":") (py-keyword "pass"))))
+    (let except-as-score
+        (add (kid-str-len except-as-match 0)
+             (add (kid-str-len except-as-match 1)
+                  (child-count except-as-match)))) ; ValueError + exc + 3 = 16
+
+    (let match-match
+        (py-apply "match-header"
+                  (list (py-keyword "match") (py-name "value") (py-op ":"))))
+    (let match-score
+        (add (kid-str-len match-match 0) (child-count match-match))) ; value + 1 = 6
+
+    (let case-match
+        (py-apply "case-pass"
+                  (list (py-keyword "case") (py-name "item")
+                        (py-op ":") (py-keyword "pass"))))
+    (let case-score
+        (add (kid-str-len case-match 0) (child-count case-match))) ; item + 2 = 6
+
+    (let list-comp-match
+        (py-apply "list-comp"
+                  (list (py-op "[") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "items") (py-op "]"))))
+    (let list-comp-score
+        (add (kid-str-len list-comp-match 0)
+             (add (kid-str-len list-comp-match 1)
+                  (add (kid-str-len list-comp-match 2)
+                       (kid-str-len list-comp-match 3))))) ; list + x + x + items = 11
+
+    (let dict-comp-match
+        (py-apply "dict-comp"
+                  (list (py-op "{") (py-name "k") (py-op ":") (py-name "v")
+                        (py-keyword "for") (py-name "item")
+                        (py-keyword "in") (py-name "items") (py-op "}"))))
+    (let dict-comp-score
+        (add (kid-str-len dict-comp-match 0)
+             (add (kid-str-len dict-comp-match 1)
+                  (add (kid-str-len dict-comp-match 2)
+                       (add (kid-str-len dict-comp-match 3)
+                            (kid-str-len dict-comp-match 4)))))) ; dict + k + v + item + items = 15
+
+    (let gen-exp-match
+        (py-apply "gen-exp"
+                  (list (py-op "(") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "items") (py-op ")"))))
+    (let gen-exp-score
+        (add (kid-str-len gen-exp-match 0)
+             (add (kid-str-len gen-exp-match 1)
+                  (kid-str-len gen-exp-match 2)))) ; x + x + items = 7
+
+    (let kwarg-match
+        (py-apply "kwarg" (list (py-name "name") (py-op "=") (py-name "v"))))
+    (let kwarg-score
+        (add (kid-str-len kwarg-match 0) (kid-str-len kwarg-match 1))) ; name + v = 5
+
+    (let star-arg-match
+        (py-apply "star-arg" (list (py-op "*") (py-name "args"))))
+    (let star-arg-score
+        (add (kid-str-len star-arg-match 0) (kid-str-len star-arg-match 1))) ; * + args = 5
+
+    (let star-star-match
+        (py-apply "star-star-arg" (list (py-op "**") (py-name "kwargs"))))
+    (let star-star-score
+        (add (kid-str-len star-star-match 0) (kid-str-len star-star-match 1))) ; ** + kwargs = 8
+
+    (let default-match
+        (py-apply "default-param-int"
+                  (list (py-name "limit") (py-op "=") (py-int "10"))))
+    (let default-score
+        (add (kid-str-len default-match 0) (kid-int default-match 1))) ; limit + 10 = 15
+
+    (let typed-match
+        (py-apply "typed-param" (list (py-name "x") (py-op ":") (py-name "int"))))
+    (let typed-score
+        (add (kid-str-len typed-match 0) (kid-str-len typed-match 1))) ; x + int = 4
+
+    (let ret-ann-match
+        (py-apply "def-return-annotation"
+                  (list (py-keyword "def") (py-name "f")
+                        (py-op "(") (py-op ")") (py-op "->")
+                        (py-name "int") (py-op ":"))))
+    (let ret-ann-score
+        (add (kid-str-len ret-ann-match 0) (kid-str-len ret-ann-match 1))) ; f + int = 4
+
+    (let walrus-match
+        (py-apply "walrus-ident"
+                  (list (py-name "n") (py-op ":=") (py-name "value"))))
+    (let walrus-score
+        (add (kid-str-len walrus-match 0) (kid-str-len walrus-match 1))) ; n + value = 6
+
+    (let float-match (py-apply "float" (list (py-float "3.14"))))
+    (let float-score (kid-str-len float-match 0)) ; 3.14 = 4
+
+    (let bytes-match (py-apply "bytes" (list (py-bytes "abc"))))
+    (let bytes-score (kid-str-len bytes-match 0)) ; abc = 3
+
+    (let ellipsis-match (py-apply "ellipsis" (list (py-op "..."))))
+    (let ellipsis-score (object-bit ellipsis-match))
+
+    (let attr-assign-match
+        (py-apply "attr-assign-int"
+                  (list (py-name "obj") (py-op ".") (py-name "count")
+                        (py-op "=") (py-int "7"))))
+    (let attr-assign-score
+        (add (kid-str-len attr-assign-match 0)
+             (add (kid-str-len attr-assign-match 1)
+                  (kid-int attr-assign-match 2)))) ; obj + count + 7 = 15
+
+    (let sub-assign-match
+        (py-apply "subscript-assign-int"
+                  (list (py-name "items") (py-op "[") (py-int "2")
+                        (py-op "]") (py-op "=") (py-int "9"))))
+    (let sub-assign-score
+        (add (kid-str-len sub-assign-match 0)
+             (add (kid-int sub-assign-match 1)
+                  (kid-int sub-assign-match 2)))) ; items + 2 + 9 = 16
+
+    (let unpack-match
+        (py-apply "unpack2-ident"
+                  (list (py-name "a") (py-op ",") (py-name "b")
+                        (py-op "=") (py-name "pair"))))
+    (let unpack-score
+        (add (kid-str-len unpack-match 0)
+             (add (kid-str-len unpack-match 1)
+                  (kid-str-len unpack-match 2)))) ; a + b + pair = 6
+
+    (sum
+        (list decorator-score decorated-def-score import-many-score
+              from-star-score raise-from-score if-else-score elif-score
+              async-for-score async-with-score except-as-score match-score
+              case-score list-comp-score dict-comp-score gen-exp-score
+              kwarg-score star-arg-score star-star-score default-score
+              typed-score ret-ann-score walrus-score float-score bytes-score
+              ellipsis-score attr-assign-score sub-assign-score
+              unpack-score)))

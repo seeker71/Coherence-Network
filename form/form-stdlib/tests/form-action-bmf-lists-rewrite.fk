@@ -1,0 +1,132 @@
+; form-action-bmf-lists-rewrite.fk - rebuild lists.fk through BMF objects.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call0 (name) (fa-call name (empty)))
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+    (defn fa-call3 (name a b c) (fa-call name (list a b c)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (let xs (fa-ident "xs"))
+    (let n (fa-ident "n"))
+    (let start (fa-ident "start"))
+    (let end (fa-ident "end"))
+    (let f (fa-ident "f"))
+    (let pred (fa-ident "pred"))
+    (let x (fa-ident "x"))
+
+    (let nil-def
+        (fa-def "nil?" (list "xs")
+            (fa-call2 "eq" (fa-call1 "len" xs) (fa-int "0"))))
+
+    (let even-def
+        (fa-def "even?" (list "n")
+            (fa-call2 "eq"
+                (fa-call2 "mod" n (fa-int "2"))
+                (fa-int "0"))))
+
+    (let range-def
+        (fa-def "range" (list "start" "end")
+            (fa-if
+                (fa-call2 "ge" start end)
+                (fa-call0 "empty")
+                (fa-call2 "cons"
+                    start
+                    (fa-call2 "range"
+                        (fa-call2 "add" start (fa-int "1"))
+                        end)))))
+
+    (let sum-def
+        (fa-def "sum" (list "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-int "0")
+                (fa-call2 "add"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "sum" (fa-call1 "tail" xs))))))
+
+    (let map-def
+        (fa-def "map" (list "f" "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-call0 "empty")
+                (fa-call2 "cons"
+                    (fa-call1 "f" (fa-call1 "head" xs))
+                    (fa-call2 "map" f (fa-call1 "tail" xs))))))
+
+    (let filter-def
+        (fa-def "filter" (list "pred" "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-call0 "empty")
+                (fa-if
+                    (fa-call1 "pred" (fa-call1 "head" xs))
+                    (fa-call2 "cons"
+                        (fa-call1 "head" xs)
+                        (fa-call2 "filter" pred (fa-call1 "tail" xs)))
+                    (fa-call2 "filter" pred (fa-call1 "tail" xs))))))
+
+    (let square-def
+        (fa-def "square" (list "x")
+            (fa-call2 "mul" x x)))
+
+    (let range-call
+        (fa-call2 "range" (fa-int "1") (fa-int "11")))
+    (let filter-call
+        (fa-call2 "filter" (fa-ident "even?") range-call))
+    (let map-call
+        (fa-call2 "map" (fa-ident "square") filter-call))
+    (let sum-call
+        (fa-call1 "sum" map-call))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list nil-def even-def range-def sum-def map-def filter-def square-def sum-call))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

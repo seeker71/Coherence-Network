@@ -1,0 +1,203 @@
+; tests/python-bmf-coverage.fk - next Python grammar support band
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn kid-int (m n)
+        (node_value (result-kid m n)))
+
+    (defn result-child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    (let assign-string-match
+        (py-apply "assign-string"
+                  (list (py-name "msg") (py-op "=") (py-string "hi"))))
+    (let assign-string-score
+        (add (kid-str-len assign-string-match 0)
+             (kid-str-len assign-string-match 1))) ; msg + hi = 5
+
+    (let return-string-match
+        (py-apply "return-string"
+                  (list (py-keyword "return") (py-string "ok"))))
+    (let return-string-score (kid-str-len return-string-match 0)) ; ok = 2
+
+    (let true-match (py-apply "bool-true" (list (py-keyword "True"))))
+    (let true-score (add (kid-str-len true-match 0) (object-bit true-match))) ; 4 + 1 = 5
+
+    (let false-match (py-apply "bool-false" (list (py-keyword "False"))))
+    (let false-score (add (kid-str-len false-match 0) (object-bit false-match))) ; 5 + 1 = 6
+
+    (let none-match (py-apply "none" (list (py-keyword "None"))))
+    (let none-score (object-bit none-match)) ; node exists = 1
+
+    (let not-match
+        (py-apply "not-ident" (list (py-keyword "not") (py-name "ready"))))
+    (let not-score
+        (add (kid-str-len not-match 0) (kid-str-len not-match 1))) ; not + ready = 8
+
+    (let neg-match
+        (py-apply "neg-int" (list (py-op "-") (py-int "9"))))
+    (let neg-score
+        (add (kid-str-len neg-match 0) (kid-int neg-match 1))) ; - + 9 = 10
+
+    (let eq-match
+        (py-apply "compare-eq-ident"
+                  (list (py-name "a") (py-op "==") (py-name "b"))))
+    (let eq-score
+        (add (kid-str-len eq-match 0)
+             (add (kid-str-len eq-match 1) (kid-str-len eq-match 2)))) ; a + == + b = 4
+
+    (let lt-match
+        (py-apply "compare-lt-ident"
+                  (list (py-name "item") (py-op "<") (py-name "limit"))))
+    (let lt-score
+        (add (kid-str-len lt-match 0)
+             (add (kid-str-len lt-match 1) (kid-str-len lt-match 2)))) ; item + < + limit = 10
+
+    (let and-match
+        (py-apply "bool-and-ident"
+                  (list (py-name "flag") (py-keyword "and") (py-name "other"))))
+    (let and-score
+        (add (kid-str-len and-match 0)
+             (add (kid-str-len and-match 1) (kid-str-len and-match 2)))) ; flag + and + other = 12
+
+    (let or-match
+        (py-apply "bool-or-ident"
+                  (list (py-name "flag") (py-keyword "or") (py-name "other"))))
+    (let or-score
+        (add (kid-str-len or-match 0)
+             (add (kid-str-len or-match 1) (kid-str-len or-match 2)))) ; flag + or + other = 11
+
+    (let subscript-match
+        (py-apply "subscript-ident-int"
+                  (list (py-name "items") (py-op "[") (py-int "3") (py-op "]"))))
+    (let subscript-score
+        (add (kid-str-len subscript-match 0) (kid-int subscript-match 1))) ; items + 3 = 8
+
+    (let slice-match
+        (py-apply "slice-int-int"
+                  (list (py-name "items") (py-op "[") (py-int "1")
+                        (py-op ":") (py-int "4") (py-op "]"))))
+    (let slice-score
+        (add (kid-str-len slice-match 0)
+             (add (kid-int slice-match 1) (kid-int slice-match 2)))) ; items + 1 + 4 = 10
+
+    (let tuple-match
+        (py-apply "tuple2-ident"
+                  (list (py-op "(") (py-name "a") (py-op ",")
+                        (py-name "b") (py-op ")"))))
+    (let tuple-score
+        (add (kid-str-len tuple-match 0) (kid-str-len tuple-match 1))) ; a + b = 2
+
+    (let set-match
+        (py-apply "set2-int"
+                  (list (py-op "{") (py-int "4") (py-op ",")
+                        (py-int "5") (py-op "}"))))
+    (let set-score
+        (add (kid-int set-match 0) (kid-int set-match 1))) ; 4 + 5 = 9
+
+    (let lambda-match
+        (py-apply "lambda1-ident"
+                  (list (py-keyword "lambda") (py-name "x")
+                        (py-op ":") (py-name "y"))))
+    (let lambda-score
+        (add (kid-str-len lambda-match 0) (kid-str-len lambda-match 1))) ; x + y = 2
+
+    (let await-match
+        (py-apply "await-ident" (list (py-keyword "await") (py-name "task"))))
+    (let await-score (kid-str-len await-match 0)) ; task = 4
+
+    (let yield-match
+        (py-apply "yield-ident" (list (py-keyword "yield") (py-name "value"))))
+    (let yield-score (kid-str-len yield-match 0)) ; value = 5
+
+    (let break-match (py-apply "break" (list (py-keyword "break"))))
+    (let break-score (object-bit break-match))
+
+    (let continue-match (py-apply "continue" (list (py-keyword "continue"))))
+    (let continue-score (object-bit continue-match))
+
+    (let global-match
+        (py-apply "global" (list (py-keyword "global") (py-name "state"))))
+    (let global-score (kid-str-len global-match 0)) ; state = 5
+
+    (let nonlocal-match
+        (py-apply "nonlocal" (list (py-keyword "nonlocal") (py-name "outer"))))
+    (let nonlocal-score (kid-str-len nonlocal-match 0)) ; outer = 5
+
+    (let del-match
+        (py-apply "del" (list (py-keyword "del") (py-name "item"))))
+    (let del-score (kid-str-len del-match 0)) ; item = 4
+
+    (let assert-match
+        (py-apply "assert-ident" (list (py-keyword "assert") (py-name "ready"))))
+    (let assert-score (kid-str-len assert-match 0)) ; ready = 5
+
+    (let with-match
+        (py-apply "with-pass"
+                  (list (py-keyword "with") (py-name "lock")
+                        (py-op ":") (py-keyword "pass"))))
+    (let with-score
+        (add (kid-str-len with-match 0) (result-child-count with-match))) ; lock + 2 = 6
+
+    (let try-except-match
+        (py-apply "try-except-pass"
+                  (list (py-keyword "try") (py-op ":") (py-keyword "pass")
+                        (py-keyword "except") (py-name "ValueError")
+                        (py-op ":") (py-keyword "pass"))))
+    (let try-except-score
+        (add (kid-str-len try-except-match 1)
+             (result-child-count try-except-match))) ; ValueError + 3 = 13
+
+    (let try-finally-match
+        (py-apply "try-finally-pass"
+                  (list (py-keyword "try") (py-op ":") (py-keyword "pass")
+                        (py-keyword "finally") (py-op ":") (py-keyword "pass"))))
+    (let try-finally-score
+        (add (kid-str-len try-finally-match 0)
+             (result-child-count try-finally-match))) ; finally + 2 = 9
+
+    (let async-def-match
+        (py-apply "async-def"
+                  (list (py-keyword "async") (py-keyword "def") (py-name "fetch")
+                        (py-op "(") (py-op ")") (py-op ":"))))
+    (let async-def-score (kid-str-len async-def-match 0)) ; fetch = 5
+
+    (let class-base-match
+        (py-apply "class-base"
+                  (list (py-keyword "class") (py-name "Widget")
+                        (py-op "(") (py-name "Base") (py-op ")")
+                        (py-op ":") (py-keyword "pass"))))
+    (let class-base-score
+        (add (kid-str-len class-base-match 0)
+             (kid-str-len class-base-match 1))) ; Widget + Base = 10
+
+    (sum
+        (list assign-string-score return-string-score true-score false-score
+              none-score not-score neg-score eq-score lt-score and-score
+              or-score subscript-score slice-score tuple-score set-score
+              lambda-score await-score yield-score break-score continue-score
+              global-score nonlocal-score del-score assert-score with-score
+              try-except-score try-finally-score async-def-score
+              class-base-score)))

@@ -1,0 +1,1572 @@
+; source-compiler.fk - Form-native source section compiler
+;
+; This module is runtime tissue above the kernel. It reads source text,
+; lowers first-class BMF sections into ordinary Form object definitions,
+; and writes compiled Form source through native file I/O.
+
+;; --- text scanning ------------------------------------------------
+
+    (defn fsc-sub (s a b) (substring s a b))
+
+    (defn fsc-find-string-at-len? (s needle s-len needle-len i j)
+        (if (eq j needle-len) true
+            (if (ge (add i j) s-len) false
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (fsc-find-string-at-len? s needle s-len needle-len i (add j 1))
+                    false))))
+
+    (defn fsc-find-string-at? (s needle i j)
+        (fsc-find-string-at-len? s needle (str_len s) (str_len needle) i j))
+
+    (defn fsc-find-string-from-len (s needle s-len needle-len i)
+        (if (gt (add i needle-len) s-len) (sub 0 1)
+            (if (fsc-find-string-at-len? s needle s-len needle-len i 0) i
+                (fsc-find-string-from-len s needle s-len needle-len (add i 1)))))
+
+    (defn fsc-find-string-from (s needle i)
+        (fsc-find-string-from-len s needle (str_len s) (str_len needle) i))
+
+    (defn fsc-contains? (s needle)
+        (ge (fsc-find-string-from s needle 0) 0))
+
+    (defn fsc-find-char-from-len (s ch s-len i)
+        (if (ge i s-len) (sub 0 1)
+            (if (str_eq (char_at s i) ch) i
+                (fsc-find-char-from-len s ch s-len (add i 1)))))
+
+    (defn fsc-find-char-from (s ch i)
+        (fsc-find-char-from-len s ch (str_len s) i))
+
+    (defn fsc-space? (ch)
+        (or (str_eq ch " ") (or (str_eq ch "\n") (or (str_eq ch "\t") (str_eq ch "\r")))))
+
+    (defn fsc-skip-spaces (s i)
+        (if (ge i (str_len s)) i
+            (if (fsc-space? (char_at s i))
+                (fsc-skip-spaces s (add i 1))
+                i)))
+
+    (defn fsc-rtrim-index (s i)
+        (if (le i 0) 0
+            (if (fsc-space? (char_at s (sub i 1)))
+                (fsc-rtrim-index s (sub i 1))
+                i)))
+
+    (defn fsc-trim (s)
+        (do
+            (let start (fsc-skip-spaces s 0))
+            (let end (fsc-rtrim-index s (str_len s)))
+            (if (ge start end) "" (fsc-sub s start end))))
+
+    (defn fsc-line-end (s i)
+        (do
+            (let e (fsc-find-char-from s "\n" i))
+            (if (lt e 0) (str_len s) e)))
+
+    (defn fsc-line-next (s i)
+        (do
+            (let e (fsc-line-end s i))
+            (if (lt e (str_len s)) (add e 1) e)))
+
+    (defn fsc-line-opens-block? (line)
+        (if (eq (str_len line) 0) false
+            (str_eq (char_at line (fsc-last-char-index line)) "{")))
+
+    (defn fsc-section-end-depth (s i depth)
+        (do
+            (let e (fsc-line-end s i))
+            (let line (fsc-trim (fsc-sub s i e)))
+            (if (str_eq line "}")
+                (if (eq depth 0) i
+                    (fsc-section-end-depth s (fsc-line-next s i) (sub depth 1)))
+                (if (fsc-line-opens-block? line)
+                    (fsc-section-end-depth s (fsc-line-next s i) (add depth 1))
+                    (fsc-section-end-depth s (fsc-line-next s i) depth)))))
+
+    (defn fsc-section-end (s i)
+        (fsc-section-end-depth s i 0))
+
+    ;; --- output strings ----------------------------------------------
+
+    (defn fsc-quote-loop (s i)
+        (if (ge i (str_len s)) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (fsc-quote-loop s (add i 1)))
+                (if (str_eq ch "\\") (str_concat "\\\\" rest)
+                (if (str_eq ch "\"") (str_concat "\\\"" rest)
+                    (str_concat ch rest))))))
+
+    (defn fsc-q (s)
+        (str_concat "\"" (str_concat (fsc-quote-loop s 0) "\"")))
+
+    (defn fsc-word-char? (ch)
+        (do
+            (let cp (ord ch))
+            (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+            (or (and (ge cp 48) (le cp 57))
+            (or (str_eq ch "_") (str_eq ch "-")))))))
+
+    (defn fsc-word-start-char? (ch)
+        (do
+            (let cp (ord ch))
+            (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+            (or (and (ge cp 48) (le cp 57))
+                (str_eq ch "_"))))))
+
+    (defn fsc-word-loop? (s i)
+        (if (ge i (str_len s)) true
+            (if (fsc-word-char? (char_at s i))
+                (fsc-word-loop? s (add i 1))
+                false)))
+
+    (defn fsc-word? (s)
+        (if (gt (str_len s) 0)
+            (and (fsc-word-start-char? (char_at s 0))
+                 (fsc-word-loop? s 1))
+            false))
+
+    (defn fsc-dialect-fn (dialect suffix)
+        (str_concat dialect (str_concat "-" suffix)))
+
+    (defn fsc-lit-fn (dialect value)
+        (if (str_eq dialect "bmf")
+            (if (fsc-word? value) "bmf-kw" "bmf-op")
+            (if (fsc-word? value)
+                (fsc-dialect-fn dialect "kw")
+                (fsc-dialect-fn dialect "op"))))
+
+    (defn fsc-literal-expr (dialect value)
+        (str_concat "("
+            (str_concat (fsc-lit-fn dialect value)
+            (str_concat " " (str_concat (fsc-q value) ")")))))
+
+    (defn fsc-capture-fn (dialect kind)
+        (if (str_eq dialect "bmf")
+            (if (str_eq kind "string") "bmf-string-lit"
+            (if (str_eq kind "pattern") "bmf-pattern-lit"
+            (if (str_eq kind "rules") "bmf-rules-lit" "bmf-name")))
+            (if (str_eq kind "int") (fsc-dialect-fn dialect "int-lit")
+            (if (str_eq kind "float") (fsc-dialect-fn dialect "float-lit")
+            (if (str_eq kind "string") (fsc-dialect-fn dialect "string-lit")
+            (if (str_eq kind "bytes") (fsc-dialect-fn dialect "bytes-lit")
+            (if (str_eq kind "fstring") (fsc-dialect-fn dialect "fstring-lit")
+            (if (str_eq kind "property") (fsc-dialect-fn dialect "prop")
+                (fsc-dialect-fn dialect "name")))))))))
+
+    (defn fsc-capture-expr (dialect spec)
+        (do
+            (let colon (fsc-find-char-from spec ":" 0))
+            (let name (fsc-sub spec 1 colon))
+            (let kind (fsc-sub spec (add colon 1) (str_len spec)))
+            (str_concat "("
+                (str_concat (fsc-capture-fn dialect kind)
+                (str_concat " " (str_concat (fsc-q name) ")"))))))
+
+    (defn fsc-rule-ref-expr (dialect name)
+        (str_concat "("
+            (str_concat dialect
+            (str_concat "-ref " (str_concat (fsc-q name) ")")))))
+
+    (defn fsc-read-quoted-end (s i)
+        (if (ge i (str_len s)) i
+            (if (str_eq (char_at s i) "\"") i
+                (fsc-read-quoted-end s (add i 1)))))
+
+    (defn fsc-read-part-end (s i)
+        (if (ge i (str_len s)) i
+            (if (fsc-space? (char_at s i)) i
+                (fsc-read-part-end s (add i 1)))))
+
+    (defn fsc-pattern-items-loop (dialect pattern i)
+        (do
+            (let p (fsc-skip-spaces pattern i))
+            (if (ge p (str_len pattern)) ""
+                (if (str_eq (char_at pattern p) "\"")
+                    (do
+                        (let e (fsc-read-quoted-end pattern (add p 1)))
+                        (let value (fsc-sub pattern (add p 1) e))
+                        (str_concat " "
+                            (str_concat (fsc-literal-expr dialect value)
+                                        (fsc-pattern-items-loop dialect pattern (add e 1)))))
+                    (do
+                        (let e (fsc-read-part-end pattern p))
+                        (let part (fsc-sub pattern p e))
+                        (let expr
+                            (if (str_eq (char_at part 0) "$")
+                                (fsc-capture-expr dialect part)
+                                (fsc-rule-ref-expr dialect part)))
+                        (str_concat " "
+                            (str_concat expr
+                                        (fsc-pattern-items-loop dialect pattern e))))))))
+
+    (defn fsc-rule-line (dialect line)
+        (do
+            (let sep (fsc-find-string-from line "::=" 0))
+            (let arr (fsc-find-string-from line " => " sep))
+            (let semi (fsc-find-char-from line ";" arr))
+            (let rev (fsc-find-string-from line " <= " arr))
+            (let name (fsc-trim (fsc-sub line 0 sep)))
+            (let pattern (fsc-trim (fsc-sub line (add sep 3) arr)))
+            (let action-end (if (and (ge rev 0) (lt rev semi)) rev semi))
+            (let action (fsc-trim (fsc-sub line (add arr 4) action-end)))
+            (let reverse (if (and (ge rev 0) (lt rev semi))
+                             (fsc-trim (fsc-sub line (add rev 4) semi))
+                             "bmf-default-reverse-emitter"))
+            (str_concat "            (list "
+                (str_concat (fsc-q name)
+                (str_concat "\n                  (list \"sequence\""
+                (str_concat (fsc-pattern-items-loop dialect pattern 0)
+                (str_concat ")\n                  "
+                (str_concat action
+                (str_concat "\n                  bmf-identity-inverse\n                  "
+                (str_concat reverse ")"))))))))))
+
+    (defn fsc-skip-rule-line? (line)
+        (if (str_eq line "") true
+            (str_eq (char_at line 0) ";")))
+
+    (defn fsc-rules-loop (dialect body i)
+        (if (ge i (str_len body)) ""
+            (do
+                (let e (fsc-line-end body i))
+                (let line (fsc-trim (fsc-sub body i e)))
+                (let rest (fsc-rules-loop dialect body (fsc-line-next body i)))
+                (if (fsc-skip-rule-line? line) rest
+                    (str_concat (fsc-rule-line dialect line)
+                                (str_concat "\n" rest))))))
+
+    (defn fsc-compile-bmf-section (dialect-name body)
+        (do
+            (let dot (fsc-find-char-from dialect-name "." 0))
+            (let dialect (fsc-sub dialect-name 0 dot))
+            (let rules-name (str_concat dialect "-bmf-rules"))
+            (let second-name (str_concat dialect "-bmf-second"))
+            (str_concat "    (let "
+            (str_concat rules-name
+            (str_concat "\n        (list\n"
+            (str_concat (fsc-rules-loop dialect body 0)
+            (str_concat "        ))\n\n    (let "
+            (str_concat second-name
+            (str_concat "\n        (form-bmf-second "
+            (str_concat (fsc-q dialect)
+            (str_concat " (bmf-section "
+            (str_concat (fsc-q dialect-name)
+            (str_concat " " (str_concat rules-name ")))"))))))))))))))
+
+    ;; --- form.bml / form.action maintenance dialect ------------------
+    ;; These dialects are deliberately above the kernel. They give stdlib,
+    ;; compiler, and rule-action code a smaller BML-shaped authoring surface,
+    ;; then lower to ordinary Form source before sibling kernels execute
+    ;; anything.
+
+    (defn fsc-last-char-index (s)
+        (sub (str_len s) 1))
+
+    (defn fsc-strip-semi (s)
+        (do
+            (let value (fsc-trim s))
+            (if (eq (str_len value) 0) value
+                (if (str_eq (char_at value (fsc-last-char-index value)) ";")
+                    (fsc-trim (fsc-sub value 0 (fsc-last-char-index value)))
+                    value))))
+
+    (defn fsc-prefix? (s prefix)
+        (fsc-find-string-at? s prefix 0 0))
+
+    (defn fsc-digit? (ch)
+        (do
+            (let cp (ord ch))
+            (and (ge cp 48) (le cp 57))))
+
+    (defn fsc-int-loop? (s i)
+        (if (ge i (str_len s)) true
+            (if (fsc-digit? (char_at s i))
+                (fsc-int-loop? s (add i 1))
+                false)))
+
+    (defn fsc-int? (s)
+        (do
+            (let value (fsc-trim s))
+            (if (eq (str_len value) 0) false
+            (if (str_eq (char_at value 0) "-")
+                (and (gt (str_len value) 1) (fsc-int-loop? value 1))
+                (fsc-int-loop? value 0)))))
+
+    (defn fsc-bml-find-comma-loop (s i depth quoted)
+        (if (ge i (str_len s)) (sub 0 1)
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (if (str_eq ch "\"")
+                        (fsc-bml-find-comma-loop s (add i 1) depth false)
+                        (fsc-bml-find-comma-loop s (add i 1) depth quoted))
+                (if (str_eq ch "\"")
+                    (fsc-bml-find-comma-loop s (add i 1) depth true)
+                (if (str_eq ch "(")
+                    (fsc-bml-find-comma-loop s (add i 1) (add depth 1) quoted)
+                (if (str_eq ch ")")
+                    (fsc-bml-find-comma-loop s (add i 1) (sub depth 1) quoted)
+                (if (and (eq depth 0) (str_eq ch ","))
+                    i
+                    (fsc-bml-find-comma-loop s (add i 1) depth quoted)))))))))
+
+    (defn fsc-bml-find-comma (s i)
+        (fsc-bml-find-comma-loop s i 0 false))
+
+    (defn fsc-bml-args-form-loop (args i)
+        (do
+            (let p (fsc-skip-spaces args i))
+            (if (ge p (str_len args)) ""
+                (do
+                    (let comma (fsc-bml-find-comma args p))
+                    (let end (if (lt comma 0) (str_len args) comma))
+                    (let part (fsc-trim (fsc-sub args p end)))
+                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
+                    (str_concat " "
+                        (str_concat (fsc-compile-form-bml-expr part)
+                                    (fsc-bml-args-form-loop args rest-start)))))))
+
+    (defn fsc-bml-name-list-loop (args i)
+        (do
+            (let p (fsc-skip-spaces args i))
+            (if (ge p (str_len args)) ""
+                (do
+                    (let comma (fsc-find-char-from args "," p))
+                    (let end (if (lt comma 0) (str_len args) comma))
+                    (let name (fsc-trim (fsc-sub args p end)))
+                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
+                    (str_concat " "
+                        (str_concat name (fsc-bml-name-list-loop args rest-start)))))))
+
+    (defn fsc-bml-block-end (body i depth)
+        (do
+            (let e (fsc-line-end body i))
+            (let line (fsc-trim (fsc-sub body i e)))
+            (if (str_eq line "}")
+                (if (eq depth 0) i
+                    (fsc-bml-block-end body (fsc-line-next body i) (sub depth 1)))
+                (if (fsc-line-opens-block? line)
+                    (fsc-bml-block-end body (fsc-line-next body i) (add depth 1))
+                    (fsc-bml-block-end body (fsc-line-next body i) depth)))))
+
+    (defn fsc-bml-comment-line? (line)
+        (if (fsc-skip-rule-line? line) true
+            (fsc-prefix? line "//")))
+
+    (defn fsc-compile-form-bml-call (expr open)
+        (do
+            (let close (fsc-last-char-index expr))
+            (let name (fsc-trim (fsc-sub expr 0 open)))
+            (let args (fsc-sub expr (add open 1) close))
+            (if (eq (str_len (fsc-trim args)) 0)
+                (str_concat "(" (str_concat name ")"))
+                (str_concat "("
+                    (str_concat name
+                    (str_concat (fsc-bml-args-form-loop args 0) ")"))))))
+
+    (defn fsc-bml-normalize-ws-loop (s i quoted saw-space)
+        (if (ge i (str_len s)) ""
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (str_concat ch
+                        (fsc-bml-normalize-ws-loop s (add i 1) (if (str_eq ch "\"") false true) false))
+                (if (str_eq ch "\"")
+                    (str_concat ch
+                        (fsc-bml-normalize-ws-loop s (add i 1) true false))
+                (if (fsc-space? ch)
+                    (if saw-space
+                        (fsc-bml-normalize-ws-loop s (add i 1) quoted saw-space)
+                        (str_concat " " (fsc-bml-normalize-ws-loop s (add i 1) quoted true)))
+                    (str_concat ch
+                        (fsc-bml-normalize-ws-loop s (add i 1) quoted false))))))))
+
+    (defn fsc-bml-normalize-ws (s)
+        (fsc-trim (fsc-bml-normalize-ws-loop s 0 false false)))
+
+    (defn fsc-compile-form-bml-if (expr)
+        (do
+            (let then-pos (fsc-find-string-from expr " then " 0))
+            (let else-pos (fsc-find-string-from expr " else " then-pos))
+            (let cond (fsc-trim (fsc-sub expr 3 then-pos)))
+            (let yes (fsc-trim (fsc-sub expr (add then-pos 6) else-pos)))
+            (let no (fsc-trim (fsc-sub expr (add else-pos 6) (str_len expr))))
+            (str_concat "(if "
+                (str_concat (fsc-compile-form-bml-expr cond)
+                (str_concat " "
+                (str_concat (fsc-compile-form-bml-expr yes)
+                (str_concat " " (str_concat (fsc-compile-form-bml-expr no) ")"))))))))
+
+    (defn fsc-compile-form-bml-expr (raw)
+        (do
+            (let expr (fsc-bml-normalize-ws (fsc-strip-semi raw)))
+            (let open (fsc-find-char-from expr "(" 0))
+            (if (eq (str_len expr) 0) "(empty)"
+            (if (fsc-prefix? expr "if ")
+                (fsc-compile-form-bml-if expr)
+            (if (and (ge open 0) (str_eq (char_at expr (fsc-last-char-index expr)) ")"))
+                (fsc-compile-form-bml-call expr open)
+            (if (str_eq expr "empty") "(empty)"
+            (if (str_eq expr "true") "true"
+            (if (str_eq expr "false") "false"
+            (if (str_eq expr "null") "null"
+            (if (fsc-int? expr) expr
+                expr))))))))))
+
+    (defn fsc-compile-form-bml-def (line)
+        (do
+            (let open (fsc-find-char-from line "(" 4))
+            (let close (fsc-find-char-from line ")" open))
+            (let eq-pos (fsc-find-char-from line "=" close))
+            (let name (fsc-trim (fsc-sub line 4 open)))
+            (let args (fsc-sub line (add open 1) close))
+            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
+            (str_concat "    (defn "
+                (str_concat name
+                (str_concat " ("
+                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
+                (str_concat ")\n        "
+                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))))
+
+    (defn fsc-compile-form-bml-let (line)
+        (do
+            (let eq-pos (fsc-find-char-from line "=" 4))
+            (let name (fsc-trim (fsc-sub line 4 eq-pos)))
+            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
+            (str_concat "    (let "
+                (str_concat name
+                (str_concat " "
+                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))
+
+    (defn fsc-compile-form-bml-block-line (line)
+        (do
+            (let value (fsc-strip-semi line))
+            (if (fsc-bml-comment-line? value) ""
+            (if (fsc-prefix? value "let ")
+                (do
+                    (let eq-pos (fsc-find-char-from value "=" 4))
+                    (let name (fsc-trim (fsc-sub value 4 eq-pos)))
+                    (let body (fsc-sub value (add eq-pos 1) (str_len value)))
+                    (str_concat "        (let "
+                        (str_concat name
+                        (str_concat " "
+                        (str_concat (fsc-compile-form-bml-expr body) ")\n")))))
+                (str_concat "        "
+                    (str_concat (fsc-compile-form-bml-expr value) "\n"))))))
+
+    (defn fsc-bml-stmt-end-loop (body i end depth quoted)
+        (if (ge i end) end
+            (do
+                (let ch (char_at body i))
+                (if quoted
+                    (if (str_eq ch "\"")
+                        (fsc-bml-stmt-end-loop body (add i 1) end depth false)
+                        (fsc-bml-stmt-end-loop body (add i 1) end depth quoted))
+                (if (str_eq ch "\"")
+                    (fsc-bml-stmt-end-loop body (add i 1) end depth true)
+                (if (str_eq ch "(")
+                    (fsc-bml-stmt-end-loop body (add i 1) end (add depth 1) quoted)
+                (if (str_eq ch ")")
+                    (fsc-bml-stmt-end-loop body (add i 1) end (sub depth 1) quoted)
+                (if (and (eq depth 0) (str_eq ch ";"))
+                    (add i 1)
+                    (fsc-bml-stmt-end-loop body (add i 1) end depth quoted)))))))))
+
+    (defn fsc-bml-stmt-end (body i end)
+        (fsc-bml-stmt-end-loop body i end 0 false))
+
+    (defn fsc-compile-form-bml-block-stmts (body i end)
+        (do
+            (let p (fsc-skip-spaces body i))
+            (if (ge p end) ""
+                (do
+                    (let line-end (fsc-line-end body p))
+                    (let line (fsc-trim (fsc-sub body p line-end)))
+                    (if (fsc-bml-comment-line? line)
+                        (fsc-compile-form-bml-block-stmts body (fsc-line-next body p) end)
+                    (do
+                    (let stmt-end (fsc-bml-stmt-end body p end))
+                    (let stmt (fsc-trim (fsc-sub body p stmt-end)))
+                    (str_concat (fsc-compile-form-bml-block-line stmt)
+                                (fsc-compile-form-bml-block-stmts body stmt-end end))))))))
+
+    (defn fsc-compile-form-bml-block-lines (body i end)
+        (fsc-compile-form-bml-block-stmts body i end))
+
+    (defn fsc-compile-form-bml-def-block (body line body-start)
+        (do
+            (let open (fsc-find-char-from line "(" 4))
+            (let close (fsc-find-char-from line ")" open))
+            (let name (fsc-trim (fsc-sub line 4 open)))
+            (let args (fsc-sub line (add open 1) close))
+            (let body-end (fsc-bml-block-end body body-start 0))
+            (str_concat "    (defn "
+                (str_concat name
+                (str_concat " ("
+                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
+                (str_concat ")\n"
+                (str_concat "        (do\n"
+                (str_concat (fsc-compile-form-bml-block-lines body body-start body-end)
+                            "        ))\n")))))))))
+
+    (defn fsc-compile-form-bml-line (line)
+        (do
+            (let value (fsc-strip-semi line))
+            (if (fsc-bml-comment-line? value) ""
+            (if (fsc-prefix? value "def ")
+                (fsc-compile-form-bml-def value)
+            (if (fsc-prefix? value "let ")
+                (fsc-compile-form-bml-let value)
+                (str_concat "    "
+                    (str_concat (fsc-compile-form-bml-expr value) "\n")))))))
+
+    (defn fsc-form-bml-lines-loop (body i)
+        (if (ge i (str_len body)) ""
+            (do
+                (let e (fsc-line-end body i))
+                (let line (fsc-trim (fsc-sub body i e)))
+                (if (and (fsc-prefix? line "def ") (fsc-line-opens-block? line))
+                    (do
+                        (let body-start (fsc-line-next body i))
+                        (let body-end (fsc-bml-block-end body body-start 0))
+                        (str_concat (fsc-compile-form-bml-def-block body line body-start)
+                                    (fsc-form-bml-lines-loop body (fsc-line-next body body-end))))
+                    (str_concat (fsc-compile-form-bml-line line)
+                                (fsc-form-bml-lines-loop body (fsc-line-next body i)))))))
+
+    (defn fsc-compile-form-bml-section (body)
+        (str_concat "(do\n"
+            (str_concat (fsc-form-bml-lines-loop body 0) ")\n")))
+
+    (defn fsc-form-action-dialect? (dialect-name)
+        (or (str_eq dialect-name "form.bml")
+            (str_eq dialect-name "form.action")))
+
+    (defn fsc-compile-section (dialect-name body)
+        (if (fsc-form-action-dialect? dialect-name)
+            (fsc-compile-form-bml-section body)
+            (fsc-compile-bmf-section dialect-name body)))
+
+    ;; --- form.action BMF object rules --------------------------------
+    ;; The text lowering above is the bootstrap path for source sections. The
+    ;; living action dialect shape is BMF: completed action source objects
+    ;; lower rule-by-rule into Form recipe nodes, and each rule carries a
+    ;; reverse path back to the matched source span.
+
+    (let FSC-ACTION-BLOCK-DO (make_nodeid 1 2 9 1))
+    (let FSC-ACTION-BLOCK-SEQ (make_nodeid 1 2 9 2))
+    (let FSC-ACTION-BLOCK-LET (make_nodeid 1 2 9 3))
+    (let FSC-ACTION-MATH-ADD (make_nodeid 1 2 12 1))
+    (let FSC-ACTION-MATH-SUB (make_nodeid 1 2 12 2))
+    (let FSC-ACTION-MATH-MUL (make_nodeid 1 2 12 3))
+    (let FSC-ACTION-MATH-MOD (make_nodeid 1 2 12 5))
+    (let FSC-ACTION-COMPARE-EQ (make_nodeid 1 2 13 1))
+    (let FSC-ACTION-COMPARE-LT (make_nodeid 1 2 13 3))
+    (let FSC-ACTION-COMPARE-LE (make_nodeid 1 2 13 4))
+    (let FSC-ACTION-COMPARE-GT (make_nodeid 1 2 13 5))
+    (let FSC-ACTION-COMPARE-GE (make_nodeid 1 2 13 6))
+    (let FSC-ACTION-COND-IF (make_nodeid 1 2 11 2))
+    (let FSC-ACTION-FNDEF (make_nodeid 1 2 31 1))
+    (let FSC-ACTION-FNCALL (make_nodeid 1 2 32 1))
+    (let FSC-ACTION-IDENT (make_nodeid 1 2 33 1))
+
+    (defn fsc-action-src-kw (value) (bmf-atom "form-action-keyword" value))
+    (defn fsc-action-src-name (value) (bmf-atom "form-action-name" value))
+    (defn fsc-action-src-int (value) (bmf-atom "form-action-int" value))
+    (defn fsc-action-src-string (value) (bmf-atom "form-action-string" value))
+    (defn fsc-action-src-op (value) (bmf-atom "form-action-op" value))
+    (defn fsc-action-src-params (value) (bmf-atom "form-action-params" value))
+    (defn fsc-action-src-args (value) (bmf-atom "form-action-args" value))
+    (defn fsc-action-src-expr (value) (bmf-atom "form-action-expr" value))
+    (defn fsc-action-src-items (value) (bmf-atom "form-action-items" value))
+
+    ;; --- streaming BMF source scanner --------------------------------
+    ;; A scanner state is a cursor over source. It emits one BMF source
+    ;; object and the next cursor; callers decide how much of a stream to
+    ;; consume. Grammar meaning stays in BMF object rules below.
+
+    (defn fsc-source-cursor-with-len (source offset line col source-len)
+        (list "fsc-source-cursor" source offset line col source-len))
+
+    (defn fsc-file-source-cursor (path offset line col source-len)
+        (list "fsc-file-source-cursor" path offset line col source-len))
+
+    (defn fsc-file-source-cursor-window (path offset line col source-len window-start window)
+        (list "fsc-file-source-cursor-window"
+              path
+              offset
+              line
+              col
+              source-len
+              window-start
+              window))
+
+    (defn fsc-source-cursor-file? (cursor)
+        (and (gt (len cursor) 0)
+             (or (str_eq (head cursor) "fsc-file-source-cursor")
+                 (str_eq (head cursor) "fsc-file-source-cursor-window"))))
+
+    (defn fsc-source-cursor-file-window? (cursor)
+        (and (gt (len cursor) 0)
+             (str_eq (head cursor) "fsc-file-source-cursor-window")))
+
+    (defn fsc-source-cursor (source offset line col)
+        (fsc-source-cursor-with-len source offset line col (str_len source)))
+
+    (defn fsc-source-cursor-source (cursor) (nth cursor 1))
+    (defn fsc-source-cursor-offset (cursor) (nth cursor 2))
+    (defn fsc-source-cursor-line (cursor) (nth cursor 3))
+    (defn fsc-source-cursor-col (cursor) (nth cursor 4))
+    (defn fsc-source-cursor-source-len (cursor)
+        (if (gt (len cursor) 5)
+            (nth cursor 5)
+            (if (fsc-source-cursor-file? cursor)
+                (file_size (fsc-source-cursor-source cursor))
+                (str_len (fsc-source-cursor-source cursor)))))
+
+    (defn fsc-source-window-size () 4096)
+
+    (defn fsc-source-cursor-window-start (cursor) (nth cursor 6))
+    (defn fsc-source-cursor-window (cursor) (nth cursor 7))
+
+    (defn fsc-source-cursor-window-contains? (cursor offset)
+        (and (fsc-source-cursor-file-window? cursor)
+             (and (ge offset (fsc-source-cursor-window-start cursor))
+                  (lt offset
+                      (add (fsc-source-cursor-window-start cursor)
+                           (str_len (fsc-source-cursor-window cursor)))))))
+
+    (defn fsc-source-cursor-windowed (cursor)
+        (if (fsc-source-cursor-window-contains? cursor
+                                                (fsc-source-cursor-offset cursor))
+            cursor
+            (fsc-file-source-cursor-window
+                (fsc-source-cursor-source cursor)
+                (fsc-source-cursor-offset cursor)
+                (fsc-source-cursor-line cursor)
+                (fsc-source-cursor-col cursor)
+                (fsc-source-cursor-source-len cursor)
+                (fsc-source-cursor-offset cursor)
+                (read_file_slice (fsc-source-cursor-source cursor)
+                                 (fsc-source-cursor-offset cursor)
+                                 (fsc-source-window-size)))))
+
+    (defn fsc-source-cursor-end? (cursor)
+        (ge (fsc-source-cursor-offset cursor)
+            (fsc-source-cursor-source-len cursor)))
+
+    (defn fsc-source-cursor-char (cursor)
+        (if (fsc-source-cursor-end? cursor) ""
+            (if (fsc-source-cursor-file? cursor)
+                (do
+                    (let windowed (fsc-source-cursor-windowed cursor))
+                    (char_at
+                        (fsc-source-cursor-window windowed)
+                        (sub (fsc-source-cursor-offset cursor)
+                             (fsc-source-cursor-window-start windowed))))
+                (char_at (fsc-source-cursor-source cursor)
+                         (fsc-source-cursor-offset cursor)))))
+
+    (defn fsc-source-cursor-next (cursor offset line col)
+        (if (fsc-source-cursor-file? cursor)
+            (if (and (fsc-source-cursor-file-window? cursor)
+                     (fsc-source-cursor-window-contains? cursor offset))
+                (fsc-file-source-cursor-window
+                    (fsc-source-cursor-source cursor)
+                    offset
+                    line
+                    col
+                    (fsc-source-cursor-source-len cursor)
+                    (fsc-source-cursor-window-start cursor)
+                    (fsc-source-cursor-window cursor))
+                (fsc-file-source-cursor
+                    (fsc-source-cursor-source cursor)
+                    offset
+                    line
+                    col
+                    (fsc-source-cursor-source-len cursor)))
+            (fsc-source-cursor-with-len
+                (fsc-source-cursor-source cursor)
+                offset
+                line
+                col
+                (fsc-source-cursor-source-len cursor))))
+
+    (defn fsc-source-cursor-advance (cursor)
+        (do
+            (let ch (fsc-source-cursor-char cursor))
+            (if (str_eq ch "\n")
+                (fsc-source-cursor-next
+                    cursor
+                    (add (fsc-source-cursor-offset cursor) 1)
+                    (add (fsc-source-cursor-line cursor) 1)
+                    0)
+                (fsc-source-cursor-next
+                    cursor
+                    (add (fsc-source-cursor-offset cursor) 1)
+                    (fsc-source-cursor-line cursor)
+                    (add (fsc-source-cursor-col cursor) 1)))))
+
+    (defn fsc-source-cursor-range (start end)
+        (list "fsc-source-range"
+              (fsc-source-cursor-offset start)
+              (sub (fsc-source-cursor-offset end)
+                   (fsc-source-cursor-offset start))
+              (fsc-source-cursor-line start)
+              (fsc-source-cursor-col start)
+              (fsc-source-cursor-line end)
+              (fsc-source-cursor-col end)))
+
+    (defn fsc-source-object (kind value start end)
+        (bmf-object kind
+                    value
+                    (bmf-match-source (bmf-empty 0)
+                                      (list (fsc-source-cursor-range start end)))
+                    bmf-identity-inverse))
+
+    (defn fsc-scan-result (object cursor)
+        (list "fsc-scan-result" object cursor))
+
+    (defn fsc-scan-result-object (result) (nth result 1))
+    (defn fsc-scan-result-cursor (result) (nth result 2))
+
+    (defn fsc-string-list-contains? (xs value)
+        (if (nil? xs) false
+            (if (str_eq (head xs) value) true
+                (fsc-string-list-contains? (tail xs) value))))
+
+    (defn fsc-source-scan-skip (cursor)
+        (if (fsc-source-cursor-end? cursor) cursor
+            (if (fsc-space? (fsc-source-cursor-char cursor))
+                (fsc-source-scan-skip (fsc-source-cursor-advance cursor))
+                cursor)))
+
+    (defn fsc-source-name-char? (ch)
+        (or (fsc-word-char? ch) (str_eq ch "?")))
+
+    (defn fsc-source-name-start-char? (ch)
+        (do
+            (let cp (ord ch))
+            (or (and (ge cp 65) (le cp 90))
+            (or (and (ge cp 97) (le cp 122))
+                (str_eq ch "_")))))
+
+    (defn fsc-source-scan-name-loop (cursor value)
+        (if (fsc-source-cursor-end? cursor)
+            (list value cursor)
+            (do
+                (let ch (fsc-source-cursor-char cursor))
+                (if (fsc-source-name-char? ch)
+                    (fsc-source-scan-name-loop
+                        (fsc-source-cursor-advance cursor)
+                        (str_concat value ch))
+                    (list value cursor)))))
+
+    (defn fsc-source-name-kind (value keywords keyword-kind name-kind)
+        (if (fsc-string-list-contains? keywords value)
+            keyword-kind
+            name-kind))
+
+    (defn fsc-source-dialect (keywords keyword-kind name-kind int-kind string-kind op-kind eof-kind ops)
+        (list "fsc-source-dialect"
+              keywords
+              keyword-kind
+              name-kind
+              int-kind
+              string-kind
+              op-kind
+              eof-kind
+              ops))
+
+    (defn fsc-source-dialect-keywords (dialect) (nth dialect 1))
+    (defn fsc-source-dialect-keyword-kind (dialect) (nth dialect 2))
+    (defn fsc-source-dialect-name-kind (dialect) (nth dialect 3))
+    (defn fsc-source-dialect-int-kind (dialect) (nth dialect 4))
+    (defn fsc-source-dialect-string-kind (dialect) (nth dialect 5))
+    (defn fsc-source-dialect-op-kind (dialect) (nth dialect 6))
+    (defn fsc-source-dialect-eof-kind (dialect) (nth dialect 7))
+    (defn fsc-source-dialect-ops (dialect) (nth dialect 8))
+
+    (defn fsc-action-keyword? (value)
+        (or (str_eq value "def")
+        (or (str_eq value "let")
+        (or (str_eq value "if")
+        (or (str_eq value "then")
+        (or (str_eq value "else")
+            (str_eq value "do")))))))
+
+    (defn fsc-action-name-kind (value)
+        (if (fsc-action-keyword? value)
+            "form-action-keyword"
+            "form-action-name"))
+
+    (defn fsc-source-scan-name (start keywords keyword-kind name-kind)
+        (do
+            (let read (fsc-source-scan-name-loop start ""))
+            (let value (nth read 0))
+            (let end (nth read 1))
+            (fsc-scan-result
+                (fsc-source-object
+                    (fsc-source-name-kind value keywords keyword-kind name-kind)
+                    value
+                    start
+                    end)
+                end)))
+
+    (defn fsc-source-scan-int-loop (cursor value)
+        (if (fsc-source-cursor-end? cursor)
+            (list value cursor)
+            (do
+                (let ch (fsc-source-cursor-char cursor))
+                (if (fsc-digit? ch)
+                    (fsc-source-scan-int-loop
+                        (fsc-source-cursor-advance cursor)
+                        (str_concat value ch))
+                    (list value cursor)))))
+
+    (defn fsc-source-scan-int (start int-kind)
+        (do
+            (let read (fsc-source-scan-int-loop start ""))
+            (let value (nth read 0))
+            (let end (nth read 1))
+            (fsc-scan-result
+                (fsc-source-object int-kind value start end)
+                end)))
+
+    (defn fsc-source-scan-string-loop (cursor value)
+        (if (fsc-source-cursor-end? cursor)
+            (list value cursor)
+            (if (str_eq (fsc-source-cursor-char cursor) "\"")
+                (list value (fsc-source-cursor-advance cursor))
+                (fsc-source-scan-string-loop
+                    (fsc-source-cursor-advance cursor)
+                    (str_concat value (fsc-source-cursor-char cursor))))))
+
+    (defn fsc-source-scan-string (start string-kind)
+        (do
+            (let body-start (fsc-source-cursor-advance start))
+            (let read (fsc-source-scan-string-loop body-start ""))
+            (let value (nth read 0))
+            (let end (nth read 1))
+            (fsc-scan-result
+                (fsc-source-object string-kind value start end)
+                end)))
+
+    (defn fsc-source-advance-n (cursor n)
+        (if (le n 0) cursor
+            (fsc-source-advance-n (fsc-source-cursor-advance cursor)
+                                  (sub n 1))))
+
+    (defn fsc-source-cursor-prefix? (cursor prefix)
+        (do
+            (let offset (fsc-source-cursor-offset cursor))
+            (if (fsc-source-cursor-file? cursor)
+                (fsc-source-cursor-file-prefix? cursor prefix 0)
+                (fsc-find-string-at-len?
+                    (fsc-source-cursor-source cursor)
+                    prefix
+                    (fsc-source-cursor-source-len cursor)
+                    (str_len prefix)
+                    offset
+                    0))))
+
+    (defn fsc-source-cursor-file-prefix? (cursor prefix j)
+        (if (eq j (str_len prefix)) true
+            (if (ge (add (fsc-source-cursor-offset cursor) j)
+                    (fsc-source-cursor-source-len cursor))
+                false
+                (if (eq
+                        (file_byte_at
+                            (fsc-source-cursor-source cursor)
+                            (add (fsc-source-cursor-offset cursor) j))
+                        (ord (char_at prefix j)))
+                    (fsc-source-cursor-file-prefix? cursor prefix (add j 1))
+                    false))))
+
+    (defn fsc-source-match-op (cursor ops)
+        (if (nil? ops) (fsc-source-cursor-char cursor)
+            (if (fsc-source-cursor-prefix? cursor (head ops))
+                (head ops)
+                (fsc-source-match-op cursor (tail ops)))))
+
+    (defn fsc-source-scan-op (start op-kind ops)
+        (do
+            (let value (fsc-source-match-op start ops))
+            (let end (fsc-source-advance-n start (str_len value)))
+            (fsc-scan-result
+                (fsc-source-object op-kind value start end)
+                end)))
+
+    (defn fsc-source-scan-next (cursor keywords keyword-kind name-kind int-kind string-kind op-kind eof-kind ops)
+        (do
+            (let start (fsc-source-scan-skip cursor))
+            (let ch (fsc-source-cursor-char start))
+            (if (fsc-source-cursor-end? start)
+                (fsc-scan-result
+                    (fsc-source-object eof-kind "" start start)
+                    start)
+            (if (str_eq ch "\"")
+                (fsc-source-scan-string start string-kind)
+            (if (fsc-digit? ch)
+                (fsc-source-scan-int start int-kind)
+            (if (fsc-source-name-start-char? ch)
+                (fsc-source-scan-name start keywords keyword-kind name-kind)
+                (fsc-source-scan-op start op-kind ops)))))))
+
+    (defn fsc-source-scan-next-dialect (cursor dialect)
+        (fsc-source-scan-next cursor
+                              (fsc-source-dialect-keywords dialect)
+                              (fsc-source-dialect-keyword-kind dialect)
+                              (fsc-source-dialect-name-kind dialect)
+                              (fsc-source-dialect-int-kind dialect)
+                              (fsc-source-dialect-string-kind dialect)
+                              (fsc-source-dialect-op-kind dialect)
+                              (fsc-source-dialect-eof-kind dialect)
+                              (fsc-source-dialect-ops dialect)))
+
+    (let fsc-action-keywords
+        (list "def" "let" "if" "then" "else" "do"))
+
+    (let fsc-common-op2
+        (list "==" "!=" "<=" ">=" "->" "=>" ":=" "+=" "-=" "*=" "/=" "**" "//" "<<" ">>" "<-" "?."))
+
+    (let fsc-action-source-dialect
+        (fsc-source-dialect fsc-action-keywords
+                            "form-action-keyword"
+                            "form-action-name"
+                            "form-action-int"
+                            "form-action-string"
+                            "form-action-op"
+                            "form-action-eof"
+                            fsc-common-op2))
+
+    (defn fsc-action-scan-skip (cursor)
+        (fsc-source-scan-skip cursor))
+
+    (defn fsc-action-name-char? (ch)
+        (fsc-source-name-char? ch))
+
+    (defn fsc-action-scan-name-loop (cursor value)
+        (fsc-source-scan-name-loop cursor value))
+
+    (defn fsc-action-scan-name (start)
+        (fsc-source-scan-name start
+                              fsc-action-keywords
+                              "form-action-keyword"
+                              "form-action-name"))
+
+    (defn fsc-action-scan-int-loop (cursor value)
+        (fsc-source-scan-int-loop cursor value))
+
+    (defn fsc-action-scan-int (start)
+        (fsc-source-scan-int start "form-action-int"))
+
+    (defn fsc-action-scan-string-loop (cursor value)
+        (fsc-source-scan-string-loop cursor value))
+
+    (defn fsc-action-scan-string (start)
+        (fsc-source-scan-string start "form-action-string"))
+
+    (defn fsc-action-scan-op (start)
+        (fsc-source-scan-op start "form-action-op" fsc-common-op2))
+
+    (defn fsc-action-scan-next (cursor)
+        (fsc-source-scan-next-dialect cursor fsc-action-source-dialect))
+
+    (defn fsc-action-kw (value) (object-lit "form-action-keyword" value))
+    (defn fsc-action-op (value) (object-lit "form-action-op" value))
+    (defn fsc-action-name (capture-name)
+        (list "capture" capture-name (object-lit "form-action-name" "")))
+    (defn fsc-action-int (capture-name)
+        (list "capture" capture-name (object-lit "form-action-int" "")))
+    (defn fsc-action-string (capture-name)
+        (list "capture" capture-name (object-lit "form-action-string" "")))
+    (defn fsc-action-params (capture-name)
+        (list "capture" capture-name (object-lit "form-action-params" "")))
+    (defn fsc-action-args (capture-name)
+        (list "capture" capture-name (object-lit "form-action-args" "")))
+    (defn fsc-action-expr (capture-name)
+        (list "capture" capture-name (object-lit "form-action-expr" "")))
+    (defn fsc-action-items (capture-name)
+        (list "capture" capture-name (object-lit "form-action-items" "")))
+
+    (defn fsc-action-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn fsc-action-ident-node (name)
+        (intern_node FSC-ACTION-IDENT (list (intern_trivial_string name))))
+
+    (defn fsc-action-param-nodes (param-list)
+        (if (nil? param-list) (empty)
+            (cons (intern_trivial_string (head param-list))
+                  (fsc-action-param-nodes (tail param-list)))))
+
+    (defn fsc-action-param-block (param-list)
+        (intern_node FSC-ACTION-BLOCK-SEQ
+                     (fsc-action-param-nodes param-list)))
+
+    (defn fsc-action-call-node (name args)
+        (if (str_eq name "add")
+            (intern_node FSC-ACTION-MATH-ADD args)
+            (if (str_eq name "sub")
+                (intern_node FSC-ACTION-MATH-SUB args)
+            (if (str_eq name "mul")
+                (intern_node FSC-ACTION-MATH-MUL args)
+            (if (str_eq name "mod")
+                (intern_node FSC-ACTION-MATH-MOD args)
+            (if (str_eq name "eq")
+                (intern_node FSC-ACTION-COMPARE-EQ args)
+            (if (str_eq name "lt")
+                (intern_node FSC-ACTION-COMPARE-LT args)
+            (if (str_eq name "le")
+                (intern_node FSC-ACTION-COMPARE-LE args)
+            (if (str_eq name "gt")
+                (intern_node FSC-ACTION-COMPARE-GT args)
+            (if (str_eq name "ge")
+                (intern_node FSC-ACTION-COMPARE-GE args)
+                (intern_node FSC-ACTION-FNCALL
+                             (cons (intern_trivial_string name) args))))))))))))
+
+    (defn fsc-action-let-node (name value)
+        (intern_node FSC-ACTION-BLOCK-LET
+                     (list (intern_trivial_string name) value)))
+
+    (defn fsc-action-do-node (items)
+        (intern_node FSC-ACTION-BLOCK-DO items))
+
+    (defn fsc-action-if-node (cond yes no)
+        (intern_node FSC-ACTION-COND-IF (list cond yes no)))
+
+    (defn fsc-action-emit-ident (objects)
+        (fsc-action-ident-node (fsc-action-cap objects "name")))
+
+    (defn fsc-action-emit-int (objects)
+        (intern_trivial_int (str_to_int (fsc-action-cap objects "value"))))
+
+    (defn fsc-action-emit-string (objects)
+        (intern_trivial_string (fsc-action-cap objects "value")))
+
+    (defn fsc-action-emit-call (objects)
+        (fsc-action-call-node
+            (fsc-action-cap objects "name")
+            (fsc-action-cap objects "args")))
+
+    (defn fsc-action-emit-let (objects)
+        (fsc-action-let-node
+            (fsc-action-cap objects "name")
+            (fsc-action-cap objects "value")))
+
+    (defn fsc-action-emit-if (objects)
+        (fsc-action-if-node
+            (fsc-action-cap objects "cond")
+            (fsc-action-cap objects "yes")
+            (fsc-action-cap objects "no")))
+
+    (defn fsc-action-emit-def (objects)
+        (intern_node FSC-ACTION-FNDEF
+            (list
+                (intern_trivial_string (fsc-action-cap objects "name"))
+                (fsc-action-param-block (fsc-action-cap objects "params"))
+                (fsc-action-cap objects "body"))))
+
+    (defn fsc-action-emit-do (objects)
+        (fsc-action-do-node (fsc-action-cap objects "items")))
+
+    (defn fsc-action-source-span (object)
+        (bmf-object-source-span object))
+
+    (defn form-action-bmf-rules (_x)
+        (list
+            (list
+                "ident"
+                (fsc-action-name "name")
+                fsc-action-emit-ident
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "int"
+                (fsc-action-int "value")
+                fsc-action-emit-int
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "string"
+                (fsc-action-string "value")
+                fsc-action-emit-string
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "call"
+                (list "sequence"
+                    (fsc-action-name "name")
+                    (fsc-action-args "args"))
+                fsc-action-emit-call
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "if"
+                (list "sequence"
+                    (fsc-action-kw "if")
+                    (fsc-action-expr "cond")
+                    (fsc-action-kw "then")
+                    (fsc-action-expr "yes")
+                    (fsc-action-kw "else")
+                    (fsc-action-expr "no"))
+                fsc-action-emit-if
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "let"
+                (list "sequence"
+                    (fsc-action-kw "let")
+                    (fsc-action-name "name")
+                    (fsc-action-op "=")
+                    (fsc-action-expr "value")
+                    (fsc-action-op ";"))
+                fsc-action-emit-let
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "def"
+                (list "sequence"
+                    (fsc-action-kw "def")
+                    (fsc-action-name "name")
+                    (fsc-action-params "params")
+                    (fsc-action-op "=")
+                    (fsc-action-expr "body")
+                    (fsc-action-op ";"))
+                fsc-action-emit-def
+                bmf-identity-inverse
+                fsc-action-source-span)
+            (list
+                "do"
+                (list "sequence"
+                    (fsc-action-kw "do")
+                    (fsc-action-items "items"))
+                fsc-action-emit-do
+                bmf-identity-inverse
+                fsc-action-source-span)))
+
+    (defn form-action-bmf-find-rule (name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (rule-name (head rules)) name)
+                (head rules)
+                (form-action-bmf-find-rule name (tail rules)))))
+
+    (defn apply-form-action-bmf-rule (rule-name objects)
+        (apply-object-rule
+            (form-action-bmf-find-rule rule-name (form-action-bmf-rules 0))
+            objects))
+
+    (defn form-action-bmf-value (rule-name objects)
+        (bmf-object-value
+            (cap-get
+                (match-caps (apply-form-action-bmf-rule rule-name objects))
+                "result")))
+
+    (defn form-action-bmf-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn form-action-bmf-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn form-action-bmf-string (value)
+        (form-action-bmf-value "string"
+            (list (fsc-action-src-string value))))
+
+    (defn form-action-bmf-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn form-action-bmf-call0 (name)
+        (form-action-bmf-call name (empty)))
+
+    (defn form-action-bmf-call1 (name a)
+        (form-action-bmf-call name (list a)))
+
+    (defn form-action-bmf-call2 (name a b)
+        (form-action-bmf-call name (list a b)))
+
+    (defn form-action-bmf-call3 (name a b c)
+        (form-action-bmf-call name (list a b c)))
+
+    (defn form-action-bmf-call4 (name a b c d)
+        (form-action-bmf-call name (list a b c d)))
+
+    (defn form-action-bmf-call5 (name a b c d e)
+        (form-action-bmf-call name (list a b c d e)))
+
+    (defn form-action-bmf-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn form-action-bmf-let (name value)
+        (form-action-bmf-value "let"
+            (list
+                (fsc-action-src-kw "let")
+                (fsc-action-src-name name)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr value)
+                (fsc-action-src-op ";"))))
+
+    (defn form-action-bmf-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (defn form-action-bmf-do-source (items)
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items items)))
+
+    (defn form-action-bmf-do-roundtrip (items)
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            (form-action-bmf-do-source items)))
+
+    (defn form-action-bmf-roundtrip-program (rt)
+        (bmf-object-value (bmf-roundtrip-first-object rt)))
+
+    (defn form-action-bmf-program (items)
+        (form-action-bmf-roundtrip-program
+            (form-action-bmf-do-roundtrip items)))
+
+    (defn form-action-bmf-proof-score (payload rt program)
+        (add payload
+        (add (if (bmf-roundtrip-node-eq? rt) 100 0)
+        (add (len (form-action-bmf-rules 0))
+             (len (node_children program))))))
+
+    ;; --- active corpus roundtrip cells -------------------------------
+    ;; These cells describe source-file bodies and target source lenses
+    ;; above the kernel. They carry source objects beside the compiled
+    ;; Form binary node so source -> binary -> source -> binary proof can
+    ;; stay generic across dialects.
+
+    (defn fsc-source-corpus (name files)
+        (compiler-object "fsc-source-corpus"
+                         (list name files)
+                         files
+                         compiler-identity-inverse))
+
+    (defn fsc-source-corpus-name (corpus)
+        (nth (compiler-object-value corpus) 0))
+
+    (defn fsc-source-corpus-files (corpus)
+        (nth (compiler-object-value corpus) 1))
+
+    (defn fsc-source-file (path kind sections)
+        (compiler-object "fsc-source-file"
+                         (list path kind sections)
+                         sections
+                         compiler-identity-inverse))
+
+    (defn fsc-source-file-path (file)
+        (nth (compiler-object-value file) 0))
+
+    (defn fsc-source-file-kind (file)
+        (nth (compiler-object-value file) 1))
+
+    (defn fsc-source-file-sections (file)
+        (nth (compiler-object-value file) 2))
+
+    (defn fsc-source-section-binary (dialect rule-name source-stream binary)
+        (compiler-object "fsc-source-section-binary"
+                         (list dialect rule-name source-stream binary)
+                         source-stream
+                         compiler-identity-inverse))
+
+    (defn fsc-source-section-dialect (section)
+        (nth (compiler-object-value section) 0))
+
+    (defn fsc-source-section-rule-name (section)
+        (nth (compiler-object-value section) 1))
+
+    (defn fsc-source-section-source (section)
+        (nth (compiler-object-value section) 2))
+
+    (defn fsc-source-section-binary-node (section)
+        (nth (compiler-object-value section) 3))
+
+    (defn fsc-source-section-node-eq? (section node)
+        (node_eq (fsc-source-section-binary-node section) node))
+
+    (defn fsc-repo-file (path kind media-type byte-count sensed)
+        (compiler-object "fsc-repo-file"
+                         (list path kind media-type byte-count sensed)
+                         sensed
+                         compiler-identity-inverse))
+
+    (defn fsc-repo-file-from-text (path kind media-type text sensed)
+        (fsc-repo-file path kind media-type (str_len text) sensed))
+
+    (defn fsc-repo-file-from-bytes (path kind media-type bytes sensed)
+        (fsc-repo-file path kind media-type (len bytes) sensed))
+
+    (defn fsc-repo-file-path (file)
+        (nth (compiler-object-value file) 0))
+
+    (defn fsc-repo-file-kind (file)
+        (nth (compiler-object-value file) 1))
+
+    (defn fsc-repo-file-media-type (file)
+        (nth (compiler-object-value file) 2))
+
+    (defn fsc-repo-file-byte-count (file)
+        (nth (compiler-object-value file) 3))
+
+    (defn fsc-repo-file-sensed (file)
+        (nth (compiler-object-value file) 4))
+
+    ;; --- repo ingestion objects --------------------------------------
+    ;; These are native Form nodes for decoded file meaning. Paths and
+    ;; media labels stay on the fsc-repo-file boundary. Transport bytes/text
+    ;; are decoder input only; queryable content lives here as local kind
+    ;; nodes, source spans, and parsed structures supplied by domain grammars.
+
+    (let FSC-REPO-DOCUMENT (make_nodeid 8 45 6 10))
+    (let FSC-REPO-TEXT-LINES (make_nodeid 8 45 6 11))
+    (let FSC-REPO-TEXT-LINE (make_nodeid 8 45 6 12))
+    (let FSC-REPO-MEANING (make_nodeid 8 45 6 13))
+    (let FSC-REPO-MEANING-FIELD (make_nodeid 8 45 6 14))
+
+    (defn fsc-repo-field-int (field value)
+        (intern_node
+            FSC-REPO-MEANING-FIELD
+            (list field (intern_trivial_int value))))
+
+    (defn fsc-repo-field-string (field value)
+        (intern_node
+            FSC-REPO-MEANING-FIELD
+            (list field (intern_trivial_string value))))
+
+    (defn fsc-repo-field-node (field value)
+        (intern_node
+            FSC-REPO-MEANING-FIELD
+            (list field value)))
+
+    (defn fsc-repo-meaning (decoder fields)
+        (intern_node FSC-REPO-MEANING (cons decoder fields)))
+
+    (defn fsc-repo-meaning-decoder (meaning)
+        (head (node_children meaning)))
+
+    (defn fsc-repo-meaning-fields (meaning)
+        (tail (node_children meaning)))
+
+    (defn fsc-repo-field-key (field)
+        (nth (node_children field) 0))
+
+    (defn fsc-repo-field-value (field)
+        (nth (node_children field) 1))
+
+    (defn fsc-repo-field-value-int (field)
+        (node_value (fsc-repo-field-value field)))
+
+    (defn fsc-repo-field-value-string (field)
+        (node_value (fsc-repo-field-value field)))
+
+    (defn fsc-repo-text-line (offset length start-line start-col end-line end-col)
+        (intern_node
+            FSC-REPO-TEXT-LINE
+            (list (intern_trivial_int offset)
+                  (intern_trivial_int length)
+                  (intern_trivial_int start-line)
+                  (intern_trivial_int start-col)
+                  (intern_trivial_int end-line)
+                  (intern_trivial_int end-col))))
+
+    (defn fsc-repo-text-lines-loop (text text-len start line acc)
+        (if (ge start text-len)
+            (intern_node
+                FSC-REPO-TEXT-LINES
+                (reverse
+                    (if (eq text-len 0)
+                        (cons (fsc-repo-text-line 0 0 1 0 1 0) acc)
+                        acc)))
+            (do
+                (let end (fsc-line-end text start))
+                (let next (fsc-line-next text start))
+                (fsc-repo-text-lines-loop
+                    text
+                    text-len
+                    next
+                    (add line 1)
+                    (cons (fsc-repo-text-line start (sub end start) line 0 line (sub end start)) acc)))))
+
+    (defn fsc-repo-text-lines (text)
+        (fsc-repo-text-lines-loop text (str_len text) 0 1 (empty)))
+
+    (defn fsc-repo-empty-spans ()
+        (intern_node FSC-REPO-TEXT-LINES (empty)))
+
+    (defn fsc-repo-document (kind size structure spans)
+        (intern_node
+            FSC-REPO-DOCUMENT
+            (list kind
+                  (intern_trivial_int size)
+                  structure
+                  spans)))
+
+    (defn fsc-repo-text-document (kind text structure)
+        (do
+            (let lines (fsc-repo-text-lines text))
+            (fsc-repo-document
+                kind
+                (str_len text)
+                structure
+                lines)))
+
+    (defn fsc-repo-binary-document (kind bytes structure)
+        (fsc-repo-document kind (len bytes) structure (fsc-repo-empty-spans)))
+
+    (defn fsc-repo-document-kind (document)
+        (nth (node_children document) 0))
+
+    (defn fsc-repo-document-size (document)
+        (node_value (nth (node_children document) 1)))
+
+    (defn fsc-repo-document-structure (document)
+        (nth (node_children document) 2))
+
+    (defn fsc-repo-document-spans (document)
+        (nth (node_children document) 3))
+
+    (defn fsc-repo-text-document-line-count (document)
+        (len (node_children (fsc-repo-document-spans document))))
+
+    (defn fsc-repo-text-document-lines (document)
+        (fsc-repo-document-spans document))
+
+    (defn fsc-repo-text-document-structure (document)
+        (fsc-repo-document-structure document))
+
+    (defn fsc-repo-text-line-number (line)
+        (if (gt (len line) 0)
+            (nth line 3)
+            (node_value (nth (node_children line) 2))))
+
+    (defn fsc-repo-text-line-start (line)
+        (if (gt (len line) 0)
+            (nth line 1)
+            (node_value (nth (node_children line) 0))))
+
+    (defn fsc-repo-text-line-length (line)
+        (if (gt (len line) 0)
+            (nth line 2)
+            (node_value (nth (node_children line) 1))))
+
+    (defn fsc-repo-text-line-end (line)
+        (add (fsc-repo-text-line-start line) (fsc-repo-text-line-length line)))
+
+    (defn fsc-repo-text-line-start-col (line)
+        (if (gt (len line) 0)
+            (nth line 4)
+            (node_value (nth (node_children line) 3))))
+
+    (defn fsc-repo-text-line-end-line (line)
+        (if (gt (len line) 0)
+            (nth line 5)
+            (node_value (nth (node_children line) 4))))
+
+    (defn fsc-repo-text-line-end-col (line)
+        (if (gt (len line) 0)
+            (nth line 6)
+            (node_value (nth (node_children line) 5))))
+
+    (defn fsc-repo-binary-document-byte-count (document)
+        (fsc-repo-document-size document))
+
+    (defn fsc-repo-binary-document-structure (document)
+        (fsc-repo-document-structure document))
+
+    (defn fsc-repo-corpus (name files)
+        (compiler-object "fsc-repo-corpus"
+                         (list name files)
+                         files
+                         compiler-identity-inverse))
+
+    (defn fsc-repo-corpus-name (corpus)
+        (nth (compiler-object-value corpus) 0))
+
+    (defn fsc-repo-corpus-files (corpus)
+        (nth (compiler-object-value corpus) 1))
+
+    (defn fsc-repo-corpus-total-bytes (files)
+        (if (nil? files) 0
+            (add (fsc-repo-file-byte-count (head files))
+                 (fsc-repo-corpus-total-bytes (tail files)))))
+
+    (defn fsc-bmf-lower-node (rule source-stream)
+        (do
+            (let match (apply-object-rule rule source-stream))
+            (let object (cap-get (match-caps match) "result"))
+            (bmf-object-value object)))
+
+    (defn fsc-bmf-source-node-eq? (rule source-stream node)
+        (node_eq (fsc-bmf-lower-node rule source-stream) node))
+
+    (defn fsc-bmf-roundtrip-node-eq? (rule source-stream)
+        (bmf-roundtrip-node-eq? (bmf-roundtrip rule source-stream)))
+
+    (defn fsc-lens-roundtrip-node-eq? (roundtrip node)
+        (node_eq (bmf-lens-roundtrip-node roundtrip) node))
+
+    (defn fsc-lens-roundtrip-anchor-eq? (roundtrip anchor)
+        (str_eq (bmf-lens-roundtrip-anchor roundtrip) anchor))
+
+    ;; --- source compiler ---------------------------------------------
+
+    (defn form-source-compile-loop (src i)
+        (do
+            (let pos (fsc-find-string-from src "section [" i))
+            (if (lt pos 0) (fsc-sub src i (str_len src))
+                (do
+                    (let dialect-start (add pos 9))
+                    (let dialect-end (fsc-find-char-from src "]" dialect-start))
+                    (let open (fsc-find-char-from src "{" dialect-end))
+                    (let close (fsc-section-end src (add open 1)))
+                    (let dialect-name (fsc-sub src dialect-start dialect-end))
+                    (let body (fsc-sub src (add open 1) close))
+                        (str_concat
+                            (fsc-sub src i pos)
+                            (str_concat
+                            (fsc-compile-section dialect-name body)
+                            (form-source-compile-loop src (fsc-line-next src close))))))))
+
+    (defn form-source-compile-text (src)
+        (form-source-compile-loop src 0))
+
+    (defn fsc-string-to-bytes-len-loop (s s-len i)
+        (if (ge i s-len) (empty)
+            (cons (ord (char_at s i))
+                  (fsc-string-to-bytes-len-loop s s-len (add i 1)))))
+
+    (defn fsc-string-to-bytes (s)
+        (fsc-string-to-bytes-len-loop s (str_len s) 0))
+
+    (defn form-source-compile-file (in-path out-path)
+        (do
+            (let src (read_file in-path))
+            (let compiled (form-source-compile-text src))
+            (write_file_text out-path compiled)))
+
+0

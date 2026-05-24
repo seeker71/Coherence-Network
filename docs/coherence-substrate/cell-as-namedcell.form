@@ -9,7 +9,7 @@
 # arm (form-engine.form @1.2.22.1 SAVE / @1.2.22.2 RESTORE /
 # @1.2.22.3 DISCARD).
 #
-# Source: experiments/local-llm-cell-v0/organ.py — Cell.__init__,
+# Source: seedbank/local-llm-cell-v0/organ.py — Cell.__init__,
 # Cell.perceive, Cell.inhabit, Cell.release_inhabit, Adapter forward.
 # Companion: docs/vision-kb/concepts/lc-one-kernel-many-tongues.md,
 # lc-recipes-as-binary-library.md.

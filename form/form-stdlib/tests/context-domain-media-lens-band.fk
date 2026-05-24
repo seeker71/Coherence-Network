@@ -1,0 +1,48 @@
+; context-domain-media-lens-band.fk - standard context properties across lenses.
+; Authored in form.action; source-compiler.fk lowers it above the kernel.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk
+
+section [form.action] {
+    def score_str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score_node(value, want, score) = if node_eq(value, want) then score else 0;
+    def score_bool(value, score) = if value then score else 0;
+
+    let anchor = "concept/count";
+
+    let natural_ar_binding = bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.adad", list("adad", "number-ar"));
+    let natural_ar_ctx = natural-symbol-context-rich("ar-EG", "ar-EG-u-nu-arab", "Arab", "EG", bmf-direction-rtl(), "egypt", bmf-register-formal(), bmf-environment-web(), "learner", bmf-lens-display(), bmf-lens-assertion(), list(natural_ar_binding));
+
+    let image_binding = bmf-symbol-binding(anchor, bmf-domain-image(), bmf-lens-metadata(), "image.count", list("count-viewbox"));
+    let image_ctx = image-symbol-context("svg", bmf-lens-metadata(), list(image_binding));
+
+    let audio_binding = bmf-symbol-binding(anchor, bmf-domain-audio(), bmf-lens-metadata(), "audio.count", list("count-audio"));
+    let audio_ctx = audio-symbol-context("flac", "flac", bmf-lens-metadata(), list(audio_binding));
+
+    let video_binding = bmf-symbol-binding(anchor, bmf-domain-video(), bmf-lens-metadata(), "video.count", list("count-video"));
+    let video_ctx = video-symbol-context("webm", "vp9,opus", bmf-lens-metadata(), list(video_binding));
+
+    let provenance_binding = bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-quote(), "natural.quote.count", list("count"));
+    let provenance_lang = bmf-language-properties(bmf-locale-en-us(), bmf-locale-en-us(), bmf-script-latn(), "US", bmf-direction-ltr(), bmf-calendar-gregory(), bmf-numbering-latn(), "America/New_York");
+    let provenance_domain = bmf-domain-properties(bmf-semantic-knowledge(), "open-source", bmf-register-plain(), bmf-environment-repo(), "maintainer", bmf-purpose-roundtrip(), "compiler");
+    let provenance_media = bmf-media-properties(bmf-media-text-plain(), bmf-charset-utf8(), "", bmf-container-text(), "", "", "");
+    let provenance_source = bmf-provenance-properties("repo", "form-runtime", "project", "2026-05-24", "standards-research");
+    let provenance_ctx = bmf-standard-symbol-context(bmf-domain-natural(), bmf-lens-quote(), list(provenance_binding), provenance_lang, provenance_domain, provenance_media, provenance_source);
+
+    let svg_source = list(image-src-keyword("svg"), image-src-int("320"), image-src-keyword("x"), image-src-int("240"), image-src-keyword("viewBox"), image-src-string("0 0 320 240"));
+    let svg_rt = bmf-roundtrip(image-bmf-find-rule(image-rule-svg-viewbox(), image-bmf-rules), svg_source);
+
+    let flac_source = list(audio-src-keyword("flac"), audio-src-int("96000"), audio-src-keyword("hz"), audio-src-int("2"), audio-src-keyword("channels"), audio-src-int("24"), audio-src-keyword("bits"), audio-src-keyword("metadata"), audio-src-string("album=field"));
+    let flac_rt = bmf-roundtrip(audio-bmf-find-rule("flac-metadata", audio-bmf-rules), flac_source);
+
+    let webm_source = list(video-src-keyword("webm"), video-src-int("1280"), video-src-keyword("x"), video-src-int("720"), video-src-keyword("fps"), video-src-int("60"), video-src-keyword("duration"), video-src-int("654321"), video-src-keyword("ms"));
+    let webm_rt = bmf-roundtrip(video-bmf-find-rule("webm-duration", video-bmf-rules), webm_source);
+
+    let natural_score = sum(list(score_str(bmf-context-language-tag(natural_ar_ctx), "ar-EG", 1), score_str(bmf-context-locale(natural_ar_ctx), "ar-EG-u-nu-arab", 2), score_str(bmf-context-script(natural_ar_ctx), "Arab", 3), score_str(bmf-context-region(natural_ar_ctx), "EG", 4), score_str(bmf-context-direction(natural_ar_ctx), bmf-direction-rtl(), 5), score_str(bmf-context-numbering-system(natural_ar_ctx), "", 6), score_str(bmf-context-semantic-domain(natural_ar_ctx), bmf-semantic-natural-language(), 7), score_str(bmf-context-culture(natural_ar_ctx), "egypt", 8), score_str(bmf-context-register(natural_ar_ctx), bmf-register-formal(), 9), score_str(bmf-context-environment(natural_ar_ctx), bmf-environment-web(), 10), score_str(bmf-context-audience(natural_ar_ctx), "learner", 11), score_node(bmf-context-purpose(natural_ar_ctx), bmf-lens-display(), 12), score_str(bmf-context-media-type(natural_ar_ctx), bmf-media-text-plain(), 13), score_str(bmf-context-charset(natural_ar_ctx), bmf-charset-utf8(), 14), score_str(bmf-anchor-resolve(natural_ar_ctx, "adad", ""), anchor, 15)));
+    let media_score = sum(list(score_str(bmf-context-media-type(image_ctx), bmf-media-image-svg(), 20), score_str(bmf-context-charset(image_ctx), bmf-charset-utf8(), 21), score_str(bmf-context-encoding(image_ctx), bmf-encoding-xml(), 22), score_str(bmf-context-container(image_ctx), "svg", 23), score_str(bmf-context-unit(image_ctx), bmf-unit-px(), 24), score_str(bmf-context-color-space(image_ctx), bmf-color-srgb(), 25), score_str(bmf-context-media-type(audio_ctx), "audio/flac", 30), score_str(bmf-context-codec(audio_ctx), "flac", 31), score_str(bmf-context-media-type(video_ctx), "video/webm", 40), score_str(bmf-context-codec(video_ctx), "vp9,opus", 41)));
+    let provenance_score = sum(list(score_str(bmf-context-calendar(provenance_ctx), bmf-calendar-gregory(), 50), score_str(bmf-context-numbering-system(provenance_ctx), bmf-numbering-latn(), 51), score_str(bmf-context-time-zone(provenance_ctx), "America/New_York", 52), score_str(bmf-context-source(provenance_ctx), "repo", 60), score_str(bmf-context-creator(provenance_ctx), "form-runtime", 61), score_str(bmf-context-license(provenance_ctx), "project", 62), score_str(bmf-context-created(provenance_ctx), "2026-05-24", 63), score_str(bmf-context-derived-from(provenance_ctx), "standards-research", 64)));
+    let roundtrip_score = sum(list(score_bool(bmf-roundtrip-node-eq?(svg_rt), 70), score_bool(bmf-roundtrip-node-eq?(flac_rt), 80), score_bool(bmf-roundtrip-node-eq?(webm_rt), 90)));
+    let width_score = sum(list(len(bmf-symbol-context-properties(natural_ar_ctx)), len(bmf-symbol-context-properties(image_ctx)), len(bmf-symbol-context-properties(audio_ctx)), len(bmf-symbol-context-properties(video_ctx)), len(bmf-symbol-context-properties(provenance_ctx))));
+
+    sum(list(natural_score, media_score, provenance_score, roundtrip_score, width_score));
+}

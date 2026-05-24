@@ -1,0 +1,117 @@
+; tests/bml-reference-compiler-runtime.fk - BML reference compiler bands
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn source-value (m name)
+        (bmf-collection-value (cell-undo (result-object m)) name))
+
+    (defn bml-kind-score (component expected bit)
+        (if (str_eq (comp-bml-kind component) expected) bit 0))
+
+    (let empty-list (empty))
+    (let props (list "public" "static"))
+    (let body (list "body"))
+
+    (let package-match
+        (apply-bml-compiler-rule "bml-package"
+            (list (bml-src-keyword "package") (bml-src-name "demo.core") (bml-src-op ";"))))
+    (let import-match
+        (apply-bml-compiler-rule "bml-import"
+            (list (bml-src-keyword "import") (bml-src-name "demo.lib") (bml-src-op ".*") (bml-src-op ";"))))
+    (let binary-match
+        (apply-bml-compiler-rule "bml-binary-type"
+            (list (bml-src-keyword "binary") (bml-src-name "Packet") (bml-src-list (list "id" "size")))))
+    (let class-match
+        (apply-bml-compiler-rule "bml-class"
+            (list (bml-src-keyword "class") (bml-src-name "Demo") (bml-src-list props)
+                  (bml-src-list (list "Application")) (bml-src-list body))))
+    (let interface-match
+        (apply-bml-compiler-rule "bml-interface"
+            (list (bml-src-keyword "interface") (bml-src-name "Runnable") (bml-src-list props)
+                  (bml-src-name "Base") (bml-src-list body))))
+    (let template-match
+        (apply-bml-compiler-rule "bml-template"
+            (list (bml-src-keyword "template") (bml-src-list (list "T"))
+                  (bml-src-name "class") (bml-src-list body))))
+    (let section-match
+        (apply-bml-compiler-rule "bml-section"
+            (list (bml-src-keyword "section") (bml-src-name "public")
+                  (bml-src-list props) (bml-src-list body))))
+    (let syntax-match
+        (apply-bml-compiler-rule "bml-syntax"
+            (list (bml-src-keyword "syntax") (bml-src-name "text")
+                  (bml-src-list (list "BMFRule")) (bml-src-list (list "BMFAttribute")))))
+    (let field-match
+        (apply-bml-compiler-rule "bml-field"
+            (list (bml-src-name "int") (bml-src-name "count") (bml-src-list props) (bml-src-op ";"))))
+    (let const-match
+        (apply-bml-compiler-rule "bml-const"
+            (list (bml-src-keyword "const") (bml-src-name "int") (bml-src-name "Answer")
+                  (bml-src-list props) (bml-src-op "=") (bml-src-int "42"))))
+    (let enum-match
+        (apply-bml-compiler-rule "bml-enum"
+            (list (bml-src-keyword "enum") (bml-src-name "Kind") (bml-src-list props)
+                  (bml-src-name "int") (bml-src-list (list "One" "Two")))))
+    (let method-match
+        (apply-bml-compiler-rule "bml-method"
+            (list (bml-src-name "int") (bml-src-name "Main")
+                  (bml-src-list props) (bml-src-list body))))
+    (let parameter-match
+        (apply-bml-compiler-rule "bml-parameter"
+            (list (bml-src-name "String") (bml-src-name "name") (bml-src-list props))))
+    (let property-match
+        (apply-bml-compiler-rule "bml-property"
+            (list (bml-src-prop "native") (bml-src-name "true"))))
+    (let statement-match
+        (apply-bml-compiler-rule "bml-statement"
+            (list (bml-src-keyword "return") (bml-src-name "Answer") (bml-src-list body))))
+    (let expression-match
+        (apply-bml-compiler-rule "bml-expression"
+            (list (bml-src-name "add") (bml-src-name "left") (bml-src-name "right"))))
+    (let asm-match
+        (apply-bml-compiler-rule "bml-asm"
+            (list (bml-src-keyword "asm") (bml-src-list (list "r0"))
+                  (bml-src-list (list "load")) (bml-src-list empty-list))))
+    (let main-match
+        (apply-bml-compiler-rule "bml-main-rule"
+            (list (bml-src-list (list (result-value package-match) (result-value class-match))))))
+    (let file-match
+        (apply-bml-compiler-rule "bml-file"
+            (list (bml-src-list (list (result-value package-match) (result-value import-match))))))
+
+    (let shape-code
+        (add (bml-kind-score (result-value package-match) "Package" 1)
+        (add (bml-kind-score (result-value import-match) "Import" 2)
+        (add (bml-kind-score (result-value binary-match) "BinaryType" 4)
+        (add (bml-kind-score (result-value class-match) "Class" 8)
+        (add (bml-kind-score (result-value interface-match) "Interface" 16)
+        (add (bml-kind-score (result-value template-match) "Template" 32)
+        (add (bml-kind-score (result-value section-match) "Section" 64)
+        (add (bml-kind-score (result-value syntax-match) "Syntax" 128)
+        (add (bml-kind-score (result-value field-match) "Field" 256)
+        (add (bml-kind-score (result-value const-match) "Const" 512)
+        (add (bml-kind-score (result-value enum-match) "Enum" 1024)
+        (add (bml-kind-score (result-value method-match) "Method" 2048)
+        (add (bml-kind-score (result-value parameter-match) "Parameter" 4096)
+        (add (bml-kind-score (result-value property-match) "Property" 8192)
+        (add (bml-kind-score (result-value statement-match) "Statement" 16384)
+        (add (bml-kind-score (result-value expression-match) "Expression" 32768)
+        (add (bml-kind-score (result-value asm-match) "Asm" 65536)
+        (add (bml-kind-score (result-value main-match) "MainRule" 131072)
+             (bml-kind-score (result-value file-match) "File" 262144))))))))))))))))))))
+
+    (let value-score
+        (add (bml-reference-rule-count 0)
+        (add (bml-compiler-rule-count 0)
+        (add (str_len (source-value package-match "name"))
+             (len (comp-bml-fields (result-value file-match)))))))
+
+    (add shape-code value-score)
+)

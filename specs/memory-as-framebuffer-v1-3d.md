@@ -2,19 +2,19 @@
 idea_id: memory-as-framebuffer
 status: draft
 source:
-  - file: experiments/memory-as-framebuffer-v0/src/scene3d.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/scene3d.rs
     symbols: [Scene3D, Camera, build_scene_from_framebuffer]
-  - file: experiments/memory-as-framebuffer-v0/src/lod.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/lod.rs
     symbols: [Lod, LodLevel, scale_factor, transition_at]
-  - file: experiments/memory-as-framebuffer-v0/src/navigate.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/navigate.rs
     symbols: [walk, fly, orbit, scale_zoom, frame_selection, follow_through_time]
-  - file: experiments/memory-as-framebuffer-v0/src/render3d.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/render3d.rs
     symbols: [render_scene, project_to_2d, software_rasterizer]
-  - file: experiments/memory-as-framebuffer-v0/src/preview.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/preview.rs
     symbols: [PreviewWindow — winit + softbuffer for live interactive playback]
-  - file: experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs
+  - file: seedbank/memory-as-framebuffer-v0/examples/walk_the_program.rs
     symbols: [interactive demo — walk through a running fizzbuzz at 5 LOD levels]
-  - file: experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs
+  - file: seedbank/memory-as-framebuffer-v0/tests/lod_scale_factor.rs
     symbols: [test_lod_uses_sqrt10_scale_factor, test_transitions_preserve_identity]
 requirements:
   - "Replace the post-process-only mp4 pipeline with a live interactive preview window (winit + softbuffer for portability) that renders the framebuffer state at any of 5 LOD levels (city, district, room, object, texture). The mp4 export remains available as a fixed-camera-path option."
@@ -29,34 +29,7 @@ done_when:
   - "Walking up to a cell (shift+scroll-in or W key) changes LOD smoothly; the same cell remains identifiable across all 5 LOD levels (substrate-hash continuity, even before substrate-render-fabric lands — for v1 just the CellHandle is preserved)."
   - "Pressing H from any LOD/position returns the camera to the canonical home view in <1 second."
   - "tests/lod_scale_factor.rs passes: scale ratios match √10 ± 0.01."
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/scene3d.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "Scene3D")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "Camera")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/scene3d.rs", "build_scene_from_framebuffer")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/lod.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "Lod")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "LodLevel")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "scale_factor")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lod.rs", "transition_at")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/navigate.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "walk")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "fly")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "orbit")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "scale_zoom")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "frame_selection")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/navigate.rs", "follow_through_time")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render3d.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "render_scene")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "project_to_2d")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render3d.rs", "software_rasterizer")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/preview.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/preview.rs", "PreviewWindow")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs", "interactive")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs", "test_lod_uses_sqrt10_scale_factor")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs", "test_transitions_preserve_identity")'
-test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release lod"
+test: "cd seedbank/memory-as-framebuffer-v0 && cargo test --release lod"
 constraints:
   - "Builds on memory-as-framebuffer-v0 (and v1-pointers if pointer cells are present). Existing 2D mp4 pipeline remains as fallback when no display is available."
   - "Software-rendered (softbuffer + a small custom rasterizer or tiny_skia). No GPU/wgpu in this spec — keeps deps small and ensures it runs headless on CI for the lod-scale-factor test."
@@ -91,27 +64,27 @@ Replace the post-process mp4-only pipeline with a live, walkable 3D scene where 
 
 ## Files to Create/Modify
 
-- `experiments/memory-as-framebuffer-v0/src/scene3d.rs`
-- `experiments/memory-as-framebuffer-v0/src/lod.rs`
-- `experiments/memory-as-framebuffer-v0/src/navigate.rs`
-- `experiments/memory-as-framebuffer-v0/src/render3d.rs`
-- `experiments/memory-as-framebuffer-v0/src/preview.rs`
-- `experiments/memory-as-framebuffer-v0/src/lib.rs` — re-exports
-- `experiments/memory-as-framebuffer-v0/Cargo.toml` — add winit, softbuffer, glam (or nalgebra), tiny_skia (or similar) dependencies
-- `experiments/memory-as-framebuffer-v0/examples/walk_the_program.rs`
-- `experiments/memory-as-framebuffer-v0/tests/lod_scale_factor.rs`
-- `experiments/memory-as-framebuffer-v0/README.md` — add navigation guide and √10 LOD note
+- `seedbank/memory-as-framebuffer-v0/src/scene3d.rs`
+- `seedbank/memory-as-framebuffer-v0/src/lod.rs`
+- `seedbank/memory-as-framebuffer-v0/src/navigate.rs`
+- `seedbank/memory-as-framebuffer-v0/src/render3d.rs`
+- `seedbank/memory-as-framebuffer-v0/src/preview.rs`
+- `seedbank/memory-as-framebuffer-v0/src/lib.rs` — re-exports
+- `seedbank/memory-as-framebuffer-v0/Cargo.toml` — add winit, softbuffer, glam (or nalgebra), tiny_skia (or similar) dependencies
+- `seedbank/memory-as-framebuffer-v0/examples/walk_the_program.rs`
+- `seedbank/memory-as-framebuffer-v0/tests/lod_scale_factor.rs`
+- `seedbank/memory-as-framebuffer-v0/README.md` — add navigation guide and √10 LOD note
 
 ## Acceptance Tests
 
-- `cd experiments/memory-as-framebuffer-v0 && cargo test --release lod` passes — scale-factor tests headless.
+- `cd seedbank/memory-as-framebuffer-v0 && cargo test --release lod` passes — scale-factor tests headless.
 - Manual validation: `cargo run --release --example walk_the_program` opens a window showing fizzbuzz live; pressing 1-5 cycles LOD; walk/fly/orbit work; F frames selection; H returns home.
 - Optional manual: `MFB_RECORD=walk.mp4 cargo run --release --example walk_the_program`, exit window, confirm `walk.mp4` is watchable.
 
 ## Verification
 
 ```bash
-cd experiments/memory-as-framebuffer-v0
+cd seedbank/memory-as-framebuffer-v0
 cargo build --release
 cargo test --release lod
 # Headed validation (requires display):

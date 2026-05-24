@@ -1,0 +1,7 @@
+; zero-arg-functions.fk - direct reader/runtime proof for zero-arg functions.
+
+section [form.action] {
+    def zero() = 7;
+    def nested() = add(zero(), 5);
+    add(zero(), nested());
+}

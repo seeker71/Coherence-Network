@@ -2,18 +2,16 @@
 
 Three sibling kernels in three host languages — **Rust**, **Go**, **TypeScript** — that execute the Form substrate. Byte-identical NodeIDs across all three. Each one a small, honest, content-addressed walker that turns recipe trees into values, with Blueprint attribution on every native call and a trace surface that the body can read in real time.
 
-The kernels are not experiments. They are the execution layer the rest of the network composes on.
+The kernels are the execution layer the rest of the network composes on.
 
-## Where they live (today)
+## Where they live
 
 | Kernel | Source | Built with | Entry binary |
 |---|---|---|---|
-| Rust | [`experiments/form-kernel-rust/`](../experiments/form-kernel-rust/) | `cargo build --release` | `target/release/form-kernel-rust` |
-| Go | [`experiments/form-kernel-go/`](../experiments/form-kernel-go/) | `go build -o bin-go .` | `bin-go` |
-| TypeScript | [`experiments/form-kernel-ts/`](../experiments/form-kernel-ts/) | `npm install` | `npm run kernel` (via `tsx`) |
-| Memory-as-Framebuffer | [`experiments/memory-as-framebuffer-v0/`](../experiments/memory-as-framebuffer-v0/) | `cargo build` | embedded in the visualizer |
-
-> The source still lives under `experiments/` until a coordinated repo move lands. The historical name reflects how the work began, not its current weight. The kernels are core; the directory naming is in transit.
+| Rust | [`form/form-kernel-rust/`](../form/form-kernel-rust/) | `cargo build --release` | `target/release/form-kernel-rust` |
+| Go | [`form/form-kernel-go/`](../form/form-kernel-go/) | `go build -o bin-go .` | `bin-go` |
+| TypeScript | [`form/form-kernel-ts/`](../form/form-kernel-ts/) | `npm install` | `npm run kernel` (via `tsx`) |
+The `form/` tree is the stable runtime address.
 
 ## What makes them different
 
@@ -23,7 +21,7 @@ Most language runtimes carry execution state in opaque host-language objects. Fr
 
 #### 1. Cross-kernel structural identity
 
-Every kernel agrees on NodeIDs. `(add 1 2)` interns to the same `@1.2.12.N` Blueprint in Rust, Go, and TypeScript. Sibling parity is verified continuously by [`experiments/form-kernel-validate.sh`](../experiments/form-kernel-validate.sh). When all three kernels return identical values for every workload in the suite, they are saying the same thing structurally — not just behaviorally.
+Every kernel agrees on NodeIDs. `(add 1 2)` interns to the same `@1.2.12.N` Blueprint in Rust, Go, and TypeScript. Sibling parity is verified continuously by [`form/validate.sh`](../form/validate.sh). When all three kernels return identical values for every workload in the suite, they are saying the same thing structurally — not just behaviorally.
 
 This is unusual. Most polyglot runtimes share serialization formats; these share *identity*.
 
@@ -73,22 +71,23 @@ This is what the kernels are for: **execution that is also a body the visualizer
 
 ```bash
 # Rust
-cd experiments/form-kernel-rust && cargo build --release
+cd form/form-kernel-rust && cargo build --release
 ./target/release/form-kernel-rust --expr '(add 1 2)'                # → 3
 ./target/release/form-kernel-rust trace --expr '(add 1 2)'          # JSON with arm counts
 
 # Go
-cd experiments/form-kernel-go && go build -o bin-go .
+cd ../form-kernel-go && go build -o bin-go .
 ./bin-go --expr '(add 1 2)'                                          # → 3
 ./bin-go trace --expr '(add 1 2)'                                    # same JSON shape
 
 # TypeScript
-cd experiments/form-kernel-ts && npm install
+cd ../form-kernel-ts && npm install
 npm run kernel -- --expr '(add 1 2)'                                # → 3
 npm run kernel -- trace --expr '(add 1 2)'                          # same JSON shape
 
 # Sibling parity check (all three on every sample)
-cd experiments && ./form-kernel-validate.sh
+cd ..
+./validate.sh
 ```
 
 ## Performance
@@ -120,4 +119,4 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 
 ## Roadmap
 
-The roadmap in [`experiments/form-kernel-roadmap.md`](../experiments/form-kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.
+The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.

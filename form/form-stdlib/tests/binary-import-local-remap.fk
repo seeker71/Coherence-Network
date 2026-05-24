@@ -1,0 +1,23 @@
+; binary-import-local-remap.fk - file-local node ids remap on binary import.
+;
+; NUMS imports rebuild node identity in the target module instead of trusting
+; source-file-local instance numbers. This proves the same rule for .fkb
+; import: a raw pkg=0 leaf maps consistently inside one imported file and
+; maps to a different target node when the same bytes are imported again.
+
+section [form.action] {
+    let holder-category = make_nodeid(1, 2, 99, 2501);
+    let file-local-ref = make_nodeid(0, 3, 99, 1);
+    let holder = intern_node(holder-category, list(file-local-ref, file-local-ref));
+    let bytes = serialize-recipe(holder);
+
+    let imported-a = deserialize-recipe(bytes);
+    let imported-b = deserialize-recipe(bytes);
+    let a-children = node_children(imported-a);
+    let b-children = node_children(imported-b);
+    let a0 = nth(a-children, 0);
+    let a1 = nth(a-children, 1);
+    let b0 = nth(b-children, 0);
+
+    sum(list(if node_eq(a0, a1) then 100 else 0, if node_eq(a0, b0) then 0 else 200, if node_eq(node_category(imported-a), holder-category) then 300 else 0, if node_eq(node_category(imported-b), holder-category) then 400 else 0));
+}

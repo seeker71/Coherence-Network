@@ -1,0 +1,171 @@
+; generic-reverse-emitter-band.fk - one binary node through target lenses
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/natural-bmf.fk
+
+(do
+    (let GENERIC-LENS-COUNT (make_nodeid 1 2 101 9))
+
+    (defn lens-count-recipe (value)
+        (intern_node GENERIC-LENS-COUNT
+            (list (intern_trivial_int value))))
+
+    (defn lens-count-value (node)
+        (node_value (head (node_children node))))
+
+    (defn lens-count-parse-int (source pos ctx)
+        (list (bmf-anchor-resolve ctx (bmf-object-value (nth source 0)) "")
+              (lens-count-recipe (str_to_int (bmf-object-value (nth source pos))))))
+
+    (defn emit-lens-python (node anchor ctx)
+        (list (py-name (bmf-symbol-name ctx anchor anchor))
+              (py-op "=")
+              (py-int (int_to_str (lens-count-value node)))))
+
+    (defn parse-lens-python (source ctx)
+        (lens-count-parse-int source 2 ctx))
+
+    (defn emit-lens-go (node anchor ctx)
+        (list (go-src-keyword "var")
+              (go-src-name (bmf-symbol-name ctx anchor anchor))
+              (go-src-op "=")
+              (go-src-int (int_to_str (lens-count-value node)))))
+
+    (defn parse-lens-go (source ctx)
+        (list (bmf-anchor-resolve ctx (bmf-object-value (nth source 1)) "")
+              (lens-count-recipe (str_to_int (bmf-object-value (nth source 3))))))
+
+    (defn emit-lens-typescript (node anchor ctx)
+        (list (ts-src-name (bmf-symbol-name ctx anchor anchor))
+              (ts-src-op "=")
+              (ts-src-int (int_to_str (lens-count-value node)))
+              (ts-src-op ";")))
+
+    (defn parse-lens-typescript (source ctx)
+        (lens-count-parse-int source 2 ctx))
+
+    (defn emit-lens-image (node anchor ctx)
+        (list (image-src-keyword "svg")
+              (image-src-int (int_to_str (lens-count-value node)))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (mul (lens-count-value node) 2)))
+              (image-src-keyword "viewBox")
+              (image-src-string (bmf-symbol-name ctx anchor anchor))))
+
+    (defn parse-lens-image (source ctx)
+        (list (bmf-anchor-resolve ctx (bmf-object-value (nth source 5)) "")
+              (lens-count-recipe (str_to_int (bmf-object-value (nth source 1))))))
+
+    (defn emit-lens-natural (node anchor ctx)
+        (natural-fact-source-for-context
+            (bmf-symbol-name ctx anchor anchor)
+            (lens-count-value node)
+            ctx))
+
+    (defn parse-lens-natural (source ctx)
+        (do
+            (let node
+                (fsc-bmf-lower-node
+                    (natural-fact-rule-for-context ctx)
+                    source))
+            (let kids (node_children node))
+            (let subject (node_value (nth kids 0)))
+            (list (bmf-anchor-resolve ctx subject subject)
+                  (lens-count-recipe (node_value (nth kids 1))))))
+
+    (defn lens-score (rt node anchor)
+        (add (if (str_eq (bmf-lens-roundtrip-anchor rt) anchor) 1 0)
+             (if (node_eq (bmf-lens-roundtrip-node rt) node) 1 0)))
+
+    (let node (lens-count-recipe 13))
+    (let anchor "binary/lens/count")
+
+    (let python-ctx
+        (bmf-symbol-context "python" "assign"
+            (list (bmf-symbol-binding anchor "python" "assign"
+                                      "py.count" (list "count_py" "py_count")))))
+    (let go-ctx
+        (bmf-symbol-context "go" "var"
+            (list (bmf-symbol-binding anchor "go" "var"
+                                      "go.count" (list "countGo")))))
+    (let typescript-ctx
+        (bmf-symbol-context "typescript" "assign"
+            (list (bmf-symbol-binding anchor "typescript" "assign"
+                                      "ts.count" (list "countTs")))))
+    (let image-ctx
+        (bmf-symbol-context "image" "svg-meta"
+            (list (bmf-symbol-binding anchor "image" "svg-meta"
+                                      "image.count" (list "count-viewbox")))))
+    (let natural-ctx
+        (natural-symbol-context "en-US" "plain" "general" "assertion"
+            (list (bmf-symbol-binding anchor "natural" "assertion"
+                                      "natural.count" (list "count" "number")))))
+    (let natural-id-ctx
+        (natural-symbol-context "id-ID" "plain" "general" "assertion"
+            (list (bmf-symbol-binding anchor "natural" "assertion"
+                                      "natural.jumlah" (list "jumlah" "bilangan")))))
+
+    (let targets
+        (list
+            (bmf-reverse-lens "python" "assign" emit-lens-python parse-lens-python
+                              (python-bmf-find-rule "assign-int" python-bmf-rules))
+            (bmf-reverse-lens "go" "var" emit-lens-go parse-lens-go
+                              (go-bmf-find-rule "var-int" go-bmf-rules))
+            (bmf-reverse-lens "typescript" "assign" emit-lens-typescript parse-lens-typescript
+                              (typescript-bmf-find-rule "assign-int" typescript-bmf-rules))
+            (bmf-reverse-lens "image" "svg-meta" emit-lens-image parse-lens-image
+                              (image-bmf-find-rule "svg-viewbox" image-bmf-rules))
+            (bmf-reverse-lens "natural" "assertion" emit-lens-natural parse-lens-natural
+                              (natural-bmf-find-rule "fact-the-is" natural-bmf-rules))))
+
+    (let py-rt (bmf-lens-roundtrip targets "python" "assign" node anchor python-ctx (empty)))
+    (let go-rt (bmf-lens-roundtrip targets "go" "var" node anchor go-ctx (empty)))
+    (let ts-rt (bmf-lens-roundtrip targets "typescript" "assign" node anchor typescript-ctx (empty)))
+    (let image-rt (bmf-lens-roundtrip targets "image" "svg-meta" node anchor image-ctx (empty)))
+    (let natural-rt (bmf-lens-roundtrip targets "natural" "assertion" node anchor natural-ctx (empty)))
+    (let natural-id-rt (bmf-lens-roundtrip targets "natural" "assertion" node anchor natural-id-ctx (empty)))
+
+    (let py-bmf-rt
+        (bmf-roundtrip
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "python" "assign" (empty)))
+            (bmf-lens-roundtrip-source py-rt)))
+    (let go-bmf-rt
+        (bmf-roundtrip
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "go" "var" (empty)))
+            (bmf-lens-roundtrip-source go-rt)))
+    (let ts-bmf-rt
+        (bmf-roundtrip
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "typescript" "assign" (empty)))
+            (bmf-lens-roundtrip-source ts-rt)))
+    (let image-bmf-rt
+        (bmf-roundtrip
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "image" "svg-meta" (empty)))
+            (bmf-lens-roundtrip-source image-rt)))
+    (let natural-bmf-rt
+        (bmf-roundtrip
+            (natural-fact-rule-for-context natural-ctx)
+            (bmf-lens-roundtrip-source natural-rt)))
+    (let natural-id-bmf-rt
+        (bmf-roundtrip
+            (natural-fact-rule-for-context natural-id-ctx)
+            (bmf-lens-roundtrip-source natural-id-rt)))
+
+    (sum
+        (list
+            (lens-score py-rt node anchor)
+            (lens-score go-rt node anchor)
+            (lens-score ts-rt node anchor)
+            (lens-score image-rt node anchor)
+            (lens-score natural-rt node anchor)
+            (lens-score natural-id-rt node anchor)
+            (if (bmf-roundtrip-node-eq? py-bmf-rt) 10 0)
+            (if (bmf-roundtrip-node-eq? go-bmf-rt) 20 0)
+            (if (bmf-roundtrip-node-eq? ts-bmf-rt) 30 0)
+            (if (bmf-roundtrip-node-eq? image-bmf-rt) 40 0)
+            (if (bmf-roundtrip-node-eq? natural-bmf-rt) 50 0)
+            (if (bmf-roundtrip-node-eq? natural-id-bmf-rt) 60 0)
+            (len (bmf-lens-roundtrip-source py-rt))
+            (len (bmf-lens-roundtrip-source go-rt))
+            (len (bmf-lens-roundtrip-source ts-rt))
+            (len (bmf-lens-roundtrip-source image-rt))
+            (len (bmf-lens-roundtrip-source natural-rt))
+            (len (bmf-lens-roundtrip-source natural-id-rt)))))

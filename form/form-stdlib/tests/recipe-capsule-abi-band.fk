@@ -1,0 +1,76 @@
+; recipe-capsule-abi-band.fk - generic recipe capsule discovery proof.
+; Contracts, costs, proofs, and specializers attach beside executable
+; capabilities and are selected without kernel vocabulary.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let RECIPE_CAPSULE_COUNT = make_nodeid(8, 45, 6, 1);
+
+    def rc_count(value) = intern_node(RECIPE_CAPSULE_COUNT, list(intern_trivial_int(value)));
+    def rc_count_value(node) = node_value(head(node_children(node)));
+    def src(value) = bmf-object("recipe-capsule-source", value, empty, empty);
+    def src_value(source, index) = bmf-object-value(nth(source, index));
+    def node_score(value, want, score) = if node_eq(value, want) then score else 0;
+    def int_score(value, want, score) = if eq(value, want) then score else 0;
+
+    let root = form-capsule-root(81, 1, 9, 1);
+    let kind_role = form-dynamic-kind(root, 1);
+    let kind_surface = form-dynamic-kind(root, 2);
+    let kind_capability = form-dynamic-kind(root, 3);
+    let kind_contract = form-dynamic-kind(root, 4);
+    let kind_proof = form-dynamic-kind(root, 5);
+    let kind_specializer = form-dynamic-kind(root, 6);
+
+    let surface_form = form-dynamic-ref(root, kind_surface, 1);
+    let surface_text = form-dynamic-ref(root, kind_surface, 2);
+    let capability_emit = form-dynamic-ref(root, kind_capability, 1);
+    let effect_pure = form-dynamic-ref(root, kind_contract, 1);
+    let effect_io = form-dynamic-ref(root, kind_contract, 2);
+    let reversible_yes = form-dynamic-ref(root, kind_contract, 3);
+    let reversible_no = form-dynamic-ref(root, kind_contract, 4);
+    let lossless_yes = form-dynamic-ref(root, kind_contract, 5);
+    let deterministic_yes = form-dynamic-ref(root, kind_contract, 6);
+    let proof_roundtrip = form-dynamic-ref(root, kind_proof, 1);
+    let specializer_inline = form-dynamic-ref(root, kind_specializer, 1);
+    let role_language = form-dynamic-ref(root, kind_role, 1);
+
+    let anchor = "recipe/count";
+    let value = rc_count(34);
+    let ctx = bmf-symbol-context(role_language, role_language, list(bmf-symbol-binding(anchor, role_language, role_language, "recipe.count", list("count"))));
+
+    def emit_count(node, anchor, ctx) = list(src("count"), src(int_to_str(rc_count_value(node))), src(anchor));
+    def parse_count(source, ctx) = list(src_value(source, 2), rc_count(str_to_int(src_value(source, 1))));
+    def specialize_identity(capability) = capability;
+    def proof_ok(capability) = 1;
+
+    let expensive = form-adapter-capability(capability_emit, surface_form, surface_text, emit_count, parse_count, empty, empty);
+    let cheap = form-adapter-capability(capability_emit, surface_form, surface_text, emit_count, parse_count, empty, empty);
+    let expensive_contract = form-capability-contract(expensive, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let cheap_contract = form-capability-contract(cheap, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let io_contract = form-capability-contract(cheap, effect_io, reversible_no, lossless_yes, deterministic_yes, empty);
+    let expensive_cost = form-capability-cost(expensive, 1000, 300, 80, 40, 10);
+    let cheap_cost = form-capability-cost(cheap, 100, 30, 8, 4, 90);
+    let cheap_proof = form-capability-proof(cheap, proof_roundtrip, proof_ok, 1);
+    let cheap_specializer = form-capability-specializer(cheap, specializer_inline, specialize_identity, empty);
+
+    let capsule = form-recipe-capsule(root, list(surface_form, surface_text), list(expensive, cheap), list(expensive_contract, cheap_contract, io_contract), list(cheap_proof), list(expensive_cost, cheap_cost), list(cheap_specializer), empty);
+    let registry = form-recipe-registry(list(capsule));
+    let selected = form-recipe-registry-find-capability(registry, capability_emit, surface_form, surface_text, ctx, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let rejected = form-recipe-registry-find-capability(registry, capability_emit, surface_form, surface_text, ctx, effect_io, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let selected_contract = form-capability-contract-for(form-recipe-registry-contracts(registry), selected, empty);
+    let selected_cost = form-capability-cost-for(form-recipe-registry-costs(registry), selected, empty);
+    let selected_proof = form-capability-proof-for(form-recipe-registry-proofs(registry), selected, proof_roundtrip, empty);
+    let selected_specializer = form-capability-specializer-for(form-recipe-registry-specializers(registry), selected, specializer_inline, ctx, empty);
+    let specialize = form-capability-specializer-recipe(selected_specializer);
+    let specialized = specialize(selected);
+    let plan = form-recipe-registry-plan-flex(registry, surface_form, surface_text, ctx, 2, empty);
+    let result = form-adapter-plan-run(plan, value, anchor, ctx);
+
+    let registry_score = sum(list(int_score(len(form-recipe-registry-capabilities(registry)), 2, 100), int_score(len(form-recipe-registry-contracts(registry)), 3, 200), int_score(len(form-recipe-registry-costs(registry)), 2, 300), int_score(len(form-recipe-registry-proofs(registry)), 1, 400), int_score(len(form-recipe-registry-specializers(registry)), 1, 500)));
+    let discovery_score = sum(list(node_score(form-adapter-capability-node(selected), form-adapter-capability-node(cheap), 600), if nil?(rejected) then 700 else 0, node_score(form-capability-contract-effect(selected_contract), effect_pure, 800), int_score(form-capability-cost-score(selected_cost), 90, 900)));
+    let proof_score = sum(list(int_score(form-capability-proof-expected(selected_proof), 1, 1000), int_score(proof_ok(selected), 1, 1100), node_score(form-adapter-capability-node(specialized), form-adapter-capability-node(cheap), 1200)));
+    let run_score = sum(list(int_score(len(form-adapter-plan-capabilities(plan)), 1, 1300), node_score(form-adapter-plan-result-value(result), value, 1400), int_score(rc_count_value(form-adapter-plan-result-value(result)), 34, 1500)));
+
+    sum(list(registry_score, discovery_score, proof_score, run_score));
+}

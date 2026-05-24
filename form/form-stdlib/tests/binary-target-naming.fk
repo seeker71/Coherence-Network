@@ -1,0 +1,76 @@
+; binary-target-naming.fk - binary objects emit through sidecar symbol lenses
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk
+
+(do
+    (let UNIVERSAL-LOCAL-INT (make_nodeid 1 2 101 1))
+
+    (defn local-int-recipe (value)
+        (intern_node UNIVERSAL-LOCAL-INT
+            (list (intern_trivial_int value))))
+
+    (defn emit-var-node-as-go (node anchor ctx)
+        (do
+            (let kids (node_children node))
+            (let name (bmf-symbol-name ctx anchor anchor))
+            (list (go-src-keyword "var")
+                  (go-src-name name)
+                  (go-src-op "=")
+                  (go-src-int (int_to_str (node_value (head kids)))))))
+
+    (defn emit-var-node-as-python (node anchor ctx)
+        (do
+            (let kids (node_children node))
+            (let name (bmf-symbol-name ctx anchor anchor))
+            (list (py-name name)
+                  (py-op "=")
+                  (py-int (int_to_str (node_value (head kids)))))))
+
+    (defn parse-go-var-source (source ctx)
+        (do
+            (let name (bmf-object-value (nth source 1)))
+            (let value (str_to_int (bmf-object-value (nth source 3))))
+            (let anchor (bmf-anchor-resolve ctx name name))
+            (list anchor (local-int-recipe value))))
+
+    (defn parse-python-assign-source (source ctx)
+        (do
+            (let name (bmf-object-value (nth source 0)))
+            (let value (str_to_int (bmf-object-value (nth source 2))))
+            (let anchor (bmf-anchor-resolve ctx name name))
+            (list anchor (local-int-recipe value))))
+
+    (let recipe (local-int-recipe 7))
+    (let anchor "body/local/0")
+    (let global-symbol
+        (bmf-global-symbol-cell anchor "go" "body" "local:0"
+            (list "count" "running_total")
+            (empty)))
+    (let go-body
+        (bmf-symbol-context "go" "body"
+            (list (bmf-symbol-cell-binding global-symbol))))
+    (let go-scratch
+        (bmf-symbol-context "go" "scratch"
+            (list (bmf-symbol-binding anchor "go" "scratch" "tmp:0" (list "n")))))
+    (let python-view
+        (bmf-symbol-context "python" "teaching"
+            (list (bmf-symbol-binding anchor "python" "teaching" "lesson.total" (list "value")))))
+    (let keep-go
+        (emit-var-node-as-go recipe anchor go-body))
+    (let fresh-go
+        (emit-var-node-as-go recipe anchor go-scratch))
+    (let fresh-python
+        (emit-var-node-as-python recipe anchor python-view))
+    (let go-roundtrip
+        (parse-go-var-source fresh-go go-scratch))
+    (let python-roundtrip
+        (parse-python-assign-source fresh-python python-view))
+
+    (add (str_len (bmf-object-value (nth keep-go 1)))
+    (add (str_len (bmf-object-value (nth fresh-go 1)))
+    (add (str_len (bmf-object-value (nth fresh-python 0)))
+    (add (str_len (bmf-symbol-value go-body anchor ""))
+    (add (if (str_eq anchor (nth go-roundtrip 0)) 1 0)
+    (add (if (node_eq recipe (nth go-roundtrip 1)) 1 0)
+    (add (if (str_eq anchor (nth python-roundtrip 0)) 1 0)
+         (if (node_eq recipe (nth python-roundtrip 1)) 1 0)))))))))

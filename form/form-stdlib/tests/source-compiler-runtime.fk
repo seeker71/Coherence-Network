@@ -1,0 +1,13 @@
+; tests/source-compiler-runtime.fk - source sections compile inside Form runtime
+;
+; preludes: form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let quote = "\"";
+    let rule-source = str_concat("[bml.bmf] {\n      field ::= $type:name $name:name ", str_concat(quote, str_concat(";", str_concat(quote, " => bml-emit-field;\n    }\n"))));
+    let sample = str_concat("section ", rule-source);
+    let compiled = form-source-compile-text(sample);
+    let rule-score = add(if fsc-contains?(compiled, "bml-bmf-rules") then 10 else 0, if fsc-contains?(compiled, "form-bmf-second") then 20 else 0);
+    let object-score = add(if fsc-contains?(compiled, "bml-name") then 30 else 0, if fsc-contains?(compiled, "bmf-identity-inverse") then 40 else 0);
+    add(rule-score, object-score);
+}

@@ -1,0 +1,40 @@
+; bmf-source-scanner-rule-band.fk - source cursor emits BMF objects.
+;
+; This proof does not slice a source line into a grammar result directly.
+; A Form-owned cursor emits source objects one at a time, and completed
+; BMF object rules reduce those objects into Form recipe nodes.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    def next(result) = fsc-action-scan-next(fsc-scan-result-cursor(result));
+    def obj(result) = fsc-scan-result-object(result);
+    def as_expr(source_object) = form-action-bmf-value("ident", list(source_object));
+    def score_str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score_int(value, want, score) = if eq(value, want) then score else 0;
+    def first_span(source_object) = head(bmf-object-source-span(source_object));
+
+    let source = "if alpha\n  then beta else gamma";
+    let r0 = fsc-action-scan-next(fsc-source-cursor(source, 0, 1, 0));
+    let r1 = next(r0);
+    let r2 = next(r1);
+    let r3 = next(r2);
+    let r4 = next(r3);
+    let r5 = next(r4);
+    let kw_if = obj(r0);
+    let alpha_name = obj(r1);
+    let kw_then = obj(r2);
+    let beta_name = obj(r3);
+    let kw_else = obj(r4);
+    let gamma_name = obj(r5);
+    let alpha_expr = as_expr(alpha_name);
+    let beta_expr = as_expr(beta_name);
+    let gamma_expr = as_expr(gamma_name);
+    let if_match = apply-form-action-bmf-rule("if", list(kw_if, fsc-action-src-expr(alpha_expr), kw_then, fsc-action-src-expr(beta_expr), kw_else, fsc-action-src-expr(gamma_expr)));
+    let if_object = cap-get(match-caps(if_match), "result");
+    let if_node = bmf-object-value(if_object);
+    let if_span = first_span(kw_if);
+    let then_span = first_span(kw_then);
+
+    sum(list(score_str(bmf-object-kind(kw_if), "form-action-keyword", 100), score_str(bmf-object-value(kw_if), "if", 200), score_str(bmf-object-value(alpha_name), "alpha", 300), score_str(bmf-object-value(kw_then), "then", 400), score_int(fsc-repo-text-line-number(then_span), 2, 500), score_int(fsc-repo-text-line-start(if_span), 0, 600), score_int(fsc-repo-text-line-length(if_span), 2, 700), if match?(if_match) then 800 else 0, score_int(len(node_children(if_node)), 3, 900)));
+}

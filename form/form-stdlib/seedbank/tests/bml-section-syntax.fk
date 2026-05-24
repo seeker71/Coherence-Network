@@ -1,0 +1,23 @@
+; tests/bml-section-syntax.fk - inline BML sections become Form objects
+;
+; preludes: form-stdlib/engine.fk
+
+(do
+    (let sample
+        section [bml] {
+            package Form.memory;
+
+            class Rule [public] {
+                section [public] {
+                    void Match( Context hContext ) {
+                        hContext.PushResult( self );
+                    }
+                }
+            }
+        })
+
+    (let bml-object (form-section-object sample))
+    (add (str_len (form-section-dialect sample))
+    (add (len (bml-section-items bml-object))
+    (add (if (form-section? sample) 1 0)
+         (if (bml-section? bml-object) 1 0)))))

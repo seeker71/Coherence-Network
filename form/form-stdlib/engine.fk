@@ -1,0 +1,1995 @@
+; engine.fk - reversible BMF object runtime
+;
+; This engine operates on BMF objects, not host parser records. A sensing
+; layer may produce source objects; grammar rules match those objects and
+; reduce completed matches into reversible Form objects.
+
+(do
+    ;; --- capture environment -----------------------------------------
+
+    (defn cap-empty (_x) (empty))
+    (defn cap-pair (name value) (list name value))
+    (defn cap-name (p) (head p))
+    (defn cap-value (p) (head (tail p)))
+
+    (defn cap-get (caps name)
+        (if (nil? caps) (empty)
+            (if (str_eq (cap-name (head caps)) name)
+                (cap-value (head caps))
+                (cap-get (tail caps) name))))
+
+    (defn cap-set (caps name value)
+        (cons (cap-pair name value) caps))
+
+    (defn cap-merge (a b)
+        (if (nil? b) a
+            (cap-merge (cons (head b) a) (tail b))))
+
+    ;; --- match result -------------------------------------------------
+
+    (defn mk-match (caps rest) (list "match" caps rest))
+    (defn mk-fail (reason) (list "fail" reason))
+
+    (defn match? (r) (str_eq (head r) "match"))
+    (defn fail? (r) (str_eq (head r) "fail"))
+
+    (defn match-caps (r) (head (tail r)))
+    (defn match-rest (r) (head (tail (tail r))))
+    (defn fail-reason (r) (head (tail r)))
+
+    ;; --- BMF objects --------------------------------------------------
+
+    (defn bmf-match-source (captures span)
+        (list "bmf-match-source" captures span))
+
+    (defn bmf-match-source? (source)
+        (and (gt (len source) 0)
+             (str_eq (head source) "bmf-match-source")))
+
+    (defn bmf-match-source-captures (source) (nth source 1))
+    (defn bmf-match-source-span (source) (nth source 2))
+
+    (defn bmf-object (kind value source inverse)
+        (cell kind value source inverse))
+
+    (defn bmf-object? (x)
+        (cell? x))
+
+    (defn bmf-object-kind (o) (cell-kind o))
+    (defn bmf-object-value (o) (cell-value o))
+    (defn bmf-object-source (o)
+        (do
+            (let source (cell-origin o))
+            (if (bmf-match-source? source)
+                (bmf-match-source-captures source)
+                source)))
+
+    (defn bmf-object-source-span (o)
+        (do
+            (let source (cell-origin o))
+            (if (bmf-match-source? source)
+                (bmf-match-source-span source)
+                (bmf-collection-items (bmf-object-source o)))))
+    (defn bmf-object-inverse (o) (cell-inverse o))
+
+    ;; Symbol lenses live beside binary Form objects. A binary object is not
+    ;; named by its payload; local and global contexts bind anchors to the
+    ;; symbols/names useful for one domain, point of view, or target language.
+    (defn bmf-symbol-binding (anchor domain lens symbol names)
+        (list "bmf-symbol-binding" anchor domain lens symbol names))
+
+    (defn bmf-symbol-binding-anchor (binding) (nth binding 1))
+    (defn bmf-symbol-binding-domain (binding) (nth binding 2))
+    (defn bmf-symbol-binding-lens (binding) (nth binding 3))
+    (defn bmf-symbol-binding-symbol (binding) (nth binding 4))
+    (defn bmf-symbol-binding-names (binding) (nth binding 5))
+    (defn bmf-symbol-binding-name (binding) (head (bmf-symbol-binding-names binding)))
+
+    (defn bmf-symbol-cell-undo (symbol-cell)
+        (cell-origin symbol-cell))
+
+    (defn bmf-global-symbol-cell (anchor domain lens symbol names origin)
+        (cell "bmf-symbol"
+              (bmf-symbol-binding anchor domain lens symbol names)
+              origin
+              bmf-symbol-cell-undo))
+
+    (defn bmf-symbol-cell-binding (symbol-cell)
+        (cell-value symbol-cell))
+
+    (defn bmf-lens-property (key value)
+        (list "bmf-lens-property" key value))
+
+    (defn bmf-lens-property-key (property) (nth property 1))
+    (defn bmf-lens-property-value (property) (nth property 2))
+
+    (defn bmf-symbol-context (domain lens bindings)
+        (list "bmf-symbol-context" domain lens bindings))
+
+    (defn bmf-symbol-context-for (domain lens bindings properties)
+        (list "bmf-symbol-context" domain lens bindings properties))
+
+    (defn bmf-symbol-context-domain (ctx) (nth ctx 1))
+    (defn bmf-symbol-context-lens (ctx) (nth ctx 2))
+    (defn bmf-symbol-context-bindings (ctx) (nth ctx 3))
+    (defn bmf-symbol-context-properties (ctx)
+        (if (gt (len ctx) 4) (nth ctx 4) (empty)))
+
+    (defn bmf-symbol-context-property-loop (properties key missing)
+        (if (nil? properties) missing
+            (if (str_eq (bmf-lens-property-key (head properties)) key)
+                (bmf-lens-property-value (head properties))
+                (bmf-symbol-context-property-loop (tail properties) key missing))))
+
+    (defn bmf-symbol-context-property (ctx key missing)
+        (bmf-symbol-context-property-loop
+            (bmf-symbol-context-properties ctx)
+            key
+            missing))
+
+    ;; --- shared translator vocabulary --------------------------------
+    ;;
+    ;; These names are ordinary Form recipes so grammars, emitters, and tests
+    ;; can share one vocabulary without teaching the kernel about languages,
+    ;; media types, or context conventions.
+    (let BMF-DOMAIN-REF (make_nodeid 8 45 4 1))
+    (let BMF-LENS-REF (make_nodeid 8 45 4 2))
+    (let BMF-DOMAIN-KIND-REF (make_nodeid 8 45 4 3))
+    (let BMF-SURFACE-REF (make_nodeid 8 45 4 4))
+
+    (defn bmf-domain-ref (index)
+        (intern_node BMF-DOMAIN-REF (list (intern_trivial_int index))))
+
+    (defn bmf-lens-ref (index)
+        (intern_node BMF-LENS-REF (list (intern_trivial_int index))))
+
+    (defn bmf-domain-kind-ref (index)
+        (intern_node BMF-DOMAIN-KIND-REF (list (intern_trivial_int index))))
+
+    (defn bmf-surface-ref (index)
+        (intern_node BMF-SURFACE-REF (list (intern_trivial_int index))))
+
+    (defn bmf-domain-python () (bmf-domain-ref 1))
+    (defn bmf-domain-typescript () (bmf-domain-ref 2))
+    (defn bmf-domain-go () (bmf-domain-ref 3))
+    (defn bmf-domain-rust () (bmf-domain-ref 4))
+    (defn bmf-domain-bml () (bmf-domain-ref 5))
+    (defn bmf-domain-natural () (bmf-domain-ref 6))
+    (defn bmf-domain-image () (bmf-domain-ref 7))
+    (defn bmf-domain-audio () (bmf-domain-ref 8))
+    (defn bmf-domain-video () (bmf-domain-ref 9))
+
+    (defn bmf-domain-kind-language () (bmf-domain-kind-ref 1))
+    (defn bmf-domain-kind-media () (bmf-domain-kind-ref 2))
+    (defn bmf-domain-kind-runtime () (bmf-domain-kind-ref 3))
+
+    (defn bmf-semantic-natural-language () "natural-language")
+    (defn bmf-semantic-image () "image")
+    (defn bmf-semantic-audio () "audio")
+    (defn bmf-semantic-video () "video")
+    (defn bmf-semantic-general () "general")
+    (defn bmf-semantic-knowledge () "knowledge")
+
+    (defn bmf-lens-assertion () (bmf-lens-ref 1))
+    (defn bmf-lens-metadata () (bmf-lens-ref 2))
+    (defn bmf-lens-assign () (bmf-lens-ref 3))
+    (defn bmf-lens-var () (bmf-lens-ref 4))
+    (defn bmf-lens-quote () (bmf-lens-ref 5))
+    (defn bmf-lens-display () (bmf-lens-ref 6))
+
+    (defn bmf-context-key-language-tag () "language-tag")
+    (defn bmf-context-key-locale () "locale")
+    (defn bmf-context-key-script () "script")
+    (defn bmf-context-key-region () "region")
+    (defn bmf-context-key-direction () "direction")
+    (defn bmf-context-key-calendar () "calendar")
+    (defn bmf-context-key-numbering-system () "numbering-system")
+    (defn bmf-context-key-time-zone () "time-zone")
+    (defn bmf-context-key-semantic-domain () "semantic-domain")
+    (defn bmf-context-key-culture () "culture")
+    (defn bmf-context-key-register () "register")
+    (defn bmf-context-key-environment () "environment")
+    (defn bmf-context-key-audience () "audience")
+    (defn bmf-context-key-purpose () "purpose")
+    (defn bmf-context-key-viewpoint () "viewpoint")
+    (defn bmf-context-key-media-type () "media-type")
+    (defn bmf-context-key-charset () "charset")
+    (defn bmf-context-key-encoding () "encoding")
+    (defn bmf-context-key-container () "container")
+    (defn bmf-context-key-codec () "codec")
+    (defn bmf-context-key-unit () "unit")
+    (defn bmf-context-key-color-space () "color-space")
+    (defn bmf-context-key-source () "source")
+    (defn bmf-context-key-creator () "creator")
+    (defn bmf-context-key-license () "license")
+    (defn bmf-context-key-created () "created")
+    (defn bmf-context-key-derived-from () "derived-from")
+
+    (defn bmf-locale-und () "und")
+    (defn bmf-locale-en-us () "en-US")
+    (defn bmf-locale-id-id () "id-ID")
+    (defn bmf-script-latn () "Latn")
+    (defn bmf-direction-auto () "auto")
+    (defn bmf-direction-ltr () "ltr")
+    (defn bmf-direction-rtl () "rtl")
+    (defn bmf-register-plain () "plain")
+    (defn bmf-register-math () "math")
+    (defn bmf-register-formal () "formal")
+    (defn bmf-environment-general () "general")
+    (defn bmf-environment-file () "file")
+    (defn bmf-environment-repo () "repo")
+    (defn bmf-environment-web () "web")
+    (defn bmf-purpose-representation () "representation")
+    (defn bmf-purpose-roundtrip () "roundtrip")
+    (defn bmf-calendar-gregory () "gregory")
+    (defn bmf-numbering-latn () "latn")
+
+    (defn bmf-media-text-plain () "text/plain")
+    (defn bmf-media-octet-stream () "application/octet-stream")
+    (defn bmf-media-image-svg () "image/svg+xml")
+    (defn bmf-media-image-gif () "image/gif")
+    (defn bmf-charset-utf8 () "utf-8")
+    (defn bmf-encoding-xml () "xml")
+    (defn bmf-encoding-binary () "binary")
+    (defn bmf-container-text () "text")
+    (defn bmf-unit-px () "px")
+    (defn bmf-unit-samples () "samples")
+    (defn bmf-unit-px-ms () "px/ms")
+    (defn bmf-color-srgb () "sRGB")
+
+    ;; Shared context property groups. These live in the runtime lens layer,
+    ;; not in binary Form objects or the kernel.
+    (defn bmf-language-properties
+        (language-tag locale script region direction calendar numbering-system time-zone)
+        (list (bmf-lens-property (bmf-context-key-language-tag) language-tag)
+              (bmf-lens-property (bmf-context-key-locale) locale)
+              (bmf-lens-property (bmf-context-key-script) script)
+              (bmf-lens-property (bmf-context-key-region) region)
+              (bmf-lens-property (bmf-context-key-direction) direction)
+              (bmf-lens-property (bmf-context-key-calendar) calendar)
+              (bmf-lens-property (bmf-context-key-numbering-system) numbering-system)
+              (bmf-lens-property (bmf-context-key-time-zone) time-zone)))
+
+    (defn bmf-domain-properties
+        (domain culture register environment audience purpose viewpoint)
+        (list (bmf-lens-property (bmf-context-key-semantic-domain) domain)
+              (bmf-lens-property (bmf-context-key-culture) culture)
+              (bmf-lens-property (bmf-context-key-register) register)
+              (bmf-lens-property (bmf-context-key-environment) environment)
+              (bmf-lens-property (bmf-context-key-audience) audience)
+              (bmf-lens-property (bmf-context-key-purpose) purpose)
+              (bmf-lens-property (bmf-context-key-viewpoint) viewpoint)))
+
+    (defn bmf-media-properties
+        (media-type charset encoding container codec unit color-space)
+        (list (bmf-lens-property (bmf-context-key-media-type) media-type)
+              (bmf-lens-property (bmf-context-key-charset) charset)
+              (bmf-lens-property (bmf-context-key-encoding) encoding)
+              (bmf-lens-property (bmf-context-key-container) container)
+              (bmf-lens-property (bmf-context-key-codec) codec)
+              (bmf-lens-property (bmf-context-key-unit) unit)
+              (bmf-lens-property (bmf-context-key-color-space) color-space)))
+
+    (defn bmf-provenance-properties
+        (source creator license created derived-from)
+        (list (bmf-lens-property (bmf-context-key-source) source)
+              (bmf-lens-property (bmf-context-key-creator) creator)
+              (bmf-lens-property (bmf-context-key-license) license)
+              (bmf-lens-property (bmf-context-key-created) created)
+              (bmf-lens-property (bmf-context-key-derived-from) derived-from)))
+
+    (defn bmf-context-properties (language domain media provenance)
+        (append language (append domain (append media provenance))))
+
+    (defn bmf-standard-symbol-context
+        (domain lens bindings language-properties domain-properties media-properties provenance-properties)
+        (bmf-symbol-context-for domain lens bindings
+            (bmf-context-properties
+                language-properties
+                domain-properties
+                media-properties
+                provenance-properties)))
+
+    (defn bmf-context-language-tag (ctx) (bmf-symbol-context-property ctx (bmf-context-key-language-tag) (bmf-locale-und)))
+    (defn bmf-context-locale (ctx) (bmf-symbol-context-property ctx (bmf-context-key-locale) (bmf-locale-und)))
+    (defn bmf-context-script (ctx) (bmf-symbol-context-property ctx (bmf-context-key-script) ""))
+    (defn bmf-context-region (ctx) (bmf-symbol-context-property ctx (bmf-context-key-region) ""))
+    (defn bmf-context-direction (ctx) (bmf-symbol-context-property ctx (bmf-context-key-direction) (bmf-direction-auto)))
+    (defn bmf-context-calendar (ctx) (bmf-symbol-context-property ctx (bmf-context-key-calendar) ""))
+    (defn bmf-context-numbering-system (ctx) (bmf-symbol-context-property ctx (bmf-context-key-numbering-system) ""))
+    (defn bmf-context-time-zone (ctx) (bmf-symbol-context-property ctx (bmf-context-key-time-zone) ""))
+    (defn bmf-context-semantic-domain (ctx) (bmf-symbol-context-property ctx (bmf-context-key-semantic-domain) (bmf-semantic-general)))
+    (defn bmf-context-culture (ctx) (bmf-symbol-context-property ctx (bmf-context-key-culture) ""))
+    (defn bmf-context-register (ctx) (bmf-symbol-context-property ctx (bmf-context-key-register) (bmf-register-plain)))
+    (defn bmf-context-environment (ctx) (bmf-symbol-context-property ctx (bmf-context-key-environment) (bmf-environment-general)))
+    (defn bmf-context-audience (ctx) (bmf-symbol-context-property ctx (bmf-context-key-audience) ""))
+    (defn bmf-context-purpose (ctx) (bmf-symbol-context-property ctx (bmf-context-key-purpose) ""))
+    (defn bmf-context-viewpoint (ctx) (bmf-symbol-context-property ctx (bmf-context-key-viewpoint) ""))
+    (defn bmf-context-media-type (ctx) (bmf-symbol-context-property ctx (bmf-context-key-media-type) (bmf-media-octet-stream)))
+    (defn bmf-context-charset (ctx) (bmf-symbol-context-property ctx (bmf-context-key-charset) ""))
+    (defn bmf-context-encoding (ctx) (bmf-symbol-context-property ctx (bmf-context-key-encoding) ""))
+    (defn bmf-context-container (ctx) (bmf-symbol-context-property ctx (bmf-context-key-container) ""))
+    (defn bmf-context-codec (ctx) (bmf-symbol-context-property ctx (bmf-context-key-codec) ""))
+    (defn bmf-context-unit (ctx) (bmf-symbol-context-property ctx (bmf-context-key-unit) ""))
+    (defn bmf-context-color-space (ctx) (bmf-symbol-context-property ctx (bmf-context-key-color-space) ""))
+    (defn bmf-context-source (ctx) (bmf-symbol-context-property ctx (bmf-context-key-source) ""))
+    (defn bmf-context-creator (ctx) (bmf-symbol-context-property ctx (bmf-context-key-creator) ""))
+    (defn bmf-context-license (ctx) (bmf-symbol-context-property ctx (bmf-context-key-license) ""))
+    (defn bmf-context-created (ctx) (bmf-symbol-context-property ctx (bmf-context-key-created) ""))
+    (defn bmf-context-derived-from (ctx) (bmf-symbol-context-property ctx (bmf-context-key-derived-from) ""))
+
+    (defn bmf-symbol-binding-matches? (binding ctx anchor)
+        (and (str_eq (bmf-symbol-binding-anchor binding) anchor)
+             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+
+    (defn bmf-symbol-name-in-list? (names name)
+        (if (nil? names) false
+            (if (str_eq (head names) name)
+                true
+                (bmf-symbol-name-in-list? (tail names) name))))
+
+    (defn bmf-symbol-binding-name-matches? (binding ctx name)
+        (and (bmf-symbol-name-in-list? (bmf-symbol-binding-names binding) name)
+             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+
+    (defn bmf-symbol-find-loop (bindings ctx anchor missing)
+        (if (nil? bindings) missing
+            (if (bmf-symbol-binding-matches? (head bindings) ctx anchor)
+                (head bindings)
+                (bmf-symbol-find-loop (tail bindings) ctx anchor missing))))
+
+    (defn bmf-symbol-find (ctx anchor missing)
+        (bmf-symbol-find-loop (bmf-symbol-context-bindings ctx) ctx anchor missing))
+
+    (defn bmf-symbol-name (ctx anchor missing)
+        (do
+            (let binding (bmf-symbol-find ctx anchor (empty)))
+            (if (nil? binding)
+                missing
+                (bmf-symbol-binding-name binding))))
+
+    (defn bmf-symbol-value (ctx anchor missing)
+        (do
+            (let binding (bmf-symbol-find ctx anchor (empty)))
+            (if (nil? binding)
+                missing
+                (bmf-symbol-binding-symbol binding))))
+
+    (defn bmf-anchor-resolve-loop (bindings ctx name missing)
+        (if (nil? bindings) missing
+            (if (bmf-symbol-binding-name-matches? (head bindings) ctx name)
+                (bmf-symbol-binding-anchor (head bindings))
+                (bmf-anchor-resolve-loop (tail bindings) ctx name missing))))
+
+    (defn bmf-anchor-resolve (ctx name missing)
+        (bmf-anchor-resolve-loop (bmf-symbol-context-bindings ctx) ctx name missing))
+
+    ;; Reverse lenses are sidecar emit/parse tables. They let one binary
+    ;; object choose a domain lens at the edge without giving names or
+    ;; target-language policy to the binary object itself.
+    (let BMF-REVERSE-LENS (make_nodeid 8 45 3 5))
+
+    (defn bmf-reverse-lens-node-from (domain lens)
+        (intern_node BMF-REVERSE-LENS (list domain lens)))
+
+    (defn bmf-reverse-lens (domain lens emit parse rule)
+        (list (bmf-reverse-lens-node-from domain lens)
+              domain
+              lens
+              emit
+              parse
+              rule))
+
+    (defn bmf-reverse-lens-for (domain lens emit parse rule requirements)
+        (list (bmf-reverse-lens-node-from domain lens)
+              domain
+              lens
+              emit
+              parse
+              rule
+              requirements))
+
+    (defn bmf-reverse-lens-domain (target) (nth target 1))
+    (defn bmf-reverse-lens-lens (target) (nth target 2))
+    (defn bmf-reverse-lens-emit (target) (nth target 3))
+    (defn bmf-reverse-lens-parse (target) (nth target 4))
+    (defn bmf-reverse-lens-rule (target) (nth target 5))
+    (defn bmf-reverse-lens-requirements (target)
+        (if (gt (len target) 6) (nth target 6) (empty)))
+
+    ;; --- universal translator architecture --------------------------
+    ;;
+    ;; A translator is not a bag of target functions. It is a space of
+    ;; domains, surfaces, and contracts. Executable parse/emit recipes attach
+    ;; to contracts after the surface has been selected by context.
+    (let BMF-DOMAIN-CONTRACT (make_nodeid 8 45 3 1))
+    (let BMF-SURFACE-CONTRACT (make_nodeid 8 45 3 2))
+    (let BMF-LENS-CONTRACT (make_nodeid 8 45 3 3))
+    (let BMF-TRANSLATION-SPACE (make_nodeid 8 45 3 4))
+
+    (defn bmf-contract-field (node index)
+        (nth (node_children node) index))
+
+    (defn bmf-domain-contract-node-from (id kind)
+        (intern_node
+            BMF-DOMAIN-CONTRACT
+            (list id kind)))
+
+    (defn bmf-domain-contract (id kind properties)
+        (list (bmf-domain-contract-node-from id kind) properties))
+
+    (defn bmf-domain-contract-node (domain) (nth domain 0))
+    (defn bmf-domain-contract-id (domain)
+        (bmf-contract-field (bmf-domain-contract-node domain) 0))
+    (defn bmf-domain-contract-kind (domain)
+        (bmf-contract-field (bmf-domain-contract-node domain) 1))
+    (defn bmf-domain-contract-properties (domain) (nth domain 1))
+
+    (defn bmf-surface-contract-node-from (id domain lens media-type)
+        (intern_node
+            BMF-SURFACE-CONTRACT
+            (list id domain lens)))
+
+    (defn bmf-surface-contract
+        (id domain lens media-type context-requirements rulebook capabilities)
+        (list (bmf-surface-contract-node-from id domain lens media-type)
+              context-requirements
+              rulebook
+              capabilities))
+
+    (defn bmf-surface-contract-node (surface) (nth surface 0))
+    (defn bmf-surface-contract-id (surface)
+        (bmf-contract-field (bmf-surface-contract-node surface) 0))
+    (defn bmf-surface-contract-domain (surface)
+        (bmf-contract-field (bmf-surface-contract-node surface) 1))
+    (defn bmf-surface-contract-lens (surface)
+        (bmf-contract-field (bmf-surface-contract-node surface) 2))
+    (defn bmf-surface-contract-media-type (surface)
+        (empty))
+    (defn bmf-surface-contract-requirements (surface) (nth surface 1))
+    (defn bmf-surface-contract-rulebook (surface) (nth surface 2))
+    (defn bmf-surface-contract-capabilities (surface) (nth surface 3))
+
+    (defn bmf-lens-contract-node-from (surface)
+        (intern_node
+            BMF-LENS-CONTRACT
+            (list (bmf-surface-contract-node surface))))
+
+    (defn bmf-lens-contract (surface emit parse rule)
+        (list (bmf-lens-contract-node-from surface) surface emit parse rule))
+
+    (defn bmf-lens-contract-node (contract) (nth contract 0))
+    (defn bmf-lens-contract-surface (contract) (nth contract 1))
+    (defn bmf-lens-contract-emit (contract) (nth contract 2))
+    (defn bmf-lens-contract-parse (contract) (nth contract 3))
+    (defn bmf-lens-contract-rule (contract) (nth contract 4))
+
+    (defn bmf-lens-contract-to-target (contract)
+        (do
+            (let surface (bmf-lens-contract-surface contract))
+            (bmf-reverse-lens-for
+                (bmf-surface-contract-domain surface)
+                (bmf-surface-contract-lens surface)
+                (bmf-lens-contract-emit contract)
+                (bmf-lens-contract-parse contract)
+                (bmf-lens-contract-rule contract)
+                (bmf-surface-contract-requirements surface))))
+
+    (defn bmf-lens-contracts-to-targets (contracts)
+        (if (nil? contracts) (empty)
+            (cons (bmf-lens-contract-to-target (head contracts))
+                  (bmf-lens-contracts-to-targets (tail contracts)))))
+
+    (defn bmf-translation-space-node-from (domains surfaces contracts)
+        (intern_node
+            BMF-TRANSLATION-SPACE
+            (list (intern_trivial_int (len domains))
+                  (intern_trivial_int (len surfaces))
+                  (intern_trivial_int (len contracts)))))
+
+    (defn bmf-translation-space (domains surfaces contracts)
+        (list (bmf-translation-space-node-from domains surfaces contracts)
+              domains
+              surfaces
+              contracts))
+
+    (defn bmf-translation-space-node (space) (nth space 0))
+    (defn bmf-translation-space-domains (space) (nth space 1))
+    (defn bmf-translation-space-surfaces (space) (nth space 2))
+    (defn bmf-translation-space-contracts (space) (nth space 3))
+    (defn bmf-translation-space-targets (space)
+        (bmf-lens-contracts-to-targets (bmf-translation-space-contracts space)))
+
+    (defn bmf-surface-contract-matches? (surface domain lens)
+        (and (node_eq (bmf-surface-contract-domain surface) domain)
+             (node_eq (bmf-surface-contract-lens surface) lens)))
+
+    (defn bmf-surface-contract-score (surface domain lens ctx)
+        (if (bmf-surface-contract-matches? surface domain lens)
+            (bmf-context-properties-score
+                ctx
+                (bmf-surface-contract-requirements surface))
+            (sub 0 1)))
+
+    (defn bmf-translation-space-find-surface-best
+        (surfaces domain lens ctx best best-score missing)
+        (if (nil? surfaces) best
+            (do
+                (let score
+                    (bmf-surface-contract-score
+                        (head surfaces)
+                        domain
+                        lens
+                        ctx))
+                (if (gt score best-score)
+                    (bmf-translation-space-find-surface-best
+                        (tail surfaces)
+                        domain
+                        lens
+                        ctx
+                        (head surfaces)
+                        score
+                        missing)
+                    (bmf-translation-space-find-surface-best
+                        (tail surfaces)
+                        domain
+                        lens
+                        ctx
+                        best
+                        best-score
+                        missing)))))
+
+    (defn bmf-translation-space-find-surface (space domain lens ctx missing)
+        (bmf-translation-space-find-surface-best
+            (bmf-translation-space-surfaces space)
+            domain
+            lens
+            ctx
+            missing
+            (sub 0 1)
+            missing))
+
+    (defn bmf-translation-space-roundtrip (space domain lens node anchor ctx missing)
+        (bmf-lens-roundtrip-for-context
+            (bmf-translation-space-targets space)
+            domain
+            lens
+            node
+            anchor
+            ctx
+            missing))
+
+    (defn bmf-reverse-lens-matches? (target domain lens)
+        (and (node_eq (bmf-reverse-lens-domain target) domain)
+             (node_eq (bmf-reverse-lens-lens target) lens)))
+
+    (defn bmf-reverse-lens-find (targets domain lens missing)
+        (if (nil? targets) missing
+            (if (bmf-reverse-lens-matches? (head targets) domain lens)
+                (head targets)
+                (bmf-reverse-lens-find (tail targets) domain lens missing))))
+
+    ;; --- dynamic adapter registry ------------------------------------
+    ;;
+    ;; Adapter capsules mint local identities under their own root. Unknown
+    ;; languages, media surfaces, codecs, encoders, decoders, compressors, and
+    ;; other transforms enter as Form nodes rather than engine vocabulary.
+    (let FORM-CAPSULE-ROOT (make_nodeid 8 45 5 1))
+    (let FORM-DYNAMIC-KIND (make_nodeid 8 45 5 2))
+    (let FORM-DYNAMIC-REF (make_nodeid 8 45 5 3))
+    (let FORM-ADAPTER-CAPSULE (make_nodeid 8 45 5 4))
+    (let FORM-ADAPTER-CAPABILITY (make_nodeid 8 45 5 5))
+    (let FORM-ADAPTER-REGISTRY (make_nodeid 8 45 5 6))
+    (let FORM-ADAPTER-ROUTE (make_nodeid 8 45 5 7))
+    (let FORM-ADAPTER-PLAN (make_nodeid 8 45 5 8))
+    (let FORM-ADAPTER-PLAN-RESULT (make_nodeid 8 45 5 9))
+    (let FORM-ADAPTER-COMPILED-PLAN (make_nodeid 8 45 5 10))
+    (let FORM-CAPABILITY-CONTRACT (make_nodeid 8 45 5 11))
+    (let FORM-CAPABILITY-COST (make_nodeid 8 45 5 12))
+    (let FORM-CAPABILITY-PROOF (make_nodeid 8 45 5 13))
+    (let FORM-CAPABILITY-SPECIALIZER (make_nodeid 8 45 5 14))
+    (let FORM-RECIPE-CAPSULE (make_nodeid 8 45 5 15))
+    (let FORM-RECIPE-REGISTRY (make_nodeid 8 45 5 16))
+
+    (defn form-capsule-root (package level type instance)
+        (intern_node
+            FORM-CAPSULE-ROOT
+            (list (intern_trivial_int package)
+                  (intern_trivial_int level)
+                  (intern_trivial_int type)
+                  (intern_trivial_int instance))))
+
+    (defn form-dynamic-kind (root local)
+        (intern_node
+            FORM-DYNAMIC-KIND
+            (list root (intern_trivial_int local))))
+
+    (defn form-dynamic-ref (root kind local)
+        (intern_node
+            FORM-DYNAMIC-REF
+            (list root kind (intern_trivial_int local))))
+
+    (defn form-adapter-capability-node-from (kind input-surface output-surface)
+        (intern_node
+            FORM-ADAPTER-CAPABILITY
+            (list kind input-surface output-surface)))
+
+    (defn form-adapter-capability
+        (kind input-surface output-surface emit parse rule requirements)
+        (list (form-adapter-capability-node-from kind input-surface output-surface)
+              kind
+              input-surface
+              output-surface
+              emit
+              parse
+              rule
+              requirements))
+
+    (defn form-adapter-capability-node (capability) (nth capability 0))
+    (defn form-adapter-capability-kind (capability) (nth capability 1))
+    (defn form-adapter-capability-input-surface (capability) (nth capability 2))
+    (defn form-adapter-capability-output-surface (capability) (nth capability 3))
+    (defn form-adapter-capability-emit (capability) (nth capability 4))
+    (defn form-adapter-capability-parse (capability) (nth capability 5))
+    (defn form-adapter-capability-rule (capability) (nth capability 6))
+    (defn form-adapter-capability-requirements (capability) (nth capability 7))
+
+    (defn form-capability-contract-node-from (capability)
+        (intern_node
+            FORM-CAPABILITY-CONTRACT
+            (list (form-adapter-capability-node capability))))
+
+    (defn form-capability-contract
+        (capability effect reversibility lossiness deterministic resources)
+        (list (form-capability-contract-node-from capability)
+              capability
+              effect
+              reversibility
+              lossiness
+              deterministic
+              resources))
+
+    (defn form-capability-contract-node (contract) (nth contract 0))
+    (defn form-capability-contract-capability (contract) (nth contract 1))
+    (defn form-capability-contract-effect (contract) (nth contract 2))
+    (defn form-capability-contract-reversibility (contract) (nth contract 3))
+    (defn form-capability-contract-lossiness (contract) (nth contract 4))
+    (defn form-capability-contract-deterministic (contract) (nth contract 5))
+    (defn form-capability-contract-resources (contract) (nth contract 6))
+
+    (defn form-capability-contract-capability-node (contract)
+        (form-adapter-capability-node
+            (form-capability-contract-capability contract)))
+
+    (defn form-capability-cost-node-from (capability)
+        (intern_node
+            FORM-CAPABILITY-COST
+            (list (form-adapter-capability-node capability))))
+
+    (defn form-capability-cost
+        (capability total-walks function-calls native-calls allocations score)
+        (list (form-capability-cost-node-from capability)
+              capability
+              total-walks
+              function-calls
+              native-calls
+              allocations
+              score))
+
+    (defn form-capability-cost-node (cost) (nth cost 0))
+    (defn form-capability-cost-capability (cost) (nth cost 1))
+    (defn form-capability-cost-total-walks (cost) (nth cost 2))
+    (defn form-capability-cost-function-calls (cost) (nth cost 3))
+    (defn form-capability-cost-native-calls (cost) (nth cost 4))
+    (defn form-capability-cost-allocations (cost) (nth cost 5))
+    (defn form-capability-cost-score (cost) (nth cost 6))
+
+    (defn form-capability-cost-capability-node (cost)
+        (form-adapter-capability-node
+            (form-capability-cost-capability cost)))
+
+    (defn form-capability-proof-node-from (capability proof-kind)
+        (intern_node
+            FORM-CAPABILITY-PROOF
+            (list (form-adapter-capability-node capability) proof-kind)))
+
+    (defn form-capability-proof (capability proof-kind proof-recipe expected)
+        (list (form-capability-proof-node-from capability proof-kind)
+              capability
+              proof-kind
+              proof-recipe
+              expected))
+
+    (defn form-capability-proof-node (proof) (nth proof 0))
+    (defn form-capability-proof-capability (proof) (nth proof 1))
+    (defn form-capability-proof-kind (proof) (nth proof 2))
+    (defn form-capability-proof-recipe (proof) (nth proof 3))
+    (defn form-capability-proof-expected (proof) (nth proof 4))
+
+    (defn form-capability-specializer-node-from (capability specializer-kind)
+        (intern_node
+            FORM-CAPABILITY-SPECIALIZER
+            (list (form-adapter-capability-node capability) specializer-kind)))
+
+    (defn form-capability-specializer
+        (capability specializer-kind specialize-recipe requirements)
+        (list (form-capability-specializer-node-from capability specializer-kind)
+              capability
+              specializer-kind
+              specialize-recipe
+              requirements))
+
+    (defn form-capability-specializer-node (specializer) (nth specializer 0))
+    (defn form-capability-specializer-capability (specializer) (nth specializer 1))
+    (defn form-capability-specializer-kind (specializer) (nth specializer 2))
+    (defn form-capability-specializer-recipe (specializer) (nth specializer 3))
+    (defn form-capability-specializer-requirements (specializer) (nth specializer 4))
+
+    (defn form-recipe-capsule-node-from (root surfaces capabilities contracts proofs costs specializers)
+        (intern_node
+            FORM-RECIPE-CAPSULE
+            (list root
+                  (intern_trivial_int (len surfaces))
+                  (intern_trivial_int (len capabilities))
+                  (intern_trivial_int (len contracts))
+                  (intern_trivial_int (len proofs))
+                  (intern_trivial_int (len costs))
+                  (intern_trivial_int (len specializers)))))
+
+    (defn form-recipe-capsule
+        (root surfaces capabilities contracts proofs costs specializers symbol-packs)
+        (list (form-recipe-capsule-node-from root surfaces capabilities contracts proofs costs specializers)
+              root
+              surfaces
+              capabilities
+              contracts
+              proofs
+              costs
+              specializers
+              symbol-packs))
+
+    (defn form-recipe-capsule-node (capsule) (nth capsule 0))
+    (defn form-recipe-capsule-root (capsule) (nth capsule 1))
+    (defn form-recipe-capsule-surfaces (capsule) (nth capsule 2))
+    (defn form-recipe-capsule-capabilities (capsule) (nth capsule 3))
+    (defn form-recipe-capsule-contracts (capsule) (nth capsule 4))
+    (defn form-recipe-capsule-proofs (capsule) (nth capsule 5))
+    (defn form-recipe-capsule-costs (capsule) (nth capsule 6))
+    (defn form-recipe-capsule-specializers (capsule) (nth capsule 7))
+    (defn form-recipe-capsule-symbol-packs (capsule) (nth capsule 8))
+
+    (defn form-recipe-capsule-from-adapter (capsule contracts costs specializers)
+        (form-recipe-capsule
+            (form-adapter-capsule-root capsule)
+            (form-adapter-capsule-surfaces capsule)
+            (form-adapter-capsule-capabilities capsule)
+            contracts
+            (form-adapter-capsule-proofs capsule)
+            costs
+            specializers
+            (form-adapter-capsule-symbol-packs capsule)))
+
+    (defn form-recipe-registry-node-from (capsules)
+        (intern_node
+            FORM-RECIPE-REGISTRY
+            (list (intern_trivial_int (len capsules)))))
+
+    (defn form-recipe-registry (capsules)
+        (list (form-recipe-registry-node-from capsules) capsules))
+
+    (defn form-recipe-registry-node (registry) (nth registry 0))
+    (defn form-recipe-registry-capsules (registry) (nth registry 1))
+
+    (defn form-recipe-registry-empty ()
+        (form-recipe-registry (empty)))
+
+    (defn form-recipe-registry-add-capsule (registry capsule)
+        (form-recipe-registry
+            (append
+                (form-recipe-registry-capsules registry)
+                (list capsule))))
+
+    (defn form-recipe-registry-merge (left right)
+        (form-recipe-registry
+            (append
+                (form-recipe-registry-capsules left)
+                (form-recipe-registry-capsules right))))
+
+    (defn form-recipe-capabilities-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-recipe-capsule-capabilities (head capsules))
+                (form-recipe-capabilities-from-capsules (tail capsules)))))
+
+    (defn form-recipe-contracts-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-recipe-capsule-contracts (head capsules))
+                (form-recipe-contracts-from-capsules (tail capsules)))))
+
+    (defn form-recipe-proofs-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-recipe-capsule-proofs (head capsules))
+                (form-recipe-proofs-from-capsules (tail capsules)))))
+
+    (defn form-recipe-costs-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-recipe-capsule-costs (head capsules))
+                (form-recipe-costs-from-capsules (tail capsules)))))
+
+    (defn form-recipe-specializers-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-recipe-capsule-specializers (head capsules))
+                (form-recipe-specializers-from-capsules (tail capsules)))))
+
+    (defn form-recipe-registry-capabilities (registry)
+        (form-recipe-capabilities-from-capsules
+            (form-recipe-registry-capsules registry)))
+
+    (defn form-recipe-registry-contracts (registry)
+        (form-recipe-contracts-from-capsules
+            (form-recipe-registry-capsules registry)))
+
+    (defn form-recipe-registry-proofs (registry)
+        (form-recipe-proofs-from-capsules
+            (form-recipe-registry-capsules registry)))
+
+    (defn form-recipe-registry-costs (registry)
+        (form-recipe-costs-from-capsules
+            (form-recipe-registry-capsules registry)))
+
+    (defn form-recipe-registry-specializers (registry)
+        (form-recipe-specializers-from-capsules
+            (form-recipe-registry-capsules registry)))
+
+    (defn form-recipe-capability-by-node
+        (capabilities capability-node missing)
+        (if (nil? capabilities) missing
+            (if (node_eq
+                    (form-adapter-capability-node (head capabilities))
+                    capability-node)
+                (head capabilities)
+                (form-recipe-capability-by-node
+                    (tail capabilities)
+                    capability-node
+                    missing))))
+
+    (defn form-recipe-registry-capability-by-node
+        (registry capability-node missing)
+        (form-recipe-capability-by-node
+            (form-recipe-registry-capabilities registry)
+            capability-node
+            missing))
+
+    (defn form-capability-contract-for
+        (contracts capability missing)
+        (if (nil? contracts) missing
+            (if (node_eq
+                    (form-capability-contract-capability-node (head contracts))
+                    (form-adapter-capability-node capability))
+                (head contracts)
+                (form-capability-contract-for
+                    (tail contracts)
+                    capability
+                    missing))))
+
+    (defn form-capability-cost-for
+        (costs capability missing)
+        (if (nil? costs) missing
+            (if (node_eq
+                    (form-capability-cost-capability-node (head costs))
+                    (form-adapter-capability-node capability))
+                (head costs)
+                (form-capability-cost-for
+                    (tail costs)
+                    capability
+                    missing))))
+
+    (defn form-capability-proof-for
+        (proofs capability proof-kind missing)
+        (if (nil? proofs) missing
+            (if (and
+                    (node_eq
+                        (form-adapter-capability-node
+                            (form-capability-proof-capability (head proofs)))
+                        (form-adapter-capability-node capability))
+                    (node_eq
+                        (form-capability-proof-kind (head proofs))
+                        proof-kind))
+                (head proofs)
+                (form-capability-proof-for
+                    (tail proofs)
+                    capability
+                    proof-kind
+                    missing))))
+
+    (defn form-capability-specializer-for
+        (specializers capability specializer-kind ctx missing)
+        (if (nil? specializers) missing
+            (if (and
+                    (node_eq
+                        (form-adapter-capability-node
+                            (form-capability-specializer-capability (head specializers)))
+                        (form-adapter-capability-node capability))
+                    (and
+                        (node_eq
+                            (form-capability-specializer-kind (head specializers))
+                            specializer-kind)
+                        (bmf-context-properties-match?
+                            ctx
+                            (form-capability-specializer-requirements (head specializers)))))
+                (head specializers)
+                (form-capability-specializer-for
+                    (tail specializers)
+                    capability
+                    specializer-kind
+                    ctx
+                    missing))))
+
+    (defn form-capability-contract-satisfies?
+        (contract effect reversibility lossiness deterministic)
+        (and
+            (node_eq (form-capability-contract-effect contract) effect)
+            (and
+                (node_eq (form-capability-contract-reversibility contract) reversibility)
+                (and
+                    (node_eq (form-capability-contract-lossiness contract) lossiness)
+                    (node_eq (form-capability-contract-deterministic contract) deterministic)))))
+
+    (defn form-recipe-capability-score
+        (capability contracts costs kind input-surface output-surface ctx effect reversibility lossiness deterministic missing)
+        (if (form-adapter-capability-matches? capability kind input-surface output-surface)
+            (do
+                (let contract (form-capability-contract-for contracts capability missing))
+                (if (nil? contract) (sub 0 1)
+                    (if (form-capability-contract-satisfies? contract effect reversibility lossiness deterministic)
+                        (do
+                            (let cost (form-capability-cost-for costs capability missing))
+                            (add
+                                (bmf-context-properties-score
+                                    ctx
+                                    (form-adapter-capability-requirements capability))
+                                (if (nil? cost) 0 (form-capability-cost-score cost))))
+                        (sub 0 1))))
+            (sub 0 1)))
+
+    (defn form-recipe-find-capability-best
+        (capabilities contracts costs kind input-surface output-surface ctx effect reversibility lossiness deterministic best best-score missing)
+        (if (nil? capabilities) best
+            (do
+                (let score
+                    (form-recipe-capability-score
+                        (head capabilities)
+                        contracts
+                        costs
+                        kind
+                        input-surface
+                        output-surface
+                        ctx
+                        effect
+                        reversibility
+                        lossiness
+                        deterministic
+                        missing))
+                (if (gt score best-score)
+                    (form-recipe-find-capability-best
+                        (tail capabilities)
+                        contracts
+                        costs
+                        kind
+                        input-surface
+                        output-surface
+                        ctx
+                        effect
+                        reversibility
+                        lossiness
+                        deterministic
+                        (head capabilities)
+                        score
+                        missing)
+                    (form-recipe-find-capability-best
+                        (tail capabilities)
+                        contracts
+                        costs
+                        kind
+                        input-surface
+                        output-surface
+                        ctx
+                        effect
+                        reversibility
+                        lossiness
+                        deterministic
+                        best
+                        best-score
+                        missing)))))
+
+    (defn form-recipe-registry-find-capability
+        (registry kind input-surface output-surface ctx effect reversibility lossiness deterministic missing)
+        (form-recipe-find-capability-best
+            (form-recipe-registry-capabilities registry)
+            (form-recipe-registry-contracts registry)
+            (form-recipe-registry-costs registry)
+            kind
+            input-surface
+            output-surface
+            ctx
+            effect
+            reversibility
+            lossiness
+            deterministic
+            missing
+            (sub 0 1)
+            missing))
+
+    (defn form-recipe-registry-plan-flex
+        (registry input-surface output-surface ctx depth missing)
+        (form-adapter-flex-plan-from-capabilities
+            (form-recipe-registry-capabilities registry)
+            input-surface
+            output-surface
+            ctx
+            depth
+            missing))
+
+    (defn form-recipe-capability-run (capability value anchor ctx)
+        (do
+            (let emit (form-adapter-capability-emit capability))
+            (let parse (form-adapter-capability-parse capability))
+            (let source (emit value anchor ctx))
+            (form-adapter-route
+                capability
+                source
+                (parse source ctx))))
+
+    (defn form-recipe-registry-run-capability
+        (registry capability-node value anchor ctx missing)
+        (do
+            (let capability
+                (form-recipe-registry-capability-by-node
+                    registry
+                    capability-node
+                    missing))
+            (if (nil? capability)
+                missing
+                (form-recipe-capability-run capability value anchor ctx))))
+
+    (defn form-recipe-registry-run-flex
+        (registry input-surface output-surface value anchor ctx depth missing)
+        (do
+            (let plan
+                (form-recipe-registry-plan-flex
+                    registry
+                    input-surface
+                    output-surface
+                    ctx
+                    depth
+                    missing))
+            (if (nil? plan)
+                missing
+                (form-adapter-plan-run plan value anchor ctx))))
+
+    (defn form-adapter-capsule-node-from (root surfaces capabilities)
+        (intern_node
+            FORM-ADAPTER-CAPSULE
+            (list root
+                  (intern_trivial_int (len surfaces))
+                  (intern_trivial_int (len capabilities)))))
+
+    (defn form-adapter-capsule (root surfaces capabilities symbol-packs proofs)
+        (list (form-adapter-capsule-node-from root surfaces capabilities)
+              root
+              surfaces
+              capabilities
+              symbol-packs
+              proofs))
+
+    (defn form-adapter-capsule-node (capsule) (nth capsule 0))
+    (defn form-adapter-capsule-root (capsule) (nth capsule 1))
+    (defn form-adapter-capsule-surfaces (capsule) (nth capsule 2))
+    (defn form-adapter-capsule-capabilities (capsule) (nth capsule 3))
+    (defn form-adapter-capsule-symbol-packs (capsule) (nth capsule 4))
+    (defn form-adapter-capsule-proofs (capsule) (nth capsule 5))
+
+    (defn form-adapter-registry-node-from (capsules)
+        (intern_node
+            FORM-ADAPTER-REGISTRY
+            (list (intern_trivial_int (len capsules)))))
+
+    (defn form-adapter-registry (capsules)
+        (list (form-adapter-registry-node-from capsules) capsules))
+
+    (defn form-adapter-registry-node (registry) (nth registry 0))
+    (defn form-adapter-registry-capsules (registry) (nth registry 1))
+
+    (defn form-adapter-capabilities-from-capsules (capsules)
+        (if (nil? capsules) (empty)
+            (append
+                (form-adapter-capsule-capabilities (head capsules))
+                (form-adapter-capabilities-from-capsules (tail capsules)))))
+
+    (defn form-adapter-registry-capabilities (registry)
+        (form-adapter-capabilities-from-capsules
+            (form-adapter-registry-capsules registry)))
+
+    (defn form-adapter-capability-matches? (capability kind input-surface output-surface)
+        (and (node_eq (form-adapter-capability-kind capability) kind)
+             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+                  (node_eq (form-adapter-capability-output-surface capability) output-surface))))
+
+    (defn form-adapter-capability-score (capability kind input-surface output-surface ctx)
+        (if (form-adapter-capability-matches? capability kind input-surface output-surface)
+            (bmf-context-properties-score
+                ctx
+                (form-adapter-capability-requirements capability))
+            (sub 0 1)))
+
+    (defn form-adapter-find-capability-best
+        (capabilities kind input-surface output-surface ctx best best-score missing)
+        (if (nil? capabilities) best
+            (do
+                (let score
+                    (form-adapter-capability-score
+                        (head capabilities)
+                        kind
+                        input-surface
+                        output-surface
+                        ctx))
+                (if (gt score best-score)
+                    (form-adapter-find-capability-best
+                        (tail capabilities)
+                        kind
+                        input-surface
+                        output-surface
+                        ctx
+                        (head capabilities)
+                        score
+                        missing)
+                    (form-adapter-find-capability-best
+                        (tail capabilities)
+                        kind
+                        input-surface
+                        output-surface
+                        ctx
+                        best
+                        best-score
+                        missing)))))
+
+    (defn form-adapter-registry-find-capability
+        (registry kind input-surface output-surface ctx missing)
+        (form-adapter-find-capability-best
+            (form-adapter-registry-capabilities registry)
+            kind
+            input-surface
+            output-surface
+            ctx
+            missing
+            (sub 0 1)
+            missing))
+
+    (defn form-adapter-route-node-from (capability)
+        (intern_node
+            FORM-ADAPTER-ROUTE
+            (list (form-adapter-capability-node capability))))
+
+    (defn form-adapter-route (capability source parsed)
+        (list (form-adapter-route-node-from capability)
+              capability
+              source
+              parsed))
+
+    (defn form-adapter-route-node (route) (nth route 0))
+    (defn form-adapter-route-capability (route) (nth route 1))
+    (defn form-adapter-route-source (route) (nth route 2))
+    (defn form-adapter-route-parsed (route) (nth route 3))
+    (defn form-adapter-route-anchor (route) (nth (form-adapter-route-parsed route) 0))
+    (defn form-adapter-route-value (route) (nth (form-adapter-route-parsed route) 1))
+
+    (defn form-adapter-registry-roundtrip
+        (registry kind input-surface output-surface value anchor ctx missing)
+        (do
+            (let capability
+                (form-adapter-registry-find-capability
+                    registry
+                    kind
+                    input-surface
+                    output-surface
+                    ctx
+                    missing))
+            (if (nil? capability)
+                missing
+                (do
+                    (let emit (form-adapter-capability-emit capability))
+                    (let parse (form-adapter-capability-parse capability))
+                    (let source
+                        (emit value anchor ctx))
+                    (form-adapter-route
+                        capability
+                        source
+                        (parse source ctx))))))
+
+    (defn form-adapter-capability-starts? (capability kind input-surface ctx)
+        (and (node_eq (form-adapter-capability-kind capability) kind)
+             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+                  (bmf-context-properties-match?
+                    ctx
+                    (form-adapter-capability-requirements capability)))))
+
+    (defn form-adapter-capability-input-ready? (capability input-surface ctx)
+        (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+             (bmf-context-properties-match?
+                ctx
+                (form-adapter-capability-requirements capability))))
+
+    (defn form-adapter-plan-node-from (capabilities)
+        (intern_node
+            FORM-ADAPTER-PLAN
+            (list (intern_trivial_int (len capabilities)))))
+
+    (defn form-adapter-plan (capabilities)
+        (list (form-adapter-plan-node-from capabilities) capabilities))
+
+    (defn form-adapter-plan-node (plan) (nth plan 0))
+    (defn form-adapter-plan-capabilities (plan) (nth plan 1))
+
+    (defn form-adapter-plan-empty? (plan)
+        (nil? (form-adapter-plan-capabilities plan)))
+
+    (defn form-adapter-plan-cons (capability plan)
+        (form-adapter-plan
+            (cons capability (form-adapter-plan-capabilities plan))))
+
+    (defn form-adapter-plan-search
+        (candidates all-capabilities kinds input-surface output-surface ctx missing)
+        (if (nil? candidates) missing
+            (do
+                (let capability (head candidates))
+                (if (form-adapter-capability-starts?
+                        capability
+                        (head kinds)
+                        input-surface
+                        ctx)
+                    (do
+                        (let rest-plan
+                            (form-adapter-plan-from-capabilities
+                                all-capabilities
+                                (tail kinds)
+                                (form-adapter-capability-output-surface capability)
+                                output-surface
+                                ctx
+                                missing))
+                        (if (nil? rest-plan)
+                            (form-adapter-plan-search
+                                (tail candidates)
+                                all-capabilities
+                                kinds
+                                input-surface
+                                output-surface
+                                ctx
+                                missing)
+                            (form-adapter-plan-cons capability rest-plan)))
+                    (form-adapter-plan-search
+                        (tail candidates)
+                        all-capabilities
+                        kinds
+                        input-surface
+                        output-surface
+                        ctx
+                        missing)))))
+
+    (defn form-adapter-plan-from-capabilities
+        (capabilities kinds input-surface output-surface ctx missing)
+        (if (nil? kinds)
+            (if (node_eq input-surface output-surface)
+                (form-adapter-plan (empty))
+                missing)
+            (form-adapter-plan-search
+                capabilities
+                capabilities
+                kinds
+                input-surface
+                output-surface
+                ctx
+                missing)))
+
+    (defn form-adapter-registry-plan
+        (registry kinds input-surface output-surface ctx missing)
+        (form-adapter-plan-from-capabilities
+            (form-adapter-registry-capabilities registry)
+            kinds
+            input-surface
+            output-surface
+            ctx
+            missing))
+
+    (defn form-adapter-flex-plan-search
+        (candidates all-capabilities input-surface output-surface ctx depth missing)
+        (if (nil? candidates) missing
+            (do
+                (let capability (head candidates))
+                (if (form-adapter-capability-input-ready? capability input-surface ctx)
+                    (do
+                        (let rest-plan
+                            (form-adapter-flex-plan-from-capabilities
+                                all-capabilities
+                                (form-adapter-capability-output-surface capability)
+                                output-surface
+                                ctx
+                                (sub depth 1)
+                                missing))
+                        (if (nil? rest-plan)
+                            (form-adapter-flex-plan-search
+                                (tail candidates)
+                                all-capabilities
+                                input-surface
+                                output-surface
+                                ctx
+                                depth
+                                missing)
+                            (form-adapter-plan-cons capability rest-plan)))
+                    (form-adapter-flex-plan-search
+                        (tail candidates)
+                        all-capabilities
+                        input-surface
+                        output-surface
+                        ctx
+                        depth
+                        missing)))))
+
+    (defn form-adapter-flex-plan-from-capabilities
+        (capabilities input-surface output-surface ctx depth missing)
+        (if (node_eq input-surface output-surface)
+            (form-adapter-plan (empty))
+            (if (lt depth 1)
+                missing
+                (form-adapter-flex-plan-search
+                    capabilities
+                    capabilities
+                    input-surface
+                    output-surface
+                    ctx
+                    depth
+                    missing))))
+
+    (defn form-adapter-registry-plan-flex
+        (registry input-surface output-surface ctx depth missing)
+        (form-adapter-flex-plan-from-capabilities
+            (form-adapter-registry-capabilities registry)
+            input-surface
+            output-surface
+            ctx
+            depth
+            missing))
+
+    (defn form-adapter-compiled-plan-node-from (plan)
+        (intern_node
+            FORM-ADAPTER-COMPILED-PLAN
+            (list (form-adapter-plan-node plan))))
+
+    (defn form-adapter-compiled-plan (plan)
+        (list (form-adapter-compiled-plan-node-from plan) plan))
+
+    (defn form-adapter-compiled-plan-node (compiled) (nth compiled 0))
+    (defn form-adapter-compiled-plan-plan (compiled) (nth compiled 1))
+    (defn form-adapter-compiled-plan-capabilities (compiled)
+        (form-adapter-plan-capabilities
+            (form-adapter-compiled-plan-plan compiled)))
+
+    (defn form-adapter-registry-compile-flex
+        (registry input-surface output-surface ctx depth missing)
+        (do
+            (let plan
+                (form-adapter-registry-plan-flex
+                    registry
+                    input-surface
+                    output-surface
+                    ctx
+                    depth
+                    missing))
+            (if (nil? plan)
+                missing
+                (form-adapter-compiled-plan plan))))
+
+    (defn form-adapter-compiled-plan-run (compiled value anchor ctx)
+        (form-adapter-plan-run
+            (form-adapter-compiled-plan-plan compiled)
+            value
+            anchor
+            ctx))
+
+    (defn form-adapter-plan-result-node-from (plan)
+        (intern_node
+            FORM-ADAPTER-PLAN-RESULT
+            (list (form-adapter-plan-node plan))))
+
+    (defn form-adapter-plan-result (plan value anchor routes)
+        (list (form-adapter-plan-result-node-from plan)
+              plan
+              value
+              anchor
+              routes))
+
+    (defn form-adapter-plan-result-node (result) (nth result 0))
+    (defn form-adapter-plan-result-plan (result) (nth result 1))
+    (defn form-adapter-plan-result-value (result) (nth result 2))
+    (defn form-adapter-plan-result-anchor (result) (nth result 3))
+    (defn form-adapter-plan-result-routes (result) (nth result 4))
+
+    (defn form-adapter-plan-run-loop
+        (capabilities value anchor ctx routes)
+        (if (nil? capabilities)
+            (list value anchor (reverse routes))
+            (do
+                (let capability (head capabilities))
+                (let emit (form-adapter-capability-emit capability))
+                (let parse (form-adapter-capability-parse capability))
+                (let source (emit value anchor ctx))
+                (let parsed (parse source ctx))
+                (let route (form-adapter-route capability source parsed))
+                (form-adapter-plan-run-loop
+                    (tail capabilities)
+                    (form-adapter-route-value route)
+                    (form-adapter-route-anchor route)
+                    ctx
+                    (cons route routes)))))
+
+    (defn form-adapter-plan-run (plan value anchor ctx)
+        (do
+            (let output
+                (form-adapter-plan-run-loop
+                    (form-adapter-plan-capabilities plan)
+                    value
+                    anchor
+                    ctx
+                    (empty)))
+            (form-adapter-plan-result
+                plan
+                (nth output 0)
+                (nth output 1)
+                (nth output 2))))
+
+    (defn form-adapter-registry-plan-run
+        (registry kinds input-surface output-surface value anchor ctx missing)
+        (do
+            (let plan
+                (form-adapter-registry-plan
+                    registry
+                    kinds
+                    input-surface
+                    output-surface
+                    ctx
+                    missing))
+            (if (nil? plan)
+                missing
+                (form-adapter-plan-run plan value anchor ctx))))
+
+    (defn bmf-context-property-matches? (ctx property)
+        (str_eq (bmf-symbol-context-property
+                    ctx
+                    (bmf-lens-property-key property)
+                    "")
+                (bmf-lens-property-value property)))
+
+    (defn bmf-context-properties-match? (ctx requirements)
+        (if (nil? requirements) true
+            (if (bmf-context-property-matches? ctx (head requirements))
+                (bmf-context-properties-match? ctx (tail requirements))
+                false)))
+
+    (defn bmf-context-property-score (ctx property)
+        (do
+            (let actual
+                (bmf-symbol-context-property
+                    ctx
+                    (bmf-lens-property-key property)
+                    ""))
+            (if (str_eq actual "")
+                0
+                (if (str_eq actual (bmf-lens-property-value property))
+                    1
+                    (sub 0 1)))))
+
+    (defn bmf-context-properties-score-loop (ctx requirements score)
+        (if (nil? requirements) score
+            (do
+                (let item-score (bmf-context-property-score ctx (head requirements)))
+                (if (lt item-score 0)
+                    (sub 0 1)
+                    (bmf-context-properties-score-loop
+                        ctx
+                        (tail requirements)
+                        (add score item-score))))))
+
+    (defn bmf-context-properties-score (ctx requirements)
+        (bmf-context-properties-score-loop ctx requirements 0))
+
+    (defn bmf-reverse-lens-context-matches? (target domain lens ctx)
+        (and (bmf-reverse-lens-matches? target domain lens)
+             (bmf-context-properties-match?
+                ctx
+                (bmf-reverse-lens-requirements target))))
+
+    (defn bmf-reverse-lens-context-score (target domain lens ctx)
+        (if (bmf-reverse-lens-matches? target domain lens)
+            (bmf-context-properties-score
+                ctx
+                (bmf-reverse-lens-requirements target))
+            (sub 0 1)))
+
+    (defn bmf-reverse-lens-find-for-context (targets domain lens ctx missing)
+        (bmf-reverse-lens-find-best-for-context
+            targets
+            domain
+            lens
+            ctx
+            missing
+            (sub 0 1)
+            missing))
+
+    (defn bmf-reverse-lens-find-best-for-context (targets domain lens ctx best best-score missing)
+        (if (nil? targets) best
+            (do
+                (let score (bmf-reverse-lens-context-score (head targets) domain lens ctx))
+                (if (gt score best-score)
+                    (bmf-reverse-lens-find-best-for-context
+                        (tail targets)
+                        domain
+                        lens
+                        ctx
+                        (head targets)
+                        score
+                        missing)
+                    (bmf-reverse-lens-find-best-for-context
+                        (tail targets)
+                        domain
+                        lens
+                        ctx
+                        best
+                        best-score
+                        missing)))))
+
+    (defn bmf-emit-through-lens (targets domain lens node anchor ctx missing)
+        (do
+            (let target (bmf-reverse-lens-find targets domain lens (empty)))
+            (if (nil? target) missing
+                (do
+                    (let emit (bmf-reverse-lens-emit target))
+                    (emit node anchor ctx)))))
+
+    (defn bmf-parse-through-lens (targets domain lens source ctx missing)
+        (do
+            (let target (bmf-reverse-lens-find targets domain lens (empty)))
+            (if (nil? target) missing
+                (do
+                    (let parse (bmf-reverse-lens-parse target))
+                    (parse source ctx)))))
+
+    (defn bmf-emit-through-context-lens (targets domain lens node anchor ctx missing)
+        (do
+            (let target (bmf-reverse-lens-find-for-context targets domain lens ctx (empty)))
+            (if (nil? target) missing
+                (do
+                    (let emit (bmf-reverse-lens-emit target))
+                    (emit node anchor ctx)))))
+
+    (defn bmf-parse-through-context-lens (targets domain lens source ctx missing)
+        (do
+            (let target (bmf-reverse-lens-find-for-context targets domain lens ctx (empty)))
+            (if (nil? target) missing
+                (do
+                    (let parse (bmf-reverse-lens-parse target))
+                    (parse source ctx)))))
+
+    (defn bmf-lens-roundtrip (targets domain lens node anchor ctx missing)
+        (do
+            (let source (bmf-emit-through-lens targets domain lens node anchor ctx missing))
+            (let parsed (bmf-parse-through-lens targets domain lens source ctx missing))
+            (list "bmf-lens-roundtrip" source parsed)))
+
+    (defn bmf-lens-roundtrip-for-context (targets domain lens node anchor ctx missing)
+        (do
+            (let source (bmf-emit-through-context-lens targets domain lens node anchor ctx missing))
+            (let parsed (bmf-parse-through-context-lens targets domain lens source ctx missing))
+            (list "bmf-lens-roundtrip" source parsed)))
+
+    (defn bmf-lens-roundtrip-source (rt) (nth rt 1))
+    (defn bmf-lens-roundtrip-parsed (rt) (nth rt 2))
+    (defn bmf-lens-roundtrip-anchor (rt) (nth (bmf-lens-roundtrip-parsed rt) 0))
+    (defn bmf-lens-roundtrip-node (rt) (nth (bmf-lens-roundtrip-parsed rt) 1))
+
+    (defn bmf-collection (objects)
+        (list "bmf-collection" objects))
+
+    (defn bmf-collection? (x)
+        (and (gt (len x) 0) (str_eq (head x) "bmf-collection")))
+
+    (defn bmf-collection-items (c) (head (tail c)))
+
+    (defn bmf-empty (_x) (bmf-collection (empty)))
+
+    (defn bmf-identity-inverse (obj)
+        (bmf-object-source obj))
+
+    (defn bmf-reverse-object (obj)
+        (cell-undo obj))
+
+    (defn bmf-atom (kind value)
+        (bmf-object kind value (bmf-empty 0) bmf-identity-inverse))
+
+    (defn bmf-cap-to-object (cap)
+        (bmf-object (cap-name cap)
+                    (cap-value cap)
+                    (bmf-empty 0)
+                    bmf-identity-inverse))
+
+    (defn bmf-caps-to-objects (caps)
+        (if (nil? caps) (empty)
+            (cons (bmf-cap-to-object (head caps))
+                  (bmf-caps-to-objects (tail caps)))))
+
+    (defn bmf-caps-to-collection (caps)
+        (bmf-collection (bmf-caps-to-objects caps)))
+
+    (defn bmf-object-by-kind (objects kind)
+        (if (nil? objects) (empty)
+            (if (str_eq (bmf-object-kind (head objects)) kind)
+                (head objects)
+                (bmf-object-by-kind (tail objects) kind))))
+
+    (defn bmf-collection-get (collection kind)
+        (bmf-object-by-kind (bmf-collection-items collection) kind))
+
+    (defn bmf-collection-value (collection kind)
+        (bmf-object-value (bmf-collection-get collection kind)))
+
+    ;; --- BMF result stack --------------------------------------------
+
+    (defn bmf-stack (items)
+        (list "bmf-stack" items))
+
+    (defn bmf-stack-items (stack) (head (tail stack)))
+
+    (defn bmf-stack-push (stack object)
+        (bmf-stack (cons object (bmf-stack-items stack))))
+
+    (defn rev-step (acc x) (cons x acc))
+
+    (defn reverse-list (xs)
+        (foldl rev-step (empty) xs))
+
+    (defn bmf-stack-reduce (stack)
+        (bmf-collection (reverse-list (bmf-stack-items stack))))
+
+    (defn bmf-frame (parent stack)
+        (list "bmf-frame" parent stack))
+
+    (defn bmf-frame-parent (frame) (head (tail frame)))
+    (defn bmf-frame-stack (frame) (head (tail (tail frame))))
+
+    (defn bmf-start-result-stack (parent-stack)
+        (bmf-frame parent-stack (bmf-stack (empty))))
+
+    (defn bmf-frame-with-stack (frame stack)
+        (bmf-frame (bmf-frame-parent frame) stack))
+
+    (defn bmf-end-result-stack (frame tag inverse)
+        (do
+            (let child-collection (bmf-stack-reduce (bmf-frame-stack frame)))
+            (let grouped (bmf-object tag child-collection child-collection inverse))
+            (bmf-stack-push (bmf-frame-parent frame) grouped)))
+
+    ;; --- object grammar rules ----------------------------------------
+
+    (defn rule-name (r) (head r))
+    (defn rule-pattern (r) (head (tail r)))
+    (defn rule-action (r) (head (tail (tail r))))
+
+    (defn rule-inverse (r)
+        (if (gt (len r) 3)
+            (head (tail (tail (tail r))))
+            bmf-identity-inverse))
+
+    (defn bmf-default-reverse-emitter (object)
+        (bmf-object-source-span object))
+
+    (defn rule-reverse-emitter (r)
+        (if (gt (len r) 4)
+            (nth r 4)
+            bmf-default-reverse-emitter))
+
+    ;; --- first-class BMF dialect sections ----------------------------
+
+    (defn bmf-native (name action category)
+        (list "native" name action category))
+
+    (defn bmf-native-name (n) (nth n 1))
+    (defn bmf-native-action (n) (nth n 2))
+    (defn bmf-native-category (n) (nth n 3))
+
+    ;; Source-section objects live above the kernel. They are built by
+    ;; Form parsers and then compiled into binary Form recipes.
+    (defn form-section (dialect object)
+        (list "form-section" dialect object))
+
+    (defn form-section? (s)
+        (and (gt (len s) 0) (str_eq (head s) "form-section")))
+
+    (defn form-section-dialect (s) (nth s 1))
+    (defn form-section-object (s) (nth s 2))
+
+    (defn bmf-terminal (name)
+        (list "bmf-terminal" name))
+
+    (defn bmf-capture (name kind)
+        (list "bmf-capture" name kind))
+
+    (defn bmf-rule-spec (name pattern action)
+        (list "bmf-rule-spec" name pattern action))
+
+    (defn bmf-reversible-rule-spec (name pattern action reverse)
+        (list "bmf-rule-spec" name pattern action reverse))
+
+    (defn bmf-section (name rules)
+        (list "bmf-section" name rules))
+
+    (defn bmf-section-name (s) (nth s 1))
+    (defn bmf-section-rules (s) (nth s 2))
+
+    (defn bml-word (value)
+        (list "bml-word" value))
+
+    (defn bml-symbol (value)
+        (list "bml-symbol" value))
+
+    (defn bml-section (items)
+        (list "bml-section" items))
+
+    (defn bml-section? (s)
+        (and (gt (len s) 0) (str_eq (head s) "bml-section")))
+
+    (defn bml-section-items (s) (nth s 1))
+
+    (defn bmf-dialect (name rulebook natives rules)
+        (list "bmf-dialect" name rulebook natives rules))
+
+    (defn bmf-dialect? (d)
+        (and (gt (len d) 0) (str_eq (head d) "bmf-dialect")))
+
+    (defn bmf-dialect-name (d) (nth d 1))
+    (defn bmf-dialect-rulebook (d) (nth d 2))
+    (defn bmf-dialect-natives (d) (nth d 3))
+    (defn bmf-dialect-rules (d) (nth d 4))
+
+    (defn bmf-dialect-rule-name (rule)
+        (head rule))
+
+    (defn bmf-dialect-find-rule-list (rules rule-name)
+        (if (nil? rules) (empty)
+            (if (str_eq (bmf-dialect-rule-name (head rules)) rule-name)
+                (head rules)
+                (bmf-dialect-find-rule-list (tail rules) rule-name))))
+
+    (defn bmf-dialect-find-rule (dialect rule-name)
+        (bmf-dialect-find-rule-list
+            (bmf-dialect-rules dialect)
+            rule-name))
+
+    (defn bmf-dialect-apply-rule (dialect rule-name object-stream)
+        (apply-object-rule
+            (bmf-dialect-find-rule dialect rule-name)
+            object-stream))
+
+    (defn bmf-dialect-reverse-rule (dialect rule-name object)
+        (apply-object-rule-reverse
+            (bmf-dialect-find-rule dialect rule-name)
+            object))
+
+    (defn bmf-runtime-grammar-request (anchor dialect rule-name source)
+        (list "bmf-runtime-grammar-request"
+              anchor
+              dialect
+              rule-name
+              source))
+
+    (defn bmf-runtime-grammar-request-anchor (request) (nth request 1))
+    (defn bmf-runtime-grammar-request-dialect (request) (nth request 2))
+    (defn bmf-runtime-grammar-request-rule-name (request) (nth request 3))
+    (defn bmf-runtime-grammar-request-source (request) (nth request 4))
+
+    (defn bmf-runtime-grammar-object-request (anchor dialect rule-name object)
+        (list "bmf-runtime-grammar-object-request"
+              anchor
+              dialect
+              rule-name
+              object))
+
+    (defn bmf-runtime-grammar-object-request-anchor (request) (nth request 1))
+    (defn bmf-runtime-grammar-object-request-dialect (request) (nth request 2))
+    (defn bmf-runtime-grammar-object-request-rule-name (request) (nth request 3))
+    (defn bmf-runtime-grammar-object-request-object (request) (nth request 4))
+
+    (defn bmf-runtime-grammar-emit-request (request anchor ctx)
+        request)
+
+    (defn bmf-runtime-grammar-parse-request (request ctx)
+        (do
+            (let match
+                (bmf-dialect-apply-rule
+                    (bmf-runtime-grammar-request-dialect request)
+                    (bmf-runtime-grammar-request-rule-name request)
+                    (bmf-runtime-grammar-request-source request)))
+            (list (bmf-runtime-grammar-request-anchor request)
+                  (cap-get (match-caps match) "result"))))
+
+    (defn bmf-runtime-grammar-emit-object-request (request anchor ctx)
+        request)
+
+    (defn bmf-runtime-grammar-reverse-request (request ctx)
+        (list
+            (bmf-runtime-grammar-object-request-anchor request)
+            (bmf-dialect-reverse-rule
+                (bmf-runtime-grammar-object-request-dialect request)
+                (bmf-runtime-grammar-object-request-rule-name request)
+                (bmf-runtime-grammar-object-request-object request))))
+
+    (defn bmf-runtime-dialect-capsule
+        (root dialect source-surface form-surface parse-kind emit-kind effect reversibility lossiness deterministic proof-kind proof-recipe expected)
+        (do
+            (let parse-capability
+                (form-adapter-capability
+                    parse-kind
+                    source-surface
+                    form-surface
+                    bmf-runtime-grammar-emit-request
+                    bmf-runtime-grammar-parse-request
+                    dialect
+                    (empty)))
+            (let emit-capability
+                (form-adapter-capability
+                    emit-kind
+                    form-surface
+                    source-surface
+                    bmf-runtime-grammar-emit-object-request
+                    bmf-runtime-grammar-reverse-request
+                    dialect
+                    (empty)))
+            (form-recipe-capsule
+                root
+                (list source-surface form-surface)
+                (list parse-capability emit-capability)
+                (list
+                    (form-capability-contract parse-capability effect reversibility lossiness deterministic (empty))
+                    (form-capability-contract emit-capability effect reversibility lossiness deterministic (empty)))
+                (list
+                    (form-capability-proof parse-capability proof-kind proof-recipe expected)
+                    (form-capability-proof emit-capability proof-kind proof-recipe expected))
+                (empty)
+                (empty)
+                (list dialect))))
+
+    (defn object-lit (kind value) (list "object" kind value))
+
+    (defn object-pattern-tag (p) (head p))
+
+    (defn match-object-pattern (p object-stream)
+        (do
+            (let tag (object-pattern-tag p))
+            (if (str_eq tag "object") (match-object-literal p object-stream)
+            (if (str_eq tag "sequence") (match-object-sequence (tail p) object-stream (cap-empty 0))
+            (if (str_eq tag "choice") (match-object-choice (tail p) object-stream)
+            (if (str_eq tag "capture") (match-object-capture (head (tail p)) (head (tail (tail p))) object-stream)
+            (if (str_eq tag "star") (match-object-star (head (tail p)) object-stream (empty))
+            (if (str_eq tag "opt") (match-object-opt (head (tail p)) object-stream)
+                (mk-fail (str_concat "unknown object pattern: " tag))))))))))
+
+    (defn match-object-literal (p object-stream)
+        (if (nil? object-stream)
+            (mk-fail "expected BMF object")
+            (do
+                (let want-kind (head (tail p)))
+                (let want-value (head (tail (tail p))))
+                (let obj (head object-stream))
+                (if (str_eq (bmf-object-kind obj) want-kind)
+                    (if (str_eq want-value "")
+                        (mk-match (cap-empty 0) (tail object-stream))
+                        (if (str_eq (bmf-object-value obj) want-value)
+                            (mk-match (cap-empty 0) (tail object-stream))
+                            (mk-fail (str_concat "object value mismatch: expected " want-value))))
+                    (mk-fail (str_concat "object kind mismatch: expected " want-kind))))))
+
+    (defn match-object-sequence (children object-stream acc-caps)
+        (if (nil? children)
+            (mk-match acc-caps object-stream)
+            (do
+                (let m (match-object-pattern (head children) object-stream))
+                (if (fail? m) m
+                    (match-object-sequence (tail children)
+                                           (match-rest m)
+                                           (cap-merge acc-caps (match-caps m)))))))
+
+    (defn match-object-choice (alternatives object-stream)
+        (if (nil? alternatives)
+            (mk-fail "no object alternative matched")
+            (do
+                (let m (match-object-pattern (head alternatives) object-stream))
+                (if (match? m) m
+                    (match-object-choice (tail alternatives) object-stream)))))
+
+    (defn capture-object-value (m original-stream)
+        (if (nil? (match-caps m))
+            (bmf-object-value (head original-stream))
+            (match-caps m)))
+
+    (defn match-object-capture (name child object-stream)
+        (do
+            (let m (match-object-pattern child object-stream))
+            (if (fail? m) m
+                (mk-match (cap-set (match-caps m) name (capture-object-value m object-stream))
+                          (match-rest m)))))
+
+    (defn match-object-star (child object-stream collected)
+        (do
+            (let m (match-object-pattern child object-stream))
+            (if (fail? m)
+                (mk-match (cap-set (cap-empty 0) "items" collected) object-stream)
+                (match-object-star child
+                                   (match-rest m)
+                                   (cons (match-caps m) collected)))))
+
+    (defn match-object-opt (child object-stream)
+        (do
+            (let m (match-object-pattern child object-stream))
+            (if (fail? m) (mk-match (cap-empty 0) object-stream) m)))
+
+    (defn apply-object-rule (rule object-stream)
+        (do
+            (let m (match-object-pattern (rule-pattern rule) object-stream))
+            (if (fail? m) m
+                (do
+                    (let captures (bmf-caps-to-collection (match-caps m)))
+                    (let source-span (take (sub (len object-stream)
+                                                (len (match-rest m)))
+                                           object-stream))
+                    (let source (bmf-match-source captures source-span))
+                    (let action (rule-action rule))
+                    (let recipe (action captures))
+                    (let object (bmf-object (rule-name rule)
+                                            recipe
+                                            source
+                                            (rule-inverse rule)))
+                    (mk-match (cap-set
+                                (cap-set (cap-empty 0) "objects" captures)
+                                "result"
+                                object)
+                              (match-rest m))))))
+
+    (defn apply-object-rule-reverse (rule object)
+        (do
+            (let emit (rule-reverse-emitter rule))
+            (emit object)))
+
+    (defn bmf-roundtrip (rule source)
+        (do
+            (let first-match (apply-object-rule rule source))
+            (let first-object (cap-get (match-caps first-match) "result"))
+            (let reverse-source (apply-object-rule-reverse rule first-object))
+            (let second-match (apply-object-rule rule reverse-source))
+            (let second-object (cap-get (match-caps second-match) "result"))
+            (list "bmf-roundtrip"
+                  first-object
+                  reverse-source
+                  second-object)))
+
+    (defn bmf-roundtrip-first-object (rt) (nth rt 1))
+    (defn bmf-roundtrip-source (rt) (nth rt 2))
+    (defn bmf-roundtrip-second-object (rt) (nth rt 3))
+
+    (defn bmf-roundtrip-node-eq? (rt)
+        (node_eq (bmf-object-value (bmf-roundtrip-first-object rt))
+                 (bmf-object-value (bmf-roundtrip-second-object rt))))
+
+    0)

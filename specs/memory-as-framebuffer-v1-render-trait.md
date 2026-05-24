@@ -2,13 +2,13 @@
 idea_id: memory-as-framebuffer
 status: draft
 source:
-  - file: experiments/memory-as-framebuffer-v0/src/render_trait.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/render_trait.rs
     symbols: [Render, RenderCtx, RenderOp, register_kernel, lookup_kernel]
-  - file: experiments/memory-as-framebuffer-v0/src/render.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/render.rs
     symbols: [render_frame — extended to dispatch through Render trait]
-  - file: experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs
+  - file: seedbank/memory-as-framebuffer-v0/examples/custom_renderer.rs
     symbols: [Matrix3x3 type with custom Render impl showing grid of cells]
-  - file: experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs
+  - file: seedbank/memory-as-framebuffer-v0/tests/render_trait_smoke.rs
     symbols: [test_default_render_matches_v0, test_custom_render_overrides, test_kernel_registry]
 requirements:
   - "Define a `Render` trait with `fn render(&self, ctx: &mut RenderCtx, lod: Lod)` where RenderOp captures intent (rect, color, halo, transparency, etc.) abstracted from the actual frame buffer. Default impl reads the cell's type tag and produces v0-equivalent output (palette color + brightness + halo)."
@@ -21,21 +21,7 @@ done_when:
   - "cargo run --release --example custom_renderer produces matrix3x3.mp4 where the matrix renders as a 3x3 visible grid rather than as 9 separate primitive cells."
   - "tests/render_trait_smoke.rs passes: default-render-matches-v0 (pixel equivalence within tolerance), custom-render-overrides (registered kernel beats default), kernel-registry (registering twice errors, lookup hits return Some)."
   - "v0 fizzbuzz example continues to produce identical mp4 output after refactoring through the Render trait dispatch."
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render_trait.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "Render")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "RenderCtx")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "RenderOp")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "register_kernel")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "lookup_kernel")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "render_frame")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs", "Matrix3x3")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_default_render_matches_v0")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_custom_render_overrides")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_kernel_registry")'
-test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release render_trait"
+test: "cd seedbank/memory-as-framebuffer-v0 && cargo test --release render_trait"
 constraints:
   - "Builds on memory-as-framebuffer-v0. The v0 fizzbuzz mp4 must remain pixel-equivalent (within H.264 tolerance) after refactor; this is a structural change, not a visual one."
   - "User-type-tag range 0x1000..0xFFFF reserved for custom kernels. Primitives 0x0001..0x000F. Pointer kinds 0x000A..0x000D. Substrate-hash-tags (when substrate-render-fabric-v0 lands) take a separate range."
@@ -68,24 +54,24 @@ Replace the hardcoded nine-primitive renderer with a `Render` trait that any use
 
 ## Files to Create/Modify
 
-- `experiments/memory-as-framebuffer-v0/src/render_trait.rs`
-- `experiments/memory-as-framebuffer-v0/src/render.rs` — refactor to dispatch through Render trait
-- `experiments/memory-as-framebuffer-v0/src/lib.rs` — re-exports
-- `experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs`
-- `experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs`
-- `experiments/memory-as-framebuffer-v0/tests/v0_fizzbuzz_snapshot.png` — committed reference frame for pixel-equivalence test
-- `experiments/memory-as-framebuffer-v0/README.md` — add Custom Kernels section
+- `seedbank/memory-as-framebuffer-v0/src/render_trait.rs`
+- `seedbank/memory-as-framebuffer-v0/src/render.rs` — refactor to dispatch through Render trait
+- `seedbank/memory-as-framebuffer-v0/src/lib.rs` — re-exports
+- `seedbank/memory-as-framebuffer-v0/examples/custom_renderer.rs`
+- `seedbank/memory-as-framebuffer-v0/tests/render_trait_smoke.rs`
+- `seedbank/memory-as-framebuffer-v0/tests/v0_fizzbuzz_snapshot.png` — committed reference frame for pixel-equivalence test
+- `seedbank/memory-as-framebuffer-v0/README.md` — add Custom Kernels section
 
 ## Acceptance Tests
 
-- `cd experiments/memory-as-framebuffer-v0 && cargo test --release render_trait` passes — default-equivalence, custom-override, registry behavior.
+- `cd seedbank/memory-as-framebuffer-v0 && cargo test --release render_trait` passes — default-equivalence, custom-override, registry behavior.
 - Manual validation: `cargo run --release --example custom_renderer` produces `matrix3x3.mp4` where the matrix is visibly a 3×3 grid, not nine separate primitive cells.
 - Manual validation: `cargo run --release --example fizzbuzz` (v0 example) produces output visually identical to pre-refactor.
 
 ## Verification
 
 ```bash
-cd experiments/memory-as-framebuffer-v0
+cd seedbank/memory-as-framebuffer-v0
 cargo build --release
 cargo test --release render_trait
 cargo run --release --example fizzbuzz

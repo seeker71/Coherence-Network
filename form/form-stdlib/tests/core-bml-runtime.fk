@@ -1,0 +1,12 @@
+; core-bml-runtime.fk - prove BML-authored core runs without old core.fk.
+
+section [form.bml] {
+    def bml-test-square(n) = mul(n, n);
+    def bml-test-double(n) = mul(n, 2);
+    let numbers = list(1, 2, 3, 4);
+    let mapped = map(bml-test-square, list(1, 2, 3));
+    let sample-cell = cell("sample", 7, empty, identity);
+    let ready-score = if task-ready?(task-resolved(5)) then 100 else 0;
+    let stepped = task-step(task-cell("resolved", 8, bml-test-double, empty, task-undo));
+    add(add(add(add(add(sum(numbers), product(list(2, 3, 4))), nth(reverse(list(1, 2, 3)), 0)), cell-value(sample-cell)), ready-score), add(sum(mapped), stepped));
+}

@@ -16,7 +16,7 @@
 # authored by the structured-composition encoder; see
 # docs/coherence-substrate/structural-composition.md).
 #
-# The Python implementation in experiments/local-llm-cell-v0/organ.py
+# The Python implementation in seedbank/local-llm-cell-v0/organ.py
 # already carries these as (frequency, angle, focus, articulation)
 # quintuples with cosine-fit + operator-fallback selection. This file
 # is its substrate-resident sibling: same five strategies, same

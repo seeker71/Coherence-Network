@@ -83,4 +83,4 @@ def test_active_recipe_trace_index_cli_json():
     payload = json.loads(result.stdout)
     assert payload["window"]["trace_count"] == 5
     assert len(payload["active_recipes"]) == 5
-    assert payload["source_path"] == "experiments/local-llm-cell-v0/_field_traces.jsonl"
+    assert payload["source_path"] == "seedbank/local-llm-cell-v0/_field_traces.jsonl"

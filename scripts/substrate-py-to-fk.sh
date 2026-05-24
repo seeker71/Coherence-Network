@@ -28,12 +28,12 @@ fi
 
 TARGET="$1"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KERNEL="$ROOT/experiments/form-kernel-go/bin-go"
-STDLIB="$ROOT/experiments/form-stdlib"
+KERNEL="$ROOT/form/form-kernel-go/bin-go"
+STDLIB="$ROOT/form/form-stdlib"
 
 if [ ! -x "$KERNEL" ]; then
     echo "building form-kernel-go..." >&2
-    (cd "$ROOT/experiments/form-kernel-go" && go build -o bin-go .)
+    (cd "$ROOT/form/form-kernel-go" && go build -o bin-go .)
 fi
 
 # Generate a per-invocation converter script with the target path baked in.

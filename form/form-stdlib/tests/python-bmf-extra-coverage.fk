@@ -1,0 +1,220 @@
+; tests/python-bmf-extra-coverage.fk - reversible Python BMF breadth
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    (let decorator-call-rt
+        (py-rt "decorator-call1"
+            (list (py-op "@") (py-name "route") (py-op "(")
+                  (py-name "path") (py-op ")"))))
+
+    (let decorated-def-rt
+        (py-rt "decorated-def"
+            (list (py-op "@") (py-name "cache") (py-keyword "def")
+                  (py-name "load") (py-op "(") (py-op ")") (py-op ":"))))
+
+    (let import-many3-rt
+        (py-rt "import-many3"
+            (list (py-keyword "import") (py-name "os") (py-op ",")
+                  (py-name "sys") (py-op ",") (py-name "json"))))
+
+    (let import-as-rt
+        (py-rt "import-as"
+            (list (py-keyword "import") (py-name "numpy")
+                  (py-keyword "as") (py-name "np"))))
+
+    (let import-alias-many-rt
+        (py-rt "import-alias-many2"
+            (list (py-keyword "import") (py-name "numpy")
+                  (py-keyword "as") (py-name "np") (py-op ",")
+                  (py-name "pandas") (py-keyword "as") (py-name "pd"))))
+
+    (let from-many-rt
+        (py-rt "from-import-many2"
+            (list (py-keyword "from") (py-name "typing")
+                  (py-keyword "import") (py-name "Any")
+                  (py-op ",") (py-name "Optional"))))
+
+    (let from-star-rt
+        (py-rt "from-import-star"
+            (list (py-keyword "from") (py-name "math")
+                  (py-keyword "import") (py-op "*"))))
+
+    (let raise-from-rt
+        (py-rt "raise-from"
+            (list (py-keyword "raise") (py-name "Error")
+                  (py-keyword "from") (py-name "cause"))))
+
+    (let if-elif-else-rt
+        (py-rt "if-elif-else-pass"
+            (list (py-keyword "if") (py-name "ready")
+                  (py-op ":") (py-keyword "pass")
+                  (py-keyword "elif") (py-name "waiting")
+                  (py-op ":") (py-keyword "pass")
+                  (py-keyword "else") (py-op ":") (py-keyword "pass"))))
+
+    (let with-as-rt
+        (py-rt "with-as-pass"
+            (list (py-keyword "with") (py-name "open")
+                  (py-keyword "as") (py-name "f")
+                  (py-op ":") (py-keyword "pass"))))
+
+    (let async-with-as-rt
+        (py-rt "async-with-as-pass"
+            (list (py-keyword "async") (py-keyword "with")
+                  (py-name "session") (py-keyword "as") (py-name "conn")
+                  (py-op ":") (py-keyword "pass"))))
+
+    (let try-skeleton-rt
+        (py-rt "try-except-else-finally-pass"
+            (list (py-keyword "try") (py-op ":") (py-keyword "pass")
+                  (py-keyword "except") (py-name "Error")
+                  (py-op ":") (py-keyword "pass")
+                  (py-keyword "else") (py-op ":") (py-keyword "pass")
+                  (py-keyword "finally") (py-op ":") (py-keyword "pass"))))
+
+    (let case-guard-rt
+        (py-rt "case-guard-pass"
+            (list (py-keyword "case") (py-name "item")
+                  (py-keyword "if") (py-name "valid")
+                  (py-op ":") (py-keyword "pass"))))
+
+    (let match-as-rt
+        (py-rt "match-as"
+            (list (py-name "value") (py-keyword "as") (py-name "alias"))))
+
+    (let list-comp-rt
+        (py-rt "list-comp"
+            (list (py-op "[") (py-name "item") (py-keyword "for")
+                  (py-name "item") (py-keyword "in") (py-name "items")
+                  (py-op "]"))))
+
+    (let dict-comp-rt
+        (py-rt "dict-comp"
+            (list (py-op "{") (py-name "key") (py-op ":")
+                  (py-name "value") (py-keyword "for") (py-name "key")
+                  (py-keyword "in") (py-name "pairs") (py-op "}"))))
+
+    (let set-comp-rt
+        (py-rt "set-comp"
+            (list (py-op "{") (py-name "name") (py-keyword "for")
+                  (py-name "name") (py-keyword "in") (py-name "names")
+                  (py-op "}"))))
+
+    (let call-kwarg-rt
+        (py-rt "call-kwarg1"
+            (list (py-name "open") (py-op "(") (py-name "mode")
+                  (py-op "=") (py-name "read") (py-op ")"))))
+
+    (let call-star-rt
+        (py-rt "call-star1"
+            (list (py-name "fn") (py-op "(") (py-op "*")
+                  (py-name "args") (py-op ")"))))
+
+    (let call-star-star-rt
+        (py-rt "call-star-star1"
+            (list (py-name "fn") (py-op "(") (py-op "**")
+                  (py-name "kwargs") (py-op ")"))))
+
+    (let default-string-rt
+        (py-rt "default-param-string"
+            (list (py-name "name") (py-op "=") (py-string "root"))))
+
+    (let typed-default-rt
+        (py-rt "typed-default-param-int"
+            (list (py-name "limit") (py-op ":") (py-name "int")
+                  (py-op "=") (py-int "10"))))
+
+    (let typed-default-string-rt
+        (py-rt "typed-default-param-string"
+            (list (py-name "path") (py-op ":") (py-name "str")
+                  (py-op "=") (py-string "root"))))
+
+    (let def-typed-default-rt
+        (py-rt "def1-typed-default-int"
+            (list (py-keyword "def") (py-name "take") (py-op "(")
+                  (py-name "limit") (py-op ":") (py-name "int")
+                  (py-op "=") (py-int "10") (py-op ")") (py-op ":"))))
+
+    (let if-walrus-rt
+        (py-rt "if-walrus-pass"
+            (list (py-keyword "if") (py-name "item") (py-op ":=")
+                  (py-name "next") (py-op ":") (py-keyword "pass"))))
+
+    (let fstring-format-rt
+        (py-rt "fstring-format"
+            (list (py-fstring "value=") (py-op "{")
+                  (py-name "value") (py-op "}"))))
+
+    (let bytes-rt
+        (py-rt "bytes" (list (py-bytes "abc"))))
+
+    (let ellipsis-rt
+        (py-rt "ellipsis" (list (py-op "..."))))
+
+    (let decorated-class-base-rt
+        (py-rt "decorated-class-base"
+            (list (py-op "@") (py-name "frozen")
+                  (py-keyword "class") (py-name "Config") (py-op "(")
+                  (py-name "Base") (py-op ")") (py-op ":")
+                  (py-keyword "pass"))))
+
+    (let compare-chain-rt
+        (py-rt "compare-chain-lt-lte"
+            (list (py-name "low") (py-op "<") (py-name "value")
+                  (py-op "<=") (py-name "high"))))
+
+    (let compare-in-rt
+        (py-rt "compare-in-ident"
+            (list (py-name "item") (py-keyword "in") (py-name "items"))))
+
+    (let compare-is-not-rt
+        (py-rt "compare-is-not-ident"
+            (list (py-name "value") (py-keyword "is")
+                  (py-keyword "not") (py-name "None"))))
+
+    (let not-ident-rt
+        (py-rt "not-ident"
+            (list (py-keyword "not") (py-name "ready"))))
+
+    (sum
+        (list (rt-score decorator-call-rt)
+              (rt-score decorated-def-rt)
+              (rt-score import-many3-rt)
+              (rt-score import-as-rt)
+              (rt-score import-alias-many-rt)
+              (rt-score from-many-rt)
+              (rt-score from-star-rt)
+              (rt-score raise-from-rt)
+              (rt-score if-elif-else-rt)
+              (rt-score with-as-rt)
+              (rt-score async-with-as-rt)
+              (rt-score try-skeleton-rt)
+              (rt-score case-guard-rt)
+              (rt-score match-as-rt)
+              (rt-score list-comp-rt)
+              (rt-score dict-comp-rt)
+              (rt-score set-comp-rt)
+              (rt-score call-kwarg-rt)
+              (rt-score call-star-rt)
+              (rt-score call-star-star-rt)
+              (rt-score default-string-rt)
+              (rt-score typed-default-rt)
+              (rt-score typed-default-string-rt)
+              (rt-score def-typed-default-rt)
+              (rt-score if-walrus-rt)
+              (rt-score fstring-format-rt)
+              (rt-score bytes-rt)
+              (rt-score ellipsis-rt)
+              (rt-score decorated-class-base-rt)
+              (rt-score compare-chain-rt)
+              (rt-score compare-in-rt)
+              (rt-score compare-is-not-rt)
+              (rt-score not-ident-rt))))

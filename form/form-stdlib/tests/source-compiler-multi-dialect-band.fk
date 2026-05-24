@@ -1,0 +1,41 @@
+; source-compiler-multi-dialect-band.fk - one source carries several DSL sections
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (let source
+        (str_concat
+        (str_concat "section " "[python.bmf] {
+  assign-int ::= $name:name \"=\" $value:int => pybmf-emit-assign-int <= pybmf-source-assign-int;
+}
+")
+        (str_concat
+        (str_concat "section " "[go.bmf] {
+  var-int ::= \"var\" $name:name \"=\" $value:int => go-emit-var-int <= go-source-var-int;
+}
+")
+        (str_concat
+        (str_concat "section " "[form.bml] {
+  let score = add(40, 2)
+  score
+}
+")
+        (str_concat "section " "[natural.bmf] {
+  fact-is ::= $subject:name \"is\" $value:int \".\" => natural-emit-fact-int <= natural-source-fact-is;
+  fact-id-adalah ::= $subject:name \"adalah\" $value:int \".\" => natural-emit-fact-int <= natural-source-fact-id-adalah;
+}
+")))))
+
+    (let compiled (form-source-compile-text source))
+
+    (sum
+        (list
+            (if (fsc-contains? compiled "python-bmf-rules") 10 0)
+            (if (fsc-contains? compiled "go-bmf-rules") 20 0)
+            (if (fsc-contains? compiled "pybmf-emit-assign-int") 30 0)
+            (if (fsc-contains? compiled "go-emit-var-int") 40 0)
+            (if (fsc-contains? compiled "(let score (add 40 2))") 50 0)
+            (if (fsc-contains? compiled "score") 60 0)
+            (if (fsc-contains? compiled "natural-bmf-rules") 70 0)
+            (if (fsc-contains? compiled "natural-emit-fact-int") 80 0)
+            (if (fsc-contains? compiled "natural-source-fact-id-adalah") 90 0))))

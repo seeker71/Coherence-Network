@@ -1,0 +1,58 @@
+; language-bmf-program-core.fk - end-to-end function-add rules across languages
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (let py-rt
+        (bmf-roundtrip
+            (python-bmf-find-rule "return-plus-ident" python-bmf-rules)
+            (list (py-keyword "return") (py-name "a")
+                  (py-op "+") (py-name "b"))))
+
+    (let ts-rt
+        (bmf-roundtrip
+            (typescript-bmf-find-rule "function-return-add" typescript-bmf-rules)
+            (list (ts-src-keyword "function") (ts-src-name "add")
+                  (ts-src-op "(") (ts-src-name "a") (ts-src-op ":")
+                  (ts-src-name "number") (ts-src-op ",")
+                  (ts-src-name "b") (ts-src-op ":")
+                  (ts-src-name "number") (ts-src-op ")")
+                  (ts-src-op ":") (ts-src-name "number")
+                  (ts-src-op "{") (ts-src-keyword "return")
+                  (ts-src-name "a") (ts-src-op "+")
+                  (ts-src-name "b") (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (let go-rt
+        (bmf-roundtrip
+            (go-bmf-find-rule "func-return-add" go-bmf-rules)
+            (list (go-src-keyword "func") (go-src-name "add")
+                  (go-src-op "(") (go-src-name "a") (go-src-name "int")
+                  (go-src-op ",") (go-src-name "b") (go-src-name "int")
+                  (go-src-op ")") (go-src-name "int")
+                  (go-src-op "{") (go-src-keyword "return")
+                  (go-src-name "a") (go-src-op "+")
+                  (go-src-name "b") (go-src-op "}"))))
+
+    (let rust-rt
+        (bmf-roundtrip
+            (rust-bmf-find-rule "fn-return-add" rust-bmf-rules)
+            (list (rust-src-keyword "fn") (rust-src-name "add")
+                  (rust-src-op "(") (rust-src-name "a") (rust-src-op ":")
+                  (rust-src-name "i32") (rust-src-op ",")
+                  (rust-src-name "b") (rust-src-op ":")
+                  (rust-src-name "i32") (rust-src-op ")")
+                  (rust-src-op "->") (rust-src-name "i32")
+                  (rust-src-op "{") (rust-src-keyword "return")
+                  (rust-src-name "a") (rust-src-op "+")
+                  (rust-src-name "b") (rust-src-op ";")
+                  (rust-src-op "}"))))
+
+    (add (rt-score py-rt)
+    (add (rt-score ts-rt)
+    (add (rt-score go-rt)
+         (rt-score rust-rt)))))

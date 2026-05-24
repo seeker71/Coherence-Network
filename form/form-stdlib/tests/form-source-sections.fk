@@ -1,0 +1,42 @@
+; tests/form-source-sections.fk - language files expose native BMF seconds and recipe sections
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (let bmf-second
+        (form-source-section-by-dialect bmf-form-source "bmf.bmf"))
+    (let bmf-recipes
+        (form-source-section-by-dialect bmf-form-source "bmf.recipes"))
+    (let bml-second
+        (form-source-section-by-dialect bml-form-source "bml.bmf"))
+    (let bml-recipes
+        (form-source-section-by-dialect bml-form-source "bml.recipes"))
+    (let python-second
+        (form-source-section-by-dialect python-form-source "python.bmf"))
+    (let python-recipes
+        (form-source-section-by-dialect python-form-source "python.recipes"))
+
+    (let bmf-rule-count
+        (len (bmf-section-rules (form-section-object bmf-second))))
+    (let bmf-recipe-count
+        (len (compiler-section-items (form-section-object bmf-recipes))))
+    (let bml-rule-count
+        (len (bmf-section-rules (form-section-object bml-second))))
+    (let bml-recipe-count
+        (len (compiler-section-items (form-section-object bml-recipes))))
+    (let python-rule-count
+        (len (bmf-section-rules (form-section-object python-second))))
+    (let python-recipe-count
+        (len (compiler-section-items (form-section-object python-recipes))))
+
+    (add
+        (add bmf-rule-count
+             (add bmf-recipe-count
+                  (len (form-source-sections bmf-form-source))))
+        (add bml-rule-count
+             (add bml-recipe-count
+                  (add python-rule-count
+                       (add python-recipe-count
+                            (add (len (form-source-sections bml-form-source))
+                                 (len (form-source-sections python-form-source))))))))
+)

@@ -1,0 +1,247 @@
+; tests/bmf-compiler-runtime.fk - BMF source objects compile into BMF compiler objects
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk
+
+(do
+    (defn result-object (m)
+        (if (match? m)
+            (cap-get (match-caps m) "result")
+            (bmf-atom "failed-match" (fail-reason m))))
+
+    (defn result-value (m)
+        (if (match? m)
+            (bmf-object-value (result-object m))
+            (list "failed-match" (fail-reason m))))
+
+    (defn source-value (m name)
+        (bmf-collection-value (cell-undo (result-object m)) name))
+
+    (defn kind-score (obj expected)
+        (if (str_eq (head obj) expected) 1 0))
+
+    (let char-int-match
+        (apply-bmf-compiler-rule "BMFChar-int"
+            (list (bmf-src-op "\\") (bmf-src-int "65"))))
+    (let char-int-object (result-object char-int-match))
+
+    (let char-a-match
+        (apply-bmf-compiler-rule "BMFChar-quoted"
+            (list (bmf-src-op "'") (bmf-src-char "a") (bmf-src-op "'"))))
+    (let char-a-object (result-object char-a-match))
+
+    (let char-z-match
+        (apply-bmf-compiler-rule "BMFChar-quoted"
+            (list (bmf-src-op "'") (bmf-src-char "z") (bmf-src-op "'"))))
+    (let char-z-object (result-object char-z-match))
+
+    (let lit-match
+        (apply-bmf-compiler-rule "BMFLit"
+            (list (bmf-src-int "0") (bmf-src-string "class") (bmf-src-int "2"))))
+    (let lit-object (result-object lit-match))
+
+    (let range-single-match
+        (apply-bmf-compiler-rule "BMFRange-single"
+            (list char-int-object)))
+    (let range-single-object (result-object range-single-match))
+
+    (let range-match
+        (apply-bmf-compiler-rule "BMFRange"
+            (list char-a-object (bmf-src-op "..") char-z-object)))
+    (let range-object (result-object range-match))
+
+    (let literal-int-match
+        (apply-bmf-compiler-rule "BMFLiteral-int"
+            (list (bmf-src-int "7"))))
+    (let literal-float-match
+        (apply-bmf-compiler-rule "BMFLiteral-float"
+            (list (bmf-src-float "1.5"))))
+    (let literal-string-match
+        (apply-bmf-compiler-rule "BMFLiteral-string"
+            (list (bmf-src-string "text"))))
+    (let literal-field-match
+        (apply-bmf-compiler-rule "BMFLiteral-field"
+            (list (bmf-src-op "#") (bmf-src-field "EnumValue"))))
+
+    (let call-match
+        (apply-bmf-compiler-rule "BMFCall"
+            (list (bmf-src-name "Identifier")
+                  (bmf-src-args (list (result-value literal-int-match)
+                                      (result-value literal-string-match))))))
+    (let call-object (result-object call-match))
+
+    (let callbase-match
+        (apply-bmf-compiler-rule "BMFCallBase"
+            (list call-object)))
+    (let callbase-object (result-object callbase-match))
+
+    (let basis-range-match
+        (apply-bmf-compiler-rule "BMFBasis-range"
+            (list range-object)))
+    (let basis-lit-match
+        (apply-bmf-compiler-rule "BMFBasis-lit"
+            (list lit-object)))
+    (let basis-lit-object (result-object basis-lit-match))
+    (let basis-call-match
+        (apply-bmf-compiler-rule "BMFBasis-call"
+            (list callbase-object)))
+    (let basis-call-object (result-object basis-call-match))
+
+    (let item-match
+        (apply-bmf-compiler-rule "BMFItem"
+            (list basis-lit-object)))
+    (let item-object (result-object item-match))
+
+    (let itemmethod-match
+        (apply-bmf-compiler-rule "BMFItemMethod"
+            (list item-object)))
+    (let itemmethod-object (result-object itemmethod-match))
+
+    (let factor-match
+        (apply-bmf-compiler-rule "BMFFactor"
+            (list itemmethod-object)))
+    (let factor-object (result-object factor-match))
+
+    (let term-one-match
+        (apply-bmf-compiler-rule "BMFTerm-one"
+            (list factor-object)))
+    (let term-one-object (result-object term-one-match))
+
+    (let expr-one-match
+        (apply-bmf-compiler-rule "BMFExpr-one"
+            (list term-one-object)))
+    (let expr-one-object (result-object expr-one-match))
+
+    (let opt-match
+        (apply-bmf-compiler-rule "BMFOpt"
+            (list (bmf-src-op "[") expr-one-object (bmf-src-op "]"))))
+    (let opt-object (result-object opt-match))
+
+    (let must-match
+        (apply-bmf-compiler-rule "BMFMust"
+            (list (bmf-src-int "1") (bmf-src-op "(") expr-one-object
+                  (bmf-src-op ")") (bmf-src-int "3"))))
+    (let must-object (result-object must-match))
+
+    (let item-opt-match
+        (apply-bmf-compiler-rule "BMFItem-opt"
+            (list opt-object)))
+    (let item-must-match
+        (apply-bmf-compiler-rule "BMFItem-must"
+            (list must-object)))
+    (let item-star-match
+        (apply-bmf-compiler-rule "BMFItem-star"
+            (list basis-call-object (bmf-src-op "*"))))
+    (let item-plus-match
+        (apply-bmf-compiler-rule "BMFItem-plus"
+            (list basis-call-object (bmf-src-op "+"))))
+    (let item-slash-match
+        (apply-bmf-compiler-rule "BMFItem-slash"
+            (list basis-call-object (bmf-src-op "\\") (bmf-src-op "+") item-object)))
+
+    (let itemmethod-call-match
+        (apply-bmf-compiler-rule "BMFItemMethod-call"
+            (list item-object (bmf-src-op ".") callbase-object)))
+    (let factor-call-match
+        (apply-bmf-compiler-rule "BMFFactor-call"
+            (list (bmf-src-op "@") callbase-object)))
+
+    (let tag-match
+        (apply-bmf-compiler-rule "BMFTag"
+            (list (bmf-src-op "$") (bmf-src-name "name") (bmf-src-op ":"))))
+    (let tag-object (result-object tag-match))
+    (let tag-anon-match
+        (apply-bmf-compiler-rule "BMFTag-anon"
+            (list (bmf-src-op ":"))))
+
+    (let factor-tag-match
+        (apply-bmf-compiler-rule "BMFFactor-tag"
+            (list tag-object itemmethod-object)))
+    (let factor-tag-object (result-object factor-tag-match))
+
+    (let term-match
+        (apply-bmf-compiler-rule "BMFTerm"
+            (list factor-object factor-tag-object)))
+    (let term-object (result-object term-match))
+
+    (let expr-match
+        (apply-bmf-compiler-rule "BMFExpr"
+            (list term-one-object (bmf-src-op "|") term-object)))
+    (let expr-object (result-object expr-match))
+
+    (let prim-match
+        (apply-bmf-compiler-rule "BMFPrim"
+            (list (bmf-src-op "<<prim") (bmf-src-name "cut") (bmf-src-op ">>"))))
+    (let inline-match
+        (apply-bmf-compiler-rule "BMFInline"
+            (list (bmf-src-op "<<") expr-object (bmf-src-op ">>"))))
+
+    (let attr-match
+        (apply-bmf-compiler-rule "BMFAttribute"
+            (list (bmf-src-fields (list "left" "right"))
+                  (bmf-src-code "{ return left; }"))))
+
+    (let rule-match
+        (apply-bmf-compiler-rule "BMFRule"
+            (list call-object (bmf-src-op "::=") expr-object (bmf-src-op ";"))))
+
+    (let old-literal-match
+        (apply-bmf-compiler-rule "char-chain"
+            (list (bmf-src-string "class"))))
+    (let old-call-match
+        (apply-bmf-compiler-rule "rule-call"
+            (list (bmf-src-name "Identifier"))))
+
+    (let coverage-score (bmf-reference-covered-count 0)) ; 36 required rule variants
+    (let shape-score
+        (add (kind-score (result-value char-int-match) "comp-bmf-char")
+        (add (kind-score (result-value lit-match) "comp-bmf-char-chain")
+        (add (kind-score (result-value range-match) "comp-bmf-char-range")
+        (add (kind-score (result-value literal-field-match) "comp-bmf-literal")
+        (add (kind-score (result-value call-match) "comp-bmf-rule-call")
+        (add (kind-score (result-value callbase-match) "comp-bmf-rule-call")
+        (add (kind-score (result-value prim-match) "comp-bmf-primitive")
+        (add (kind-score (result-value inline-match) "comp-bmf-inline")
+        (add (kind-score (result-value opt-match) "comp-bmf-repeat")
+        (add (kind-score (result-value must-match) "comp-bmf-repeat")
+        (add (kind-score (result-value item-star-match) "comp-bmf-repeat")
+        (add (kind-score (result-value item-plus-match) "comp-bmf-repeat")
+        (add (kind-score (result-value item-slash-match) "comp-bmf-sequence")
+        (add (kind-score (result-value itemmethod-call-match) "comp-bmf-method-call")
+        (add (kind-score (result-value tag-match) "comp-bmf-tag")
+        (add (kind-score (result-value factor-tag-match) "comp-bmf-tag")
+        (add (kind-score (result-value term-match) "comp-bmf-sequence")
+        (add (kind-score (result-value expr-match) "comp-bmf-branch")
+        (add (kind-score (result-value attr-match) "comp-bmf-attribute")
+             (kind-score (result-value rule-match) "comp-bmf-rule")))))))))))))))))))))
+
+    (let value-score
+        (add (str_len (comp-bmf-call-name (result-value call-match)))
+        (add (len (comp-bmf-call-args (result-value call-match)))
+        (add (str_to_int (source-value char-int-match "value"))
+        (add (str_len (source-value old-literal-match "value"))
+             (str_len (source-value old-call-match "name")))))))
+
+    (let shape-code
+        (add (if (eq (kind-score (result-value char-int-match) "comp-bmf-char") 1) 1 0)
+        (add (if (eq (kind-score (result-value lit-match) "comp-bmf-char-chain") 1) 2 0)
+        (add (if (eq (kind-score (result-value range-match) "comp-bmf-char-range") 1) 4 0)
+        (add (if (eq (kind-score (result-value literal-field-match) "comp-bmf-literal") 1) 8 0)
+        (add (if (eq (kind-score (result-value call-match) "comp-bmf-rule-call") 1) 16 0)
+        (add (if (eq (kind-score (result-value callbase-match) "comp-bmf-rule-call") 1) 32 0)
+        (add (if (eq (kind-score (result-value prim-match) "comp-bmf-primitive") 1) 64 0)
+        (add (if (eq (kind-score (result-value inline-match) "comp-bmf-inline") 1) 128 0)
+        (add (if (eq (kind-score (result-value opt-match) "comp-bmf-repeat") 1) 256 0)
+        (add (if (eq (kind-score (result-value must-match) "comp-bmf-repeat") 1) 512 0)
+        (add (if (eq (kind-score (result-value item-star-match) "comp-bmf-repeat") 1) 1024 0)
+        (add (if (eq (kind-score (result-value item-plus-match) "comp-bmf-repeat") 1) 2048 0)
+        (add (if (eq (kind-score (result-value item-slash-match) "comp-bmf-sequence") 1) 4096 0)
+        (add (if (eq (kind-score (result-value itemmethod-call-match) "comp-bmf-method-call") 1) 8192 0)
+        (add (if (eq (kind-score (result-value tag-match) "comp-bmf-tag") 1) 16384 0)
+        (add (if (eq (kind-score (result-value factor-tag-match) "comp-bmf-tag") 1) 32768 0)
+        (add (if (eq (kind-score (result-value term-match) "comp-bmf-sequence") 1) 65536 0)
+        (add (if (eq (kind-score (result-value expr-match) "comp-bmf-branch") 1) 131072 0)
+        (add (if (eq (kind-score (result-value attr-match) "comp-bmf-attribute") 1) 262144 0)
+             (if (eq (kind-score (result-value rule-match) "comp-bmf-rule") 1) 524288 0)))))))))))))))))))))
+
+    (add shape-code (add coverage-score value-score))
+)

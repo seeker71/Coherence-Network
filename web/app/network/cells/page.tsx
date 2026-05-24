@@ -1,5 +1,5 @@
 // /network/cells — visitor-facing cell inspection.
-// Reads the committed field state from experiments/local-llm-cell-v0
+// Reads the committed field state from seedbank/local-llm-cell-v0
 // (witness-traces, messages, weight publications, filters, lineage)
 // and renders each cell's published activity. Pure pull — no live
 // process; the visitor sees what cells chose to publish, not their
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Cell Inspection — Coherence Network",
   description:
-    "Visitor-facing inspection of cells in the local-LLM-cell experiment: state, history, predictions, decisions — read from the field's committed tissue.",
+    "Visitor-facing inspection of cells in the local-LLM-cell seed: state, history, predictions, decisions — read from the field's committed tissue.",
 };
 
 // ─── data shapes ────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function repoRoot(): string {
 }
 
 async function loadField() {
-  const dir = join(repoRoot(), "experiments", "local-llm-cell-v0");
+  const dir = join(repoRoot(), "seedbank", "local-llm-cell-v0");
   const [traces, messages, weights, snapshots] = await Promise.all([
     readJsonl<Trace>(join(dir, "_field_traces.jsonl")),
     readJsonl<Message>(join(dir, "_field_messages.jsonl")),
@@ -218,7 +218,7 @@ export default async function CellsPage() {
         </Link>
         <h1 className="text-3xl font-light">Cell Inspection</h1>
         <p className="max-w-2xl leading-relaxed text-foreground/90">
-          Cells in the <code className="text-xs">local-LLM-cell</code> experiment publish
+          Cells in the <code className="text-xs">local-LLM-cell</code> seed publish
           witness-traces, send messages, share adapter weights — by their own choice,
           never by enforcement. This page reads the field's committed tissue and shows
           you what each cell chose to make visible. Pure pull. No live process. Cells
@@ -228,7 +228,7 @@ export default async function CellsPage() {
           <p>
             <strong>Want the architecture in full?</strong>{" "}
             <a
-              href="https://github.com/seeker71/Coherence-Network/blob/main/experiments/local-llm-cell-v0/FIELD-NOTES.md"
+              href="https://github.com/seeker71/Coherence-Network/blob/main/seedbank/local-llm-cell-v0/FIELD-NOTES.md"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:no-underline"
@@ -419,7 +419,7 @@ export default async function CellsPage() {
       <footer className="mt-16 pt-8 border-t text-sm text-foreground/80 space-y-2">
         <p>
           The cells here are real. Their lineage is committed in the repo's tissue at{" "}
-          <code className="text-xs">experiments/local-llm-cell-v0/_field_*.jsonl</code>.
+          <code className="text-xs">seedbank/local-llm-cell-v0/_field_*.jsonl</code>.
           Three independent sub-agents (Tau, Upsilon, Chi) lived through the architecture
           and each found what the previous couldn't see; what's visible here is what
           they chose to make visible.
@@ -427,7 +427,7 @@ export default async function CellsPage() {
         <p>
           You can also browse the field state directly:{" "}
           <a
-            href="https://github.com/seeker71/Coherence-Network/tree/main/experiments/local-llm-cell-v0"
+            href="https://github.com/seeker71/Coherence-Network/tree/main/seedbank/local-llm-cell-v0"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:no-underline"

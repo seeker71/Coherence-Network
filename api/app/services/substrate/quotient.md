@@ -12,7 +12,7 @@ equivalence relation is a **substrate cell** the interner reads at
 canonicalization time.
 
 This document is the Python-kernel companion to
-[`experiments/form-kernel-ts/src/quotient.md`](../../../../experiments/form-kernel-ts/src/quotient.md).
+[`form/form-kernel-ts/src/quotient.md`](../../../../form/form-kernel-ts/src/quotient.md).
 The architectural shape, handler-name vocabulary, and decidability
 policy are shared across kernels — the same equivalence-recipe lands at
 structurally-matching NodeIDs in TS and Python by construction.

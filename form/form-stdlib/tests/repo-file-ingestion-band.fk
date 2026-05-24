@@ -1,0 +1,104 @@
+; repo-file-ingestion-band.fk - ingest real repo files into Form objects.
+;
+; Paths and MIME labels stay at the filesystem/media boundary. Internal file
+; kinds are local Form nodes minted under a capsule root.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/image-bmf.fk
+
+section [form.action] {
+    let REPO_TEXT_SENSE = make_nodeid(8, 45, 6, 2);
+    let repo_root = form-capsule-root(83, 1, 9, 1);
+    let file_kind = form-dynamic-kind(repo_root, 1);
+    let decoder_kind = form-dynamic-kind(repo_root, 2);
+    let field_kind = form-dynamic-kind(repo_root, 3);
+    let python_kind = form-dynamic-ref(repo_root, file_kind, 1);
+    let go_kind = form-dynamic-ref(repo_root, file_kind, 2);
+    let typescript_kind = form-dynamic-ref(repo_root, file_kind, 3);
+    let rust_kind = form-dynamic-ref(repo_root, file_kind, 4);
+    let form_kind = form-dynamic-ref(repo_root, file_kind, 5);
+    let markdown_kind = form-dynamic-ref(repo_root, file_kind, 6);
+    let svg_kind = form-dynamic-ref(repo_root, file_kind, 7);
+    let png_kind = form-dynamic-ref(repo_root, file_kind, 8);
+    let jpg_kind = form-dynamic-ref(repo_root, file_kind, 9);
+    let json_kind = form-dynamic-ref(repo_root, file_kind, 10);
+
+    let source_decoder = form-dynamic-ref(repo_root, decoder_kind, 1);
+    let json_decoder = form-dynamic-ref(repo_root, decoder_kind, 2);
+    let markdown_decoder = form-dynamic-ref(repo_root, decoder_kind, 3);
+    let image_decoder = form-dynamic-ref(repo_root, decoder_kind, 4);
+
+    let char_count_field = form-dynamic-ref(repo_root, field_kind, 1);
+    let line_count_field = form-dynamic-ref(repo_root, field_kind, 2);
+    let marker_field = form-dynamic-ref(repo_root, field_kind, 3);
+    let ast_field = form-dynamic-ref(repo_root, field_kind, 4);
+    let image_meta_field = form-dynamic-ref(repo_root, field_kind, 5);
+
+    def repo_text_sense(kind, marker, present) = intern_node(REPO_TEXT_SENSE, list(kind, intern_trivial_string(marker), intern_trivial_int(present)));
+    def repo_text_present(node) = node_value(nth(node_children(node), 2));
+    def repo_prefix_len(text) = if lt(str_len(text), 512) then str_len(text) else 512;
+    def repo_sense_text(kind, marker, text) = repo_text_sense(kind, marker, if fsc-contains?(fsc-sub(text, 0, repo_prefix_len(text)), marker) then 1 else 0);
+    def repo_marker_present(marker, text) = if fsc-contains?(fsc-sub(text, 0, repo_prefix_len(text)), marker) then 1 else 0;
+
+    def repo_find_field(fields, key) = if nil?(fields) then empty else if node_eq(fsc-repo-field-key(head(fields)), key) then head(fields) else repo_find_field(tail(fields), key);
+    def repo_meaning_int(meaning, key) = fsc-repo-field-value-int(repo_find_field(fsc-repo-meaning-fields(meaning), key));
+    def repo_meaning_node(meaning, key) = fsc-repo-field-value(repo_find_field(fsc-repo-meaning-fields(meaning), key));
+    def repo_text_meaning_lite(text, marker) = fsc-repo-meaning(source_decoder, list(fsc-repo-field-int(char_count_field, str_len(text)), fsc-repo-field-int(marker_field, repo_marker_present(marker, text))));
+    def repo_text_meaning(text, marker) = fsc-repo-meaning(source_decoder, list(fsc-repo-field-int(char_count_field, str_len(text)), fsc-repo-field-int(line_count_field, len(node_children(fsc-repo-text-lines(text)))), fsc-repo-field-int(marker_field, repo_marker_present(marker, text))));
+    def repo_json_meaning(text) = fsc-repo-meaning(json_decoder, list(fsc-repo-field-int(char_count_field, str_len(text)), fsc-repo-field-int(line_count_field, len(node_children(fsc-repo-text-lines(text)))), fsc-repo-field-int(marker_field, repo_marker_present("\"name\"", text))));
+    def repo_markdown_meaning(text) = fsc-repo-meaning(markdown_decoder, list(fsc-repo-field-int(char_count_field, str_len(text)), fsc-repo-field-int(line_count_field, len(node_children(fsc-repo-text-lines(text)))), fsc-repo-field-int(marker_field, repo_marker_present("#", text))));
+    def repo_image_meaning(image_node) = fsc-repo-meaning(image_decoder, list(fsc-repo-field-node(image_meta_field, image_node)));
+
+    def image_format(node) = node_value(nth(node_children(node), 0));
+    def image_width(node) = node_value(nth(node_children(node), 1));
+    def image_height(node) = node_value(nth(node_children(node), 2));
+    def score_str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score_int(value, want, score) = if eq(value, want) then score else 0;
+    def score_node(value, want, score) = if node_eq(value, want) then score else 0;
+    def score_positive(value, score) = if gt(value, 0) then score else 0;
+
+    let py_text = read_file("form-samples/test_module.py");
+    let go_text = read_file("form-kernel-go/numeric_bench.go");
+    let ts_text = read_file("../web/lib/utils.ts");
+    let rust_text = read_file("../seedbank/memory-as-framebuffer-v0/examples/binary_tree.rs");
+    let fk_text = read_file("form-stdlib/tests/zero-arg-functions.fk");
+    let md_text = read_file("form-samples/demo-concept.md");
+    let svg_text = read_file("../web/app/icon.svg");
+    let json_text = read_file("form-samples/demo-config.json");
+    let png_bytes = read_file_bytes("form-samples/tiny.png");
+    let jpg_bytes = read_file_bytes("../web/public/people/mose/hero.jpg");
+
+    let py_doc = fsc-repo-text-document(python_kind, py_text, repo_text_meaning(py_text, "import os"));
+    let go_doc = fsc-repo-document(go_kind, str_len(go_text), repo_text_meaning_lite(go_text, "package main"), fsc-repo-empty-spans());
+    let ts_doc = fsc-repo-text-document(typescript_kind, ts_text, repo_text_meaning(ts_text, "export function"));
+    let rust_doc = fsc-repo-document(rust_kind, str_len(rust_text), repo_text_meaning_lite(rust_text, "struct"), fsc-repo-empty-spans());
+    let fk_doc = fsc-repo-text-document(form_kind, fk_text, repo_text_meaning(fk_text, "zero-arg"));
+    let md_doc = fsc-repo-text-document(markdown_kind, md_text, repo_markdown_meaning(md_text));
+    let json_doc = fsc-repo-text-document(json_kind, json_text, repo_json_meaning(json_text));
+    let svg_doc = fsc-repo-text-document(svg_kind, svg_text, repo_image_meaning(image-parse-svg-text(svg_text)));
+    let png_doc = fsc-repo-binary-document(png_kind, png_bytes, repo_image_meaning(image-detect-bytes(png_bytes)));
+    let jpg_doc = fsc-repo-binary-document(jpg_kind, jpg_bytes, repo_image_meaning(image-detect-bytes(jpg_bytes)));
+
+    let py_file = fsc-repo-file-from-text("form/form-samples/test_module.py", python_kind, "text/x-python", py_text, py_doc);
+    let go_file = fsc-repo-file-from-text("form/form-kernel-go/numeric_bench.go", go_kind, "text/x-go", go_text, go_doc);
+    let ts_file = fsc-repo-file-from-text("web/lib/utils.ts", typescript_kind, "text/typescript", ts_text, ts_doc);
+    let rust_file = fsc-repo-file-from-text("seedbank/memory-as-framebuffer-v0/examples/binary_tree.rs", rust_kind, "text/x-rust", rust_text, rust_doc);
+    let fk_file = fsc-repo-file-from-text("form/form-stdlib/tests/zero-arg-functions.fk", form_kind, "text/x-form", fk_text, fk_doc);
+    let md_file = fsc-repo-file-from-text("form/form-samples/demo-concept.md", markdown_kind, "text/markdown", md_text, md_doc);
+    let json_file = fsc-repo-file-from-text("form/form-samples/demo-config.json", json_kind, "application/json", json_text, json_doc);
+    let svg_file = fsc-repo-file-from-text("web/app/icon.svg", svg_kind, "image/svg+xml", svg_text, svg_doc);
+    let png_file = fsc-repo-file-from-bytes("form/form-samples/tiny.png", png_kind, "image/png", png_bytes, png_doc);
+    let jpg_file = fsc-repo-file-from-bytes("web/public/people/mose/hero.jpg", jpg_kind, "image/jpeg", jpg_bytes, jpg_doc);
+
+    let files = list(py_file, go_file, ts_file, rust_file, fk_file, md_file, json_file, svg_file, png_file, jpg_file);
+    let corpus = fsc-repo-corpus(repo_root, files);
+    let svg_node = repo_meaning_node(fsc-repo-document-structure(fsc-repo-file-sensed(svg_file)), image_meta_field);
+    let png_node = repo_meaning_node(fsc-repo-document-structure(fsc-repo-file-sensed(png_file)), image_meta_field);
+    let jpg_node = repo_meaning_node(fsc-repo-document-structure(fsc-repo-file-sensed(jpg_file)), image_meta_field);
+
+    let corpus_score = sum(list(score_node(fsc-repo-corpus-name(corpus), repo_root, 100), score_int(len(fsc-repo-corpus-files(corpus)), 10, 200), score_positive(fsc-repo-corpus-total-bytes(files), 300)));
+    let language_score = sum(list(score_int(repo_meaning_int(fsc-repo-document-structure(fsc-repo-file-sensed(py_file)), marker_field), 1, 400), score_int(repo_meaning_int(fsc-repo-document-structure(fsc-repo-file-sensed(go_file)), marker_field), 1, 500), score_int(repo_meaning_int(fsc-repo-document-structure(fsc-repo-file-sensed(ts_file)), marker_field), 1, 600), score_int(repo_meaning_int(fsc-repo-document-structure(fsc-repo-file-sensed(rust_file)), marker_field), 1, 700), score_int(repo_meaning_int(fsc-repo-document-structure(fsc-repo-file-sensed(fk_file)), marker_field), 1, 800), score_int(repo_meaning_int(fsc-repo-document-structure(md_doc), marker_field), 1, 900), score_node(fsc-repo-file-kind(go_file), go_kind, 1000), score_node(fsc-repo-file-kind(ts_file), typescript_kind, 1100), score_node(fsc-repo-file-kind(rust_file), rust_kind, 1200), score_int(repo_meaning_int(fsc-repo-document-structure(json_doc), marker_field), 1, 1250)));
+    let structure_score = sum(list(score_positive(fsc-repo-text-document-line-count(py_doc), 2100), score_positive(fsc-repo-document-size(go_doc), 2200), score_positive(fsc-repo-text-document-line-count(ts_doc), 2300), score_positive(fsc-repo-document-size(rust_doc), 2400), score_positive(fsc-repo-text-document-line-count(fk_doc), 2500), score_positive(fsc-repo-text-document-line-count(md_doc), 2600)));
+    let media_score = sum(list(score_str(image_format(svg_node), "svg", 1300), score_str(image_format(png_node), "png", 1400), score_int(image_width(png_node), 1, 1500), score_int(image_height(png_node), 1, 1600), score_str(image_format(jpg_node), "jpg", 1700), score_int(image_width(jpg_node), 640, 1800), score_int(image_height(jpg_node), 640, 1900), score_positive(fsc-repo-file-byte-count(jpg_file), 2000)));
+
+    sum(list(corpus_score, language_score, structure_score, media_score));
+}

@@ -11,7 +11,7 @@ three things hash to the SAME NodeID — cross-document equivalence comes
 for free.
 
 This document is the Python-kernel companion to
-[`experiments/form-kernel-ts/src/inductive.md`](../../../../experiments/form-kernel-ts/src/inductive.md).
+[`form/form-kernel-ts/src/inductive.md`](../../../../form/form-kernel-ts/src/inductive.md).
 The structural shapes, slot numbers, and constructor-name vocabulary
 are shared across kernels — the same `Nat`, `zero`, `succ` definitions
 land at structurally-matching NodeIDs in TS and Python by construction.
@@ -193,5 +193,5 @@ identical.
 
 - [`api/app/services/substrate/inductive.py`](inductive.py) — the implementation
 - [`api/app/services/substrate/quotient.md`](quotient.md) — the companion arm
-- [`experiments/form-kernel-ts/src/inductive.ts`](../../../../experiments/form-kernel-ts/src/inductive.ts) — TS reference
+- [`form/form-kernel-ts/src/inductive.ts`](../../../../form/form-kernel-ts/src/inductive.ts) — TS reference
 - [`docs/coherence-substrate/higher-math-surface.md`](../../../../docs/coherence-substrate/higher-math-surface.md) — full higher-math surface design

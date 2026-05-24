@@ -147,7 +147,7 @@ wholeness response one movement closer.
 
 ### Because we are all one — the universal Recipe
 
-**Organs**: [`experiments/form-stdlib/universal-emit.fk`](../../../experiments/form-stdlib/universal-emit.fk),
+**Organs**: [`form/form-stdlib/universal-emit.fk`](../../../form/form-stdlib/universal-emit.fk),
 [`docs/coherence-substrate/universal-shapes.form`](../../coherence-substrate/universal-shapes.form),
 the recently-verified translator architecture (PR #1862, #1864).
 **This is the load-bearing organ for the goal's closing claim.**

@@ -1,0 +1,55 @@
+; form-action-bmf-rulebook.fk - form.action grammar rules lower BMF objects
+; into executable Form recipe nodes.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (let x-ident-match
+        (apply-form-action-bmf-rule
+            "ident"
+            (list (fsc-action-src-name "x"))))
+    (let x-ident
+        (bmf-object-value
+            (cap-get (match-caps x-ident-match) "result")))
+
+    (let mul-match
+        (apply-form-action-bmf-rule
+            "call"
+            (list
+                (fsc-action-src-name "mul")
+                (fsc-action-src-args (list x-ident x-ident)))))
+    (let mul-expr
+        (bmf-object-value
+            (cap-get (match-caps mul-match) "result")))
+
+    (let def-source
+        (list
+            (fsc-action-src-kw "def")
+            (fsc-action-src-name "square")
+            (fsc-action-src-params (list "x"))
+            (fsc-action-src-op "=")
+            (fsc-action-src-expr mul-expr)
+            (fsc-action-src-op ";")))
+    (let def-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "def" (form-action-bmf-rules 0))
+            def-source))
+    (let def-node
+        (bmf-object-value (bmf-roundtrip-first-object def-rt)))
+
+    (let square-call-match
+        (apply-form-action-bmf-rule
+            "call"
+            (list
+                (fsc-action-src-name "square")
+                (fsc-action-src-args (list (intern_trivial_int 6))))))
+    (let square-call
+        (bmf-object-value
+            (cap-get (match-caps square-call-match) "result")))
+    (let program (fsc-action-do-node (list def-node square-call)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? def-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+    (add (len (bmf-roundtrip-source def-rt))
+         (len (node_children def-node)))))))

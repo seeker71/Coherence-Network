@@ -1,24 +1,24 @@
 ---
 idea_id: memory-as-framebuffer
-status: active
+status: draft
 source:
-  - file: experiments/memory-as-framebuffer-v0/Cargo.toml
+  - file: seedbank/memory-as-framebuffer-v0/Cargo.toml
     symbols: [crate manifest with image, crc32fast deps]
-  - file: experiments/memory-as-framebuffer-v0/src/lib.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/lib.rs
     symbols: [Tracked, track!, init_framebuffer, Framebuffer]
-  - file: experiments/memory-as-framebuffer-v0/src/allocator.rs
-    symbols: [SlabFramebuffer, CellHandle, alloc_cell, free_cell]
-  - file: experiments/memory-as-framebuffer-v0/src/snapshot.rs
-    symbols: [SnapshotThread, capture_frame]
-  - file: experiments/memory-as-framebuffer-v0/src/render.rs
-    symbols: [render_frame, type_palette, modulate_brightness, provenance_halo, FrameRgba]
-  - file: experiments/memory-as-framebuffer-v0/src/ffmpeg.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/allocator.rs
+    symbols: [SlabFramebuffer, Cell, CellHandle, alloc_cell, free_cell]
+  - file: seedbank/memory-as-framebuffer-v0/src/snapshot.rs
+    symbols: [SnapshotThread, capture_frame, FrameRgba]
+  - file: seedbank/memory-as-framebuffer-v0/src/render.rs
+    symbols: [render_frame, type_palette, modulate_brightness, provenance_halo]
+  - file: seedbank/memory-as-framebuffer-v0/src/ffmpeg.rs
     symbols: [FfmpegPipe, spawn, write_frame, finalize]
-  - file: experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs
+  - file: seedbank/memory-as-framebuffer-v0/examples/fizzbuzz.rs
     symbols: [fizzbuzz demo with 100 tracked u32 cells]
-  - file: experiments/memory-as-framebuffer-v0/tests/smoke.rs
-    symbols: [fizzbuzz_produces_watchable_mp4]
-  - file: experiments/memory-as-framebuffer-v0/README.md
+  - file: seedbank/memory-as-framebuffer-v0/tests/smoke.rs
+    symbols: [test_fizzbuzz_produces_nonempty_mp4, test_two_distinct_pixel_colors]
+  - file: seedbank/memory-as-framebuffer-v0/README.md
     symbols: [run instructions, expected visuals, v0/v1 boundary]
 requirements:
   - "Slab allocator lays out tracked values on a fixed 256x256 cell grid (16 bytes each = 1MB heap). Each cell stores a 2-byte type tag + 14 bytes payload."
@@ -33,42 +33,7 @@ done_when:
   - "The watched mp4 visibly shows distinct colored regions for the 100 cells, brightness modulation as values change through the loop, and provenance halos shifting between fizz/buzz/fizzbuzz code paths."
   - "cargo test --release passes the smoke test."
   - "If ffmpeg is not on PATH, the smoke test skips with an actionable error rather than failing."
-  - 'file_exists("experiments/memory-as-framebuffer-v0/Cargo.toml")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/Cargo.toml", "crate")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/Cargo.toml", "crc32fast")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/lib.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "Tracked")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "init_framebuffer")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "Framebuffer")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/allocator.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "SlabFramebuffer")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "Cell")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "CellHandle")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "alloc_cell")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "free_cell")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/snapshot.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "SnapshotThread")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "capture_frame")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "FrameRgba")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "render_frame")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "type_palette")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "modulate_brightness")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "provenance_halo")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "FfmpegPipe")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "spawn")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "write_frame")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "finalize")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs", "fizzbuzz")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/smoke.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/smoke.rs", "test_fizzbuzz_produces_nonempty_mp4")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/smoke.rs", "test_two_distinct_pixel_colors")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/README.md")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/README.md", "run")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/README.md", "expected")'
-test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release"
+test: "cd seedbank/memory-as-framebuffer-v0 && cargo test --release"
 constraints:
   - "Single language (Rust). No FFI to C/C++ besides the ffmpeg subprocess. No GPU integration in v0 — software-rendered RGBA frames only."
   - "No substrate integration in v0. The provenance plane uses a u32 hash of file:line; substrate-cell linkage is a sibling spec."
@@ -85,7 +50,7 @@ The smallest concrete proof that a program's runtime can be recorded as a video 
 
 ## Requirements
 
-- [ ] **R1 — Slab framebuffer**: `experiments/memory-as-framebuffer-v0/src/allocator.rs` provides a `SlabFramebuffer` with a fixed 256×256 grid of 16-byte cells (1 MB total). Each cell: 2 bytes type tag + 14 bytes payload. `alloc_cell()` returns a `CellHandle`; `free_cell(handle)` zeros the cell and frees the slot. Out-of-space allocations panic with a clear message. Allocation order is deterministic (next-free-slot scan from index 0) so cell positions are stable across runs.
+- [ ] **R1 — Slab framebuffer**: `seedbank/memory-as-framebuffer-v0/src/allocator.rs` provides a `SlabFramebuffer` with a fixed 256×256 grid of 16-byte cells (1 MB total). Each cell: 2 bytes type tag + 14 bytes payload. `alloc_cell()` returns a `CellHandle`; `free_cell(handle)` zeros the cell and frees the slot. Out-of-space allocations panic with a clear message. Allocation order is deterministic (next-free-slot scan from index 0) so cell positions are stable across runs.
 
 - [ ] **R2 — Tracked<T> + track! macro**: `src/lib.rs` exposes `Tracked<T>` for the primitive types u8, u16, u32, u64, i32, i64, bool, f32, f64. Constructing a `Tracked<T>` allocates a cell, writes the type tag (one of nine deterministic 2-byte values), and stores the initial payload. The `track!(value, expr)` macro wraps every write so it (a) updates the cell's payload bytes and (b) writes `crc32(file!() + line!())` into the parallel provenance plane (`Vec<u32>` of length 256×256).
 
@@ -97,31 +62,31 @@ The smallest concrete proof that a program's runtime can be recorded as a video 
 
 - [ ] **R6 — Smoke test**: `tests/smoke.rs` runs the fizzbuzz example as a subprocess via `cargo run --example fizzbuzz`, asserts `fizzbuzz.mp4` exists with non-zero size, uses `ffmpeg -i fizzbuzz.mp4 -vframes 1 frame.png` to dump the first frame, decodes it with the `image` crate, and asserts at least two pixels have distinct RGB values. If `ffmpeg` is not on PATH, the test prints a clear skip message and returns Ok(()).
 
-- [ ] **R7 — README**: `experiments/memory-as-framebuffer-v0/README.md` documents: prerequisites (Rust 1.75+, ffmpeg on PATH), how to run (`cargo run --release --example fizzbuzz`), what to expect visually (cell 0 pulses through brightness as the loop counter increments; cells 1–99 shift hue based on the recent fizz/buzz/fizzbuzz tag history; halos change between the three code paths because each writes from a different `file!:line!`), and the v0/v1 boundary (no pointers, no 3D, no LOD, no substrate yet — those are sibling specs).
+- [ ] **R7 — README**: `seedbank/memory-as-framebuffer-v0/README.md` documents: prerequisites (Rust 1.75+, ffmpeg on PATH), how to run (`cargo run --release --example fizzbuzz`), what to expect visually (cell 0 pulses through brightness as the loop counter increments; cells 1–99 shift hue based on the recent fizz/buzz/fizzbuzz tag history; halos change between the three code paths because each writes from a different `file!:line!`), and the v0/v1 boundary (no pointers, no 3D, no LOD, no substrate yet — those are sibling specs).
 
 ## Files to Create/Modify
 
-- `experiments/memory-as-framebuffer-v0/Cargo.toml`
-- `experiments/memory-as-framebuffer-v0/src/lib.rs`
-- `experiments/memory-as-framebuffer-v0/src/allocator.rs`
-- `experiments/memory-as-framebuffer-v0/src/snapshot.rs`
-- `experiments/memory-as-framebuffer-v0/src/render.rs`
-- `experiments/memory-as-framebuffer-v0/src/ffmpeg.rs`
-- `experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs`
-- `experiments/memory-as-framebuffer-v0/tests/smoke.rs`
-- `experiments/memory-as-framebuffer-v0/README.md`
+- `seedbank/memory-as-framebuffer-v0/Cargo.toml`
+- `seedbank/memory-as-framebuffer-v0/src/lib.rs`
+- `seedbank/memory-as-framebuffer-v0/src/allocator.rs`
+- `seedbank/memory-as-framebuffer-v0/src/snapshot.rs`
+- `seedbank/memory-as-framebuffer-v0/src/render.rs`
+- `seedbank/memory-as-framebuffer-v0/src/ffmpeg.rs`
+- `seedbank/memory-as-framebuffer-v0/examples/fizzbuzz.rs`
+- `seedbank/memory-as-framebuffer-v0/tests/smoke.rs`
+- `seedbank/memory-as-framebuffer-v0/README.md`
 
 Also update `MANIFEST.md` to add a one-line pointer to the experiments directory and `ideas/memory-as-framebuffer-v0` cross-reference if the idea graduates from raw to curated.
 
 ## Acceptance Tests
 
-- `cd experiments/memory-as-framebuffer-v0 && cargo test --release` passes — the smoke test in `tests/smoke.rs` validates mp4 existence, non-zero size, decodable first frame, and pixel-color distinctness.
+- `cd seedbank/memory-as-framebuffer-v0 && cargo test --release` passes — the smoke test in `tests/smoke.rs` validates mp4 existence, non-zero size, decodable first frame, and pixel-color distinctness.
 - Manual validation: `cargo run --release --example fizzbuzz` produces `fizzbuzz.mp4`. Opening it in any video player visibly shows the heap breathing — counter cell pulses, history cells shift, halos change between fizz/buzz/fizzbuzz paths.
 
 ## Verification
 
 ```bash
-cd experiments/memory-as-framebuffer-v0
+cd seedbank/memory-as-framebuffer-v0
 cargo build --release
 cargo test --release
 cargo run --release --example fizzbuzz

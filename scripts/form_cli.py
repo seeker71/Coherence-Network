@@ -2,7 +2,7 @@
 """form_cli.py — Form-native CLI: generate, execute, convert.
 
 The CLI Urs named: kernel + binary library + Language cells, end-to-end.
-Uses ONLY the experiments/local-llm-cell-v0/form_native.py recipes and
+Uses ONLY the seedbank/local-llm-cell-v0/form_native.py recipes and
 the .recipelib bundles in docs/coherence-substrate/libraries/. No
 substrate session boot, no host stdlib math — every numeric op runs
 through the Form-native composition (Newton sqrt, Taylor exp, recursive
@@ -50,10 +50,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LIBRARY_DIR = REPO_ROOT / "docs" / "coherence-substrate" / "libraries"
-EXPERIMENTS_DIR = REPO_ROOT / "experiments" / "local-llm-cell-v0"
+SEEDBANK_DIR = REPO_ROOT / "seedbank" / "local-llm-cell-v0"
 
-# Allow imports of form_native from experiments/.
-sys.path.insert(0, str(EXPERIMENTS_DIR))
+# Allow imports of form_native from the local seedbank.
+sys.path.insert(0, str(SEEDBANK_DIR))
 
 
 def _die(message: str, code: int = 2) -> None:

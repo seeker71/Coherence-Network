@@ -1,0 +1,78 @@
+; tests/python-bmf-module-parse-band.fk - generic Python module parse proof.
+;
+; This drives the Python-owned scanner through the whole-file module parse
+; entry, not through the sample-module rule. The resulting py-module object
+; carries queryable py-statement objects with kind, indentation, tokens, and
+; reversible source object origin.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn score-str (actual want score) (if (str_eq actual want) score 0))
+    (defn score-int (actual want score) (if (eq actual want) score 0))
+    (defn layout-count (objects value)
+        (if (nil? objects) 0
+            (add
+                (if (and (str_eq (bmf-object-kind (head objects)) "py-layout")
+                         (str_eq (bmf-object-value (head objects)) value))
+                    1
+                    0)
+                (layout-count (tail objects) value))))
+
+    (let module (python-parse-module-file "form-samples/test_module.py"))
+    (let statements (python-module-statements module))
+    (let first-statement (head statements))
+    (let add-statement (nth statements 3))
+    (let return-statement (nth statements 4))
+    (let print-statement (nth statements 8))
+    (let source-objects (python-module-source-objects module))
+    (let continued-source "value = (
+    left +
+    right
+)
+next_value = 1
+")
+    (let continued-module (python-parse-module-text continued-source))
+    (let continued-statements (python-module-statements continued-module))
+    (let continued-first (head continued-statements))
+    (let continued-second (nth continued-statements 1))
+    (let module-tree (python-parse-module-tree-file "form-samples/test_module.py"))
+    (let top-trees (python-module-tree-statements module-tree))
+    (let add-tree (nth top-trees 4))
+    (let main-tree (nth top-trees 5))
+    (let layout-objects (python-source-scan-file-with-layout "form-samples/test_module.py"))
+
+    (sum
+        (list
+            (score-str (bmf-object-kind module) "py-module" 100)
+            (score-int (len source-objects) 46 200)
+            (score-int (len statements) 9 300)
+            (score-str (python-statement-kind-value first-statement) "import" 400)
+            (score-int (python-statement-indent-value first-statement) 0 500)
+            (score-str (python-statement-cpython-rule first-statement) "import_stmt" 550)
+            (score-str (python-statement-kind-value add-statement) "def" 600)
+            (score-int (python-statement-indent-value add-statement) 0 700)
+            (score-str (python-statement-cpython-rule add-statement) "function_def" 750)
+            (score-str (python-statement-kind-value return-statement) "return" 800)
+            (score-int (python-statement-indent-value return-statement) 4 900)
+            (score-str (python-statement-cpython-rule return-statement) "return_stmt" 950)
+            (score-str (python-statement-kind-value print-statement) "expr" 1000)
+            (score-int (python-statement-indent-value print-statement) 4 1100)
+            (score-int (len (python-statement-tokens print-statement)) 4 1200)
+            (score-int (len continued-statements) 2 1300)
+            (score-int (len (python-statement-tokens continued-first)) 7 1400)
+            (score-int (python-statement-indent-value continued-first) 0 1500)
+            (score-int (python-statement-indent-value continued-second) 0 1600)
+            (score-str (bmf-object-kind module-tree) "py-module-tree" 1700)
+            (score-int (len top-trees) 6 1800)
+            (score-str (python-statement-tree-kind add-tree) "def" 1900)
+            (score-str (python-statement-tree-cpython-rule add-tree) "function_def" 1950)
+            (score-int (len (python-statement-tree-children add-tree)) 1 2000)
+            (score-str (python-statement-tree-kind main-tree) "def" 2100)
+            (score-str (python-statement-tree-cpython-rule main-tree) "function_def" 2150)
+            (score-int (len (python-statement-tree-children main-tree)) 4 2200)
+            (score-int (len layout-objects) 61 2300)
+            (score-int (layout-count layout-objects "NEWLINE") 10 2400)
+            (score-int (layout-count layout-objects "INDENT") 2 2500)
+            (score-int (layout-count layout-objects "DEDENT") 2 2600)
+            (score-int (layout-count layout-objects "ENDMARKER") 1 2700))))

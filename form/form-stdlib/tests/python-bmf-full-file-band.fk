@@ -1,0 +1,35 @@
+; tests/python-bmf-full-file-band.fk - full Python file through BMF objects.
+;
+; A real repo Python file is read by Form, scanned into Python BMF source
+; objects with cursor spans, and reduced by the Python BMF module rule. The
+; proof checks that the rule consumes the complete scanned source stream.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
+
+section [form.action] {
+    def result-object(match) = cap-get(match-caps(match), "result");
+    def result-node(match) = bmf-object-value(result-object(match));
+    def node-child(node, index) = nth(node_children(node), index);
+    def node-child-value(node, index) = node_value(node-child(node, index));
+    def token-span(object) = head(bmf-object-source-span(object));
+    def score-str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score-int(value, want, score) = if eq(value, want) then score else 0;
+
+    let source_path = "form-samples/test_module.py";
+    let source_objects = python-source-scan-file(source_path);
+    let first_object = head(source_objects);
+    let last_object = nth(source_objects, sub(len(source_objects), 1));
+    let module_match = apply-python-bmf-rule("sample-module", source_objects);
+    let module_object = result-object(module_match);
+    let module_node = result-node(module_match);
+    let module_children = node_children(module_node);
+    let z_assign = node-child(module_node, 13);
+    let z_call = node-child(z_assign, 1);
+    let print_call = node-child(module_node, 14);
+
+    let scan_score = sum(list(score-int(len(source_objects), 46, 100), score-str(bmf-object-kind(first_object), "py-keyword", 200), score-str(bmf-object-value(first_object), "import", 300), score-int(fsc-repo-text-line-number(token-span(first_object)), 1, 400), score-str(bmf-object-kind(last_object), "py-op", 500), score-str(bmf-object-value(last_object), ")", 600), score-int(fsc-repo-text-line-number(token-span(last_object)), 14, 700)));
+    let match_score = sum(list(if match?(module_match) then 800 else 0, if nil?(match-rest(module_match)) then 900 else 0, score-str(bmf-object-kind(module_object), "sample-module", 1000), score-int(len(module_children), 15, 1100)));
+    let module_score = sum(list(score-str(node-child-value(module_node, 0), "os", 1200), score-str(node-child-value(module_node, 1), "sys", 1300), score-str(node-child-value(module_node, 2), "typing", 1400), score-str(node-child-value(module_node, 3), "Optional", 1500), score-int(node-child-value(module_node, 5), 42, 1600), score-str(node-child-value(module_node, 6), "add", 1700), score-str(node-child-value(module_node, 10), "main", 1800), score-str(node-child-value(z_assign, 0), "z", 1900), score-str(node-child-value(z_call, 0), "add", 2000), score-str(node-child-value(print_call, 0), "print", 2100)));
+
+    sum(list(scan_score, match_score, module_score));
+}

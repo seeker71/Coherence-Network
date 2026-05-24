@@ -1,18 +1,18 @@
 ---
 idea_id: memory-as-framebuffer
-status: active
+status: draft
 source:
-  - file: experiments/memory-as-framebuffer-v0/src/pointer.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/pointer.rs
     symbols: [Pointer, BoxPtr, RcPtr, WeakPtr, PointerKind, render_pointer_cell]
-  - file: experiments/memory-as-framebuffer-v0/src/render.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/render.rs
     symbols: [render_frame — extended for transparent surface composition]
-  - file: experiments/memory-as-framebuffer-v0/src/allocator.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/allocator.rs
     symbols: [SlabFramebuffer — extended type tags for pointer kinds]
-  - file: experiments/memory-as-framebuffer-v0/examples/linked_list.rs
+  - file: seedbank/memory-as-framebuffer-v0/examples/linked_list.rs
     symbols: [singly-linked list of 20 nodes demonstrating glass-corridor effect]
-  - file: experiments/memory-as-framebuffer-v0/examples/binary_tree.rs
+  - file: seedbank/memory-as-framebuffer-v0/examples/binary_tree.rs
     symbols: [balanced 15-node binary tree demonstrating branching glass]
-  - file: experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs
+  - file: seedbank/memory-as-framebuffer-v0/tests/pointer_smoke.rs
     symbols: [test_pointer_renders_target_color, test_aliasing_visible, test_cycle_bounded]
 requirements:
   - "Add Pointer<T> wrapper that allocates a pointer cell containing the target's CellHandle index (u16) plus a pointer-kind tag (raw, Box, Rc, Weak — one byte each, 4 reserved)."
@@ -25,26 +25,7 @@ done_when:
   - "cargo run --release --example binary_tree produces binary_tree.mp4 where each node's two pointer cells show distinct subtree colors."
   - "tests/pointer_smoke.rs passes: target-color rendering, aliasing equality, cycle bounded."
   - "An aliasing demo: two pointers to the same target are visually indistinguishable in their inner regions and visually distinct in their halos (because they live at different file:line locations and so have different provenance halos)."
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/pointer.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "Pointer")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "BoxPtr")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "RcPtr")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "WeakPtr")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "PointerKind")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/pointer.rs", "render_pointer_cell")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "render_frame")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/src/allocator.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "SlabFramebuffer")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/linked_list.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/linked_list.rs", "singly-linked")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/binary_tree.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/binary_tree.rs", "balanced")'
-  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs", "test_pointer_renders_target_color")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs", "test_aliasing_visible")'
-  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs", "test_cycle_bounded")'
-test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release pointer"
+test: "cd seedbank/memory-as-framebuffer-v0 && cargo test --release pointer"
 constraints:
   - "Builds on memory-as-framebuffer-v0. Does not break v0 examples."
   - "No 3D in this spec. Pointer rendering stays within the 2D framebuffer (transparency = inner-region color substitution, not actual alpha compositing)."
@@ -77,24 +58,24 @@ Extend the v0 framebuffer with pointer-window rendering — the Superliminal-ins
 
 ## Files to Create/Modify
 
-- `experiments/memory-as-framebuffer-v0/src/pointer.rs` — new module
-- `experiments/memory-as-framebuffer-v0/src/render.rs` — extended for pointer cells (transparent surface)
-- `experiments/memory-as-framebuffer-v0/src/allocator.rs` — extended type tag range for pointer kinds
-- `experiments/memory-as-framebuffer-v0/src/lib.rs` — re-export pointer types
-- `experiments/memory-as-framebuffer-v0/examples/linked_list.rs`
-- `experiments/memory-as-framebuffer-v0/examples/binary_tree.rs`
-- `experiments/memory-as-framebuffer-v0/tests/pointer_smoke.rs`
-- `experiments/memory-as-framebuffer-v0/README.md` — extended with pointer section
+- `seedbank/memory-as-framebuffer-v0/src/pointer.rs` — new module
+- `seedbank/memory-as-framebuffer-v0/src/render.rs` — extended for pointer cells (transparent surface)
+- `seedbank/memory-as-framebuffer-v0/src/allocator.rs` — extended type tag range for pointer kinds
+- `seedbank/memory-as-framebuffer-v0/src/lib.rs` — re-export pointer types
+- `seedbank/memory-as-framebuffer-v0/examples/linked_list.rs`
+- `seedbank/memory-as-framebuffer-v0/examples/binary_tree.rs`
+- `seedbank/memory-as-framebuffer-v0/tests/pointer_smoke.rs`
+- `seedbank/memory-as-framebuffer-v0/README.md` — extended with pointer section
 
 ## Acceptance Tests
 
-- `cd experiments/memory-as-framebuffer-v0 && cargo test --release pointer` passes the pointer smoke test.
+- `cd seedbank/memory-as-framebuffer-v0 && cargo test --release pointer` passes the pointer smoke test.
 - Manual validation: open `linked_list.mp4` and `binary_tree.mp4` — the glass-corridor and branching-glass effects are visible; pointer cells show next-node colors.
 
 ## Verification
 
 ```bash
-cd experiments/memory-as-framebuffer-v0
+cd seedbank/memory-as-framebuffer-v0
 cargo build --release
 cargo test --release pointer
 cargo run --release --example linked_list

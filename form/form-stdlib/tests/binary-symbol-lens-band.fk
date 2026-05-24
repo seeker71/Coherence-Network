@@ -1,0 +1,128 @@
+; binary-symbol-lens-band.fk - one binary object through several symbol lenses
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk
+
+(do
+    (let UNIVERSAL-SYMBOL-COUNTER (make_nodeid 1 2 101 3))
+
+    (defn symbol-counter-recipe (value)
+        (intern_node UNIVERSAL-SYMBOL-COUNTER
+            (list (intern_trivial_int value))))
+
+    (defn symbol-counter-value (node)
+        (node_value (head (node_children node))))
+
+    (defn emit-counter-as-python (node anchor ctx)
+        (list (py-name (bmf-symbol-name ctx anchor anchor))
+              (py-op "=")
+              (py-int (int_to_str (symbol-counter-value node)))))
+
+    (defn emit-counter-as-typescript (node anchor ctx)
+        (list (ts-src-name (bmf-symbol-name ctx anchor anchor))
+              (ts-src-op "=")
+              (ts-src-int (int_to_str (symbol-counter-value node)))
+              (ts-src-op ";")))
+
+    (defn parse-python-counter-source (source ctx)
+        (do
+            (let name (bmf-object-value (nth source 0)))
+            (let value (str_to_int (bmf-object-value (nth source 2))))
+            (list (bmf-anchor-resolve ctx name name)
+                  (symbol-counter-recipe value))))
+
+    (defn parse-typescript-counter-source (source ctx)
+        (do
+            (let name (bmf-object-value (nth source 0)))
+            (let value (str_to_int (bmf-object-value (nth source 2))))
+            (list (bmf-anchor-resolve ctx name name)
+                  (symbol-counter-recipe value))))
+
+    (let recipe (symbol-counter-recipe 42))
+    (let anchor "binary/form/0")
+
+    (let generated-origin
+        (compiler-unit "python" "generated-symbols" (empty)))
+    (let generated-symbol
+        (bmf-global-symbol-cell anchor "python" "generated" "generated:g0"
+            (list "_g0" "_counter_0")
+            generated-origin))
+    (let python-generated
+        (bmf-symbol-context "python" "generated"
+            (list (bmf-symbol-cell-binding generated-symbol))))
+
+    (let python-local
+        (bmf-symbol-context "python" "local"
+            (list (bmf-symbol-binding anchor "python" "local"
+                                      "local:counter"
+                                      (list "count" "local_count")))))
+
+    (let global-origin
+        (compiler-unit "typescript" "global-symbols" (empty)))
+    (let global-symbol
+        (bmf-global-symbol-cell anchor "typescript" "global" "module.counter"
+            (list "sharedCount" "exportedCount")
+            global-origin))
+    (let typescript-global
+        (bmf-symbol-context "typescript" "global"
+            (list (bmf-symbol-cell-binding global-symbol))))
+
+    (let generated-python-source
+        (emit-counter-as-python recipe anchor python-generated))
+    (let local-python-source
+        (emit-counter-as-python recipe anchor python-local))
+    (let local-python-alias-source
+        (list (py-name "local_count")
+              (py-op "=")
+              (py-int "42")))
+    (let global-typescript-source
+        (emit-counter-as-typescript recipe anchor typescript-global))
+    (let global-typescript-alias-source
+        (list (ts-src-name "exportedCount")
+              (ts-src-op "=")
+              (ts-src-int "42")
+              (ts-src-op ";")))
+
+    (let python-parsed
+        (parse-python-counter-source local-python-source python-local))
+    (let python-alias-parsed
+        (parse-python-counter-source local-python-alias-source python-local))
+    (let typescript-parsed
+        (parse-typescript-counter-source global-typescript-source typescript-global))
+    (let typescript-alias-parsed
+        (parse-typescript-counter-source global-typescript-alias-source typescript-global))
+
+    (let python-rt
+        (bmf-roundtrip
+            (python-bmf-find-rule "assign-int" python-bmf-rules)
+            local-python-source))
+    (let typescript-rt
+        (bmf-roundtrip
+            (typescript-bmf-find-rule "assign-int" typescript-bmf-rules)
+            global-typescript-source))
+
+    (sum
+        (list
+            (if (str_eq (bmf-symbol-name python-generated anchor "") "_g0") 10 0)
+            (if (str_eq (bmf-symbol-name python-local anchor "") "count") 20 0)
+            (if (str_eq (bmf-symbol-name typescript-global anchor "") "sharedCount") 30 0)
+            (if (str_eq (bmf-symbol-value python-generated anchor "") "generated:g0") 40 0)
+            (if (str_eq (bmf-symbol-value python-local anchor "") "local:counter") 50 0)
+            (if (str_eq (bmf-symbol-value typescript-global anchor "") "module.counter") 60 0)
+            (if (str_eq anchor (nth python-parsed 0)) 70 0)
+            (if (node_eq recipe (nth python-parsed 1)) 80 0)
+            (if (str_eq anchor (nth typescript-parsed 0)) 90 0)
+            (if (node_eq recipe (nth typescript-parsed 1)) 100 0)
+            (if (bmf-roundtrip-node-eq? python-rt) 110 0)
+            (if (bmf-roundtrip-node-eq? typescript-rt) 120 0)
+            (len (bmf-roundtrip-source python-rt))
+            (len (bmf-roundtrip-source typescript-rt))
+            (if (str_eq (compiler-unit-language (cell-origin generated-symbol)) "python") 130 0)
+            (if (str_eq (compiler-unit-language (cell-origin global-symbol)) "typescript") 140 0)
+            (if (str_eq anchor (bmf-anchor-resolve python-local "count" "")) 150 0)
+            (if (str_eq anchor (nth python-alias-parsed 0)) 160 0)
+            (if (node_eq recipe (nth python-alias-parsed 1)) 170 0)
+            (if (str_eq anchor (nth typescript-alias-parsed 0)) 180 0)
+            (if (node_eq recipe (nth typescript-alias-parsed 1)) 190 0)
+            (if (str_eq (bmf-anchor-resolve python-local anchor "missing") "missing") 200 0)
+            (if (str_eq (bmf-anchor-resolve python-local "exportedCount" "missing") "missing") 210 0)
+            (len generated-python-source))))

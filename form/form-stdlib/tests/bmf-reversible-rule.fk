@@ -1,0 +1,42 @@
+; bmf-reversible-rule.fk - one BMF rule parses forward and emits backward
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/go-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn rev-kind (xs n)
+        (bmf-object-kind (nth xs n)))
+
+    (defn rev-value (xs n)
+        (bmf-object-value (nth xs n)))
+
+    (let source
+        (list (go-src-keyword "var")
+              (go-src-name "count")
+              (go-src-op "=")
+              (go-src-int "7")))
+    (let first-match (apply-go-bmf-rule "var-int" source))
+    (let first-object (result-object first-match))
+    (let reverse
+        (apply-object-rule-reverse
+            (go-bmf-find-rule "var-int" go-bmf-rules)
+            first-object))
+    (let second-match (apply-go-bmf-rule "var-int" reverse))
+    (let second-object (result-object second-match))
+    (let kids (node_children (bmf-object-value second-object)))
+
+    (add (len reverse)
+         (add (if (str_eq (rev-kind reverse 0) "go-keyword") 1 0)
+         (add (if (str_eq (rev-value reverse 0) "var") 1 0)
+         (add (if (str_eq (rev-kind reverse 1) "go-name") 1 0)
+         (add (if (str_eq (rev-value reverse 1) "count") 1 0)
+         (add (if (str_eq (rev-kind reverse 2) "go-op") 1 0)
+         (add (if (str_eq (rev-value reverse 2) "=") 1 0)
+         (add (if (str_eq (rev-kind reverse 3) "go-int") 1 0)
+         (add (if (str_eq (rev-value reverse 3) "7") 1 0)
+         (add (if (node_eq (bmf-object-value first-object)
+                           (bmf-object-value second-object)) 1 0)
+         (add (str_len (node_value (head kids)))
+              (node_value (head (tail kids)))))))))))))))

@@ -1,0 +1,158 @@
+; language-bmf-expanded-constructs.fk - expanded BMF grammar constructs across language adapters
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn kid-int (m n)
+        (node_value (result-kid m n)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (let py-async-for
+        (apply-python-bmf-rule "async-for-pass"
+            (list (py-keyword "async") (py-keyword "for")
+                  (py-name "item") (py-keyword "in") (py-name "stream")
+                  (py-op ":") (py-keyword "pass"))))
+    (let py-except-as
+        (apply-python-bmf-rule "except-as-pass"
+            (list (py-keyword "except") (py-name "ValueError")
+                  (py-keyword "as") (py-name "err")
+                  (py-op ":") (py-keyword "pass"))))
+    (let py-list-comp
+        (apply-python-bmf-rule "list-comp"
+            (list (py-op "[") (py-name "value") (py-keyword "for")
+                  (py-name "value") (py-keyword "in") (py-name "items")
+                  (py-op "]"))))
+    (let py-ifexp
+        (apply-python-bmf-rule "ifexp-ident"
+            (list (py-name "left") (py-keyword "if") (py-name "ready")
+                  (py-keyword "else") (py-name "right"))))
+    (let py-def-ann
+        (apply-python-bmf-rule "def-return-annotation"
+            (list (py-keyword "def") (py-name "size") (py-op "(")
+                  (py-op ")") (py-op "->") (py-name "int") (py-op ":"))))
+    (let py-score
+        (sum (list
+            (add (kid-str-len py-async-for 0)
+                 (add (kid-str-len py-async-for 1)
+                      (child-count py-async-for)))
+            (add (kid-str-len py-except-as 0)
+                 (add (kid-str-len py-except-as 1)
+                      (child-count py-except-as)))
+            (add (kid-str-len py-list-comp 0)
+                 (add (kid-str-len py-list-comp 1)
+                 (add (kid-str-len py-list-comp 2)
+                      (kid-str-len py-list-comp 3))))
+            (add (kid-str-len py-ifexp 0)
+                 (add (kid-str-len py-ifexp 1)
+                      (kid-str-len py-ifexp 2)))
+            (add (kid-str-len py-def-ann 0)
+                 (kid-str-len py-def-ann 1)))))
+
+    (let ts-call
+        (apply-typescript-bmf-rule "call1"
+            (list (ts-src-name "render") (ts-src-op "(")
+                  (ts-src-name "view") (ts-src-op ")") (ts-src-op ";"))))
+    (let ts-jsx
+        (apply-typescript-bmf-rule "jsx-self"
+            (list (ts-src-op "<") (ts-src-name "Widget")
+                  (ts-src-op "/") (ts-src-op ">"))))
+    (let ts-arrow
+        (apply-typescript-bmf-rule "arrow1"
+            (list (ts-src-name "item") (ts-src-op "=>") (ts-src-name "item"))))
+    (let ts-array
+        (apply-typescript-bmf-rule "array-empty"
+            (list (ts-src-op "[") (ts-src-op "]"))))
+    (let ts-object
+        (apply-typescript-bmf-rule "object-empty"
+            (list (ts-src-op "{") (ts-src-op "}"))))
+    (let ts-score
+        (sum (list
+            (add (kid-str-len ts-call 0) (kid-str-len ts-call 1))
+            (kid-str-len ts-jsx 0)
+            (add (kid-str-len ts-arrow 0) (kid-str-len ts-arrow 1))
+            (object-bit ts-array)
+            (object-bit ts-object))))
+
+    (let go-method
+        (apply-go-bmf-rule "method0"
+            (list (go-src-keyword "func") (go-src-op "(")
+                  (go-src-name "s") (go-src-op ")") (go-src-name "Run")
+                  (go-src-op "(") (go-src-op ")") (go-src-op "{")
+                  (go-src-op "}"))))
+    (let go-range
+        (apply-go-bmf-rule "for-range-pass"
+            (list (go-src-keyword "for") (go-src-name "i") (go-src-op ",")
+                  (go-src-name "v") (go-src-op ":=") (go-src-keyword "range")
+                  (go-src-name "items") (go-src-op "{") (go-src-op "}"))))
+    (let go-defer
+        (apply-go-bmf-rule "defer-call0"
+            (list (go-src-keyword "defer") (go-src-name "close")
+                  (go-src-op "(") (go-src-op ")"))))
+    (let go-type
+        (apply-go-bmf-rule "type-alias"
+            (list (go-src-keyword "type") (go-src-name "ID")
+                  (go-src-op "=") (go-src-name "string"))))
+    (let go-score
+        (sum (list
+            (add (kid-str-len go-method 0) (kid-str-len go-method 1))
+            (add (kid-str-len go-range 0)
+                 (add (kid-str-len go-range 1)
+                      (kid-str-len go-range 2)))
+            (kid-str-len go-defer 0)
+            (add (kid-str-len go-type 0) (kid-str-len go-type 1)))))
+
+    (let rust-use
+        (apply-rust-bmf-rule "use"
+            (list (rust-src-keyword "use") (rust-src-string "std::fmt")
+                  (rust-src-op ";"))))
+    (let rust-pub-mod
+        (apply-rust-bmf-rule "pub-mod"
+            (list (rust-src-keyword "pub") (rust-src-keyword "mod")
+                  (rust-src-name "api") (rust-src-op ";"))))
+    (let rust-fn1
+        (apply-rust-bmf-rule "fn1"
+            (list (rust-src-keyword "fn") (rust-src-name "wrap")
+                  (rust-src-op "(") (rust-src-name "value") (rust-src-op ")")
+                  (rust-src-op "{") (rust-src-op "}"))))
+    (let rust-enum
+        (apply-rust-bmf-rule "enum"
+            (list (rust-src-keyword "enum") (rust-src-name "State")
+                  (rust-src-op "{") (rust-src-op "}"))))
+    (let rust-impl
+        (apply-rust-bmf-rule "impl"
+            (list (rust-src-keyword "impl") (rust-src-name "State")
+                  (rust-src-op "{") (rust-src-op "}"))))
+    (let rust-trait
+        (apply-rust-bmf-rule "trait"
+            (list (rust-src-keyword "trait") (rust-src-name "View")
+                  (rust-src-op "{") (rust-src-op "}"))))
+    (let rust-score
+        (sum (list
+            (kid-str-len rust-use 0)
+            (kid-str-len rust-pub-mod 0)
+            (add (kid-str-len rust-fn1 0) (kid-str-len rust-fn1 1))
+            (kid-str-len rust-enum 0)
+            (kid-str-len rust-impl 0)
+            (kid-str-len rust-trait 0))))
+
+    (sum (list py-score ts-score go-score rust-score)))
