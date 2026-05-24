@@ -5,6 +5,7 @@
 //   tsx src/main.ts --bench
 //   tsx src/main.ts path/to/file.fk
 
+import { readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { resolve as pathResolve, basename } from "node:path";
@@ -15,6 +16,15 @@ import { compileNode } from "./compiler.ts";
 import { runNumericBench } from "./numeric-bench.ts";
 import { evalPython, parsePython } from "./lang-python.ts";
 import { emitFk } from "./lang-python-fk.ts";
+
+function makeKernel(): Kernel {
+  return new Kernel({
+    readTextFile: (path) => readFileSync(path, "utf8"),
+    readBinaryFile: (path) => new Uint8Array(readFileSync(path)),
+    writeStdout: (text) => process.stdout.write(text),
+    writeStderr: (text) => process.stderr.write(text),
+  });
+}
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -55,7 +65,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const k = new Kernel();
+  const k = makeKernel();
   const frame = new Frame(null);
 
   if (args[0] === "--expr") {
@@ -115,7 +125,7 @@ async function runTrace(args: string[]): Promise<void> {
     src = await readFile(args[0]!, "utf8");
   }
 
-  const k = new Kernel();
+  const k = makeKernel();
   k.trace = new Trace();
   const frame = new Frame(null);
   const node = readAll(k, src);
@@ -146,7 +156,7 @@ async function runPythonTrace(args: string[]): Promise<void> {
   }
   const src = await readFile(args[0]!, "utf8");
 
-  const k = new Kernel();
+  const k = makeKernel();
   // Phase 1 — parse. The Python source becomes a NodeID tree in the
   // substrate. Parsing IS substrate-write work (intern_node calls);
   // tracing it here would surface the parser's structural shape, but we
@@ -208,7 +218,7 @@ async function runPythonCompile(args: string[]): Promise<void> {
   const outArg = args[1];
   const src = await readFile(inPath, "utf8");
 
-  const k = new Kernel();
+  const k = makeKernel();
   const tree = parsePython(k, src);
   const fk = emitFk(k, tree);
 
@@ -244,7 +254,7 @@ async function runPythonRun(args: string[]): Promise<void> {
   const src = await readFile(inPath, "utf8");
 
   // Compile in-memory.
-  const k = new Kernel();
+  const k = makeKernel();
   const tree = parsePython(k, src);
   const fk = emitFk(k, tree);
 
