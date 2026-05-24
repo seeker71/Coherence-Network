@@ -185,7 +185,7 @@
 | [push_subscription_service.py](push_subscription_service.py) | Web Push subscription storage + send. |
 | [quality_awareness_service.py](quality_awareness_service.py) | Guidance-first quality awareness summary derived from maintainability audits. |
 | [reaction_service.py](reaction_service.py) | Reactions — a lightweight surface for expressing care on anything. |
-| [read_tracking_service.py](read_tracking_service.py) | Read sensing service — records asset reads as daily aggregated counters |
+| [read_tracking_service.py](read_tracking_service.py) | Read sensing service — records asset reads as daily aggregated counters, |
 | [registry_discovery_service.py](registry_discovery_service.py) | Registry submission inventory backed by static repo-tracked evidence. |
 | [registry_stats_service.py](registry_stats_service.py) | Registry install/download count fetching service with file-based cache. |
 | [release_gate_service.py](release_gate_service.py) | Release gate checks for PR status, collective review, and public validation. |
