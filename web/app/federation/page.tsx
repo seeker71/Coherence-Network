@@ -1,5 +1,5 @@
 // Federation surface — a window into the peer-to-peer geometry the network
-// has chosen to know. Seven sections, each read-only:
+// has chosen to know. Eight sections, each read-only:
 //   1. This instance — pulse + self-declared capabilities
 //   2. Known peers — registered instances + observed pulses
 //   3. Substrate alignment — per-peer recipe-shape attestations (aligned /
@@ -8,6 +8,8 @@
 //   5. Federated assets (mirrors) — assets served from us, authored on peers
 //   6. Read attestations — peers' signed claims about reads of our assets
 //   7. Settlement shares — outbox (we owe peers) + inbox (peers owe us)
+//   8. Cross-instance identity — pubkey claims + recognition counts (no
+//      individual identities; per-contributor detail lives at /me/aliases)
 //
 // Every label honors that each instance speaks its own truth. Nothing here
 // implies any instance has authority over another.
@@ -160,6 +162,17 @@ type SettlementInboxListResponse = {
   count: number;
 };
 
+type IdentityPerPeerCount = {
+  peer_instance_id: string;
+  count: number;
+};
+
+type IdentityRecognitionSummary = {
+  local_contributors_with_pubkey: number;
+  cross_instance_recognitions: number;
+  per_peer_counts: IdentityPerPeerCount[];
+};
+
 // ─── Loaders ──────────────────────────────────────────────────────────────────
 
 async function fetchJson<T>(url: string): Promise<T | null> {
@@ -278,6 +291,7 @@ export default async function FederationPage() {
     attestations,
     outbox,
     inbox,
+    identitySummary,
   ] = await Promise.all([
     fetchJson<SelfPulse>(`${apiBase}/api/pulse/self`),
     fetchJson<CapabilityManifest>(`${apiBase}/api/federation/capabilities/self`),
@@ -293,6 +307,9 @@ export default async function FederationPage() {
     ),
     fetchJson<SettlementInboxListResponse>(
       `${apiBase}/api/federation/value/settlement-share/inbox`
+    ),
+    fetchJson<IdentityRecognitionSummary>(
+      `${apiBase}/api/federation/identity/recognition-summary`
     ),
   ]);
 
@@ -936,6 +953,62 @@ export default async function FederationPage() {
         </div>
       </section>
 
+      {/* ─── 8. Cross-instance identity recognition ─────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">{t("federation.identity.heading")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("federation.identity.lede")}
+        </p>
+        {identitySummary ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <IdentityStat
+                value={identitySummary.local_contributors_with_pubkey}
+                label={t("federation.identity.localClaimed")}
+              />
+              <IdentityStat
+                value={identitySummary.cross_instance_recognitions}
+                label={t("federation.identity.totalRecognitions")}
+              />
+            </div>
+            {identitySummary.per_peer_counts.length > 0 ? (
+              <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/40 to-card/20 p-5 space-y-3">
+                <h3 className="text-sm font-medium">
+                  {t("federation.identity.perPeerHeading")}
+                </h3>
+                <ul className="space-y-2">
+                  {identitySummary.per_peer_counts.map((p) => (
+                    <li
+                      key={`identity-peer-${p.peer_instance_id}`}
+                      className="flex items-baseline justify-between rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2"
+                    >
+                      <span className="text-sm text-amber-200">
+                        {t("federation.identity.recognizedWith", {
+                          peer: peerLabel(p.peer_instance_id),
+                        })}
+                      </span>
+                      <span className="text-sm font-mono text-amber-200/90">
+                        {t("federation.identity.sharedCount", { n: p.count })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ) : null}
+            <p className="text-xs text-muted-foreground/70">
+              {t("federation.identity.mineLink")}{" "}
+              <Link href="/me/aliases" className="text-amber-300 hover:underline">
+                /me/aliases
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-border/30 bg-background/30 p-6 text-sm text-muted-foreground">
+            {t("federation.identity.empty")}
+          </p>
+        )}
+      </section>
+
       {/* ─── Footer ─────────────────────────────────────────────────── */}
       <nav
         className="py-8 text-center space-y-2 border-t border-border/20"
@@ -957,6 +1030,17 @@ export default async function FederationPage() {
         </div>
       </nav>
     </main>
+  );
+}
+
+// ─── IdentityStat ─────────────────────────────────────────────────────────────
+
+function IdentityStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-400/20 bg-amber-500/5 px-4 py-3">
+      <div className="text-2xl font-light text-amber-200">{value}</div>
+      <div className="text-xs text-muted-foreground/80 mt-1">{label}</div>
+    </div>
   );
 }
 

@@ -1078,7 +1078,49 @@
           "reads": "{n} reads"
         }
       }
+    },
+    "identity": {
+      "heading": "Cross-instance identity recognition",
+      "lede": "Each contributor holds their own keypair. When the same pubkey is claimed on two instances, both recognize the same person — no central registry, no permission, sovereignty on each side.",
+      "empty": "No identity claims yet on this instance.",
+      "localClaimed": "Local contributors with a claimed pubkey",
+      "totalRecognitions": "Cross-instance recognitions held here",
+      "perPeerHeading": "Recognized with each peer",
+      "recognizedWith": "With {peer}",
+      "sharedCount": "{n} shared",
+      "mineLink": "Your own pubkey + aliases live at"
     }
+  },
+  "identity": {
+    "heading": "Your aliases",
+    "lede": "Your identity is the keypair you hold. This page shows the pubkey this instance has recorded for you, and the peer instances that recognize you through the same key. Nothing here is granted — every claim is your own signed declaration.",
+    "contributorIdLabel": "Contributor ID",
+    "contributorIdPlaceholder": "your-contributor-id",
+    "contributorIdHelp": "The local id this instance knows you by. On peer instances you may carry a different id under the same pubkey.",
+    "loading": "Reading the body…",
+    "noPubkey": "No pubkey claimed yet — your identity stays local to this instance until you generate one.",
+    "yourPubkey": "Your pubkey on this instance",
+    "generateClaim": "Generate keypair and claim",
+    "generating": "Generating in your browser…",
+    "claimSuccess": "Claim accepted. The pubkey is now linked to your contributor id on this instance.",
+    "privateKeyOnce": "Your private key — shown once",
+    "privateKeyWarning": "Save this somewhere only you can read. It never leaves your browser; this instance has only the public half. If you lose it you cannot rotate without help from the old key.",
+    "privateKeyAcknowledge": "I've saved it",
+    "aliasesHeading": "Aliases recognized by this instance",
+    "aliasesEmpty": "No peer has shared a recognition envelope for your pubkey yet. When a peer carries the same pubkey under one of their contributors, this list will name them.",
+    "aliasPeer": "Peer instance",
+    "aliasAs": "Known there as",
+    "aliasRecognizedAt": "Recognized",
+    "rotateHeading": "Rotate your pubkey",
+    "rotateLede": "If you want to change keys (a new device, a compromised key), generate a new pair and sign the swap with your old key. This instance verifies the old-key signature; no permission is asked.",
+    "rotateWarning": "Rotation is one-way. The OLD pubkey will no longer recognize you on this instance. Make sure you really hold the new private key before continuing.",
+    "rotateOldKeyLabel": "Paste your OLD private key (hex)",
+    "rotateOldKeyPlaceholder": "your old private key in hex",
+    "rotateAction": "Rotate to new keypair",
+    "rotateInProgress": "Rotating…",
+    "rotateSuccess": "Rotation complete. The new pubkey is now linked to your contributor id; the old key is retired.",
+    "errorPrefix": "Something pushed back:",
+    "sovereigntyNote": "Your private key never leaves your browser. The instance only ever sees the public half and the signature proving you hold the matching private one. Peer recognitions are this instance's view; the peer holds its own."
   },
   "pipeline": {
     "liveView": "Live view",
