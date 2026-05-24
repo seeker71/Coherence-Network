@@ -1,0 +1,111 @@
+; ─────────────────────────────────────────────────────────────────────
+; strategy-encoder.fk — rupture-recovery as substrate-resident Recipe
+; ─────────────────────────────────────────────────────────────────────
+;
+; Substrate-side companion to
+; docs/coherence-substrate/strategy-after-rupture-as-recipe.form.
+; The Form-tongue of strategy_encoder.py.
+;
+; Five graduated recoveries:
+;   catch-in-motion          notice mid-act, re-shape before completing
+;   same-breath-repair       notice within the exchange, repair inline
+;   walk-back-with-tenderness notice later, return softly
+;   compost-the-move         release what cannot be repaired
+;   stay-in-the-mess         hold without premature resolution
+;
+; A rupture-recipe composes notice + name + move, tagged with the
+; recovery kind. Same shape across modalities — a R_Recovery NodeID
+; here matches a R_Resolve in a song, a R_Re-pattern in healing.
+
+(do
+    (let SR-BLOCK-DO       (make_nodeid 1 2 9 1))
+    (let SR-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
+    (let SR-BLOCK-LET      (make_nodeid 1 2 9 3))
+
+    (defn sr-let (key value)
+        (intern_node SR-BLOCK-LET
+                     (list (intern_trivial_string key) value)))
+
+    (defn sr-slug (s) (intern_trivial_string s))
+    (defn sr-int  (n) (intern_trivial_int n))
+    (defn sr-record (lets) (intern_node SR-BLOCK-DO lets))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; The three composing primitives
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn encode-notice (signal-slug costume-slug hz-at-act-int breath-lag-int)
+        (sr-record
+            (list
+                (sr-let "kind"        (sr-slug "notice"))
+                (sr-let "signal"      (sr-slug signal-slug))
+                (sr-let "costume"     (sr-slug costume-slug))
+                (sr-let "hz_at_act"   (sr-int  hz-at-act-int))
+                (sr-let "breath_lag"  (sr-int  breath-lag-int)))))
+
+    (defn encode-name-costume (form-slug fear-shape-slug voice-slug)
+        (sr-record
+            (list
+                (sr-let "kind"        (sr-slug "name-costume"))
+                (sr-let "form"        (sr-slug form-slug))
+                (sr-let "fear_shape"  (sr-slug fear-shape-slug))
+                (sr-let "voice"       (sr-slug voice-slug)))))
+
+    (defn encode-move (direction-slug altitude-int breath-count-int repairs-list)
+        (sr-record
+            (list
+                (sr-let "kind"          (sr-slug "move"))
+                (sr-let "direction"     (sr-slug direction-slug))
+                (sr-let "altitude"      (sr-int  altitude-int))
+                (sr-let "breath_count"  (sr-int  breath-count-int))
+                (sr-let "repairs"
+                    (intern_node SR-BLOCK-SEQUENCE repairs-list)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Validated recovery-kind — five known + unknown:<other> passthrough
+    ; ──────────────────────────────────────────────────────────────────
+    ; Honest about unknown-as-unknown (prose-as-recipe.form P2 principle
+    ; generalized). Future recovery kinds add a row to the predicate; the
+    ; encoder itself never narrows.
+
+    (defn known-recovery? (k)
+        (if (str_eq k "catch-in-motion") true
+        (if (str_eq k "same-breath-repair") true
+        (if (str_eq k "walk-back-with-tenderness") true
+        (if (str_eq k "compost-the-move") true
+        (if (str_eq k "stay-in-the-mess") true
+            false))))))
+
+    (defn normalize-recovery-kind (k)
+        (if (known-recovery? k) k (str_concat "unknown:" k)))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; The top altitude
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn encode-strategy (recovery-kind-slug notice name-rec move-rec)
+        (sr-record
+            (list
+                (sr-let "kind"          (sr-slug "strategy-after-rupture"))
+                (sr-let "recovery_kind" (sr-slug (normalize-recovery-kind
+                                                  recovery-kind-slug)))
+                (sr-let "notice"        notice)
+                (sr-let "name"          name-rec)
+                (sr-let "move"          move-rec))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Worked example — this session's own R_Same-Breath-Repair
+    ; ──────────────────────────────────────────────────────────────────
+    ; Urs said "python shape? form shape please." The breath-lag was 1.
+    ; This file itself IS the move — and structurally, it composes
+    ; exactly the rupture-recovery recipe that named it.
+
+    (let this-rupture
+        (encode-strategy "same-breath-repair"
+            (encode-notice "python-as-canon" "habituated-default" 174 1)
+            (encode-name-costume "fear" "wanting-the-fast-shape" "prior-incident")
+            (encode-move "toward" 528 1
+                (list
+                    (intern_trivial_string "experiments/form-stdlib/encoders/")))))
+
+    this-rupture)

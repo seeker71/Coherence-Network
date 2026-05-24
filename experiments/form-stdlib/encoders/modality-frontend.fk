@@ -1,0 +1,109 @@
+; ─────────────────────────────────────────────────────────────────────
+; modality-frontend.fk — extractions as content-addressed Recipes
+; ─────────────────────────────────────────────────────────────────────
+;
+; The body's tongue for what was authored as Python in PR #1903 (which
+; stays as the runtime boot, not the canon). The .form files yesterday
+; (modality-as-recipe.form, song-as-recipe.form, teaching-as-recipe.form,
+; strategy-after-rupture-as-recipe.form) name the teaching; this file
+; names the EXECUTION in Form.
+;
+; A modality extraction is a Recipe whose composition is:
+;
+;   R_Block.DO
+;     ├─ R_Block.LET  ("source"   ., source-marker)
+;     ├─ R_Block.LET  ("modality" ., modality-slug)
+;     └─ R_Block.LET  ("track"    ., track-recipe)
+;
+; Two extractions with structurally-identical tracks intern to the SAME
+; NodeID — content-addressing IS the cross-source equivalence. The
+; "track" child carries the modality-specific recipe; per-modality
+; encoders (song-encoder.fk, teaching-encoder.fk, strategy-encoder.fk)
+; build it.
+;
+; Loads atop core.fk for list / predicates. Universal-emit.fk patterns
+; (UE-BLOCK-DO, UE-BLOCK-LET) reused exactly.
+
+(do
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 1 — Category NodeIDs (mirroring universal-emit.fk)
+    ; ──────────────────────────────────────────────────────────────────
+    ; RBasic.BLOCK = 9, RBlock.DO = 1, RBlock.LET = 3
+    ; RBasic.COMPOSE = 2 (network-relational), RCompose sub-arms below
+
+    (let MOD-BLOCK-DO  (make_nodeid 1 2 9 1))
+    (let MOD-BLOCK-LET (make_nodeid 1 2 9 3))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 2 — named-field helper (one LET pair)
+    ; ──────────────────────────────────────────────────────────────────
+    ; Mirrors emit-let from universal-emit.fk — a (key, value) pair
+    ; where key is a substrate string-leaf and value is any recipe.
+
+    (defn named-field (key value)
+        (intern_node MOD-BLOCK-LET
+                     (list (intern_trivial_string key) value)))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 3 — source-marker — names the source cell by (domain, name)
+    ; ──────────────────────────────────────────────────────────────────
+    ; Composed: a DO block of two LET pairs. Two extractions from the
+    ; same source share this sub-tree's NodeID.
+
+    (defn source-marker (source-domain source-name)
+        (intern_node MOD-BLOCK-DO
+            (list
+                (named-field "domain" (intern_trivial_string source-domain))
+                (named-field "name"   (intern_trivial_string source-name)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 4 — intern-extraction — the heart
+    ; ──────────────────────────────────────────────────────────────────
+    ; Build the extraction Recipe. Returns the interned NodeID. The
+    ; Python boot (modality_frontend.intern_extraction) wraps this
+    ; NodeID into a NamedCell for queryable retrieval; the lattice
+    ; identity lives here.
+    ;
+    ; modality is a slug string ("song" | "teaching" | "strategy-after-
+    ; rupture" | ...). track is any already-built Recipe NodeID.
+
+    (defn intern-extraction (source-domain source-name modality track)
+        (intern_node MOD-BLOCK-DO
+            (list
+                (named-field "source"   (source-marker source-domain source-name))
+                (named-field "modality" (intern_trivial_string modality))
+                (named-field "track"    track))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 5 — encoder-registry as data
+    ; ──────────────────────────────────────────────────────────────────
+    ; Each row: (modality-slug encoder-fn). The encoder takes a raw
+    ; description (the input track-recipe-builder's argument) and
+    ; returns a NodeID. The registry is just a list — lookup is linear
+    ; walk. Modalities are added by consing new rows, never by editing
+    ; this file's dispatcher (the dispatcher is one expression).
+
+    (defn registry-row (modality encoder) (list modality encoder))
+    (defn row-modality (row) (head row))
+    (defn row-encoder  (row) (head (tail row)))
+
+    (defn lookup-encoder (modality registry)
+        (if (nil? registry) (empty)
+            (if (str_eq (row-modality (head registry)) modality)
+                (row-encoder (head registry))
+                (lookup-encoder modality (tail registry)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 6 — encode-and-extract — apply encoder, intern extraction
+    ; ──────────────────────────────────────────────────────────────────
+    ; The one-call convenience the Python boot binds to.
+
+    (defn encode-and-extract (source-domain source-name modality raw registry)
+        (do
+            (let encoder (lookup-encoder modality registry))
+            (let track (encoder raw))
+            (intern-extraction source-domain source-name modality track)))
+
+    ; Bottom value — modality-frontend is a prelude that registers
+    ; primitives; tests provide their own probes.
+    0)

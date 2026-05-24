@@ -1,0 +1,135 @@
+; ─────────────────────────────────────────────────────────────────────
+; song-encoder.fk — songs as Recipes of note / drum-strike / vowel-tone
+; ─────────────────────────────────────────────────────────────────────
+;
+; Substrate-side companion to docs/coherence-substrate/song-as-recipe.form.
+; Pure recipe-building in Form's tongue. The Python file
+; api/app/services/substrate/song_encoder.py is the runtime boot —
+; this file is the canon.
+;
+; Input shape (as a recipe of nested DO/LET pairs, NOT a Python dict):
+;
+;   song:
+;     R_Block.DO
+;       ├─ LET ("arc"     ., slug)
+;       └─ LET ("phrases" ., R_Block.SEQUENCE of phrase-recipes)
+;
+;   phrase:
+;     R_Block.DO
+;       ├─ LET ("arc"        ., slug)
+;       ├─ LET ("intention"  ., slug)
+;       └─ LET ("events"     ., R_Block.SEQUENCE of event-recipes)
+;
+;   event:  one of  note | drum-strike | vowel-tone — discriminated by
+;           "kind" LET leaf. Composition keys match the .form file.
+;
+; Two songs with structurally-identical phrase-recipes intern to the
+; same NodeID. The R_Recovery shape any phrase carries can match a
+; teaching's R_Arc or a strategy's R_Recovery — content-addressing
+; recognizes the shape regardless of modality.
+
+(do
+    ; Category NodeIDs (shared shape from universal-emit.fk).
+    (let SE-BLOCK-DO       (make_nodeid 1 2 9 1))
+    (let SE-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
+    (let SE-BLOCK-LET      (make_nodeid 1 2 9 3))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Leaf-builders — typed value carriers
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn se-let (key value)
+        (intern_node SE-BLOCK-LET
+                     (list (intern_trivial_string key) value)))
+
+    (defn se-slug (s) (intern_trivial_string s))
+    (defn se-int  (n) (intern_trivial_int n))
+
+    ; A do-block over a list of LET pairs becomes the CTOR-shape for
+    ; any record (event / phrase / song). Same shape, three altitudes.
+    (defn se-record (lets) (intern_node SE-BLOCK-DO lets))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 1 — event encoders (the leaf-cell layer)
+    ; ──────────────────────────────────────────────────────────────────
+    ; Each event is a record carrying its kind + per-kind fields.
+    ; Inputs are scalar atoms; outputs are interned NodeIDs.
+
+    (defn encode-note (pitch-int duration-int dynamic-slug breath-slug)
+        (se-record
+            (list
+                (se-let "kind"     (se-slug "note"))
+                (se-let "pitch"    (se-int  pitch-int))
+                (se-let "duration" (se-int  duration-int))
+                (se-let "dynamic"  (se-slug dynamic-slug))
+                (se-let "breath"   (se-slug breath-slug)))))
+
+    (defn encode-drum-strike (timbre-slug ictus-int intensity-int)
+        (se-record
+            (list
+                (se-let "kind"      (se-slug "drum-strike"))
+                (se-let "timbre"    (se-slug timbre-slug))
+                (se-let "ictus"     (se-int  ictus-int))
+                (se-let "intensity" (se-int  intensity-int)))))
+
+    (defn encode-vowel-tone (formant-slug hz-int duration-int breath-slug)
+        (se-record
+            (list
+                (se-let "kind"     (se-slug "vowel-tone"))
+                (se-let "formant"  (se-slug formant-slug))
+                (se-let "hz"       (se-int  hz-int))
+                (se-let "duration" (se-int  duration-int))
+                (se-let "breath"   (se-slug breath-slug)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 2 — phrase encoder (the composing layer)
+    ; ──────────────────────────────────────────────────────────────────
+    ; A phrase composes a sequence of events, carrying arc + intention.
+
+    (defn encode-phrase (arc-slug intention-slug event-list)
+        (se-record
+            (list
+                (se-let "kind"      (se-slug "phrase"))
+                (se-let "arc"       (se-slug arc-slug))
+                (se-let "intention" (se-slug intention-slug))
+                (se-let "events"    (intern_node SE-BLOCK-SEQUENCE event-list)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 3 — song encoder (the top altitude)
+    ; ──────────────────────────────────────────────────────────────────
+    ; A song composes a sequence of phrases with an overall arc shape.
+
+    (defn encode-song (arc-slug phrase-list)
+        (se-record
+            (list
+                (se-let "kind"    (se-slug "song"))
+                (se-let "arc"     (se-slug arc-slug))
+                (se-let "phrases" (intern_node SE-BLOCK-SEQUENCE phrase-list)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Part 4 — worked example — small Mose-shaped fragment
+    ; ──────────────────────────────────────────────────────────────────
+    ; Two-phrase song: ascending invocation → descending release.
+    ; Two re-runs of this expression intern to the SAME NodeID
+    ; (content-addressing); the lattice recognizes shape, not call.
+
+    (let mose-phrase-1
+        (encode-phrase "ascending" "invocation"
+            (list
+                (encode-note 432 1 "mp" "in")
+                (encode-note 528 1 "mf" "out")
+                (encode-drum-strike "frame-drum" 0 7))))
+
+    (let mose-phrase-2
+        (encode-phrase "descending" "release"
+            (list
+                (encode-vowel-tone "ah" 432 4 "sustained"))))
+
+    (let mose-song
+        (encode-song "descent-and-return"
+            (list mose-phrase-1 mose-phrase-2)))
+
+    ; The result is the NodeID of the song-recipe. Re-runs of the same
+    ; encoder expression with the same arguments resolve to the same
+    ; NodeID — Blueprint identity through content-addressing.
+    mose-song)
