@@ -15,14 +15,19 @@ from pydantic import BaseModel
 from app.middleware.traceability import traces_to
 
 from app.models.federation import (
+    AssetMirrorManifest,
+    AssetMirrorRecord,
     CanonicalDiscoverResponse,
     CanonicalExchangeRequest,
     CanonicalExchangeResponse,
     CanonicalShapesListResponse,
     CapabilityAlignment,
     CapabilityManifest,
+    ComputeFederatedSharesRequest,
+    ComputeFederatedSharesResponse,
     FederatedInstance,
     FederatedPayload,
+    FederatedReadAttestationListResponse,
     FleetCapabilitySummary,
     FederationNodeHeartbeatRequest,
     FederationNodeHeartbeatResponse,
@@ -35,6 +40,11 @@ from app.models.federation import (
     MeasurementListResponse,
     MeasurementPushRequest,
     MeasurementPushResponse,
+    ReadAttributionAck,
+    ReadAttributionEnvelope,
+    SettlementInboxListResponse,
+    SettlementShareAck,
+    SettlementShareEnvelope,
     SignedCapabilityManifest,
     VALID_STRATEGY_TYPES,
     FederatedAggregationRequest,
@@ -43,6 +53,8 @@ from app.models.federation import (
 )
 from app.services import federation_service
 from app.services import federation_substrate_service
+from app.services import federation_value_flow_service
+from app.services.federation_value_flow_service import SignatureRejection
 from app.services import openclaw_node_bridge_service
 from app.services import unified_db as _udb
 
@@ -474,6 +486,176 @@ async def list_substrate_attestations(peer_instance_id: str) -> dict:
         "attestations": [a.model_dump(mode="json") for a in attestations],
         "count": len(attestations),
     }
+
+
+# ---------------------------------------------------------------------------
+# Federated value flow — freedom-preserving CC distribution across instances
+# ---------------------------------------------------------------------------
+#
+# Asset on instance A is mirrored to instance B. B serves a read; B sends A
+# a signed read-attribution envelope. At settlement, A computes B's serving
+# share and sends B a signed settlement envelope (B logs it in its inbox).
+# Each instance is the source-of-truth for its own truths:
+#   - A is authoritative for its assets (origin_asset_id, payment address).
+#   - B is authoritative for its readers (reader_subject).
+# Neither commands the other; attestations are exchanged, not commanded.
+
+
+@router.post(
+    "/federation/value/mirror-asset",
+    response_model=AssetMirrorRecord,
+    status_code=201,
+    summary="Record that we are hosting an asset whose authority lives on another instance",
+)
+async def mirror_asset(manifest: AssetMirrorManifest) -> AssetMirrorRecord:
+    """Record a federation mirror. Idempotent: re-mirroring updates origin fields.
+
+    The mirror table is THIS instance's view of which of our assets actually
+    live somewhere else's authority. Sovereignty: we choose to host; the
+    origin instance remains authoritative for what the asset IS.
+    """
+    return federation_value_flow_service.mirror_asset(manifest)
+
+
+@router.get(
+    "/federation/value/mirrors",
+    response_model=list[AssetMirrorRecord],
+    summary="List federation mirrors (assets here whose authority lives elsewhere)",
+)
+async def list_mirrors(
+    origin_instance_id: str | None = Query(default=None),
+) -> list[AssetMirrorRecord]:
+    """List mirrors, optionally filtered by origin instance."""
+    return federation_value_flow_service.list_mirrors(origin_instance_id=origin_instance_id)
+
+
+@router.post(
+    "/federation/value/read-attribution",
+    response_model=ReadAttributionAck,
+    status_code=201,
+    summary="Accept a signed read-attribution envelope from a serving instance",
+)
+async def receive_read_attribution(
+    envelope: ReadAttributionEnvelope,
+) -> ReadAttributionAck:
+    """Accept an attribution envelope from a peer that served one of our assets.
+
+    Verifies the signature against the secret we hold for the serving
+    instance. On success: records the attestation and bridges the read
+    into local read-tracking under a federated reader_id so settlement
+    sees it. On signature failure: 401 with no record.
+
+    Sovereignty: this instance is authoritative for the asset; the peer is
+    authoritative for the reader. Federation is opt-in on both sides — an
+    unregistered peer is refused (no shared secret = no verifiable claim).
+    """
+    try:
+        return federation_value_flow_service.receive_read_attribution(envelope)
+    except SignatureRejection as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@router.get(
+    "/federation/value/read-attestations",
+    response_model=FederatedReadAttestationListResponse,
+    summary="List read attestations received from peers",
+)
+async def list_read_attestations(
+    asset_origin_id: str | None = Query(default=None),
+    reader_instance_id: str | None = Query(default=None),
+    status: str | None = Query(
+        default=None,
+        description="Filter: received | verified | settled | rejected",
+    ),
+) -> FederatedReadAttestationListResponse:
+    """List federated read attestations stored locally.
+
+    Each attestation is one signed envelope received from a peer. The
+    received-attestations table is our durable claim that the read
+    happened — even if the peer goes offline later.
+    """
+    return federation_value_flow_service.list_read_attestations(
+        asset_origin_id=asset_origin_id,
+        reader_instance_id=reader_instance_id,
+        status=status,
+    )
+
+
+@router.post(
+    "/federation/value/settlement-share/compute",
+    response_model=ComputeFederatedSharesResponse,
+    summary="Compute per-peer settlement envelopes from federated read attestations",
+)
+async def compute_federated_shares(
+    request: ComputeFederatedSharesRequest,
+) -> ComputeFederatedSharesResponse:
+    """Compute settlement envelopes for federated reads in the window.
+
+    For each peer with attestations in [period_start, period_end), produce
+    one signed envelope declaring the peer's serving share. Envelopes are
+    stored in the outbox; transport to the peer is the caller's choice.
+    Default serving share is 20%; an asset-owner may override per request.
+    """
+    return federation_value_flow_service.compute_federated_shares(request)
+
+
+@router.get(
+    "/federation/value/settlement-share/outbox",
+    response_model=list[SettlementShareEnvelope],
+    summary="List settlement envelopes we have computed for peers",
+)
+async def list_outbox(
+    serving_instance_id: str | None = Query(default=None),
+) -> list[SettlementShareEnvelope]:
+    """Walk the outbox of envelopes WE signed for peers.
+
+    Useful both for audit (what did we attest we owed?) and re-transport
+    (peer didn't ack the first time → fetch and re-POST to the peer's
+    `/api/federation/value/settlement-share` endpoint).
+    """
+    return federation_value_flow_service.list_outbox(
+        serving_instance_id=serving_instance_id
+    )
+
+
+@router.post(
+    "/federation/value/settlement-share",
+    response_model=SettlementShareAck,
+    status_code=201,
+    summary="Accept a settlement envelope from a peer that owes us a serving fee",
+)
+async def receive_settlement_share(
+    envelope: SettlementShareEnvelope,
+) -> SettlementShareAck:
+    """Accept a settlement envelope from a peer (we are the serving instance).
+
+    Verifies the signature against the secret we hold for the origin.
+    On success: logs into the inbox. On failure: 401 with no record.
+    CC transfer itself is a downstream breath — the inbox is the durable
+    claim that the peer attested to this share.
+    """
+    try:
+        return federation_value_flow_service.receive_settlement_share(envelope)
+    except SignatureRejection as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+@router.get(
+    "/federation/value/settlement-share/inbox",
+    response_model=SettlementInboxListResponse,
+    summary="List settlement envelopes received from peers (we are owed)",
+)
+async def list_inbox(
+    origin_instance_id: str | None = Query(default=None),
+) -> SettlementInboxListResponse:
+    """Walk the inbox of envelopes peers signed and sent to us.
+
+    Each entry is a peer's attestation that they owe us a serving fee for
+    a period. The downstream CC settlement step reads from here.
+    """
+    return federation_value_flow_service.list_inbox(
+        origin_instance_id=origin_instance_id
+    )
 
 
 # ---------------------------------------------------------------------------
