@@ -22,6 +22,17 @@ SILENCE_CLOSE_SUCCESSES = 3
 # Duration at which a "strained" silence escalates to "silent" — 5 minutes.
 SILENCE_ESCALATION_SECONDS = 300
 
+# Daily rollup tiers. A handful of scattered failures across a day full
+# of successful probes is honest noise, not strain — the live silence
+# detector already opens a silence when failures cluster (3 in a row).
+# The daily classifier mirrors that discipline at SLO granularity:
+#   • >= DAILY_BREATHING_SUCCESS_PCT successful → breathing (noise floor)
+#   • strictly more than half failed → silent (the existing rule)
+#   • everything between → strained
+# Set so that 1/2879 (0.035% fail) reads as breathing while a sustained
+# 1% failure rate still reads as strained.
+DAILY_BREATHING_SUCCESS_PCT = 99.5
+
 
 Severity = Literal["strained", "silent"]
 
@@ -97,11 +108,15 @@ class DayBucket:
     def status(self) -> str:
         if self.samples == 0:
             return "unknown"
-        if self.failures == 0:
-            return "breathing"
         # Strictly more than half the samples failed → silent.
         if self.failures * 2 > self.samples:
             return "silent"
+        # Noise floor: very high success rate reads as breathing even with
+        # a few scattered failures. Strain shows up as either a meaningful
+        # failure rate sustained across the day OR an opened silence run.
+        success_pct = 100.0 * (self.samples - self.failures) / self.samples
+        if success_pct >= DAILY_BREATHING_SUCCESS_PCT:
+            return "breathing"
         return "strained"
 
 
