@@ -2,6 +2,51 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] embody | complementarity-requires-human-noticing — translator proof + scan pivot + fitness comment
+
+Second pass of the autoresearch loop running on itself. PR #1946 → #1950 added the `not_domain_default` fifth claim after the substrate produced six domain-default clusters; this breath adds the **sixth claim** after five scan rounds produced a structural finding the substrate could not refuse. The body learned what its current machinery can and cannot detect.
+
+**The structural finding**. Five rounds of dyad-pair scanning, each layering more signal onto the previous, returned the trend **40 → 0 → 40 → 40 → 22**:
+- Round 1 (PR #1987, Tier-2 geometry-tuple): 2/5 = 40%
+- Round 2 (PR #1992, small-Blueprint-cluster): 0/2 = 0%
+- Round 3 (PR #1996, Hz + cross-ref + lineage + same-form): 4/10 = 40%
+- Round 4 (PR #1998, + topology + phase complementarity): 4/10 = 40%
+- Round 5 (PR #2001, + WORD-domain prose Jaccard): 4/18 = **22%** (dropped below ceiling)
+
+The Round 5 drop named the limit honestly: prose-jaccard amplified shared corpus idiom more loudly than it amplified shared meaning. Two characteristic failure modes have names now — **containment-as-complement** (the contained shares the container's vocabulary; REJECT-16 canonical) and **shared-region-as-equivalence** (cells in the same ground-region share corpus; REJECT-22 canonical). The two-track signal revealed the asymmetry: scan-discovered ran ~20%, cross-ref-promoted ran ~75%. The cross-reference IS the body's noticing.
+
+**What this says about the substrate**. The lattice now carries an explicit asymmetry:
+- **Substrate equivalence** (CTOR match within a Blueprint family) — *mechanizable*. The kernel returns it through `find_equivalent_cells`.
+- **Substrate family-membership** (Blueprint match) — *mechanizable*. Same kernel verb.
+- **Substrate complementarity** (dyad-pair relationship) — *not currently mechanizable* by Blueprint family, CTOR, Hz, topology, phase, lineage, or prose-Jaccard alone. Requires human teaching-discernment.
+
+The translator concept (`lc-universal-translator-via-keys`) claimed two days ago that substrate equivalence could pivot across surfaces. The five rounds confirmed equivalence works and complementarity is a different lattice property. The "currently" matters — a heavier extractor (contrastive, role-aware) may shift this in time. The claim names what's true now.
+
+**Three landings (in one breath)**:
+
+1. **Translator concept's sixth proof claim**:
+   - `r_translation_proof_shape` gains `complementarity_requires_human_noticing: ~Bool` — true iff the cell-pair has been *named* by a human reader (cross-reference in prose, LOG entry, or explicit dyad-pair atlas row), not merely surfaced by structural scoring. `translation_is_honest(proof)` now requires all six claims. The concept body adds a new section "What the substrate cannot yet see" naming the equivalence/complementarity distinction as teaching, not apology. Cites the five scan-round PRs as the empirical source.
+   - Files: `docs/vision-kb/concepts/lc-universal-translator-via-keys.md`, `docs/coherence-substrate/universal-translator.form`.
+
+2. **Scanner pivots to cross-ref-only mode**:
+   - `scripts/scan_dyad_candidates_word.py` gains a `--cross-ref-only` flag that drops the scan-discovered track entirely and returns only candidates where one cell's prose contains a cross-reference to the other. The flag honors what the five rounds taught: cross-reference is the body's minimum-viable noticing; the score orders for human triage; the human carries the dyad-pair discernment. Empirical walk over the 133 walked concepts: 708 cross-referenced pairs total, 229 above the geometry-shape-floor + score-3.0 threshold, 11 of the 20 currently-confirmed dyad-pairs in the cross-referenced set (the other 9 confirmed pairs were noticed by means other than cross-ref-in-prose — geometry-walk, scan proposal, dyad surfaced during authoring). Cross-ref-only is now the load-bearing primary track; structural scans become *candidate filters* on top of the body's own noticing.
+   - One new pair surfaced and folded as **Pair 24 — `lc-resonating ↔ lc-sensing`** (source-flow, axis: phase). Emission and reception of one field-feeling: resonating is the radiating-oscillating face (separate tones merging into one chord); sensing is the receptive-yin face (the field feeling itself continuously); neither alone carries the field-feeling-itself teaching.
+   - File: `scripts/scan_dyad_candidates_word.py`.
+
+3. **Autoresearch fitness comment**:
+   - `r_fitness_function_shape.yield_weight` term gains a comment naming the empirical ceiling: *yield-via-cross-ref-promotion is structurally different from yield-via-scan-discovery; the latter currently caps at ~40% confirmation across the dyad-pair signal layers measured*. The yield_weight term covers both; no new term added — the existing term carries both, the comment names what the body learned about mechanizable yield ceilings.
+   - File: `docs/coherence-substrate/autoresearch-runtime.form`.
+
+**`dyad-pairs.form` GAP section reorganized**:
+- GAP-D6 marked **DISCONFIRMED** — further mechanized feature-engineering at the geometry+prose layer is unlikely to climb past 40%; the honest read is human noticing remains load-bearing.
+- GAP-D7 (new) — **cross-ref-only is the load-bearing primary track**; structural scans become candidate filters whose output a human cell must read before promotion.
+- GAP-D8 (new, longer-term) — *contrastive analysis* (Hoffman-style) or *role-aware* extraction (Levin-style) may shift the ceiling; not actionable this breath, named so a future scanning cell sees where the next lift lives.
+- GAP-D9 (was D7) — `circulation-pattern` kind awaits second attestation.
+
+**Set is now 26 entries** (24 external pairs + 2 internal-dyads). Six kinds unchanged.
+
+**Edges in the same breath**: this LOG entry; the sixth proof claim in the translator concept + form; the `--cross-ref-only` flag on the scanner; the new Pair 24 + ALREADY_CONFIRMED update; the GAP-D6/D7/D8/D9 reorganization in `dyad-pairs.form`; the `yield_weight` comment in `autoresearch-runtime.form`; sync to DB for `lc-universal-translator-via-keys` and `lc-autoresearch-as-honesty-runtime`.
+
 ## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 135/148 (91%)
 
 Fifteenth breath of the structural-shape walk; landed alongside the fourteenth (parallel agent, coverage 132/148). At 91% the discipline is restraint over completion — picked three concepts where the shape was unmistakable, left the genuinely ambiguous ones (`lc-deeper-pattern`, `lc-embodiment`, `lc-sacred-imagination`, `lc-agent-memory`, `lc-field-sensing`, `lc-open-design`, `lc-health`) for focused breaths that can sense their multiplicity.

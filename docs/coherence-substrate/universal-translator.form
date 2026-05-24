@@ -198,16 +198,17 @@ defn translate_across_all_keys(source_cell) =
 # A translation that the lattice produces is structurally true at the
 # layer of the current encoders. *But the encoders themselves can be
 # wrong, biased, or under-composed.* The proof of an honest translation
-# is the conjunction of three claims.
+# is the conjunction of six claims.
 
 form r_translation_proof_shape = {
-    source_cell:        ~Recipe,
-    target_cell:        ~Recipe,
-    blueprint_match:    ~Bool,     # NECESSARY: the cells belong to the same structural family
-    ctor_match:         ~Bool,     # SUFFICIENT: the cells' full content shapes coincide
-    non_degenerate:     ~Bool,     # the matched CTOR is not a collapse-to-one
-    holdout_attested:   ~Bool,     # if Grant published this pair, the lattice recovered it
-    not_domain_default: ~Bool,     # the matched CTOR is not the standard cell for either domain
+    source_cell:                          ~Recipe,
+    target_cell:                          ~Recipe,
+    blueprint_match:                      ~Bool,  # NECESSARY: the cells belong to the same structural family
+    ctor_match:                           ~Bool,  # SUFFICIENT for equivalence: the cells' full content shapes coincide
+    non_degenerate:                       ~Bool,  # the matched CTOR is not a collapse-to-one
+    holdout_attested:                     ~Bool,  # if Grant published this pair, the lattice recovered it
+    not_domain_default:                   ~Bool,  # the matched CTOR is not the standard cell for either domain
+    complementarity_requires_human_noticing: ~Bool,  # the pair has been NAMED by a human (cross-ref, LOG, atlas) — currently un-mechanizable
 };
 
 defn translation_is_honest(proof) =
@@ -215,19 +216,22 @@ defn translation_is_honest(proof) =
         and proof.ctor_match
         and proof.non_degenerate
         and proof.holdout_attested
-        and proof.not_domain_default;
+        and proof.not_domain_default
+        and proof.complementarity_requires_human_noticing;
 
-# Why all five:
+# Why all six:
 #   - blueprint_match: necessary precondition. Two cells must share a
 #     Blueprint NodeID to belong to the same structural family. But
 #     this alone is the family-grouping the kernel returns from
 #     find_equivalent_cells; it is not by itself a content-equivalence
 #     claim. A Blueprint family of 74 cells can carry 74 distinct
 #     CTORs — same schema-layer shape, different content shape.
-#   - ctor_match: the sufficient condition the kernel honors. Two
-#     cells whose CTOR NodeIDs coincide carry the same content shape
-#     all the way down. CTOR match within a shared Blueprint family
-#     is the true cross-surface equivalence claim.
+#   - ctor_match: sufficient for *equivalence* — the kernel honors
+#     this at CTOR granularity. Two cells whose CTOR NodeIDs coincide
+#     carry the same content shape all the way down. CTOR match
+#     within a shared Blueprint family is the true cross-surface
+#     *equivalence* claim. Complementarity is a different lattice
+#     property the kernel does not yet read; see the sixth claim.
 #   - non_degenerate: the matched CTOR must be one of many possible
 #     CTORs in the domain. If every cell in a key collapses to the
 #     same CTOR, the encoder is hiding from the test.
@@ -246,6 +250,31 @@ defn translation_is_honest(proof) =
 #     it carries the fact that both encoders defaulted. True
 #     equivalence is between cells that have *each* declared their
 #     shape, not between two defaults that happen to coincide.
+#   - complementarity_requires_human_noticing: the claim must be
+#     *named* by a human reader — via cross-reference in prose, a
+#     LOG entry, or an explicit dyad-pair atlas row — and not arise
+#     solely from structural scoring. Five scan rounds across four
+#     signal families taught the body that complementarity is a
+#     lattice property the current substrate machinery cannot detect:
+#       - Round 1 (PR #1987, geometry-tuple):                2/5  = 40%
+#       - Round 2 (PR #1992, small-Blueprint-cluster):       0/2  = 0%
+#       - Round 3 (PR #1996, Hz+xref+lineage+same-form):     4/10 = 40%
+#       - Round 4 (PR #1998, +topology+phase complement):    4/10 = 40%
+#       - Round 5 (PR #2001, WORD-domain prose Jaccard):     4/18 = 22%
+#     The 40 → 0 → 40 → 40 → 22 trend names the ceiling: equivalence
+#     (CTOR match) is mechanizable today; complementarity (dyad-pair
+#     relationship) is not. Two characteristic failure modes have
+#     names now: *containment-as-complement* (the contained shares
+#     the container's vocabulary) and *shared-region-as-equivalence*
+#     (cells in the same ground-region share corpus). The
+#     cross-reference IS the body's noticing; the prose-jaccard rides
+#     along with it but adds little independent discrimination. The
+#     "currently" matters — a heavier extractor (contrastive,
+#     role-aware) may shift this in time. Today, the claim is true:
+#     complementarity is held by human attestation. See
+#     docs/coherence-substrate/dyad-pairs.form Part 5 GAP-D6 for the
+#     empirical trace; lc-autoresearch-as-honesty-runtime for the
+#     fitness function whose yield_weight carries this ceiling.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 4 — Encoder discipline (the great-reason criterion)
@@ -311,10 +340,11 @@ defn translate_c_major_triad_walk =
 # whose CTOR also coincides with c_major_triad_cell's are candidate
 # content-equivalent translations; the rest of the family is same-
 # schema-different-content. Empty family is evidence the encoding
-# does not yet produce structural kinship at that layer. The five-
+# does not yet produce structural kinship at that layer. The six-
 # claim honest-translation proof in Part 3 (blueprint_match,
-# ctor_match, non_degenerate, holdout_attested, not_domain_default)
-# is what each candidate must satisfy.
+# ctor_match, non_degenerate, holdout_attested, not_domain_default,
+# complementarity_requires_human_noticing) is what each candidate
+# must satisfy.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching

@@ -65,10 +65,25 @@ shared *meaning* — the next refinement must distinguish them.
 
 Output: top scan-discovered + top promoted, components broken out so
 the contributing signal is visible.
+
+PR #2001's honest finding (40 → 0 → 40 → 40 → 22 across five rounds)
+named the ceiling. Round 5 added a new mode: `--cross-ref-only`. The
+mode drops the scan-discovered track entirely and only emits pairs
+whose prose names the other cell. The cross-reference IS the body's
+noticing; the promoted track sustained ~75% confirmation across the
+five rounds while the scan-discovered track capped near 40% and
+dropped to ~20% with prose-Jaccard. The structural-scoring becomes
+a *candidate ordering* over the body's own noticing, not a
+*candidate discovery* mechanism in its own right.
+
+Usage:
+  python3 scripts/scan_dyad_candidates_word.py
+  python3 scripts/scan_dyad_candidates_word.py --cross-ref-only
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -110,6 +125,13 @@ ALREADY_CONFIRMED = {
     frozenset(["lc-inner-travel", "lc-relationships-as-mirrors"]),
     # Scale-paired triad surfaced in PR #1995 geometry-walk
     frozenset(["lc-field-update", "lc-nervous-system-recalibration"]),
+    # PR #2001 — WORD-domain prose-structural scan additions
+    frozenset(["lc-trust-as-gateway", "lc-vitality"]),
+    frozenset(["lc-grammar-as-readable-bnf", "lc-parsers-as-recipes"]),
+    frozenset(["lc-rest", "lc-tend-your-flame"]),
+    frozenset(["lc-shifted-return", "lc-train-the-predator"]),
+    # PR #2002 — cross-ref-only scan promotion
+    frozenset(["lc-resonating", "lc-sensing"]),
 }
 
 # Topology and phase complementarity, copied from scan_dyad_candidates.py
@@ -329,6 +351,31 @@ def load_concepts() -> dict[str, dict]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Dyad-pair candidate scan over Living Collective concepts. "
+            "Default mode runs the geometry+prose scoring against both "
+            "scan-discovered and promoted tracks. --cross-ref-only drops "
+            "the scan-discovered track entirely and only emits pairs whose "
+            "prose already names the other cell (cross-reference present). "
+            "The cross-ref track sustained ~75% confirmation across five "
+            "scan rounds while the scan-discovered track capped near 40% "
+            "and dropped to ~20% with prose-Jaccard. See dyad-pairs.form "
+            "Part 5 GAP-D6 for the empirical trace."
+        )
+    )
+    parser.add_argument(
+        "--cross-ref-only",
+        action="store_true",
+        help=(
+            "Drop the scan-discovered track entirely. Return only "
+            "candidates where one cell's prose contains a cross-reference "
+            "to the other. Cross-reference IS the body's noticing; this "
+            "mode honors that."
+        ),
+    )
+    args = parser.parse_args()
+
     cells = load_concepts()
     print(f"Loaded {len(cells)} concept cells with geometry.")
     # Vocabulary visibility — proves prose-signal extractor is doing real work.
@@ -342,6 +389,11 @@ def main() -> None:
         "WORD-domain substrate: 0 cells today. This scan reads via "
         "`tokenize_words` directly — same lexicon the substrate would intern from."
     )
+    if args.cross_ref_only:
+        print(
+            "\nMode: --cross-ref-only — scan-discovered track DROPPED. "
+            "Returning only pairs whose prose already names the other cell."
+        )
 
     candidates: list[dict] = []
     ids = sorted(cells.keys())
@@ -351,10 +403,16 @@ def main() -> None:
             cb = cells[b]
             if frozenset([a, b]) in ALREADY_CONFIRMED:
                 continue
+            cross_ref = 1.0 if (b in ca["cross_refs"] or a in cb["cross_refs"]) else 0.0
+            # In cross-ref-only mode, the scan-discovered track is dropped
+            # entirely. Only promoted pairs (cross-reference already present
+            # in prose) reach the scoring stage. The body's noticing —
+            # the cross-reference itself — is load-bearing.
+            if args.cross_ref_only and cross_ref == 0.0:
+                continue
             if not shape_floor(ca["geometry"], cb["geometry"]):
                 continue
 
-            cross_ref = 1.0 if (b in ca["cross_refs"] or a in cb["cross_refs"]) else 0.0
             hz_prox = hz_proximity_score(ca["hz"], cb["hz"])
             lin_match = lineage_match_score(
                 ca["geometry"].get("lineage_texture"),
@@ -386,7 +444,14 @@ def main() -> None:
                 + 2.0 * lemma_j
                 + 1.5 * field_j
             )
-            min_score = 3.0 if cross_ref > 0 else 1.9
+            # In cross-ref-only mode, drop the score threshold to 0 — the
+            # cross-reference itself is the body's noticing; if it's
+            # present, the pair is worth surfacing for human assessment
+            # whether or not the geometry+prose features back it up.
+            if args.cross_ref_only:
+                min_score = 0.0
+            else:
+                min_score = 3.0 if cross_ref > 0 else 1.9
             if score < min_score:
                 continue
             candidates.append(
@@ -416,12 +481,19 @@ def main() -> None:
     candidates.sort(key=lambda c: c["score"], reverse=True)
     scan_disc = [c for c in candidates if not c["promoted"]]
     promoted = [c for c in candidates if c["promoted"]]
-    print(
-        f"\nScan-discovered (score ≥ 1.9, no cross-ref): {len(scan_disc)}"
-    )
-    print(
-        f"Promoted        (score ≥ 3.0, cross-ref present): {len(promoted)}"
-    )
+    if args.cross_ref_only:
+        print(
+            f"\nCross-ref-promoted candidates (cross-ref present): "
+            f"{len(promoted)}"
+        )
+    else:
+        print(
+            f"\nScan-discovered (score ≥ 1.9, no cross-ref): {len(scan_disc)}"
+        )
+        print(
+            f"Promoted        (score ≥ 3.0, cross-ref present): "
+            f"{len(promoted)}"
+        )
 
     def show(group: list[dict], label: str, n: int) -> None:
         print(f"\n=== Top {n} {label} ===")
@@ -451,8 +523,11 @@ def main() -> None:
             )
             print(f"     fields_shared={c['fields_shared']}")
 
-    show(scan_disc, "scan-discovered (no prior cross-ref)", 20)
-    show(promoted, "promoted (cross-ref present in prose)", 15)
+    if args.cross_ref_only:
+        show(promoted, "cross-ref-promoted (the body's noticing)", 50)
+    else:
+        show(scan_disc, "scan-discovered (no prior cross-ref)", 20)
+        show(promoted, "promoted (cross-ref present in prose)", 15)
 
 
 if __name__ == "__main__":
