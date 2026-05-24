@@ -157,6 +157,53 @@ def test_rollup_half_or_more_failures_is_silent():
     assert buckets[0].status == "silent"
 
 
+def test_rollup_handful_of_failures_in_high_volume_day_is_breathing():
+    """A single failure across nearly three thousand probes is honest
+    noise, not strain. The witness should not cry wolf when 99.5%+ of
+    the day's probes succeeded — the live silence detector already
+    surfaces clustered failures via the silences table.
+    """
+    now = datetime(2026, 4, 15, 23, 59, tzinfo=timezone.utc)
+    # 2879 successful samples, 1 failure → 99.965% success.
+    samples = [
+        Sample(
+            ts=f"2026-04-15T{(i // 120) % 24:02d}:{(i % 120) // 2:02d}:{(i % 2) * 30:02d}Z",
+            organ="api",
+            ok=(i != 1000),
+            latency_ms=10,
+            detail=None if i != 1000 else "x",
+        )
+        for i in range(2880)
+    ]
+    buckets = rollup_daily(samples, days=1, now=now)
+    assert buckets[0].samples == 2880
+    assert buckets[0].failures == 1
+    assert buckets[0].status == "breathing"
+
+
+def test_rollup_sustained_low_failure_rate_is_still_strained():
+    """A 1% failure rate sustained across a high-volume day is real
+    strain — it sits above the noise floor.
+    """
+    now = datetime(2026, 4, 15, 23, 59, tzinfo=timezone.utc)
+    # 100 samples, 5 failures = 95% success → below 99.5% breathing floor,
+    # well below 50% silent threshold → strained.
+    samples = [
+        Sample(
+            ts=f"2026-04-15T{i // 60:02d}:{i % 60:02d}:00Z",
+            organ="api",
+            ok=(i % 20 != 0),  # every 20th sample fails → 5/100
+            latency_ms=10,
+            detail=None,
+        )
+        for i in range(100)
+    ]
+    buckets = rollup_daily(samples, days=1, now=now)
+    assert buckets[0].samples == 100
+    assert buckets[0].failures == 5
+    assert buckets[0].status == "strained"
+
+
 # --- latency aggregation -------------------------------------------------
 
 def test_rollup_computes_latency_percentiles_on_successful_samples():
