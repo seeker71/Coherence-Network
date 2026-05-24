@@ -9,17 +9,29 @@ source:
   - file: web/next.config.ts
     symbols: [nextConfig]
   - file: api/app/models/translation.py
-    symbols: [EntityView, GlossaryEntry]
+    symbols: [TranslationLens, OntologyConceptRef, IdeaTranslationResponse, ConceptTranslationResponse]
   - file: api/app/models/lens_translation.py
-    symbols: [LensTranslation]
+    symbols: [WorldviewLensCreate, TranslationRegenerateBody]
   - file: api/app/services/translation_cache_service.py
-    symbols: [write_view, canonical_view, all_canonical_views, find_anchor, is_stale, list_history, glossary_for, upsert_glossary_entry]
+    symbols: [EntityViewRecord, GlossaryEntryRecord, write_view, canonical_view, all_canonical_views, find_anchor, is_stale, list_history, glossary_for, upsert_glossary_entry]
   - file: api/app/services/translator_service.py
-    symbols: [translate_markdown, build_glossary_prompt, SUPPORTED_LOCALES]
+    symbols: [build_glossary_prompt, SUPPORTED_LOCALES, attune_from_anchor, load_view, set_backend]
   - file: api/app/services/concept_translation_service.py
-    symbols: [translate_concept, get_cached_translation]
+    symbols: [translate_idea, translate_concept]
   - file: api/app/services/lens_translation_service.py
-    symbols: [translate_via_lens]
+    symbols: [build_idea_translation, build_lens_public_dict, list_translations_for_idea, get_roi_payload]
+# Evolution note (2026-05-24): translation surface evolved during
+# implementation. Model classes EntityView/GlossaryEntry are now
+# EntityViewRecord/GlossaryEntryRecord living in translation_cache_service
+# (Record suffix marks them as SQLAlchemy ORM rows, not Pydantic
+# request/response shapes). LensTranslation became WorldviewLensCreate +
+# TranslationRegenerateBody (split into create vs. regenerate
+# operations). translate_markdown was replaced by the attunement-backend
+# pattern (attune_from_anchor + set_backend); get_cached_translation
+# was absorbed into translate_idea/translate_concept which cache
+# internally; translate_via_lens became build_idea_translation +
+# build_lens_public_dict (split between idea-translation and
+# lens-public-projection responsibilities).
   - file: api/app/routers/locales.py
     symbols: [list_locales, get_glossary, patch_glossary]
   - file: api/app/routers/translations.py
