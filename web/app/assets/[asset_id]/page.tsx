@@ -1,3 +1,8 @@
+// Asset detail surface — the vessel's full page. Surfaces hero, contribution
+// history, concept tags, provenance (creator + content hash + IPFS/Arweave),
+// IPStatusBadge (Story Protocol on-chain status), StorageLinks (Arweave +
+// IPFS as link rows), and Implementation evidence (R9 submissions with
+// verified/pending state). Per spec story-protocol-integration.md.
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
@@ -44,7 +49,132 @@ type Asset = {
   node_id?: string;
   image_url?: string | null;
   file_path?: string | null;
+  // Story Protocol IP registration — set when the asset has been
+  // registered on-chain via ip_registration_service. ip_status is
+  // 'registered' | 'pending' | 'failed' | undefined (legacy node).
+  ip_status?: string;
+  sp_ip_id?: string;
 };
+
+type Evidence = {
+  id: string;
+  asset_id: string;
+  submitter_id?: string;
+  photo_urls?: string[];
+  gps?: { lat?: number; lng?: number } | null;
+  attestation_count?: number;
+  description?: string;
+  created_at?: string;
+};
+
+type EvidenceVerification = {
+  evidence_id: string;
+  verified: boolean;
+};
+
+// IPStatusBadge — surfaces the on-chain registration state of the asset.
+// Renders a chip showing ip_status (registered / pending / failed) and,
+// when available, the Story Protocol IP Asset ID. Silent when neither
+// field is populated so legacy assets don't show an empty badge.
+function IPStatusBadge({
+  ipStatus,
+  spIpId,
+  t,
+}: {
+  ipStatus?: string;
+  spIpId?: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  if (!ipStatus && !spIpId) return null;
+  const status = (ipStatus || "registered").toLowerCase();
+  const palette =
+    status === "registered"
+      ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+      : status === "pending"
+        ? "border-amber-400/40 bg-amber-500/10 text-amber-200"
+        : status === "failed"
+          ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
+          : "border-stone-500/30 bg-stone-500/10 text-stone-200";
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] uppercase tracking-[0.14em] ${palette}`}>
+        <span aria-hidden="true">◈</span>
+        <span>{t(`assets.detail.ipStatus.${status}`)}</span>
+      </span>
+      {spIpId && (
+        <span className="font-mono text-[11px] text-stone-400 break-all" title={spIpId}>
+          {t("assets.detail.ipStatus.idLabel")}{" "}
+          {spIpId.length > 24 ? `${spIpId.slice(0, 12)}…${spIpId.slice(-6)}` : spIpId}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// StorageLinks — surfaces the two permanent-storage references for the
+// asset content (Arweave TX, IPFS CID). Each row is silent when its
+// field is missing; the whole section returns null when neither lives
+// on the asset.
+function StorageLinks({
+  arweaveTx,
+  ipfsCid,
+  t,
+}: {
+  arweaveTx?: string;
+  ipfsCid?: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  if (!arweaveTx && !ipfsCid) return null;
+  const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
+  return (
+    <div className="space-y-2">
+      {arweaveTx && (
+        <a
+          href={`https://viewblock.io/arweave/tx/${encodeURIComponent(arweaveTx)}`}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border/30 bg-card/40 px-3 py-2 hover:border-amber-400/40 transition-colors"
+        >
+          <span className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("assets.detail.storageArweave")}</span>
+          <span className="font-mono text-xs text-stone-300 truncate" title={arweaveTx}>
+            {truncate(arweaveTx, 16)} ↗
+          </span>
+        </a>
+      )}
+      {ipfsCid && (
+        <a
+          href={`https://ipfs.io/ipfs/${encodeURIComponent(ipfsCid)}`}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border/30 bg-card/40 px-3 py-2 hover:border-amber-400/40 transition-colors"
+        >
+          <span className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{t("assets.detail.storageIpfs")}</span>
+          <span className="font-mono text-xs text-stone-300 truncate" title={ipfsCid}>
+            {truncate(ipfsCid, 16)} ↗
+          </span>
+        </a>
+      )}
+    </div>
+  );
+}
+
+async function loadEvidence(assetId: string): Promise<{ submissions: Evidence[]; verifications: EvidenceVerification[] }> {
+  const API = getApiBase();
+  try {
+    const res = await fetch(
+      `${API}/api/evidence/asset/${encodeURIComponent(assetId)}`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return { submissions: [], verifications: [] };
+    const data = await res.json();
+    return {
+      submissions: Array.isArray(data?.submissions) ? data.submissions : [],
+      verifications: Array.isArray(data?.verifications) ? data.verifications : [],
+    };
+  } catch {
+    return { submissions: [], verifications: [] };
+  }
+}
 
 type ViewStats = {
   total_views?: number;
@@ -252,6 +382,11 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
     notFound();
   }
 
+  const evidenceData = await loadEvidence(asset.id);
+  const verifiedIds = new Set(
+    evidenceData.verifications.filter((v) => v.verified).map((v) => String(v.evidence_id)),
+  );
+
   const totalContributionCost = contributions.reduce((sum, item) => sum + (Number(item.cost_amount) || 0), 0);
   const avgCoherence = contributions.length
     ? contributions.reduce((sum, item) => sum + (Number(item.coherence_score) || 0), 0) / contributions.length
@@ -277,6 +412,8 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
   const contentHash: string | undefined = (asset as any).content_hash || undefined;
   const ipfsCid: string | undefined = (asset as any).ipfs_cid || undefined;
   const arweaveTx: string | undefined = (asset as any).arweave_tx || undefined;
+  const ipStatus: string | undefined = (asset as any).ip_status || undefined;
+  const spIpId: string | undefined = (asset as any).sp_ip_id || undefined;
   const hasProvenance = !!(creatorId || mimeType || contentHash || ipfsCid || arweaveTx);
   const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
@@ -461,6 +598,12 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
                 </p>
               )}
               <p className="text-xs text-stone-500 font-mono break-all pt-1">{asset.id}</p>
+              {/* IPStatusBadge — Story Protocol on-chain registration
+                  status. Silent for legacy assets that predate the
+                  ip_registration_service wiring. */}
+              <div className="pt-2">
+                <IPStatusBadge ipStatus={ipStatus} spIpId={spIpId} t={t} />
+              </div>
             </div>
             {Number(asset.total_cost) > 0 && (
               <div className="text-right shrink-0">
@@ -696,6 +839,89 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
             </dl>
           </section>
         )}
+
+        {/* Permanent storage — Arweave + IPFS links so a visitor can
+            verify the content is reachable on either decentralized
+            store without leaving the asset surface. */}
+        {(arweaveTx || ipfsCid) && (
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-6 space-y-3">
+            <h2 className="text-lg font-medium text-stone-100">{t("assets.detail.storageTitle")}</h2>
+            <p className="text-sm text-stone-400">{t("assets.detail.storageLede")}</p>
+            <StorageLinks arweaveTx={arweaveTx} ipfsCid={ipfsCid} t={t} />
+          </section>
+        )}
+
+        {/* Implementation evidence — submissions that a real-world
+            cell built this asset's plan, with photos, GPS, and
+            community attestations. Verified submissions trigger a CC
+            multiplier on the next settlement period (spec R9). */}
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-lg font-medium text-stone-100">{t("assets.detail.evidenceTitle")}</h2>
+            <span className="text-xs text-stone-500">
+              {t("assets.detail.evidenceCount", { n: String(evidenceData.submissions.length) })}
+            </span>
+          </div>
+          {evidenceData.submissions.length === 0 ? (
+            <p className="text-sm text-stone-400">{t("assets.detail.evidenceEmpty")}</p>
+          ) : (
+            <ul className="space-y-3">
+              {evidenceData.submissions.map((ev) => {
+                const photoCount = ev.photo_urls?.length ?? 0;
+                const hasGps = !!(ev.gps?.lat != null && ev.gps?.lng != null);
+                const attestations = ev.attestation_count ?? 0;
+                const verified = verifiedIds.has(String(ev.id));
+                return (
+                  <li
+                    key={ev.id}
+                    className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-stone-200">
+                          {ev.description || t("assets.detail.evidenceUnnamed")}
+                        </p>
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          {formatDate(ev.created_at, lang)}
+                          {ev.submitter_id ? ` · ${ev.submitter_id.slice(0, 8)}` : ""}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] ${
+                          verified
+                            ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                            : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                        }`}
+                      >
+                        {verified
+                          ? t("assets.detail.evidenceVerified")
+                          : t("assets.detail.evidencePending")}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs text-stone-400">
+                      <span>
+                        {t("assets.detail.evidencePhotos", { n: String(photoCount) })}
+                      </span>
+                      <span>
+                        {hasGps
+                          ? t("assets.detail.evidenceGpsPresent", {
+                              lat: (ev.gps?.lat ?? 0).toFixed(3),
+                              lng: (ev.gps?.lng ?? 0).toFixed(3),
+                            })
+                          : t("assets.detail.evidenceGpsAbsent")}
+                      </span>
+                      <span>
+                        {t("assets.detail.evidenceAttestations", {
+                          n: String(attestations),
+                        })}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
     </main>
   );

@@ -19,10 +19,10 @@
 | `/api-health` | [page.tsx](api-health/page.tsx) | _no top-of-file purpose_ |
 | `/arrival/[id]` | [page.tsx](arrival/[id]/page.tsx) | /arrival/[id] — the moment of being received. After /begin lands, the |
 | `/asking` | [page.tsx](asking/page.tsx) | /asking — a quiet doorway where questions from this lineage land. |
-| `/assets/[asset_id]` | [page.tsx](assets/[asset_id]/page.tsx) | _no top-of-file purpose_ |
+| `/assets/[asset_id]` | [page.tsx](assets/[asset_id]/page.tsx) | Asset detail surface — the vessel's full page. Surfaces hero, contribution |
 | `/assets/[asset_id]/proof` | [page.tsx](assets/[asset_id]/proof/page.tsx) | _no top-of-file purpose_ |
 | `/assets` | [page.tsx](assets/page.tsx) | _no top-of-file purpose_ |
-| `/assets/upload` | [page.tsx](assets/upload/page.tsx) | _no top-of-file purpose_ |
+| `/assets/upload` | [page.tsx](assets/upload/page.tsx) | Upload an asset — wires the POST /api/assets/register endpoint into a |
 | `/automation` | [page.tsx](automation/page.tsx) | _no top-of-file purpose_ |
 | `/begin` | [page.tsx](begin/page.tsx) | _no top-of-file purpose_ |
 | `/beliefs` | [page.tsx](beliefs/page.tsx) | _no top-of-file purpose_ |
@@ -124,7 +124,7 @@
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |
-| `/settlement` | [page.tsx](settlement/page.tsx) | _no top-of-file purpose_ |
+| `/settlement` | [page.tsx](settlement/page.tsx) | Daily settlement dashboard — surfaces the SettlementBatch records |
 | `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
