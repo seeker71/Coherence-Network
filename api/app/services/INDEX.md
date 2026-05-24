@@ -142,7 +142,7 @@
 | [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
 | [investment_service.py](investment_service.py) | Investment service — positions, ROI projection, history. |
-| [ip_registration_service.py](ip_registration_service.py) | IP registration service — Story Protocol SDK integration (pending). |
+| [ip_registration_service.py](ip_registration_service.py) | IP registration service — Story Protocol queue surface (first iteration). |
 | [lens_translation_service.py](lens_translation_service.py) | Idea lens translations — spec-181 style responses, cache, and ROI counters. |
 | [locale_projection.py](locale_projection.py) | Shared locale projection for API responses. |
 | [localized_errors.py](localized_errors.py) | Localized API error messages. |

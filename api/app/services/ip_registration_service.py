@@ -1,103 +1,173 @@
-"""IP registration service — Story Protocol SDK integration (pending).
+"""IP registration service — Story Protocol queue surface (first iteration).
 
-Per specs/story-protocol-integration.md R1. The spec describes async
-registration of an asset as an IP Asset on Story Protocol, returning
-an IP Asset ID stored on the asset's graph node.
+Per specs/story-protocol-integration.md R1 and R7. The spec describes
+async registration of an asset as an IP Asset on Story Protocol,
+returning an IP Asset ID stored on the asset's graph node, and a
+derivative-work royalty record using the 15/85 default split.
 
-**Not yet wired.** The real implementation requires the Story Protocol
-SDK and a partner-selection gate:
-  - Which chain? Story Protocol's own L2 on Base? Sepolia for testing?
-  - Which signer? Platform-owned hot wallet or per-contributor wallet?
-  - Which royalty module config? Default split vs configurable?
+**Mock SDK, real interface.** This iteration holds registration and
+derivative state in module-level dicts and synthesizes a deterministic
+`sp_ip_id` of the shape `sp:mock:<asset_id_prefix>`. The function
+signatures are the contract callers will use against the real Story
+Protocol SDK once partner selection (chain + signer + royalty module)
+lands; only the body that mints `sp_ip_id` and the synchronous return
+will change. Persistence is a follow-up breath — when the IPRegistration
+PostgreSQL table arrives (see spec Data Model), the dicts move to rows
+behind the same surface.
 
-Until those decisions land, this module provides the function
-signatures the rest of the system can import and call. Functions
-raise `IpRegistrationPending` with a clear message so callers can
-either check `is_ready()` first or catch the exception and fall
-back to marking the asset's `ip_status` as `pending`.
+The three named functions the spec's `source:` block claims for this
+file:
 
-Once partner selection completes:
-  - Replace `IpRegistrationPending` raises with real SDK calls
-  - Implement `register_ip_asset()` to call `sp.register_ip(...)`
-  - Implement `get_ip_status()` to query the chain
-  - Implement `record_derivative()` to wire the royalty module
+  - `register_ip_asset(asset_id, metadata) -> dict`
+  - `get_ip_status(asset_id) -> dict`
+  - `record_derivative(parent_asset_id, derivative_asset_id, derivative_type) -> dict`
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
 
-class IpRegistrationPending(Exception):
-    """Raised when IP registration is invoked before Story Protocol
-    SDK integration lands."""
+# Module-level state — first iteration. Replaced by graph_service +
+# PostgreSQL persistence once the IPRegistration table lands.
+_registrations: Dict[str, Dict[str, Any]] = {}
+_derivatives: Dict[str, Dict[str, Any]] = {}
 
 
-@dataclass(frozen=True)
-class IpRegistrationResult:
-    """Shape the real implementation will return."""
-
-    sp_ip_id: str
-    tx_hash: str
-    royalty_module_address: Optional[str]
-    registered_at: str  # ISO 8601
+# Royalty split defaults from spec R7.
+DEFAULT_ROYALTY_SPLIT = {"parent": 0.15, "derivative": 0.85}
 
 
-def is_ready() -> bool:
-    """Return True once the Story Protocol SDK is wired and a signer
-    is configured. Returns False for the current partner-gated state.
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _mint_sp_ip_id(asset_id: str) -> str:
+    """Deterministic mock IP Asset ID. The real SDK returns an
+    on-chain hex address; this prefix marks the value as a stub so
+    nothing accidentally pushes it to a real chain."""
+    prefix = asset_id[:8] if len(asset_id) >= 8 else asset_id
+    return f"sp:mock:{prefix}"
+
+
+def _validate_metadata(metadata: Any) -> Optional[str]:
+    """Return None if metadata is acceptable, otherwise a reason string.
+
+    Acceptable metadata is a dict (possibly empty). Non-dict values,
+    or a dict carrying a sentinel `_force_failure` key, transition the
+    registration to `failed`. The sentinel exists for the test that
+    proves the failure path without needing a real SDK error."""
+    if metadata is None:
+        return None
+    if not isinstance(metadata, dict):
+        return f"metadata must be a dict, got {type(metadata).__name__}"
+    if metadata.get("_force_failure"):
+        reason = metadata.get("_force_failure_reason", "forced failure")
+        return str(reason)
+    return None
+
+
+def register_ip_asset(asset_id: str, metadata: Optional[dict] = None) -> dict:
+    """Queue (and, in this iteration, immediately complete) an IP Asset
+    registration with Story Protocol.
+
+    Returns a dict with `asset_id`, `sp_ip_id`, `ip_status`, and
+    `registered_at`. On malformed metadata the status is `failed` and
+    the dict carries a `reason` field; `sp_ip_id` is None in that case.
+
+    Idempotent: registering the same `asset_id` twice returns the
+    existing record. To re-register, callers must clear state via
+    `_reset_for_tests()` (production will offer an explicit retry path).
     """
-    return False
+    if not asset_id:
+        raise ValueError("asset_id is required")
+
+    existing = _registrations.get(asset_id)
+    if existing is not None:
+        return dict(existing)
+
+    failure_reason = _validate_metadata(metadata)
+    now = _now_iso()
+    if failure_reason is not None:
+        record = {
+            "asset_id": asset_id,
+            "sp_ip_id": None,
+            "ip_status": "failed",
+            "reason": failure_reason,
+            "registered_at": None,
+            "queued_at": now,
+            "metadata": metadata if isinstance(metadata, dict) else {},
+        }
+    else:
+        record = {
+            "asset_id": asset_id,
+            "sp_ip_id": _mint_sp_ip_id(asset_id),
+            "ip_status": "registered",
+            "registered_at": now,
+            "queued_at": now,
+            "metadata": metadata or {},
+        }
+    _registrations[asset_id] = record
+    return dict(record)
 
 
-def register_ip_asset(
-    asset_id: str,
-    creator_id: str,
-    *,
-    content_hash: str,
-    metadata: Optional[dict] = None,
-) -> IpRegistrationResult:
-    """Register an asset as an IP Asset on Story Protocol.
+def get_ip_status(asset_id: str) -> dict:
+    """Return the current IP registration record for `asset_id`.
 
-    Returns an IpRegistrationResult with the on-chain IP Asset ID,
-    transaction hash, and royalty module address. The caller stores
-    `sp_ip_id` on the asset's graph node under property `sp_ip_id`
-    and flips `ip_status` from `pending` to `registered`.
+    For unknown assets returns `{"asset_id": asset_id,
+    "ip_status": "not_registered"}` so callers can treat absence as a
+    first-class state rather than handling a None.
     """
-    raise IpRegistrationPending(
-        "Story Protocol SDK integration is pending partner selection. "
-        "See specs/story-protocol-integration.md R1 for the contract."
-    )
-
-
-def get_ip_status(sp_ip_id: str) -> dict:
-    """Query the on-chain status of a registered IP Asset.
-
-    Returns a dict with fields the settlement service reads to confirm
-    the asset's IP Asset is confirmed and accruing royalties.
-    """
-    raise IpRegistrationPending(
-        "Story Protocol SDK integration is pending partner selection."
-    )
+    record = _registrations.get(asset_id)
+    if record is None:
+        return {"asset_id": asset_id, "ip_status": "not_registered"}
+    return dict(record)
 
 
 def record_derivative(
-    child_asset_id: str,
-    parent_sp_ip_id: str,
+    parent_asset_id: str,
+    derivative_asset_id: str,
+    derivative_type: str,
     *,
-    royalty_split_parent: float = 0.15,
-    royalty_split_child: float = 0.85,
-) -> IpRegistrationResult:
-    """Register a derivative work with the royalty module.
+    royalty_split: Optional[Dict[str, float]] = None,
+) -> dict:
+    """Record a derivative-work relationship with the parent IP Asset.
 
-    Configures the parent/child royalty split so future CC flows
-    attribute proportionally. Default 15%/85% per spec R7.
+    Stores the parent → derivative edge with a royalty split. Default
+    is `{"parent": 0.15, "derivative": 0.85}` per spec R7; callers
+    pass `royalty_split={"parent": X, "derivative": Y}` to override.
+    The split must sum to 1.0 within a small tolerance.
+
+    Returns the recorded relationship as a dict.
     """
-    if abs(royalty_split_parent + royalty_split_child - 1.0) > 0.001:
-        raise ValueError(
-            "royalty_split_parent + royalty_split_child must sum to 1.0"
-        )
-    raise IpRegistrationPending(
-        "Story Protocol royalty module integration is pending partner selection."
-    )
+    if not parent_asset_id or not derivative_asset_id:
+        raise ValueError("parent_asset_id and derivative_asset_id are required")
+    if parent_asset_id == derivative_asset_id:
+        raise ValueError("a derivative cannot be its own parent")
+    if not derivative_type:
+        raise ValueError("derivative_type is required")
+
+    split = dict(royalty_split) if royalty_split else dict(DEFAULT_ROYALTY_SPLIT)
+    if set(split.keys()) != {"parent", "derivative"}:
+        raise ValueError("royalty_split must have keys 'parent' and 'derivative'")
+    total = split["parent"] + split["derivative"]
+    if abs(total - 1.0) > 0.001:
+        raise ValueError(f"royalty_split must sum to 1.0, got {total}")
+
+    record = {
+        "parent_asset_id": parent_asset_id,
+        "derivative_asset_id": derivative_asset_id,
+        "derivative_type": derivative_type,
+        "royalty_split": split,
+        "recorded_at": _now_iso(),
+    }
+    _derivatives[derivative_asset_id] = record
+    return dict(record)
+
+
+def _reset_for_tests() -> None:
+    """Clear module-level state. Call from a pytest fixture so each
+    test starts on fresh ground."""
+    _registrations.clear()
+    _derivatives.clear()
