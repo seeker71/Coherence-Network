@@ -1368,6 +1368,52 @@ export class Kernel {
     };
     this.registerNative("walk_parallel", catWitness(), walkParallel);
     this.registerNative("walk-parallel", catWitness(), walkParallel);
+    const walkParallelCached: NativeFn = (k, args) => {
+      const roots = argList(args, 0).map((value) => {
+        if (value.kind !== "nodeid")
+          throw new Error("walk_parallel_cached: first argument must be a list of NodeIDs");
+        return value.nodeid;
+      });
+      const workers = Math.max(1, argInt(args, 1));
+      const allPure = roots.every((root) => isParallelPure(k, root, new Set<string>()));
+      const sequential = (cache: boolean): Value => {
+        const list = roots.map((root) => {
+          const key = nodeKey(root);
+          if (cache) {
+            const cached = k.walkCache.get(key);
+            if (cached !== undefined) return cached;
+          }
+          const value = walk(k, root, new Frame(null));
+          if (cache) k.walkCache.set(key, value);
+          return value;
+        });
+        return { kind: "list", list };
+      };
+      if (!allPure) return sequential(false);
+      if (
+        workers <= 1 ||
+        roots.length <= 1 ||
+        k.trace !== undefined
+      ) {
+        return sequential(k.trace === undefined);
+      }
+      const out: Value[] = new Array(roots.length);
+      const workerCount = Math.min(workers, roots.length);
+      for (let worker = 0; worker < workerCount; worker++) {
+        for (let i = worker; i < roots.length; i += workerCount) {
+          const root = roots[i]!;
+          const key = nodeKey(root);
+          const cached = k.walkCache.get(key);
+          out[i] = cached ?? walk(k, root, new Frame(null));
+        }
+      }
+      for (let i = 0; i < roots.length; i++) {
+        k.walkCache.set(nodeKey(roots[i]!), out[i]!);
+      }
+      return { kind: "list", list: out };
+    };
+    this.registerNative("walk_parallel_cached", catWitness(), walkParallelCached);
+    this.registerNative("walk-parallel-cached", catWitness(), walkParallelCached);
     this.registerNative("walk-cached", catWitness(), (k, args) => {
       const nid = argNodeID(args, 0);
       const key = nodeKey(nid);

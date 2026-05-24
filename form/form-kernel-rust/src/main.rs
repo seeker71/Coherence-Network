@@ -941,6 +941,93 @@ fn native_walk_parallel(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value 
     )
 }
 
+fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value {
+    let roots: Vec<NodeID> = match &args[0] {
+        Value::List(xs) => xs.iter().map(|v| v.as_nid()).collect(),
+        _ => panic!("walk_parallel_cached: first argument must be a list of NodeIDs"),
+    };
+    let mut workers = args[1].as_int().max(1) as usize;
+    if roots.is_empty() {
+        return Value::List(Vec::new());
+    }
+    workers = workers.min(roots.len());
+    let all_pure = roots
+        .iter()
+        .all(|root| k.is_parallel_pure(*root, &mut HashSet::new()));
+    if !all_pure {
+        let mut out = Vec::with_capacity(roots.len());
+        for root in &roots {
+            let mut sub_arena = Arena::new();
+            let env = sub_arena.new_frame(None);
+            out.push(walk(k, &mut sub_arena, *root, env));
+        }
+        return Value::List(out);
+    }
+    if workers <= 1 || roots.len() <= 1 || k.trace.is_some() {
+        let cache_enabled = k.trace.is_none();
+        let mut out = Vec::with_capacity(roots.len());
+        for root in &roots {
+            if cache_enabled {
+                if let Some(v) = k.walk_cache.get(root) {
+                    out.push(v.clone());
+                    continue;
+                }
+            }
+            let mut sub_arena = Arena::new();
+            let env = sub_arena.new_frame(None);
+            let value = walk(k, &mut sub_arena, *root, env);
+            if cache_enabled {
+                k.walk_cache.insert(*root, value.clone());
+            }
+            out.push(value);
+        }
+        return Value::List(out);
+    }
+
+    let mut out: Vec<Option<Value>> = vec![None; roots.len()];
+    let mut jobs = Vec::<(usize, NodeID)>::new();
+    for (idx, root) in roots.iter().copied().enumerate() {
+        if let Some(v) = k.walk_cache.get(&root) {
+            out[idx] = Some(v.clone());
+        } else {
+            jobs.push((idx, root));
+        }
+    }
+    if !jobs.is_empty() {
+        let mut buckets = vec![Vec::<(usize, NodeID)>::new(); workers];
+        for (pos, job) in jobs.into_iter().enumerate() {
+            buckets[pos % workers].push(job);
+        }
+        let mut handles = Vec::with_capacity(workers);
+        for bucket in buckets {
+            if bucket.is_empty() {
+                continue;
+            }
+            let mut worker = k.readonly_worker_clone();
+            handles.push(std::thread::spawn(move || {
+                let mut chunk = Vec::with_capacity(bucket.len());
+                for (idx, root) in bucket {
+                    let mut sub_arena = Arena::new();
+                    let env = sub_arena.new_frame(None);
+                    chunk.push((idx, root, walk(&mut worker, &mut sub_arena, root, env)));
+                }
+                chunk
+            }));
+        }
+        for handle in handles {
+            for (idx, root, value) in handle.join().expect("walk_parallel_cached worker panicked") {
+                k.walk_cache.insert(root, value.clone());
+                out[idx] = Some(value);
+            }
+        }
+    }
+    Value::List(
+        out.into_iter()
+            .map(|value| value.expect("walk_parallel_cached missing worker result"))
+            .collect(),
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Frame — scope primitive
 // ---------------------------------------------------------------------------
@@ -1417,6 +1504,16 @@ impl Kernel {
         });
         self.register_native("walk_parallel", cat_witness(), native_walk_parallel);
         self.register_native("walk-parallel", cat_witness(), native_walk_parallel);
+        self.register_native(
+            "walk_parallel_cached",
+            cat_witness(),
+            native_walk_parallel_cached,
+        );
+        self.register_native(
+            "walk-parallel-cached",
+            cat_witness(),
+            native_walk_parallel_cached,
+        );
         // walk-cached — JIT-vector memoization. Caller asserts the
         // recipe is pure (no I/O, no external state). Result cached
         // by recipe NodeID. Subsequent calls return O(1) from cache

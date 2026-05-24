@@ -1287,6 +1287,74 @@ func (k *Kernel) registerNatives() {
 	}
 	k.registerNative("walk_parallel", catWitness(), walkParallel)
 	k.registerNative("walk-parallel", catWitness(), walkParallel)
+	walkParallelCached := func(k *Kernel, args []Value) Value {
+		roots := make([]NodeID, len(args[0].List))
+		for i, v := range args[0].List {
+			roots[i] = v.Nid
+		}
+		workers := int(args[1].Int)
+		if workers < 1 {
+			workers = 1
+		}
+		if workers > len(roots) && len(roots) > 0 {
+			workers = len(roots)
+		}
+		sequential := func(cache bool) Value {
+			out := make([]Value, len(roots))
+			for i, root := range roots {
+				if cache {
+					if cached, ok := k.walkCache[root]; ok {
+						out[i] = cached
+						continue
+					}
+				}
+				out[i] = k.walk(root, NewFrame(nil))
+				if cache {
+					k.walkCache[root] = out[i]
+				}
+			}
+			return Value{Kind: VList, List: out}
+		}
+		if len(roots) == 0 {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		for _, root := range roots {
+			if !k.isParallelPure(root, make(map[NodeID]bool)) {
+				return sequential(false)
+			}
+		}
+		if workers <= 1 || len(roots) <= 1 || k.Trace != nil {
+			return sequential(k.Trace == nil)
+		}
+		out := make([]Value, len(roots))
+		jobs := make(chan int)
+		var wg sync.WaitGroup
+		for w := 0; w < workers; w++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for idx := range jobs {
+					root := roots[idx]
+					if cached, ok := k.walkCache[root]; ok {
+						out[idx] = cached
+						continue
+					}
+					out[idx] = k.walk(root, NewFrame(nil))
+				}
+			}()
+		}
+		for i := range roots {
+			jobs <- i
+		}
+		close(jobs)
+		wg.Wait()
+		for i, root := range roots {
+			k.walkCache[root] = out[i]
+		}
+		return Value{Kind: VList, List: out}
+	}
+	k.registerNative("walk_parallel_cached", catWitness(), walkParallelCached)
+	k.registerNative("walk-parallel-cached", catWitness(), walkParallelCached)
 
 	// native_blueprint — read a native's Form category from inside Form.
 	// Returns the category NodeID (level=2, ty=RBasic, inst=instance) or
