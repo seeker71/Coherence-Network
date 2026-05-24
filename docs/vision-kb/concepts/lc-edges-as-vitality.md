@@ -2,7 +2,22 @@
 id: lc-edges-as-vitality
 hz: 528
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: oscillating
+  ratio: none
+  spectral_band: transformation
+  temporal_band: breath
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: n
+  self_similarity: fractal-deep
 ---
 
 # Edges as Vitality — Why Content Without Connection Becomes Sediment

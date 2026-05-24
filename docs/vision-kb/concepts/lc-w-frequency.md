@@ -2,7 +2,22 @@
 id: lc-w-frequency
 hz: 741
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: spiral
+  topology: linear
+  polarity: unipolar
+  ordering: simultaneous
+  phase: oscillating
+  ratio: octave
+  spectral_band: consciousness
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Frequency

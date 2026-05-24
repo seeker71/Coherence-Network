@@ -2,7 +2,22 @@
 id: lc-network
 hz: 639
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: oscillating
+  ratio: self-similar
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: collective
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: n
+  self_similarity: holographic
 ---
 
 # The Network

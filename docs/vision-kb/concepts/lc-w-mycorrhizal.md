@@ -2,7 +2,22 @@
 id: lc-w-mycorrhizal
 hz: 639
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: collective
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: n
+  self_similarity: fractal-deep
 ---
 
 # Mycorrhizal

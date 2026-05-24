@@ -2,7 +2,22 @@
 id: lc-w-wu-wei
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: receptive-resonance
+  polarity: unipolar
+  ordering: atemporal
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: personal
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Wu Wei
