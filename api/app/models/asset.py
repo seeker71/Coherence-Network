@@ -120,10 +120,24 @@ class AssetRegistrationCreate(BaseModel):
 
 
 class AssetRegistration(AssetRegistrationCreate):
-    """Registered asset with server-assigned id and timestamp."""
+    """Registered asset with server-assigned id and timestamp.
+
+    ``sp_ip_id``, ``ip_status``, and ``ip_reason`` are populated by the
+    auto-fire pipeline at registration time (see register_asset in
+    api/app/routers/assets.py). On success ``ip_status`` is ``registered``
+    and ``sp_ip_id`` carries the Story Protocol IP Asset id. On failure
+    ``ip_status`` is ``failed``, ``ip_reason`` names the cause, and
+    ``sp_ip_id`` stays None — the asset itself remains usable per spec
+    R1's escape hatch. Storage refs (``arweave_tx``, ``ipfs_cid``) are
+    inherited from AssetRegistrationCreate; the auto-fire fills them in
+    when the upload succeeds and leaves them None when it doesn't.
+    """
 
     id: str = Field(description="asset:<uuid> identifier")
     created_at: datetime
+    sp_ip_id: Optional[str] = None
+    ip_status: str = "pending"
+    ip_reason: Optional[str] = None
 
 
 class AssetIPRegistration(BaseModel):
