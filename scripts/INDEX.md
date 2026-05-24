@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 118
+**Total files**: 119
 
 | File | Purpose |
 |---|---|
@@ -38,6 +38,7 @@
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
 | [demo_dual_identity.py](demo_dual_identity.py) | !/usr/bin/env python3 |
 | [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | !/usr/bin/env python3 |
+| [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | !/usr/bin/env python3 |
 | [encounter.py](encounter.py) | !/usr/bin/env python3 |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | !/usr/bin/env python3 |
 | [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
