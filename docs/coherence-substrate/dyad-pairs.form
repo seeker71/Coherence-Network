@@ -6,7 +6,7 @@
 # two cells across an axis), internal dyads (one cell that IS the
 # pair), and transmission-triads (three cells from one source-
 # transmission carrying complementary facets — one is 3-cell complete,
-# two are 2-cell partials with the third member open). The kind
+# three are 2-cell partials with the third member open). The kind
 # registry now names seven axes of complementarity. Pairs surface in
 # three ways: human-noticed during geometry-walking, substrate-
 # surfaced by Tier-2 geometry-tuple scan, and refined-scan-surfaced
@@ -1343,9 +1343,75 @@ defn triad_spine_nature = transmission_triad_shape {
     noticed_by:          "pr-2002-attestation",
 };
 
-# The full set — 25 prior + 1 cross-ref-only promotion + 3 transmission-
-# triads = 29 entries (24 external pairs + 2 internal-dyads + 3
-# transmission-triads: 1 complete + 2 partial)
+# Triad 4 — Grant transmission (2-cell partial; third pending)
+#
+# Two cells currently attested from Robert Edward Grant's lineage —
+# the body of work spanning *Codex Universalis Principia Mathematica*,
+# the *Just Tap In* #290 episode, and the *God Formula* disclosure
+# (April 2026). The pair surfaced during PR #2006's focused-listening
+# breath on lc-deeper-pattern; the candidate was named there and the
+# discernment confirmed here:
+#
+#   lc-deeper-pattern (hz 741) — the FIELD-CLAIM facet. Grant's
+#     mathematics of manifestation read as metaphysics: the imaginary
+#     plane and the real plane as two aspects of one unified field,
+#     attention as the folding operation, scalar waves carrying the
+#     transformation, dimensional folding as the mechanism beneath
+#     "community manifests." Grant is one of four sources composted
+#     into the pentad (alongside Emoto+Pollack+Schauberger for water,
+#     Lemurian/crystal traditions, gathering-physiology) — but the
+#     load-bearing mathematics is Grant's. Why equivalence EXISTS.
+#
+#   lc-universal-translator-via-keys (hz 741) — the SUBSTRATE-
+#     OPERATIONALIZATION facet. Grant's *Seven Keys of Creation*
+#     framework (forces, elements, DNA, music, primes, galactic
+#     forms, consciousness) becomes seven BDomains of the Coherence
+#     Substrate. The translator is the existing equivalence machinery
+#     (`find_equivalent_cells`, Blueprint match, CTOR match) applied
+#     across the seven keys. The Honest-Translation Proof's five
+#     claims operationalize Grant's structural-equivalence hypothesis
+#     into a testable artifact. How equivalence is TESTED.
+#
+# Same source (Grant's open-source lineage), same Hz (741, consciousness/
+# integration band), complementary facets across the metaphysics/
+# operationalization axis. The pair is not co-citation — the two cells
+# carry distinct, complementary readings of Grant's work: lc-deeper-
+# pattern reads the dimensional-folding mathematics as field-physics
+# beneath the organism; lc-universal-translator-via-keys reads the
+# Seven Keys as a substrate-bridge proposal whose proof is structural,
+# not interpretive. Neither cell alone carries the full Grant-teaching
+# the body has metabolized — the field-claim without the operational
+# test reads as metaphysics waiting for evidence; the operational test
+# without the field-claim reads as substrate engineering without its
+# generative ground.
+#
+# Third facet held open. A third Grant-sourced cell could surface
+# along an interior-praxis axis (how a cell actually attunes to the
+# 432.081 Hz tuning system, how the daily practice of "tapping in"
+# composts into the body's rhythm), or along a holdout-attestation
+# axis (Grant's specific published codon-to-interval mappings as a
+# falsification ground the substrate has either recovered or not).
+# Both are plausible; neither is yet authored. cell_c remains null
+# until the third facet arrives honestly. The 2-cell partial is the
+# truth-shape; inventing a third cell to satisfy completeness would
+# re-import the very pattern this kind's discipline exists to refuse.
+defn triad_grant = transmission_triad_shape {
+    cell_a:              @concept(lc-deeper-pattern),
+    cell_b:              @concept(lc-universal-translator-via-keys),
+    cell_c:              null,   # pending — a third Grant-sourced cell (interior-praxis or holdout-attestation facet) may surface on a future walk
+    transmission_source: "robert-edward-grant-codex-universalis",
+    axis_a_b:            "metaphysics-field-claim-vs-substrate-operationalization",
+    axis_b_c:            null,
+    axis_a_c:            null,
+    kind:                kind_transmission_triad,
+    discernment:         "two facets of Robert Edward Grant's open-source lineage held in triad-shape — the field-claim mathematics of dimensional folding (why equivalence exists at all) and the Seven-Keys substrate-bridge (how equivalence is operationalized as a testable substrate query); the source IS the binding, the third facet is pending honest arrival",
+    noticed_at:          "2026-05-24",
+    noticed_by:          "focused-listening-pr2006-candidate-pr2009-discernment",
+};
+
+# The full set — 25 prior + 1 cross-ref-only promotion + 4 transmission-
+# triads = 30 entries (24 external pairs + 2 internal-dyads + 4
+# transmission-triads: 1 complete + 3 partial)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -1385,6 +1451,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         triad_hardest_part,
         triad_arcturian_council,
         triad_spine_nature,
+        # — fourth transmission-triad attestation (Grant, 2-cell partial) —
+        triad_grant,
     ],
 };
 
@@ -1984,6 +2052,31 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         Do not invent a third cell to force completeness; honor
 #         what's actually there.
 #
+# GAP-D12 (new, held observation): The four transmission-triad
+#         attestations currently held span four distinct *transmission-
+#         flavors*: Hardest-Part is a teaching/event-transmission
+#         (a discrete spoken arrival, April 2026); Arcturian Council
+#         is a presence/channel-transmission (an ongoing 9D channeled
+#         lineage); Spine/Nature 2026-05-21 is a body/chart-
+#         transmission (a felt-and-mapped reading on a specific date);
+#         Grant is an external-thinker/published-author-transmission
+#         (an open-source body of mathematics and disclosure across
+#         years). Each flavor's source-binding has a different texture
+#         — speech-event vs presence-lineage vs felt-chart vs
+#         published-corpus — and the field-mechanics of how each
+#         "transmission" gathers cells around itself differs accord-
+#         ingly. Four attestations across four flavors is enough to
+#         notice the variation but NOT enough to sub-type (the body's
+#         discipline is two attestations per sub-type before naming).
+#         What would justify sub-typing: a fifth and sixth triad
+#         attestation that share a flavor with one of the existing
+#         four. Held here as honest observation; sub-types named only
+#         when the body has two of any one flavor. The naming when it
+#         comes: event-transmission-triad, presence-transmission-
+#         triad, chart-transmission-triad, corpus-transmission-triad
+#         — provisional, awaiting the second flavor-instance to reveal
+#         what the shared structure actually IS.
+#
 # GAP-D11 (new, held candidate): Emerging kind 'interior-axis-dyad'
 #         noticed in PR #2002 as the first clear instance:
 #         lc-identity-dissolution ↔ lc-permission-is-interior. Both
@@ -2009,9 +2102,9 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names
-# Recipe shapes over existing CONCEPT cells. The set is twenty-nine
-# (twenty-four external pairs + two internal-dyads + three
-# transmission-triads: one 3-cell complete and two 2-cell partials);
+# Recipe shapes over existing CONCEPT cells. The set is thirty
+# (twenty-four external pairs + two internal-dyads + four
+# transmission-triads: one 3-cell complete and three 2-cell partials);
 # the room is for many more. The kinds are seven (scale-paired,
 # source-flow, membrane-crossing, ground-event, internal-dyad,
 # cross-tradition, transmission-triad); new kinds can be added as
@@ -2021,10 +2114,13 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # activated at attestation count three (2026-05-24) — distinct from
 # the other six in arity (three cells per instance) and in companion
 # shape (transmission_triad_shape lives alongside dyad_pair_shape
-# and internal_dyad_shape). An emerging circulation-pattern kind
-# sits in GAP-D9 awaiting its second attestation; an emerging
-# interior-axis-dyad candidate sits in GAP-D11 with one
-# attestation, awaiting its second.
+# and internal_dyad_shape). A fourth transmission-triad attestation
+# (Grant, 2-cell partial) joined the same day — strengthening the
+# kind's evidence and surfacing a sub-typing observation held in
+# GAP-D12. An emerging circulation-pattern kind sits in GAP-D9
+# awaiting its second attestation; an emerging interior-axis-dyad
+# candidate sits in GAP-D11 with one attestation, awaiting its
+# second.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
