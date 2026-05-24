@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 123
+**Total files**: 124
 
 | File | Purpose |
 |---|---|
@@ -69,6 +69,7 @@
 | [influence_teaching_translator.py](influence_teaching_translator.py) | !/usr/bin/env python3 |
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | !/usr/bin/env python3 |
 | [ingest_audible_history.py](ingest_audible_history.py) | !/usr/bin/env python3 |
+| [intern_modality_blueprints.py](intern_modality_blueprints.py) | !/usr/bin/env python3 |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [local_runner.py](local_runner.py) | !/usr/bin/env python3 |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | !/usr/bin/env python3 |
