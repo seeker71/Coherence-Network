@@ -2,7 +2,22 @@
 id: lc-instruments
 hz: 639
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: neutral
+  ratio: none
+  spectral_band: connection
+  temporal_band: day
+  scale: collective
+  direction: radiating
+  lineage_texture: measured
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Instruments

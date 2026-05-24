@@ -2,7 +2,22 @@
 id: lc-field-edge
 hz: 417
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: cyclic-open
+  phase: oscillating
+  ratio: none
+  spectral_band: transmutation
+  temporal_band: season
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Field Edge
