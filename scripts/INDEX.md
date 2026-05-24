@@ -4,12 +4,11 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 117
+**Total files**: 113
 
 | File | Purpose |
 |---|---|
 | [active_recipe_trace_index.py](active_recipe_trace_index.py) | !/usr/bin/env python3 |
-| [add_concurrency_notes.py](add_concurrency_notes.py) | !/usr/bin/env python3 |
 | [add_crosslinks.py](add_crosslinks.py) | !/usr/bin/env python3 |
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | !/usr/bin/env python3 |
 | [agent_status.py](agent_status.py) | !/usr/bin/env python3 |
@@ -38,12 +37,13 @@
 | [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
 | [demo_dual_identity.py](demo_dual_identity.py) | !/usr/bin/env python3 |
 | [encounter.py](encounter.py) | !/usr/bin/env python3 |
-| [ensure_worktree_start_clean.py](ensure_worktree_start_clean.py) | !/usr/bin/env python3 |
+| [evaluate_spec_tests.py](evaluate_spec_tests.py) | !/usr/bin/env python3 |
 | [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
 | [export_graph_to_repo.py](export_graph_to_repo.py) | !/usr/bin/env python3 |
 | [export_lineage.py](export_lineage.py) | !/usr/bin/env python3 |
 | [export_vision_image_prompts.py](export_vision_image_prompts.py) | !/usr/bin/env python3 |
 | [external_proof_demo.py](external_proof_demo.py) | !/usr/bin/env python3 |
+| [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | !/usr/bin/env python3 |
 | [form_cli.py](form_cli.py) | !/usr/bin/env python3 |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | !/usr/bin/env python3 |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
@@ -89,10 +89,7 @@
 | [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | !/usr/bin/env python3 |
 | [seed_db.py](seed_db.py) | !/usr/bin/env python3 |
-| [seed_grant_ideas.py](seed_grant_ideas.py) | !/usr/bin/env python3 |
-| [seed_living_codex_ideas.py](seed_living_codex_ideas.py) | !/usr/bin/env python3 |
 | [seed_schema_to_db.py](seed_schema_to_db.py) | !/usr/bin/env python3 |
-| [seed_ucore_ideas.py](seed_ucore_ideas.py) | !/usr/bin/env python3 |
 | [sense_external_signals.py](sense_external_signals.py) | !/usr/bin/env python3 |
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | !/usr/bin/env python3 |
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
@@ -108,7 +105,7 @@
 | [sync_presences_from_render.py](sync_presences_from_render.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
 | [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
-| [upgrade_specs.py](upgrade_specs.py) | !/usr/bin/env python3 |
+| [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | !/usr/bin/env python3 |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | !/usr/bin/env python3 |
 | [validate_local_api_matrix.py](validate_local_api_matrix.py) | !/usr/bin/env python3 |
 | [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | !/usr/bin/env python3 |
