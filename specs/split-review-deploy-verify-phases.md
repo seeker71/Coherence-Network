@@ -41,6 +41,12 @@ test: "cd api && python -m pytest -q tests/test_flow_pipeline.py"
 **Depends on**: Spec 139 (Agent Pipeline), Spec 138 (Idea Lifecycle Management)
 **Depended on by**: Spec 157 (Investment UX — validated status now requires verify-production)
 
+## Related Specs
+
+- [`idea-lifecycle-closure`](idea-lifecycle-closure.md) — sibling in the idea-engine cluster: this spec produces the terminal *validated* state; closure recognizes it and exits ideas from the task-generation pool.
+
+Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Problem Statement
 
 ### Current behavior

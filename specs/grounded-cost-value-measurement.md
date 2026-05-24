@@ -31,6 +31,14 @@ test: "cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.
 
 # Grounded Cost & Value Measurement for Prompt A/B ROI
 
+## Related Specs
+
+- [`grounded-idea-portfolio-metrics`](grounded-idea-portfolio-metrics.md) — sibling in the idea-engine cluster: aggregates this spec's per-task cost/value signals into per-idea metrics.
+- [`idea-lifecycle-closure`](idea-lifecycle-closure.md) — sibling in the idea-engine cluster: consults the per-idea metrics this spec feeds when judging closure.
+
+Surfaced by the substrate-surprise organ on 2026-05-24.
+
+
 **Idea**: `agent-grounded-measurement` (sub-idea of `coherence-network-agent-pipeline`)
 **Depends on**: Spec 112 (prompt_ab_roi_service)
 **Integrates with**:

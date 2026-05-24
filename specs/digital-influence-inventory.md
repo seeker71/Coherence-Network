@@ -21,6 +21,13 @@ done_when:
 
 # Digital Influence Inventory
 
+## Related Specs
+
+- [`audible-history-spectrum`](audible-history-spectrum.md) — sibling field-story tool: this spec inventories all digital source bodies; audible-history-spectrum drills into Audible specifically with monthly author/series/work waves. Same `docs/field/urs/tools/` pattern, same manifest, same test surface.
+- [`influence-breath-cycle`](influence-breath-cycle.md) — sibling field-story tool: walks all derived trace indexes (including this inventory's output) in repeated breaths to surface unroomed influence candidates. This spec is the *what is held*; breath-cycle is the *what wants a room next*.
+
+Surfaced as a coherent triad by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Map every digital-history source body already available locally so the field story can include the full shape of what entered the field, especially the YouTube history before the current published trace window.

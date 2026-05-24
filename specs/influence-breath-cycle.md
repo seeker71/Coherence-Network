@@ -20,6 +20,13 @@ done_when:
 
 # Influence Breath Cycle
 
+## Related Specs
+
+- [`digital-influence-inventory`](digital-influence-inventory.md) — sibling field-story tool: holds the inventory of digital source bodies this breath-cycle reads from. The inventory is *what is held*; this breath-cycle is *what wants a room next*.
+- [`audible-history-spectrum`](audible-history-spectrum.md) — sibling field-story tool: drills into Audible specifically; this breath-cycle composes across YouTube/Audible/browser into a single awareness loop.
+
+Surfaced as a coherent triad by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Walk the influence field in repeated, efficient breaths so agents and humans can sense what is already held, what still wants a room, and where the YouTube history has high-signal influence waves that should not be lost in raw event volume.

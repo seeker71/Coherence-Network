@@ -31,6 +31,14 @@ test: "cd api && python -m pytest -q tests/test_idea_lifecycle_closure.py"
 
 # Idea Lifecycle Closure — System Must Recognize When an Idea Is Done
 
+## Related Specs
+
+- [`grounded-idea-portfolio-metrics`](grounded-idea-portfolio-metrics.md) — sibling in the idea-engine cluster: closure judges *when* an idea is done; portfolio-metrics judges *what it earned* across cost, value, and confidence signals. Closure depends on metrics for the validation evidence.
+- [`grounded-cost-value-measurement`](grounded-cost-value-measurement.md) — sibling in the idea-engine cluster: feeds the per-task cost/value signals that portfolio-metrics aggregates and closure consults.
+- [`split-review-deploy-verify-phases`](split-review-deploy-verify-phases.md) — sibling in the idea-engine cluster: the phase sequencer that drives ideas from reviewing → deployed → validated. Closure recognizes the terminal state this spec produces.
+
+Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 The pipeline wastes compute on ideas that are already implemented. Two bugs cause this:
