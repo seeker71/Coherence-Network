@@ -82,3 +82,9 @@ python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/fie
 cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
 api/.venv/bin/ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/digital_influence_inventory.py
 ```
+
+## Verification
+
+```bash
+cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
+```

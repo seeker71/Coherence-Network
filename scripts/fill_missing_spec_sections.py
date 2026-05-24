@@ -125,6 +125,87 @@ def build_purpose_block(fm: dict, body: str) -> str:
     )
 
 
+def _replace_section_body(text: str, heading_aliases: set[str], new_body: str) -> str:
+    """Replace the body of the first matching H2 section.
+    `new_body` should NOT include the heading line."""
+    # Build regex of any heading alias
+    pat = re.compile(
+        r"^(##\s+(.+?))\s*\n(.*?)(?=^## |\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    out_parts = []
+    last_end = 0
+    for m in pat.finditer(text):
+        heading_norm = re.sub(r"[^a-z0-9\s/_-]", "", m.group(2).lower()).strip()
+        heading_norm = re.sub(r"\s+", " ", heading_norm)
+        if heading_norm in heading_aliases or any(
+            heading_norm.startswith(a + " ") for a in heading_aliases
+        ):
+            out_parts.append(text[last_end:m.start()])
+            out_parts.append(f"## {m.group(2)}\n\n{new_body}\n\n")
+            last_end = m.end()
+            break
+    if last_end == 0:
+        return text
+    out_parts.append(text[last_end:])
+    return "".join(out_parts)
+
+
+def heal_content_shape_gaps(text: str) -> str:
+    """Address content-shape failures (numbered → checklist, bullet→multi, etc)."""
+    fm, _, _ = parse_frontmatter(text)
+    if fm is None:
+        return text
+
+    sections = _parse_sections(text)
+
+    # Requirements with <3 checklist items
+    req = _find_section(sections, SECTION_ALIASES["requirements"])
+    if req:
+        items = re.findall(r"(?im)^\s*-\s*\[[ xX]\]\s+(.+)$", req)
+        if len(items) < 3:
+            # Try converting numbered list to checklist
+            numbered = re.findall(r"(?im)^\s*\d+[.)]\s+(.+)$", req)
+            if len(numbered) >= 3:
+                new_body = "\n".join(f"- [ ] {it.strip()}" for it in numbered)
+                text = _replace_section_body(
+                    text, {_normalize_heading(a) for a in SECTION_ALIASES["requirements"]},
+                    new_body,
+                )
+            else:
+                # Generate from done_when
+                done = fm.get("done_when", [])
+                if isinstance(done, list):
+                    proto = [d for d in done if isinstance(d, str) and not d.startswith(("file_", "symbol_", "pytest_"))]
+                    if len(proto) >= 3:
+                        new_body = req.rstrip() + "\n\n" + "\n".join(
+                            f"- [ ] {it[:100]}" for it in proto[:6]
+                        )
+                        text = _replace_section_body(
+                            text,
+                            {_normalize_heading(a) for a in SECTION_ALIASES["requirements"]},
+                            new_body,
+                        )
+
+    # Files section with no bullets
+    sections = _parse_sections(text)
+    files = _find_section(sections, SECTION_ALIASES["files"])
+    if files and not re.search(r"(?m)^\s*-\s+", files):
+        # Append source-paths bullets
+        source = fm.get("source", [])
+        if isinstance(source, list):
+            paths = [e.get("file") for e in source if isinstance(e, dict) and isinstance(e.get("file"), str)]
+            if paths:
+                new_body = files.rstrip() + "\n\n" + "\n".join(f"- `{p}`" for p in paths)
+                text = _replace_section_body(
+                    text,
+                    {_normalize_heading(a) for a in SECTION_ALIASES["files"]},
+                    new_body,
+                )
+
+    return text
+
+
 def heal_section_content_gaps(text: str) -> str:
     """Fix content-check failures by appending honest closures."""
     sections = _parse_sections(text)
@@ -240,8 +321,15 @@ def heal_spec(text: str) -> tuple[str, list[str]]:
 
     # Content-check fixes
     text = heal_section_content_gaps(text)
+    text = heal_content_shape_gaps(text)
 
     return text, actions
+
+
+def _normalize_heading(title: str) -> str:
+    title = re.sub(r"\(.*?\)", "", title)
+    cleaned = re.sub(r"[^a-z0-9\s/_-]", "", title.lower()).strip()
+    return re.sub(r"\s+", " ", cleaned)
 
 
 def main() -> int:

@@ -81,15 +81,15 @@ The federation layer spans four source files implementing the full node lifecycl
 
 ## Requirements
 
-1. Node registration with capabilities declaration
-2. Heartbeat keep-alive with system metrics
-3. Measurement summary push from nodes to hub
-4. Strategy propagation (prompt variants, provider recommendations)
-5. Strategy effectiveness reporting
-6. Inter-node messaging (queue-based + SSE streaming)
-7. Broadcast to all nodes
-8. Trust-gated payload aggregation from partner instances
-9. OpenClaw bidirectional bridge
+- [ ] Node registration with capabilities declaration
+- [ ] Heartbeat keep-alive with system metrics
+- [ ] Measurement summary push from nodes to hub
+- [ ] Strategy propagation (prompt variants, provider recommendations)
+- [ ] Strategy effectiveness reporting
+- [ ] Inter-node messaging (queue-based + SSE streaming)
+- [ ] Broadcast to all nodes
+- [ ] Trust-gated payload aggregation from partner instances
+- [ ] OpenClaw bidirectional bridge
 
 ## Acceptance Tests
 

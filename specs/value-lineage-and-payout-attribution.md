@@ -423,6 +423,14 @@ cd api && pytest -q tests/test_value_lineage.py
 
 ```bash
 cd api && pytest -q tests/test_value_lineage.py
+```
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+```
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
 cd api && pytest -q tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections
 cd api && pytest -q tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape
 python3 scripts/validate_spec_quality.py --file specs/value-lineage-and-payout-attribution.md

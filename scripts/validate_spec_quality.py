@@ -32,7 +32,7 @@ SECTION_ALIASES = {
         "tests", "test plan",
     },
     "verification": {
-        "verification", "verification steps", "validation",
+        "verification", "verification steps",
         "validation steps", "verification scenarios", "manual verification",
     },
     "out_of_scope": {
@@ -85,14 +85,15 @@ def _parse_sections(markdown: str) -> list[tuple[str, str]]:
 
 def _find_section(sections: list[tuple[str, str]], aliases: set[str]) -> str | None:
     normalized_aliases = {_normalize_heading(alias) for alias in aliases}
+    # Pass 1: exact match wins (so a real `## Verification` heading
+    # beats a `## Validation Contract` startswith-alias match).
     for title, body in sections:
         if title in normalized_aliases:
             return body
-        # Allow partial match if title starts with an alias
-        # (e.g. "Verification (CI complete)" → starts with "verification").
-        # Do NOT match by suffix — that misfires when a subheading like
-        # "Input Validation" looks like it ends with the "validation"
-        # alias for `verification`, but is actually a different section.
+    # Pass 2: startswith partial match (e.g. "Verification (CI complete)").
+    # Suffix-match is deliberately not supported — misfires on subheadings
+    # like "Input Validation" that share an alias prefix.
+    for title, body in sections:
         for alias in normalized_aliases:
             if title.startswith(alias + " "):
                 return body

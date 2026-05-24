@@ -101,3 +101,7 @@ python3 -m pytest api/tests/test_idea_hierarchy.py -x -v
 
 - `api/tests/test_super_idea_rollup.py`
 
+
+## Files
+
+- `specs/super-idea-rollup-criteria.md`

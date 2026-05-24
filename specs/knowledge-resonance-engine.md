@@ -101,14 +101,14 @@ The knowledge and resonance engine spans eight source files implementing four la
 
 ## Requirements
 
-1. 184 universal concepts with 46 typed relationships and 53 axes
-2. Concept Resonance Kernel (CRK) -- harmonic spectral matching
-3. Optimal Transport distance (OT-phi) for coherence scoring
-4. Contributor belief profiles with 6 worldview axes
-5. Cross-domain resonance discovery between ideas from different domains
-6. Accessible ontology -- non-technical contributors can suggest/endorse concepts
-7. Serendipity discovery feed combining 5 resonance sources
-8. Resonance proof endpoint showing network health
+- [ ] 184 universal concepts with 46 typed relationships and 53 axes
+- [ ] Concept Resonance Kernel (CRK) -- harmonic spectral matching
+- [ ] Optimal Transport distance (OT-phi) for coherence scoring
+- [ ] Contributor belief profiles with 6 worldview axes
+- [ ] Cross-domain resonance discovery between ideas from different domains
+- [ ] Accessible ontology -- non-technical contributors can suggest/endorse concepts
+- [ ] Serendipity discovery feed combining 5 resonance sources
+- [ ] Resonance proof endpoint showing network health
 
 ## Acceptance Tests
 

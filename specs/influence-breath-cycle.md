@@ -82,3 +82,9 @@ python3 docs/field/urs/tools/influence_breath_cycle.py --field-dir docs/field/ur
 cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
 api/.venv/bin/ruff check tests/test_field_story_trace_index.py ../docs/field/urs/tools/influence_breath_cycle.py
 ```
+
+## Verification
+
+```bash
+cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
+```

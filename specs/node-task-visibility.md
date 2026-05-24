@@ -173,6 +173,8 @@ Open `https://coherencycoin.com` in a browser. Navigate to the pipeline page.
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 1. **`coh tasks watch`** — a live terminal refresh mode (like `watch -n2 coh tasks`) is not in scope here but would complement this spec. Track as separate idea.
 2. **Thompson Sampling visibility** — provider routing decisions (which executor is winning, exploration vs exploitation ratio) are not exposed in this spec. The pipeline page shows success rates but not the internal sampling state. Track as `spec-thompson-visibility`.
 3. **Task output storage** — currently `result` is a plain string. A follow-up should store structured output with sections (files changed, DIF score, commit SHA) as JSON. This spec only improves display of the existing field.
@@ -208,6 +210,8 @@ The reviewer MUST run scenarios 1–4 from a clean terminal with no local setup 
 - `web/app/tasks/[task_id]/page.tsx`
 
 ## Acceptance Tests
+
+- Manual validation: ingest a node-task graph; verify the visibility query returns expected results.
 
 - See `## Verification` below.
 

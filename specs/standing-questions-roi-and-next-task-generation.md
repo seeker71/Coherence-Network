@@ -151,6 +151,14 @@ cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_ide
 ```
 
 ```bash
+cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_idea_scoring.py -x -v
+```
+
+```bash
+cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_idea_scoring.py -x -v
+```
+
+```bash
 python3 -m pytest api/tests/test_ideas.py -x -v
 ```
 
