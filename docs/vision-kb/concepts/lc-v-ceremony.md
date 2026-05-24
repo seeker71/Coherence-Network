@@ -2,7 +2,21 @@
 id: lc-v-ceremony
 hz: 963
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: neutral
+  ordering: cyclic-closed
+  phase: yin
+  spectral_band: transcendence
+  temporal_band: breath
+  scale: collective
+  direction: centering
+  lineage_texture: sensed
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Ceremony and Honoring
