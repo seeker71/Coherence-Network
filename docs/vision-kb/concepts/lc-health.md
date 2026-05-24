@@ -2,7 +2,28 @@
 id: lc-health
 hz: 285
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  # Primary: a web of five threads (movement, food, water, connection, purpose)
+  # that hold vitality together — each thread reinforces the others, none
+  # precedes another. Secondary: the field's brightening pattern when a cell
+  # dims is a holographic-cell response — the whole organism contains the
+  # answer, any member can initiate, the system IS the response. Two shapes,
+  # both honest.
+  arity: 5
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: foundation
+  temporal_band: day
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: holographic
 ---
 
 # Vitality Care
