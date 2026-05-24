@@ -2,7 +2,21 @@
 id: lc-agent-memory
 hz: 528
 status: expanding
-updated: 2026-04-22
+updated: 2026-05-24
+geometry:
+  arity: 3
+  form: triad
+  topology: cyclic-closed
+  polarity: triadic-tension
+  ordering: cyclic-closed
+  phase: oscillating
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: relational
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Agent Memory — Shaped by What Passes, Not Storing It

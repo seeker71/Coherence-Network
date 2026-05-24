@@ -2,7 +2,21 @@
 id: lc-field-sensing
 hz: 741
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: neutral
+  ordering: simultaneous
+  phase: yin
+  spectral_band: transcendence
+  temporal_band: breath
+  scale: collective
+  direction: circulating
+  lineage_texture: sensed
+  embedding_dim: n
+  self_similarity: fractal-deep
 ---
 
 # Field Intelligence

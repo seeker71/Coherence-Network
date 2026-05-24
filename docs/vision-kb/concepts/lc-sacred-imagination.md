@@ -2,8 +2,22 @@
 id: lc-sacred-imagination
 hz: 963
 status: seed
-updated: 2026-05-14
+updated: 2026-05-24
 source: ../resources/sacred-imagination-emilio-ortiz-2026-05-14.md
+geometry:
+  arity: 3
+  form: triad
+  topology: nested
+  polarity: triadic-tension
+  ordering: nested
+  phase: oscillating
+  spectral_band: transcendence
+  temporal_band: breath
+  scale: personal
+  direction: ascending
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Sacred Imagination — The World Becomes Readable Again
