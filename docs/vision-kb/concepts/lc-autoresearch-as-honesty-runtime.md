@@ -115,13 +115,16 @@ constellation, each term named so the agent can see what it is
 being measured against. The shape lives in
 [`autoresearch-runtime.form`](../../coherence-substrate/autoresearch-runtime.form)
 Part 3 as `r_fitness_function_shape` over seven weighted terms:
-**yield** (% of cells finding non-degenerate matches), **holdout
-recovery** (attested cross-domain pairs the lattice recovered),
-**collapse penalty** (entropy collapse to one Blueprint), **table
-penalty** (hardcoded `{k:v}` maps in encoder source, caught by
-static analysis), **depth penalty** (encoder code complexity),
-**reciprocity** (A→B implies B→A), and **triadic** (A↔B and B↔C
-imply A↔C once three domains exist). The composed
+**yield** (% of cells finding non-degenerate CTOR-level matches
+across domains — Blueprint family alone does not count, since two
+cells can share a Blueprint while their content shapes diverge),
+**holdout recovery** (attested cross-domain pairs the lattice
+recovered at CTOR), **collapse penalty** (entropy collapse to one
+Blueprint or one CTOR), **table penalty** (hardcoded `{k:v}` maps
+in encoder source, caught by static analysis), **depth penalty**
+(encoder code complexity), **reciprocity** (A→B implies B→A), and
+**triadic** (A↔B and B↔C imply A↔C once three domains exist). The
+composed
 `compute_translator_fitness` Recipe is what the evaluator computes
 each iteration.
 
