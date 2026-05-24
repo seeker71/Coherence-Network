@@ -204,6 +204,181 @@ def list_cells(
         return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
+# ---------------------------------------------------------------------------
+# Cross-modal canonical shapes (recipe-shape domain)
+# ---------------------------------------------------------------------------
+#
+# The cross-modal substrate proofs (PR #1956 +
+# scripts/intern_modality_blueprints.py) intern canonical recipe shapes
+# such as R_ObserverConditionedActualization, R_Recovery, R_Pointing,
+# R_Re-coherence, R_Re-pattern, R_Re-anchor under domain="recipe-shape".
+# Per-modality cells share their canonical's Blueprint NodeID, so the
+# substrate-native query for "what cells across modalities share this
+# shape?" is `find_equivalent_cells(canonical.blueprint)`.
+#
+# These endpoints expose that cross-modal unity directly, so any agent
+# surface (MCP, web) can ask the substrate "what other modalities carry
+# the shape I am thinking about?" without composing the Form query.
+
+
+CANONICAL_RECIPE_SHAPE_DOMAIN = "recipe-shape"
+
+
+class CrossModalTwinsOut(BaseModel):
+    canonical_name: str
+    blueprint: NodeIDOut | None = None
+    twins: list[CellOut] = Field(default_factory=list)
+    count: int = 0
+    found: bool = False
+
+
+@router.get(
+    "/cross_modal_twins/{canonical_name}",
+    response_model=CrossModalTwinsOut,
+    tags=["substrate"],
+)
+def get_cross_modal_twins(canonical_name: str) -> CrossModalTwinsOut:
+    """Return per-modality cells that share the canonical shape's Blueprint.
+
+    Wrapper around `find_equivalent_cells` for the `recipe-shape` domain.
+    The canonical cell itself is excluded from the twins list — callers
+    receive the *other* modality expressions of the same structural shape.
+
+    Returns `found=false` when the canonical name is not interned, so
+    callers can render an honest empty result rather than treat a missing
+    canonical as an error.
+    """
+    with session_scope() as session:
+        cell = lookup_cell(session, CANONICAL_RECIPE_SHAPE_DOMAIN, canonical_name)
+        if cell is None:
+            return CrossModalTwinsOut(canonical_name=canonical_name)
+        equivalents = find_equivalent_cells(
+            session, cell.blueprint, exclude_name=cell.name
+        )
+        return CrossModalTwinsOut(
+            canonical_name=canonical_name,
+            blueprint=NodeIDOut.from_node_id(cell.blueprint),
+            twins=[CellOut.from_cell(c) for c in equivalents],
+            count=len(equivalents),
+            found=True,
+        )
+
+
+class CanonicalFamilyOut(BaseModel):
+    canonical_name: str
+    blueprint: NodeIDOut
+    members: list[CellOut] = Field(default_factory=list)
+    member_count: int = 0
+
+
+class CanonicalFamiliesOut(BaseModel):
+    families: list[CanonicalFamilyOut] = Field(default_factory=list)
+    count: int = 0
+
+
+# The seven canonical cross-modal shapes interned by
+# scripts/intern_modality_blueprints.py. Listed here so the endpoint
+# returns a stable ordering with the keystone first; the actual cells
+# and Blueprint NodeIDs are read live from the substrate.
+_CANONICAL_SHAPE_NAMES: list[str] = [
+    "R_ObserverConditionedActualization",
+    "R_Recovery",
+    "R_SustainedTension",
+    "R_ResolutionToSilence",
+    "R_MeetThenShift",
+    "R_SkipTheIntermediate",
+    "R_ReturnFromEdge",
+]
+
+
+@router.get(
+    "/canonical_families",
+    response_model=CanonicalFamiliesOut,
+    tags=["substrate"],
+)
+def get_canonical_families() -> CanonicalFamiliesOut:
+    """List all interned cross-modal canonical shapes with their members.
+
+    Returns one entry per canonical shape (R_ObserverConditionedActualization,
+    R_Recovery, R_SustainedTension, R_ResolutionToSilence, R_MeetThenShift,
+    R_SkipTheIntermediate, R_ReturnFromEdge), each carrying the full family
+    of per-modality cells that share the canonical's Blueprint NodeID. The
+    map of cross-modal unity.
+
+    Shapes whose canonical cell is not interned (e.g. in a fresh test
+    substrate) are omitted; callers see only the families that exist.
+    """
+    families: list[CanonicalFamilyOut] = []
+    with session_scope() as session:
+        for canonical_name in _CANONICAL_SHAPE_NAMES:
+            cell = lookup_cell(
+                session, CANONICAL_RECIPE_SHAPE_DOMAIN, canonical_name
+            )
+            if cell is None:
+                continue
+            # Members include the canonical itself, so callers see the
+            # complete family without needing a second lookup.
+            members = find_equivalent_cells(session, cell.blueprint)
+            families.append(
+                CanonicalFamilyOut(
+                    canonical_name=canonical_name,
+                    blueprint=NodeIDOut.from_node_id(cell.blueprint),
+                    members=[CellOut.from_cell(c) for c in members],
+                    member_count=len(members),
+                )
+            )
+    return CanonicalFamiliesOut(families=families, count=len(families))
+
+
+class ModalityForOut(BaseModel):
+    per_modality_name: str
+    canonical_name: str | None = None
+    blueprint: NodeIDOut | None = None
+    family: list[CellOut] = Field(default_factory=list)
+    family_count: int = 0
+    found: bool = False
+
+
+@router.get(
+    "/modality_for/{per_modality_name}",
+    response_model=ModalityForOut,
+    tags=["substrate"],
+)
+def get_modality_for(per_modality_name: str) -> ModalityForOut:
+    """Inverse query: from a per-modality cell name, find its canonical family.
+
+    Given a recipe-shape cell like `R_Re-coherence` (quantum) or
+    `R_Pointing` (teaching), returns the cross-modal canonical shape it
+    belongs to and the other modality twins that share its Blueprint.
+    Lets a cell ask "what other domains carry the shape I am thinking
+    about?" without knowing the canonical name in advance.
+
+    The canonical is detected as the family member whose name matches one
+    of the interned canonical shapes; the cell itself is included in the
+    `family` list so callers see the full membership.
+    """
+    with session_scope() as session:
+        cell = lookup_cell(
+            session, CANONICAL_RECIPE_SHAPE_DOMAIN, per_modality_name
+        )
+        if cell is None:
+            return ModalityForOut(per_modality_name=per_modality_name)
+        family_cells = find_equivalent_cells(session, cell.blueprint)
+        canonical_names = {n for n in _CANONICAL_SHAPE_NAMES}
+        canonical_name = next(
+            (c.name for c in family_cells if c.name in canonical_names),
+            None,
+        )
+        return ModalityForOut(
+            per_modality_name=per_modality_name,
+            canonical_name=canonical_name,
+            blueprint=NodeIDOut.from_node_id(cell.blueprint),
+            family=[CellOut.from_cell(c) for c in family_cells],
+            family_count=len(family_cells),
+            found=True,
+        )
+
+
 class PathAnnotationOut(BaseModel):
     path: str
     cell: CellOut | None = None

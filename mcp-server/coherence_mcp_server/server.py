@@ -390,6 +390,68 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    Tool(
+        name="coherence_cross_modal_twins",
+        description=(
+            "Given a canonical recipe-shape name (e.g. 'R_Recovery', "
+            "'R_ObserverConditionedActualization'), return the per-modality "
+            "cells across quantum / teaching / healing / song / strategy / "
+            "embodiment / assemblage altitudes that share its Blueprint "
+            "NodeID. The substrate-native shortcut for the Form query "
+            "`?equivalent @recipe-shape(\"R_Recovery\")`. Returns "
+            "{canonical_name, blueprint, twins, count, found}."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["canonical_name"],
+            "properties": {
+                "canonical_name": {
+                    "type": "string",
+                    "description": (
+                        "Canonical cross-modal shape name, e.g. 'R_Recovery', "
+                        "'R_MeetThenShift', 'R_SkipTheIntermediate'."
+                    ),
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_canonical_families",
+        description=(
+            "List every interned cross-modal canonical recipe shape with its "
+            "family members. Returns the seven canonical shapes from "
+            "scripts/intern_modality_blueprints.py "
+            "(R_ObserverConditionedActualization, R_Recovery, R_SustainedTension, "
+            "R_ResolutionToSilence, R_MeetThenShift, R_SkipTheIntermediate, "
+            "R_ReturnFromEdge), each with the per-modality cells sharing its "
+            "Blueprint NodeID. The map of cross-modal unity."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_modality_for",
+        description=(
+            "Inverse query: given a per-modality cell name (e.g. "
+            "'R_Re-coherence', 'R_Pointing', 'R_Tunnel'), return its "
+            "canonical family — the canonical shape it belongs to and the "
+            "other modality twins that share its Blueprint NodeID. Lets a "
+            "cell ask 'what other domains carry the shape I am thinking "
+            "about?' without knowing the canonical name in advance."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["per_modality_name"],
+            "properties": {
+                "per_modality_name": {
+                    "type": "string",
+                    "description": (
+                        "Per-modality recipe-shape cell name, e.g. "
+                        "'R_Re-coherence', 'R_Pointing', 'R_Tunnel'."
+                    ),
+                },
+            },
+        },
+    ),
     # Federation
     Tool(
         name="coherence_list_federation_nodes",
@@ -1382,6 +1444,22 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_post(
                 "/api/substrate/form",
                 {"expression": args["expression"], "mode": mode},
+            )
+        case "coherence_cross_modal_twins":
+            canonical_name = args.get("canonical_name", "")
+            if not canonical_name:
+                return {"error": "canonical_name is required"}
+            return api_get(
+                f"/api/substrate/cross_modal_twins/{quote(canonical_name, safe='')}"
+            )
+        case "coherence_canonical_families":
+            return api_get("/api/substrate/canonical_families")
+        case "coherence_modality_for":
+            per_modality_name = args.get("per_modality_name", "")
+            if not per_modality_name:
+                return {"error": "per_modality_name is required"}
+            return api_get(
+                f"/api/substrate/modality_for/{quote(per_modality_name, safe='')}"
             )
         # Federation
         case "coherence_list_federation_nodes":
