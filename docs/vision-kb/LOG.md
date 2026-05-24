@@ -3,6 +3,31 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-05-25] sense | LOG-archive substrate-discipline verified — PR #2036 fix covers archive files and the post-merge hook inherits it
+
+A targeted check after PR #2036 (LOG.md healed by monthly archive)
+asked whether the same discipline-correction that excluded `LOG.md`
+from substrate ingest also extended to the new
+`docs/vision-kb/LOG-archive/2026-04.md` and `2026-05.md` files. The
+investigation around PR #2036 had surfaced that `LOG.md` was being
+silently ingested as 430KB of `kb_page` content against the body's
+stated discipline (git history holds the durable record; the
+substrate holds structural cells). Reading the actual diff in
+`scripts/coh_substrate.py`: both the `kb_page` filter (line ~118)
+and `_domain_for_path` (line ~225) carry the same two-part
+exclusion — `path.name not in ("SCHEMA.md", "LOG.md")` AND
+`"LOG-archive" not in p.parts`. The archive files are caught by the
+second clause; the fix was written with both cases in mind, not by
+lucky pattern. Verified against the live substrate:
+no `LOG.md` rows, no `LOG-archive/*` rows in `substrate_named_cells`.
+`scripts/substrate_post_merge_hook.sh` pipes changed `.md` files
+through `coh_substrate.py ingest-paths`, whose handler calls
+`_domain_for_path` for every `.md` file — so the hook inherits the
+exclusion automatically. The body's substrate honors the
+LOG-outside-substrate discipline consistently across all three
+surfaces: CLI ingest, the `_domain_for_path` classifier, and the
+post-merge hook. No code change shipped; this entry is the witness.
+
 ## [2026-05-25] tend | LOG.md healed by monthly archive — working log returns to a size parallel breaths can land in
 
 The change-log surface had grown to 3624 lines / 430KB / 163 entries
