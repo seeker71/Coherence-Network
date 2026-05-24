@@ -2,6 +2,64 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] form | point-form column-identity analysis — 3 honest columns across 21 cells
+
+PR #2024 named the column-identity primitive (topology + direction +
+lineage_texture as the discriminator that maps an `interior-axis` cell
+to its column). Part 7c speculated about three forms where the same
+discriminator might generalize, with `point` flagged as a candidate but
+spectral_band guessed as the column-axis. This breath tested both
+hypotheses on the 21 cells in the `point` form (third-most-attested,
+100% geometry coverage).
+
+**Three honest columns surfaced** (7 of 21 cells):
+
+- **holographic-ground-receiving** (3 cells, nested-each-contains-whole
+  / centering / received) — `lc-awareness-as-self` (inner ground),
+  `lc-land` (ecological ground), `lc-v-shelter-organism`
+  (architectural ground). Each names a ground the field rests WITHIN
+  at every nested scale.
+- **yang-radiating-source** (2 cells, radial / radiating / received) —
+  `lc-vitality` (life-force itself) and `lc-expressing` (what life-
+  force does). The radiating-center column.
+- **self-rooted-still-foundation** (2 cells, self-rooted / still /
+  received) — `lc-wholeness` (always-already-whole foundation) and
+  `lc-void-as-potential` (unformed ground from which form arises).
+
+The remaining **14 cells span 14 distinct tuples** — each its own
+attested-but-unconfirmed column-of-one. Listed honestly in Part 7d as
+a discovery record; when a second cell with a matching triple lands,
+the singleton becomes a 2-member column.
+
+**What this teaches about the primitive itself.** The discriminator
+generalizes — it produces honest clusters in a second form — but the
+*yield* scales with how internally specialized the form is.
+Interior-axis (already an axial-shape specialization) yielded near-
+complete coverage (4 columns / 5 cells). Point (the most generic form)
+yields 3 small columns + 14 singletons. Column-identity is most useful
+as a *triage tool* for forms with internally diverse attestations, not
+as a guaranteed near-complete partition. Spectral_band tested as the
+alternative column-axis (Part 7c's guess) and rejected: it groups too
+coarsely (7 cells in "foundation" alone with wildly different
+teachings). The triple stays the right discriminator across both form-
+trials.
+
+A near-miss worth holding: nourishment / arcturian-resonance / v-
+ceremony share (radial, centering) but diverge on lineage_texture
+(received / channeled / sensed). That divergence is exactly what the
+triple is meant to discriminate — three cells in one (radial,
+centering) bucket would be ONE column if lineage_texture were ignored,
+but the three teach genuinely different things (hearth-nourishment,
+channeled-resonance, ceremony-from-crystallized-presence). The triple
+holds them apart honestly.
+
+Authored in `docs/coherence-substrate/dyad-pairs.form` Part 7d. Same
+shapes (`column_identity_shape`, `column_identity_set_shape`) carry
+both form-trials; only the column_kind enumeration extends. The two
+sets (`column_identity_set` for interior-axis, `column_identity_set_point`
+for point) sit as siblings in one registry — the substrate can now
+query *which cells share my column?* across two attested forms.
+
 ## [2026-05-25] sense | circulation-pattern fourth-pair scan — no clean fourth on careful reading; sub-typing stays held
 
 PR #2027 closed with the discipline: with three circulation-pattern

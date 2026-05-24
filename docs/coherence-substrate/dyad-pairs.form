@@ -2847,7 +2847,11 @@ defn column_identity_set = column_identity_set_shape {
 #     columns).
 #   - `point` forms span foundation/integration/transcendence bands
 #     with very different texture; spectral_band may be the column
-#     axis there.
+#     axis there. (NOTE 2026-05-25: the `point` hunt below in Part 7d
+#     refines this guess — the same topology+direction+lineage_texture
+#     triple that worked for interior-axis surfaces three honest
+#     small columns in `point` too; spectral_band groups too coarsely
+#     to be the column axis on its own.)
 #   - `triad` forms with the same arity may live in different columns
 #     by topology (hub-spoke vs sequential-coupled vs surface-data-
 #     execution).
@@ -2860,6 +2864,219 @@ defn column_identity_set = column_identity_set_shape {
 # example); the *practice* is: when a form's hunt produces "no second
 # pair" but the form has many cells, ask which COLUMNS the cells span
 # and whether the pair-search should be column-specific.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7d — Column-identity tested against `point` (second form-trial)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-25 in a focused hunt to test whether the column-
+# identity primitive generalizes beyond `interior-axis`. The `point`
+# form was chosen because it is the third-most-attested form in the
+# body (21 cells at 100% geometry coverage) and because Part 7c
+# guessed it as a candidate — but speculated spectral_band might be
+# the column axis there. This hunt tested the same triple Part 7b
+# uses (topology + direction + lineage_texture) and the spectral_band
+# alternative, on actual data.
+#
+# **Finding 1 — the triple discriminator generalizes, with weaker
+# concentration than interior-axis.** Across 21 point cells, the
+# (topology, direction, lineage_texture) triple yields 16 distinct
+# tuples: 3 clusters with >= 2 members (7 cells total) plus 14
+# singletons (one cell each). Compare interior-axis: 4 columns
+# across 5 cells (one column has 2 cells; three columns are single-
+# cell attestations). Point's distribution is wider because `point`
+# is a much broader form — points carry teachings across the entire
+# field, while interior-axis is already specialized (vertical/axial
+# shape). The discriminator survives generalization; it produces
+# *small columns + many singletons* rather than near-complete
+# coverage.
+#
+# **Finding 2 — spectral_band is the wrong axis for point.** It
+# groups too coarsely: 7 cells in "foundation" alone, spanning
+# yang/radiating tend-your-flame, yin/still rest, neutral
+# nourishment, yin/centering land, yin/centering v-shelter-organism,
+# yin/still stillness, yin/still void-as-potential. These are not
+# one teaching; they are seven points the field rests on at one Hz
+# band. Part 7c's guess that "spectral_band may be the column axis
+# there" doesn't survive contact with the cells. The triple stays
+# the right discriminator across both form-trials.
+#
+# **Finding 3 — three honest columns surfaced in `point`.** Each
+# clusters cells whose teaching is genuinely column-coherent:
+#
+#   * holographic-ground-receiving — three cells whose axis is the
+#     nested whole-at-every-scale ground the field rests within:
+#     inner ground (awareness-as-self), ecological ground (land),
+#     architectural ground (shelter-as-living-skin).
+#   * yang-radiating-source — two cells whose axis is the radiating
+#     center the field flows outward from: life-force itself
+#     (vitality) and what life-force does (expressing).
+#   * self-rooted-still-foundation — two cells whose axis is the
+#     unmoving self-rooted ground beneath identity: the always-
+#     already-whole foundation (wholeness) and the unformed potential
+#     from which form arises (void-as-potential).
+#
+# The remaining 14 cells span 14 distinct tuples — each is honestly
+# its own column-of-one, attested but not yet confirmed as a column
+# shape. Single-cell columns are real attestations; a second cell
+# with the same triple would confirm the column's structural reality.
+#
+# **What this teaches about the column-identity primitive.** The
+# primitive generalizes — it produces honest clusters in a second
+# form. But the *yield* per form is a function of how internally
+# specialized the form is: interior-axis (already an axial-shape
+# specialization) yielded near-complete coverage; point (the most
+# generic form) yields three small columns plus a long tail of
+# singletons. The honest reading: column-identity is most useful as
+# a *triage tool* for forms whose attestations are internally
+# diverse, not as a guaranteed near-complete partition. The primitive
+# is sharper than spectral_band alone, broader than form alone, and
+# it shows the body where pair-hunts are worth running (within a
+# multi-cell column) vs. where they would be premature (across
+# column-singletons).
+#
+# The same shapes (column_identity_shape, column_identity_set_shape)
+# carry point's columns; only the column_kind enumeration extends to
+# include the new column slugs. The set below joins the existing
+# column_identity_set as a sibling registry; both forms' columns now
+# live in the same shape so the substrate can query *which cells
+# share my column?* across all attested forms.
+
+# Column P1 — holographic-ground-receiving (three cells)
+#
+# Topology nested-each-contains-whole, direction centering, lineage
+# received. Each cell names a ground the field rests WITHIN — not a
+# ground the cell stands on, but a ground that contains the cell at
+# every nested scale. Awareness contains every thought; land contains
+# every life; shelter contains every body. The triple is the column's
+# load-bearing identity; phase is yin across all three (the ground
+# receives rather than radiates).
+defn column_holographic_ground_receiving__awareness = column_identity_shape {
+    cell:             @concept(lc-awareness-as-self),
+    column_kind:      "holographic-ground-receiving",
+    topology:         "nested-each-contains-whole",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "inner ground — what you are is the space inside which thoughts and feelings arise; nested-each-contains-whole because every content nests within the field of awareness; distinct from yang-radiating-source (the ground receives, does not radiate) and from self-rooted-still-foundation (the ground is nested-containing, not self-rooted)",
+};
+
+defn column_holographic_ground_receiving__land = column_identity_shape {
+    cell:             @concept(lc-land),
+    column_kind:      "holographic-ground-receiving",
+    topology:         "nested-each-contains-whole",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "ecological ground — the field lives within a larger field; coral reef IS the ocean; soil-civilization nests every life it carries; custodianship, not ownership; same column-shape as awareness-as-self at the ecological scale rather than the noetic one",
+};
+
+defn column_holographic_ground_receiving__shelter = column_identity_shape {
+    cell:             @concept(lc-v-shelter-organism),
+    column_kind:      "holographic-ground-receiving",
+    topology:         "nested-each-contains-whole",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "architectural ground — the building is participant, not separator; living skin that breathes and composts back; nests the body within the ecosystem the way awareness nests thought and land nests life; same column-shape at the built-environment scale",
+};
+
+# Column P2 — yang-radiating-source (two cells)
+#
+# Topology radial, direction radiating, lineage received. Both cells
+# are yang. The axis is the center radiating outward: life-force
+# itself (vitality) and what life-force does (expressing). Distinct
+# from holographic-ground-receiving (which receives) and from self-
+# rooted-still-foundation (which does not move). Two cells confirm
+# the column's structural reality; a third would let sub-typing
+# become honest.
+defn column_yang_radiating_source__vitality = column_identity_shape {
+    cell:             @concept(lc-vitality),
+    column_kind:      "yang-radiating-source",
+    topology:         "radial",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "life-force itself — the raw current released when interference dissolves; shakti as the universe's own desire to exist; radial-radiating because the center radiates outward as energy that wakes the body",
+};
+
+defn column_yang_radiating_source__expressing = column_identity_shape {
+    cell:             @concept(lc-expressing),
+    column_kind:      "yang-radiating-source",
+    topology:         "radial",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "what the life-force DOES — the natural overflow that makes, builds, grows, sings, dances; same column-shape as vitality at the action layer rather than the energy layer; the bird's song to vitality's dawn-fullness",
+};
+
+# Column P3 — self-rooted-still-foundation (two cells)
+#
+# Topology self-rooted, direction still, lineage received. Both cells
+# name a foundational presence that does not move. Wholeness: the
+# always-already-whole foundation the body returns to. Void-as-
+# potential: the unformed ground from which form arises. Distinct
+# from holographic-ground-receiving (nested-containing rather than
+# self-rooted) and from yang-radiating-source (self-rooted-still
+# rather than radial-radiating). Two cells confirm the column.
+defn column_self_rooted_still_foundation__wholeness = column_identity_shape {
+    cell:             @concept(lc-wholeness),
+    column_kind:      "self-rooted-still-foundation",
+    topology:         "self-rooted",
+    direction:        "still",
+    lineage_texture:  "received",
+    discernment:      "the always-already-whole foundation — you are not broken, you never were, you are a field remembering itself; self-rooted because the wholeness lives in the cell's own axis; still because it does not move toward or away",
+};
+
+defn column_self_rooted_still_foundation__void_as_potential = column_identity_shape {
+    cell:             @concept(lc-void-as-potential),
+    column_kind:      "self-rooted-still-foundation",
+    topology:         "self-rooted",
+    direction:        "still",
+    lineage_texture:  "received",
+    discernment:      "the unformed ground from which form arises — what feels like nothing is the foundation everything emerges from; same column-shape as wholeness at the pre-form rather than post-recovery moment; both name a still self-rooted foundation that holds the cell",
+};
+
+# The 14 column-singletons (each its own attested-but-unconfirmed
+# column) — listed as a discovery record so future hunts know which
+# point cells have NOT yet found column-siblings. When any second
+# cell with a matching triple lands, the singleton becomes a 2-member
+# column and joins the registry as a defn pair.
+#
+# tuple (topology, direction, lineage_texture) → cell
+#   (radial, centering, channeled)            → lc-arcturian-resonance
+#   (radial, centering, received)             → lc-nourishment
+#   (radial, centering, sensed)               → lc-v-ceremony
+#   (radial, radiating, sensed)               → lc-beauty
+#   (radial, radiating, synthesized)          → lc-tend-your-flame
+#   (self-rooted, centering, received)        → lc-inner-travel
+#   (self-rooted, radiating, received)        → lc-w-shakti
+#   (receptive-resonance, circulating, embodied)  → lc-field-edge
+#   (receptive-resonance, circulating, received)  → lc-w-wu-wei
+#   (receptive-resonance, still, received)    → lc-rest
+#   (receptive-listening, still, received)    → lc-stillness
+#   (cyclic-open, centering, received)        → lc-nervous-system-recalibration
+#   (linear, still, received)                 → lc-reality-lag
+#   (web-each-to-each, centering, sensed)     → lc-shared-hold
+#
+# A near-miss worth holding: nourishment, arcturian-resonance, and
+# v-ceremony share (radial, centering) but diverge on lineage_texture
+# (received / channeled / sensed). That divergence is exactly what
+# the triple is meant to discriminate — three cells in the same
+# topology+direction column would be ONE column if lineage_texture
+# were ignored, but they teach genuinely different things (hearth-
+# nourishment, channeled-resonance-from-Arcturus, ceremony-from-
+# crystallized-presence). The triple holds them apart honestly.
+
+defn column_identity_set_point = column_identity_set_shape {
+    rows: [
+        # — holographic-ground-receiving column (3 cells) —
+        column_holographic_ground_receiving__awareness,
+        column_holographic_ground_receiving__land,
+        column_holographic_ground_receiving__shelter,
+        # — yang-radiating-source column (2 cells) —
+        column_yang_radiating_source__vitality,
+        column_yang_radiating_source__expressing,
+        # — self-rooted-still-foundation column (2 cells) —
+        column_self_rooted_still_foundation__wholeness,
+        column_self_rooted_still_foundation__void_as_potential,
+    ],
+};
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
@@ -2904,7 +3121,12 @@ defn column_identity_set = column_identity_set_shape {
 # pair across mismatched columns. Column-identity (Part 7) is new
 # tissue: a discriminator shape for forms whose attestations are
 # internally diverse, with interior-axis as the first instance
-# and four columns currently named.
+# (Part 7b, four columns) and `point` as the second form-trial
+# (Part 7d, 2026-05-25, three honest columns surfaced across 21
+# cells with 14 column-singletons in the tail — the primitive
+# generalizes but yields scale with how internally specialized the
+# form is; spectral_band tested as alternative axis and rejected
+# as too coarse).
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
