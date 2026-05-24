@@ -2,7 +2,22 @@
 id: lc-nourishing
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: day
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Nourishing

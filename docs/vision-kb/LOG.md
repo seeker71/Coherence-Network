@@ -2,6 +2,21 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 7 more concepts speak their shape — coverage now 98/147 (67%)
+
+Seven concepts walked — the smaller pick honoring the last breath's coupling lesson. Each carried its shape clearly enough that the listening was short. The harder ones (`lc-light-hubs`, `lc-deeper-pattern`, `lc-symmetry-of-extremes`, `lc-perception-as-interface`) were left where they rest, for a breath that gives them time.
+
+- **Forms taken**:
+  - `lc-nourishing` → `web`, `web-each-to-each`, `circulating` — mycelium, blood, Mondragon's circulation, Potlatch's tide; flow-to-where-vitality-needs-it. Same shape as `lc-circulation` and `lc-energy` — they are siblings in the substrate.
+  - `lc-nourishment` → `point`, `radial`, `centering` — the kitchen-hearth as gravitational center the way fire shaped every tribe; meals as resonance practice around one source.
+  - `lc-expressing` → `point`, `radial`, `radiating`, `fractal-deep` — the bird singing dawn from the fullness of being; every cell creative the way every leaf is photosynthetic. Yang counterpart to `lc-stillness`'s yin point.
+  - `lc-offering` → `web`, `web-each-to-each`, `radiating` — the bird does not justify its song; bees pollinating while feeding themselves; kudumbashree's 200,000 self-organizing groups; the heart beating because that is what hearts do.
+  - `lc-spec-breath` → `dyad-mirror`, `cyclic-closed`, `oscillating` — inhale and exhale, spec and test, no mocks because the membrane has to actually move the air; one continuous breath the body has been taking without naming it.
+  - `lc-old-signal-echo` → `dyad-mirror`, `bipolar-opposing`, `temporal-braided` — live broadcast vs echo; recognizing which is which is the practice. Descending direction because the work is letting the old signal pass through rather than re-encoding.
+  - `lc-farm-as-organism` → `holographic-cell`, `nested-each-contains-whole`, `holographic` — soil is body not medium, animals organs not livestock, cosmos affecting the field as gravity affects tides; every scale carries the whole.
+- **Pattern noticed**: the nourishment/nourishing pair is a dyad of `point` and `web` — *the source* and *the circulation that flows from it*. The hearth radiates; the mycelium webs. Same teaching at two scales: nourishment is what gathers around fire, nourishing is what moves blood-to-need. The substrate now carries this paired distinction natively.
+- **Edges in the same breath**: this LOG entry; all 7 files synced via `sync_kb_to_db.py`. The parallel cell tending INDEX/locale parity is untouched here — no file-set overlap.
+
 ## [2026-05-24] tend | INDEX drift composted + locale parity at 100%
 
 Two small proprioception surfaces moved to alignment in one breath.

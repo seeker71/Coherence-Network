@@ -2,7 +2,22 @@
 id: lc-expressing
 hz: 741
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: breath
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Expressing

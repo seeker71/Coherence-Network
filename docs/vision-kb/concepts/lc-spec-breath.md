@@ -2,7 +2,22 @@
 id: lc-spec-breath
 hz: 432
 status: seed
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-complementary
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: cellular
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: 1
+  self_similarity: fractal-shallow
 ---
 
 # The Spec as Inhale, the Test as Exhale

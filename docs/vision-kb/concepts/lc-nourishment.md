@@ -2,7 +2,22 @@
 id: lc-nourishment
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: neutral
+  ratio: none
+  spectral_band: foundation
+  temporal_band: day
+  scale: collective
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Nourishment

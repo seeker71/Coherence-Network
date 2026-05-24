@@ -2,7 +2,22 @@
 id: lc-offering
 hz: 528
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: transformation
+  temporal_band: lifetime
+  scale: collective
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Offering

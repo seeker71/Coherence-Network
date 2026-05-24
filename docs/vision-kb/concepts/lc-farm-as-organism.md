@@ -3,6 +3,22 @@ id: lc-farm-as-organism
 title: Farm as Organism
 domain: living-collective
 status: living
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: neutral
+  ratio: none
+  spectral_band: integration
+  temporal_band: season
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Farm as Organism

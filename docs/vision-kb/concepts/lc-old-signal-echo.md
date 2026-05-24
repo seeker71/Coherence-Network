@@ -2,8 +2,23 @@
 id: lc-old-signal-echo
 hz: 285
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-open
+  polarity: bipolar-opposing
+  ordering: temporal-braided
+  phase: oscillating
+  ratio: none
+  spectral_band: restoration
+  temporal_band: breath
+  scale: personal
+  direction: descending
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Old Signal as Echo — The Body Replays What Is No Longer True
