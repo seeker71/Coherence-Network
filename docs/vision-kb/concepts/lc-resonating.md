@@ -2,7 +2,22 @@
 id: lc-resonating
 hz: 528
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: octave
+  spectral_band: transformation
+  temporal_band: breath
+  scale: collective
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Resonating

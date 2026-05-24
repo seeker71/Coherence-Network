@@ -2,7 +2,22 @@
 id: lc-ceremony
 hz: 963
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: ring
+  topology: cyclic-closed
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: yin
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: season
+  scale: collective
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Ceremony

@@ -2,7 +2,22 @@
 id: lc-intimacy
 hz: 639
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: parallel
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: relational
+  direction: centering
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Intimacy

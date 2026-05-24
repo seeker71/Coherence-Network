@@ -2,7 +2,22 @@
 id: lc-attunement
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: collective
+  direction: circulating
+  lineage_texture: sensed
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Attunement

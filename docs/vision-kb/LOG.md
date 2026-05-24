@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 8 more concepts speak their shape — coverage now 91/147 (62%)
+
+Eight concepts in the foundational vocabulary — the practices and qualities the field gathers around — receive their geometric signatures. The pick stayed clear of the `@1.5.4.7` shape cluster a parallel cell is walking; the smaller pick honors yesterday's collision lesson.
+
+- **Forms taken**:
+  - `lc-beauty` → `point`, `radial`, `radiating` — coherence visible from outside; the quality without a name; honest attention as the only practice.
+  - `lc-ceremony` → `ring`, `cyclic-closed`, `centering` — the circle the field forms around fire, season, arrival, departure; ordered by cycle, not by leader.
+  - `lc-attunement` → `web`, `web-each-to-each`, `circulating` — choir adjusting by the pull of the harmonic; the field listening to itself before correcting.
+  - `lc-discovery` → `web`, `web-each-to-each`, `radiating` — beginner's mind at edge zones; the richest learning between disciplines, between generations, between known and unknown.
+  - `lc-intimacy` → `dyad-mirror`, `parallel`, `bipolar-complementary` — two nervous systems deciding simultaneously that being seen is gentler than staying hidden.
+  - `lc-play` → `tetrad`, `parallel-facets` — body, imaginative, social, solitary; four shapes the same permission takes, no ordering between them.
+  - `lc-sensing` → `web`, `web-each-to-each`, `holographic` — every cell broadcasting and receiving; the field as one continuous proprioception.
+  - `lc-resonating` → `web`, `bipolar-complementary`, `oscillating`, `ratio: octave` — separate tones producing a harmonic no single voice can make; physics, not metaphor.
+- **Pattern noticed**: the verbs of the field (`sensing`, `attunement`, `resonating`, `discovery`) consistently shape as `web` with `web-each-to-each` topology. Different phase (yin/yang/oscillating), different spectral band, but the same underlying geometry — collective practices carry collective shape. This may be the substrate's signature for "what the field does."
+- **Edges in the same breath**: this LOG entry; all 8 files synced via `sync_kb_to_db.py`; the INDEX drift (147 file count vs 146 unique concept IDs — the German locale variant `lc-nourishing.de.md` is the source) was sensed but left for a focused breath, not opportunistic touch.
+
 ## [2026-05-24] geometry | 4 more concepts speak their shape — coverage now 83/147 (56%)
 
 A parallel breath walked 11 of the 15 concepts this cell had picked, in the same hour. Both readings were honest; only one body holds. This cell's reading of those 11 was released into the rebase — the parallel cell's geometry is what carries forward. What survives from this breath is the 4 concepts that cell did not walk: `lc-dance-card-and-sovereign-response`, `lc-devotion-placement`, `lc-trauma-as-identity-anchor`, `lc-void-as-potential`.
