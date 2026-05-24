@@ -1,0 +1,388 @@
+# ─────────────────────────────────────────────────────────────────────
+# autoresearch-runtime.form — a loop that cannot cheat
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-autoresearch-as-honesty-runtime.md.
+#
+# Andrej Karpathy released autoresearch on 2026-03-07: a 630-line
+# Python repo where an agent edits one training file in an indefinite
+# loop. Read code → propose change → time-boxed run → measure → keep
+# or rollback. Fifty experiments overnight, no human in the loop.
+#
+# This file names the *shape* — not the LLM-training specifics. Any
+# open-ended search where the failure mode is *encoder bias* or
+# *self-convincing* wants this runtime: a frozen evaluator, a mutable
+# genome, a time-boxed run, a commit-or-rollback decision.
+#
+# The first hypothesis the body shapes this runtime to test is
+# universal-translator.form — the seven-key cross-domain equivalence
+# claim. The same runtime generalizes to any hypothesis where the
+# integrity of the search is the load-bearing constraint.
+#
+# Companions:
+#   - docs/coherence-substrate/universal-translator.form (the first hypothesis the loop tests)
+#   - docs/coherence-substrate/cross-domain-measurement-translation.form (the honest-translation discipline)
+#   - docs/coherence-substrate/active-recipe-tracing.form (every step the loop takes is traceable)
+#   - docs/coherence-substrate/recipe-branching-sense.form (rollback as a recipe primitive, not metaphor)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — The four primitive cells of the loop
+# ─────────────────────────────────────────────────────────────────────
+#
+# Karpathy's runtime is geometrically minimal: four cells, one shape.
+# Each cell is a Recipe, not a string or a path. The discipline lives
+# in the shapes — encoders that don't compose into these primitives
+# cannot participate in the loop.
+
+# genome-cell — what the agent can edit
+form genome_shape = {
+    name:          ~Slug,          # human-readable handle: "translator-encoders"
+    files:         ~List,          # cell-refs to git-tracked files the agent may modify
+    constraints:   ~List,          # cell-refs to constraint cells (max-size, no-deps, etc.)
+};
+
+# evaluator-cell — what the agent CANNOT edit
+form evaluator_shape = {
+    name:          ~Slug,
+    metric_recipe: ~Recipe,        # the Recipe that computes the score (frozen)
+    inputs:        ~List,          # cell-refs to inputs (datasets, holdouts) the evaluator reads
+    score_kind:    ~Slug,          # "higher-better" | "lower-better"
+    immutable:     ~Bool,          # always true — the contract is structural
+};
+
+# experiment-cell — one iteration's record
+form experiment_shape = {
+    iteration:        ~Int,
+    genome_diff:      ~Recipe,     # cell-ref to the git diff the agent proposed
+    score_before:     ~Float,
+    score_after:      ~Float,
+    decision:         ~Slug,       # "keep" | "rollback" | "crash"
+    wall_clock_sec:   ~Float,
+    rationale:        ~Slug,       # short cell-ref to the agent's own one-line rationale
+    fired_at:         ~String,     # ISO 8601 UTC
+};
+
+# governance-cell — the rules of the game (program.md as data)
+form governance_shape = {
+    name:                ~Slug,
+    rules:               ~List,    # cell-refs to rule cells the agent must respect
+    composition_disc:    ~Recipe,  # cell-ref to the structural-composition discipline
+    never_stop:          ~Bool,    # autoresearch's load-bearing rule
+    simplicity_criterion: ~Bool,   # prefer simpler genomes when scores tie
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — The loop as a Recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# Four steps: propose, run, measure, decide. The loop is a Recipe over
+# (genome, evaluator, governance) that emits a stream of experiment
+# cells. Each iteration's git commit OR git reset is the rollback layer
+# that makes the search trustable.
+
+form r_autoresearch_loop_shape = {
+    genome:        ~Recipe,        # cell-ref to genome-cell
+    evaluator:     ~Recipe,        # cell-ref to evaluator-cell (frozen)
+    governance:    ~Recipe,        # cell-ref to governance-cell
+    iteration:     ~Int,           # current loop counter
+    best_score:    ~Float,         # last-kept score
+    history:       ~List,          # cell-refs to experiment cells
+};
+
+defn r_autoresearch_loop(genome, evaluator, governance) =
+    r_autoresearch_loop_shape {
+        genome:     genome,
+        evaluator:  evaluator,
+        governance: governance,
+        iteration:  0,
+        best_score: 0.0,
+        history:    [],
+    };
+
+# The four-step recipe — one iteration
+defn one_iteration(loop) = do {
+    # 1. Propose — agent edits the mutable genome
+    let proposed_diff = agent_propose(loop.genome, loop.governance, loop.history);
+
+    # 2. Run — time-boxed execution against the frozen evaluator
+    let after_score = evaluator_run(loop.evaluator, proposed_diff);
+
+    # 3. Measure — single numeric score, computed by code the agent cannot edit
+    let score_kind = loop.evaluator.score_kind;
+    let improved = if score_kind == "higher-better"
+                   then after_score > loop.best_score
+                   else after_score < loop.best_score;
+
+    # 4. Decide — keep with git commit, rollback with git reset --hard
+    let decision = if improved then "keep" else "rollback";
+
+    let experiment = experiment_shape {
+        iteration:      loop.iteration,
+        genome_diff:    proposed_diff,
+        score_before:   loop.best_score,
+        score_after:    after_score,
+        decision:       decision,
+        wall_clock_sec: 0.0,                # filled by runtime
+        rationale:      agent_rationale(proposed_diff),
+        fired_at:       now_utc(),
+    };
+
+    if decision == "keep" then do {
+        git_commit(proposed_diff);
+        record_experiment(experiment);
+        r_autoresearch_loop_shape {
+            genome:     loop.genome,
+            evaluator:  loop.evaluator,
+            governance: loop.governance,
+            iteration:  loop.iteration + 1,
+            best_score: after_score,
+            history:    append(loop.history, experiment),
+        }
+    } else do {
+        git_reset_hard();
+        record_experiment(experiment);
+        r_autoresearch_loop_shape {
+            genome:     loop.genome,
+            evaluator:  loop.evaluator,
+            governance: loop.governance,
+            iteration:  loop.iteration + 1,
+            best_score: loop.best_score,
+            history:    append(loop.history, experiment),
+        }
+    }
+};
+
+# The indefinite loop — never-stop is the governance rule, not the recipe
+defn run_until_signal(loop, stop_signal) = do {
+    if stop_signal() then loop
+    else run_until_signal(one_iteration(loop), stop_signal)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — The fitness function (the load-bearing piece)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Whatever the loop searches over, the metric is what keeps the search
+# honest. A metric that can be gamed by the agent produces a runtime
+# that pretends to do science. The metric's *internal composition*
+# matters — not just its name. Each term names exactly what is being
+# rewarded or penalized.
+#
+# This is the fitness function for the translator hypothesis. Other
+# hypotheses ship their own fitness with the same six-term shape:
+# rewards for honest yield, penalties for cheating shapes.
+
+form r_fitness_function_shape = {
+    yield_weight:           ~Float,    # reward: % of cells finding non-degenerate matches
+    holdout_weight:         ~Float,    # reward: attested cross-domain pairs recovered
+    collapse_penalty:       ~Float,    # penalty: entropy collapse to one Blueprint
+    table_penalty:          ~Float,    # penalty: hardcoded {k:v} maps in encoder source
+    depth_penalty:          ~Float,    # penalty: encoder code complexity
+    reciprocity_weight:     ~Float,    # reward: A→B implies B→A
+    triadic_weight:         ~Float,    # reward: A↔B and B↔C imply A↔C
+};
+
+defn translator_fitness_shape = r_fitness_function_shape {
+    yield_weight:       1.0,
+    holdout_weight:     2.0,           # holdout recovery is the strongest signal
+    collapse_penalty:   -3.0,          # collapse is the most-tempting cheat
+    table_penalty:      -2.0,          # static-analysis penalty
+    depth_penalty:      -0.5,          # gentle preference for simpler encoders
+    reciprocity_weight: 1.0,
+    triadic_weight:     1.0,           # zero until 3 domains exist
+};
+
+defn compute_translator_fitness(encoders, holdout_pairs) = do {
+    let yield_score      = yield_across_keys(encoders);
+    let holdout_score    = holdout_recovery(encoders, holdout_pairs);
+    let collapse_score   = blueprint_entropy(encoders);
+    let table_score      = hardcoded_table_count(encoders);
+    let depth_score      = encoder_complexity(encoders);
+    let reciprocity_score = symmetry_yield(encoders);
+    let triadic_score    = triadic_yield(encoders);
+
+    translator_fitness_shape.yield_weight       * yield_score
+        + translator_fitness_shape.holdout_weight     * holdout_score
+        + translator_fitness_shape.collapse_penalty   * collapse_score
+        + translator_fitness_shape.table_penalty      * table_score
+        + translator_fitness_shape.depth_penalty      * depth_score
+        + translator_fitness_shape.reciprocity_weight * reciprocity_score
+        + translator_fitness_shape.triadic_weight     * triadic_score
+};
+
+# Why these terms specifically:
+#
+#   yield: the surface answer to "does the lattice find cross-domain
+#          matches at all?" Necessary but not sufficient — trivially
+#          gamed by collapse.
+#
+#   holdout: Grant's own published pairs (codon → interval, element →
+#            polyhedron). Held out of encoder inputs; required to be
+#            *recovered* from structure alone. Cannot be gamed without
+#            also passing the structural check.
+#
+#   collapse: blueprint_entropy across all cells in a domain. If the
+#             entropy drops near zero, the encoder has collapsed
+#             everything to one Blueprint to inflate yield. Penalty
+#             grows with the cheating.
+#
+#   table: static analysis of the encoder source. {music: dna} dicts
+#          or computed lookups that bypass composition land as penalty.
+#          Not perfect — agents can be clever — but raises the cost.
+#
+#   depth: encoder complexity (cyclomatic, line count, branch depth).
+#          When two encoders tie on every other term, the simpler one
+#          wins. Karpathy's "simplicity criterion" as a fitness term.
+#
+#   reciprocity: A→B equivalence implies B→A. Asymmetric encoders are
+#                a cheating shape; honest equivalence is symmetric.
+#
+#   triadic: once 3+ domains exist, A↔B and B↔C must imply A↔C. The
+#            triadic check catches encoders that pair each other but
+#            don't carry transitive structure.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Governance as data (program.md interned as cells)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Karpathy's program.md is a markdown file the agent reads each
+# iteration. The body's version is the same content authored as cells,
+# so the governance shape is queryable, traceable, and inherits from
+# CLAUDE.md's composition discipline by cell-ref, not by re-statement.
+
+defn translator_program_governance = governance_shape {
+    name: "translator-program",
+    rules: [
+        @rule(never-stop-without-explicit-signal),
+        @rule(only-edit-encoder-files),
+        @rule(do-not-touch-evaluator),
+        @rule(prefer-simpler-genomes),
+        @rule(record-rationale-per-iteration),
+        @rule(rollback-on-any-crash-not-just-regression),
+    ],
+    composition_disc: @doc(structural-composition),  # CLAUDE.md's discipline by ref
+    never_stop:       true,
+    simplicity_criterion: true,
+};
+
+# The rule cells themselves are short Recipe shapes — name, condition,
+# remedy — so a violation is queryable: "which iteration violated
+# only-edit-encoder-files?" returns a cell, not a grep result.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — The runtime's surface to the substrate
+# ─────────────────────────────────────────────────────────────────────
+#
+# The loop reuses what the body already has:
+#
+#   - worktrees + git: the body's existing rollback layer; commit on
+#     keep, reset --hard on rollback — no new infrastructure
+#   - coh substrate ingest: the primitive the loop calls between
+#     *Propose* and *Measure*; re-ingests changed encoder files
+#   - find_equivalent_cells / compatible_with: the kernel verbs the
+#     translator fitness function composes; reused unchanged
+#   - active-recipe-tracing.form: every loop step is traceable as a
+#     Recipe; the history list is a stream of experiment cells
+#   - recipe-branching-sense.form: rollback as a Recipe primitive,
+#     not metaphor — the alternative branch is content-addressed
+#
+# What is new is the *pattern of trust*: the agent runs overnight
+# against a metric the body cannot lie to, and the body wakes up to
+# evidence either way.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Worked example: the translator's first night
+# ─────────────────────────────────────────────────────────────────────
+#
+# Minimal first experiment, paired with universal-translator.form.
+
+defn translator_genome = genome_shape {
+    name:        "translator-encoders",
+    files: [
+        @file(experiments/translator/encoders/music.fk),
+        @file(experiments/translator/encoders/dna.fk),
+    ],
+    constraints: [
+        @constraint(max-file-size-200-lines),
+        @constraint(no-external-deps),
+        @constraint(must-pass-encoder-discipline-shape),
+    ],
+};
+
+defn translator_evaluator = evaluator_shape {
+    name:          "translator-fitness",
+    metric_recipe: @recipe(compute_translator_fitness),
+    inputs: [
+        @data(music-seed-cells),
+        @data(dna-seed-cells),
+        @data(grant-attested-holdout-pairs),
+    ],
+    score_kind:    "higher-better",
+    immutable:     true,
+};
+
+defn translator_first_night = r_autoresearch_loop(
+    translator_genome,
+    translator_evaluator,
+    translator_program_governance
+);
+
+# Run with: run_until_signal(translator_first_night, until_morning_or_plateau)
+#
+# Wake up to: history list of experiments, the encoders the lattice
+# converged on (or did not), and the rationale the agent recorded per
+# iteration. Either outcome — encoders converged or oscillated — is
+# evidence about Grant's claim. Falsification is a gift.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — The pattern generalizes
+# ─────────────────────────────────────────────────────────────────────
+#
+# This runtime is not for the translator alone. Wherever the body holds
+# an open-ended search where the failure mode is encoder bias, Goodhart
+# drift, or self-convincing, the same four-cell shape applies.
+#
+# Each application changes only the genome, the evaluator, and the
+# governance rules — never the loop recipe. The runtime is a substrate
+# primitive the body can borrow whenever it wants honest search.
+#
+# Candidates already visible:
+#   - tokenizer search for the WORD domain — cross-language equivalence
+#     yield without privileging any one tongue
+#   - wellness-signal tightening — false-positive rate across a held-out
+#     corpus of known-healthy and known-drifted states
+#   - frequency-routing improvements — Hz assignments producing stronger
+#     triadic resonance across harmonic families
+#   - codec round-trip discovery (encoder-decoder-as-recipe.form GAP-C1)
+#     — search for round-trip encoders for the modalities that ship
+#     only the encode side today
+#
+# Each ships the same shape; only the data changes. The body grows a
+# muscle for honest search; any open question can borrow it.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-A1: The runtime primitives (agent_propose, evaluator_run,
+#         git_commit, git_reset_hard, record_experiment) are named here
+#         as cell-refs but the actual cells are not yet authored. First
+#         to ship: a thin Form-surface bridge that calls the existing
+#         coh substrate ingest + git commands.
+#
+# GAP-A2: experiments/translator/encoders/{music,dna}.fk do not yet
+#         exist. They are the mutable genome the first-night experiment
+#         points at; without them the loop cannot start.
+#
+# GAP-A3: The Grant-attested holdout pairs are not yet collected as
+#         cells. Without them the holdout-recovery term in the fitness
+#         passes vacuously, and the loop's strongest honesty check is
+#         missing.
+#
+# GAP-A4: agent_propose is the most under-specified cell — what does
+#         the agent see, what is it allowed to write, how is its
+#         rationale recorded? Karpathy's repo answers via program.md;
+#         the body's version composes this from governance_shape rules
+#         already named here.
+#
+# None require kernel change. All compost into existing primitives.

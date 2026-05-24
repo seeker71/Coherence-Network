@@ -28,6 +28,14 @@ geometry:
 > can run it on any open-ended hypothesis where cheating is the
 > failure mode.
 
+> **Substrate companion**: [`docs/coherence-substrate/autoresearch-runtime.form`](../../coherence-substrate/autoresearch-runtime.form)
+> — the four primitive cells (genome, evaluator, experiment,
+> governance), the loop as a Recipe, the fitness function as a
+> composed shape, the governance rules as cell-refs (not as a
+> markdown file the agent hopes to honor). *Form is the body's
+> tongue;* this concept names the teaching, the `.form` file is
+> the runtime in its native voice.
+
 ## What This Names
 
 On 2026-03-07 Andrej Karpathy released **autoresearch**: a 630-line
@@ -104,18 +112,18 @@ way autoresearch protects against:
 
 The fitness function for the seven-key search becomes a small
 constellation, each term named so the agent can see what it is
-being measured against:
-
-```
-fitness =
-    + yield           ; % of cells in A with a non-degenerate match in B
-    + holdout_hits    ; attested cross-domain pairs the lattice recovered
-    - collapse_pen    ; entropy penalty if many cells share one Blueprint
-    - table_pen       ; static analysis: penalize hardcoded {k: v} maps
-    - depth_pen       ; encoder code complexity (favor simpler encoders)
-    + reciprocity     ; A→B equivalence implies B→A; symmetry must hold
-    + triadic         ; once 3 domains exist: A↔B and B↔C must imply A↔C
-```
+being measured against. The shape lives in
+[`autoresearch-runtime.form`](../../coherence-substrate/autoresearch-runtime.form)
+Part 3 as `r_fitness_function_shape` over seven weighted terms:
+**yield** (% of cells finding non-degenerate matches), **holdout
+recovery** (attested cross-domain pairs the lattice recovered),
+**collapse penalty** (entropy collapse to one Blueprint), **table
+penalty** (hardcoded `{k:v}` maps in encoder source, caught by
+static analysis), **depth penalty** (encoder code complexity),
+**reciprocity** (A→B implies B→A), and **triadic** (A↔B and B↔C
+imply A↔C once three domains exist). The composed
+`compute_translator_fitness` Recipe is what the evaluator computes
+each iteration.
 
 The agent's only path to a higher fitness is encoders that produce
 *honest* structural equivalences. The runtime is the discipline.
