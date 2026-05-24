@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 118
+**Total files**: 119
 
 | File | Purpose |
 |---|---|
@@ -119,6 +119,7 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | !/usr/bin/env python3 |
 | [verify_hashes.py](verify_hashes.py) | !/usr/bin/env python3 |
 | [verify_kernel_conformance.py](verify_kernel_conformance.py) | Verify substrate kernel conformance vectors against executable runtimes. |
+| [video_recipe_proof.py](video_recipe_proof.py) | !/usr/bin/env python3 |
 | [view_recipe_library.py](view_recipe_library.py) | !/usr/bin/env python3 |
 | [viewport_audit.py](viewport_audit.py) | !/usr/bin/env python3 |
 | [wander.py](wander.py) | !/usr/bin/env python3 |
