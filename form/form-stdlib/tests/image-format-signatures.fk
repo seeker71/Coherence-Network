@@ -1,0 +1,76 @@
+; image-format-signatures.fk - byte/text image format sensing
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk
+
+(do
+    (defn image-format (node) (node_value (nth (node_children node) 0)))
+    (defn image-width (node) (node_value (nth (node_children node) 1)))
+    (defn image-height (node) (node_value (nth (node_children node) 2)))
+    (defn image-frames (node) (node_value (nth (node_children node) 3)))
+
+    (defn format-score (node want score)
+        (if (str_eq (image-format node) want) score 0))
+
+    (let png-bytes
+        (list 137 80 78 71 13 10 26 10
+              0 0 0 13 73 72 68 82
+              0 0 0 1 0 0 0 2 8 2 0 0 0
+              0 0 0 0
+              0 0 0 0 73 69 78 68
+              0 0 0 0))
+
+    (let jpg-bytes
+        (list 255 216
+              255 224 0 2
+              255 192 0 11 8 0 3 0 4 1 1 17 0))
+
+    (let gif-bytes
+        (list 71 73 70 56 57 97 5 0 6 0 0 0 0))
+
+    (let bmp-bytes
+        (list 66 77 0 0 0 0 0 0 0 0
+              0 0 0 0 0 0 0 0
+              7 0 0 0 8 0 0 0))
+
+    (let ico-bytes
+        (list 0 0 1 0 1 0 16 16 0 0 1 0 32 0
+              0 0 0 0 0 0 0 0))
+
+    (let png (image-detect-bytes png-bytes))
+    (let jpg (image-detect-bytes jpg-bytes))
+    (let gif (image-detect-bytes gif-bytes))
+    (let bmp (image-detect-bytes bmp-bytes))
+    (let ico (image-detect-bytes ico-bytes))
+    (let svg (image-parse-svg-text "<svg width=\"9\" height=\"10\"></svg>"))
+
+    (let png-score
+        (add (format-score png "png" 10)
+        (add (image-width png)
+        (add (image-height png)
+             (image-frames png)))))
+
+    (let jpg-score
+        (add (format-score jpg "jpg" 20)
+        (add (image-width jpg)
+             (image-height jpg))))
+
+    (let gif-score
+        (add (format-score gif "gif" 30)
+        (add (image-width gif)
+             (image-height gif))))
+
+    (let bmp-score
+        (add (format-score bmp "bmp" 40)
+        (add (image-width bmp)
+             (image-height bmp))))
+
+    (let ico-score
+        (add (format-score ico "ico" 50)
+        (add (image-width ico)
+        (add (image-height ico)
+             (image-frames ico)))))
+
+    (let svg-score
+        (format-score svg "svg" 60))
+
+    (sum (list png-score jpg-score gif-score bmp-score ico-score svg-score)))

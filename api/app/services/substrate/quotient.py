@@ -23,7 +23,7 @@ design (PROOF / INDUCTIVE / symmetry-aware canonicalization all build on
 this foundation).
 
 Cross-kernel: handler names are part of the cross-kernel contract. The
-TS kernel (:mod:`experiments/form-kernel-ts/src/quotient.ts`) registers
+TS kernel (:mod:`form/form-kernel-ts/src/quotient.ts`) registers
 the same ``integer-from-nat-pair``, ``rational-from-int-pair``,
 ``commutative-pair``, ``associative-left-fold`` handler names, so a Form
 program ingested into either kernel canonicalizes identically. New

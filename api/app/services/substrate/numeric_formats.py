@@ -15,7 +15,7 @@ Cross-kernel coordination lives in
 (Python, TS, Go, Rust) reads that same contract and interns the formats
 in the same order with the same child structure. The format-recipe NodeIDs
 produced by this module match — by construction — the shape the TS kernel
-produces (see ``experiments/form-kernel-ts/src/formats.ts``).
+produces (see ``form/form-kernel-ts/src/formats.ts``).
 
 This file is read-time-driven by the canonical JSON: do not hardcode the
 format list. Drift between contract and implementation is forbidden.
@@ -411,7 +411,7 @@ def apply_arith(
     """Generic dispatcher (Pass 0).
 
     Switches on ``arith_hint_code`` then on operator. Mirrors the logic in
-    ``experiments/form-kernel-ts/src/formats.ts`` (``applyArithCode``)
+    ``form/form-kernel-ts/src/formats.ts`` (``applyArithCode``)
     exactly, with Python's runtime model standing in for the V8 jump-table
     behaviour the TS comments describe.
     """

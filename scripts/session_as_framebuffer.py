@@ -3,7 +3,7 @@
 
 Reads a session JSONL (e.g. ``~/.claude/projects/<slug>/<uuid>.jsonl``)
 and emits the same lossless .mfb substrate format the Rust crate writes
-(see ``experiments/memory-as-framebuffer-v0/src/capture.rs`` for the spec).
+(see ``seedbank/memory-as-framebuffer-v0/src/capture.rs`` for the spec).
 The existing ``mfb-html`` viewer renders it unchanged — Identity mode
 shows the heap of things-touched, Vitality mode shows the busy heatmap
 + recipes leaderboard.
@@ -432,9 +432,9 @@ AUTO_REFRESH_SCRIPT = """<script>
 
 
 def find_mfb_html_bin() -> str | None:
-    """Locate the mfb-html binary in the repo's experiments dir, building if needed."""
+    """Locate the mfb-html binary in the repo seedbank, building if needed."""
     repo_root = Path(__file__).resolve().parent.parent
-    crate_dir = repo_root / "experiments" / "memory-as-framebuffer-v0"
+    crate_dir = repo_root / "seedbank" / "memory-as-framebuffer-v0"
     bin_path = crate_dir / "target" / "release" / "mfb-html"
     if not crate_dir.exists():
         return None
@@ -553,7 +553,7 @@ def main() -> int:
         if not bin_path:
             print(
                 "[warn] mfb-html binary not found; .html will not be regenerated. "
-                "Run `cargo build --release --bin mfb-html` in experiments/memory-as-framebuffer-v0/",
+                "Run `cargo build --release --bin mfb-html` in seedbank/memory-as-framebuffer-v0/",
                 file=sys.stderr,
             )
 

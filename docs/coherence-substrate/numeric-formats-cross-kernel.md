@@ -10,10 +10,10 @@ The format-recipes-as-substrate-cells architecture is now implemented across all
 
 - **Contract:** [`docs/coherence-substrate/numeric-formats.canonical.json`](numeric-formats.canonical.json) — 19 canonical formats (FP64/32/16, FP8 E4M3/E5M2, FP4 uniform, NF4, BF16, INT4–64 signed + unsigned, BitNet ternary, 1-bit XNOR, log-prob), 15 conformance vectors, intern-order spec
 - **Architecture:** [`docs/coherence-substrate/numeric-types-plan.md`](numeric-types-plan.md)
-- **TS kernel:** `experiments/form-kernel-ts/src/{formats,numeric,numeric-bench}.ts` — proof of shape (Pass 0 / Pass 1 / Pass 2)
+- **TS kernel:** `form/form-kernel-ts/src/{formats,numeric,numeric-bench}.ts` — proof of shape (Pass 0 / Pass 1 / Pass 2)
 - **Python kernel:** `api/app/services/substrate/numeric_formats.py` + `api/tests/test_numeric_formats.py`
-- **Go kernel:** `experiments/form-kernel-go/{formats,formats_test,numeric_bench}.go` + `main.go` (`--numeric-bench`)
-- **Rust kernel:** `experiments/form-kernel-rust/src/formats.rs` + `main.rs` (`--numeric-bench`)
+- **Go kernel:** `form/form-kernel-go/{formats,formats_test,numeric_bench}.go` + `main.go` (`--numeric-bench`)
+- **Rust kernel:** `form/form-kernel-rust/src/formats.rs` + `main.rs` (`--numeric-bench`)
 
 All four kernels read the same canonical JSON at runtime. Format-recipe identity is structural by content-addressing.
 

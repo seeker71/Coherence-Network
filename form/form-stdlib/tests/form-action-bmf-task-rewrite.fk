@@ -1,0 +1,309 @@
+; form-action-bmf-task-rewrite.fk - rebuild task-runtime through BMF objects.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-string (value)
+        (form-action-bmf-value "string"
+            (list (fsc-action-src-string value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call0 (name) (fa-call name (empty)))
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+    (defn fa-call3 (name a b c) (fa-call name (list a b c)))
+    (defn fa-call4 (name a b c d) (fa-call name (list a b c d)))
+    (defn fa-call5 (name a b c d e) (fa-call name (list a b c d e)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-let (name value)
+        (form-action-bmf-value "let"
+            (list
+                (fsc-action-src-kw "let")
+                (fsc-action-src-name name)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr value)
+                (fsc-action-src-op ";"))))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (defn fa-tail2 (value) (fa-call1 "tail" (fa-call1 "tail" value)))
+    (defn fa-tail3 (value) (fa-call1 "tail" (fa-tail2 value)))
+    (defn fa-tail4 (value) (fa-call1 "tail" (fa-tail3 value)))
+    (defn fa-second (value) (fa-call1 "head" (fa-call1 "tail" value)))
+    (defn fa-third (value) (fa-call1 "head" (fa-tail2 value)))
+
+    (let x (fa-ident "x"))
+    (let b (fa-ident "b"))
+    (let c (fa-ident "c"))
+    (let t (fa-ident "t"))
+    (let state (fa-ident "state"))
+    (let value (fa-ident "value"))
+    (let cont (fa-ident "cont"))
+    (let origin (fa-ident "origin"))
+    (let inverse (fa-ident "inverse"))
+    (let failure (fa-ident "failure"))
+
+    (let inc-def
+        (fa-def "inc" (list "x")
+            (fa-call2 "add" x (fa-int "1"))))
+
+    (let bool-int-def
+        (fa-def "b->i" (list "b")
+            (fa-if b (fa-int "1") (fa-int "0"))))
+
+    (let identity-def
+        (fa-def "identity" (list "x") x))
+
+    (let cell-def
+        (fa-def "cell" (list "kind" "value" "origin" "inverse")
+            (fa-call5 "list"
+                (fa-string "cell")
+                (fa-ident "kind")
+                value
+                origin
+                inverse)))
+
+    (let cell-kind-def
+        (fa-def "cell-kind" (list "c")
+            (fa-second c)))
+
+    (let cell-value-def
+        (fa-def "cell-value" (list "c")
+            (fa-third c)))
+
+    (let cell-origin-def
+        (fa-def "cell-origin" (list "c")
+            (fa-call1 "head" (fa-tail3 c))))
+
+    (let cell-inverse-def
+        (fa-def "cell-inverse" (list "c")
+            (fa-call1 "head" (fa-tail4 c))))
+
+    (let task-undo-def
+        (fa-def "task-undo" (list "t")
+            (fa-call1 "cell-origin" t)))
+
+    (let cell-undo-def
+        (fa-def "cell-undo" (list "c")
+            (fa-call1 "task-undo" c)))
+
+    (let task-cell-def
+        (fa-def "task-cell" (list "state" "value" "cont" "origin" "inverse")
+            (fa-call4 "cell"
+                (fa-string "task")
+                (fa-call3 "list" state value cont)
+                origin
+                inverse)))
+
+    (let task-pred-def
+        (fa-def "task?" (list "t")
+            (fa-call2 "str_eq"
+                (fa-call1 "cell-kind" t)
+                (fa-string "task"))))
+
+    (let task-state-def
+        (fa-def "task-state" (list "t")
+            (fa-call1 "head" (fa-call1 "cell-value" t))))
+
+    (let task-value-def
+        (fa-def "task-value" (list "t")
+            (fa-second (fa-call1 "cell-value" t))))
+
+    (let task-cont-def
+        (fa-def "task-cont" (list "t")
+            (fa-third (fa-call1 "cell-value" t))))
+
+    (let task-pending-def
+        (fa-def "task-pending" (list "origin" "cont")
+            (fa-call5 "task-cell"
+                (fa-string "pending")
+                (fa-call0 "empty")
+                cont
+                origin
+                (fa-ident "task-undo"))))
+
+    (let task-resolved-def
+        (fa-def "task-resolved" (list "value")
+            (fa-call5 "task-cell"
+                (fa-string "resolved")
+                value
+                (fa-ident "identity")
+                (fa-call0 "empty")
+                (fa-ident "task-undo"))))
+
+    (let task-failed-def
+        (fa-def "task-failed" (list "failure")
+            (fa-call5 "task-cell"
+                (fa-string "failed")
+                failure
+                (fa-ident "identity")
+                (fa-call0 "empty")
+                (fa-ident "task-undo"))))
+
+    (let task-resolve-def
+        (fa-def "task-resolve" (list "t" "value")
+            (fa-call5 "task-cell"
+                (fa-string "resolved")
+                value
+                (fa-call1 "task-cont" t)
+                (fa-call1 "cell-origin" t)
+                (fa-call1 "cell-inverse" t))))
+
+    (let task-reject-def
+        (fa-def "task-reject" (list "t" "failure")
+            (fa-call5 "task-cell"
+                (fa-string "failed")
+                failure
+                (fa-call1 "task-cont" t)
+                (fa-call1 "cell-origin" t)
+                (fa-call1 "cell-inverse" t))))
+
+    (let task-await-def
+        (fa-def "task-await" (list "t")
+            (fa-if
+                (fa-call2 "str_eq"
+                    (fa-call1 "task-state" t)
+                    (fa-string "resolved"))
+                (fa-call1 "task-value" t)
+                t)))
+
+    (let task-step-def
+        (fa-def "task-step" (list "t")
+            (fa-if
+                (fa-call2 "str_eq"
+                    (fa-call1 "task-state" t)
+                    (fa-string "resolved"))
+                (fa-call1 "inc" (fa-call1 "task-value" t))
+                t)))
+
+    (let task-ready-def
+        (fa-def "task-ready?" (list "t")
+            (fa-call2 "str_eq"
+                (fa-call1 "task-state" t)
+                (fa-string "resolved"))))
+
+    (let task-failed-pred-def
+        (fa-def "task-failed?" (list "t")
+            (fa-call2 "str_eq"
+                (fa-call1 "task-state" t)
+                (fa-string "failed"))))
+
+    (let origin-let
+        (fa-let "origin"
+            (fa-call2 "list"
+                (fa-string "py-await")
+                (fa-string "suspend"))))
+
+    (let pending-let
+        (fa-let "pending"
+            (fa-call2 "task-pending"
+                (fa-ident "origin")
+                (fa-ident "inc"))))
+
+    (let ready-let
+        (fa-let "ready"
+            (fa-call2 "task-resolve"
+                (fa-ident "pending")
+                (fa-int "41"))))
+
+    (let rejected-let
+        (fa-let "rejected"
+            (fa-call2 "task-reject"
+                (fa-ident "pending")
+                (fa-call2 "list"
+                    (fa-string "error")
+                    (fa-string "cancelled")))))
+
+    (let pending-await-let
+        (fa-let "pending-await"
+            (fa-call1 "task-await" (fa-ident "pending"))))
+
+    (let ready-score-let
+        (fa-let "ready-score"
+            (fa-call2 "add"
+                (fa-call1 "task-await" (fa-ident "ready"))
+                (fa-call2 "add"
+                    (fa-call1 "task-step" (fa-ident "ready"))
+                    (fa-call1 "len"
+                        (fa-call1 "cell-undo" (fa-ident "ready")))))))
+
+    (let state-score-let
+        (fa-let "state-score"
+            (fa-call2 "add"
+                (fa-call1 "b->i"
+                    (fa-call1 "task-ready?" (fa-ident "ready")))
+                (fa-call2 "add"
+                    (fa-call1 "b->i"
+                        (fa-call1 "task?" (fa-ident "pending")))
+                    (fa-call1 "b->i"
+                        (fa-call1 "task-failed?" (fa-ident "rejected")))))))
+
+    (let undo-score-let
+        (fa-let "undo-score"
+            (fa-call2 "add"
+                (fa-call1 "b->i"
+                    (fa-call1 "task?" (fa-ident "pending-await")))
+                (fa-call1 "len"
+                    (fa-call1 "cell-undo" (fa-ident "rejected"))))))
+
+    (let final-score
+        (fa-call2 "add"
+            (fa-ident "ready-score")
+            (fa-call2 "add"
+                (fa-ident "state-score")
+                (fa-ident "undo-score"))))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list
+                    inc-def bool-int-def identity-def
+                    cell-def cell-kind-def cell-value-def cell-origin-def cell-inverse-def cell-undo-def
+                    task-undo-def task-cell-def task-pred-def task-state-def task-value-def task-cont-def
+                    task-pending-def task-resolved-def task-failed-def task-resolve-def task-reject-def
+                    task-await-def task-step-def task-ready-def task-failed-pred-def
+                    origin-let pending-let ready-let rejected-let pending-await-let
+                    ready-score-let state-score-let undo-score-let final-score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

@@ -1,0 +1,60 @@
+; form-action-bmf-zero-arg-rewrite.fk - rebuild zero-arg-functions through
+; BMF objects and executable Form recipe nodes.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call0 (name) (fa-call name (empty)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (let zero-def
+        (fa-def "zero" (empty)
+            (fa-int "7")))
+
+    (let nested-def
+        (fa-def "nested" (empty)
+            (fa-call2 "add"
+                (fa-call0 "zero")
+                (fa-int "5"))))
+
+    (let final-score
+        (fa-call2 "add"
+            (fa-call0 "zero")
+            (fa-call0 "nested")))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list zero-def nested-def final-score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

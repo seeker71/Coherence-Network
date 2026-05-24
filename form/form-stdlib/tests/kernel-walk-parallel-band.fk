@@ -1,0 +1,20 @@
+; kernel-walk-parallel-band.fk - ordered async execution over pure recipe roots.
+;
+; `walk_parallel` is a kernel resource primitive: it exposes bounded worker
+; execution for recipes whose structure is pure, while effectful or unknown
+; recipes retain ordered sequential semantics.
+
+(do
+    (let PLUS (make_nodeid 1 2 12 1))
+    (let MUL (make_nodeid 1 2 12 3))
+    (let one (intern_trivial_int 1))
+    (let two (intern_trivial_int 2))
+    (let three (intern_trivial_int 3))
+    (let four (intern_trivial_int 4))
+    (let five (intern_trivial_int 5))
+    (let seven (intern_trivial_int 7))
+    (let r1 (intern_node PLUS (list two three)))
+    (let r2 (intern_node MUL (list three four)))
+    (let r3 (intern_node MUL (list five five)))
+    (let r4 (intern_node PLUS (list one seven)))
+    (sum (walk_parallel (list r1 r2 r3 r4) 3)))

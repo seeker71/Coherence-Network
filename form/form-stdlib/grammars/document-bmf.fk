@@ -1,0 +1,112 @@
+; grammars/document-bmf.fk - binary document containers as Form meaning.
+;
+; The byte list is decoder input only. The resulting Form object carries the
+; compound-document container structure that queries need.
+
+(do
+    (let DOCUMENT-CONTAINER (make_nodeid 1 2 99 730))
+
+    (defn document-src-keyword (value) (bmf-atom "document-keyword" value))
+    (defn document-src-int (value) (bmf-atom "document-int" value))
+
+    (defn document-kw (value) (object-lit "document-keyword" value))
+    (defn document-int-lit (capture-name) (list "capture" capture-name (object-lit "document-int" "")))
+
+    (defn document-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn document-container (format sector-shift mini-sector-shift fat-sectors first-dir-sector)
+        (intern_node DOCUMENT-CONTAINER
+                     (list (intern_trivial_string format)
+                           (intern_trivial_int sector-shift)
+                           (intern_trivial_int mini-sector-shift)
+                           (intern_trivial_int fat-sectors)
+                           (intern_trivial_int first-dir-sector))))
+
+    (defn document-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn document-format-node (object) (nth (document-kids object) 0))
+    (defn document-sector-shift-node (object) (nth (document-kids object) 1))
+    (defn document-mini-sector-shift-node (object) (nth (document-kids object) 2))
+    (defn document-fat-sectors-node (object) (nth (document-kids object) 3))
+    (defn document-first-dir-sector-node (object) (nth (document-kids object) 4))
+
+    (defn document-emit-cfbf (objects)
+        (document-container "cfbf"
+                            (str_to_int (document-cap objects "sector_shift"))
+                            (str_to_int (document-cap objects "mini_sector_shift"))
+                            (str_to_int (document-cap objects "fat_sectors"))
+                            (str_to_int (document-cap objects "first_dir_sector"))))
+
+    (defn document-source-cfbf (object)
+        (list (document-src-keyword "cfbf")
+              (document-src-keyword "sector")
+              (document-src-int (int_to_str (node_value (document-sector-shift-node object))))
+              (document-src-keyword "mini")
+              (document-src-int (int_to_str (node_value (document-mini-sector-shift-node object))))
+              (document-src-keyword "fat")
+              (document-src-int (int_to_str (node_value (document-fat-sectors-node object))))
+              (document-src-keyword "dir")
+              (document-src-int (int_to_str (node_value (document-first-dir-sector-node object))))))
+
+    (let document-bmf-native-section
+        (list
+            (bmf-native "document-emit-cfbf" document-emit-cfbf DOCUMENT-CONTAINER)))
+
+    section [document.bmf] {
+      cfbf ::= "cfbf" "sector" $sector_shift:int "mini" $mini_sector_shift:int "fat" $fat_sectors:int "dir" $first_dir_sector:int => document-emit-cfbf <= document-source-cfbf;
+    }
+
+    (defn document-bmf-rule-name (r) (head r))
+
+    (defn document-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (document-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (document-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-document-bmf-rule (rule-name object-stream)
+        (apply-object-rule
+            (document-bmf-find-rule rule-name document-bmf-rules)
+            object-stream))
+
+    (let document-form-source
+        (form-source "document" (list document-bmf-second)))
+
+    (let document-bmf-dialect
+        (bmf-dialect "document"
+                     (form-section-object document-bmf-second)
+                     document-bmf-native-section
+                     document-bmf-rules))
+
+    (defn document-le16 (bs pos)
+        (add (nth bs pos)
+             (mul (nth bs (add pos 1)) 256)))
+
+    (defn document-le32 (bs pos)
+        (add (nth bs pos)
+        (add (mul (nth bs (add pos 1)) 256)
+        (add (mul (nth bs (add pos 2)) 65536)
+             (mul (nth bs (add pos 3)) 16777216)))))
+
+    (defn document-cfbf? (bs)
+        (and (eq (nth bs 0) 208)
+        (and (eq (nth bs 1) 207)
+        (and (eq (nth bs 2) 17)
+        (and (eq (nth bs 3) 224)
+        (and (eq (nth bs 4) 161)
+        (and (eq (nth bs 5) 177)
+        (and (eq (nth bs 6) 26)
+             (eq (nth bs 7) 225)))))))))
+
+    (defn document-parse-cfbf-bytes (bs)
+        (if (document-cfbf? bs)
+            (document-container "cfbf"
+                                (document-le16 bs 30)
+                                (document-le16 bs 32)
+                                (document-le32 bs 44)
+                                (document-le32 bs 48))
+            (document-container "unknown" 0 0 0 0)))
+
+    0)

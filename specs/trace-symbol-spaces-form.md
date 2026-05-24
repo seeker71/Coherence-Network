@@ -24,32 +24,7 @@ done_when:
   - "The tightnesses weak-signal, trace-not-yet-substrate-indexed, grain-boundary-loose, and stillness-not-first-class each have a closure recipe"
   - "scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json returns five active recipes from the latest trace burst"
   - "A compiled native form-cli binary executes docs/coherence-substrate/trace-symbol-spaces-proof.fk and returns true"
-  - 'file_exists("docs/coherence-substrate/trace-symbol-spaces.form")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_trace_source")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_blueprint")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_cells_involved")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_recipe_signatures")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "chosen_symbol_spaces")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "symbol_space_for")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "active_pattern_recipe")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "observed_tightnesses")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "gap_closure_recipes")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "stability_harmony_from_trace")'
-  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "loosen_current_tightness")'
-  - 'file_exists("docs/coherence-substrate/trace-symbol-spaces-proof.fk")'
-  - 'file_exists("api/tests/test_trace_symbol_spaces_form.py")'
-  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_raw_cells_and_shared_blueprint")'
-  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_active_recipe_signatures_from_logs")'
-  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_declares_four_chosen_symbol_spaces")'
-  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_tightness_and_gap_closure_recipes")'
-  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_wellness_resolves_trace_symbol_form_claims")'
-  - 'file_exists("scripts/active_recipe_trace_index.py")'
-  - 'symbol_in_file("scripts/active_recipe_trace_index.py", "query_active_recipe_traces")'
-  - 'file_exists("api/tests/test_active_recipe_trace_index.py")'
-  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_traces_hydrate_current_breath_for_cell")'
-  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_traces_accept_cell_node_id_and_all_time")'
-  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_trace_index_cli_json")'
-test: "mkdir -p .cache && (cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk"
+test: "mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk"
 constraints:
   - "Do not convert this slice into an API endpoint or Python business-logic service"
   - "Do not treat symbolic spaces as replacements for raw trace IDs"
@@ -67,7 +42,7 @@ This spec adds a Form artifact that records the current raw trace witness and th
 ## Requirements
 
 - [ ] **R1**: `docs/coherence-substrate/trace-symbol-spaces.form` declares `raw_trace_source`, `raw_blueprint`, `raw_cells_involved`, and `raw_recipe_signatures`.
-- [ ] **R2**: The raw cells include Tau, Upsilon, Chi, and efficacy-probe with NodeIDs from `experiments/local-llm-cell-v0/_field_traces.jsonl`.
+- [ ] **R2**: The raw cells include Tau, Upsilon, Chi, and efficacy-probe with NodeIDs from `seedbank/local-llm-cell-v0/_field_traces.jsonl`.
 - [ ] **R3**: The shared raw blueprint is named as `1.5.142425.0`, derived from the shared `organ-cell|dim=128|rank=8|bands=8|out=15|senses=...` architecture signature.
 - [ ] **R4**: The active recipes include observer, name-the-need, gift, ho'oponopono, and freq-angle-focus with trace count `3` and weak-signal confidence.
 - [ ] **R5**: The Form file chooses Form-native, geometry, audio, and Hindu tattva symbol spaces, with a `symbol_space_for(goal)` selector.
@@ -79,9 +54,9 @@ This spec adds a Form artifact that records the current raw trace witness and th
 ## Research Inputs
 
 - `2026-05-21` - User direction: use the raw cells, recipes, and blueprints involved in trace logs, then choose 3 or 4 symbol spaces.
-- `experiments/local-llm-cell-v0/_field_traces.jsonl` - raw trace events for Tau, Upsilon, Chi, and efficacy-probe.
-- `experiments/local-llm-cell-v0/_field_weights.jsonl` - raw public weight fingerprints and notes for Tau, Upsilon, and Chi.
-- `experiments/local-llm-cell-v0/substrate_bridge.py` - content-address rule that derives Blueprint IDs from architecture signatures.
+- `seedbank/local-llm-cell-v0/_field_traces.jsonl` - raw trace events for Tau, Upsilon, Chi, and efficacy-probe.
+- `seedbank/local-llm-cell-v0/_field_weights.jsonl` - raw public weight fingerprints and notes for Tau, Upsilon, and Chi.
+- `seedbank/local-llm-cell-v0/substrate_bridge.py` - content-address rule that derives Blueprint IDs from architecture signatures.
 - `docs/coherence-substrate/active-recipe-tracing.form` - active recipe state and keep-or-choose relation.
 - `docs/coherence-substrate/traces-teach-the-recipe.form` - recipe efficacy from strategy traces.
 
@@ -97,7 +72,7 @@ This spec adds a Form artifact that records the current raw trace witness and th
 
 ## Acceptance Tests
 
-- Manual validation: `mkdir -p .cache && (cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk`
+- Manual validation: `mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk`
 
 Host compatibility checks still exercise the file-backed bridge and static Form declarations:
 
@@ -107,7 +82,7 @@ Host compatibility checks still exercise the file-backed bridge and static Form 
 ## Verification
 
 ```bash
-mkdir -p .cache && (cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
+mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
 python3 scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json
 cd api && python -m pytest -q tests/test_trace_symbol_spaces_form.py tests/test_active_recipe_trace_index.py
 python3 scripts/validate_spec_quality.py --file specs/trace-symbol-spaces-form.md

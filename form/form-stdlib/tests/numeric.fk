@@ -1,0 +1,22 @@
+; numeric.fk - exercises abs / min2 / max2 / minimum / maximum / product.
+; Returns an aggregate integer; sibling kernels must agree.
+;
+;   (abs -7)                              -> 7
+;   (min2 3 9)                            -> 3
+;   (max2 3 9)                            -> 9
+;   (minimum [4 2 8 1 6])                 -> 1
+;   (maximum [4 2 8 1 6])                 -> 8
+;   (product [1 2 3 4 5])                 -> 120
+;   (sum [10 20 30])                      -> 60
+;   Total                                  -> 208
+
+section [form.action] {
+    let values = list(4, 2, 8, 1, 6);
+    let factors = list(1, 2, 3, 4, 5);
+    let totals = list(10, 20, 30);
+
+    let part-a = add(abs(sub(0, 7)), min2(3, 9));
+    let part-b = add(max2(3, 9), minimum(values));
+    let part-c = add(maximum(values), product(factors));
+    add(part-a, add(part-b, add(part-c, sum(totals))));
+}

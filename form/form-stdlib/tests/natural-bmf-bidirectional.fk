@@ -1,0 +1,75 @@
+; natural-bmf-bidirectional.fk - natural language through BMF rules and lenses.
+; Authored in form.action; source-compiler.fk lowers it above the kernel.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/python-bmf.fk
+
+section [form.action] {
+    let NATURAL_LENS_COUNT = make_nodeid(8, 45, 2, 1);
+
+    def natural_lens_count(value) = intern_node(NATURAL_LENS_COUNT, list(intern_trivial_int(value)));
+    def natural_lens_count_value(node) = node_value(head(node_children(node)));
+    def rt_score(rt) = add(if bmf-roundtrip-node-eq?(rt) then 10 else 0, len(bmf-roundtrip-source(rt)));
+
+    def emit_count_natural(node, anchor, ctx) = natural-fact-source-for-context(bmf-symbol-name(ctx, anchor, anchor), natural_lens_count_value(node), ctx);
+
+    def parse_count_natural(source, ctx) {
+        let node = fsc-bmf-lower-node(natural-fact-rule-for-context(ctx), source);
+        let kids = node_children(node);
+        let subject = node_value(nth(kids, 0));
+        list(bmf-anchor-resolve(ctx, subject, subject), natural_lens_count(node_value(nth(kids, 1))));
+    }
+
+    def emit_count_python(node, anchor, ctx) = list(py-name(bmf-symbol-name(ctx, anchor, anchor)), py-op("="), py-int(int_to_str(natural_lens_count_value(node))));
+
+    def parse_count_python(source, ctx) {
+        let node = fsc-bmf-lower-node(python-bmf-find-rule("assign-int", python-bmf-rules), source);
+        let kids = node_children(node);
+        let name = node_value(nth(kids, 0));
+        list(bmf-anchor-resolve(ctx, name, name), natural_lens_count(node_value(nth(kids, 1))));
+    }
+
+    let fact_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-fact-is(), natural-bmf-rules), list(natural-src-word("count"), natural-src-word("is"), natural-src-int("13"), natural-src-punct(".")));
+    let fact_the_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-fact-the-is(), natural-bmf-rules), list(natural-src-word("the"), natural-src-word("count"), natural-src-word("is"), natural-src-int("13"), natural-src-punct(".")));
+    let fact_equals_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-fact-equals(), natural-bmf-rules), list(natural-src-word("count"), natural-src-word("equals"), natural-src-int("13"), natural-src-punct(".")));
+    let fact_id_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-fact-id-adalah(), natural-bmf-rules), list(natural-src-word("jumlah"), natural-src-word("adalah"), natural-src-int("13"), natural-src-punct(".")));
+    let relation_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-relation-supports(), natural-bmf-rules), list(natural-src-word("source"), natural-src-word("supports"), natural-src-word("binary"), natural-src-punct(".")));
+    let relates_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-relation-relates-to(), natural-bmf-rules), list(natural-src-word("grammar"), natural-src-word("relates"), natural-src-word("to"), natural-src-word("meaning"), natural-src-punct(".")));
+    let question_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-question-what-is(), natural-bmf-rules), list(natural-src-word("what"), natural-src-word("is"), natural-src-word("count"), natural-src-punct("?")));
+    let meaning_rt = bmf-roundtrip(natural-bmf-find-rule(natural-rule-meaning(), natural-bmf-rules), list(natural-src-word("form"), natural-src-word("means"), natural-src-string("shared object"), natural-src-punct(".")));
+
+    let anchor = "meaning/count";
+    let binary = natural_lens_count(13);
+    let natural_en_bindings = list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.count", list("count", "number")));
+    let natural_id_bindings = list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.jumlah", list("jumlah", "bilangan")));
+    let natural_math_bindings = list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.math.count", list("count", "cardinality")));
+    let python_bindings = list(bmf-symbol-binding(anchor, bmf-domain-python(), bmf-lens-assign(), "python.count", list("count_py", "count")));
+    let natural_en_ctx = natural-symbol-context(bmf-locale-en-us(), bmf-register-plain(), bmf-environment-general(), bmf-lens-assertion(), natural_en_bindings);
+    let natural_id_ctx = natural-symbol-context(bmf-locale-id-id(), bmf-register-plain(), bmf-environment-general(), bmf-lens-assertion(), natural_id_bindings);
+    let natural_math_ctx = natural-symbol-context(bmf-locale-en-us(), bmf-register-math(), "proof", bmf-lens-assertion(), natural_math_bindings);
+    let python_ctx = bmf-symbol-context(bmf-domain-python(), bmf-lens-assign(), python_bindings);
+
+    let natural_lens = bmf-reverse-lens(bmf-domain-natural(), bmf-lens-assertion(), emit_count_natural, parse_count_natural, natural-bmf-find-rule(natural-rule-fact-the-is(), natural-bmf-rules));
+    let python_lens = bmf-reverse-lens(bmf-domain-python(), bmf-lens-assign(), emit_count_python, parse_count_python, python-bmf-find-rule("assign-int", python-bmf-rules));
+    let targets = list(natural_lens, python_lens);
+
+    let natural_en_lens_rt = bmf-lens-roundtrip(targets, bmf-domain-natural(), bmf-lens-assertion(), binary, anchor, natural_en_ctx, empty);
+    let natural_id_lens_rt = bmf-lens-roundtrip(targets, bmf-domain-natural(), bmf-lens-assertion(), binary, anchor, natural_id_ctx, empty);
+    let natural_math_lens_rt = bmf-lens-roundtrip(targets, bmf-domain-natural(), bmf-lens-assertion(), binary, anchor, natural_math_ctx, empty);
+    let python_lens_rt = bmf-lens-roundtrip(targets, bmf-domain-python(), bmf-lens-assign(), binary, anchor, python_ctx, empty);
+
+    let natural_en_source = bmf-lens-roundtrip-source(natural_en_lens_rt);
+    let natural_id_source = bmf-lens-roundtrip-source(natural_id_lens_rt);
+    let natural_math_source = bmf-lens-roundtrip-source(natural_math_lens_rt);
+    let python_source = bmf-lens-roundtrip-source(python_lens_rt);
+
+    let natural_source_section = "section [natural.bmf] {\n  fact-the-is ::= \"the\" $subject:name \"is\" $value:int \".\" => natural-emit-fact-int <= natural-source-fact-the;\n}\n";
+    let python_source_section = "section [python.bmf] {\n  assign-int ::= $target:name \"=\" $value:int => pybmf-emit-assign-int <= pybmf-source-assign-int;\n}\n";
+    let compiled = form-source-compile-text(str_concat(natural_source_section, python_source_section));
+
+    let rule_score = sum(list(len(natural-bmf-rules), rt_score(fact_rt), rt_score(fact_the_rt), rt_score(fact_equals_rt), rt_score(fact_id_rt), rt_score(relation_rt), rt_score(relates_rt), rt_score(question_rt), rt_score(meaning_rt)));
+    let lens_score = sum(list(if str_eq(bmf-lens-roundtrip-anchor(natural_en_lens_rt), anchor) then 100 else 0, if node_eq(bmf-lens-roundtrip-node(natural_en_lens_rt), binary) then 200 else 0, if str_eq(bmf-lens-roundtrip-anchor(natural_id_lens_rt), anchor) then 300 else 0, if node_eq(bmf-lens-roundtrip-node(natural_id_lens_rt), binary) then 400 else 0, if str_eq(bmf-lens-roundtrip-anchor(natural_math_lens_rt), anchor) then 500 else 0, if node_eq(bmf-lens-roundtrip-node(natural_math_lens_rt), binary) then 600 else 0, if str_eq(bmf-lens-roundtrip-anchor(python_lens_rt), anchor) then 300 else 0, if node_eq(bmf-lens-roundtrip-node(python_lens_rt), binary) then 400 else 0));
+    let source_score = sum(list(if fsc-bmf-roundtrip-node-eq?(natural-bmf-find-rule(natural-rule-fact-the-is(), natural-bmf-rules), natural_en_source) then 700 else 0, if fsc-bmf-roundtrip-node-eq?(natural-bmf-find-rule(natural-rule-fact-id-adalah(), natural-bmf-rules), natural_id_source) then 800 else 0, if fsc-bmf-roundtrip-node-eq?(natural-bmf-find-rule(natural-rule-fact-equals(), natural-bmf-rules), natural_math_source) then 900 else 0, if fsc-bmf-roundtrip-node-eq?(python-bmf-find-rule("assign-int", python-bmf-rules), python_source) then 1000 else 0, if fsc-contains?(compiled, "natural-bmf-rules") then 700 else 0, if fsc-contains?(compiled, "python-bmf-rules") then 800 else 0));
+    let emitted_length_score = sum(list(len(natural_en_source), len(natural_id_source), len(natural_math_source), len(python_source)));
+
+    sum(list(rule_score, lens_score, source_score, emitted_length_score));
+}

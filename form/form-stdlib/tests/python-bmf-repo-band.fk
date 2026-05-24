@@ -1,0 +1,98 @@
+; tests/python-bmf-repo-band.fk - Python grammar objects from repo AST inventory
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn kid-int (m n)
+        (node_value (result-kid m n)))
+
+    (defn tri-score (m)
+        (add (kid-str-len m 0)
+             (add (kid-str-len m 1)
+                  (kid-str-len m 2))))
+
+    (defn bi-score (m)
+        (add (kid-str-len m 0) (kid-str-len m 1)))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    (let ne-score (tri-score (py-apply "compare-ne-ident"
+        (list (py-name "a") (py-op "!=") (py-name "b")))))
+    (let gt-score (tri-score (py-apply "compare-gt-ident"
+        (list (py-name "x") (py-op ">") (py-name "y")))))
+    (let gte-score (tri-score (py-apply "compare-gte-ident"
+        (list (py-name "count") (py-op ">=") (py-name "limit")))))
+    (let lte-score (tri-score (py-apply "compare-lte-ident"
+        (list (py-name "age") (py-op "<=") (py-name "max")))))
+    (let in-score (tri-score (py-apply "compare-in-ident"
+        (list (py-name "item") (py-keyword "in") (py-name "items")))))
+    (let not-in-score (tri-score (py-apply "compare-not-in-ident"
+        (list (py-name "path") (py-keyword "not") (py-keyword "in") (py-name "seen")))))
+    (let is-score (tri-score (py-apply "compare-is-ident"
+        (list (py-name "value") (py-keyword "is") (py-name "None")))))
+    (let is-not-score (tri-score (py-apply "compare-is-not-ident"
+        (list (py-name "value") (py-keyword "is") (py-keyword "not") (py-name "missing")))))
+
+    (let sub-score (tri-score (py-apply "binop-sub-ident"
+        (list (py-name "a") (py-op "-") (py-name "b")))))
+    (let mul-score (tri-score (py-apply "binop-mul-ident"
+        (list (py-name "left") (py-op "*") (py-name "right")))))
+    (let div-score (tri-score (py-apply "binop-div-ident"
+        (list (py-name "total") (py-op "/") (py-name "count")))))
+    (let mod-score (tri-score (py-apply "binop-mod-ident"
+        (list (py-name "n") (py-op "%") (py-name "base")))))
+    (let pow-score (tri-score (py-apply "binop-pow-ident"
+        (list (py-name "n") (py-op "**") (py-name "p")))))
+    (let floor-score (tri-score (py-apply "binop-floor-div-ident"
+        (list (py-name "n") (py-op "//") (py-name "d")))))
+    (let bitor-score (tri-score (py-apply "binop-bit-or-ident"
+        (list (py-name "flags") (py-op "|") (py-name "mask")))))
+    (let bitand-score (tri-score (py-apply "binop-bit-and-ident"
+        (list (py-name "flags") (py-op "&") (py-name "mask")))))
+    (let bitxor-score (tri-score (py-apply "binop-bit-xor-ident"
+        (list (py-name "a") (py-op "^") (py-name "b")))))
+    (let lshift-score (tri-score (py-apply "binop-lshift-ident"
+        (list (py-name "n") (py-op "<<") (py-name "bits")))))
+    (let rshift-score (tri-score (py-apply "binop-rshift-ident"
+        (list (py-name "n") (py-op ">>") (py-name "bits")))))
+
+    (let pos-match (py-apply "pos-int" (list (py-op "+") (py-int "7"))))
+    (let pos-score (add (kid-str-len pos-match 0) (kid-int pos-match 1)))
+    (let invert-score (bi-score (py-apply "invert-ident"
+        (list (py-op "~") (py-name "mask")))))
+
+    (let ifexp-score (tri-score (py-apply "ifexp-ident"
+        (list (py-name "yes") (py-keyword "if") (py-name "ok")
+              (py-keyword "else") (py-name "no")))))
+    (let fstring-score (kid-str-len (py-apply "fstring"
+        (list (py-fstring "hello {name}"))) 0))
+    (let setcomp-score (tri-score (py-apply "set-comp"
+        (list (py-op "{") (py-name "x") (py-keyword "for")
+              (py-name "x") (py-keyword "in") (py-name "items") (py-op "}")))))
+    (let yield-from-score (kid-str-len (py-apply "yield-from-ident"
+        (list (py-keyword "yield") (py-keyword "from") (py-name "rows"))) 0))
+    (let match-as-score (bi-score (py-apply "match-as"
+        (list (py-name "value") (py-keyword "as") (py-name "rest")))))
+
+    (sum
+        (list ne-score gt-score gte-score lte-score in-score not-in-score
+              is-score is-not-score sub-score mul-score div-score mod-score
+              pow-score floor-score bitor-score bitand-score bitxor-score
+              lshift-score rshift-score pos-score invert-score ifexp-score
+              fstring-score setcomp-score yield-from-score match-as-score)))

@@ -1,0 +1,128 @@
+; go-bmf-reversible-band.fk - canonical Go reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/go-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn go-rt (rule-name objects)
+        (bmf-roundtrip (go-bmf-find-rule rule-name go-bmf-rules) objects))
+
+    (let package-rt
+        (go-rt "package"
+            (list (go-src-keyword "package") (go-src-name "main"))))
+    (let import-rt
+        (go-rt "import"
+            (list (go-src-keyword "import") (go-src-string "fmt"))))
+    (let func0-rt
+        (go-rt "func0"
+            (list (go-src-keyword "func") (go-src-name "main")
+                  (go-src-op "(") (go-src-op ")")
+                  (go-src-op "{") (go-src-op "}"))))
+    (let func2-rt
+        (go-rt "func2"
+            (list (go-src-keyword "func") (go-src-name "add")
+                  (go-src-op "(") (go-src-name "a") (go-src-op ",")
+                  (go-src-name "b") (go-src-op ")")
+                  (go-src-op "{") (go-src-op "}"))))
+    (let func-return-add-rt
+        (go-rt "func-return-add"
+            (list (go-src-keyword "func") (go-src-name "add")
+                  (go-src-op "(") (go-src-name "a") (go-src-name "int")
+                  (go-src-op ",") (go-src-name "b") (go-src-name "int")
+                  (go-src-op ")") (go-src-name "int") (go-src-op "{")
+                  (go-src-keyword "return") (go-src-name "a") (go-src-op "+")
+                  (go-src-name "b") (go-src-op "}"))))
+    (let method0-rt
+        (go-rt "method0"
+            (list (go-src-keyword "func") (go-src-op "(")
+                  (go-src-name "r") (go-src-op ")") (go-src-name "Run")
+                  (go-src-op "(") (go-src-op ")")
+                  (go-src-op "{") (go-src-op "}"))))
+    (let struct-rt
+        (go-rt "struct"
+            (list (go-src-keyword "type") (go-src-name "Packet")
+                  (go-src-keyword "struct") (go-src-op "{") (go-src-op "}"))))
+    (let interface-rt
+        (go-rt "interface"
+            (list (go-src-keyword "type") (go-src-name "Runner")
+                  (go-src-keyword "interface") (go-src-op "{") (go-src-op "}"))))
+    (let var-int-rt
+        (go-rt "var-int"
+            (list (go-src-keyword "var") (go-src-name "count")
+                  (go-src-op "=") (go-src-int "7"))))
+    (let const-string-rt
+        (go-rt "const-string"
+            (list (go-src-keyword "const") (go-src-name "status")
+                  (go-src-op "=") (go-src-string "ready"))))
+    (let return-ident-rt
+        (go-rt "return-ident"
+            (list (go-src-keyword "return") (go-src-name "value"))))
+    (let return-int-rt
+        (go-rt "return-int"
+            (list (go-src-keyword "return") (go-src-int "42"))))
+    (let assign-ident-rt
+        (go-rt "assign-ident"
+            (list (go-src-name "target") (go-src-op "=") (go-src-name "value"))))
+    (let assign-int-rt
+        (go-rt "assign-int"
+            (list (go-src-name "target") (go-src-op "=") (go-src-int "11"))))
+    (let short-var-ident-rt
+        (go-rt "short-var-ident"
+            (list (go-src-name "target") (go-src-op ":=") (go-src-name "value"))))
+    (let short-var-int-rt
+        (go-rt "short-var-int"
+            (list (go-src-name "target") (go-src-op ":=") (go-src-int "12"))))
+    (let call0-rt
+        (go-rt "call0"
+            (list (go-src-name "run") (go-src-op "(") (go-src-op ")"))))
+    (let call1-rt
+        (go-rt "call1-ident"
+            (list (go-src-name "use") (go-src-op "(")
+                  (go-src-name "value") (go-src-op ")"))))
+    (let selector-rt
+        (go-rt "selector"
+            (list (go-src-name "obj") (go-src-op ".") (go-src-name "Field"))))
+    (let index-rt
+        (go-rt "index-int"
+            (list (go-src-name "items") (go-src-op "[")
+                  (go-src-int "3") (go-src-op "]"))))
+    (let if-rt
+        (go-rt "if-pass"
+            (list (go-src-keyword "if") (go-src-name "ready")
+                  (go-src-op "{") (go-src-op "}"))))
+    (let for-rt
+        (go-rt "for-range-pass"
+            (list (go-src-keyword "for") (go-src-name "i")
+                  (go-src-op ",") (go-src-name "item")
+                  (go-src-op ":=") (go-src-keyword "range")
+                  (go-src-name "items") (go-src-op "{") (go-src-op "}"))))
+    (let go-call-rt
+        (go-rt "go-call0"
+            (list (go-src-keyword "go") (go-src-name "run")
+                  (go-src-op "(") (go-src-op ")"))))
+    (let defer-call-rt
+        (go-rt "defer-call0"
+            (list (go-src-keyword "defer") (go-src-name "close")
+                  (go-src-op "(") (go-src-op ")"))))
+    (let type-alias-rt
+        (go-rt "type-alias"
+            (list (go-src-keyword "type") (go-src-name "ID")
+                  (go-src-op "=") (go-src-name "int"))))
+
+    (sum
+        (list (rt-score package-rt) (rt-score import-rt)
+              (rt-score func0-rt) (rt-score func2-rt)
+              (rt-score func-return-add-rt) (rt-score method0-rt)
+              (rt-score struct-rt) (rt-score interface-rt)
+              (rt-score var-int-rt) (rt-score const-string-rt)
+              (rt-score return-ident-rt) (rt-score return-int-rt)
+              (rt-score assign-ident-rt) (rt-score assign-int-rt)
+              (rt-score short-var-ident-rt) (rt-score short-var-int-rt)
+              (rt-score call0-rt) (rt-score call1-rt)
+              (rt-score selector-rt) (rt-score index-rt)
+              (rt-score if-rt) (rt-score for-rt)
+              (rt-score go-call-rt) (rt-score defer-call-rt)
+              (rt-score type-alias-rt))))

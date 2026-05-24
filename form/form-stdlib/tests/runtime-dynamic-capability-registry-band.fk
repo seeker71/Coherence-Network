@@ -1,0 +1,103 @@
+; runtime-dynamic-capability-registry-band.fk - runtime-added capabilities.
+;
+; Grammars, encoders, decoders, compressors, decompressors, binary parsers,
+; and transport parsers are all ordinary runtime capabilities. The registry
+; plans by surfaces and context, not by kernel vocabulary or hard-coded order.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let RUNTIME_DYNAMIC_COUNT = make_nodeid(8, 45, 8, 1);
+
+    def rt_count(value) = intern_node(RUNTIME_DYNAMIC_COUNT, list(intern_trivial_int(value)));
+    def rt_count_value(node) = node_value(head(node_children(node)));
+    def src(kind, value) = bmf-object(kind, value, empty, empty);
+    def src_value(source, index) = bmf-object-value(nth(source, index));
+    def src_kind(source, index) = bmf-object-kind(nth(source, index));
+    def node_score(value, want, score) = if node_eq(value, want) then score else 0;
+    def str_score(value, want, score) = if str_eq(value, want) then score else 0;
+    def int_score(value, want, score) = if eq(value, want) then score else 0;
+    def emit_transport_parse(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "transport-parser"), src("payload", value));
+    def emit_decompress(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "decompressor"), src("payload", value));
+    def emit_binary_parse(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "binary-parser"), src("payload", value));
+    def emit_decode(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "decoder"), src("payload", value));
+    def emit_grammar_parse(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "grammar-parser"), src("payload", value));
+    def emit_grammar_encode(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "grammar-encoder"), src("payload", value));
+    def emit_encode(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "encoder"), src("payload", value));
+    def emit_binary_write(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "binary-writer"), src("payload", value));
+    def emit_compress(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "compressor"), src("payload", value));
+    def emit_transport_write(value, anchor, ctx) = list(src("anchor", anchor), src("runtime-op", "transport-writer"), src("payload", value));
+    def parse_payload(source, ctx) = list(src_value(source, 0), src_value(source, 2));
+    def proof_ok(capability) = 1;
+
+    let runtime_root = form-capsule-root(91, 1, 9, 1);
+    let io_root = form-capsule-root(92, 1, 9, 1);
+    let kind_role = form-dynamic-kind(runtime_root, 1);
+    let kind_surface = form-dynamic-kind(runtime_root, 2);
+    let kind_capability = form-dynamic-kind(runtime_root, 3);
+    let kind_contract = form-dynamic-kind(runtime_root, 4);
+    let kind_proof = form-dynamic-kind(runtime_root, 5);
+
+    let role_runtime = form-dynamic-ref(runtime_root, kind_role, 1);
+    let lens_runtime = form-dynamic-ref(runtime_root, kind_role, 2);
+    let surface_wire = form-dynamic-ref(runtime_root, kind_surface, 1);
+    let surface_compressed = form-dynamic-ref(runtime_root, kind_surface, 2);
+    let surface_raw_bytes = form-dynamic-ref(runtime_root, kind_surface, 3);
+    let surface_binary_units = form-dynamic-ref(runtime_root, kind_surface, 4);
+    let surface_text = form-dynamic-ref(runtime_root, kind_surface, 5);
+    let surface_source_objects = form-dynamic-ref(runtime_root, kind_surface, 6);
+    let surface_form = form-dynamic-ref(runtime_root, kind_surface, 7);
+
+    let cap_transport_parser = form-dynamic-ref(runtime_root, kind_capability, 1);
+    let cap_decompressor = form-dynamic-ref(runtime_root, kind_capability, 2);
+    let cap_binary_parser = form-dynamic-ref(runtime_root, kind_capability, 3);
+    let cap_decoder = form-dynamic-ref(runtime_root, kind_capability, 4);
+    let cap_grammar_parser = form-dynamic-ref(runtime_root, kind_capability, 5);
+    let cap_grammar_encoder = form-dynamic-ref(runtime_root, kind_capability, 6);
+    let cap_encoder = form-dynamic-ref(runtime_root, kind_capability, 7);
+    let cap_binary_writer = form-dynamic-ref(runtime_root, kind_capability, 8);
+    let cap_compressor = form-dynamic-ref(runtime_root, kind_capability, 9);
+    let cap_transport_writer = form-dynamic-ref(runtime_root, kind_capability, 10);
+    let effect_io = form-dynamic-ref(runtime_root, kind_contract, 1);
+    let effect_pure = form-dynamic-ref(runtime_root, kind_contract, 2);
+    let reversible_yes = form-dynamic-ref(runtime_root, kind_contract, 3);
+    let lossless_yes = form-dynamic-ref(runtime_root, kind_contract, 4);
+    let deterministic_yes = form-dynamic-ref(runtime_root, kind_contract, 5);
+    let proof_runtime = form-dynamic-ref(runtime_root, kind_proof, 1);
+
+    let transport_parser = form-adapter-capability(cap_transport_parser, surface_wire, surface_compressed, emit_transport_parse, parse_payload, empty, empty);
+    let decompressor = form-adapter-capability(cap_decompressor, surface_compressed, surface_raw_bytes, emit_decompress, parse_payload, empty, empty);
+    let binary_parser = form-adapter-capability(cap_binary_parser, surface_raw_bytes, surface_binary_units, emit_binary_parse, parse_payload, empty, empty);
+    let decoder = form-adapter-capability(cap_decoder, surface_binary_units, surface_text, emit_decode, parse_payload, empty, empty);
+    let grammar_parser = form-adapter-capability(cap_grammar_parser, surface_text, surface_form, emit_grammar_parse, parse_payload, empty, empty);
+    let grammar_encoder = form-adapter-capability(cap_grammar_encoder, surface_form, surface_text, emit_grammar_encode, parse_payload, empty, empty);
+    let encoder = form-adapter-capability(cap_encoder, surface_text, surface_binary_units, emit_encode, parse_payload, empty, empty);
+    let binary_writer = form-adapter-capability(cap_binary_writer, surface_binary_units, surface_raw_bytes, emit_binary_write, parse_payload, empty, empty);
+    let compressor = form-adapter-capability(cap_compressor, surface_raw_bytes, surface_compressed, emit_compress, parse_payload, empty, empty);
+    let transport_writer = form-adapter-capability(cap_transport_writer, surface_compressed, surface_wire, emit_transport_write, parse_payload, empty, empty);
+
+    let io_capsule = form-recipe-capsule(io_root, list(surface_wire, surface_compressed, surface_raw_bytes, surface_binary_units), list(transport_parser, decompressor, binary_parser, binary_writer, compressor, transport_writer), list(form-capability-contract(transport_parser, effect_io, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(decompressor, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(binary_parser, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(binary_writer, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(compressor, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(transport_writer, effect_io, reversible_yes, lossless_yes, deterministic_yes, empty)), list(form-capability-proof(transport_parser, proof_runtime, proof_ok, 1), form-capability-proof(compressor, proof_runtime, proof_ok, 1)), empty, empty, empty);
+    let language_capsule = form-recipe-capsule(runtime_root, list(surface_text, surface_source_objects, surface_form), list(decoder, grammar_parser, grammar_encoder, encoder), list(form-capability-contract(decoder, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(grammar_parser, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(grammar_encoder, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty), form-capability-contract(encoder, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty)), list(form-capability-proof(grammar_parser, proof_runtime, proof_ok, 1)), empty, empty, empty);
+    let runtime_registry = form-recipe-registry-add-capsule(form-recipe-registry-add-capsule(form-recipe-registry-empty(), io_capsule), language_capsule);
+    let anchor = "runtime/count";
+    let value = rt_count(77);
+    let ctx = bmf-symbol-context(role_runtime, lens_runtime, list(bmf-symbol-binding(anchor, role_runtime, lens_runtime, "runtime.count", list("runtime-count"))));
+
+    let forward = form-recipe-registry-run-flex(runtime_registry, surface_wire, surface_form, value, anchor, ctx, 8, empty);
+    let reverse = form-recipe-registry-run-flex(runtime_registry, surface_form, surface_wire, value, anchor, ctx, 8, empty);
+    let forward_routes = form-adapter-plan-result-routes(forward);
+    let reverse_routes = form-adapter-plan-result-routes(reverse);
+    let selected_compressor = form-recipe-registry-capability-by-node(runtime_registry, form-adapter-capability-node(compressor), empty);
+    let direct_compress = form-recipe-registry-run-capability(runtime_registry, form-adapter-capability-node(compressor), value, anchor, ctx, empty);
+    let first_forward_source = form-adapter-route-source(head(forward_routes));
+    let last_reverse_source = form-adapter-route-source(nth(reverse_routes, 4));
+    let grammar_proof = form-capability-proof-for(form-recipe-registry-proofs(runtime_registry), grammar_parser, proof_runtime, empty);
+
+    let registry_score = sum(list(int_score(len(form-recipe-registry-capsules(runtime_registry)), 2, 100), int_score(len(form-recipe-registry-capabilities(runtime_registry)), 10, 200), int_score(len(form-recipe-registry-contracts(runtime_registry)), 10, 300), int_score(len(form-recipe-registry-proofs(runtime_registry)), 3, 400)));
+    let forward_score = sum(list(int_score(len(forward_routes), 5, 500), node_score(form-adapter-plan-result-value(forward), value, 600), int_score(rt_count_value(form-adapter-plan-result-value(forward)), 77, 700), str_score(src_value(first_forward_source, 1), "transport-parser", 800)));
+    let reverse_score = sum(list(int_score(len(reverse_routes), 5, 900), node_score(form-adapter-plan-result-value(reverse), value, 1000), str_score(src_value(last_reverse_source, 1), "transport-writer", 1100)));
+    let lookup_score = sum(list(node_score(form-adapter-capability-node(selected_compressor), form-adapter-capability-node(compressor), 1200), node_score(form-adapter-capability-node(form-adapter-route-capability(direct_compress)), form-adapter-capability-node(compressor), 1300), str_score(src_value(form-adapter-route-source(direct_compress), 1), "compressor", 1400)));
+    let proof_score = sum(list(int_score(form-capability-proof-expected(grammar_proof), 1, 1500), int_score(proof_ok(grammar_parser), 1, 1600), node_score(form-adapter-capability-node(form-capability-proof-capability(grammar_proof)), form-adapter-capability-node(grammar_parser), 1700)));
+
+    sum(list(registry_score, forward_score, reverse_score, lookup_score, proof_score));
+}

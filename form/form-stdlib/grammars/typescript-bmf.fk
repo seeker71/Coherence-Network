@@ -1,0 +1,560 @@
+; grammars/typescript-bmf.fk - TypeScript grammar as native BMF object rules
+
+(do
+    (let TS-BMF-IMPORT       (make_nodeid 1 2 99 601))
+    (let TS-BMF-EXPORT-CONST (make_nodeid 1 2 99 602))
+    (let TS-BMF-FUNCTION     (make_nodeid 1 2 99 603))
+    (let TS-BMF-CLASS        (make_nodeid 1 2 99 604))
+    (let TS-BMF-INTERFACE    (make_nodeid 1 2 99 605))
+    (let TS-BMF-TYPE         (make_nodeid 1 2 99 606))
+    (let TS-BMF-CALL         (make_nodeid 1 2 99 607))
+    (let TS-BMF-AWAIT        (make_nodeid 1 2 99 608))
+    (let TS-BMF-JSX          (make_nodeid 1 2 99 609))
+    (let TS-BMF-RETURN       (make_nodeid 1 2 99 610))
+    (let TS-BMF-ASSIGN       (make_nodeid 1 2 99 611))
+    (let TS-BMF-MEMBER       (make_nodeid 1 2 99 612))
+    (let TS-BMF-INDEX        (make_nodeid 1 2 99 613))
+    (let TS-BMF-IF           (make_nodeid 1 2 99 614))
+    (let TS-BMF-FOR          (make_nodeid 1 2 99 615))
+    (let TS-BMF-ARROW        (make_nodeid 1 2 99 616))
+    (let TS-BMF-ARRAY        (make_nodeid 1 2 99 617))
+    (let TS-BMF-OBJECT       (make_nodeid 1 2 99 618))
+    (let TS-BMF-ENUM         (make_nodeid 1 2 99 619))
+    (let TS-BMF-OPTIONAL     (make_nodeid 1 2 99 620))
+    (let TS-BMF-TEMPLATE     (make_nodeid 1 2 99 621))
+
+    (defn ts-src-keyword (value) (bmf-atom "typescript-keyword" value))
+    (defn ts-src-name (value) (bmf-atom "typescript-name" value))
+    (defn ts-src-op (value) (bmf-atom "typescript-op" value))
+    (defn ts-src-string (value) (bmf-atom "typescript-string" value))
+    (defn ts-src-int (value) (bmf-atom "typescript-int" value))
+
+    (defn typescript-kw (value) (object-lit "typescript-keyword" value))
+    (defn typescript-op (value) (object-lit "typescript-op" value))
+    (defn typescript-name (capture-name) (list "capture" capture-name (object-lit "typescript-name" "")))
+    (defn typescript-string-lit (capture-name) (list "capture" capture-name (object-lit "typescript-string" "")))
+    (defn typescript-int-lit (capture-name) (list "capture" capture-name (object-lit "typescript-int" "")))
+
+    (defn tsbmf-value (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn tsbmf-string (objects capture-name)
+        (intern_trivial_string (tsbmf-value objects capture-name)))
+
+    (defn tsbmf-int (objects capture-name)
+        (intern_trivial_int (str_to_int (tsbmf-value objects capture-name))))
+
+    (defn tsbmf-empty (_objects)
+        (intern_trivial_string ""))
+
+    (defn tsbmf-node-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn tsbmf-emit-import-named (objects)
+        (intern_node TS-BMF-IMPORT
+                     (list (intern_trivial_string "named")
+                           (tsbmf-string objects "names")
+                           (tsbmf-string objects "module"))))
+
+    (defn tsbmf-source-import-named (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "import")
+                  (ts-src-op "{")
+                  (ts-src-string (node_value (nth kids 1)))
+                  (ts-src-op "}")
+                  (ts-src-keyword "from")
+                  (ts-src-string (node_value (nth kids 2)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-import-default (objects)
+        (intern_node TS-BMF-IMPORT
+                     (list (intern_trivial_string "default")
+                           (tsbmf-string objects "name")
+                           (tsbmf-string objects "module"))))
+
+    (defn tsbmf-source-import-default (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "import")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-keyword "from")
+                  (ts-src-string (node_value (nth kids 2)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-export-const (objects)
+        (intern_node TS-BMF-EXPORT-CONST
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-export-const (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "export")
+                  (ts-src-keyword "const")
+                  (ts-src-name (node_value (head kids)))
+                  (ts-src-op "=")
+                  (ts-src-name (node_value (head (tail kids))))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-function (objects)
+        (intern_node TS-BMF-FUNCTION
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "params"))))
+
+    (defn tsbmf-source-function (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "function")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "(")
+                  (ts-src-string (node_value (nth kids 1)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-source-export-function (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "export")
+                  (ts-src-keyword "function")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "(")
+                  (ts-src-string (node_value (nth kids 1)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-function-return-add (objects)
+        (intern_node TS-BMF-FUNCTION
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "a")
+                           (tsbmf-string objects "atype")
+                           (tsbmf-string objects "b")
+                           (tsbmf-string objects "btype")
+                           (tsbmf-string objects "rtype")
+                           (tsbmf-string objects "left")
+                           (tsbmf-string objects "right"))))
+
+    (defn tsbmf-source-function-return-add (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "function")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ",")
+                  (ts-src-name (node_value (nth kids 3)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 4)))
+                  (ts-src-op ")")
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 5)))
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 6)))
+                  (ts-src-op "+")
+                  (ts-src-name (node_value (nth kids 7)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-class (objects)
+        (intern_node TS-BMF-CLASS
+                     (list (tsbmf-string objects "name"))))
+
+    (defn tsbmf-source-class (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "class")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-interface (objects)
+        (intern_node TS-BMF-INTERFACE
+                     (list (tsbmf-string objects "name"))))
+
+    (defn tsbmf-source-interface (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "interface")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-type-alias (objects)
+        (intern_node TS-BMF-TYPE
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-type-alias (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "type")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "=")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-call1 (objects)
+        (intern_node TS-BMF-CALL
+                     (list (tsbmf-string objects "callee")
+                           (tsbmf-string objects "arg"))))
+
+    (defn tsbmf-source-call1 (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ")")
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-await (objects)
+        (intern_node TS-BMF-AWAIT
+                     (list (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-await (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "await")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-jsx-self (objects)
+        (intern_node TS-BMF-JSX
+                     (list (tsbmf-string objects "name"))))
+
+    (defn tsbmf-source-jsx-self (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-op "<")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "/")
+                  (ts-src-op ">"))))
+
+    (defn tsbmf-emit-return-ident (objects)
+        (intern_node TS-BMF-RETURN (list (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-return-ident (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-return-string (objects)
+        (intern_node TS-BMF-RETURN (list (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-return-string (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "return")
+                  (ts-src-string (node_value (nth kids 0)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-assign-ident (objects)
+        (intern_node TS-BMF-ASSIGN
+                     (list (tsbmf-string objects "target")
+                           (intern_trivial_string "=")
+                           (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-assign-ident (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op (node_value (nth kids 1)))
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-assign-int (objects)
+        (intern_node TS-BMF-ASSIGN
+                     (list (tsbmf-string objects "target")
+                           (intern_trivial_string "=")
+                           (tsbmf-int objects "value"))))
+
+    (defn tsbmf-source-assign-int (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op (node_value (nth kids 1)))
+                  (ts-src-int (int_to_str (node_value (nth kids 2))))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-member (objects)
+        (intern_node TS-BMF-MEMBER
+                     (list (tsbmf-string objects "object")
+                           (tsbmf-string objects "field"))))
+
+    (defn tsbmf-source-member (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ".")
+                  (ts-src-name (node_value (nth kids 1))))))
+
+    (defn tsbmf-emit-index-int (objects)
+        (intern_node TS-BMF-INDEX
+                     (list (tsbmf-string objects "object")
+                           (tsbmf-int objects "index"))))
+
+    (defn tsbmf-source-index-int (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "[")
+                  (ts-src-int (int_to_str (node_value (nth kids 1))))
+                  (ts-src-op "]"))))
+
+    (defn tsbmf-emit-if-pass (objects)
+        (intern_node TS-BMF-IF (list (tsbmf-string objects "cond"))))
+
+    (defn tsbmf-source-if-pass (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "if")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-for-of-pass (objects)
+        (intern_node TS-BMF-FOR
+                     (list (tsbmf-string objects "item")
+                           (tsbmf-string objects "iter"))))
+
+    (defn tsbmf-source-for-of-pass (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "for")
+                  (ts-src-op "(")
+                  (ts-src-keyword "const")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-keyword "of")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-arrow1 (objects)
+        (intern_node TS-BMF-ARROW
+                     (list (tsbmf-string objects "param")
+                           (tsbmf-string objects "body"))))
+
+    (defn tsbmf-source-arrow1 (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "=>")
+                  (ts-src-name (node_value (nth kids 1))))))
+
+    (defn tsbmf-emit-array-empty (_objects)
+        (intern_node TS-BMF-ARRAY (list)))
+
+    (defn tsbmf-source-array-empty (_object)
+        (list (ts-src-op "[") (ts-src-op "]")))
+
+    (defn tsbmf-emit-object-empty (_objects)
+        (intern_node TS-BMF-OBJECT (list)))
+
+    (defn tsbmf-source-object-empty (_object)
+        (list (ts-src-op "{") (ts-src-op "}")))
+
+    (defn tsbmf-emit-enum-empty (objects)
+        (intern_node TS-BMF-ENUM (list (tsbmf-string objects "name"))))
+
+    (defn tsbmf-source-enum-empty (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "enum")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "{")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-generic-function-return (objects)
+        (intern_node TS-BMF-FUNCTION
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "type")
+                           (tsbmf-string objects "arg")
+                           (tsbmf-string objects "arg_type")
+                           (tsbmf-string objects "return_type")
+                           (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-generic-function-return (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "function")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "<")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ">")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 3)))
+                  (ts-src-op ")")
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 4)))
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 5)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-interface-property (objects)
+        (intern_node TS-BMF-INTERFACE
+                     (list (tsbmf-string objects "name")
+                           (tsbmf-string objects "field")
+                           (tsbmf-string objects "type"))))
+
+    (defn tsbmf-source-interface-property (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "interface")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "{")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-optional-member (objects)
+        (intern_node TS-BMF-OPTIONAL
+                     (list (tsbmf-string objects "object")
+                           (tsbmf-string objects "field"))))
+
+    (defn tsbmf-source-optional-member (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "?.")
+                  (ts-src-name (node_value (nth kids 1))))))
+
+    (defn tsbmf-emit-template-ident (objects)
+        (intern_node TS-BMF-TEMPLATE
+                     (list (tsbmf-string objects "head")
+                           (tsbmf-string objects "expr")
+                           (tsbmf-string objects "tail"))))
+
+    (defn tsbmf-source-template-ident (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-op "`")
+                  (ts-src-string (node_value (nth kids 0)))
+                  (ts-src-op "${")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op "}")
+                  (ts-src-string (node_value (nth kids 2)))
+                  (ts-src-op "`"))))
+
+    (let typescript-bmf-native-section
+        (list
+            (bmf-native "tsbmf-emit-import-named" tsbmf-emit-import-named TS-BMF-IMPORT)
+            (bmf-native "tsbmf-emit-import-default" tsbmf-emit-import-default TS-BMF-IMPORT)
+            (bmf-native "tsbmf-emit-export-const" tsbmf-emit-export-const TS-BMF-EXPORT-CONST)
+            (bmf-native "tsbmf-emit-function" tsbmf-emit-function TS-BMF-FUNCTION)
+            (bmf-native "tsbmf-emit-function-return-add" tsbmf-emit-function-return-add TS-BMF-FUNCTION)
+            (bmf-native "tsbmf-emit-class" tsbmf-emit-class TS-BMF-CLASS)
+            (bmf-native "tsbmf-emit-interface" tsbmf-emit-interface TS-BMF-INTERFACE)
+            (bmf-native "tsbmf-emit-type-alias" tsbmf-emit-type-alias TS-BMF-TYPE)
+            (bmf-native "tsbmf-emit-call1" tsbmf-emit-call1 TS-BMF-CALL)
+            (bmf-native "tsbmf-emit-await" tsbmf-emit-await TS-BMF-AWAIT)
+            (bmf-native "tsbmf-emit-jsx-self" tsbmf-emit-jsx-self TS-BMF-JSX)
+            (bmf-native "tsbmf-emit-return-ident" tsbmf-emit-return-ident TS-BMF-RETURN)
+            (bmf-native "tsbmf-emit-return-string" tsbmf-emit-return-string TS-BMF-RETURN)
+            (bmf-native "tsbmf-emit-assign-ident" tsbmf-emit-assign-ident TS-BMF-ASSIGN)
+            (bmf-native "tsbmf-emit-assign-int" tsbmf-emit-assign-int TS-BMF-ASSIGN)
+            (bmf-native "tsbmf-emit-member" tsbmf-emit-member TS-BMF-MEMBER)
+            (bmf-native "tsbmf-emit-index-int" tsbmf-emit-index-int TS-BMF-INDEX)
+            (bmf-native "tsbmf-emit-if-pass" tsbmf-emit-if-pass TS-BMF-IF)
+            (bmf-native "tsbmf-emit-for-of-pass" tsbmf-emit-for-of-pass TS-BMF-FOR)
+            (bmf-native "tsbmf-emit-arrow1" tsbmf-emit-arrow1 TS-BMF-ARROW)
+            (bmf-native "tsbmf-emit-array-empty" tsbmf-emit-array-empty TS-BMF-ARRAY)
+            (bmf-native "tsbmf-emit-object-empty" tsbmf-emit-object-empty TS-BMF-OBJECT)
+            (bmf-native "tsbmf-emit-enum-empty" tsbmf-emit-enum-empty TS-BMF-ENUM)
+            (bmf-native "tsbmf-emit-generic-function-return" tsbmf-emit-generic-function-return TS-BMF-FUNCTION)
+            (bmf-native "tsbmf-emit-interface-property" tsbmf-emit-interface-property TS-BMF-INTERFACE)
+            (bmf-native "tsbmf-emit-optional-member" tsbmf-emit-optional-member TS-BMF-OPTIONAL)
+            (bmf-native "tsbmf-emit-template-ident" tsbmf-emit-template-ident TS-BMF-TEMPLATE)))
+
+    section [typescript.bmf] {
+      import-named ::= "import" "{" $names:string "}" "from" $module:string ";" => tsbmf-emit-import-named <= tsbmf-source-import-named;
+      import-default ::= "import" $name:name "from" $module:string ";" => tsbmf-emit-import-default <= tsbmf-source-import-default;
+      export-const ::= "export" "const" $name:name "=" $value:name ";" => tsbmf-emit-export-const <= tsbmf-source-export-const;
+      function-decl ::= "function" $name:name "(" $params:string ")" "{" "}" => tsbmf-emit-function <= tsbmf-source-function;
+      function-return-add ::= "function" $name:name "(" $a:name ":" $atype:name "," $b:name ":" $btype:name ")" ":" $rtype:name "{" "return" $left:name "+" $right:name ";" "}" => tsbmf-emit-function-return-add <= tsbmf-source-function-return-add;
+      export-function ::= "export" "function" $name:name "(" $params:string ")" "{" "}" => tsbmf-emit-function <= tsbmf-source-export-function;
+      class-decl ::= "class" $name:name "{" "}" => tsbmf-emit-class <= tsbmf-source-class;
+      interface-decl ::= "interface" $name:name "{" "}" => tsbmf-emit-interface <= tsbmf-source-interface;
+      type-alias ::= "type" $name:name "=" $value:name ";" => tsbmf-emit-type-alias <= tsbmf-source-type-alias;
+      call1 ::= $callee:name "(" $arg:name ")" ";" => tsbmf-emit-call1 <= tsbmf-source-call1;
+      await-expr ::= "await" $value:name ";" => tsbmf-emit-await <= tsbmf-source-await;
+      jsx-self ::= "<" $name:name "/" ">" => tsbmf-emit-jsx-self <= tsbmf-source-jsx-self;
+      return-ident ::= "return" $value:name ";" => tsbmf-emit-return-ident <= tsbmf-source-return-ident;
+      return-string ::= "return" $value:string ";" => tsbmf-emit-return-string <= tsbmf-source-return-string;
+      assign-ident ::= $target:name "=" $value:name ";" => tsbmf-emit-assign-ident <= tsbmf-source-assign-ident;
+      assign-int ::= $target:name "=" $value:int ";" => tsbmf-emit-assign-int <= tsbmf-source-assign-int;
+      member ::= $object:name "." $field:name => tsbmf-emit-member <= tsbmf-source-member;
+      index-int ::= $object:name "[" $index:int "]" => tsbmf-emit-index-int <= tsbmf-source-index-int;
+      if-pass ::= "if" "(" $cond:name ")" "{" "}" => tsbmf-emit-if-pass <= tsbmf-source-if-pass;
+      for-of-pass ::= "for" "(" "const" $item:name "of" $iter:name ")" "{" "}" => tsbmf-emit-for-of-pass <= tsbmf-source-for-of-pass;
+      arrow1 ::= $param:name "=>" $body:name => tsbmf-emit-arrow1 <= tsbmf-source-arrow1;
+      array-empty ::= "[" "]" => tsbmf-emit-array-empty <= tsbmf-source-array-empty;
+      object-empty ::= "{" "}" => tsbmf-emit-object-empty <= tsbmf-source-object-empty;
+      enum-empty ::= "enum" $name:name "{" "}" => tsbmf-emit-enum-empty <= tsbmf-source-enum-empty;
+      generic-function-return ::= "function" $name:name "<" $type:name ">" "(" $arg:name ":" $arg_type:name ")" ":" $return_type:name "{" "return" $value:name ";" "}" => tsbmf-emit-generic-function-return <= tsbmf-source-generic-function-return;
+      interface-property ::= "interface" $name:name "{" $field:name ":" $type:name ";" "}" => tsbmf-emit-interface-property <= tsbmf-source-interface-property;
+      optional-member ::= $object:name "?." $field:name => tsbmf-emit-optional-member <= tsbmf-source-optional-member;
+      template-ident ::= "`" $head:string "${" $expr:name "}" $tail:string "`" => tsbmf-emit-template-ident <= tsbmf-source-template-ident;
+    }
+
+    (defn typescript-bmf-rule-name (r) (head r))
+
+    (defn typescript-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (typescript-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (typescript-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-typescript-bmf-rule (rule-name object-stream)
+        (apply-object-rule
+            (typescript-bmf-find-rule rule-name typescript-bmf-rules)
+            object-stream))
+
+    (let typescript-recipe-section
+        (form-rule-recipe-section "typescript"
+            (list
+                (compiler-rule "typescript" "import" "TypeScript import source objects" tsbmf-emit-import-named)
+                (compiler-rule "typescript" "export-const" "TypeScript exported const objects" tsbmf-emit-export-const)
+                (compiler-rule "typescript" "function" "TypeScript function source objects" tsbmf-emit-function)
+                (compiler-rule "typescript" "function-return-add" "TypeScript function addition source objects" tsbmf-emit-function-return-add)
+                (compiler-rule "typescript" "class" "TypeScript class source objects" tsbmf-emit-class)
+                (compiler-rule "typescript" "interface" "TypeScript interface source objects" tsbmf-emit-interface)
+                (compiler-rule "typescript" "type-alias" "TypeScript type alias source objects" tsbmf-emit-type-alias)
+                (compiler-rule "typescript" "return" "TypeScript return source objects" tsbmf-emit-return-ident)
+                (compiler-rule "typescript" "assign" "TypeScript assignment source objects" tsbmf-emit-assign-ident)
+                (compiler-rule "typescript" "member" "TypeScript member access source objects" tsbmf-emit-member)
+                (compiler-rule "typescript" "index" "TypeScript index access source objects" tsbmf-emit-index-int)
+                (compiler-rule "typescript" "if" "TypeScript if source objects" tsbmf-emit-if-pass)
+                (compiler-rule "typescript" "for-of" "TypeScript for-of source objects" tsbmf-emit-for-of-pass)
+                (compiler-rule "typescript" "arrow" "TypeScript arrow source objects" tsbmf-emit-arrow1)
+                (compiler-rule "typescript" "jsx" "TSX element source objects" tsbmf-emit-jsx-self)
+                (compiler-rule "typescript" "enum" "TypeScript enum source objects" tsbmf-emit-enum-empty)
+                (compiler-rule "typescript" "generic-function" "TypeScript generic function source objects" tsbmf-emit-generic-function-return)
+                (compiler-rule "typescript" "optional-member" "TypeScript optional member source objects" tsbmf-emit-optional-member)
+                (compiler-rule "typescript" "template" "TypeScript template source objects" tsbmf-emit-template-ident))))
+
+    (let typescript-form-source
+        (form-source "typescript" (list typescript-bmf-second typescript-recipe-section)))
+
+    (let typescript-bmf-dialect
+        (bmf-dialect "typescript"
+                     (form-section-object typescript-bmf-second)
+                     typescript-bmf-native-section
+                     typescript-bmf-rules))
+
+    0)

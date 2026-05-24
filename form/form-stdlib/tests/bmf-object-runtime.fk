@@ -1,0 +1,42 @@
+; tests/bmf-object-runtime.fk - completed grammar rules become reversible BMF objects
+;
+; preludes: form-stdlib/engine.fk
+
+(do
+    (defn emit-int-object (objects)
+        (intern_trivial_int
+            (str_to_int (bmf-collection-value objects "_1"))))
+
+    (defn undo-start (obj)
+        (bmf-object-source obj))
+
+    (let rule
+        (list "start"
+              (list "capture" "_1" (object-lit "int" ""))
+              emit-int-object
+              undo-start))
+
+    (let object-stream (list (bmf-atom "int" "7")))
+    (let match (apply-object-rule rule object-stream))
+    (let result-object (cap-get (match-caps match) "result"))
+    (let source (cell-undo result-object))
+    (let parent-stack (bmf-stack (empty)))
+    (let frame (bmf-start-result-stack parent-stack))
+    (let child-stack (bmf-stack-push (bmf-frame-stack frame) result-object))
+    (let closed-stack
+        (bmf-end-result-stack
+            (bmf-frame-with-stack frame child-stack)
+            "start"
+            undo-start))
+    (let grouped (head (bmf-stack-items closed-stack)))
+    (let grouped-source (bmf-object-value grouped))
+    (let grouped-child (bmf-collection-get grouped-source "start"))
+    (let grouped-child-source (cell-undo grouped-child))
+
+    ;; Forward value 7 + reversed source value 7 + grouped source value 7
+    ;; + object/collection proof bits 2 = 23.
+    (add (walk_recipe (bmf-object-value result-object))
+         (add (str_to_int (bmf-collection-value source "_1"))
+              (add (str_to_int (bmf-collection-value grouped-child-source "_1"))
+                   (add (if (bmf-object? result-object) 1 0)
+                        (if (bmf-collection? source) 1 0))))))

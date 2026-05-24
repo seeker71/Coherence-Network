@@ -14,7 +14,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EXPERIMENTS="$REPO_ROOT/experiments"
+FORM_DIR="$REPO_ROOT/form"
 
 KERNEL="rust"
 while [[ $# -gt 0 ]]; do
@@ -36,7 +36,7 @@ done
 [[ ! -f "$FILE" ]] && { echo "form-convert: file not found: $FILE" >&2; exit 2; }
 
 ABS_FILE="$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")"
-REL_FILE="${ABS_FILE#$EXPERIMENTS/}"
+REL_FILE="$ABS_FILE"
 
 ext="${FILE##*.}"
 case "$ext" in
@@ -75,11 +75,11 @@ cat > "$RUNNER" <<EOF
 EOF
 
 case "$KERNEL" in
-    rust) BIN="$EXPERIMENTS/form-kernel-rust/target/release/form-kernel-rust" ;;
-    go)   BIN="$EXPERIMENTS/form-kernel-go/bin-go" ;;
+    rust) BIN="$FORM_DIR/form-kernel-rust/target/release/form-kernel-rust" ;;
+    go)   BIN="$FORM_DIR/form-kernel-go/bin-go" ;;
     ts)   echo "form-convert: ts kernel not yet wired" >&2; exit 4 ;;
     *)    echo "form-convert: unknown kernel '$KERNEL'" >&2; exit 4 ;;
 esac
 
-cd "$EXPERIMENTS"
+cd "$FORM_DIR"
 "$BIN" "${LOAD_ARGS[@]}" "$RUNNER"

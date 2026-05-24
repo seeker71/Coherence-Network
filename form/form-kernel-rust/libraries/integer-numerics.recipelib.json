@@ -1,0 +1,129 @@
+{
+  "library_meta": {
+    "name": "integer-numerics",
+    "version": "0.1.0",
+    "generated_at": "2026-05-21T00:00:00Z",
+    "generator_tongue": "hand-authored",
+    "package_hint": 1,
+    "summary": "Integer-only recipe library runnable through form-kernel-rust. Each recipe has an accompanying .fk implementation in form/form-kernel-rust/recipes/. The Rust binary `form-kernel-rust execute` walks the .fk source via the native walker (22 RBasic dispatch arms). No Python in the execution path."
+  },
+  "dependencies": [],
+  "language_cells": ["form", "fk"],
+  "recipes": [
+    {
+      "name": "factorial",
+      "node_id_hint": "1.3.factorial.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["Int"],
+        "output_type": "Int"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "n <= 1", "then": "1"},
+          {"else": "n * factorial(n - 1)"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "fk",
+        "source_path": "form/form-kernel-rust/recipes/factorial.fk"
+      },
+      "tongue_caches": {
+        "fk": "(defn factorial (n)\n  (if (<= n 1)\n      1\n      (* n (factorial (- n 1)))))"
+      }
+    },
+    {
+      "name": "sum_list",
+      "node_id_hint": "1.3.sum_list.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Int>"],
+        "output_type": "Int"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "len(xs) == 0", "then": "0"},
+          {"else": "head(xs) + sum_list(tail(xs))"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "fk",
+        "source_path": "form/form-kernel-rust/recipes/sum_list.fk"
+      },
+      "tongue_caches": {
+        "fk": "(defn sum_list (xs)\n  (if (= (len xs) 0)\n      0\n      (+ (head xs) (sum_list (tail xs)))))"
+      }
+    },
+    {
+      "name": "dot_product",
+      "node_id_hint": "1.3.dot_product.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Int>", "List<Int>"],
+        "output_type": "Int"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "len(a) == 0", "then": "0"},
+          {"else": "head(a) * head(b) + dot_product(tail(a), tail(b))"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "fk",
+        "source_path": "form/form-kernel-rust/recipes/dot_product.fk"
+      },
+      "tongue_caches": {
+        "fk": "(defn dot_product (a b)\n  (if (= (len a) 0)\n      0\n      (+ (* (head a) (head b))\n         (dot_product (tail a) (tail b)))))"
+      }
+    },
+    {
+      "name": "vector_add",
+      "node_id_hint": "1.3.vector_add.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Int>", "List<Int>"],
+        "output_type": "List<Int>"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "len(a) == 0", "then": "()"},
+          {"else": "cons(head(a) + head(b), vector_add(tail(a), tail(b)))"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "fk",
+        "source_path": "form/form-kernel-rust/recipes/vector_add.fk"
+      },
+      "tongue_caches": {
+        "fk": "(defn vector_add (a b)\n  (if (= (len a) 0)\n      (list)\n      (cons (+ (head a) (head b))\n            (vector_add (tail a) (tail b)))))"
+      }
+    },
+    {
+      "name": "fib",
+      "node_id_hint": "1.3.fib.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["Int"],
+        "output_type": "Int"
+      },
+      "tree": {
+        "category": "R_Block.COND",
+        "branches": [
+          {"if": "n <= 1", "then": "n"},
+          {"else": "fib(n - 1) + fib(n - 2)"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "fk",
+        "source_path": "form/form-kernel-rust/recipes/fib.fk"
+      },
+      "tongue_caches": {
+        "fk": "(defn fib (n)\n  (if (<= n 1)\n      n\n      (+ (fib (- n 1)) (fib (- n 2)))))"
+      }
+    }
+  ]
+}

@@ -1,0 +1,441 @@
+; grammars/image-bmf.fk - image formats as Form-native objects and BMF rules
+;
+; The kernel provides byte/file access only. Format sensing, metadata lifting,
+; and reverse source emission live here as ordinary Form recipes.
+
+(do
+    (let IMAGE-FILE (make_nodeid 1 2 99 690))
+    (let IMAGE-META-FILE (make_nodeid 1 2 99 691))
+
+    (defn image-src-keyword (value) (bmf-atom "image-keyword" value))
+    (defn image-src-name (value) (bmf-atom "image-name" value))
+    (defn image-src-op (value) (bmf-atom "image-op" value))
+    (defn image-src-int (value) (bmf-atom "image-int" value))
+    (defn image-src-string (value) (bmf-atom "image-string" value))
+
+    (defn image-kw (value) (object-lit "image-keyword" value))
+    (defn image-op (value) (object-lit "image-op" value))
+    (defn image-name-lit (capture-name) (list "capture" capture-name (object-lit "image-name" "")))
+    (defn image-int-lit (capture-name) (list "capture" capture-name (object-lit "image-int" "")))
+    (defn image-string-lit (capture-name) (list "capture" capture-name (object-lit "image-string" "")))
+
+    (defn image-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn image-cap-int (objects capture-name)
+        (intern_trivial_int (str_to_int (image-cap objects capture-name))))
+
+    (defn image-format-media-type (format)
+        (if (str_eq format "png") "image/png"
+        (if (str_eq format "jpg") "image/jpeg"
+        (if (str_eq format "jpeg") "image/jpeg"
+        (if (str_eq format "svg") (bmf-media-image-svg)
+        (if (str_eq format "bmp") "image/bmp"
+        (if (str_eq format "ico") "image/vnd.microsoft.icon"
+        (if (str_eq format "gif") (bmf-media-image-gif)
+            (bmf-media-octet-stream)))))))))
+
+    (defn image-symbol-context (format lens bindings)
+        (bmf-standard-symbol-context (bmf-domain-image) lens bindings
+            (empty)
+            (bmf-domain-properties (bmf-semantic-image) "" (bmf-lens-metadata) (bmf-environment-file) "" (bmf-purpose-representation) "")
+            (bmf-media-properties
+                (image-format-media-type format)
+                (if (str_eq format "svg") (bmf-charset-utf8) "")
+                (if (str_eq format "svg") (bmf-encoding-xml) (bmf-encoding-binary))
+                format
+                ""
+                (bmf-unit-px)
+                (bmf-color-srgb))
+            (bmf-provenance-properties "" "" "" "" "")))
+
+    (defn image-rule-jpg () "jpg")
+    (defn image-rule-gif () "gif")
+    (defn image-rule-svg-viewbox () "svg-viewbox")
+
+    (defn image-file (format width height frames)
+        (intern_node IMAGE-FILE
+                     (list (intern_trivial_string format)
+                           (intern_trivial_int width)
+                           (intern_trivial_int height)
+                           (intern_trivial_int frames))))
+
+    (defn image-meta-file (format width height frames detail)
+        (intern_node IMAGE-META-FILE
+                     (list (intern_trivial_string format)
+                           (intern_trivial_int width)
+                           (intern_trivial_int height)
+                           (intern_trivial_int frames)
+                           (intern_trivial_string detail))))
+
+    (defn image-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn image-format-node (object) (nth (image-kids object) 0))
+    (defn image-width-node (object) (nth (image-kids object) 1))
+    (defn image-height-node (object) (nth (image-kids object) 2))
+    (defn image-frames-node (object) (nth (image-kids object) 3))
+    (defn image-detail-node (object) (nth (image-kids object) 4))
+
+    (defn image-emit-png (objects)
+        (image-file "png"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    (str_to_int (image-cap objects "chunks"))))
+
+    (defn image-source-png (object)
+        (list (image-src-keyword "png")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "chunks")
+              (image-src-int (int_to_str (node_value (image-frames-node object))))))
+
+    (defn image-emit-jpg (objects)
+        (image-file "jpg"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    1))
+
+    (defn image-source-jpg (object)
+        (list (image-src-keyword "jpg")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))))
+
+    (defn image-emit-jpeg (objects)
+        (image-file "jpeg"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    1))
+
+    (defn image-source-jpeg (object)
+        (list (image-src-keyword "jpeg")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))))
+
+    (defn image-emit-svg (objects)
+        (image-file "svg"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    1))
+
+    (defn image-source-svg (object)
+        (list (image-src-keyword "svg")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))))
+
+    (defn image-emit-bmp (objects)
+        (image-file "bmp"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    1))
+
+    (defn image-source-bmp (object)
+        (list (image-src-keyword "bmp")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))))
+
+    (defn image-emit-ico (objects)
+        (image-file "ico"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    (str_to_int (image-cap objects "images"))))
+
+    (defn image-source-ico (object)
+        (list (image-src-keyword "ico")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "images")
+              (image-src-int (int_to_str (node_value (image-frames-node object))))))
+
+    (defn image-emit-gif (objects)
+        (image-file "gif"
+                    (str_to_int (image-cap objects "width"))
+                    (str_to_int (image-cap objects "height"))
+                    (str_to_int (image-cap objects "frames"))))
+
+    (defn image-source-gif (object)
+        (list (image-src-keyword "gif")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "frames")
+              (image-src-int (int_to_str (node_value (image-frames-node object))))))
+
+    (defn image-emit-svg-viewbox (objects)
+        (image-meta-file "svg"
+                         (str_to_int (image-cap objects "width"))
+                         (str_to_int (image-cap objects "height"))
+                         1
+                         (image-cap objects "viewbox")))
+
+    (defn image-source-svg-viewbox (object)
+        (list (image-src-keyword "svg")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "viewBox")
+              (image-src-string (node_value (image-detail-node object)))))
+
+    (defn image-emit-gif-loop (objects)
+        (image-meta-file "gif"
+                         (str_to_int (image-cap objects "width"))
+                         (str_to_int (image-cap objects "height"))
+                         (str_to_int (image-cap objects "frames"))
+                         (image-cap objects "loop")))
+
+    (defn image-source-gif-loop (object)
+        (list (image-src-keyword "gif")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "frames")
+              (image-src-int (int_to_str (node_value (image-frames-node object))))
+              (image-src-keyword "loop")
+              (image-src-int (node_value (image-detail-node object)))))
+
+    (defn image-emit-jpeg-orientation (objects)
+        (image-meta-file "jpeg"
+                         (str_to_int (image-cap objects "width"))
+                         (str_to_int (image-cap objects "height"))
+                         1
+                         (image-cap objects "orientation")))
+
+    (defn image-source-jpeg-orientation (object)
+        (list (image-src-keyword "jpeg")
+              (image-src-int (int_to_str (node_value (image-width-node object))))
+              (image-src-keyword "x")
+              (image-src-int (int_to_str (node_value (image-height-node object))))
+              (image-src-keyword "orientation")
+              (image-src-int (node_value (image-detail-node object)))))
+
+    (let image-bmf-native-section
+        (list
+            (bmf-native "image-emit-png" image-emit-png IMAGE-FILE)
+            (bmf-native "image-emit-jpg" image-emit-jpg IMAGE-FILE)
+            (bmf-native "image-emit-jpeg" image-emit-jpeg IMAGE-FILE)
+            (bmf-native "image-emit-svg" image-emit-svg IMAGE-FILE)
+            (bmf-native "image-emit-bmp" image-emit-bmp IMAGE-FILE)
+            (bmf-native "image-emit-ico" image-emit-ico IMAGE-FILE)
+            (bmf-native "image-emit-gif" image-emit-gif IMAGE-FILE)
+            (bmf-native "image-emit-svg-viewbox" image-emit-svg-viewbox IMAGE-META-FILE)
+            (bmf-native "image-emit-gif-loop" image-emit-gif-loop IMAGE-META-FILE)
+            (bmf-native "image-emit-jpeg-orientation" image-emit-jpeg-orientation IMAGE-META-FILE)))
+
+    section [image.bmf] {
+      png ::= "png" $width:int "x" $height:int "chunks" $chunks:int => image-emit-png <= image-source-png;
+      jpg ::= "jpg" $width:int "x" $height:int => image-emit-jpg <= image-source-jpg;
+      jpeg ::= "jpeg" $width:int "x" $height:int => image-emit-jpeg <= image-source-jpeg;
+      svg ::= "svg" $width:int "x" $height:int => image-emit-svg <= image-source-svg;
+      bmp ::= "bmp" $width:int "x" $height:int => image-emit-bmp <= image-source-bmp;
+      ico ::= "ico" $width:int "x" $height:int "images" $images:int => image-emit-ico <= image-source-ico;
+      gif ::= "gif" $width:int "x" $height:int "frames" $frames:int => image-emit-gif <= image-source-gif;
+      svg-viewbox ::= "svg" $width:int "x" $height:int "viewBox" $viewbox:string => image-emit-svg-viewbox <= image-source-svg-viewbox;
+      gif-loop ::= "gif" $width:int "x" $height:int "frames" $frames:int "loop" $loop:int => image-emit-gif-loop <= image-source-gif-loop;
+      jpeg-orientation ::= "jpeg" $width:int "x" $height:int "orientation" $orientation:int => image-emit-jpeg-orientation <= image-source-jpeg-orientation;
+    }
+
+    (defn image-bmf-rule-name (r) (head r))
+
+    (defn image-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (image-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (image-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-image-bmf-rule (rule-name object-stream)
+        (apply-object-rule
+            (image-bmf-find-rule rule-name image-bmf-rules)
+            object-stream))
+
+    (let image-form-source
+        (form-source "image" (list image-bmf-second)))
+
+    (let image-bmf-dialect
+        (bmf-dialect "image"
+                     (form-section-object image-bmf-second)
+                     image-bmf-native-section
+                     image-bmf-rules))
+
+    ;; --- byte/text format sensing ------------------------------------
+
+    (defn image-be16 (bs pos)
+        (add (mul (nth bs pos) 256)
+             (nth bs (add pos 1))))
+
+    (defn image-be32 (bs pos)
+        (add (mul (nth bs pos) 16777216)
+        (add (mul (nth bs (add pos 1)) 65536)
+        (add (mul (nth bs (add pos 2)) 256)
+             (nth bs (add pos 3))))))
+
+    (defn image-le16 (bs pos)
+        (add (nth bs pos)
+             (mul (nth bs (add pos 1)) 256)))
+
+    (defn image-le32 (bs pos)
+        (add (nth bs pos)
+        (add (mul (nth bs (add pos 1)) 256)
+        (add (mul (nth bs (add pos 2)) 65536)
+             (mul (nth bs (add pos 3)) 16777216)))))
+
+    (defn image-byte0->256 (n)
+        (if (eq n 0) 256 n))
+
+    (defn image-substr (s a b)
+        (if (ge a b) ""
+            (str_concat (char_at s a) (image-substr s (add a 1) b))))
+
+    (defn image-png-signature? (bs)
+        (and (eq (nth bs 0) 137)
+        (and (eq (nth bs 1) 80)
+        (and (eq (nth bs 2) 78)
+        (and (eq (nth bs 3) 71)
+        (and (eq (nth bs 4) 13)
+        (and (eq (nth bs 5) 10)
+        (and (eq (nth bs 6) 26)
+             (eq (nth bs 7) 10)))))))))
+
+    (defn image-jpg-signature? (bs)
+        (and (eq (nth bs 0) 255)
+        (and (eq (nth bs 1) 216)
+             (eq (nth bs 2) 255))))
+
+    (defn image-gif-signature? (bs)
+        (and (eq (nth bs 0) 71)
+        (and (eq (nth bs 1) 73)
+        (and (eq (nth bs 2) 70)
+        (and (eq (nth bs 3) 56)
+        (and (or (eq (nth bs 4) 55) (eq (nth bs 4) 57))
+             (eq (nth bs 5) 97)))))))
+
+    (defn image-bmp-signature? (bs)
+        (and (eq (nth bs 0) 66)
+             (eq (nth bs 1) 77)))
+
+    (defn image-ico-signature? (bs)
+        (and (eq (nth bs 0) 0)
+        (and (eq (nth bs 1) 0)
+        (and (eq (nth bs 2) 1)
+             (eq (nth bs 3) 0)))))
+
+    (defn image-png-chunk-type (bs pos)
+        (list (nth bs (add pos 4))
+              (nth bs (add pos 5))
+              (nth bs (add pos 6))
+              (nth bs (add pos 7))))
+
+    (defn image-png-iend-type? (bs pos)
+        (and (eq (nth bs (add pos 4)) 73)
+        (and (eq (nth bs (add pos 5)) 69)
+        (and (eq (nth bs (add pos 6)) 78)
+             (eq (nth bs (add pos 7)) 68)))))
+
+    (defn image-count-png-chunks (bs pos count)
+        (do
+            (let length (image-be32 bs pos))
+            (let next-pos (add pos (add 12 length)))
+            (let next-count (add count 1))
+            (if (image-png-iend-type? bs pos)
+                next-count
+                (image-count-png-chunks bs next-pos next-count))))
+
+    (defn image-parse-png-bytes (bs)
+        (if (image-png-signature? bs)
+            (image-file "png"
+                        (image-be32 bs 16)
+                        (image-be32 bs 20)
+                        (image-count-png-chunks bs 8 0))
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-jpeg-sof? (marker)
+        (or (eq marker 192)
+        (or (eq marker 193)
+        (or (eq marker 194)
+        (or (eq marker 195)
+        (or (eq marker 197)
+        (or (eq marker 198)
+        (or (eq marker 199)
+        (or (eq marker 201)
+        (or (eq marker 202)
+        (or (eq marker 203)
+        (or (eq marker 205)
+        (or (eq marker 206)
+             (eq marker 207))))))))))))))
+
+    (defn image-jpeg-standalone? (marker)
+        (or (eq marker 1)
+        (or (eq marker 216)
+        (or (eq marker 217)
+        (and (ge marker 208) (le marker 215))))))
+
+    (defn image-jpeg-scan (bs pos)
+        (if (ge pos (sub (len bs) 9))
+            (image-file "jpg" 0 0 1)
+            (if (eq (nth bs pos) 255)
+                (do
+                    (let marker (nth bs (add pos 1)))
+                    (if (image-jpeg-sof? marker)
+                        (image-file "jpg"
+                                    (image-be16 bs (add pos 7))
+                                    (image-be16 bs (add pos 5))
+                                    1)
+                        (if (image-jpeg-standalone? marker)
+                            (image-jpeg-scan bs (add pos 2))
+                            (image-jpeg-scan bs (add pos (add 2 (image-be16 bs (add pos 2))))))))
+                (image-jpeg-scan bs (add pos 1)))))
+
+    (defn image-parse-jpg-bytes (bs)
+        (if (image-jpg-signature? bs)
+            (image-jpeg-scan bs 2)
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-parse-gif-bytes (bs)
+        (if (image-gif-signature? bs)
+            (image-file "gif"
+                        (image-le16 bs 6)
+                        (image-le16 bs 8)
+                        1)
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-parse-bmp-bytes (bs)
+        (if (image-bmp-signature? bs)
+            (image-file "bmp"
+                        (image-le32 bs 18)
+                        (abs (image-le32 bs 22))
+                        1)
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-parse-ico-bytes (bs)
+        (if (image-ico-signature? bs)
+            (image-file "ico"
+                        (image-byte0->256 (nth bs 6))
+                        (image-byte0->256 (nth bs 7))
+                        (image-le16 bs 4))
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-svg-text? (text)
+        (or (and (ge (str_len text) 4)
+                 (str_eq (image-substr text 0 4) "<svg"))
+            (and (ge (str_len text) 9)
+                 (str_eq (image-substr text 0 5) "<?xml"))))
+
+    (defn image-parse-svg-text (text)
+        (if (image-svg-text? text)
+            (image-file "svg" 0 0 1)
+            (image-file "unknown" 0 0 0)))
+
+    (defn image-detect-bytes (bs)
+        (if (image-png-signature? bs) (image-parse-png-bytes bs)
+        (if (image-jpg-signature? bs) (image-parse-jpg-bytes bs)
+        (if (image-gif-signature? bs) (image-parse-gif-bytes bs)
+        (if (image-bmp-signature? bs) (image-parse-bmp-bytes bs)
+        (if (image-ico-signature? bs) (image-parse-ico-bytes bs)
+            (image-file "unknown" 0 0 0)))))))
+
+    0)

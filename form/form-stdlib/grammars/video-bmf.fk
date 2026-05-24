@@ -1,0 +1,327 @@
+; grammars/video-bmf.fk - video containers as Form-native objects and BMF rules
+;
+; The kernel provides byte/file access only. Container sensing, metadata
+; lifting, and reverse source emission live here as ordinary Form recipes.
+
+(do
+    (let VIDEO-FILE (make_nodeid 1 2 99 710))
+    (let VIDEO-META-FILE (make_nodeid 1 2 99 711))
+
+    (defn video-src-keyword (value) (bmf-atom "video-keyword" value))
+    (defn video-src-int (value) (bmf-atom "video-int" value))
+
+    (defn video-kw (value) (object-lit "video-keyword" value))
+    (defn video-int-lit (capture-name) (list "capture" capture-name (object-lit "video-int" "")))
+
+    (defn video-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn video-format-media-type (format)
+        (if (str_eq format "mp4") "video/mp4"
+        (if (str_eq format "mov") "video/quicktime"
+        (if (str_eq format "mkv") "video/matroska"
+        (if (str_eq format "webm") "video/webm"
+        (if (str_eq format "avi") "video/vnd.avi"
+        (if (str_eq format "mpeg") "video/mpeg"
+        (if (str_eq format "mpg") "video/mpeg"
+        (if (str_eq format "flv") "video/x-flv"
+            (bmf-media-octet-stream))))))))))
+
+    (defn video-symbol-context (format codec lens bindings)
+        (bmf-standard-symbol-context (bmf-domain-video) lens bindings
+            (empty)
+            (bmf-domain-properties (bmf-semantic-video) "" (bmf-lens-metadata) (bmf-environment-file) "" (bmf-purpose-representation) "")
+            (bmf-media-properties
+                (video-format-media-type format)
+                ""
+                (bmf-encoding-binary)
+                format
+                codec
+                (bmf-unit-px-ms)
+                "")
+            (bmf-provenance-properties "" "" "" "" "")))
+
+    (defn video-file (format width height fps)
+        (intern_node VIDEO-FILE
+                     (list (intern_trivial_string format)
+                           (intern_trivial_int width)
+                           (intern_trivial_int height)
+                           (intern_trivial_int fps))))
+
+    (defn video-meta-file (format width height fps duration-ms)
+        (intern_node VIDEO-META-FILE
+                     (list (intern_trivial_string format)
+                           (intern_trivial_int width)
+                           (intern_trivial_int height)
+                           (intern_trivial_int fps)
+                           (intern_trivial_int duration-ms))))
+
+    (defn video-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn video-format-node (object) (nth (video-kids object) 0))
+    (defn video-width-node (object) (nth (video-kids object) 1))
+    (defn video-height-node (object) (nth (video-kids object) 2))
+    (defn video-fps-node (object) (nth (video-kids object) 3))
+    (defn video-duration-node (object) (nth (video-kids object) 4))
+
+    (defn video-emit (format objects)
+        (video-file format
+                    (str_to_int (video-cap objects "width"))
+                    (str_to_int (video-cap objects "height"))
+                    (str_to_int (video-cap objects "fps"))))
+
+    (defn video-emit-mp4 (objects) (video-emit "mp4" objects))
+    (defn video-emit-mov (objects) (video-emit "mov" objects))
+    (defn video-emit-mkv (objects) (video-emit "mkv" objects))
+    (defn video-emit-webm (objects) (video-emit "webm" objects))
+    (defn video-emit-avi (objects) (video-emit "avi" objects))
+    (defn video-emit-mpeg (objects) (video-emit "mpeg" objects))
+    (defn video-emit-mpg (objects) (video-emit "mpg" objects))
+    (defn video-emit-flv (objects) (video-emit "flv" objects))
+
+    (defn video-source (format object)
+        (list (video-src-keyword format)
+              (video-src-int (int_to_str (node_value (video-width-node object))))
+              (video-src-keyword "x")
+              (video-src-int (int_to_str (node_value (video-height-node object))))
+              (video-src-keyword "fps")
+              (video-src-int (int_to_str (node_value (video-fps-node object))))))
+
+    (defn video-source-mp4 (object) (video-source "mp4" object))
+    (defn video-source-mov (object) (video-source "mov" object))
+    (defn video-source-mkv (object) (video-source "mkv" object))
+    (defn video-source-webm (object) (video-source "webm" object))
+    (defn video-source-avi (object) (video-source "avi" object))
+    (defn video-source-mpeg (object) (video-source "mpeg" object))
+    (defn video-source-mpg (object) (video-source "mpg" object))
+    (defn video-source-flv (object) (video-source "flv" object))
+
+    (defn video-emit-duration (format objects)
+        (video-meta-file format
+                         (str_to_int (video-cap objects "width"))
+                         (str_to_int (video-cap objects "height"))
+                         (str_to_int (video-cap objects "fps"))
+                         (str_to_int (video-cap objects "duration_ms"))))
+
+    (defn video-emit-mp4-duration (objects) (video-emit-duration "mp4" objects))
+    (defn video-emit-webm-duration (objects) (video-emit-duration "webm" objects))
+    (defn video-emit-mkv-duration (objects) (video-emit-duration "mkv" objects))
+
+    (defn video-source-duration (format object)
+        (list (video-src-keyword format)
+              (video-src-int (int_to_str (node_value (video-width-node object))))
+              (video-src-keyword "x")
+              (video-src-int (int_to_str (node_value (video-height-node object))))
+              (video-src-keyword "fps")
+              (video-src-int (int_to_str (node_value (video-fps-node object))))
+              (video-src-keyword "duration")
+              (video-src-int (int_to_str (node_value (video-duration-node object))))
+              (video-src-keyword "ms")))
+
+    (defn video-source-mp4-duration (object) (video-source-duration "mp4" object))
+    (defn video-source-webm-duration (object) (video-source-duration "webm" object))
+    (defn video-source-mkv-duration (object) (video-source-duration "mkv" object))
+
+    (let video-bmf-native-section
+        (list
+            (bmf-native "video-emit-mp4" video-emit-mp4 VIDEO-FILE)
+            (bmf-native "video-emit-mov" video-emit-mov VIDEO-FILE)
+            (bmf-native "video-emit-mkv" video-emit-mkv VIDEO-FILE)
+            (bmf-native "video-emit-webm" video-emit-webm VIDEO-FILE)
+            (bmf-native "video-emit-avi" video-emit-avi VIDEO-FILE)
+            (bmf-native "video-emit-mpeg" video-emit-mpeg VIDEO-FILE)
+            (bmf-native "video-emit-mpg" video-emit-mpg VIDEO-FILE)
+            (bmf-native "video-emit-flv" video-emit-flv VIDEO-FILE)
+            (bmf-native "video-emit-mp4-duration" video-emit-mp4-duration VIDEO-META-FILE)
+            (bmf-native "video-emit-webm-duration" video-emit-webm-duration VIDEO-META-FILE)
+            (bmf-native "video-emit-mkv-duration" video-emit-mkv-duration VIDEO-META-FILE)))
+
+    section [video.bmf] {
+      mp4 ::= "mp4" $width:int "x" $height:int "fps" $fps:int => video-emit-mp4 <= video-source-mp4;
+      mov ::= "mov" $width:int "x" $height:int "fps" $fps:int => video-emit-mov <= video-source-mov;
+      mkv ::= "mkv" $width:int "x" $height:int "fps" $fps:int => video-emit-mkv <= video-source-mkv;
+      webm ::= "webm" $width:int "x" $height:int "fps" $fps:int => video-emit-webm <= video-source-webm;
+      avi ::= "avi" $width:int "x" $height:int "fps" $fps:int => video-emit-avi <= video-source-avi;
+      mpeg ::= "mpeg" $width:int "x" $height:int "fps" $fps:int => video-emit-mpeg <= video-source-mpeg;
+      mpg ::= "mpg" $width:int "x" $height:int "fps" $fps:int => video-emit-mpg <= video-source-mpg;
+      flv ::= "flv" $width:int "x" $height:int "fps" $fps:int => video-emit-flv <= video-source-flv;
+      mp4-duration ::= "mp4" $width:int "x" $height:int "fps" $fps:int "duration" $duration_ms:int "ms" => video-emit-mp4-duration <= video-source-mp4-duration;
+      webm-duration ::= "webm" $width:int "x" $height:int "fps" $fps:int "duration" $duration_ms:int "ms" => video-emit-webm-duration <= video-source-webm-duration;
+      mkv-duration ::= "mkv" $width:int "x" $height:int "fps" $fps:int "duration" $duration_ms:int "ms" => video-emit-mkv-duration <= video-source-mkv-duration;
+    }
+
+    (defn video-bmf-rule-name (r) (head r))
+
+    (defn video-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (video-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (video-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-video-bmf-rule (rule-name object-stream)
+        (apply-object-rule
+            (video-bmf-find-rule rule-name video-bmf-rules)
+            object-stream))
+
+    (let video-form-source
+        (form-source "video" (list video-bmf-second)))
+
+    (let video-bmf-dialect
+        (bmf-dialect "video"
+                     (form-section-object video-bmf-second)
+                     video-bmf-native-section
+                     video-bmf-rules))
+
+    ;; --- byte format sensing -----------------------------------------
+
+    (defn video-le32 (bs pos)
+        (add (nth bs pos)
+        (add (mul (nth bs (add pos 1)) 256)
+        (add (mul (nth bs (add pos 2)) 65536)
+             (mul (nth bs (add pos 3)) 16777216)))))
+
+    (defn video-riff-avi? (bs)
+        (and (eq (nth bs 0) 82)
+        (and (eq (nth bs 1) 73)
+        (and (eq (nth bs 2) 70)
+        (and (eq (nth bs 3) 70)
+        (and (eq (nth bs 8) 65)
+        (and (eq (nth bs 9) 86)
+             (eq (nth bs 10) 73))))))))
+
+    (defn video-ftyp? (bs)
+        (and (eq (nth bs 4) 102)
+        (and (eq (nth bs 5) 116)
+        (and (eq (nth bs 6) 121)
+             (eq (nth bs 7) 112)))))
+
+    (defn video-brand-isom? (bs)
+        (and (eq (nth bs 8) 105)
+        (and (eq (nth bs 9) 115)
+        (and (eq (nth bs 10) 111)
+             (eq (nth bs 11) 109)))))
+
+    (defn video-brand-mp42? (bs)
+        (and (eq (nth bs 8) 109)
+        (and (eq (nth bs 9) 112)
+        (and (eq (nth bs 10) 52)
+             (eq (nth bs 11) 50)))))
+
+    (defn video-brand-avc1? (bs)
+        (and (eq (nth bs 8) 97)
+        (and (eq (nth bs 9) 118)
+        (and (eq (nth bs 10) 99)
+             (eq (nth bs 11) 49)))))
+
+    (defn video-brand-qt? (bs)
+        (and (eq (nth bs 8) 113)
+        (and (eq (nth bs 9) 116)
+        (and (eq (nth bs 10) 32)
+             (eq (nth bs 11) 32)))))
+
+    (defn video-mp4? (bs)
+        (and (video-ftyp? bs)
+             (or (video-brand-isom? bs)
+             (or (video-brand-mp42? bs)
+                 (video-brand-avc1? bs)))))
+
+    (defn video-mov? (bs)
+        (and (video-ftyp? bs) (video-brand-qt? bs)))
+
+    (defn video-ebml? (bs)
+        (and (eq (nth bs 0) 26)
+        (and (eq (nth bs 1) 69)
+        (and (eq (nth bs 2) 223)
+             (eq (nth bs 3) 163)))))
+
+    (defn video-webm? (bs)
+        (and (video-ebml? bs)
+        (and (eq (nth bs 24) 119)
+        (and (eq (nth bs 25) 101)
+        (and (eq (nth bs 26) 98)
+             (eq (nth bs 27) 109))))))
+
+    (defn video-mkv? (bs)
+        (and (video-ebml? bs)
+        (and (eq (nth bs 24) 109)
+        (and (eq (nth bs 25) 97)
+        (and (eq (nth bs 26) 116)
+        (and (eq (nth bs 27) 114)
+        (and (eq (nth bs 28) 111)
+        (and (eq (nth bs 29) 115)
+        (and (eq (nth bs 30) 107)
+             (eq (nth bs 31) 97))))))))))
+
+    (defn video-mpeg? (bs)
+        (and (eq (nth bs 0) 0)
+        (and (eq (nth bs 1) 0)
+        (and (eq (nth bs 2) 1)
+             (eq (nth bs 3) 186)))))
+
+    (defn video-mpg? (bs)
+        (and (eq (nth bs 0) 0)
+        (and (eq (nth bs 1) 0)
+        (and (eq (nth bs 2) 1)
+             (eq (nth bs 3) 179)))))
+
+    (defn video-flv? (bs)
+        (and (eq (nth bs 0) 70)
+        (and (eq (nth bs 1) 76)
+             (eq (nth bs 2) 86))))
+
+    (defn video-parse-mp4-bytes (bs)
+        (if (video-mp4? bs)
+            (video-file "mp4" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-mov-bytes (bs)
+        (if (video-mov? bs)
+            (video-file "mov" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-mkv-bytes (bs)
+        (if (video-mkv? bs)
+            (video-file "mkv" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-webm-bytes (bs)
+        (if (video-webm? bs)
+            (video-file "webm" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-avi-bytes (bs)
+        (if (video-riff-avi? bs)
+            (video-file "avi"
+                        (video-le32 bs 64)
+                        (video-le32 bs 68)
+                        (divide 1000000 (video-le32 bs 32)))
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-mpeg-bytes (bs)
+        (if (video-mpeg? bs)
+            (video-file "mpeg" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-mpg-bytes (bs)
+        (if (video-mpg? bs)
+            (video-file "mpg" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-parse-flv-bytes (bs)
+        (if (video-flv? bs)
+            (video-file "flv" 0 0 0)
+            (video-file "unknown" 0 0 0)))
+
+    (defn video-detect-bytes (bs)
+        (if (video-mp4? bs) (video-parse-mp4-bytes bs)
+        (if (video-mov? bs) (video-parse-mov-bytes bs)
+        (if (video-webm? bs) (video-parse-webm-bytes bs)
+        (if (video-mkv? bs) (video-parse-mkv-bytes bs)
+        (if (video-riff-avi? bs) (video-parse-avi-bytes bs)
+        (if (video-mpeg? bs) (video-parse-mpeg-bytes bs)
+        (if (video-mpg? bs) (video-parse-mpg-bytes bs)
+        (if (video-flv? bs) (video-parse-flv-bytes bs)
+            (video-file "unknown" 0 0 0))))))))))
+
+    0)

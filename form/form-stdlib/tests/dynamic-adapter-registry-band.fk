@@ -1,0 +1,80 @@
+; dynamic-adapter-registry-band.fk - adapter capsules mint local identities.
+; Authored in form.action; source-compiler.fk lowers it above the kernel.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let DYNAMIC_ADAPTER_COUNT = make_nodeid(8, 45, 2, 3);
+
+    def dyn_count(value) = intern_node(DYNAMIC_ADAPTER_COUNT, list(intern_trivial_int(value)));
+    def dyn_count_value(node) = node_value(head(node_children(node)));
+    def src(value) = bmf-object("adapter-boundary-source", value, empty, empty);
+    def src_value(source, index) = bmf-object-value(nth(source, index));
+    def node_score(value, want, score) = if node_eq(value, want) then score else 0;
+    def str_score(value, want, score) = if str_eq(value, want) then score else 0;
+
+    let language_root = form-capsule-root(71, 1, 9, 1);
+    let codec_root = form-capsule-root(72, 1, 9, 1);
+    let role_kind = form-dynamic-kind(language_root, 1);
+    let surface_kind = form-dynamic-kind(language_root, 2);
+    let language_capability_kind = form-dynamic-kind(language_root, 3);
+    let codec_capability_kind = form-dynamic-kind(codec_root, 1);
+
+    let private_language = form-dynamic-ref(language_root, role_kind, 1);
+    let private_dialect = form-dynamic-ref(language_root, role_kind, 2);
+    let form_surface = form-dynamic-ref(language_root, surface_kind, 1);
+    let text_surface = form-dynamic-ref(language_root, surface_kind, 2);
+    let restored_form_surface = form-dynamic-ref(language_root, surface_kind, 3);
+    let decompressed_text_surface = form-dynamic-ref(language_root, surface_kind, 4);
+    let compressed_surface = form-dynamic-ref(codec_root, surface_kind, 1);
+    let encode_capability = form-dynamic-ref(language_root, language_capability_kind, 1);
+    let decode_capability = form-dynamic-ref(language_root, language_capability_kind, 2);
+    let compress_capability = form-dynamic-ref(codec_root, codec_capability_kind, 1);
+    let decompress_capability = form-dynamic-ref(codec_root, codec_capability_kind, 2);
+
+    let anchor = "capsule/count";
+    let value = dyn_count(21);
+    let ctx = bmf-symbol-context(private_language, private_dialect, list(bmf-symbol-binding(anchor, private_language, private_dialect, "capsule.count", list("capsule-count"))));
+
+    def emit_private_text(node, anchor, ctx) = list(src("capsule"), src(int_to_str(dyn_count_value(node))), src(bmf-symbol-name(ctx, anchor, anchor)));
+    def emit_private_identity(source, anchor, ctx) = source;
+    def pass_private_text(source, ctx) = list(bmf-anchor-resolve(ctx, src_value(source, 2), ""), source);
+    def parse_private_text(source, ctx) = list(bmf-anchor-resolve(ctx, src_value(source, 2), ""), dyn_count(str_to_int(src_value(source, 1))));
+    def emit_private_compressed(source, anchor, ctx) = list(src("packed"), src(int_to_str(len(source))));
+    def pass_private_compressed(source, ctx) = list(anchor, source);
+    def emit_private_decompressed(source, anchor, ctx) = list(src("capsule"), src("21"), src("capsule-count"));
+
+    let encode = form-adapter-capability(encode_capability, form_surface, text_surface, emit_private_text, pass_private_text, empty, empty);
+    let decode = form-adapter-capability(decode_capability, decompressed_text_surface, restored_form_surface, emit_private_identity, parse_private_text, empty, empty);
+    let compress = form-adapter-capability(compress_capability, text_surface, compressed_surface, emit_private_compressed, pass_private_compressed, empty, empty);
+    let decompress = form-adapter-capability(decompress_capability, compressed_surface, decompressed_text_surface, emit_private_decompressed, pass_private_text, empty, empty);
+    let language_capsule = form-adapter-capsule(language_root, list(form_surface, text_surface, decompressed_text_surface, restored_form_surface), list(encode, decode), empty, empty);
+    let codec_capsule = form-adapter-capsule(codec_root, list(text_surface, compressed_surface, decompressed_text_surface), list(compress, decompress), empty, empty);
+    let registry = form-adapter-registry(list(language_capsule, codec_capsule));
+
+    let selected_encode = form-adapter-registry-find-capability(registry, encode_capability, form_surface, text_surface, ctx, empty);
+    let selected_compress = form-adapter-registry-find-capability(registry, compress_capability, text_surface, compressed_surface, ctx, empty);
+    let selected_decompress = form-adapter-registry-find-capability(registry, decompress_capability, compressed_surface, decompressed_text_surface, ctx, empty);
+    let route = form-adapter-registry-roundtrip(registry, encode_capability, form_surface, text_surface, value, anchor, ctx, empty);
+    let source = form-adapter-route-source(route);
+    let plan_kinds = list(encode_capability, compress_capability, decompress_capability, decode_capability);
+    let plan = form-adapter-registry-plan(registry, plan_kinds, form_surface, restored_form_surface, ctx, empty);
+    let plan_result = form-adapter-plan-run(plan, value, anchor, ctx);
+    let flex_plan = form-adapter-registry-plan-flex(registry, form_surface, restored_form_surface, ctx, 6, empty);
+    let flex_result = form-adapter-plan-run(flex_plan, value, anchor, ctx);
+    let compiled_flex = form-adapter-registry-compile-flex(registry, form_surface, restored_form_surface, ctx, 6, empty);
+    let compiled_result = form-adapter-compiled-plan-run(compiled_flex, value, anchor, ctx);
+    let plan_routes = form-adapter-plan-result-routes(plan_result);
+    let flex_routes = form-adapter-plan-result-routes(flex_result);
+    let compiled_routes = form-adapter-plan-result-routes(compiled_result);
+    let packed_source = form-adapter-route-source(nth(plan_routes, 1));
+
+    let registry_score = sum(list(node_score(form-adapter-capability-node(selected_encode), form-adapter-capability-node(encode), 100), node_score(form-adapter-capability-node(selected_compress), form-adapter-capability-node(compress), 200), node_score(form-adapter-capability-node(selected_decompress), form-adapter-capability-node(decompress), 300), node_score(form-adapter-capability-node(form-adapter-route-capability(route)), form-adapter-capability-node(encode), 400)));
+    let route_score = sum(list(str_score(form-adapter-route-anchor(route), anchor, 500), str_score(src_value(form-adapter-route-value(route), 0), "capsule", 600), str_score(src_value(source, 0), "capsule", 700), str_score(src_value(source, 2), "capsule-count", 800)));
+    let identity_score = sum(list(node_score(form-adapter-capsule-root(language_capsule), language_root, 900), node_score(form-adapter-capability-kind(encode), encode_capability, 1000), node_score(form-adapter-capability-input-surface(encode), form_surface, 1100), node_score(form-adapter-capability-output-surface(encode), text_surface, 1200)));
+    let plan_score = sum(list(node_score(form-adapter-plan-result-value(plan_result), value, 1300), str_score(form-adapter-plan-result-anchor(plan_result), anchor, 1400), if eq(len(form-adapter-plan-capabilities(plan)), 4) then 1500 else 0, if eq(len(plan_routes), 4) then 1600 else 0, str_score(src_value(packed_source, 0), "packed", 1700)));
+    let flex_score = sum(list(node_score(form-adapter-plan-result-value(flex_result), value, 1800), if eq(len(form-adapter-plan-capabilities(flex_plan)), 4) then 1900 else 0, if eq(len(flex_routes), 4) then 2000 else 0, node_score(form-adapter-capability-output-surface(nth(form-adapter-plan-capabilities(flex_plan), 3)), restored_form_surface, 2100)));
+    let compiled_score = sum(list(node_score(form-adapter-plan-result-value(compiled_result), value, 2200), if eq(len(form-adapter-compiled-plan-capabilities(compiled_flex)), 4) then 2300 else 0, if eq(len(compiled_routes), 4) then 2400 else 0, node_score(form-adapter-compiled-plan-node(compiled_flex), form-adapter-compiled-plan-node(compiled_flex), 2500)));
+
+    sum(list(registry_score, route_score, identity_score, plan_score, flex_score, compiled_score));
+}

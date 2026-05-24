@@ -1,0 +1,265 @@
+; grammars/natural-bmf.fk - natural-language surfaces as BMF object rules
+;
+; Natural language is a source dialect like Python, Go, Rust, TypeScript,
+; images, audio, and video: sensing produces source objects, BMF rules lower
+; completed matches into Form nodes, and reverse emitters choose a readable
+; target surface without changing the binary object.
+
+(do
+    (let NATURAL-BMF-FACT     (make_nodeid 1 2 99 760))
+    (let NATURAL-BMF-RELATION (make_nodeid 1 2 99 761))
+    (let NATURAL-BMF-QUESTION (make_nodeid 1 2 99 762))
+    (let NATURAL-BMF-MEANING  (make_nodeid 1 2 99 763))
+
+    ;; --- source-object helpers --------------------------------------
+
+    (defn natural-src-word (value) (bmf-atom "natural-word" value))
+    (defn natural-src-int (value) (bmf-atom "natural-int" value))
+    (defn natural-src-string (value) (bmf-atom "natural-string" value))
+    (defn natural-src-punct (value) (bmf-atom "natural-punct" value))
+
+    (defn natural-kw (value) (object-lit "natural-word" value))
+    (defn natural-op (value) (object-lit "natural-punct" value))
+    (defn natural-name (capture-name) (list "capture" capture-name (object-lit "natural-word" "")))
+    (defn natural-int-lit (capture-name) (list "capture" capture-name (object-lit "natural-int" "")))
+    (defn natural-string-lit (capture-name) (list "capture" capture-name (object-lit "natural-string" "")))
+
+    ;; Locale, register, and environment belong to the lens context. They are
+    ;; not part of the binary object identity and can change per emission.
+    (defn natural-symbol-context (locale register environment lens bindings)
+        (natural-symbol-context-rich
+            locale locale "" "" (bmf-direction-ltr) "" register environment "" "" lens bindings))
+
+    (defn natural-symbol-context-rich
+        (language-tag locale script region direction culture register environment audience purpose lens bindings)
+        (bmf-standard-symbol-context (bmf-domain-natural) lens bindings
+            (bmf-language-properties language-tag locale script region direction "" "" "")
+            (bmf-domain-properties (bmf-semantic-natural-language) culture register environment audience purpose "")
+            (bmf-media-properties (bmf-media-text-plain) (bmf-charset-utf8) "" (bmf-container-text) "" "" "")
+            (bmf-provenance-properties "" "" "" "" "")))
+
+    (defn natural-context-locale (ctx)
+        (bmf-context-locale ctx))
+
+    (defn natural-context-register (ctx)
+        (bmf-context-register ctx))
+
+    (defn natural-context-environment (ctx)
+        (bmf-context-environment ctx))
+
+    (defn natural-context-id-id? (ctx)
+        (str_eq (natural-context-locale ctx) (bmf-locale-id-id)))
+
+    (defn natural-context-math? (ctx)
+        (str_eq (natural-context-register ctx) (bmf-register-math)))
+
+    (defn natural-rule-fact-is () "fact-is")
+    (defn natural-rule-fact-the-is () "fact-the-is")
+    (defn natural-rule-fact-equals () "fact-equals")
+    (defn natural-rule-fact-id-adalah () "fact-id-adalah")
+    (defn natural-rule-relation-supports () "relation-supports")
+    (defn natural-rule-relation-relates-to () "relation-relates-to")
+    (defn natural-rule-question-what-is () "question-what-is")
+    (defn natural-rule-meaning () "meaning")
+
+    ;; --- capture helpers --------------------------------------------
+
+    (defn natural-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn natural-cap-string (objects capture-name)
+        (intern_trivial_string (natural-cap objects capture-name)))
+
+    (defn natural-cap-int (objects capture-name)
+        (intern_trivial_int (str_to_int (natural-cap objects capture-name))))
+
+    (defn natural-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn natural-kid-value (object index)
+        (node_value (nth (natural-kids object) index)))
+
+    ;; --- binary constructors ----------------------------------------
+
+    (defn natural-fact-node (subject value)
+        (intern_node NATURAL-BMF-FACT
+            (list (intern_trivial_string subject)
+                  (intern_trivial_int value))))
+
+    (defn natural-relation-node (subject relation object)
+        (intern_node NATURAL-BMF-RELATION
+            (list (intern_trivial_string subject)
+                  (intern_trivial_string relation)
+                  (intern_trivial_string object))))
+
+    (defn natural-question-node (subject)
+        (intern_node NATURAL-BMF-QUESTION
+            (list (intern_trivial_string subject))))
+
+    (defn natural-meaning-node (subject meaning)
+        (intern_node NATURAL-BMF-MEANING
+            (list (intern_trivial_string subject)
+                  (intern_trivial_string meaning))))
+
+    ;; --- rule actions ------------------------------------------------
+
+    (defn natural-emit-fact-int (objects)
+        (natural-fact-node
+            (natural-cap objects "subject")
+            (str_to_int (natural-cap objects "value"))))
+
+    (defn natural-emit-relation-supports (objects)
+        (natural-relation-node
+            (natural-cap objects "subject")
+            "supports"
+            (natural-cap objects "object")))
+
+    (defn natural-emit-relation-relates (objects)
+        (natural-relation-node
+            (natural-cap objects "subject")
+            "relates-to"
+            (natural-cap objects "object")))
+
+    (defn natural-emit-question-what-is (objects)
+        (natural-question-node (natural-cap objects "subject")))
+
+    (defn natural-emit-meaning (objects)
+        (natural-meaning-node
+            (natural-cap objects "subject")
+            (natural-cap objects "meaning")))
+
+    ;; --- reverse source emitters ------------------------------------
+
+    (defn natural-source-fact-is (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "is")
+              (natural-src-int (int_to_str (natural-kid-value object 1)))
+              (natural-src-punct ".")))
+
+    (defn natural-source-fact-the (object)
+        (list (natural-src-word "the")
+              (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "is")
+              (natural-src-int (int_to_str (natural-kid-value object 1)))
+              (natural-src-punct ".")))
+
+    (defn natural-source-fact-equals (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "equals")
+              (natural-src-int (int_to_str (natural-kid-value object 1)))
+              (natural-src-punct ".")))
+
+    (defn natural-source-fact-id-adalah (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "adalah")
+              (natural-src-int (int_to_str (natural-kid-value object 1)))
+              (natural-src-punct ".")))
+
+    (defn natural-source-relation-supports (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "supports")
+              (natural-src-word (natural-kid-value object 2))
+              (natural-src-punct ".")))
+
+    (defn natural-source-relation-relates (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "relates")
+              (natural-src-word "to")
+              (natural-src-word (natural-kid-value object 2))
+              (natural-src-punct ".")))
+
+    (defn natural-source-question-what-is (object)
+        (list (natural-src-word "what")
+              (natural-src-word "is")
+              (natural-src-word (natural-kid-value object 0))
+              (natural-src-punct "?")))
+
+    (defn natural-source-meaning (object)
+        (list (natural-src-word (natural-kid-value object 0))
+              (natural-src-word "means")
+              (natural-src-string (natural-kid-value object 1))
+              (natural-src-punct ".")))
+
+    (let natural-bmf-native-section
+        (list
+            (bmf-native "natural-emit-fact-int" natural-emit-fact-int NATURAL-BMF-FACT)
+            (bmf-native "natural-emit-relation-supports" natural-emit-relation-supports NATURAL-BMF-RELATION)
+            (bmf-native "natural-emit-relation-relates" natural-emit-relation-relates NATURAL-BMF-RELATION)
+            (bmf-native "natural-emit-question-what-is" natural-emit-question-what-is NATURAL-BMF-QUESTION)
+            (bmf-native "natural-emit-meaning" natural-emit-meaning NATURAL-BMF-MEANING)))
+
+    section [natural.bmf] {
+      fact-is ::= $subject:name "is" $value:int "." => natural-emit-fact-int <= natural-source-fact-is;
+      fact-the-is ::= "the" $subject:name "is" $value:int "." => natural-emit-fact-int <= natural-source-fact-the;
+      fact-equals ::= $subject:name "equals" $value:int "." => natural-emit-fact-int <= natural-source-fact-equals;
+      fact-id-adalah ::= $subject:name "adalah" $value:int "." => natural-emit-fact-int <= natural-source-fact-id-adalah;
+      relation-supports ::= $subject:name "supports" $object:name "." => natural-emit-relation-supports <= natural-source-relation-supports;
+      relation-relates-to ::= $subject:name "relates" "to" $object:name "." => natural-emit-relation-relates <= natural-source-relation-relates;
+      question-what-is ::= "what" "is" $subject:name "?" => natural-emit-question-what-is <= natural-source-question-what-is;
+      meaning ::= $subject:name "means" $meaning:string "." => natural-emit-meaning <= natural-source-meaning;
+    }
+
+    (defn natural-fact-rule-name-for-context (ctx)
+        (if (natural-context-id-id? ctx)
+            (natural-rule-fact-id-adalah)
+            (if (natural-context-math? ctx)
+                (natural-rule-fact-equals)
+                (natural-rule-fact-the-is))))
+
+    (defn natural-fact-rule-for-context (ctx)
+        (natural-bmf-find-rule
+            (natural-fact-rule-name-for-context ctx)
+            natural-bmf-rules))
+
+    (defn natural-fact-source-for-context (subject value ctx)
+        (if (natural-context-id-id? ctx)
+            (list (natural-src-word subject)
+                  (natural-src-word "adalah")
+                  (natural-src-int (int_to_str value))
+                  (natural-src-punct "."))
+            (if (natural-context-math? ctx)
+                (list (natural-src-word subject)
+                      (natural-src-word "equals")
+                      (natural-src-int (int_to_str value))
+                      (natural-src-punct "."))
+                (list (natural-src-word "the")
+                      (natural-src-word subject)
+                      (natural-src-word "is")
+                      (natural-src-int (int_to_str value))
+                      (natural-src-punct ".")))))
+
+    ;; --- rule lookup and dialect cell --------------------------------
+
+    (defn natural-bmf-rule-name (r) (head r))
+
+    (defn natural-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (natural-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (natural-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-natural-bmf-rule (rule-name object-stream)
+        (do
+            (let rule (natural-bmf-find-rule rule-name natural-bmf-rules))
+            (apply-object-rule rule object-stream)))
+
+    (let natural-bmf-section natural-bmf-second)
+
+    (let natural-recipe-section
+        (form-rule-recipe-section "natural"
+            (list
+                (compiler-rule "natural" "fact" "Natural-language factual source objects" natural-emit-fact-int)
+                (compiler-rule "natural" "relation" "Natural-language relation source objects" natural-emit-relation-supports)
+                (compiler-rule "natural" "question" "Natural-language question source objects" natural-emit-question-what-is)
+                (compiler-rule "natural" "meaning" "Natural-language meaning source objects" natural-emit-meaning))))
+
+    (let natural-form-source
+        (form-source "natural" (list natural-bmf-section natural-recipe-section)))
+
+    (let natural-bmf-dialect
+        (bmf-dialect "natural"
+                     (form-section-object natural-bmf-section)
+                     natural-bmf-native-section
+                     natural-bmf-rules))
+
+    0)

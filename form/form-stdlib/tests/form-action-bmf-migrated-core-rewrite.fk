@@ -1,0 +1,233 @@
+; form-action-bmf-migrated-core-rewrite.fk - rebuild
+; form-action-migrated-core-band through shared BMF action helpers.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-tail2 (value)
+        (form-action-bmf-call1 "tail"
+            (form-action-bmf-call1 "tail" value)))
+
+    (defn fa-tail3 (value)
+        (form-action-bmf-call1 "tail" (fa-tail2 value)))
+
+    (defn fa-second (value)
+        (form-action-bmf-call1 "head"
+            (form-action-bmf-call1 "tail" value)))
+
+    (defn fa-third (value)
+        (form-action-bmf-call1 "head" (fa-tail2 value)))
+
+    (let n (form-action-bmf-ident "n"))
+    (let x (form-action-bmf-ident "x"))
+    (let xs (form-action-bmf-ident "xs"))
+    (let f (form-action-bmf-ident "f"))
+    (let c (form-action-bmf-ident "c"))
+    (let t (form-action-bmf-ident "t"))
+    (let kind (form-action-bmf-ident "kind"))
+    (let value (form-action-bmf-ident "value"))
+    (let origin (form-action-bmf-ident "origin"))
+    (let inverse (form-action-bmf-ident "inverse"))
+    (let state (form-action-bmf-ident "state"))
+    (let cont (form-action-bmf-ident "cont"))
+
+    (let nil-def
+        (form-action-bmf-def "nil?" (list "xs")
+            (form-action-bmf-call2 "eq"
+                (form-action-bmf-call1 "len" xs)
+                (form-action-bmf-int "0"))))
+
+    (let square-def
+        (form-action-bmf-def "migrated_square" (list "n")
+            (form-action-bmf-call2 "mul" n n)))
+
+    (let double-def
+        (form-action-bmf-def "migrated_double" (list "n")
+            (form-action-bmf-call2 "mul" n (form-action-bmf-int "2"))))
+
+    (let map-def
+        (form-action-bmf-def "map" (list "f" "xs")
+            (form-action-bmf-if
+                (form-action-bmf-call1 "nil?" xs)
+                (form-action-bmf-call0 "empty")
+                (form-action-bmf-call2 "cons"
+                    (form-action-bmf-call1 "f"
+                        (form-action-bmf-call1 "head" xs))
+                    (form-action-bmf-call2 "map"
+                        f
+                        (form-action-bmf-call1 "tail" xs))))))
+
+    (let sum-def
+        (form-action-bmf-def "sum" (list "xs")
+            (form-action-bmf-if
+                (form-action-bmf-call1 "nil?" xs)
+                (form-action-bmf-int "0")
+                (form-action-bmf-call2 "add"
+                    (form-action-bmf-call1 "head" xs)
+                    (form-action-bmf-call1 "sum"
+                        (form-action-bmf-call1 "tail" xs))))))
+
+    (let product-def
+        (form-action-bmf-def "product" (list "xs")
+            (form-action-bmf-if
+                (form-action-bmf-call1 "nil?" xs)
+                (form-action-bmf-int "1")
+                (form-action-bmf-call2 "mul"
+                    (form-action-bmf-call1 "head" xs)
+                    (form-action-bmf-call1 "product"
+                        (form-action-bmf-call1 "tail" xs))))))
+
+    (let cell-def
+        (form-action-bmf-def "cell" (list "kind" "value" "origin" "inverse")
+            (form-action-bmf-call5 "list"
+                (form-action-bmf-string "cell")
+                kind
+                value
+                origin
+                inverse)))
+
+    (let cell-value-def
+        (form-action-bmf-def "cell-value" (list "c")
+            (fa-third c)))
+
+    (let cell-origin-def
+        (form-action-bmf-def "cell-origin" (list "c")
+            (form-action-bmf-call1 "head" (fa-tail3 c))))
+
+    (let migrated-cell-origin-def
+        (form-action-bmf-def "migrated_cell_origin" (list "c")
+            (form-action-bmf-call1 "cell-origin" c)))
+
+    (let migrated-cell-value-plus-origin-def
+        (form-action-bmf-def "migrated_cell_value_plus_origin" (list "c")
+            (form-action-bmf-call2 "add"
+                (form-action-bmf-call1 "cell-value" c)
+                (form-action-bmf-call1 "migrated_cell_origin" c))))
+
+    (let cell-undo-def
+        (form-action-bmf-def "cell-undo" (list "c")
+            (form-action-bmf-call1 "cell-origin" c)))
+
+    (let task-undo-def
+        (form-action-bmf-def "task-undo" (list "t")
+            (form-action-bmf-call1 "cell-origin" t)))
+
+    (let task-cell-def
+        (form-action-bmf-def "task-cell" (list "state" "value" "cont" "origin" "inverse")
+            (form-action-bmf-call4 "cell"
+                (form-action-bmf-string "task")
+                (form-action-bmf-call3 "list" state value cont)
+                origin
+                inverse)))
+
+    (let task-state-def
+        (form-action-bmf-def "task-state" (list "t")
+            (form-action-bmf-call1 "head"
+                (form-action-bmf-call1 "cell-value" t))))
+
+    (let task-value-def
+        (form-action-bmf-def "task-value" (list "t")
+            (fa-second
+                (form-action-bmf-call1 "cell-value" t))))
+
+    (let task-ready-def
+        (form-action-bmf-def "task-ready?" (list "t")
+            (form-action-bmf-call2 "str_eq"
+                (form-action-bmf-call1 "task-state" t)
+                (form-action-bmf-string "resolved"))))
+
+    (let task-step-def
+        (form-action-bmf-def "task-step" (list "t")
+            (form-action-bmf-call1 "migrated_double"
+                (form-action-bmf-call1 "task-value" t))))
+
+    (let migrated-task-score-def
+        (form-action-bmf-def "migrated_task_score" (list "t")
+            (form-action-bmf-if
+                (form-action-bmf-call1 "task-ready?" t)
+                (form-action-bmf-call1 "task-step" t)
+                (form-action-bmf-int "0"))))
+
+    (let numbers-let
+        (form-action-bmf-let "migrated_numbers"
+            (form-action-bmf-call4 "list"
+                (form-action-bmf-int "1")
+                (form-action-bmf-int "2")
+                (form-action-bmf-int "3")
+                (form-action-bmf-int "4"))))
+
+    (let squares-let
+        (form-action-bmf-let "migrated_squares"
+            (form-action-bmf-call2 "map"
+                (form-action-bmf-ident "migrated_square")
+                (form-action-bmf-call3 "list"
+                    (form-action-bmf-int "2")
+                    (form-action-bmf-int "3")
+                    (form-action-bmf-int "4")))))
+
+    (let cell-let
+        (form-action-bmf-let "migrated_cell"
+            (form-action-bmf-call4 "cell"
+                (form-action-bmf-string "migrated")
+                (form-action-bmf-int "11")
+                (form-action-bmf-int "5")
+                (form-action-bmf-ident "migrated_cell_origin"))))
+
+    (let task-let
+        (form-action-bmf-let "migrated_task"
+            (form-action-bmf-call5 "task-cell"
+                (form-action-bmf-string "resolved")
+                (form-action-bmf-int "9")
+                (form-action-bmf-ident "migrated_double")
+                (form-action-bmf-call0 "empty")
+                (form-action-bmf-ident "task-undo"))))
+
+    (let list-score-let
+        (form-action-bmf-let "migrated_list_score"
+            (form-action-bmf-call2 "add"
+                (form-action-bmf-call1 "sum"
+                    (form-action-bmf-ident "migrated_numbers"))
+                (form-action-bmf-call1 "product"
+                    (form-action-bmf-call3 "list"
+                        (form-action-bmf-int "2")
+                        (form-action-bmf-int "3")
+                        (form-action-bmf-int "4"))))))
+
+    (let cell-score-let
+        (form-action-bmf-let "migrated_cell_score"
+            (form-action-bmf-call2 "add"
+                (form-action-bmf-call1 "migrated_cell_value_plus_origin"
+                    (form-action-bmf-ident "migrated_cell"))
+                (form-action-bmf-call1 "cell-undo"
+                    (form-action-bmf-ident "migrated_cell")))))
+
+    (let task-score-let
+        (form-action-bmf-let "migrated_task_score_value"
+            (form-action-bmf-call1 "migrated_task_score"
+                (form-action-bmf-ident "migrated_task"))))
+
+    (let total-let
+        (form-action-bmf-let "migrated_total"
+            (form-action-bmf-call2 "add"
+                (form-action-bmf-call2 "add"
+                    (form-action-bmf-ident "migrated_list_score")
+                    (form-action-bmf-call1 "sum"
+                        (form-action-bmf-ident "migrated_squares")))
+                (form-action-bmf-call2 "add"
+                    (form-action-bmf-ident "migrated_cell_score")
+                    (form-action-bmf-ident "migrated_task_score_value")))))
+
+    (let final-score (form-action-bmf-ident "migrated_total"))
+
+    (let do-rt
+        (form-action-bmf-do-roundtrip
+            (list
+                nil-def square-def double-def map-def sum-def product-def
+                cell-def cell-value-def cell-origin-def migrated-cell-origin-def
+                migrated-cell-value-plus-origin-def cell-undo-def task-undo-def
+                task-cell-def task-state-def task-value-def task-ready-def task-step-def
+                migrated-task-score-def numbers-let squares-let cell-let task-let
+                list-score-let cell-score-let task-score-let total-let final-score)))
+    (let program (form-action-bmf-roundtrip-program do-rt))
+
+    (form-action-bmf-proof-score (walk_recipe program) do-rt program))

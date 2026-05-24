@@ -8,20 +8,20 @@ source:
     symbols: [POST /api/substrate/render-kernels, GET /api/substrate/render-kernels/{blueprint_hash}]
   - file: api/app/models/substrate_render.py
     symbols: [RenderKernelCreate, RenderKernelOut, RenderKernelEdge]
-  - file: experiments/memory-as-framebuffer-v0/src/substrate_bridge.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/substrate_bridge.rs
     symbols: [SubstrateClient, blueprint_hash_for_type_tag, fetch_recipe_for_blueprint, push_provenance]
-  - file: experiments/memory-as-framebuffer-v0/src/lib.rs
+  - file: seedbank/memory-as-framebuffer-v0/src/lib.rs
     symbols: [Tracked — extended to compute Blueprint hash at construction]
   - file: api/tests/test_substrate_render_kernels.py
     symbols: [test_register_kernel, test_lookup_by_blueprint_hash, test_render_edge_persists]
-  - file: experiments/memory-as-framebuffer-v0/tests/substrate_bridge_smoke.rs
+  - file: seedbank/memory-as-framebuffer-v0/tests/substrate_bridge_smoke.rs
     symbols: [test_provenance_uses_substrate_hash, test_render_kernel_fetched_from_api]
 requirements:
   - "Add Blueprint-hash computation to Tracked<T> construction: each Tracked allocation produces a Blueprint hash (Blake3 of the type's structural form: type-name + size + field layout) and stores that as the cell's type tag (extended from 16-bit primitive tag to a 64-bit hash, with a 16-bit fast-path lookup table for the v0 primitives)."
   - "Provenance plane writes substrate cell hashes (64-bit) instead of crc32(file:line). The substrate cell at that hash represents the source location with file/line/symbol metadata content-addressed."
   - "POST /api/substrate/render-kernels accepts a RenderKernelCreate { blueprint_hash, recipe_content, kernel_kind } and creates a substrate cell + (Blueprint)-[:rendered_by]->(Recipe) edge in the existing graph DB."
   - "GET /api/substrate/render-kernels/{blueprint_hash} returns the registered Recipe (kernel content) for that Blueprint, or 404 if no override is registered. The default-render fallback path kicks in when 404 is returned."
-  - "experiments/memory-as-framebuffer-v0/src/substrate_bridge.rs adds a SubstrateClient that, at framebuffer init, fetches all registered render kernels for the Blueprints present in the program and caches them locally. Cache misses (new Blueprint encountered mid-run) trigger an async refresh; cells render with default until the refresh lands."
+  - "seedbank/memory-as-framebuffer-v0/src/substrate_bridge.rs adds a SubstrateClient that, at framebuffer init, fetches all registered render kernels for the Blueprints present in the program and caches them locally. Cache misses (new Blueprint encountered mid-run) trigger an async refresh; cells render with default until the refresh lands."
   - "Cross-language type identity test: a Python type with the same structural form as a Rust type produces the same Blueprint hash, and registering a kernel for that hash in either language causes both to render with that kernel."
   - "Hallucination-bounded check: if a Tracked allocation produces a Blueprint hash not in substrate, the framebuffer auto-registers a minimal Blueprint cell (structural metadata only, no Recipe) so substrate stays in sync with what's actually being rendered."
 done_when:
@@ -29,8 +29,7 @@ done_when:
   - "POST /api/substrate/render-kernels creates a kernel; the Rust example's next render cycle picks up the new kernel and the matrix3x3 cells render through it (when v1-render-trait is also live)."
   - "test_substrate_render_kernels.py passes: register, lookup, edge persistence."
   - "tests/substrate_bridge_smoke.rs passes: provenance hash resolution, kernel fetch."
-  - 'pytest_passes("api/tests/test_substrate_render_kernels.py")'
-test: "cd api && .venv/bin/pytest -q tests/test_substrate_render_kernels.py && cd ../experiments/memory-as-framebuffer-v0 && cargo test --release substrate_bridge"
+test: "cd api && .venv/bin/pytest -q tests/test_substrate_render_kernels.py && cd ../seedbank/memory-as-framebuffer-v0 && cargo test --release substrate_bridge"
 constraints:
   - "Builds on memory-as-framebuffer-v0 (Rust crate) and the existing coherence-substrate (Python). The substrate cell schema and graph DB are already in place — this spec uses them, does not redefine them."
   - "Type-tag widening from u16 to u64 is a breaking change to the v0 storage layout. Document migration; v0 mp4s remain replayable, but the v0 binary format is bumped to v0.2.0."
@@ -40,10 +39,6 @@ constraints:
 ---
 
 # Spec: Substrate as Render Fabric — v0
-
-## Related Specs
-
-- [`agent-memory-system`](agent-memory-system.md) — sibling substrate-grounded service: the render-fabric binds Tracked allocations to Blueprint cells; agent-memory binds metabolized moments to relationship-nodes. Both teach *execution lands in substrate, not beside it*. Surfaced by the substrate-surprise organ on 2026-05-24.
 
 ## Purpose
 
@@ -82,19 +77,19 @@ Bridge the memory-as-framebuffer crate to the existing coherence-substrate so th
 - `api/app/models/substrate_render.py` — Pydantic models
 - `api/app/main.py` — register new router
 - `api/tests/test_substrate_render_kernels.py` — new tests
-- `experiments/memory-as-framebuffer-v0/src/substrate_bridge.rs` — new module
-- `experiments/memory-as-framebuffer-v0/src/lib.rs` — extend Tracked + track! for u64 tag/provenance
-- `experiments/memory-as-framebuffer-v0/src/allocator.rs` — widen cell layout (type tag 2→8 bytes, payload 14→8 bytes; or keep payload 14 and grow cell to 24 bytes — TBD by implementer, document choice)
-- `experiments/memory-as-framebuffer-v0/Cargo.toml` — add blake3, reqwest (or ureq for sync fallback), serde_json
-- `experiments/memory-as-framebuffer-v0/tests/substrate_bridge_smoke.rs`
-- `experiments/memory-as-framebuffer-v0/README.md` — add Substrate Bridge section, env-var docs
+- `seedbank/memory-as-framebuffer-v0/src/substrate_bridge.rs` — new module
+- `seedbank/memory-as-framebuffer-v0/src/lib.rs` — extend Tracked + track! for u64 tag/provenance
+- `seedbank/memory-as-framebuffer-v0/src/allocator.rs` — widen cell layout (type tag 2→8 bytes, payload 14→8 bytes; or keep payload 14 and grow cell to 24 bytes — TBD by implementer, document choice)
+- `seedbank/memory-as-framebuffer-v0/Cargo.toml` — add blake3, reqwest (or ureq for sync fallback), serde_json
+- `seedbank/memory-as-framebuffer-v0/tests/substrate_bridge_smoke.rs`
+- `seedbank/memory-as-framebuffer-v0/README.md` — add Substrate Bridge section, env-var docs
 - `api/app/routers/INDEX.md` — add line for substrate_render.py
 - `api/app/services/INDEX.md` — add line for render_kernels.py
 
 ## Acceptance Tests
 
 - `cd api && .venv/bin/pytest -q tests/test_substrate_render_kernels.py` passes — register/lookup/edge/auth.
-- `cd experiments/memory-as-framebuffer-v0 && cargo test --release substrate_bridge` passes — provenance resolution and kernel fetch (uses a mock substrate URL or a docker-compose'd local API).
+- `cd seedbank/memory-as-framebuffer-v0 && cargo test --release substrate_bridge` passes — provenance resolution and kernel fetch (uses a mock substrate URL or a docker-compose'd local API).
 - Manual validation: `MFB_SUBSTRATE_URL=https://api.coherencycoin.com cargo run --release --example fizzbuzz` writes provenance to substrate; the substrate API confirms the source-location cells exist after the run.
 
 ## Verification
@@ -104,7 +99,7 @@ Bridge the memory-as-framebuffer crate to the existing coherence-substrate so th
 cd api && .venv/bin/pytest -q tests/test_substrate_render_kernels.py
 
 # Crate side (with mock substrate URL)
-cd experiments/memory-as-framebuffer-v0
+cd seedbank/memory-as-framebuffer-v0
 cargo test --release substrate_bridge
 
 # End-to-end (production substrate)

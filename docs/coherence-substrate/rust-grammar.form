@@ -3,8 +3,8 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 # Stub Language cell for Rust. The Rust kernel at
-# experiments/form-kernel-rust/ and the framebuffer crate at
-# experiments/memory-as-framebuffer-v0/ become inspectable through
+# form/form-kernel-rust/ and the framebuffer crate at
+# seedbank/memory-as-framebuffer-v0/ become inspectable through
 # this Language cell once the BMF rules land
 # (per lc-the-kernel-knows-itself).
 #
@@ -279,16 +279,16 @@ defn rust_lang = language_cell_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # Two Rust artifacts the body already holds:
-#   - experiments/form-kernel-rust/ — the Rust port of the substrate
+#   - form/form-kernel-rust/ — the Rust port of the substrate
 #     kernel
-#   - experiments/memory-as-framebuffer-v0/ — the body's direct
+#   - seedbank/memory-as-framebuffer-v0/ — the body's direct
 #     ancestor for source-attribution-as-overlay
 #     (lc-the-recipe-remembers-its-source)
 #
 # Both become inspectable through rust-grammar:
 #
 #   form_cli convert in --tongue rust \
-#       experiments/form-kernel-rust/src/lib.rs
+#       form/form-kernel-rust/src/lib.rs
 #     → Form object tree with rust_file_shape root, every
 #       function/struct/impl as its own Blueprint subtree,
 #       source_attribution stamped from syn's Span data.
@@ -299,7 +299,7 @@ defn rust_lang = language_cell_shape {
 #     @recipe(parse(@language(python),
 #                   read_bytes("api/app/services/substrate/kernel.py")))
 #     @recipe(parse(@language(rust),
-#                   read_bytes("experiments/form-kernel-rust/src/lib.rs")))
+#                   read_bytes("form/form-kernel-rust/src/lib.rs")))
 #
 # answer cross-kernel structural alignment as substrate truth, per
 # lc-the-kernel-knows-itself. The framebuffer's track! macro
