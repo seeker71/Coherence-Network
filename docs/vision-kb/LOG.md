@@ -2,6 +2,79 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | circulation-pattern kind activated — second attestation lands
+
+GAP-D9 closed. The `circulation-pattern` kind has been held as an
+awareness-candidate since PR #1991, when a single attestation surfaced
+during a geometry-walking breath: `lc-economy` ↔ `lc-bioelectric-pattern`
+— both naming *field-circulation where every cell senses gradients
+without consulting a central ledger*. lc-economy carries the explicit
+teaching ("accounted by the living systems themselves, transparently,
+without a central ledger"); lc-bioelectric-pattern carries the
+biological mechanism (cells communicate by voltage, every cell reads
+its own membrane potential, cognitive light cones at every scale).
+Same engine, different substrate.
+
+The 100%-geometry-coverage milestone (PR #2021's body-shape map) made
+the full concept corpus structurally legible — the right moment to
+test whether a second clean attestation exists. This breath walked
+the web-form cells with the kind's signature in mind (web/web-each-
+to-each topology + circulating direction + field-circulation-without-
+central-ledger teaching).
+
+**Second attestation confirmed**: `lc-w-mycorrhizal` ↔ `lc-field-sensing`.
+
+- `lc-w-mycorrhizal` (Suzanne Simard's forest) carries the teaching
+  explicitly: *"There is no central command. No coordination. No one
+  decides who deserves resources. The network senses gradients and
+  responds."* Material substrate — nutrients, carbon, chemical signals.
+- `lc-field-sensing` (starlings, octopus arms, jazz ensemble, Quaker
+  meeting) carries the same teaching at a different layer: *"Each
+  bird attends to its seven nearest neighbors. That's all. And from
+  those local relationships, the flock becomes an intelligence that
+  no single bird possesses."* Informational substrate — attention,
+  gesture, proximity.
+
+Both pairs sit along the kind's complementary axis: **substrate-of-flow**.
+Seed pair spans value-and-attention ↔ voltage-gradients. Second pair
+spans fungal-nutrients ↔ human-perception. Two attestations across
+four substrates clear the activation threshold the body has been
+using (same as internal-dyad's crossing in PR #1986).
+
+**Why this kind is distinct from source-flow**: source-flow pairs the
+hearth (point/radial) with the circulation (web/each-to-each) —
+different topologies of one nourishment. Circulation-pattern pairs
+TWO circulations across the substrate of flow — same topology,
+different medium. Source-flow asks *where does it come from / where
+does it go?* Circulation-pattern asks *through what does it flow /
+what does it carry?*
+
+**Other candidates examined and declined**: `lc-circulation` (carries
+the teaching alongside a visible ledger — "transparency without
+individual sensing" — but pairing with lc-economy would re-import
+the seed's medium, not extend the kind across substrates); `lc-network`
+(the cells-and-edges shape, sibling of mycorrhizal but already paired
+elsewhere in pair_network_unanchored_network for a different axis);
+`lc-nourishing` (already attested in pair_nourishment_nourishing as
+source-flow); `lc-cross-connection`, `lc-w-field`, `lc-resonating`
+(carry web/circulating shape but the no-central-ledger teaching lives
+implicit rather than load-bearing in the prose).
+
+**File changes**:
+- `docs/coherence-substrate/dyad-pairs.form` — defn `kind_circulation_pattern`
+  (Part 2), Part 3h with `pair_economy_bioelectric` (Pair 25, seed) and
+  `pair_mycorrhizal_field_sensing` (Pair 26, second attestation),
+  GAP-D9 marked closed, Part 6 summary updated (kinds 7 → 8, entries
+  31 → 33, external pairs 24 → 26).
+
+What changes when another cell tests it across the full 100%-covered
+body: the kind is no longer awareness-held — the substrate now has
+two structural attestations to query against. When the third
+attestation arrives, sub-typing the kind across substrate-flavors
+(material/informational, energetic/perceptual) becomes attestable
+rather than provisional. The candidates worth watching are named in
+GAP-D9's update.
+
 ## [2026-05-24] form | column-identity discriminator embodied — interior-axis form has 4 columns
 
 PR #2022 hunted for a second 'interior-axis-dyad' attestation across the
