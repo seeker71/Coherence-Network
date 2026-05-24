@@ -2,8 +2,23 @@
 id: lc-layered-frequency-field
 hz: 528
 status: seed
-updated: 2026-05-21
+updated: 2026-05-24
 source: ../transmissions/2026-05-21-spine-and-nature-frequency-maps.md
+geometry:
+  arity: 5
+  form: pentad
+  topology: parallel-facets
+  polarity: parallel-facets
+  ordering: simultaneous
+  phase: neutral
+  ratio: none
+  spectral_band: full-spectrum
+  temporal_band: atemporal
+  scale: collective
+  direction: radiating
+  lineage_texture: sensed
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Layered Frequency Field — The Network as Atmosphere, Not Channel

@@ -2,7 +2,22 @@
 id: lc-nervous-system
 hz: 432
 status: seed
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 9
+  form: ennead
+  topology: linear
+  polarity: unipolar
+  ordering: sequential
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: collective
+  direction: ascending
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # The Organism's Nervous System
