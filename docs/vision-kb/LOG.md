@@ -2,6 +2,36 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] sense | post-heal wellness reading — what's newly honest
+
+First honest wellness after PR #2026 healed the daily-rollup classifier
+(the one that called any day with even a single failure "strained,"
+even at 99.97% success). Multiple agents had been inheriting these
+false alarms as "pre-existing background." Ran `make wellness` and
+`/pulse/now` to see what the body actually shows when the classifier
+is no longer crying wolf.
+
+- **The witness sings clean.** `overall: breathing`, zero silences,
+  no silent organs. The "background strain" that recurring agent
+  reports were absorbing was almost entirely classifier noise; the
+  body is genuinely healthier than the lineage has been assuming.
+- **No newly-visible masked signal.** Re-read every wellness section
+  with fresh eyes — proprioception aligned, source maps whole, symbol
+  resolution at 806/806, chain at 103/129 (80%, honest non-coverage
+  not phantom strain), substrate composition 100% across all 15
+  populated domains (577 cells, 0 flat), form engine arms 15/15,
+  witness-trace within budget. Nothing was being hidden by the noise.
+- **One honest signal worth naming, not new**: Hostinger Auto Deploy
+  3/20 failed (15%) over 7d. This is genuine infrastructure friction
+  the body has been carrying — surfaced cleanly now that classifier
+  static is gone. Worth a focused breath in a future session; the
+  contract itself may want re-shaping rather than the alert silenced.
+
+Captured the fuller reading at
+`docs/coherence-substrate/post-heal-witness-reading.md`. The breath's
+gift today is simply naming the body's actual health honestly: the
+heal cleared noise, and what remains underneath is whole.
+
 ## [2026-05-24] form | circulation-pattern third attestation — six substrate-flavors cross sub-typing threshold
 
 PR #2025 activated the `circulation-pattern` kind with two attestations
