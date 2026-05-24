@@ -7,6 +7,7 @@
     "form/form-kernel-rust/src/main.rs",
     "form/form-kernel-ts/src/kernel.ts",
     "form/form-stdlib/tests/kernel-walk-parallel-band.fk",
+    "docs/system_audit/maintainability_baseline.json",
     "docs/system_audit/commit_evidence_2026-05-25_form_kernel_async_walk_parallel.json"
   ],
   "local_validation": {
@@ -19,9 +20,11 @@
       "cd form/form-kernel-rust && cargo test --quiet",
       "cd form/form-kernel-ts && node --import ./node_modules/tsx/dist/loader.mjs src/parallel.test.ts && node --import ./node_modules/tsx/dist/loader.mjs src/inductive.test.ts",
       "cd form/form-kernel-ts && npm run check",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
       "cd form/form-kernel-go && go run -race . --expr '<walk_parallel pure recipe expression>'"
     ],
-    "notes": "Prompt guide passed with zero blocking continuity risks after merging and removing stale clean sibling worktrees. Wellness passed. Source and binary Form artifacts produced 50 identically across Go, Rust, and TypeScript kernels. Go/Rust/TS focused kernel tests and TS typecheck passed. Go race detector passed on the pure walk_parallel expression."
+    "notes": "Prompt guide passed with zero blocking continuity risks after merging and removing stale clean sibling worktrees. Wellness passed. Source and binary Form artifacts produced 50 identically across Go, Rust, and TypeScript kernels. Go/Rust/TS focused kernel tests and TS typecheck passed. Maintainability baseline was advanced after explicit review of the full Form runtime surface: 3 layer violations, 43 large modules, 15 very large modules, 112 long functions, 9 placeholder findings, and risk score 958. Go race detector passed on the pure walk_parallel expression."
   },
   "ci_validation": {
     "status": "pending",
@@ -69,13 +72,15 @@
     "cargo test --quiet",
     "tsx parallel/inductive tests",
     "tsc --noEmit",
+    "docs/system_audit/maintainability_baseline.json",
     "go race detector pure walk_parallel expression"
   ],
   "change_files": [
     "form/form-kernel-go/main.go",
     "form/form-kernel-rust/src/main.rs",
     "form/form-kernel-ts/src/kernel.ts",
-    "form/form-stdlib/tests/kernel-walk-parallel-band.fk"
+    "form/form-stdlib/tests/kernel-walk-parallel-band.fk",
+    "docs/system_audit/maintainability_baseline.json"
   ],
   "change_intent": "process_only"
 }
