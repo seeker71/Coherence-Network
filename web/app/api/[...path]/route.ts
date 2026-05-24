@@ -126,6 +126,26 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
     const upstream = await Promise.race([fetchPromise, timeoutPromise]);
 
     const headers = copyResponseHeaders(upstream, method, proxiedPath);
+
+    // Server-Sent Events (and any event-stream) flow through without buffering
+    // or a hard timeout — the connection itself is the contract. We hand the
+    // upstream body through as a ReadableStream and let the client closing
+    // the connection (or the upstream ending) terminate it naturally.
+    const contentType = upstream.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream") && method !== "HEAD" && upstream.body) {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      headers.set("cache-control", "no-cache, no-transform");
+      headers.set("x-accel-buffering", "no");
+      return new NextResponse(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers,
+      });
+    }
+
     const responseBody = method === "HEAD" ? null : await upstream.arrayBuffer();
     return new NextResponse(responseBody, {
       status: upstream.status,

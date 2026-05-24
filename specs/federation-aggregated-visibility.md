@@ -1,6 +1,6 @@
 ---
 idea_id: federation-and-nodes
-status: draft
+status: active
 source:
   - file: api/app/routers/federation.py
     symbols: [get_aggregated_node_stats, get_network_summary]
@@ -24,6 +24,19 @@ done_when:
   - "curl https://api.coherencycoin.com/api/federation/network-summary | jq '.total_nodes' returns a number >= 0"
   - "/nodes web page renders without error when both endpoints return empty data"
   - "all existing tests pass"
+  - 'file_exists("api/app/routers/federation.py")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_aggregated_node_stats")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_network_summary")'
+  - 'file_exists("api/app/services/federation_service.py")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "get_aggregated_node_stats")'
+  - 'symbol_in_file("api/app/services/federation_service.py", "get_network_summary")'
+  - 'file_exists("api/app/models/federation.py")'
+  - 'symbol_in_file("api/app/models/federation.py", "NetworkSummaryResponse")'
+  - 'symbol_in_file("api/app/models/federation.py", "AggregatedNodeStatsResponse")'
+  - 'file_exists("web/app/nodes/page.tsx")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "loadData")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "NodesPage")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "NetworkStatsSection")'
 test: "cd api && python -m pytest api/tests/ -q -k federation"
 constraints:
   - "Do not change the existing /api/federation/nodes/stats response shape — only add the new /api/federation/network-summary endpoint"
@@ -239,3 +252,12 @@ If provider stats or network-summary fail, the page still returns 200 — sectio
 - Alerting / notification when a provider crosses a threshold (covered by `provider-health-alerting` spec)
 - Strategy propagation visibility (covered by `federation-network-layer` spec)
 - Authentication gating on the network-summary endpoint
+
+## Known Gaps
+
+- None.
+
+## Acceptance Tests
+
+- Validated by: `cd api && python -m pytest api/tests/ -q -k federation`
+

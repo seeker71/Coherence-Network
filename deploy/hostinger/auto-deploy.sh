@@ -178,6 +178,57 @@ sync_substrate_content() {
   if [[ -d "$REPO_DIR/docs/lineage" ]]; then
     docker compose cp "$REPO_DIR/docs/lineage" api:/app/docs/lineage 2>&1 | tee -a "$LOG_FILE"
   fi
+  if [[ -d "$REPO_DIR/docs/breath" ]]; then
+    docker compose cp "$REPO_DIR/docs/breath" api:/app/docs/breath 2>&1 | tee -a "$LOG_FILE"
+  fi
+  # Single-file evidence the registry-submissions endpoint reads at import
+  # time. Without this copy /app/docs/registry-submissions.json is missing
+  # and the endpoint returns items:[] (core_requirement_met:false) even
+  # though the file is healthy at the repo root.
+  if [[ -f "$REPO_DIR/docs/registry-submissions.json" ]]; then
+    docker compose exec -T api sh -lc 'mkdir -p /app/docs' \
+      2>&1 | tee -a "$LOG_FILE" || true
+    docker compose cp "$REPO_DIR/docs/registry-submissions.json" \
+      api:/app/docs/registry-submissions.json 2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  # Registry submission assets the validator checks per-item. The body
+  # already carries glama.json, server.json, smithery.yaml, pulsemcp.json,
+  # the MCP package README, SKILL.md, .cursor/skills/, the root README,
+  # and docs/shared/ecosystem-table.md at the repo root. Inside the api
+  # container these surfaces live under /app/, where the validator
+  # resolves repo-root via parents[2]. Sync them so the live endpoint
+  # sees the same readiness the local validator sees.
+  docker compose exec -T api sh -lc 'rm -rf /app/mcp-server /app/skills /app/.cursor/skills /app/docs/shared' \
+    2>&1 | tee -a "$LOG_FILE" || true
+  if [[ -d "$REPO_DIR/mcp-server" ]]; then
+    docker compose cp "$REPO_DIR/mcp-server" api:/app/mcp-server 2>&1 | tee -a "$LOG_FILE"
+  fi
+  if [[ -d "$REPO_DIR/skills" ]]; then
+    docker compose cp "$REPO_DIR/skills" api:/app/skills 2>&1 | tee -a "$LOG_FILE"
+  fi
+  if [[ -d "$REPO_DIR/.cursor/skills" ]]; then
+    docker compose exec -T api sh -lc 'mkdir -p /app/.cursor' \
+      2>&1 | tee -a "$LOG_FILE" || true
+    docker compose cp "$REPO_DIR/.cursor/skills" api:/app/.cursor/skills 2>&1 | tee -a "$LOG_FILE"
+  fi
+  if [[ -d "$REPO_DIR/docs/shared" ]]; then
+    docker compose cp "$REPO_DIR/docs/shared" api:/app/docs/shared 2>&1 | tee -a "$LOG_FILE"
+  fi
+  if [[ -f "$REPO_DIR/README.md" ]]; then
+    docker compose cp "$REPO_DIR/README.md" api:/app/README.md 2>&1 | tee -a "$LOG_FILE"
+  fi
+  # The registry inventory references the MCP entry point at its repo-
+  # relative path (api/mcp_server.py). Inside the container the file
+  # lives at /app/mcp_server.py because the api directory is the
+  # container root. Mirror it under /app/api/ so the validator's
+  # source_paths check resolves the same in both layouts.
+  if [[ -f "$REPO_DIR/api/mcp_server.py" ]]; then
+    docker compose exec -T api sh -lc 'mkdir -p /app/api' \
+      2>&1 | tee -a "$LOG_FILE" || true
+    docker compose cp "$REPO_DIR/api/mcp_server.py" api:/app/api/mcp_server.py \
+      2>&1 | tee -a "$LOG_FILE"
+  fi
 }
 
 run_substrate_ingest() {

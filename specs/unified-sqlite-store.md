@@ -14,6 +14,14 @@ requirements:
 done_when:
   - pytest api/tests/test_unified_sqlite_store.py passes
   - pytest api/tests/test_schema_init_fastpath.py passes
+  - 'file_exists("api/app/services/unified_db.py")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "database_url")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "engine")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "get_sessionmaker")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "session")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "ensure_schema")'
+  - 'pytest_passes("api/tests/test_persistence_contract_config.py")'
+test: "cd api && python -m pytest -q tests/test_persistence_contract_config.py"
 ---
 
 > **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)

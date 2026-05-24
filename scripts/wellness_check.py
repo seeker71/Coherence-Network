@@ -608,16 +608,10 @@ def sense_substrate_surprise() -> list[str]:
     """Names structural twins of recently-touched cells that haven't been
     looked at yet.
 
-    The substrate's content-addressing already finds same-shape cells
-    across documents (PR #1693 fenced it; PR #1696 made it MCP-reachable).
-    What it doesn't do on its own is *tell you* — you have to ask.
-
-    This organ asks for you, once per wellness pass. It walks the files
-    touched in the last 14 days (git log), resolves each to its
-    substrate cell, finds structural equivalents, and reports the
-    equivalents that haven't appeared in that touched set. That is the
-    "tap on the shoulder" — the body holds twins of your recent work
-    that you haven't acknowledged yet.
+    Delegates to api/app/services/substrate/sense_surprise.py so the
+    `coh substrate sense --surprise` CLI surfaces the same data through
+    one shared organ. Previously this logic lived inline and `sense`
+    didn't see it — they gave different answers about the same body.
 
     Silent when there's nothing surprising.
     """
@@ -629,125 +623,21 @@ def sense_substrate_surprise() -> list[str]:
 
     try:
         from app.services.unified_db import session as session_scope
-        from app.services.substrate.kernel import find_equivalent_cells, _orm_to_cell
-        from app.services.substrate.orm import SubstrateNamedCellORM
+        from app.services.substrate.sense_surprise import (
+            find_unseen_twins, format_for_wellness,
+        )
     except Exception:
         return ["  (substrate not importable; skipping)"]
 
-    r = subprocess.run(
-        ["git", "log", "--since=14.days.ago", "--name-only", "--pretty=format:"],
-        cwd=ROOT, capture_output=True, text=True, check=False,
-    )
-    touched_paths = sorted({
-        line.strip() for line in r.stdout.splitlines()
-        if line.strip() and any(
-            line.strip().startswith(prefix) for prefix in (
-                "docs/vision-kb/concepts/",
-                "docs/coherence-substrate/",
-                "docs/lineage/",
-                "specs/",
-                "ideas/",
-                "docs/presences/",
-                "docs/field/",
-            )
-        ) and line.strip().endswith(".md")
-    })
-
-    if not touched_paths:
-        return ["  (no substrate-ingested paths touched in the last 14 days)"]
-
     try:
         with session_scope() as session:
-            touched_cells: list = []
-            for path in touched_paths:
-                # Suffix-match: cell source_paths are absolute and tied to
-                # the worktree they were ingested from. We don't care which;
-                # we match by the repo-relative tail.
-                orm = (
-                    session.query(SubstrateNamedCellORM)
-                    .filter(SubstrateNamedCellORM.source_path.like(f"%/{path}"))
-                    .order_by(SubstrateNamedCellORM.cell_id)
-                    .first()
-                )
-                if orm is None:
-                    continue
-                touched_cells.append(_orm_to_cell(session, orm))
-
-            touched_keys = {(c.domain, c.name) for c in touched_cells}
-
-            if not touched_keys:
-                return [
-                    f"  ({len(touched_paths)} touched paths, none resolve to substrate cells yet)"
-                ]
-
-            # Group by Blueprint shape — many concept cells share one
-            # blueprint today (the structural-composition migration is
-            # ongoing per CLAUDE.md), so the meaningful unit of surprise
-            # is "you touched cells with this shape; here are the others."
-            from collections import defaultdict
-            shape_to_touched: dict = defaultdict(list)
-            shape_to_unseen: dict = defaultdict(list)
-            for cell in touched_cells:
-                if cell.blueprint is None or cell.blueprint.is_undefined():
-                    continue
-                shape_key = (
-                    cell.blueprint.package, cell.blueprint.level,
-                    cell.blueprint.type_, cell.blueprint.instance,
-                )
-                shape_to_touched[shape_key].append((cell.domain, cell.name))
-                # Compute unseen twins once per shape
-                if shape_key not in shape_to_unseen:
-                    twins = find_equivalent_cells(
-                        session, cell.blueprint, exclude_name="__never_excluded__"
-                    )
-                    unseen = [
-                        (t.domain, t.name) for t in twins
-                        if (t.domain, t.name) not in touched_keys
-                    ]
-                    shape_to_unseen[shape_key] = unseen
-
-            # Surface only shapes with at least one unseen twin.
-            # Sort by "asymmetry" — shapes where we touched the fewest
-            # of the cluster carry the most "you haven't seen the rest" signal.
-            ranked = sorted(
-                ((shape, shape_to_touched[shape], shape_to_unseen[shape])
-                 for shape in shape_to_touched
-                 if shape_to_unseen[shape]),
-                key=lambda r: (len(r[1]), -len(r[2])),
+            touched_count, ranked = find_unseen_twins(
+                session, ROOT, since="14.days.ago"
             )
     except Exception as exc:
         return [f"  (substrate session failed: {type(exc).__name__})"]
+    return format_for_wellness(touched_count, ranked)
 
-    if not ranked:
-        return [
-            f"  walked {len(touched_keys)} touched cell(s) — no unseen structural twins"
-        ]
-
-    lines: list[str] = []
-    total_shapes = len(ranked)
-    total_unseen = sum(len(u) for _, _, u in ranked)
-    lines.append(
-        f"  {total_shapes} shape(s) carry unseen twins ({total_unseen} cells total):"
-    )
-    for shape, touched_list, unseen in ranked[:5]:
-        shape_str = "@" + ".".join(str(x) for x in shape)
-        first_touched = touched_list[0]
-        sample = ", ".join(f"@{d}({n})" for d, n in unseen[:3])
-        more = f", +{len(unseen) - 3} more" if len(unseen) > 3 else ""
-        lines.append(
-            f"    · shape {shape_str} — you touched {len(touched_list)} "
-            f"(e.g. @{first_touched[0]}({first_touched[1]})); "
-            f"substrate holds {len(unseen)} unread: {sample}{more}"
-        )
-    if total_shapes > 5:
-        lines.append(f"    · (+{total_shapes - 5} more shape(s) with unseen twins)")
-    lines.append(
-        "  (The substrate already saw the resonance. This is the shoulder-tap"
-    )
-    lines.append(
-        "   so the next breath can choose whether to read across.)"
-    )
-    return lines
 
 
 def sense_contracts() -> list[str]:
@@ -1107,6 +997,71 @@ def sense_witness_trace() -> list[str]:
     return lines
 
 
+def _wellness_attention_line(line: str) -> bool:
+    lower = line.lower()
+    attention_markers = (
+        "drift:",
+        "missing",
+        "no readers",
+        "awaiting home",
+        "could not reach",
+        "flags raised",
+        "not found",
+        "cannot verify",
+        "no test:",
+        "no proof",
+    )
+    return any(marker in lower for marker in attention_markers)
+
+
+def _wellness_compost_line(line: str) -> bool:
+    lower = line.lower()
+    compost_markers = (
+        "aligned",
+        "root is clear",
+        "no action needed",
+        "no living_collective_*.md drafts remain",
+        "every ",
+        "coherent",
+        "within budget",
+    )
+    return any(marker in lower for marker in compost_markers)
+
+
+def build_reading(sections: list[tuple[str, list[str]]]) -> dict[str, list]:
+    """Project the wellness sections into the shared reading shape."""
+    sensed: list[str] = []
+    attention: list[dict[str, str]] = []
+    compost: list[str] = []
+
+    for header, lines in sections:
+        first = next((line.strip() for line in lines if line.strip()), "")
+        sensed.append(f"{header}: {first}" if first else f"{header}: no reading")
+        for line in lines:
+            clean = line.strip()
+            if not clean:
+                continue
+            if _wellness_attention_line(clean):
+                attention.append(
+                    {
+                        "surface": header,
+                        "reading": clean,
+                        "next_action": "Tend this surface with the smallest focused proof.",
+                    }
+                )
+            elif _wellness_compost_line(clean):
+                compost.append(f"{header}: {clean}")
+
+    if not compost and not attention:
+        compost.append("No added procedure is needed for this breath; keep the reading small.")
+
+    return {
+        "what_i_sensed": sensed,
+        "what_wants_attention": attention,
+        "what_can_compost": compost,
+    }
+
+
 def main() -> int:
     """Sense the body, print to stdout, and cache the reading.
 
@@ -1132,6 +1087,7 @@ def main() -> int:
         ("Substrate shape — do cell CTORs carry composition or flat type-markers?", sense_substrate_shape()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
     ]
+    reading = build_reading(sections)
 
     out: list[str] = []
     out.append("# Wellness check")
@@ -1144,6 +1100,27 @@ def main() -> int:
         out.append("")
         out.extend(lines)
         out.append("")
+    out.append("## Reading — shared shape")
+    out.append("")
+    out.append("what_i_sensed:")
+    for item in reading["what_i_sensed"]:
+        out.append(f"  · {item}")
+    out.append("")
+    out.append("what_wants_attention:")
+    if reading["what_wants_attention"]:
+        for item in reading["what_wants_attention"]:
+            out.append(f"  · {item['surface']}: {item['reading']}")
+            out.append(f"    → {item['next_action']}")
+    else:
+        out.append("  · none")
+    out.append("")
+    out.append("what_can_compost:")
+    if reading["what_can_compost"]:
+        for item in reading["what_can_compost"]:
+            out.append(f"  · {item}")
+    else:
+        out.append("  · no compost reading this breath")
+    out.append("")
     out.append("(Feedback is the blood. Run me anytime the body")
     out.append(" feels slightly off; I'll name what I can sense.)")
 

@@ -13,6 +13,13 @@ requirements:
   - "R6 — Extend `GET /api/ideas/{id}/tasks` response to include `phase_summary` dict keyed"
   - "R7 — When skip-ahead occurs (R3), propagate context from the completed task of the"
   - "R8 — For auto-advance and auto-retry tasks, set `context.task_fingerprint` to"
+test: "cd api && python -m pytest -q tests/test_task_dedup_service.py"
+done_when:
+  - 'file_exists("api/app/services/agent_service_active_task.py")'
+  - 'symbol_in_file("api/app/services/agent_service_active_task.py", "find_active_task_by_fingerprint")'
+  - 'symbol_in_file("api/app/services/agent_service_active_task.py", "find_active_task_by_session_key")'
+  - 'pytest_passes("api/tests/test_task_dedup_service.py")'
+
 ---
 
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)

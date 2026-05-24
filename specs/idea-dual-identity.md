@@ -20,6 +20,14 @@ done_when:
   - POST /api/ideas with no slug returns derived slug from name
   - Old slug resolves after rename via history
   - All existing test_ideas.py tests pass without modification
+  - 'file_exists("api/app/services/idea_naming.py")'
+  - 'symbol_in_file("api/app/services/idea_naming.py", "slugify")'
+  - 'file_exists("api/app/services/idea_write_ops.py")'
+  - 'symbol_in_file("api/app/services/idea_write_ops.py", "update_idea_slug")'
+  - 'file_exists("api/app/models/idea.py")'
+  - 'symbol_in_file("api/app/models/idea.py", "Idea")'
+  - 'pytest_passes("api/tests/test_edge_cases_regression.py::test_idea_slug_rename_preserves_history")'
+test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_slug_rename_preserves_history"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)

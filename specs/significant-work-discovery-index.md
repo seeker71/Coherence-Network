@@ -1,6 +1,6 @@
 ---
 idea_id: significant-work-discovery-index
-status: draft
+status: done
 priority: high
 source:
   - file: docs/field/urs/tools/build_trace_indexes.py
@@ -16,6 +16,14 @@ requirements:
 done_when:
   - "GET /api/field-stories/urs-field-story/trace/significant-work/Spellmonger returns Spellmonger Universe with concept links and child works."
   - "GET /api/field-stories/urs-field-story/trace/concept/lc-network returns related significant works and probe terms."
+  - 'file_exists("docs/field/urs/tools/build_trace_indexes.py")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "SIGNIFICANT_WORK_RULES")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "build_significant_work_indexes")'
+  - 'file_exists("api/app/services/field_story_service.py")'
+  - 'symbol_in_file("api/app/services/field_story_service.py", "get_field_story_trace_slice")'
+  - 'file_exists("api/app/services/field_story_mcp_tools.py")'
+  - 'symbol_in_file("api/app/services/field_story_mcp_tools.py", "get_field_story_trace")'
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
 constraints:
   - "Do not claim exact chapter matches until chapter-level source material is present."

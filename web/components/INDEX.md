@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 50
+**Total files**: 52
 
 | File | Purpose |
 |---|---|
@@ -17,6 +17,7 @@
 | [FirstTimeWelcome.tsx](FirstTimeWelcome.tsx) | _no top-of-file purpose_ |
 | [InspiredByPreview.tsx](InspiredByPreview.tsx) | _no top-of-file purpose_ |
 | [InspiredByRail.tsx](InspiredByRail.tsx) | _no top-of-file purpose_ |
+| [InvestModal.tsx](InvestModal.tsx) | _no top-of-file purpose_ |
 | [InviteBanner.tsx](InviteBanner.tsx) | _no top-of-file purpose_ |
 | [InviteFriend.tsx](InviteFriend.tsx) | _no top-of-file purpose_ |
 | [KinActivity.tsx](KinActivity.tsx) | _no top-of-file purpose_ |
@@ -41,6 +42,7 @@
 | [SecondaryLayerNav.tsx](SecondaryLayerNav.tsx) | _no top-of-file purpose_ |
 | [ShareButton.tsx](ShareButton.tsx) | _no top-of-file purpose_ |
 | [SinceLastVisit.tsx](SinceLastVisit.tsx) | _no top-of-file purpose_ |
+| [SubstrateBadge.tsx](SubstrateBadge.tsx) | SubstrateBadge — every page reveals what cells compose it. |
 | [active_nav_link.tsx](active_nav_link.tsx) | _no top-of-file purpose_ |
 | [expert-mode-context.tsx](expert-mode-context.tsx) | _no top-of-file purpose_ |
 | [hash-scroller.tsx](hash-scroller.tsx) | _no top-of-file purpose_ |

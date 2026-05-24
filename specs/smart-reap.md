@@ -26,6 +26,16 @@ done_when:
   - "GET /api/agent/reap-history returns per-idea timeout summary"
   - "GET /api/agent/tasks/{id}/reap-diagnosis returns 200 with diagnosis or 404"
   - "All 8 new tests pass in pytest"
+  - 'file_exists("api/app/services/smart_reaper_service.py")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "is_runner_alive")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "can_extend")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "capture_partial_output")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "build_reap_diagnosis")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "smart_reap_task")'
+  - 'file_exists("api/app/routers/agent_smart_reap_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_smart_reap_routes.py", "smart")'
+  - 'pytest_passes("api/tests/test_smart_reaper_module_boundary.py")'
+  - 'pytest_passes("api/tests/test_stale_task_reaper.py")'
 test: "cd api && python -m pytest tests/test_smart_reaper_module_boundary.py tests/test_stale_task_reaper.py -x"
 constraints:
   - "Do not break existing timed_out / failed pipeline advance logic"

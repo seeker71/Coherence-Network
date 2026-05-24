@@ -14,6 +14,11 @@ done_when:
   - "API exposes canonical route registry for machine/human tooling."
   - "Runtime mapping defaults avoid `unmapped` for standard API (`/api`, `/v1`) and web (`/`) surfaces."
   - "Tests validate canonical route endpoint and default mapping behavior."
+  - 'file_exists("api/app/services/route_registry_service.py")'
+  - 'symbol_in_file("api/app/services/route_registry_service.py", "get_canonical_routes")'
+  - 'file_exists("api/app/routers/registry_discovery.py")'
+  - 'symbol_in_file("api/app/routers/registry_discovery.py", "route")'
+  - 'pytest_passes("api/tests/test_runtime_api.py")'
 test: "python3 -m pytest api/tests/test_runtime_api.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -118,7 +123,24 @@ See `api/tests/test_canonical_route_registry_and_runtime_mapping.py` for test ca
 python3 -m pytest api/tests/test_runtime_api.py -x -v
 ```
 
+```bash
+python3 -m pytest api/tests/test_runtime_api.py -x -v
+```
+
+```bash
+python3 -m pytest api/tests/test_runtime_api.py -x -v
+```
+
+```bash
+python3 -m pytest api/tests/test_runtime_api.py -x -v
+```
+
 ## Known Gaps and Follow-up Tasks
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+

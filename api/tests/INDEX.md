@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 187
+**Total files**: 194
 
 | File | Purpose |
 |---|---|
@@ -30,6 +30,7 @@
 | [test_audit_vision_image_candidates.py](test_audit_vision_image_candidates.py) | _no top-of-file purpose_ |
 | [test_auth_keys_api.py](test_auth_keys_api.py) | Tests for the /api/auth/keys HTTP layer. |
 | [test_auto_heal_service.py](test_auto_heal_service.py) | Tests for the auto-heal-from-diagnostics spec |
+| [test_automation_usage_api.py](test_automation_usage_api.py) | _no top-of-file purpose_ |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
@@ -86,12 +87,14 @@
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
 | [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
+| [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
 | [test_governance_change_flow.py](test_governance_change_flow.py) | Contributor onboarding + governed change flow (spec: |
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
+| [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
@@ -100,6 +103,7 @@
 | [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
+| [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
 | [test_lens_translation_boundaries.py](test_lens_translation_boundaries.py) | _no top-of-file purpose_ |
@@ -113,6 +117,7 @@
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
 | [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
+| [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
 | [test_persistence_contract_config.py](test_persistence_contract_config.py) | _no top-of-file purpose_ |
 | [test_pipeline_router.py](test_pipeline_router.py) | Tests for the coherence-network-agent-pipeline spec |
@@ -122,6 +127,7 @@
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
+| [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |
 | [test_renderers_router.py](test_renderers_router.py) | Route-level tests for /api/renderers/* endpoints. |
@@ -188,6 +194,7 @@
 | [test_sync_kb_to_db.py](test_sync_kb_to_db.py) | _no top-of-file purpose_ |
 | [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |
 | [test_task_dedup_service.py](test_task_dedup_service.py) | Tests for the task dedup service — prevents duplicate tasks per idea+phase. |
+| [test_timeout_adaptive_service.py](test_timeout_adaptive_service.py) | _no top-of-file purpose_ |
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |

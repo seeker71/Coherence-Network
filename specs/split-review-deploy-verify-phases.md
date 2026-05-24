@@ -20,6 +20,14 @@ done_when:
   - Full chain code-review to deploy to verify to validated works end-to-end
   - No orphaned reviewing ideas with no active task
   - pytest api/tests/test_pipeline_phase_split.py passes
+  - 'file_exists("api/app/models/agent.py")'
+  - 'file_exists("api/app/services/pipeline_advance_service.py")'
+  - 'symbol_in_file("api/app/services/pipeline_advance_service.py", "phase")'
+  - 'file_exists("api/scripts/run_cli_task_flow_matrix.py")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "PASS_FAIL")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "review")'
+  - 'pytest_passes("api/tests/test_flow_pipeline.py")'
+test: "cd api && python -m pytest -q tests/test_flow_pipeline.py"
 ---
 
 > **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
@@ -198,3 +206,30 @@ The pulse service (`pipeline_pulse_service.py`) already tracks per-phase success
 
 - Alembic migration for `regression` status: requires DBA/ops approval before deploy.
 - Removing `merge` as standalone phase: requires architectural review (Spec 139 dependency).
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Verification
+
+```bash
+cd api && python -m pytest -q tests/test_flow_pipeline.py
+```
+
+## Acceptance Tests
+
+- `tests/test_flow_pipeline.py`
+
+## Requirements
+
+- [ ] Full chain code-review to deploy to verify to validated works end-to-end
+- [ ] No orphaned reviewing ideas with no active task
+- [ ] pytest api/tests/test_pipeline_phase_split.py passes
+- [ ] file_exists("api/app/models/agent.py")
+- [ ] file_exists("api/app/services/pipeline_advance_service.py")
+

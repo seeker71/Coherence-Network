@@ -1,6 +1,6 @@
 ---
 idea_id: knowledge-and-resonance
-status: draft
+status: active
 source:
   - file: docs/integration/gitnexus-integration-experiment.md
     symbols: [setup steps, agent contract, decision criteria]
@@ -22,6 +22,20 @@ done_when:
   - "docs/integrations/gitnexus-integration-experiment.md describes when an agent should call GitNexus tools (with concrete examples) and when our existing tools are sufficient."
   - "scripts/measure_gitnexus_value.py produces a comparison report across at least 30 paired tasks."
   - "A signed-off decision (adopt / drop / pivot) is recorded in the spec's `## Outcome` section with the measurement evidence."
+  - 'file_exists("docs/integration/gitnexus-integration-experiment.md")'
+  - 'symbol_in_file("docs/integration/gitnexus-integration-experiment.md", "setup")'
+  - 'symbol_in_file("docs/integration/gitnexus-integration-experiment.md", "agent")'
+  - 'symbol_in_file("docs/integration/gitnexus-integration-experiment.md", "decision")'
+  - 'file_exists("scripts/measure_gitnexus_value.py")'
+  - 'symbol_in_file("scripts/measure_gitnexus_value.py", "collect_window")'
+  - 'symbol_in_file("scripts/measure_gitnexus_value.py", "render_report")'
+  - 'symbol_in_file("scripts/measure_gitnexus_value.py", "WindowMetrics")'
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "MCP")'
+  - 'file_exists("specs/source-artifact-sensing-graph-integration.md")'
+  - 'symbol_in_file("specs/source-artifact-sensing-graph-integration.md", "meaning-layer")'
+  - 'file_exists("api/scripts/local_runner.py")'
+  - 'symbol_in_file("api/scripts/local_runner.py", "agent")'
 test: "python3 scripts/measure_gitnexus_value.py --report-only"
 constraints:
   - "No changes to Neo4j schema — GitNexus runs alongside, not merged into, our existing graph."

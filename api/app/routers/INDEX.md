@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 128
+**Total files**: 131
 
 | File | Purpose |
 |---|---|
@@ -29,6 +29,7 @@
 | [agent_task_log_routes.py](agent_task_log_routes.py) | Agent task log route. |
 | [agent_tasks_routes.py](agent_tasks_routes.py) | Agent task CRUD and list routes. |
 | [agent_telegram.py](agent_telegram.py) | Telegram webhook routes for agent operations. |
+| [agent_timeout_routes.py](agent_timeout_routes.py) | Agent timeout sample and recommendation routes. |
 | [agent_usage_routes.py](agent_usage_routes.py) | Agent usage, visibility, orchestration guidance, and integration routes. |
 | [assets.py](assets.py) | Assets router — backed by graph_nodes (type=asset). |
 | [audit.py](audit.py) | Audit ledger router -- spec 123. |
@@ -36,6 +37,7 @@
 | [automation_usage.py](automation_usage.py) | Automation provider usage and capacity endpoints. |
 | [beliefs.py](beliefs.py) | Beliefs router — per-contributor worldview, interests, and concept preferences. |
 | [blueprints.py](blueprints.py) | Blueprints router — project roadmap templates. |
+| [breath.py](breath.py) | Breath surface — the body's present-tense felt voice, observable to any cell. |
 | [brief.py](brief.py) | Brief router — daily engagement brief endpoints. |
 | [cc_economics.py](cc_economics.py) | CC Economics Router — endpoints for supply, exchange rate, and staking. |
 | [cc_exchange.py](cc_exchange.py) | CC Exchange Router — bridge to external exchanges (New Earth, CES). |
@@ -80,6 +82,7 @@
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
 | [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
+| [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
 | [lenses.py](lenses.py) | Worldview lens registry — spec-181. |
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
 | [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |

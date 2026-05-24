@@ -13,6 +13,10 @@ done_when:
   - "`ThemeToggle` is keyboard-accessible and has a descriptive `aria-label`."
   - "No hydration mismatch (SSR-safe: initial HTML class set via inline script)."
   - "Light mode background is warm, not stark white — consistent with brand tone."
+  - 'file_exists("web/app/page.tsx")'
+  - 'symbol_in_file("web/app/page.tsx", "Home")'
+  - 'file_exists("web/app/globals.css")'
+test: "cd web && npm run test -- tests/theme-toggle.test.ts"
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)

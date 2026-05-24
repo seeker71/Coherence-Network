@@ -17,6 +17,12 @@ requirements:
 done_when:
   - Unit tests verify exact metric computations from known inputs
   - pytest api/tests/test_grounded_idea_portfolio_metrics.py passes
+  - 'file_exists("api/app/services/grounded_idea_metrics_service.py")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_idea_metrics")'
+  - 'file_exists("api/app/routers/agent_grounded_metrics_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_grounded_metrics_routes.py", "grounded")'
+  - 'pytest_passes("api/tests/test_edge_cases_regression.py::test_idea_grounded_metrics")'
+test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_grounded_metrics"
 ---
 
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
@@ -131,6 +137,8 @@ Bulk endpoint `GET /api/ideas/grounded-metrics` returns metrics for all ideas.
 
 ## Acceptance Criteria
 
+- Validated by: `cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_grounded_metrics`
+
 1. `compute_idea_metrics()` returns `computed_actual_cost` aggregated from spec registry
    + runtime + commit evidence. Never returns a hand-typed number.
 2. `compute_idea_metrics()` returns `computed_actual_value` as the strongest signal from
@@ -159,6 +167,10 @@ See `api/tests/test_grounded_idea_portfolio_metrics.py` for test cases covering 
 
 ## Verification
 
+```bash
+cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_idea_grounded_metrics
+```
+
 - Unit tests with exact assertions on all metric computations
 - Contract tests verifying all upstream service methods exist with correct signatures
 - Integration test: compute_idea_metrics for an idea with known spec/runtime/lineage data
@@ -174,8 +186,28 @@ See `api/tests/test_grounded_idea_portfolio_metrics.py` for test cases covering 
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 - [ ] Replace DEFAULT_IDEAS hardcoded values with computed metrics on read
 - [ ] Ground `resistance_risk` from PR review friction and CI failure rates
 - [ ] Ground `potential_value` from comparable-idea benchmarking
 - [ ] Add time-series tracking of computed metrics for trend analysis
 - [ ] Calibrate confidence weights (0.3/0.25/0.25/0.1/0.1) from actual prediction accuracy
+
+## Out of Scope
+
+- None.
+
+## Files
+
+- `api/app/services/grounded_idea_metrics_service.py`
+- `api/app/routers/agent_grounded_metrics_routes.py`
+
+## Requirements
+
+- [ ] Unit tests verify exact metric computations from known inputs
+- [ ] pytest api/tests/test_grounded_idea_portfolio_metrics.py passes
+- [ ] file_exists("api/app/services/grounded_idea_metrics_service.py")
+- [ ] symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_idea_metrics")
+- [ ] file_exists("api/app/routers/agent_grounded_metrics_routes.py")
+

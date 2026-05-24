@@ -494,6 +494,89 @@ def _builtin_bool_value(nid: Any) -> bool:
     return v
 
 
+def _builtin_file_exists(path: Any) -> bool:
+    """Does the file at `path` exist on disk?
+
+    Form predicate for spec recipes — `done_when: - form: file_exists("X")`.
+    The result is content-addressed by the runtime, so two evaluations of
+    the same expression intern to the same Recipe NodeID. The substrate's
+    cache IS the body's persistent record of "what does this assertion
+    return for this path."
+    """
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_exists: path must be string, got {type(path).__name__}")
+    return _Path(path).exists()
+
+
+def _builtin_file_contains(path: Any, needle: Any) -> bool:
+    """Does the file at `path` contain the substring `needle`?
+
+    The honest baseline for spec-symbol resolution. The wellness check uses
+    a smarter language-aware regex; this is the substrate-native check that
+    runs from any Form expression. False when the file doesn't exist.
+    """
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_contains: path must be string, got {type(path).__name__}")
+    if not isinstance(needle, str):
+        raise TypeError(f"file_contains: needle must be string, got {type(needle).__name__}")
+    p = _Path(path)
+    if not p.is_file():
+        return False
+    try:
+        return needle in p.read_text(errors="replace")
+    except OSError:
+        return False
+
+
+def _builtin_file_size(path: Any) -> int:
+    """Size of `path` in bytes. 0 when path does not exist (not an error —
+    spec predicates may want to compose `file_size("X") > 0` without
+    a missing-file exception interrupting evaluation)."""
+    from pathlib import Path as _Path
+    if not isinstance(path, str):
+        raise TypeError(f"file_size: path must be string, got {type(path).__name__}")
+    p = _Path(path)
+    if not p.is_file():
+        return 0
+    try:
+        return p.stat().st_size
+    except OSError:
+        return 0
+
+
+def _builtin_symbol_in_file(path: Any, symbol: Any) -> bool:
+    """Alias for file_contains keyed by a symbol-named string. Semantic
+    clarity for spec.source predicates: `symbol_in_file(file, "ingest_one")`
+    reads naturally as 'does ingest_one resolve in file?'"""
+    return _builtin_file_contains(path, symbol)
+
+
+def _builtin_pytest_passes(test_target: Any) -> bool:
+    """Run pytest against `test_target` and return True iff exit code is 0.
+
+    `test_target` is the same string the spec.test field uses — e.g.,
+    "api/tests/test_X.py" or "api/tests/test_Y.py::test_specific".
+    This is impure (it runs a subprocess) — unlike file_exists / contains
+    which are pure functions of disk state. Two evaluations may give
+    different answers (test behavior can change). The runtime does not
+    auto-cache impure results; the caller chooses when to re-evaluate.
+
+    Returns False on missing pytest, missing file, or non-zero exit.
+    """
+    import subprocess
+    if not isinstance(test_target, str):
+        raise TypeError(f"pytest_passes: target must be string, got {type(test_target).__name__}")
+    # Use python3 -m pytest to avoid `python` vs `python3` shell-PATH ambiguity.
+    cmd = ["python3", "-m", "pytest", "-q", test_target]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0
+
+
 def _builtin_ask(*args: Any) -> dict[str, Any]:
     """`ask(agent_id, question, choices=[], context={})` — open a human question.
 
@@ -582,6 +665,19 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     # Host effects — bridge Form execution into the agent question channel.
     "ask": _builtin_ask,
     "await_answer": _builtin_await_answer,
+    # Filesystem facts — the predicates spec recipes need to assert about
+    # the body's structural reality. Result is content-addressed; the
+    # substrate's cache holds the answer once evaluated. See
+    # docs/coherence-substrate/spec-as-playable-recipe.form (S4 — these
+    # builtins close the predicate vocabulary for `done_when:` items).
+    "file_exists": _builtin_file_exists,
+    "file_contains": _builtin_file_contains,
+    "file_size": _builtin_file_size,
+    "symbol_in_file": _builtin_symbol_in_file,
+    # Impure (subprocess) — runs pytest and returns the boolean exit-code-zero.
+    # Spec.test fields become Form predicates; done_when items can include
+    # behavioral assertions, not just file-shape ones.
+    "pytest_passes": _builtin_pytest_passes,
 }
 
 
@@ -1120,10 +1216,59 @@ def _trivial_value(session: Session, nid: NodeID) -> Any:
         return nid.instance - 1 if nid.instance > 0 else 0
     if nid.type_ == RType.STRING:
         return lookup_string_value(session, nid.instance) or ""
+    if nid.type_ == RType.SLUG:
+        # Slugs share the substrate_strings interning table with strings;
+        # they differ in type-tag (identity-role vs content-role) but the
+        # surface decoding is the same lookup. Letting `let x = 42` round-trip
+        # required this arm; without it, the Identifier child x stays opaque.
+        return lookup_string_value(session, nid.instance) or ""
     raise ValueError(
         f"Form runtime: .value has no decoder for RType={nid.type_} "
-        f"(supported: NULL, BOOL, INTEGER, STRING)"
+        f"(supported: NULL, BOOL, INTEGER, STRING, SLUG)"
     )
+
+
+def _ctor_field_lookup(session: Session, ctor: Any, field: str) -> Any:
+    """Walk a structured CTOR (R_Block.DO of R_Block.LET) for a named field.
+
+    Returns the decoded value of the LET binding whose key matches `field`,
+    or None if the CTOR is not in structured-LET shape, or no binding
+    matches. Composite values are returned as their NodeID (so the caller
+    can walk further); trivial values are decoded.
+
+    The shape this walks is what `frontmatter_to_structured_ctor` produces:
+
+        do {
+            let "idea_id" = "...";   # LET[SLUG, STRING]
+            let "title"   = "...";   # LET[SLUG, STRING]
+            ...
+        }
+    """
+    if ctor is None or not isinstance(ctor, NodeID):
+        return None
+    from app.services.substrate.category import RBasic
+    ctor_cat = _node_category(session, ctor)
+    if ctor_cat.type_ != RBasic.BLOCK.value:
+        return None
+    for let_nid in _node_children(session, ctor):
+        let_cat = _node_category(session, let_nid)
+        if let_cat.type_ != RBasic.BLOCK.value or let_cat.instance != 3:
+            continue  # not a LET
+        let_kids = _node_children(session, let_nid)
+        if len(let_kids) != 2:
+            continue
+        try:
+            key = _trivial_value(session, let_kids[0])
+        except (ValueError, AttributeError):
+            continue
+        if key != field:
+            continue
+        # Match — decode the value if trivial, else return the NodeID.
+        try:
+            return _trivial_value(session, let_kids[1])
+        except (ValueError, AttributeError):
+            return let_kids[1]
+    return None
 
 
 def _resolve_access(session: Session, target: Any, field: str) -> Any:
@@ -1160,9 +1305,19 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
             return target.domain
         if field == "source":
             return target.source_path
+        # Fall through to structured-CTOR field-by-name access.
+        # If the cell's CTOR is a R_Block.DO whose children are R_Block.LET
+        # recipes (the structured-CTOR shape since 2026-05-23), walk the
+        # LET-bindings looking for one whose key matches `field`. This is
+        # what makes `@idea(realization).title` work: the human reads YAML,
+        # the substrate walks LET, the AI bridges — same value, three voices.
+        ctor_value = _ctor_field_lookup(session, target.ctor, field)
+        if ctor_value is not None:
+            return ctor_value
         raise AttributeError(
             f"Form runtime: cell has no field {field!r} "
-            f"(try: blueprint, ctor, base, access, name, domain, source)"
+            f"(try: blueprint, ctor, base, access, name, domain, source, "
+            f"or any frontmatter key from the structured CTOR)"
         )
 
     if isinstance(target, NodeID):
@@ -1182,9 +1337,18 @@ def _resolve_access(session: Session, target: Any, field: str) -> Any:
             return len(_node_children(session, target))
         if field == "value":
             return _trivial_value(session, target)
+        # Fall through to structured-CTOR field-by-name access on a Recipe.
+        # A R_Block.DO whose children are R_Block.LET (the structured-CTOR
+        # shape) walks by key name. This lets the runtime navigate nested
+        # structured frontmatter — `cell.capabilities.children[0].title`
+        # works without explicit walking once both layers fall through.
+        ctor_value = _ctor_field_lookup(session, target, field)
+        if ctor_value is not None:
+            return ctor_value
         raise AttributeError(
             f"Form runtime: NodeID has no field {field!r} "
-            f"(try: package, level, type, instance, category, children, nchildren, value)"
+            f"(try: package, level, type, instance, category, children, "
+            f"nchildren, value, or any LET-binding key in a structured CTOR)"
         )
 
     raise TypeError(

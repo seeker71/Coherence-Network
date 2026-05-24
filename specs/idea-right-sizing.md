@@ -19,6 +19,8 @@ done_when:
   - Right-sizing report returns valid health counts for 10+ ideas
   - Dry-run apply previews changes without writing
   - pytest api/tests/test_right_sizing.py passes
+  - 'pytest_passes("api/tests/test_right_sizing.py")'
+test: "cd api && python -m pytest -q tests/test_right_sizing.py"
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
@@ -171,6 +173,8 @@ CREATE INDEX idx_rss_snapshot_at ON right_sizing_snapshots(snapshot_at);
 
 ## Files to Create/Modify
 
+- `specs/idea-right-sizing.md`
+
 | File | Change |
 |------|--------|
 | `api/app/models/idea.py` | Add `GranularitySignal` enum; extend `Idea` with `granularity_signal`, `granularity_assessed_at`, `overlap_with_idea_id`, `overlap_score`; add `RightSizingSuggestion`, `RightSizingReport`, `PortfolioHealthCounts`, `TrendInfo` models |
@@ -181,6 +185,10 @@ CREATE INDEX idx_rss_snapshot_at ON right_sizing_snapshots(snapshot_at);
 | `api/tests/test_right_sizing.py` | Full test suite (see Acceptance Tests) |
 
 ## Verification Scenarios
+
+```bash
+cd api && python -m pytest -q tests/test_right_sizing.py
+```
 
 These scenarios must pass in production against `https://api.coherencycoin.com`.
 
@@ -278,3 +286,19 @@ curl -s "https://api.coherencycoin.com/api/ideas/right-sizing/history?days=7" | 
 
 - **Threshold values** (too_large_questions=10, too_large_tasks=8, overlap_score_min=0.80) must be reviewed with the portfolio owner before the first background sweep runs. These are configurable in `right_sizing.json` but the defaults ship with this spec.
 - **`merge_and_archive` action** is irreversible (soft-delete only). A human must confirm via the API explicitly; there is no "undo" endpoint in this spec.
+
+## Risks and Assumptions
+
+- None.
+
+## Acceptance Tests
+
+- `tests/test_right_sizing.py`
+
+## Requirements
+
+- [ ] Right-sizing report returns valid health counts for 10+ ideas
+- [ ] Dry-run apply previews changes without writing
+- [ ] pytest api/tests/test_right_sizing.py passes
+- [ ] pytest_passes("api/tests/test_right_sizing.py")
+

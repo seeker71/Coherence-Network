@@ -13,6 +13,7 @@ other (routes to modules, routes to types, modules to types).
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import inspect
 import pkgutil
@@ -23,6 +24,7 @@ from pydantic import BaseModel
 from app.models.meta import (
     EndpointEdge,
     EndpointNode,
+    MetaCoverageResponse,
     MetaEndpointsResponse,
     MetaGraphEdge,
     MetaGraphNode,
@@ -34,6 +36,11 @@ from app.models.meta import (
     TypeField,
     TypeNode,
 )
+
+
+def _path_hash(method: str, path: str) -> str:
+    """Stable 8-char hex hash of f'{METHOD} {path}' — lookup key for endpoints."""
+    return hashlib.sha1(f"{method} {path}".encode("utf-8")).hexdigest()[:8]
 
 
 # ---------------------------------------------------------------------------
@@ -175,19 +182,29 @@ def list_endpoints(app: Any) -> MetaEndpointsResponse:
                 id=node_id,
                 method=method,
                 path=path,
+                path_hash=_path_hash(method, path),
                 name=name,
                 summary=summary,
                 tags=tags,
                 spec_id=spec_id,
                 idea_id=idea_id,
+                has_trace=bool(spec_id or idea_id),
                 module=module_name,
+                router_module=module_name,
                 request_model=request_model_id,
                 response_model=response_model_id,
                 edges=edges,
             ))
 
     nodes.sort(key=lambda n: (n.path, n.method))
-    return MetaEndpointsResponse(total=len(nodes), endpoints=nodes)
+    traced = sum(1 for n in nodes if n.has_trace)
+    coverage_pct = round((traced / len(nodes)) * 100, 1) if nodes else 0.0
+    return MetaEndpointsResponse(
+        total=len(nodes),
+        traced=traced,
+        coverage_pct=coverage_pct,
+        endpoints=nodes,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -199,32 +216,38 @@ def list_modules(app: Any) -> MetaModulesResponse:
     registry = _get_trace_registry()
     module_data: dict[str, dict] = {}
 
-    try:
-        routes = app.routes
-    except Exception:
-        routes = []
-
-    for route in routes:
-        methods = getattr(route, "methods", None)
-        path = getattr(route, "path", None)
-        if not methods or not path:
-            continue
-        endpoint_fn = getattr(route, "endpoint", None)
-        if not endpoint_fn:
-            continue
-        module_name = getattr(endpoint_fn, "__module__", None)
+    # Use list_endpoints output so endpoint counts and trace counts agree exactly.
+    ep_response = list_endpoints(app)
+    for ep in ep_response.endpoints:
+        module_name = ep.module
         if not module_name:
             continue
         if module_name not in module_data:
-            module_data[module_name] = {"spec_ids": set(), "idea_ids": set(), "endpoint_count": 0}
-        module_data[module_name]["endpoint_count"] += len(methods)
+            module_data[module_name] = {
+                "spec_ids": set(),
+                "idea_ids": set(),
+                "endpoint_count": 0,
+                "traced_endpoint_count": 0,
+            }
+        module_data[module_name]["endpoint_count"] += 1
+        if ep.has_trace:
+            module_data[module_name]["traced_endpoint_count"] += 1
+        if ep.spec_id:
+            module_data[module_name]["spec_ids"].add(ep.spec_id)
+        if ep.idea_id:
+            module_data[module_name]["idea_ids"].add(ep.idea_id)
 
     for entry in registry:
         mod = entry.get("module", "")
         if not mod:
             continue
         if mod not in module_data:
-            module_data[mod] = {"spec_ids": set(), "idea_ids": set(), "endpoint_count": 0}
+            module_data[mod] = {
+                "spec_ids": set(),
+                "idea_ids": set(),
+                "endpoint_count": 0,
+                "traced_endpoint_count": 0,
+            }
         if entry.get("spec"):
             module_data[mod]["spec_ids"].add(entry["spec"])
         if entry.get("idea"):
@@ -261,6 +284,10 @@ def list_modules(app: Any) -> MetaModulesResponse:
                 target_label=iid,
             ))
 
+        ep_count = data["endpoint_count"]
+        traced_count = data["traced_endpoint_count"]
+        coverage_pct = round((traced_count / ep_count) * 100, 1) if ep_count > 0 else 0.0
+
         nodes.append(ModuleNode(
             id=mod_name,
             name=short_name,
@@ -268,11 +295,67 @@ def list_modules(app: Any) -> MetaModulesResponse:
             file_path=mod_name.replace(".", "/") + ".py",
             spec_ids=spec_ids,
             idea_ids=idea_ids,
-            endpoint_count=data["endpoint_count"],
+            endpoint_count=ep_count,
+            traced_endpoint_count=traced_count,
+            trace_coverage_pct=coverage_pct,
             edges=edges,
         ))
 
     return MetaModulesResponse(total=len(nodes), modules=nodes)
+
+
+# ---------------------------------------------------------------------------
+# Single-entity lookups + coverage report
+# ---------------------------------------------------------------------------
+
+def get_endpoint_by_hash(app: Any, path_hash: str) -> EndpointNode | None:
+    """Return a single endpoint matching path_hash, or None if absent."""
+    ep_response = list_endpoints(app)
+    for ep in ep_response.endpoints:
+        if ep.path_hash == path_hash:
+            return ep
+    return None
+
+
+def get_module_by_name(app: Any, module_name: str) -> ModuleNode | None:
+    """Return a single module by dotted name (`app.routers.ideas`) or last
+    segment (`ideas`). Returns None on no match."""
+    mod_response = list_modules(app)
+    # Exact dotted match first
+    for mod in mod_response.modules:
+        if mod.id == module_name:
+            return mod
+    # Fall back to last-segment ("short") name
+    for mod in mod_response.modules:
+        if mod.name == module_name:
+            return mod
+    return None
+
+
+def get_coverage(app: Any) -> MetaCoverageResponse:
+    """Aggregate coverage summary across endpoints and modules."""
+    ep_response = list_endpoints(app)
+    mod_response = list_modules(app)
+
+    total_endpoints = ep_response.total
+    traced_endpoints = ep_response.traced
+    coverage_pct = ep_response.coverage_pct
+
+    modules_with_any_trace = sum(
+        1 for m in mod_response.modules if m.traced_endpoint_count > 0
+    )
+    untraced_paths = sorted({
+        ep.path for ep in ep_response.endpoints if not ep.has_trace
+    })
+
+    return MetaCoverageResponse(
+        total_endpoints=total_endpoints,
+        traced_endpoints=traced_endpoints,
+        coverage_pct=coverage_pct,
+        total_modules=mod_response.total,
+        modules_with_any_trace=modules_with_any_trace,
+        untraced_paths=untraced_paths,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,22 @@ done_when:
   - "API exposes valuation summary for a lineage link (measured value, estimated cost, ROI ratio, event count)."
   - "API supports payout preview from valuation using explicit stage weights and returns per-contributor attribution."
   - "Payout preview applies optimization objectives for coherence, energy flow, awareness, friction relief, and stage-bala..."
+  - 'file_exists("api/app/routers/value_lineage.py")'
+  - 'symbol_in_file("api/app/routers/value_lineage.py", "create_link")'
+  - 'symbol_in_file("api/app/routers/value_lineage.py", "add_usage_event")'
+  - 'symbol_in_file("api/app/routers/value_lineage.py", "get_valuation")'
+  - 'symbol_in_file("api/app/routers/value_lineage.py", "payout_preview")'
+  - 'file_exists("api/app/services/value_lineage_service.py")'
+  - 'symbol_in_file("api/app/services/value_lineage_service.py", "create_link")'
+  - 'symbol_in_file("api/app/services/value_lineage_service.py", "list_links")'
+  - 'symbol_in_file("api/app/services/value_lineage_service.py", "valuation")'
+  - 'symbol_in_file("api/app/services/value_lineage_service.py", "payout_preview")'
+  - 'file_exists("api/app/models/value_lineage.py")'
+  - 'symbol_in_file("api/app/models/value_lineage.py", "LineageLink")'
+  - 'symbol_in_file("api/app/models/value_lineage.py", "UsageEvent")'
+  - 'symbol_in_file("api/app/models/value_lineage.py", "LineageValuation")'
+  - 'symbol_in_file("api/app/models/value_lineage.py", "PayoutPreview")'
+  - 'pytest_passes("api/tests/test_value_lineage.py")'
 test: "cd api && pytest -q tests/test_value_lineage.py"
 constraints:
   - "changes scoped to listed files only"
@@ -400,6 +416,18 @@ UsageEvent:
 
 
 ## Verification
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+```
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+```
+
+```bash
+cd api && pytest -q tests/test_value_lineage.py
+```
 
 ```bash
 cd api && pytest -q tests/test_value_lineage.py

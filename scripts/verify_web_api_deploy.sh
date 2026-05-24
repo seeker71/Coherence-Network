@@ -289,6 +289,11 @@ for organ in strained:
 PY
 }
 
+extract_next_css_paths() {
+  local html_file="$1"
+  grep -Eo '/_next/static/(css|chunks)/[^"]+\.css' "$html_file" | awk '!seen[$0]++'
+}
+
 check_web_css_assets() {
   local web_root_url="$1"
   local html_file="$TMP_DIR/web_root.body.html"
@@ -311,7 +316,7 @@ check_web_css_assets() {
   local css_line
   while IFS= read -r css_line; do
     [[ -n "$css_line" ]] && css_paths+=("$css_line")
-  done < <(grep -Eo '/_next/static/css/[^"]+\.css' "$html_file" | awk '!seen[$0]++')
+  done < <(extract_next_css_paths "$html_file")
 
   if [[ "${#css_paths[@]}" -eq 0 ]]; then
     echo "FAIL: no Next CSS assets found in web root HTML"

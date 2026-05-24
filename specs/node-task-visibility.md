@@ -16,6 +16,14 @@ done_when:
   - "coherencycoin.com/pipeline loads and shows live task flow"
   - "/pipeline shows per-provider success rates"
   - "/pipeline shows active node names and task counts"
+  - 'file_exists("web/app/nodes/page.tsx")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "node")'
+  - 'file_exists("web/app/tasks/page.tsx")'
+  - 'symbol_in_file("web/app/tasks/page.tsx", "task")'
+  - 'file_exists("web/app/tasks/[task_id]/page.tsx")'
+  - 'symbol_in_file("web/app/tasks/[task_id]/page.tsx", "task")'
+proof: operational
+proof_note: "Web /pipeline and /tasks render live in production; the CLI surfaces (coh tasks, coh task) are exercised by humans daily. The spec is entirely UI-shape and CLI output formatting — flow tests against text output would be brittle without proving the human-facing behavior."
 constraints:
   - "No new database tables required for R4 (compute on-the-fly or cache in memory)"
   - "CLI must remain zero-dependency (no new npm packages)"
@@ -165,6 +173,8 @@ Open `https://coherencycoin.com` in a browser. Navigate to the pipeline page.
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 1. **`coh tasks watch`** — a live terminal refresh mode (like `watch -n2 coh tasks`) is not in scope here but would complement this spec. Track as separate idea.
 2. **Thompson Sampling visibility** — provider routing decisions (which executor is winning, exploration vs exploitation ratio) are not exposed in this spec. The pipeline page shows success rates but not the internal sampling state. Track as `spec-thompson-visibility`.
 3. **Task output storage** — currently `result` is a plain string. A follow-up should store structured output with sections (files changed, DIF score, commit SHA) as JSON. This spec only improves display of the existing field.
@@ -184,3 +194,32 @@ This spec is realized when ALL of the following are independently verifiable:
 5. A screenshot of `coherencycoin.com/pipeline` showing at least one active task with an idea name is posted to the project's contributor record.
 
 The reviewer MUST run scenarios 1–4 from a clean terminal with no local setup (public endpoints only). Scenario 5 is verified by loading the URL in an incognito browser window.
+
+## Out of Scope
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `web/app/nodes/page.tsx`
+- `web/app/tasks/page.tsx`
+- `web/app/tasks/[task_id]/page.tsx`
+
+## Acceptance Tests
+
+- Manual validation: ingest a node-task graph; verify the visibility query returns expected results.
+
+- See `## Verification` below.
+
+## Requirements
+
+- [ ] coh tasks shows idea names (not IDs) and clean provider labels
+- [ ] coh tasks shows a "recently completed" section
+- [ ] coh task <id> shows full (untruncated) output and activity timeline
+- [ ] coh task <id> shows error_summary when present
+- [ ] coherencycoin.com/pipeline loads and shows live task flow
+

@@ -28,6 +28,8 @@ done_when:
   - `coh design generate lc-open-design weekly-update` produces a real `.html` and `.pdf` on disk and a graph node referencing them
   - `GenerateArtifactButton` rendered on `/vision/{conceptId}` opens, runs end-to-end, and the resulting artifact appears in a small gallery on the same page on next render
   - All new tests pass; existing 700+ tests still green; type-check + lint clean
+  - 'pytest_passes("api/tests/test_design_artifact_service.py")'
+  - 'pytest_passes("api/tests/test_design_router.py")'
 test: "cd api && python -m pytest tests/test_design_artifact_service.py tests/test_design_router.py -q"
 constraints:
   - Daemon-as-sidecar — the network does not vendor open-design's source; it depends on the daemon's HTTP surface only, so upstream stays free to evolve

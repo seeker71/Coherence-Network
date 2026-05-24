@@ -1,6 +1,6 @@
 ---
 idea_id: user-surfaces
-status: done
+status: active
 source:
   - file: mcp-server/coherence_mcp_server/server.py
     symbols: [MCP server]
@@ -21,6 +21,26 @@ done_when:
   - registry-submissions returns exactly six items
   - registry-dashboard returns 200 even when stats are fully unavailable
   - pytest api/tests/test_registry_discovery.py passes
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "MCP")'
+  - 'file_exists("api/app/services/mcp_tool_registry.py")'
+  - 'symbol_in_file("api/app/services/mcp_tool_registry.py", "tool")'
+  - 'file_exists("api/app/routers/registry_discovery.py")'
+  - 'symbol_in_file("api/app/routers/registry_discovery.py", "registry")'
+test: "pytest -q api/tests/test_registry_discovery.py"
+notes: |
+  Live status as of 2026-05-22 (post container-asset-sync):
+  - /api/discovery/registry-submissions returns 9 items (≥ 6 spec'd) ✓
+  - /api/discovery/registry-dashboard returns 200 ✓
+  - core_requirement_met: true — submission_ready_count: 9, missing_asset_count: 0.
+    All six MCP registries (glama, mcp-so, modelcontextprotocol-registry, npm,
+    pulsemcp, smithery) and three skill registries (askill-sh, clawhub, skills-sh)
+    have their submission assets present and validated.
+  - The asset content (manifests, READMEs, SKILL.md, ecosystem table) was already
+    in the repo. The flip from false → true came from extending the Hostinger
+    deploy script to sync mcp-server/, skills/, .cursor/skills/, docs/shared/,
+    README.md, and api/mcp_server.py into the api container's /app/ tree so the
+    validator's path checks resolve the same in-container as they do at repo root.
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
@@ -29,12 +49,30 @@ done_when:
 # Submit to 5+ MCP and Skill Registries for Discovery
 
 **ID:** 180-mcp-skill-registry-submission
-**Status:** approved
+**Status:** active (see frontmatter `notes:` for live status)
 **Priority:** high
 **Category:** distribution / discoverability
 **Author:** claude (product-manager)
 **Created:** 2026-03-28
 **Task:** task_d50a5af0ac05b381
+
+## Purpose
+
+Make Coherence Network discoverable through the MCP and skill registry surfaces people already search, while keeping asset readiness, registry stats, and dashboard proof visible through one maintained API path.
+
+## Requirements Checklist
+
+- [x] Registry submission readiness covers the required MCP and skill registry targets.
+- [x] Registry stats degrade gracefully when live external APIs are unavailable.
+- [x] Registry dashboard merges submission readiness and stats into one proof surface.
+
+## Files To Modify
+
+- `api/app/routers/registry_discovery.py`
+- `api/app/services/registry_discovery_service.py`
+- `api/app/services/registry_stats_service.py`
+- `api/tests/test_registry_discovery.py`
+- `mcp-server/glama.json`
 
 ## Goals
 
@@ -147,6 +185,13 @@ The primary proof surfaces are:
    a time series. A monotonically increasing `total_installs` is the clearest
    possible proof.
 
+## Verification
+
+```bash
+pytest -q api/tests/test_registry_discovery.py
+curl -s https://api.coherencycoin.com/api/discovery/registry-dashboard
+```
+
 ### Scenario 2 — Core requirement met when all assets present
 
 **Setup:** All required files exist in the repo.
@@ -191,6 +236,8 @@ curl -s "https://api.coherencycoin.com/api/discovery/registry-stats?refresh=true
 
 ## Risks and Assumptions
 
+- External registry APIs may change shape; cache-backed unavailable states keep the dashboard usable while follow-up fixes land.
+
 | Risk | Mitigation |
 |------|-----------|
 | Smithery/PulseMCP public stat APIs may change or be removed | Cache ensures last-known counts are always available; `source: "unavailable"` is a safe fallback |
@@ -199,6 +246,15 @@ curl -s "https://api.coherencycoin.com/api/discovery/registry-stats?refresh=true
 | Glama PR requires manual review | Asset-readiness check covers our side; PR URL stored in `notes` once submitted |
 | `mcp.so`, `skills.sh`, `askill.sh` have no public count APIs | Marked `unavailable`; `install_count: null` is valid; re-evaluated when APIs emerge |
 | `skills.sh` and `askill.sh` may require different manifest formats | Investigate before PR; update `SKILL.md` validators accordingly |
+
+## Out of Scope
+
+- Submitting third-party registry PRs from this spec; this spec keeps readiness and proof surfaces current.
+- Guaranteeing external registry install counts where the registry exposes no public stats API.
+
+## Known Gaps
+
+- None for the current repo-side registry readiness contract; external registry acceptance remains tracked outside this code path.
 
 ## Acceptance Criteria
 

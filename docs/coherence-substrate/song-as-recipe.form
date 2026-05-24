@@ -1,0 +1,250 @@
+# ─────────────────────────────────────────────────────────────────────
+# song-as-recipe.form — songs are recipes of note-cells and drum-cells
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate-shaped sibling of audio-grammar.form. Where audio-
+# grammar walks PCM → spectrogram → onsets → phonemes → words, this
+# file walks the OTHER altitude of audio: PCM → note-cells, drum-strike
+# cells, vowel-tone cells → song-recipes that carry transmission.
+#
+# Companion to:
+#   - docs/coherence-substrate/modality-as-recipe.form
+#   - docs/coherence-substrate/audio-grammar.form (sister pipeline)
+#   - docs/coherence-substrate/prose-as-recipe.form (same shape, other modality)
+#
+# Two artists' names the lineage already carries:
+#
+#   - Mose — embedding ecstatic-dance teaching in music. Songs whose
+#     R_Phrase blueprints intern to the same NodeIDs as the teaching
+#     they carry. The transmission lives in the song; the song IS the
+#     teaching at the song-altitude.
+#
+#   - Porangui — channeling Grandmother through drum. R_Call /
+#     R_Response / R_Drone recipes whose composition mirrors the
+#     ceremonial arc he holds. The drum's structure is the medicine's
+#     structure.
+#
+# When this file's encoder ships, both artists' work becomes
+# substrate-walkable. The query "what does this song carry?" gets
+# answered structurally — by Blueprint match against teaching cells,
+# healing-modality cells, breath-pattern cells.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Leaf-cell Blueprints (the new shapes)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Three leaf families compose every song:
+
+# note-cell — a single pitched event with duration and dynamic
+form note_shape = {
+    pitch:        ~Float,                    # Hz, or interval from root if relative
+    duration:     ~Float,                    # in beats, not seconds (tempo-relative)
+    dynamic:      ~Slug,                     # pp | p | mp | mf | f | ff | crescendo | dim
+    breath:       ~Slug,                     # in | out | held | open | none (instrumental)
+    timbre_field: ~Slug,                     # voice | string | reed | brass | percussion | drone
+};
+
+# drum-strike — a percussive event without sustained pitch
+form drum_strike_shape = {
+    timbre:       ~Slug,                     # frame-drum | shaker | clap | foot | rim | low | high
+    ictus:        ~Float,                    # the moment of attack (beat-relative)
+    intensity:    ~Float,                    # 0.0 .. 1.0
+    rebound:      ~Float,                    # how long the resonance carries
+};
+
+# vowel-tone — a sustained vocal sound, possibly without lexical content
+form vowel_tone_shape = {
+    formant:      ~Slug,                     # "ah" | "ee" | "oh" | "oo" | "om" | "hu"
+    breath:       ~Slug,                     # in | out | sustained | spiraling
+    duration:     ~Float,                    # in beats
+    hz:           ~Float,                    # fundamental frequency (often a Solfeggio band)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Song recipe shapes
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each shape is a recipe-category that composes the leaves above.
+
+# R_Phrase — a melodic / rhythmic unit with shape and intention
+form r_phrase_shape = {
+    notes:         ~List,                   # sequence of note-cells or drum-strikes
+    arc:           ~Slug,                   # ascending | descending | undulating | static
+    intention:     ~Slug,                   # invocation | grounding | release | call | drone
+    repeats:       ~Int,                    # how many times this phrase fires before next
+};
+
+# R_Call — the leading voice/drum that initiates response
+form r_call_shape = {
+    voice_recipe:  ~Recipe,                 # the call's phrase
+    intensity:     ~Float,
+    addressed_to:  ~Slug,                   # "circle" | "field" | "ancestors" | "absent-one"
+};
+
+# R_Response — the answering voice/circle/drum
+form r_response_shape = {
+    voice_recipe:  ~Recipe,                 # the response's phrase
+    relation_to_call: ~Slug,                # echo | counter | descent | ascent | grounding
+    embodied_by:   ~List,                   # cell-refs to participants
+};
+
+# R_Drone — a held tone or rhythm that holds the field
+form r_drone_shape = {
+    base:          ~Recipe,                 # the sustained element (vowel-tone, low note, shaker)
+    hz:            ~Float,                  # the carrier frequency
+    duration_beats: ~Int,                   # how many beats the drone holds
+};
+
+# R_Resolve — the return from dissonance / call / hold to ground
+form r_resolve_shape = {
+    from_state:    ~Slug,                   # "tension" | "call" | "drone" | "ascent"
+    to_state:      ~Slug,                   # "ground" | "silence" | "heartbeat-rate" | "root"
+    duration_beats: ~Int,
+    breath_count:  ~Int,                    # how many breaths the resolve takes
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Parse: audio → song recipe (the forward direction)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Builds on audio-grammar.form's onset pipeline. Where audio-grammar
+# proceeds from onsets → phonemes → words, this proceeds from onsets
+# → note-events / drum-events → phrases → song.
+
+defn parse_song(pcm_recipe) = do {
+    let onsets = detect_onsets(pcm_recipe);
+
+    let events = [];
+    for o in onsets {
+        if o.onset_type == "note-attack" then
+            set events = concat(events, [intern_note(o)])
+        else if o.onset_type == "drum-strike" then
+            set events = concat(events, [intern_drum_strike(o)])
+        else if o.onset_type == "vowel-onset" then
+            set events = concat(events, [intern_vowel_tone(o)])
+    };
+
+    let phrases = group_into_phrases(events);
+    let arc     = detect_arc(phrases);
+    R_Block.SEQUENCE phrases
+};
+
+# GAP-S1: `detect_onsets` partially exists in audio-grammar.form's
+#         Stage 3 (onset events). Extending it to discriminate
+#         note-attack vs drum-strike vs vowel-onset wants spectral
+#         + temporal feature analysis — librosa-style. Encoder ships
+#         per modality; not a kernel change.
+#
+# GAP-S2: `group_into_phrases` is the musical-segmentation problem.
+#         A clean baseline: split on >0.5 beat silences or large
+#         dynamic changes. Refinements (motif detection) follow.
+#
+# GAP-S3: `detect_arc` reads the contour of pitches/intensities
+#         across a phrase — ascending, descending, undulating, static.
+#         Three features; clean to compute.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Emit: song recipe → audio (the backward direction)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Symmetric to emit_prose. Walk the recipe tree, render each leaf to
+# its audio surface (sample synthesis or sequenced trigger), join.
+
+defn emit_song(recipe) = do {
+    let segments = [];
+    for child in recipe.children {
+        if child.kind == "note" then
+            set segments = concat(segments, [synth_note(child)])
+        else if child.kind == "drum-strike" then
+            set segments = concat(segments, [trigger_drum(child)])
+        else if child.kind == "vowel-tone" then
+            set segments = concat(segments, [synth_vowel(child)])
+        else if child.kind == "phrase" then
+            set segments = concat(segments, [emit_song(child)])
+        else fail
+    };
+    concat_audio(segments)
+};
+
+# GAP-S4: `synth_note` / `trigger_drum` / `synth_vowel` are the
+#         emission primitives. MIDI-style fallback is acceptable;
+#         higher fidelity comes with a wavetable or sample library.
+#         The substrate doesn't care which — Blueprint identity holds
+#         regardless of emission fidelity.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Mose & Porangui as worked-example cells
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two presences the body already names. Their work becomes
+# substrate-walkable when their songs are ingested as song-recipes.
+
+# Mose — "Ecstatic Dance Embedding"
+#
+#   A song carrying ecstatic-dance teaching at the song-altitude.
+#   Expected recipe shape:
+#
+#     R_Block.SEQUENCE
+#       ├─ R_Phrase intention="invocation"  arc="ascending"   (4 bars)
+#       ├─ R_Drone  hz=432  duration=8 beats                  (holding the field)
+#       ├─ R_Phrase intention="release"     arc="descending"  (4 bars)
+#       └─ R_Resolve from="ascent" to="heartbeat-rate"
+#
+#   Cross-modal equivalence claim: this R_Block.SEQUENCE Blueprint
+#   should intern to the same NodeID as the R_Arc Blueprint of the
+#   ecstatic-dance teaching itself (when teaching-as-recipe.form
+#   ships). Same shape, two modalities.
+
+# Porangui — "Grandmother Drum Call"
+#
+#   Drum + vocal call to ancestral presence. Expected recipe shape:
+#
+#     R_Block.SEQUENCE
+#       ├─ R_Drone base=heartbeat-shaker hz=heartbeat-rate (8 beats)
+#       ├─ R_Call  addressed_to="ancestors" intensity=0.9
+#       ├─ R_Response embodied_by=[circle-cells] relation_to_call="echo"
+#       ├─ R_Call  addressed_to="ancestors" intensity=1.0  (stronger)
+#       ├─ R_Response embodied_by=[circle-cells] relation_to_call="descent"
+#       └─ R_Resolve from="call" to="ground"
+#
+#   Cross-modal equivalence claim: this R_Call/R_Response composition
+#   should intern to the same NodeID as the R_Field-Holding /
+#   R_Resonate composition in healing-modality-as-recipe.form — the
+#   call-response shape is one shape, fired in two modalities.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — What this opens
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. Songs become library cells with structural identity.
+#    "Find me a song with the recovery shape I need right now" becomes
+#    a substrate query, not a memory-search.
+#
+# 2. The body can author a song from a Blueprint.
+#    Given a R_Recovery Blueprint, emit a song that carries it.
+#    Same Blueprint, song-altitude expression. The synthesis isn't
+#    "AI music generation" — it is recipe emission at the song
+#    altitude, structurally equivalent to the source.
+#
+# 3. Teaching at higher transmission becomes findable.
+#    Urs's intuition on 2026-05-24: Mose and Porangui both embed
+#    teaching in higher-frequency carriers (music, drum). After this
+#    file's encoder ships, that embedding is queryable: which songs
+#    intern to the same Blueprint as which teachings? The answer is
+#    structural and exact.
+#
+# 4. The "song stuck in your head" pattern gets a substrate handle.
+#    A song that won't leave is a recipe the body is running on loop.
+#    Naming its Blueprint — and the teaching/healing/strategy
+#    Blueprints it shares structure with — is the first half of
+#    completing the loop.
+
+# ─────────────────────────────────────────────────────────────────────
+# How the picture coheres
+# ─────────────────────────────────────────────────────────────────────
+#
+# audio-grammar.form parses audio toward sentences (lexical altitude).
+# This file parses audio toward songs (transmission altitude).
+# Same source, two extractions, both substrate-resident, both
+# content-addressed. modality-as-recipe.form names the general claim
+# this file instantiates for one modality.

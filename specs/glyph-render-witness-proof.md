@@ -27,6 +27,25 @@ done_when:
   - "The CC settlement for that read distributes per the existing render-event math AND records the geometric metadata (archetype 3, flow WITNESS, quanta dimensions)."
   - "A glyph fired with a reader who has been flagged by the asset's consent_terms is rejected with a coherent 409, no settlement occurs, and the rejection itself is recorded as a Glyph(2, REFUSE) for observability."
   - "test_glyph_render_witness.py passes end-to-end — read → glyph → SSE event → settlement."
+  - 'file_exists("api/app/models/glyph.py")'
+  - 'symbol_in_file("api/app/models/glyph.py", "Glyph")'
+  - 'symbol_in_file("api/app/models/glyph.py", "FlowType")'
+  - 'symbol_in_file("api/app/models/glyph.py", "Phase")'
+  - 'file_exists("api/app/routers/glyphs.py")'
+  - 'symbol_in_file("api/app/routers/glyphs.py", "post_glyph")'
+  - 'symbol_in_file("api/app/routers/glyphs.py", "stream_glyphs")'
+  - 'symbol_in_file("api/app/routers/glyphs.py", "get_glyph")'
+  - 'file_exists("api/app/services/glyph_service.py")'
+  - 'symbol_in_file("api/app/services/glyph_service.py", "validate_consent")'
+  - 'symbol_in_file("api/app/services/glyph_service.py", "settle_balance")'
+  - 'symbol_in_file("api/app/services/glyph_service.py", "record_glyph")'
+  - 'file_exists("api/app/routers/render_events.py")'
+  - 'symbol_in_file("api/app/routers/render_events.py", "record_render_event")'
+  - 'file_exists("web/components/GlyphPulse.tsx")'
+  - 'symbol_in_file("web/components/GlyphPulse.tsx", "GlyphPulse")'
+  - 'file_exists("api/tests/test_glyph_render_witness.py")'
+  - 'symbol_in_file("api/tests/test_glyph_render_witness.py", "render-witness")'
+  - 'pytest_passes("api/tests/test_glyph_render_witness.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_glyph_render_witness.py"
 constraints:
   - "Additive only — existing render-event endpoint stays functional and CC math stays compatible."

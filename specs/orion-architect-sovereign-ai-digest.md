@@ -14,6 +14,8 @@ done_when:
   - "manifest JSON validates"
   - "lineage importer dry-run reports the expected added nodes and edges"
   - "resource digest records integration guidance and epistemic boundaries"
+  - 'file_exists("docs/lineage/urs-contribution-profile.graph.json")'
+  - 'file_exists("docs/vision-kb/resources/orion-architect-sovereign-ai-2026-05-06.md")'
 test: "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json"
 constraints:
   - "Do not store the full YouTube transcript."
