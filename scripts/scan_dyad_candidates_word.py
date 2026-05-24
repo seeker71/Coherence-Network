@@ -1,10 +1,12 @@
 """WORD-domain prose-structural dyad-pair scan over Living Collective concepts.
 
-Fifth scan in the autoresearch loop. Previous rounds and their signal/noise:
+Six scan rounds in the autoresearch loop. Signal/noise across rounds:
   - PR #1987 (Tier-2 geometry-tuple, 7-axis):                  2/5  = 40%
   - PR #1992 (small-Blueprint-cluster):                         0/2  = 0%
   - PR #1996 (Hz + cross-ref + lineage + same-form):            4/10 = 40%
   - PR #1998 (added topology + phase complementarity):          4/10 = 40%
+  - PR #2001 (WORD-domain prose Jaccard, tokenizer-direct):     4/18 = 22%
+  - Round 6 (this script's --substrate-native mode):            see GAP-D6
   - Cumulative across rounds 1-4:                              10/27 = 37.0%
 
 The body's own teaching after PR #1998 saturation:
@@ -98,6 +100,8 @@ from app.services.substrate.markdown_frontend import (  # noqa: E402
     _WORD_LEXICON_DEFAULTS,
     tokenize_words,
 )
+from app.services.unified_db import session as session_scope  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 CONCEPTS_DIR = Path("docs/vision-kb/concepts")
 
@@ -290,6 +294,120 @@ def extract_prose_signals(body: str) -> tuple[set[str], set[str]]:
     return lemmas, fields
 
 
+def load_substrate_prose_signals() -> dict[str, tuple[set[str], set[str]]]:
+    """Walk every concept's ctor_recipe in the substrate, collect its
+    word-cell REF leaves, and return {concept_id: (lemmas, fields)}.
+
+    This is the substrate-native read: prose lives in the lattice as a
+    SEQUENCE of word-cell refs (via section_content_to_word_sequence).
+    We traverse the recipe tree until we hit RType.REF (1.1.9.*) leaves,
+    each of which is a cell_id pointing at a word-cell in substrate_named_cells.
+    The word-cell's name encodes (lemma, POS); we parse it back.
+
+    Field tagging comes from _WORD_LEXICON_DEFAULTS — the 50-word seed
+    lexicon. 99.5% of interned word-cells are POS=UNK (the lemmatizer
+    is the v0 fallback) so most cells contribute lemma signal but no
+    field signal. Honest finding; do not engineer around it.
+
+    Returns empty dict when WORD domain is empty (caller falls back).
+    """
+    cells_by_path: dict[str, tuple[set[str], set[str]]] = {}
+    with session_scope() as s:
+        # Verify WORD domain is populated first.
+        word_count = s.execute(
+            text("SELECT COUNT(*) FROM substrate_named_cells WHERE domain='word'")
+        ).scalar() or 0
+        if word_count == 0:
+            return {}
+
+        # Pull all word-cells once into an in-memory map: cell_id -> (lemma, pos)
+        word_rows = s.execute(
+            text("SELECT cell_id, name FROM substrate_named_cells WHERE domain='word'")
+        ).fetchall()
+        word_map: dict[int, tuple[str, str]] = {}
+        for row in word_rows:
+            # name format is "{lemma}.{POS}"; some lemmas contain dots
+            # (e.g. punctuation) so rsplit once on the rightmost dot.
+            if "." in row.name:
+                lemma, pos = row.name.rsplit(".", 1)
+            else:
+                lemma, pos = row.name, "UNK"
+            word_map[row.cell_id] = (lemma.lower(), pos)
+
+        # Pull all substrate_nodes once into a serialized-map for fast walk.
+        # node_id -> serialized string. Trade memory for query count.
+        node_rows = s.execute(
+            text("SELECT node_id, serialized FROM substrate_nodes")
+        ).fetchall()
+        ser_by_id: dict[int, str] = {r.node_id: r.serialized for r in node_rows}
+        # Also reverse-index by (p,l,t,i) -> node_id so child refs resolve.
+        id_by_quad: dict[tuple[int, int, int, int], int] = {}
+        node_rows2 = s.execute(
+            text("SELECT node_id, package, level, type, instance FROM substrate_nodes")
+        ).fetchall()
+        for r in node_rows2:
+            id_by_quad[(r.package, r.level, r.type, r.instance)] = r.node_id
+
+        def collect_refs(node_id: int, visited: set[int]) -> list[int]:
+            if node_id in visited:
+                return []
+            visited.add(node_id)
+            ser = ser_by_id.get(node_id)
+            if not ser:
+                return []
+            parts = ser.split("+")
+            refs: list[int] = []
+            # Skip first part (the category); walk children.
+            for piece in parts[1:]:
+                try:
+                    a, b, c, d = (int(x) for x in piece.split("."))
+                except ValueError:
+                    continue
+                if a == 1 and b == 1 and c == 9:
+                    # RType.REF — cell_id is d
+                    refs.append(d)
+                else:
+                    child_nid = id_by_quad.get((a, b, c, d))
+                    if child_nid is not None:
+                        refs.extend(collect_refs(child_nid, visited))
+            return refs
+
+        # Walk each concept's ctor_recipe.
+        concept_rows = s.execute(
+            text(
+                "SELECT name, source_path, ctor_recipe_node_id FROM "
+                "substrate_named_cells WHERE domain='concept' AND "
+                "ctor_recipe_node_id IS NOT NULL"
+            )
+        ).fetchall()
+        for cr in concept_rows:
+            if cr.ctor_recipe_node_id is None:
+                continue
+            ref_cell_ids = collect_refs(cr.ctor_recipe_node_id, set())
+            lemmas: set[str] = set()
+            fields: set[str] = set()
+            for cid in ref_cell_ids:
+                wm = word_map.get(cid)
+                if wm is None:
+                    continue
+                lemma, pos = wm
+                if len(lemma) <= 2:
+                    continue
+                if lemma in STOPWORDS:
+                    continue
+                lemmas.add(lemma)
+                # Field tagging: look up in the lexicon by lemma.
+                lex = _WORD_LEXICON_DEFAULTS.get(lemma)
+                if lex and pos != "UNK":
+                    field = lex.get("field")
+                    if field and field != "neutral":
+                        fields.add(field)
+            # Concept's lc-id is the file basename (concept name in substrate
+            # IS the lc-id already since ingest sets name=fm['id']).
+            cells_by_path[cr.name] = (lemmas, fields)
+    return cells_by_path
+
+
 def strip_frontmatter_and_visuals(text: str) -> str:
     """Return the prose body with frontmatter, code blocks, and image
     captions removed. Keeps cross-ref arrows out of the lemma set so
@@ -309,13 +427,31 @@ def strip_frontmatter_and_visuals(text: str) -> str:
     return body
 
 
-def load_concepts() -> dict[str, dict]:
+def load_concepts(substrate_native: bool = False) -> dict[str, dict]:
+    """Walk concept files and assemble per-cell signals.
+
+    When `substrate_native=True`, lemma/field sets come from
+    `load_substrate_prose_signals` (the WORD-domain substrate read)
+    rather than from re-tokenizing the markdown body. If the substrate
+    is empty, fall back to tokenizer-direct with a printed warning so
+    the gap is visible.
+    """
+    substrate_signals: dict[str, tuple[set[str], set[str]]] = {}
+    if substrate_native:
+        substrate_signals = load_substrate_prose_signals()
+        if not substrate_signals:
+            print(
+                "WARN: --substrate-native requested but WORD domain is empty. "
+                "Falling back to tokenizer-direct read for this run."
+            )
+            substrate_native = False
+
     cells: dict[str, dict] = {}
     for path in sorted(CONCEPTS_DIR.glob("lc-*.md")):
-        text = path.read_text(encoding="utf-8")
-        if not text.startswith("---\n"):
+        raw = path.read_text(encoding="utf-8")
+        if not raw.startswith("---\n"):
             continue
-        _, fm_text, body = text.split("---\n", 2)
+        _, fm_text, body = raw.split("---\n", 2)
         try:
             fm = yaml.safe_load(fm_text)
         except yaml.YAMLError:
@@ -337,8 +473,11 @@ def load_concepts() -> dict[str, dict]:
             if line.startswith("> "):
                 summary = line[2:].strip()
                 break
-        prose = strip_frontmatter_and_visuals(text)
-        lemmas, fields = extract_prose_signals(prose)
+        if substrate_native and cid in substrate_signals:
+            lemmas, fields = substrate_signals[cid]
+        else:
+            prose = strip_frontmatter_and_visuals(raw)
+            lemmas, fields = extract_prose_signals(prose)
         cells[cid] = {
             "hz": fm.get("hz"),
             "geometry": fm.get("geometry") or {},
@@ -374,9 +513,19 @@ def main() -> None:
             "mode honors that."
         ),
     )
+    parser.add_argument(
+        "--substrate-native",
+        action="store_true",
+        help=(
+            "Read lemma/field sets from the WORD-domain substrate (via "
+            "each concept's ctor_recipe walk) rather than re-tokenizing "
+            "the markdown file. Empirical round-6 test: does substrate-"
+            "native prose reading change signal/noise vs tokenizer-direct?"
+        ),
+    )
     args = parser.parse_args()
 
-    cells = load_concepts()
+    cells = load_concepts(substrate_native=args.substrate_native)
     print(f"Loaded {len(cells)} concept cells with geometry.")
     # Vocabulary visibility — proves prose-signal extractor is doing real work.
     avg_lemmas = sum(len(c["lemmas"]) for c in cells.values()) / max(1, len(cells))
@@ -385,10 +534,18 @@ def main() -> None:
         f"Prose signals: avg {avg_lemmas:.1f} substantive lemmas/cell, "
         f"avg {avg_fields:.1f} semantic fields/cell (of 8 possible)."
     )
-    print(
-        "WORD-domain substrate: 0 cells today. This scan reads via "
-        "`tokenize_words` directly — same lexicon the substrate would intern from."
-    )
+    if args.substrate_native:
+        print(
+            "WORD-domain substrate: read directly via concept ctor_recipe "
+            "walk. Each lemma set comes from interned word-cell REF leaves "
+            "(99.5% POS=UNK in current lexicon — field signal is degraded)."
+        )
+    else:
+        print(
+            "WORD-domain substrate: read via `tokenize_words` directly — "
+            "same lexicon the substrate would intern from. Use "
+            "--substrate-native to read from the lattice instead."
+        )
     if args.cross_ref_only:
         print(
             "\nMode: --cross-ref-only — scan-discovered track DROPPED. "

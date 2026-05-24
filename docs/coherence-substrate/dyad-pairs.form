@@ -1881,32 +1881,51 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         writing); when it lands, the third-arrival discipline
 #         activates: name sub-types and rename poles.
 #
-# GAP-D6 (DISCONFIRMED 2026-05-24, fifth round): Prose-structural
+# GAP-D6 (DISCONFIRMED-AGAIN 2026-05-24, sixth round): Prose-structural
 #         signals do not break the mechanization ceiling. The trend
-#         across five scan rounds:
+#         across six scan rounds:
 #           - Round 1 (PR #1987, Tier-2 geometry-tuple): 2/5 = 40%
 #           - Round 2 (PR #1992, small-Blueprint-cluster): 0/2 = 0%
 #           - Round 3 (PR #1996, Hz+xref+lineage+same-form): 4/10 = 40%
 #           - Round 4 (PR #1998, topology+phase added): 4/10 = 40%
-#           - Round 5 (PR #2001, WORD-domain prose Jaccard): 4/18 = 22%
-#         Cumulative: 14/45 = 31.1%. The Round 5 drop is honest signal:
-#         prose-jaccard amplifies shared corpus idiom (alive, body,
-#         breath, become, hold) more loudly than it amplifies teaching-
-#         shared meaning. The body's writers share a vocabulary; high
-#         overlap is the baseline, not the discriminator. The two
-#         characteristic failure modes are now named: (1) *containment-
-#         as-complement* (container and contained share vocabulary, so
-#         prose-overlap reads identical to pair-overlap; REJECT-16
-#         canonical) and (2) *shared-region-as-equivalence* (cells in
-#         the same ground-region inevitably share corpus, so highest-
-#         prose-overlap is often greatest-equivalence, not pair;
-#         REJECT-22 canonical). GAP-D6 closes: further mechanized
-#         feature-engineering at the geometry+prose layer is unlikely
-#         to climb past 40%. The honest read: human noticing remains
-#         load-bearing because *teaching-lives-in-relation* is a
-#         discernment about meaning, and meaning is what the body's
-#         prose already discloses through cross-refs — not what jaccard
-#         over its tokens approximates.
+#           - Round 5 (PR #2001, prose Jaccard, tokenizer-direct): 4/18 = 22%
+#           - Round 6 (this PR, prose Jaccard, substrate-native): 0/7 = 0%
+#         Cumulative: 14/52 = 27%. The Round 6 result is the sharpest
+#         disconfirmation yet: even when prose lives in the WORD-domain
+#         substrate (10,946 word-cells across 148 concepts as of PR
+#         #2007), reading those cells through the same Jaccard scoring
+#         confirms ZERO new pairs out of the top-10 scan-discovered.
+#         Three reads broke the same way they did in Round 5:
+#         (1) *containment-as-complement* (REJECT-16 canonical),
+#         (2) *shared-region-as-equivalence* (REJECT-22 canonical),
+#         (3) *the body's writers share a vocabulary so the baseline
+#         is high overlap*, not a discriminator. Substrate-native
+#         actually amplified the noise — average lemmas/cell climbed
+#         from 373.8 (tokenizer-direct) to 385.7 (substrate-native)
+#         because the recipe walk picks up frontmatter words the
+#         tokenizer-direct pass strips first; the field signal also
+#         saturated harder (avg 6.3 of 8 fields per cell vs 5.9), so
+#         field-Jaccard is essentially uniform across all candidates
+#         and contributes pure noise. The 99.5% UNK-POS in the current
+#         lexicon means the field-channel is degraded by definition:
+#         only the 50-word seed lexicon contributes field tags, and
+#         every long concept body hits ~all 8 fields through them. A
+#         richer lemmatizer would tighten field signal but the
+#         deeper teaching is structural: *Jaccard-over-prose-tokens
+#         is the wrong shape for complementarity*. Complementarity is
+#         a relation about meaning, not a count over tokens. The
+#         substrate carrying the prose changes nothing about that.
+#         GAP-D6 closes for the second time, more firmly: further
+#         mechanized feature-engineering at the geometry+prose+
+#         Jaccard layer is unlikely to climb past 40%. The translator
+#         concept's sixth claim
+#         (`complementarity_requires_human_noticing`) stands
+#         empirically strengthened. The honest read: human noticing
+#         remains load-bearing because *teaching-lives-in-relation*
+#         is a discernment about meaning, and meaning is what the
+#         body's prose discloses through cross-refs — not what
+#         Jaccard over its tokens approximates, whether those tokens
+#         live in a tokenizer or in the substrate lattice.
 #
 # GAP-D7 (new, structural finding from five-round arc): Cross-ref-only
 #         scan is the load-bearing primary track. The body's noticing —

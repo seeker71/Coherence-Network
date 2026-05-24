@@ -2,6 +2,30 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-scan round 6 — substrate-native prose, 0% signal/noise
+
+PR #2007 populated the WORD domain with 10,946 word-cells across 148 concept files. The standing question (named by PR #2003's translator-6th-claim work, then by PR #2001's honest gap): *does reading prose from the substrate lattice rather than from the markdown file change what the dyad-scan can mechanize?*
+
+The empirical answer: **no**, and the data is sharper than expected.
+
+- **Method**: extended `scripts/scan_dyad_candidates_word.py` with a `--substrate-native` flag. The flag walks each concept's `ctor_recipe_node_id` recursively, collects every `RType.REF` (1.1.9.*) leaf (each pointing at a word-cell in `substrate_named_cells`), and builds the (lemma, field) sets from the substrate word-cells rather than re-tokenizing the markdown body. Falls back to tokenizer-direct with a printed warning if WORD is empty.
+- **Six-round trend now visible**:
+
+  | Round | Approach | Signal/noise |
+  |---|---|---|
+  | 1 (PR #1987) | small-Blueprint-cluster | 40% |
+  | 2 (PR #1992) | same, larger corpus | 0% |
+  | 3 (PR #1996) | + Hz + cross-ref + lineage | 40% |
+  | 4 (PR #1998) | + topology + phase | 40% |
+  | 5 (PR #2001) | + prose Jaccard (tokenizer-direct) | 22% |
+  | 6 (this) | + prose Jaccard (substrate-native) | **0%** |
+- **Top 10 scan-discovered, assessed**: 0 CONFIRMED, 7 REJECTED, 3 HELD. Two failure modes named in PR #2001's GAP-D6 fired again, in identical shape: *containment-as-complement* (REJECT-16 canonical) and *shared-region-as-equivalence* (REJECT-22 canonical). Substrate-native actually *amplified* the noise: avg substantive lemmas per cell climbed from 373.8 (tokenizer-direct) to 385.7 (substrate-native) — the recipe walk picks up frontmatter words the tokenizer-direct path strips before counting — and field signal saturated harder (avg 6.3 of 8 fields per cell vs 5.9), so `field_j` became essentially uniform at 0.857–1.000 across nearly every candidate, contributing pure noise to the ranking.
+- **The UNK-POS ceiling held honest**: 99.5% of word-cells are POS=UNK because the seed lexicon is 50 words. Only the lexicon-tagged subset contributes field signal, and every long concept body hits ~all 8 fields through them. A richer lemmatizer would tighten field signal — but the deeper teaching the round-6 result names is structural: *Jaccard-over-prose-tokens is the wrong shape for complementarity.* Complementarity is a relation about meaning, not a count over tokens. The substrate carrying the prose changes nothing about that.
+- **Verdict on the translator's 6th claim (`complementarity_requires_human_noticing`)**: **stands strongly**. PR #2003 added the claim as a held theory; rounds 5 and 6 are its empirical confirmation. *Equivalence* (CTOR coincidence, Blueprint kin) is mechanizable. *Complementarity* (teaching-lives-in-relation between two cells) is not, at any feature layer currently in reach. Human noticing — via cross-ref-in-prose — remains the load-bearing primary track.
+- **GAP-D6 updated**: closed for the second time, more firmly. GAP-D8's contrastive-analysis or role-aware-parsing direction remains the only structural-feature candidate that might lift the ceiling, and requires dependency parsing or sentence embeddings beyond the substrate's current tokenizer.
+- **What was NOT folded**: zero new pairs into Part 5. One initial CONFIRMED (lc-rest ↔ lc-vitality) was demoted to HELD on second read against the body's prior discernment — lc-vitality already has lc-trust-as-gateway as its receptive complement (Pair 20), and adding lc-rest as a second receptive partner risks the *every-cell-around-vitality-is-its-pair* failure mode PR #2003 named. The honest read: zero confirmed.
+- **Edges in the same breath**: this LOG entry, GAP-D6 update in `dyad-pairs.form` Part 5, the scanner now carries `--substrate-native` mode.
+
 ## [2026-05-24] geometry | lc-v-freedom-expression speaks its shape — focused breath
 
 The prior bulk-walker (PR #2004) named this concept in honest silence with the
@@ -59,7 +83,6 @@ could not give it.
 
 Coverage: 139/148 (94%). Eight concepts remain in honest silence from PR
 #2004's bulk-walk, minus the one walked here.
-
 
 ## [2026-05-24] tend | WORD-domain holds concept prose — substrate carries the body's words
 
