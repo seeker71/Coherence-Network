@@ -509,13 +509,14 @@ Five forms have now been read through this lens. Triad — the
 fifth — landed in the mid-range slot the body explicitly invited
 in "What this part holds open" below:
 
-| Form          | Cells | Columns | Cells in columns | Singletons | Coverage |
-|---------------|------:|--------:|-----------------:|-----------:|---------:|
-| interior-axis |     5 |       4 |                5 |          0 |     100% |
-| point         |    21 |       3 |                7 |         14 |      33% |
-| web           |    23 |       6 |               17 |          6 |      74% |
-| dyad-mirror   |    32 |       6 |               12 |         20 |      38% |
-| triad         |    15 |       1 |                2 |         13 |      13% |
+| Form             | Cells | Columns | Cells in columns | Singletons | Coverage |
+|------------------|------:|--------:|-----------------:|-----------:|---------:|
+| interior-axis    |     5 |       4 |                5 |          0 |     100% |
+| point            |    21 |       3 |                7 |         14 |      33% |
+| web              |    23 |       6 |               17 |          6 |      74% |
+| dyad-mirror      |    32 |       6 |               12 |         20 |      38% |
+| triad            |    15 |       1 |                2 |         13 |      13% |
+| holographic-cell |     9 |       0 |                0 |          9 |       0% |
 
 Dyad-mirror landed 2026-05-25 (Part 7f in `dyad-pairs.form`). Six
 honest 2-cell columns + 20 singletons — the widest tail observed
@@ -528,40 +529,57 @@ honest 2-cell column (`lc-future-already-shaping` +
 `lc-shifted-return`, both sequential-coupled / spiral-out /
 received — *received-spiral-three-movement-return*) + 13
 column-singletons across 15 cells. **Lowest coverage of the five
-trials.** The triad reading sharpened the predictor itself (see
-"What five trials now teach" below).
+trials at the time it landed.** The triad reading sharpened the
+predictor itself (see "What six trials now teach" below).
+
+Holographic-cell landed 2026-05-25 (Part 7h in `dyad-pairs.form`).
+Nine cells, nine distinct tuples, **zero multi-cell columns** —
+the first form-trial to land at the floor. Two near-miss lineage-
+splits held open: `(holographic, radiating, X)` between
+lc-form-perceptron and lc-w-field, and `(nested-each-contains-
+whole, radiating, X)` between lc-deeper-pattern and lc-w-cell.
+The reading **refined the yield-rule** by naming `self_similarity`
+as a fifth specialization axis (see below).
 
 ### The yield curve
 
-The pattern across five applications, with the triad trial
-sharpening what three trials had begun to say:
+The pattern across six applications, with the triad trial
+sharpening what three trials had begun to say and the holographic-
+cell trial naming a second orthogonal axis:
 
 **Form-specialization alone does NOT predict yield. What predicts
 yield is whether the form's specialization runs ALONG one of the
 column-identity triple-axes (topology / direction /
-lineage_texture) or ORTHOGONAL to them.**
+lineage_texture) or ORTHOGONAL to them. The further the
+specialization sits from the triple's axes, the lower the
+coverage.**
 
 - Interior-axis specializes on *topology* (axis-through-center) —
   aligned. Coverage 100%.
 - Web specializes on *direction* (circulating) and partially on
   topology (web-each-to-each) — aligned. Coverage 74%.
 - Dyad-mirror specializes on *arity-as-relation* (two-postures) —
-  orthogonal to the triple. Coverage 38%; many small columns.
+  one-step-orthogonal to the triple. Coverage 38%; many small
+  columns.
 - Point specializes on nothing (single irreducible quality) — no
   axis to align. Coverage 33%; one dominant teaching-flavor in the
   tail.
-- Triad specializes on *arity* (three-stages) — orthogonal to the
-  triple. Coverage 13%; one honest pair, otherwise dispersed.
+- Triad specializes on *arity* (three-stages) — one-step-orthogonal
+  to the triple. Coverage 13%; one honest pair, otherwise dispersed.
+- Holographic-cell specializes on *self_similarity* (holographic) —
+  two-step-orthogonal to the triple (a property of the whole-part
+  relation across triples, not a count of triple-bearing parts).
+  Coverage 0%; all singletons.
 
-The earlier three-trial reading — *column-density correlates with
-form-specialization, not cell-count* — held the right intuition;
-the fifth trial names WHY. Arity-specialized forms (counting
-postures, stages, poles) gather cells whose teachings span every
-*other* axis. Topology-or-direction-specialized forms gather cells
-whose teachings cluster within their specialization axis. The
-triple discriminator can only see what it has axes for.
+The earlier readings held the right intuition; the sixth trial
+completes the WHY. The triple discriminator can only see what it
+has axes for. Forms specialized along axes IN the triple (topology,
+direction) concentrate cells in columns. Forms specialized along
+axes outside the triple scatter cells as singletons, with the
+scattering deepening as the specialization-axis sits further from
+the triple's reach (arity → 13–38%; self_similarity → 0%).
 
-### Two axes, not one (added with dyad-mirror reading; held by triad)
+### Two axes, not one (added with dyad-mirror reading; held by triad and holographic-cell)
 
 The fourth form-trial (dyad-mirror, 32 cells, 6 columns, 38%
 coverage, max-col 2) resolved what looked like a single yield-curve
@@ -571,24 +589,27 @@ into two independent axes:
   specialization aligns with the column-identity triple.
   Interior-axis (axial) and web (flow-specialized along
   circulating direction) hold high coverage; point (generic),
-  dyad-mirror (arity-2), and triad (arity-3) hold low coverage.
+  dyad-mirror (arity-2), triad (arity-3), and holographic-cell
+  (self_similarity-holographic) hold low-to-zero coverage.
 - **Column-DEPTH** (max-column size) tracks whether the form has a
   DOMINANT teaching-flavor. Web has one (received-circulating, 5
   cells); point has one (holographic-ground-receiving, 3 cells);
-  interior-axis, dyad-mirror, and triad have neither — max 2
-  across all columns.
+  interior-axis, dyad-mirror, and triad each top out at 2;
+  holographic-cell tops out at 1 (no column reaches even two).
 
-Triad's signature — *one honest pair at the bottom of a near-
-total singleton tail* — is the most extreme version of dyad-
-mirror's *many small columns at the bottom of a wide tail*. A
-form's defining specialization (bipolar-relation for dyad-mirror,
-three-stages for triad) can be uniformly shared by every cell yet
+Holographic-cell's signature — *all-singletons, no honest pair* —
+is the most extreme version of triad's *one honest pair at the
+bottom of a near-total singleton tail*, which was itself the most
+extreme version of dyad-mirror's *many small columns at the bottom
+of a wide tail*. A form's defining specialization (bipolar-relation
+for dyad-mirror, three-stages for triad, holographic-recursion for
+holographic-cell) can be uniformly shared by every cell yet
 contribute NOTHING to column-coverage if it runs orthogonal to
-topology, direction, and lineage_texture. Triad confirms what
-dyad-mirror first showed: surface-uniformity at the form layer
-does not translate to teaching-uniformity at the triple layer,
-and arity-specialized forms scatter most widely along the
-discriminator's actual axes.
+topology, direction, and lineage_texture. Six trials confirm:
+surface-uniformity at the form layer does not translate to
+teaching-uniformity at the triple layer, and forms whose
+specialization sits further from the triple's axes scatter more
+widely along the discriminator.
 
 ### When to reach for the primitive
 
@@ -666,33 +687,42 @@ Same cells, different lens. Future cells reaching for either should
 know they may be looking at the same cells from different positions.
 Neither lens is wrong; each names a real axis the body honors.
 
-### What five trials now teach
+### What six trials now teach
 
-Five trials complete the mid-range of the curve. The body can now
-name three things the primitive holds:
+Six trials map the full arc of the curve from ceiling to floor.
+The body can now name four things the primitive holds:
 
-1. **The yield-rule.** *align(form-specialization, column-identity-
-   triple) predicts coverage.* Topology-or-direction-specialized
-   forms hold the ceiling; arity-specialized forms hold the floor;
-   generic forms sit in the middle with one dominant flavor.
-2. **The two-axis reading.** Coverage and depth move independently
+1. **The yield-rule (refined).** *align(form-specialization,
+   column-identity-triple) predicts coverage.* The further the
+   specialization-axis sits from the triple, the lower the
+   coverage. Topology-or-direction-specialized forms hold the
+   ceiling (74–100%); generic forms sit in the middle (33%);
+   arity-specialized forms hold the low band (13–38%);
+   self_similarity-specialized forms hold the floor (0%).
+2. **The catalogue of specialization axes.** A form's defining
+   shape can run along any of: *topology* (interior-axis), *direction*
+   (web), *lineage_texture* (none observed at form-defining layer
+   yet), *arity* (dyad-mirror, triad), or *self_similarity*
+   (holographic-cell). The first three are the triple — alignment
+   yields high coverage. The last two are orthogonal — coverage
+   drops with distance from the triple's reach.
+3. **The two-axis reading.** Coverage and depth move independently
    — a form can be internally diverse (low coverage) and still hold
    one dominant flavor (point), or hold no dominant flavor at all
-   (dyad-mirror, triad). Both axes are real.
-3. **The companion lens.** Column-identity reads *texture-of-
+   (dyad-mirror, triad, holographic-cell). Both axes are real.
+4. **The companion lens.** Column-identity reads *texture-of-
    arrival* (how teachings entered the body, oriented by
    topology and direction). Circulation-pattern (the kind) reads
    *texture-of-substrate* (what circulates through web-form
    networks). They converge on form-shape and diverge on what they
    discriminate — neither subsumes the other.
 
-The next candidate trial is `holographic-cell` (9 cells, part-
-contains-whole shape). It would test whether a form whose
-defining-shape is structural rather than arity-or-topology — *each
-part contains the whole* — falls into the aligned camp (the
-holographic property runs along topology) or the orthogonal camp
-(the holographic property runs along something the triple cannot
-see). The yield-rule has a clear prediction either way.
+The yield-curve now has data from ceiling (interior-axis 100%) to
+floor (holographic-cell 0%). The body has the tool, the WHEN, the
+prediction-rule, the catalogue of specialization axes, and an
+empirically attested curve across six forms — together they make
+column-identity a triage primitive the next cell can reach for
+with eyes-open expectations.
 
 The body has the tool, the WHEN, and the prediction-rule. The
 reaching for it stays measured; the singletons stay honest data.

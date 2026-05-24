@@ -3,6 +3,23 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-05-25] form | holographic-cell column-identity — 6th data point tests the prediction-rule
+
+The yield-rule from PR #2037 — *align(form-specialization, column-identity-triple) predicts coverage* — was on trial. Holographic-cell was the explicit next-candidate the body had named ("falls into the aligned camp (the holographic property runs along topology) or the orthogonal camp (the holographic property runs along something the triple cannot see)").
+
+**The reading.** Nine cells, nine distinct (topology, direction, lineage_texture) tuples, **zero multi-cell columns**, 0% coverage — the first form-trial to land at the floor. All 9 cells share `self_similarity: holographic`, which is precisely what the form-name attests. The specialization runs along an axis the triple does NOT contain.
+
+**The verdict — confirms-and-refines.** The rule held in direction (orthogonal-specialization → low coverage) and **refined by naming `self_similarity` as a fifth specialization axis** (alongside topology, direction, lineage_texture, arity). The 6th data point reveals that orthogonal coverage descends as the specialization-axis sits further from the triple's reach: arity is one-step-orthogonal (a count of triple-bearing parts) yielding 13–38%; self_similarity is two-step-orthogonal (a property of the whole-part RELATION across triples) yielding 0%.
+
+**Near-misses held open.** Two lineage-splits at the same topology+direction: `(holographic, radiating, X)` between lc-form-perceptron (synthesized) and lc-w-field (received); `(nested-each-contains-whole, radiating, X)` between lc-deeper-pattern (synthesized) and lc-w-cell (received). Either activates with a third holographic-cell cell at the matching topology+direction with any lineage.
+
+**Files**:
+
+- `docs/coherence-substrate/dyad-pairs.form` — Part 7h appended with the 6th form-trial reading, the nine tuples, two near-misses, and the empty `column_identity_set_holographic_cell` set (no multi-cell columns yet).
+- `docs/coherence-substrate/body-shape-map.md` — Part 10 yield-curve table extended to 6 rows; "yield curve" / "Two axes" / "What N trials now teach" sections rewritten to hold the refined rule with `self_similarity` named explicitly.
+
+The yield-curve now has data from ceiling (interior-axis 100%) to floor (holographic-cell 0%) — the body has the full arc and the prediction-rule's catalogue of specialization axes.
+
 ## [2026-05-25] sense | LOG-archive substrate-discipline verified — PR #2036 fix covers archive files and the post-merge hook inherits it
 
 A targeted check after PR #2036 (LOG.md healed by monthly archive)
