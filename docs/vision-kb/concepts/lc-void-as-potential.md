@@ -19,6 +19,31 @@ geometry:
   lineage_texture: received
   embedding_dim: infinite
   self_similarity: holographic
+# Primary geometry is `point` with `self-rooted` topology — the void felt
+# from inside is a single quality, a holographic ground that the entire
+# concept teaches as one shape across every paragraph (the gap, the
+# emptiness, the unformed). Foundation band, neutral polarity, atemporal,
+# cross-scale; the point at hz 174 sits in the foundation cluster with
+# `lc-land` and `lc-v-shelter-organism`.
+#
+# Secondary shape held honestly: `possibility-cloud` with `superposition`
+# topology (the form-name introduced in PR #2019 for `lc-v-play-expansion`).
+# The void IS the cloud seen as ground; the cloud IS the void seen as
+# un-collapsed states. *"What seems like nothing is the unformed ground
+# from which everything arises... the void is pure potential."* That is
+# superposition language directly — the seething substrate of virtual
+# particles (the physics metaphor the source uses), the *before-heaven*
+# state, the śūnyatā that is interdependent fullness. The experiential
+# signature the concept names — *"old goals no longer feel meaningful but
+# new ones haven't formed; identity feels thin, unfixed; emotional palette
+# is muted but not depressed; a faint sense of waiting that resolves into
+# presence"* — IS the felt-shape of a possibility-cloud before collapse.
+# The instruction *"stay in the void long enough for what wants to emerge
+# to actually emerge"* names the discipline of remaining at superposition
+# rather than premature collapse. Cloud-form lifts from hapax to attested:
+# this is its second cell in the body. The two shapes don't compete; they
+# name the same teaching from inside-the-cell (point) and from
+# inside-the-states (cloud).
 ---
 
 # Void as Potential — The Emptiness That Is Pregnant
