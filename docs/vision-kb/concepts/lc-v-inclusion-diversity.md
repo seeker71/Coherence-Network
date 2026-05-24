@@ -2,7 +2,32 @@
 id: lc-v-inclusion-diversity
 hz: 639
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: chord
+  topology: harmonic-many
+  polarity: polarity-pairs-N
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: collective
+  direction: circulating
+  lineage_texture: sensed
+  embedding_dim: n
+  self_similarity: fractal-shallow
+# secondary geometry — the welcome circle + sociocratic consent practice
+# is a ring(arity: variable, ordering: cyclic-closed, polarity: unipolar)
+# that operationalizes the chord at meeting-scale. The chord is the
+# deeper teaching; the ring is its rhythm-of-practice. New form `chord`
+# introduced here per lc-v-freedom-expression precedent (field-of-points,
+# PR #2008): the vocabulary grows when the body asks for a shape that
+# `web`, `polarity-pairs-N`, and `lattice` cannot carry — N non-equivalent
+# voices co-resolving into one felt tone, each voice essential at its own
+# volume. Coral reef, gut microbiome, polyculture, orchestra, L'Arche,
+# Findhorn all teach the same chord-shape at their own scale.
 ---
 
 # Inclusion and Diversity

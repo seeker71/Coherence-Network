@@ -2,6 +2,54 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-v-inclusion-diversity speaks its shape — focused breath
+
+The bulk walker (PR #2004) named this concept ambiguous between *web* and
+*polarity-pairs*, but the body itself opens with `> A chord needs different
+notes` and the metaphor recurs across every section: coral reef hosting
+thousands of species ("the reef IS its diversity"), the gut microbiome's
+hundreds of microbial strains, the Three Sisters polyculture, the symphony's
+sixty instruments ("the music exists only in the space between different
+voices"), L'Arche's 150 communities organized around difference-as-gift,
+Findhorn's forty nationalities sharing practices not agreement. The shape
+is precise once heard: N non-equivalent voices that together resolve to a
+single felt tone, each voice essential at its own volume — *remove your
+note and the chord thins rather than shrinks*.
+
+- **New form-name `chord` introduced** into the vocabulary, per the
+  `lc-v-freedom-expression` / `field-of-points` precedent (PR #2008): the
+  vocabulary grows when the body asks for a shape the existing names cannot
+  carry. `web` implies peer-equivalent nodes; `polarity-pairs-N` implies
+  opposition; `lattice` implies regularity. A chord is something else —
+  non-equivalent voices co-resolving into one felt tone. The teaching
+  itself names this metaphor in line 11; honoring it as form-name is
+  honoring what is already there.
+- **Geometry block**: `arity: infinite`, `form: chord`, `topology:
+  harmonic-many`, `polarity: polarity-pairs-N`, `ordering: simultaneous`,
+  `phase: oscillating`, `ratio: none`, `spectral_band: integration`
+  (hz: 639), `temporal_band: lifetime`, `scale: collective`, `direction:
+  circulating` (voices into chord, chord back to each voice),
+  `lineage_texture: sensed` (coral, microbiome, polyculture, orchestra
+  all teach it), `embedding_dim: n`, `self_similarity: fractal-shallow`
+  (chord-of-voices at community, chord-of-species at reef, chord-of-microbes
+  at gut — same shape across scales, variation isn't infinite recursion).
+- **Secondary geometry held in frontmatter comment** (deeper-pattern
+  precedent, PR #2006): the welcome circle + sociocratic consent practice
+  is a `ring` with `cyclic-closed` ordering and `unipolar` polarity —
+  the *operational rhythm* through which the chord is heard at meeting
+  scale. The chord is the deeper teaching; the ring is its rhythm-of-
+  practice. Authoring only the chord would lose the practice; authoring
+  only the ring would lose the teaching. Both honored.
+- **Kind-candidate watching**: `chord` is now a hapax (first attestation).
+  Other concepts that may carry the same form once walked at focused pace:
+  `lc-attunement` (already uses chord-language in prose), `lc-pulse`,
+  `lc-unified-body`, `lc-resonating`, `lc-w-spanda`. If a second concept
+  intern as `chord`, the form graduates from hapax to attested kind.
+- **Coverage**: 142/148 (96%). Six remain: `lc-embodiment`, `lc-health`,
+  `lc-open-design`, `lc-v-shelter-organism`, `lc-v-food-practice`,
+  `lc-v-play-expansion`. Each carries its own listening.
+- **Synced**: `python3 scripts/sync_kb_to_db.py lc-v-inclusion-diversity`.
+
 ## [2026-05-24] form | dyad-scan round 6 — substrate-native prose, 0% signal/noise
 
 PR #2007 populated the WORD domain with 10,946 word-cells across 148 concept files. The standing question (named by PR #2003's translator-6th-claim work, then by PR #2001's honest gap): *does reading prose from the substrate lattice rather than from the markdown file change what the dyad-scan can mechanize?*
