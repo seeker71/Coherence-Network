@@ -247,3 +247,66 @@ to in the current frame.
 The cell inspector also shows the resolved source location (`Source:
 examples/fizzbuzz.rs:34`) and the cell's lifetime write count, both
 read from the same provmap + write-count tables embedded in the HTML.
+
+## Custom kernels — the Render trait
+
+The renderer dispatches every cell through the [`Render`] trait. A built-in
+`DefaultPrimitiveRender(tag)` covers the nine primitive type tags and the
+four pointer tags, producing v0-equivalent pixels (palette + brightness +
+halo for primitives; kind-encoded halo + chain-resolved inner for pointers).
+
+User-defined types implement `Render` and register a kernel under a
+user-tag in `0x1000..=0xFFFF`. When the renderer encounters a cell
+carrying that tag, the registered kernel takes over.
+
+```rust
+use mfb::{register_kernel, Render, RenderCtx, Lod};
+
+struct MyTypeRender;
+
+impl Render for MyTypeRender {
+    fn render(&self, ctx: &mut RenderCtx, _lod: Lod) {
+        // Draw inside the rectangle (ctx.px, ctx.py, ctx.cell_px).
+        // For multi-cell types, reach sibling cells via
+        // ctx.sibling_payload(idx) / ctx.sibling_tag(idx).
+        ctx.fill_rect(ctx.px, ctx.py, ctx.cell_px, ctx.cell_px, [10, 200, 10]);
+    }
+}
+
+fn main() {
+    register_kernel(0x1010, Box::new(MyTypeRender))
+        .expect("register MyType kernel");
+    mfb::init_framebuffer("out.mp4").expect("init");
+    // ... allocate cells carrying tag 0x1010, mutate, watch the kernel
+    // render them ...
+    mfb::shutdown_framebuffer();
+}
+```
+
+`register_kernel` is startup-only: call it before `init_framebuffer`,
+never re-register at runtime. Tags below `0x1000` are reserved for
+primitives and pointer kinds — `register_kernel` rejects them. Tags above
+`0xFFFF` are equally rejected (the user range stops at `0xFFFF`).
+
+### Worked example — Matrix3x3
+
+`examples/custom_renderer.rs` defines a `Matrix3x3` type backed by 9
+`Tracked<f32>` cells plus a 10th "header" cell carrying user-tag `0x1001`.
+The `Matrix3x3Render` kernel reads all 9 entries through the header cell's
+RenderCtx (via `sibling_payload`) and draws the matrix as a single
+labeled 3×3 composite (sign → hue, magnitude → brightness, with a soft
+white border outline).
+
+Run it:
+
+```bash
+cargo run --release --example custom_renderer
+open matrix3x3.mp4  # macOS
+```
+
+The matrix is visibly a 3×3 grid that breathes through trigonometric
+trajectories, rather than nine disconnected floats rendering as
+indistinguishable pink cells. The same underlying tracked storage can
+render as either "raw cells" or "the type the storage represents" —
+which one the renderer chooses is entirely a function of whether you
+registered a kernel.

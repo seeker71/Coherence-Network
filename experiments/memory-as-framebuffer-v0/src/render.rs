@@ -222,6 +222,13 @@ fn resolve_inner_color(data_bytes: &[u8], idx: usize) -> [u8; 3] {
     CYCLE_TERMINATOR_RGB
 }
 
+/// Public re-export of the internal `pointer_halo_pair` so the Render trait's
+/// default kernel (in `render_trait.rs`) can compose the same halo without
+/// duplicating the kind table.
+pub fn pointer_halo_pair_public(kind: PointerKind, prov: u32) -> ([u8; 3], [u8; 3]) {
+    pointer_halo_pair(kind, prov)
+}
+
 /// Compute the halo (outer-ring) color for a pointer cell of the given kind.
 /// The halo encodes the pointer-kind: raw uses the plain provenance hash;
 /// Box paints solid white; Rc paints alternating bright/dim (dotted); Weak
@@ -311,6 +318,7 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [u8; 3] {
     ]
 }
 
+#[cfg_attr(not(feature = "nodeid_render"), allow(dead_code))]
 fn put_px(buf: &mut [u8], x: usize, y: usize, rgb: [u8; 3]) {
     let i = (y * RENDER_W + x) * 4;
     buf[i] = rgb[0];
@@ -400,9 +408,19 @@ pub fn compute_active_viewport(data_bytes: &[u8]) -> (usize, usize, usize) {
 /// frame regardless of how few cells exist or where they sit on the grid.
 /// When no cells are allocated, the top-left MIN_VIEWPORT_SIDE square renders
 /// as black (matching the empty-heap test contract).
+///
+/// Internally, every cell is dispatched through the [`Render`] trait. If a
+/// user-tag kernel is registered (via `register_kernel`), it owns rendering
+/// for cells carrying that tag. Otherwise `DefaultPrimitiveRender(tag)`
+/// produces v0-equivalent output — palette + brightness + halo for
+/// primitives, kind-encoded halo + chain-resolved inner for pointers.
 pub fn render_frame(data_bytes: &[u8], provenance: &[u32]) -> FrameRgba {
     debug_assert_eq!(data_bytes.len(), NUM_CELLS * CELL_BYTES);
     debug_assert_eq!(provenance.len(), NUM_CELLS);
+
+    use crate::render_trait::{
+        lookup_kernel, DefaultPrimitiveRender, Lod, Render, RenderCtx,
+    };
 
     // Initialize with opaque black so any padding around the viewport is
     // valid RGBA rather than fully transparent.
@@ -433,40 +451,50 @@ pub fn render_frame(data_bytes: &[u8], provenance: &[u32]) -> FrameRgba {
             }
             let idx = cy * GRID + cx;
             let tag = read_tag_at(data_bytes, idx);
+            let payload = read_payload_at(data_bytes, idx);
 
-            let inner = if is_pointer_tag(tag) {
-                resolve_inner_color(data_bytes, idx)
+            // Pointer cells: pre-resolve the target color so the default
+            // kernel (and user kernels that wrap pointers) sees a single
+            // resolved color instead of having to walk the chain. The
+            // chain-walk rule lives in one place (`resolve_inner_color`).
+            let resolved_target = if is_pointer_tag(tag) {
+                Some(resolve_inner_color(data_bytes, idx))
             } else {
-                let payload = read_payload_at(data_bytes, idx);
-                primitive_inner(tag, &payload)
-            };
-
-            let (halo_a, halo_b) = if let Some(kind) =
-                if is_pointer_tag(tag) { PointerKind::from_tag(tag) } else { None }
-            {
-                pointer_halo_pair(kind, provenance[idx])
-            } else {
-                let h = provenance_halo(provenance[idx]);
-                (h, h)
+                None
             };
 
             let px = pad_x + cx_local * cell_px;
             let py = pad_y + cy_local * cell_px;
-            for dy in 0..cell_px {
-                for dx in 0..cell_px {
-                    let is_inner = dx >= inner_offset
-                        && dx < inner_offset + inner_size
-                        && dy >= inner_offset
-                        && dy < inner_offset + inner_size;
-                    let rgb = if is_inner {
-                        inner
-                    } else if (dx + dy) % 2 == 0 {
-                        halo_a
-                    } else {
-                        halo_b
-                    };
-                    put_px(&mut buf, px + dx, py + dy, rgb);
-                }
+
+            let mut ctx = RenderCtx {
+                cell_idx: idx,
+                gx: cx,
+                gy: cy,
+                px,
+                py,
+                cell_px,
+                inner_offset,
+                inner_size,
+                frame_w: RENDER_W,
+                frame_h: RENDER_H,
+                data_bytes,
+                provenance,
+                tag,
+                payload,
+                resolved_target,
+                lod: Lod::Default,
+                frame: &mut buf,
+                ops: None,
+            };
+
+            // Dispatch: user kernel beats default. The default kernel
+            // produces v0-equivalent pixels for every primitive + pointer
+            // tag, so this is a pure refactor for cells without registered
+            // user kernels.
+            if let Some(kernel) = lookup_kernel(tag) {
+                kernel.render(&mut ctx, Lod::Default);
+            } else {
+                DefaultPrimitiveRender::new(tag).render(&mut ctx, Lod::Default);
             }
         }
     }
