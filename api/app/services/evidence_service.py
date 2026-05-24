@@ -55,11 +55,13 @@ def submit_evidence(body: EvidenceCreate) -> ImplementationEvidence:
     return evidence
 
 
-def run_verification(evidence_id: UUID) -> Optional[EvidenceVerification]:
+def verify_evidence(evidence_id: UUID) -> Optional[EvidenceVerification]:
     """Run 2-of-3 factor verification on a stored evidence record.
 
     Returns None if the evidence_id is not found. Otherwise stores
-    and returns the verification result.
+    and returns the verification result. Verified evidence carries
+    the 5× CC multiplier per spec R9; unverified evidence stays at
+    multiplier 1×.
     """
     record = _find(evidence_id)
     if record is None:
@@ -85,6 +87,29 @@ def run_verification(evidence_id: UUID) -> Optional[EvidenceVerification]:
     return result
 
 
+# Compatibility alias — older callers used this name. New code should
+# import verify_evidence directly per spec R9 source: map.
+run_verification = verify_evidence
+
+
+def compute_evidence_bonus(evidence_id: UUID) -> Decimal:
+    """Return the CC multiplier earned by a single piece of verified
+    evidence: ``Decimal("5")`` when the 2-of-3 factor rule passes,
+    ``Decimal("1")`` otherwise.
+
+    Per spec R9: verified implementation evidence triggers a 5× CC
+    multiplier on the asset's next settlement period. Settlement uses
+    :func:`applicable_multiplier_for_asset` to fold per-evidence
+    bonuses into the per-asset multiplier; this function exposes the
+    single-evidence value so callers can audit the contribution of
+    each submission independently.
+    """
+    verification = _VERIFICATIONS.get(evidence_id)
+    if verification is None or not verification.verified:
+        return Decimal("1")
+    return Decimal(verification.cc_multiplier_applicable)
+
+
 def get_evidence(evidence_id: UUID) -> Optional[ImplementationEvidence]:
     return _find(evidence_id)
 
@@ -93,8 +118,22 @@ def get_verification(evidence_id: UUID) -> Optional[EvidenceVerification]:
     return _VERIFICATIONS.get(evidence_id)
 
 
+def list_evidence(asset_id: Optional[str] = None) -> List[ImplementationEvidence]:
+    """Return evidence records, optionally filtered by asset.
+
+    With ``asset_id`` set, returns only submissions for that asset.
+    Without filter, returns every submission across every asset in
+    submission order per asset. Per spec R9 source: map.
+    """
+    if asset_id is not None:
+        return list(_EVIDENCE.get(asset_id, []))
+    return [record for records in _EVIDENCE.values() for record in records]
+
+
+# Compatibility alias — keep the older name working for callers that
+# already import it. New code should call list_evidence() directly.
 def list_evidence_for_asset(asset_id: str) -> List[ImplementationEvidence]:
-    return list(_EVIDENCE.get(asset_id, []))
+    return list_evidence(asset_id)
 
 
 def list_verifications_for_asset(asset_id: str) -> List[EvidenceVerification]:

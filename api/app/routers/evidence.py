@@ -2,19 +2,22 @@
 
 Endpoints:
   POST /api/evidence                          - Submit evidence for an asset
+  GET  /api/evidence?asset_id=...             - List submissions, optionally per asset
   POST /api/evidence/{evidence_id}/verify     - Run 2-of-3 factor verification
   GET  /api/evidence/{evidence_id}            - Fetch one submission
-  GET  /api/evidence/asset/{asset_id}         - List submissions + verifications
+  GET  /api/evidence/asset/{asset_id}         - Per-asset composite view (submissions + verifications + applicable multiplier)
 
-See specs/story-protocol-integration.md (R9).
+See specs/story-protocol-integration.md (R9). The two handler names
+the spec source: map claims for this file are `submit_evidence` and
+`list_evidence`; both are defined below as the public router surface.
 """
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.models.evidence import (
@@ -47,6 +50,23 @@ async def submit_evidence(body: EvidenceCreate) -> ImplementationEvidence:
     return evidence_service.submit_evidence(body)
 
 
+@router.get(
+    "",
+    response_model=List[ImplementationEvidence],
+    summary="List evidence submissions, optionally filtered by asset",
+)
+async def list_evidence(
+    asset_id: Optional[str] = Query(
+        default=None,
+        description="If set, restrict results to evidence for this asset.",
+    ),
+) -> List[ImplementationEvidence]:
+    """Return every evidence submission, or — with ``asset_id`` set —
+    just those for the named asset. Per spec R9 source: map.
+    """
+    return evidence_service.list_evidence(asset_id)
+
+
 @router.post(
     "/{evidence_id}/verify",
     response_model=EvidenceVerification,
@@ -57,7 +77,7 @@ async def verify_evidence(evidence_id: UUID) -> EvidenceVerification:
     Verified evidence applies a 5× CC multiplier via the
     applicable_multiplier_for_asset() lookup used by settlement.
     """
-    result = evidence_service.run_verification(evidence_id)
+    result = evidence_service.verify_evidence(evidence_id)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -93,7 +113,7 @@ async def list_for_asset(asset_id: str) -> EvidenceAssetView:
     multiplier = evidence_service.applicable_multiplier_for_asset(asset_id)
     return EvidenceAssetView(
         asset_id=asset_id,
-        submissions=evidence_service.list_evidence_for_asset(asset_id),
+        submissions=evidence_service.list_evidence(asset_id),
         verifications=evidence_service.list_verifications_for_asset(asset_id),
         cc_multiplier_applicable=str(multiplier),
     )
