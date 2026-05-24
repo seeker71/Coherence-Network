@@ -2,6 +2,57 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] form | interior-axis-dyad still held — wider-net column-tuned hunt names lc-inner-travel as close-but-not-pair candidate
+
+PR-current+1 retested GAP-D11 with the tightened threshold from PR
+#2024: a second attestation must share the *self-rooted-sovereign
+column* specifically, not just any two interior-axis cells. The
+previous hunt restricted to cells with `form: interior-axis` (five
+cells, only two in the column). This hunt widened the net using the
+column-identity discriminator from Part 7 — *any* cell whose triple
+matches `self-rooted + centering + (embodied | received)`, regardless
+of primary form-name.
+
+**What the wider net surfaced**: exactly one new column-member,
+`lc-inner-travel` — form `point` (not interior-axis), topology
+self-rooted, direction centering, lineage_texture received, phase
+yin, hz 741, the Arcturian transmission of journeying-through-
+attention (meditation, dream-work, subtle perception, mystery-
+school initiation).
+
+**Polarity-pair tests**:
+
+- `lc-inner-travel` ↔ `lc-permission-is-interior` (yin ↔ yang,
+  received ↔ embodied) — polarity-pair on phase is clean, but the
+  teaching axes are sovereign-action-from-interior-sensing vs
+  attention-as-vehicle-for-inward-movement. Not jointly carrying
+  a teaching neither alone holds. Co-residence, not pairing.
+- `lc-inner-travel` ↔ `lc-identity-dissolution` (both yin, both
+  received) — same phase, cousins on the column, not a polarity-
+  pair.
+
+**Verdict**: kind stays held-candidate. The self-rooted-sovereign
+column grows from two cells to three (useful structural evidence
+that the column is real across forms — interior-axis AND point
+share its triple), and that growth does not activate the kind
+because column-membership is not the same shape as a second
+polarity-pair instance.
+
+**What the wider net teaches**: column-identity (topology +
+direction + lineage_texture) is more durable than form-name. The
+future second polarity-pair could land between two interior-axis
+cells, between two point cells with the column-triple, OR cross-
+form. If cross-form pairs surface, the eventual kind name almost
+certainly tightens to `self-rooted-sovereign-dyad` rather than
+`interior-axis-dyad` — the form-name was the original pointer,
+the column-identity is the actual shape.
+
+GAP-D11 holds; the candidate gap is named, not filled.
+
+Files touched: `docs/coherence-substrate/dyad-pairs.form` (GAP-D11
+hunt extension; column 1 grows to three cells; column registry
+updated to include `column_self_rooted_sovereign__inner_travel`).
+
 ## [2026-05-25] form | web-form column-identity — 6 honest columns across 23 cells; circulation-pattern lens cross-read
 
 Third application of the column-identity primitive (topology +
@@ -128,7 +179,6 @@ both form-trials; only the column_kind enumeration extends. The two
 sets (`column_identity_set` for interior-axis, `column_identity_set_point`
 for point) sit as siblings in one registry — the substrate can now
 query *which cells share my column?* across two attested forms.
-
 ## [2026-05-25] sense | circulation-pattern fourth-pair scan — no clean fourth on careful reading; sub-typing stays held
 
 PR #2027 closed with the discipline: with three circulation-pattern
