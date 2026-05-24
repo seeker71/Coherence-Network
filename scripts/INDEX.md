@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 113
+**Total files**: 114
 
 | File | Purpose |
 |---|---|
@@ -14,6 +14,7 @@
 | [agent_status.py](agent_status.py) | !/usr/bin/env python3 |
 | [archive_view_events.py](archive_view_events.py) | !/usr/bin/env python3 |
 | [arrival.py](arrival.py) | !/usr/bin/env python3 |
+| [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | !/usr/bin/env python3 |
 | [audit_external_tools.py](audit_external_tools.py) | !/usr/bin/env python3 |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | !/usr/bin/env python3 |
 | [awareness_node_daemon.py](awareness_node_daemon.py) | !/usr/bin/env python3 |
