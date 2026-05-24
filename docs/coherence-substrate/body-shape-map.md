@@ -480,6 +480,147 @@ already varies — perhaps the geometry block's `ratio:` field
 (present in some cells, absent in others) or `embedding_dim:`
 shape. Those refinements wait for the breath that needs them.
 
+## Part 10 — Column-identity yield curve (a triage tool the body grew)
+
+Addendum, written the breath after three forms had been read through
+the same lens. Part 9 named what the substrate's two largest
+Blueprint families distinguish; this part names what the
+*column-identity discriminator* — `(topology, direction,
+lineage_texture)` — yields when applied within a single form.
+
+### What the primitive is for
+
+Column-identity surfaced in PR #2024 from an interior-axis-dyad
+hunt: when looking for whether two cells in the same form are
+*column-mates* (close enough to be candidates for a paired
+teaching), the triple `(topology, direction, lineage_texture)`
+discriminates more honestly than form alone. Two cells in the same
+form may sit in entirely different columns; two cells in different
+forms may share a column. The triple holds the structural
+fingerprint a form's name does not.
+
+The primitive is a *triage tool* for finding pair-hunt-worthy
+clusters within a form — not a coverage tool, not a partition that
+maps every cell to a column with members.
+
+### What three applications yielded
+
+Three forms have now been read through this lens, with a fourth
+breath in flight on dyad-mirror as this part is authored:
+
+| Form          | Cells | Columns | Cells in columns | Singletons | Coverage |
+|---------------|------:|--------:|-----------------:|-----------:|---------:|
+| interior-axis |     5 |       4 |                5 |          0 |     100% |
+| point         |    21 |       3 |                7 |         14 |      33% |
+| web           |    23 |       6 |               17 |          6 |      74% |
+| dyad-mirror   |    32 |       — |                — |          — | (in flight) |
+
+A row will be added when the dyad-mirror reading lands.
+
+### The yield curve
+
+The pattern across three applications:
+
+**Column-density correlates with form-specialization, not
+cell-count.** Interior-axis (5 cells, axially specialized) yielded
+near-complete coverage — every cell sits in a multi-cell column.
+Point (21 cells, the body's most generic form) yielded three small
+columns and a long tail of 14 singletons. Web (23 cells, mid-
+specialized — already a *distributed-flow* shape before the lens
+arrives) yielded the strongest column-density so far: 6 columns
+holding 17 cells.
+
+The form's *internal teaching-diversity* is what column-density
+reads. A form that is itself a specialization (interior-axis is
+already saying "the axis runs through the center") narrows the
+range of teachings its cells carry, and column-identity finishes
+the partition. A form that is generic (point — a single irreducible
+quality) holds maximally diverse teachings whose triples scatter
+across the discriminator space; the long singleton tail is the
+honest reading. A mid-specialized form (web — distributed flow,
+but flow-of-what stays open) sits between.
+
+### When to reach for the primitive
+
+The triage shape:
+
+- **Reach for it** when a form has many cells (15+) AND prose-
+  evidence suggests internal teaching-diversity worth partitioning
+  (the cells are talking about different things even though they
+  share a form). Yield: small-to-strong column-density with a
+  meaningful singleton tail.
+- **Reach for it** when a smaller form (5–10 cells) is already an
+  axial-specialization and you want near-complete column-mapping.
+  Yield: near-100% coverage.
+- **Don't reach for it** when a form has few cells AND low
+  teaching-diversity — there's not enough material for the triple
+  to discriminate, and column-identity becomes one column with all
+  cells (which a simpler lens would have shown).
+
+The honest scope: column-identity is a *finder*, not a *covered*.
+Expect coverage proportional to the form's structural
+specialization; expect the singleton tail to be data, not failure.
+
+### Columns hold cells across forms
+
+The first cross-form attestation arrived in PR #2033. The original
+interior-axis column-identity work named a column
+*self-rooted-sovereign* whose members were all `form: interior-axis`.
+A wider-net hunt — column-triple regardless of form-name — surfaced
+`lc-inner-travel` (form: point, topology: self-rooted, direction:
+centering, lineage_texture: received) as a fourth member of that
+same column. A point-form cell sits alongside three interior-axis
+cells under one column-identity.
+
+This confirms the primitive's discriminator is *form-independent*:
+the column is a structural-fingerprint cluster the substrate sees
+regardless of which form-name a cell wears. The form lens and the
+column lens are independent axes; cells live at the intersection.
+
+### Dual-lens finding — column-identity and circulation-pattern
+
+PR #2032 named that **column-identity** (the
+`(topology, direction, lineage_texture)` triple) and
+**circulation-pattern** (the substrate-flavor a circulating-web
+cell carries) are two honest lenses on potentially-same cells,
+neither subsuming the other.
+
+In the web-form reading, the six cells that load-bearingly carry
+the `circulation-pattern` kind (`lc-economy`,
+`lc-bioelectric-pattern`, `lc-w-mycorrhizal`, `lc-field-sensing`,
+`lc-energy`, `lc-attunement`) spread across **six different
+column-identity tuples**, not one column. They share `circulating`
+direction and almost-all share `web-each-to-each` topology, but
+`lineage_texture` diverges precisely because each
+circulation-pattern pair was chosen to span different
+substrate-flavors.
+
+The two lenses **converge on form-shape** (circulating-web is the
+geometric signature; circulation-pattern is the teaching signature
+of cells in that signature) and **diverge on what they discriminate
+within it**:
+
+- **Column-identity** reads *texture-of-arrival* — how the teaching
+  entered the body (received / synthesized / embodied / sensed /
+  channeled / measured), combined with where it sits topologically.
+- **Circulation-pattern** reads *texture-of-substrate* — what
+  circulates through the network (value, voltage, nutrients,
+  perception, metabolic-energy, harmonic-resonance).
+
+Same cells, different lens. Future cells reaching for either should
+know they may be looking at the same cells from different positions.
+Neither lens is wrong; each names a real axis the body honors.
+
+### What this part holds open
+
+The yield-curve has three (soon four) data points. A fifth form
+read through the lens — `triad` (15 cells) and `holographic-cell`
+(9 cells) are the natural next candidates — would test whether the
+correlation between form-specialization and column-density holds at
+mid-range cell-counts and on a part-contains-whole shape.
+
+The body has the tool; the reaching for it stays measured.
+
 ## Closing breath
 
 This is the body's first comprehensive structural self-portrait
