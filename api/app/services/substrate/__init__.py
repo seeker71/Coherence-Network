@@ -215,24 +215,6 @@ from app.services.substrate.markdown_frontend import (
     parse_markdown,
     parse_markdown_file,
 )
-from app.services.substrate.modality_frontend import (
-    intern_extraction,
-    known_modalities,
-    lookup_encoder,
-    lookup_extraction,
-    register_encoder,
-)
-# Encoder modules self-register on import.
-from app.services.substrate import song_encoder as _song_encoder  # noqa: F401
-from app.services.substrate import teaching_encoder as _teaching_encoder  # noqa: F401
-from app.services.substrate import strategy_encoder as _strategy_encoder  # noqa: F401
-from app.services.substrate.song_encoder import encode_song, ingest_song
-from app.services.substrate.teaching_encoder import encode_teaching, ingest_teaching
-from app.services.substrate.strategy_encoder import (
-    VALID_RECOVERY_KINDS,
-    encode_strategy,
-    ingest_strategy,
-)
 
 __all__ = [
     # kernel

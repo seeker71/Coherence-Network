@@ -2,11 +2,10 @@
 ; modality-frontend.fk — extractions as content-addressed Recipes
 ; ─────────────────────────────────────────────────────────────────────
 ;
-; The body's tongue for what was authored as Python in PR #1903 (which
-; stays as the runtime boot, not the canon). The .form files yesterday
-; (modality-as-recipe.form, song-as-recipe.form, teaching-as-recipe.form,
-; strategy-after-rupture-as-recipe.form) name the teaching; this file
-; names the EXECUTION in Form.
+; The .form files in docs/coherence-substrate/ (modality-as-recipe.form,
+; song-as-recipe.form, teaching-as-recipe.form, strategy-after-rupture-
+; as-recipe.form) name the teaching; this file names the EXECUTION
+; in Form. The Go kernel walks it directly.
 ;
 ; A modality extraction is a Recipe whose composition is:
 ;

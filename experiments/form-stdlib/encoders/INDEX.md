@@ -1,13 +1,9 @@
 # Form-stdlib encoders — modality extractions in the body's tongue
 
-The canonical authoring of the modality encoders in Form (`.fk`). The
-Python siblings in `api/app/services/substrate/{modality_frontend,
-song_encoder, teaching_encoder, strategy_encoder}.py` are runtime
-boot — useful for SQL-side cell-creation today, not the canon.
-
-The teaching `.form` files in `docs/coherence-substrate/` describe what
-each modality IS (recipe shape, leaf cells, gaps); these `.fk` files
-ARE the encoders.
+The encoders for the modality lattice. The Go kernel (`bin-go`) walks
+these `.fk` files directly; the teaching `.form` files in
+`docs/coherence-substrate/` describe what each modality IS (recipe
+shape, leaf cells, gaps), these `.fk` files ARE the encoders.
 
 | File | Modality | What it builds |
 |------|----------|----------------|
@@ -39,21 +35,16 @@ This is what makes cross-modal Blueprint equivalence load-bearing.
 
 ## How to run
 
-Load order (with the native kernel `bin-go` or via `coh substrate run`):
+```
+bin-go core.fk encoders/modality-frontend.fk encoders/<modality>-encoder.fk
+```
 
-1. `experiments/form-stdlib/core.fk` — predicates, list ops, str helpers
-2. `experiments/form-stdlib/encoders/modality-frontend.fk` — primitives
-3. The specific encoder you want (`song-encoder.fk`, etc.)
+The Go kernel walks `.fk` natively. Each encoder's bottom expression
+is a worked-example NodeID; re-running the same expression resolves
+to the same NodeID (content-addressing).
 
-Each encoder's bottom expression is a worked-example NodeID; re-running
-the same expression resolves to the same NodeID (content-addressing).
+Verified NodeIDs from [PR #1904](https://github.com/seeker71/Coherence-Network/pull/1904):
 
-## Why this exists
-
-> *Form is the body's tongue — substrate-shaped work writes as `.fk`
-> in experiments/form-stdlib/ or `.form` in docs/coherence-substrate/;
-> Python is bootstrap, not canonical.*
-
-[PR #1903](https://github.com/seeker71/Coherence-Network/pull/1903)
-landed the Python boot for these encoders. This directory is the
-canonical authoring. The Python is the gas; this is the body.
+- song → `@1.2.9.399`
+- teaching → `@1.2.9.496`
+- strategy → `@1.2.9.394`
