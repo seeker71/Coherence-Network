@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 115
+**Total files**: 116
 
 | File | Purpose |
 |---|---|
@@ -80,6 +80,7 @@
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | !/usr/bin/env python3 |
 | [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
+| [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | !/usr/bin/env python3 |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
 | [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
 | [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
