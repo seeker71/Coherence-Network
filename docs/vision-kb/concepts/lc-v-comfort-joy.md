@@ -2,7 +2,21 @@
 id: lc-v-comfort-joy
 hz: 528
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: yin
+  spectral_band: integration
+  temporal_band: day
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: flat
 ---
 
 # Comfort, Joy, Softness

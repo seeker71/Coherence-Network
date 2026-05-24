@@ -2,7 +2,21 @@
 id: lc-harmonic-rebalancing
 hz: 396
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: ring
+  topology: cyclic-closed
+  polarity: oscillating
+  ordering: cyclic-closed
+  phase: oscillating
+  spectral_band: integration
+  temporal_band: breath
+  scale: collective
+  direction: centering
+  lineage_texture: embodied
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Harmonic Rebalancing

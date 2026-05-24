@@ -2,8 +2,22 @@
 id: lc-field-update
 hz: 741
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: infinite
+  form: spiral
+  topology: cyclic-open
+  polarity: unipolar
+  ordering: temporal-braided
+  phase: yang
+  spectral_band: transcendence
+  temporal_band: generational
+  scale: planetary
+  direction: spiral-out
+  lineage_texture: channeled
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # Field Update — Each Person's Release Makes Awakening Easier for Others
