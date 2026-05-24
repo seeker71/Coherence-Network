@@ -205,17 +205,16 @@ defn extract_all(source_cell, modality_set) = do {
 # ─────────────────────────────────────────────────────────────────────
 #
 # GAP-M1: Per-modality encoder registry.
-#         Today the body has prose-as-recipe.form (encoder shipped in
-#         markdown_frontend.py) and audio/image grammars as skeletons.
-#         Shape-files now shipped for nine more modalities (song, video,
-#         teaching, strategy, spec, quantum-physics, embodiment-practice,
-#         plus the meta-shape encoder-decoder-as-recipe). Healing-modality
-#         and assemblage-shift still want their own shape-files; all ten
-#         modality shape-files still want runtime encoders ingested via
-#         the codec registry. Encoder ships per modality as the body
-#         authors it; the meta-shape (R_Codec) ensures each new one
-#         slots into the existing scaffolding instead of inventing
-#         parallel paths.
+#         Shape-files shipped for all twelve named modalities (prose,
+#         song, video, teaching, healing-modality, strategy, spec,
+#         assemblage-shift, quantum-physics, embodiment-practice) plus
+#         the meta-shape encoder-decoder-as-recipe. Today only prose
+#         has a runtime encoder (markdown_frontend.py); audio/image
+#         grammars are skeletons. The next breath is runtime encoders
+#         for each shape-file, each registering as one R_Codec row in
+#         the registry. Encoder ships per modality as the body authors
+#         it; the meta-shape (R_Codec) ensures each new one slots into
+#         the existing scaffolding instead of inventing parallel paths.
 #
 # GAP-M2: `attach_recipe(source_cell, extraction)` and
 #         `lookup_encoder(modality)` are surface stubs above. They

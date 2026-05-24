@@ -1,0 +1,341 @@
+# ─────────────────────────────────────────────────────────────────────
+# healing-modality-as-recipe.form — practitioner field with another cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# Distinct from embodiment-practice (what a cell does WITH ITSELF),
+# healing-modality names what one cell does WITH ANOTHER's field —
+# touch, intention, presence, breath shared across two or more
+# bodies. The receiving cell may be human, animal, plant, place, or
+# another network cell; the structural shape is the same.
+#
+# This is *not* a description of medical-clinical treatment. It is
+# the shape under bodywork, somatic-experiencing, energy-work,
+# constellation work, ceremonial holding, Reiki, ortho-bionomy,
+# craniosacral, Pono, ancestral repair, polarity work, doula presence,
+# psychedelic sitting — every modality where a practitioner holds
+# field with another cell so re-patterning becomes possible.
+#
+# Companions:
+#   - docs/coherence-substrate/modality-as-recipe.form (the universal claim)
+#   - docs/coherence-substrate/embodiment-practice-as-recipe.form (sibling — self-with-self)
+#   - docs/coherence-substrate/assemblage-shift-as-recipe.form (sibling — the shift itself)
+#   - docs/coherence-substrate/song-as-recipe.form (Porangui — drum-as-healing)
+#   - docs/vision-kb/concepts/lc-tend-your-flame.md (the practitioner's own ground)
+#   - docs/vision-kb/concepts/lc-frequency-routes-reception.md (why the same touch lands differently)
+#   - docs/vision-kb/concepts/lc-dance-card-and-sovereign-response.md (consent shape)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Leaf-cell Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+# touch-point-cell — where practitioner and receiver meet (physical or not)
+form touch_point_shape = {
+    somatic_locus: ~Recipe,        # cell-ref to somatic-locus on the receiver (embodiment-practice)
+    contact_kind:  ~Slug,          # "skin" | "fascia" | "field" | "breath" | "voice" | "gaze" | "presence"
+    pressure:      ~Slug,          # "absent" | "feather" | "rest" | "engage" | "deep"
+    intention:     ~Recipe,        # intention-form cell at this point
+    duration_sec:  ~Float,
+};
+
+# breath-pattern-shared — practitioner's breath in relation to receiver's
+form breath_pattern_shared_shape = {
+    practitioner_breath: ~Recipe,  # cell-ref to breath-cell (embodiment-practice)
+    receiver_breath:     ~Recipe,  # cell-ref or "unknown" if not directly sensed
+    relation:            ~Slug,    # "matched" | "anchoring" | "leading" | "independent" | "silent"
+    convergence_arc:     ~Slug,    # "diverging" | "converging" | "synchronized" | "released"
+};
+
+# intention-form-cell — the shaped intention the practitioner brings
+form intention_form_shape = {
+    direction:     ~Slug,          # "toward" | "away-from" | "with" | "for" | "release" | "witness-only"
+    altitude:      ~Float,         # 0.0 (ground) to 1.0 (spacious-spirit)
+    polarity:      ~Slug,          # "drawing-in" | "radiating" | "still" | "circulating"
+    target_state:  ~Slug,          # what the intention sees as already-true ("wholeness" | "rest" | "release" | "remembered")
+    held_lightly:  ~Bool,          # the practitioner does not grip the outcome
+};
+
+# field-state-shared — the joint field of practitioner + receiver
+form field_state_shared_shape = {
+    coherence:         ~Float,     # 0.0–1.0 — how aligned the two fields are
+    receiver_window:   ~Recipe,    # window-of-tolerance state on receiver side
+    practitioner_window: ~Recipe,  # window-of-tolerance state on practitioner side
+    boundary_clarity:  ~Float,     # 0.0–1.0 — distinct fields (1.0) vs. merged (0.0); both have uses
+    consent_state:     ~Slug,      # "explicit" | "embodied" | "sensed" | "withdrawn" | "renegotiating"
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Recipe shapes
+# ─────────────────────────────────────────────────────────────────────
+
+# R_Arrival — the opening: practitioner grounds, receiver arrives
+#
+# Always-first. Skipping this is the practitioner's commonest costume
+# (urgency, helpfulness, performance). The Recipe ensures the
+# practitioner has run R_Coherence-Heart-Brain on themselves before
+# any touch-point is offered.
+form r_arrival_shape = {
+    practitioner_self_tend: ~Recipe,  # R_Coherence-Heart-Brain or R_Grounding from embodiment-practice
+    receiver_settling:      ~Recipe,  # breath-cells noticed in receiver
+    consent:                ~Slug,    # "explicit-verbal" | "embodied-yes" | "renegotiated-each-touch"
+    field_initial:          ~Recipe,  # field-state-shared before contact
+};
+
+# R_Field-Holding — the practitioner holds a coherent field, receiver rests in it
+#
+# Twin of R_Field-Holding-Self (embodiment-practice). The difference:
+# the field is held FOR the other, not WITH oneself only. The structural
+# composition is identical; the leaves differ (receiver-cells appear).
+form r_field_holding_shape = {
+    practitioner_ground: ~Recipe,
+    boundary_clarity:    ~Float,
+    duration_min:        ~Int,
+    field_quality:       ~Slug,        # "still" | "warm" | "open" | "encompassing" | "edge-meeting"
+};
+
+# R_Resonate — practitioner matches receiver's frequency to meet, then offers shift
+#
+# Polyvagal co-regulation in the shape language. First match, then
+# slowly offer a shift toward coherence. Selection here is delicate
+# — too-fast a shift breaks contact; too-slow stays stuck. The
+# pacing IS the medicine.
+form r_resonate_shape = {
+    meet:          ~Recipe,        # match receiver's current state (breath, tone, posture, hz)
+    offer_shift:   ~Recipe,        # the small invitation toward more-coherent state
+    pacing:        ~Slug,          # "match-only" | "match-then-lead" | "intermittent-lead"
+    follow_check:  ~Recipe,        # sensing whether receiver came along; if no, return to meet
+};
+
+# R_Release — practitioner holds while receiver releases (tension, story, hold)
+#
+# The simplest and least technique-heavy. The practitioner does
+# almost nothing — holds the field, holds presence, holds witnessing.
+# The receiver does the releasing. The art is in NOT-doing.
+form r_release_shape = {
+    holding:       ~Recipe,        # R_Field-Holding sustained
+    receiver_release: ~Recipe,     # what the receiver lets go of (tension, breath-held, story, somatic-block)
+    practitioner_doing: ~Slug,     # should be "almost-nothing" | "witnessing-only"
+    completion_signal: ~Slug,      # "spontaneous-breath" | "tears" | "yawn" | "shake" | "stillness"
+};
+
+# R_Re-pattern — receiver's old pattern dissolves; new pattern arrives
+#
+# The deepest shape and the slowest. The receiver's somatic-locus
+# (or relational-pattern, or assemblage-point) has held a shape for
+# a long time. Inside the held field, the pattern de-stabilizes,
+# and a new pattern crystallizes. The practitioner cannot force
+# this; can only hold field stable enough for it to happen.
+# Twin of R_Re-coherence in quantum-physics and R_Re-anchor in
+# assemblage-shift.
+form r_re_pattern_shape = {
+    old_pattern:   ~Recipe,        # the somatic / relational / energetic pattern present at arrival
+    destabilization: ~Recipe,      # the loosening in the held field
+    new_pattern:   ~Recipe,        # what crystallizes (often unpredictable)
+    integration:   ~Recipe,        # the breaths after the shift; new-pattern stabilizes
+    timescale:     ~Slug,          # "session" | "days" | "weeks" | "lifetime" — re-patterning is not instant
+};
+
+# R_Witness — practitioner offers being-seen without intervention
+#
+# Sometimes the medicine is solely: the receiver is witnessed. No
+# touch, no offering, no shifting. Just clear-eyed presence with
+# what is. The receiver, met by witnessing, finds their own
+# re-patterning available.
+form r_witness_shape = {
+    presence:      ~Recipe,        # practitioner field-state, very steady
+    duration:      ~Slug,          # "moment" | "session" | "decades" | "lifetime"
+    intervention:  ~Bool,          # should be false; witness is the recipe
+    what_is_seen:  ~Slug,          # "the whole cell" | "the pattern" | "the truth" | "the asking"
+};
+
+# R_Closing — practitioner releases the field; receiver returns to autonomy
+#
+# Always-last. Skipping this leaves a dependency-shape that compounds
+# (practitioner stuck holding; receiver stuck needing). The clean
+# closing IS the practice's invitation toward receiver-sovereignty.
+form r_closing_shape = {
+    completion_check: ~Recipe,     # receiver consents that the session is complete
+    field_release:    ~Recipe,     # practitioner releases held field
+    autonomy_return:  ~Recipe,     # explicit hand-back of receiver's own field
+    integration_offer: ~Slug,      # "rest" | "drink-water" | "tend-this-week" | "return-when-ready"
+};
+
+# R_Repair — practitioner offers re-meeting after rupture in session
+#
+# Sometimes a session ruptures (consent shifts, a touch lands wrong,
+# the field collapses). The Recipe for repair within the session is
+# distinct from any of the above. It composts with strategy-after-
+# rupture-as-recipe but stays within the practitioner-receiver field.
+form r_repair_shape = {
+    notice_rupture:  ~Recipe,      # the moment of recognizing the field broke
+    name_to_receiver: ~Recipe,     # explicit verbal naming, not pretending it didn't happen
+    re_consent:      ~Recipe,      # ask whether to continue; honor the answer
+    repair_move:     ~Recipe,      # what is offered to repair (silence, return-to-arrival, end-here)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — The arc: full session as Recipe composition
+# ─────────────────────────────────────────────────────────────────────
+#
+# A typical session composes as:
+#
+#   R_Block.SEQUENCE
+#     ├─ R_Arrival
+#     ├─ R_Field-Holding (sustained throughout)
+#     │    └─ R_Resonate (during early/mid session)
+#     │    └─ R_Release (when receiver's hold loosens)
+#     │    └─ R_Re-pattern (if the depth allows it; often not in one session)
+#     │    └─ R_Witness (always, alongside everything)
+#     │    └─ R_Repair (only if rupture appears)
+#     └─ R_Closing
+#
+# The shape is fractal: each child Recipe contains its own arrival /
+# holding / closing micro-arc. R_Re-pattern within a session has its
+# own micro-arrival to the old pattern, its own holding while it
+# destabilizes, its own closing as the new pattern stabilizes.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Selection: which recipe fires when
+# ─────────────────────────────────────────────────────────────────────
+#
+# The practitioner's discernment IS the dispatch table. Selection is
+# by: receiver's window state, time-in-session, what arrives, consent
+# state. Naming the dispatch makes it transmissible — what often
+# stays as "intuition" becomes Recipe-addressable.
+
+defn select_modality_move(session_state, receiver_state) = do {
+    if session_state.phase == "opening" then
+        R_Arrival
+    else if receiver_state outside window_of_tolerance then
+        if receiver_state.hyper then R_Witness                  # do not add stimulation
+        else                         R_Resonate (meet-only)     # call coherence back
+    else if receiver_state.holding_pattern_loosening then
+        R_Release                                                # do less, hold more
+    else if session_state.depth_signals.crystallizing then
+        R_Re-pattern                                             # the held field allows it
+    else if session_state.rupture_detected then
+        R_Repair                                                 # always interrupt the arc for repair
+    else if session_state.phase == "closing" then
+        R_Closing
+    else
+        R_Field-Holding                                          # baseline
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Cross-modal equivalence
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each healing-modality recipe has structural twins. The claim is
+# Blueprint identity, not analogy.
+#
+# R_Arrival              ↔ embodiment-practice: R_Grounding + R_Body-Scan
+#                        ↔ teaching: scene-setting (presences, what-arrives)
+#                        ↔ spec: requirements + done_when (the ground for what's about to land)
+#                        ↔ song: tuning, the first note's offering
+#
+# R_Field-Holding        ↔ embodiment-practice: R_Field-Holding-Self (sibling)
+#                        ↔ quantum-physics: maintaining basis through measurement window
+#                        ↔ teaching: the steady-frequency held by the satsang teacher
+#                        ↔ strategy: R_Stay-In-The-Mess at altitude
+#
+# R_Resonate             ↔ song: R_Call-and-R_Response
+#                        ↔ teaching: R_Embodied-Example (meet-then-offer-shift)
+#                        ↔ strategy: R_Same-Breath-Repair (meet the rupture, offer return)
+#                        ↔ quantum: tuned coupling between observer and observed
+#
+# R_Release              ↔ song: R_Resolve to root or to silence
+#                        ↔ strategy: R_Compost-The-Move (release without re-pattern requirement)
+#                        ↔ quantum: R_Decoherence held without intervention; sometimes the medicine
+#                        ↔ embodiment: long exhale held without re-inhaling immediately
+#
+# R_Re-pattern           ↔ embodiment: R_Pendulation completing into expanded window
+#                        ↔ quantum: R_Re-coherence
+#                        ↔ strategy: dispatch-table arm added after R_Compost-The-Move
+#                        ↔ assemblage-shift: R_Re-anchor at deep timescale
+#
+# R_Witness              ↔ teaching: R_Pointing without verbal naming
+#                        ↔ quantum: R_Observer-Effect at minimum-perturbation
+#                        ↔ song: drone held with no melodic intervention
+#                        ↔ embodiment: R_Sit (witnessing one's own arrivals)
+#
+# R_Closing              ↔ song: final cadence + silence
+#                        ↔ strategy: explicit hand-back after a tended exchange
+#                        ↔ spec: done_when attestation
+#                        ↔ teaching: closing of the satsang
+#
+# R_Repair               ↔ strategy: R_Walk-Back-With-Tenderness (within the relationship)
+#                        ↔ song: a missed entrance corrected by next phrase's reach
+#                        ↔ teaching: explicit unraveling of an unclear point
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Worked example: ceremonial holding (Porangui's drum)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The lineage already carries Porangui's ceremonial drum-work as a
+# living example (song-as-recipe.form names it). In healing-modality
+# tongue, the drum-call is the touch-point; the rhythm is the
+# breath-pattern-shared; the held tonic IS R_Field-Holding; the
+# transition through call → drone → response → return → silence
+# walks every recipe in this file:
+#
+#   R_Arrival (the first call gathers the field)
+#   R_Field-Holding (the sustained drum-pulse)
+#   R_Resonate (the call-and-response across the circle)
+#   R_Release (the pulse softens; receivers exhale long-held tension)
+#   R_Re-pattern (somatic shifts crystallize during the held field)
+#   R_Witness (silences between phrases)
+#   R_Closing (the final note, the silence after, the explicit return)
+#
+# Substrate trace: a Porangui session and a Reiki session and a
+# constellation circle, despite radically different surfaces, intern
+# to the SAME parent Recipe at the session-arc level. The leaves
+# differ (drum vs. hands vs. spatial-placement); the composition is
+# one. This is the cross-modal equivalence the modality claims.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-H1: Encoder reads modality session descriptions from
+#         practitioner interviews, transcripts, lineage docs. Many
+#         healing modalities live as oral lineage; ingesting them as
+#         Recipe trees makes the structural shape visible to the
+#         lattice. First targets the body has access to: ceremonial
+#         drum (song-as-recipe.form's Porangui example), somatic-
+#         experiencing protocols (already in the public literature),
+#         constellation-work session structure.
+#
+# GAP-H2: Consent state as first-class. The consent_state field on
+#         field-state-shared wants its own typed-token vocabulary
+#         interned. "Explicit-verbal" vs "embodied-yes" vs "withdrawn"
+#         are structural states the lattice should be able to
+#         recognize across modalities.
+#
+# GAP-H3: Cross-modal equivalence proofs for the R_Re-pattern claim
+#         (CLAIM-H1: R_Re-pattern ≡ R_Re-coherence ≡ R_Re-anchor).
+#         If these three intern to the same Blueprint, then a cell
+#         that learns re-patterning in one modality has structurally
+#         learned it in all three. This is the deepest claim and the
+#         most consequential.
+#
+# GAP-H4: Practitioner self-tending lifecycle. R_Arrival depends on
+#         R_Coherence-Heart-Brain or R_Grounding from embodiment-
+#         practice, but the cell-ref isn't wired. Once embodiment-
+#         practice's encoder ships, the link becomes attestable.
+
+# ─────────────────────────────────────────────────────────────────────
+# How this composts with sibling teaching
+# ─────────────────────────────────────────────────────────────────────
+#
+# Embodiment-practice covers what one cell does with itself. This
+# file covers what one cell does with another. Assemblage-shift (the
+# next sibling) covers the act of shifting one's own or another's
+# assemblage-point as its own discrete shape. The three together
+# form a triangle: self-tending, field-with-another, point-of-view-
+# itself. Many living modalities draw from all three; naming each
+# separately makes the composition visible.
+#
+# The deepest teaching here: the practitioner is not the one doing
+# the healing. The receiver's wholeness was always already present;
+# the practitioner holds field stable enough for the wholeness to
+# re-pattern visible. R_Field-Holding is the load-bearing recipe;
+# everything else is its children.
