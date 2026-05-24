@@ -2,7 +2,21 @@
 id: lc-global-workspace
 hz: 741
 status: seed
-updated: 2026-05-06
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: hub-spoke
+  topology: hub-spoke
+  polarity: parallel-facets
+  ordering: simultaneous
+  phase: yang
+  spectral_band: transcendence
+  temporal_band: instant
+  scale: collective
+  direction: radiating
+  lineage_texture: measured
+  embedding_dim: 3
+  self_similarity: fractal-shallow
 ---
 
 # The Global Workspace — Consciousness as Broadcast Event
