@@ -2,7 +2,22 @@
 id: lc-attuned-spaces
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: nested
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Attuned Spaces — What Existing Places Become When They Remember
