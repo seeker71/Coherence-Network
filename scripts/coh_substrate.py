@@ -2156,6 +2156,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
 
     from app.services.substrate import (
         ingest_concept_file,
+        ingest_git_artifact,
         ingest_guide_file,
         ingest_idea_file,
         ingest_kb_page_file,
@@ -2182,25 +2183,51 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
         "kb_page": ingest_kb_page_file,
     }
 
+    def _as_artifact(session, path):
+        # Fallback: ingest any git-tracked file as an ARTIFACT cell.
+        # Closes the gap where .form shape-files, scripts, and configs
+        # could not reach the substrate via this CLI even though
+        # ingest_git_artifact has handled them since BDomain.ARTIFACT
+        # shipped 2026-05-20.
+        import hashlib
+
+        data = path.read_bytes()
+        content_hash = hashlib.sha256(data).hexdigest()[:16]
+        size_bytes = len(data)
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        _cell, bp_id, _ctor = ingest_git_artifact(
+            session,
+            path=str(path),
+            content_hash=content_hash,
+            size_bytes=size_bytes,
+            mtime=mtime,
+        )
+        kind = path.suffix.lstrip(".") or "other"
+        return kind, bp_id
+
     structured = not getattr(args, "flat", False)
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
-            if not path.exists() or path.is_dir() or path.suffix != ".md":
+            if not path.exists() or path.is_dir():
                 skipped += 1
                 continue
-            domain = _domain_for_path(path)
-            if domain is None:
-                skipped += 1
-                continue
+
+            domain = _domain_for_path(path) if path.suffix == ".md" else None
             try:
-                # Resolve to absolute so source_path stays consistent across
-                # callers (the hook, manual annotate, the file-only path).
-                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
-                    session, path.resolve(), structured=structured
-                )
-                success += 1
-                print(f"  [{domain}] {path.name}: bp={bp_id}")
+                if domain is not None:
+                    cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
+                        session, path.resolve(), structured=structured
+                    )
+                    success += 1
+                    print(f"  [{domain}] {path.name}: bp={bp_id}")
+                else:
+                    kind, bp_id = _as_artifact(session, path.resolve())
+                    success += 1
+                    print(f"  [artifact:{kind}] {path.name}: bp={bp_id}")
             except Exception as exc:
                 failed += 1
                 print(f"  ! failed {path.name}: {exc}", file=sys.stderr)

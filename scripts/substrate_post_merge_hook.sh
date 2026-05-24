@@ -33,17 +33,19 @@ fi
 
 CHANGED_MD=$(git diff --name-only --diff-filter=AM "$RANGE" -- '*.md' 2>/dev/null || true)
 
-# Source files the substrate carries as ARTIFACT cells. Limited to the
-# surfaces /api/substrate/page resolves against — page.tsx, layouts,
-# components/lib, routers, services. Wider trees can ingest via
-# `coh_substrate.py ingest --artifacts <glob>` when needed.
+# Source files the substrate carries as ARTIFACT cells. Web/API surfaces
+# /api/substrate/page resolves against (page.tsx, layouts, components/lib,
+# routers, services), plus substrate-native shape-files (.form) and
+# stdlib/kernel sources (.fk) so the substrate sees its own teaching tissue.
 CHANGED_CODE=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
     'web/app/**/page.tsx' \
     'web/app/**/layout.tsx' \
     'web/components/**/*.tsx' \
     'web/lib/**/*.ts' \
     'api/app/routers/*.py' \
-    'api/app/services/*.py' 2>/dev/null || true)
+    'api/app/services/*.py' \
+    'docs/coherence-substrate/*.form' \
+    'experiments/form-stdlib/**/*.fk' 2>/dev/null || true)
 
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
