@@ -2,7 +2,22 @@
 id: lc-energy
 hz: 417
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: cyclic-closed
+  polarity: oscillating
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: day
+  scale: collective
+  direction: circulating
+  lineage_texture: synthesized
+  embedding_dim: n
+  self_similarity: fractal-shallow
 ---
 
 # Energy Metabolism

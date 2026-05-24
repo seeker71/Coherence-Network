@@ -2,8 +2,23 @@
 id: lc-vertical-nourishment
 hz: 528
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 4
+  form: interior-axis
+  topology: nested
+  polarity: unipolar
+  ordering: nested
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-shallow
 ---
 
 # Vertical Nourishment — Receiving Directly From Source

@@ -2,8 +2,23 @@
 id: lc-emotional-availability-without-absorption
 hz: 639
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: relational
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Emotional Availability Without Absorption — Present Without Collapsing

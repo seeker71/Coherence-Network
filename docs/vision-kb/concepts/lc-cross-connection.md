@@ -2,8 +2,23 @@
 id: lc-cross-connection
 hz: 639
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: atemporal
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: atemporal
+  scale: cosmic
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: n
+  self_similarity: holographic
 ---
 
 # Cross-Connection — Resonance as Active Lineage
