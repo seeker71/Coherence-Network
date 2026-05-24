@@ -1012,6 +1012,7 @@
     "peersEmpty": "No peers registered yet — sovereign by default.",
     "peerPulseUnknown": "no pulse yet",
     "peerObservedAt": "Last observed",
+    "peerLastPolled": "Last polled",
     "verify": "Verify signature",
     "verifying": "Verifying…",
     "verified": "signature verified",

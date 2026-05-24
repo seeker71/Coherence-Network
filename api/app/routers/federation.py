@@ -51,6 +51,7 @@ from app.models.federation import (
     FederatedAggregationResponse,
     FederatedAggregationListResponse,
 )
+from app.services import federation_peer_poll_service
 from app.services import federation_service
 from app.services import federation_substrate_service
 from app.services import federation_value_flow_service
@@ -486,6 +487,62 @@ async def list_substrate_attestations(peer_instance_id: str) -> dict:
         "attestations": [a.model_dump(mode="json") for a in attestations],
         "count": len(attestations),
     }
+
+
+# ---------------------------------------------------------------------------
+# Peer-poll job — the federation's heartbeat
+# ---------------------------------------------------------------------------
+#
+# A manual trigger for the peer-poll service. Production runs this on a
+# schedule (see scripts/federation_peer_poll.py for the cron-installable
+# CLI); this endpoint exists so an operator can fire a poll out-of-band or
+# integration tests can drive the loop. The endpoint reads from peers via
+# their public read-only surfaces (pulse, capabilities, canonicals) and
+# never writes to them — sovereignty is preserved on both sides.
+
+
+@router.post(
+    "/federation/peers/poll",
+    summary="Trigger a peer-poll cycle — read each peer's pulse, manifest, canonicals",
+)
+async def trigger_peer_poll(
+    instance_id: str | None = Query(
+        default=None,
+        description="Optional: poll only this peer. Default: all registered peers.",
+    ),
+) -> dict:
+    """Manually trigger the peer-poll job for one peer or all peers.
+
+    Internal-use: there is no auth layer on this endpoint at the API tier;
+    production deployments should restrict it at the proxy layer or rely on
+    the scheduled `scripts/federation_peer_poll.py` cron job. Each peer's
+    poll is bounded and isolated — one failing peer does not break the rest.
+    """
+    if instance_id is not None:
+        result = await federation_peer_poll_service.poll_peer(instance_id)
+        return {
+            "polled": 1,
+            "results": {instance_id: result.to_dict()},
+        }
+    results = await federation_peer_poll_service.poll_all_peers()
+    return {
+        "polled": len(results),
+        "results": {pid: r.to_dict() for pid, r in results.items()},
+    }
+
+
+@router.get(
+    "/federation/peers/last-polled",
+    summary="Per-peer freshest observation timestamp from poll cycles",
+)
+async def list_peer_last_polled() -> dict:
+    """Return the most-recent successful poll timestamp for each peer.
+
+    Used by the web /federation page to show "last polled" alongside each
+    peer card. Values are ISO 8601 UTC; a peer that has never been
+    successfully polled is absent from the map.
+    """
+    return federation_peer_poll_service.list_last_polled()
 
 
 # ---------------------------------------------------------------------------

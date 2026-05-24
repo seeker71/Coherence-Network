@@ -96,6 +96,8 @@ type AttestationsResponse = {
   count: number;
 };
 
+type LastPolledResponse = Record<string, string | null>;
+
 type AssetMirrorRecord = {
   local_asset_id: string;
   origin_instance_id: string;
@@ -271,6 +273,7 @@ export default async function FederationPage() {
     selfCaps,
     instances,
     peerPulses,
+    lastPolled,
     mirrors,
     attestations,
     outbox,
@@ -280,6 +283,7 @@ export default async function FederationPage() {
     fetchJson<CapabilityManifest>(`${apiBase}/api/federation/capabilities/self`),
     fetchJson<FederatedInstance[]>(`${apiBase}/api/federation/instances`),
     fetchJson<PeerPulsesResponse>(`${apiBase}/api/pulse/peers`),
+    fetchJson<LastPolledResponse>(`${apiBase}/api/federation/peers/last-polled`),
     fetchJson<AssetMirrorRecord[]>(`${apiBase}/api/federation/value/mirrors`),
     fetchJson<FederatedReadAttestationListResponse>(
       `${apiBase}/api/federation/value/read-attestations`
@@ -291,6 +295,8 @@ export default async function FederationPage() {
       `${apiBase}/api/federation/value/settlement-share/inbox`
     ),
   ]);
+
+  const lastPolledMap: LastPolledResponse = lastPolled ?? {};
 
   const mirrorList = Array.isArray(mirrors) ? mirrors : [];
   const attestationList = attestations?.attestations ?? [];
@@ -505,6 +511,10 @@ export default async function FederationPage() {
                     </p>
                     <p>
                       {t("federation.peerObservedAt")}: {formatTimestamp(pulse?.observed_at)}
+                    </p>
+                    <p>
+                      {t("federation.peerLastPolled")}:{" "}
+                      {formatTimestamp(lastPolledMap[peer.instance_id] ?? null)}
                     </p>
                   </div>
                   <PeerVerifyButton
