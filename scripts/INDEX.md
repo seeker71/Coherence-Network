@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 128
+**Total files**: 129
 
 | File | Purpose |
 |---|---|
@@ -29,6 +29,7 @@
 | [check_runtime_drift.py](check_runtime_drift.py) | !/usr/bin/env python3 |
 | [check_spec_references.py](check_spec_references.py) | !/usr/bin/env python3 |
 | [check_traceability.py](check_traceability.py) | !/usr/bin/env python3 |
+| [check_web_docker_context.py](check_web_docker_context.py) | !/usr/bin/env python3 |
 | [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
 | [coh_substrate.py](coh_substrate.py) | !/usr/bin/env python3 |
 | [coherence_reach.py](coherence_reach.py) | !/usr/bin/env python3 |

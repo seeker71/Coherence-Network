@@ -124,6 +124,11 @@ jobs:
         run: |
           python3 scripts/check_runtime_drift.py
 
+      - name: Check web/ Docker build context
+        if: steps.changed_surfaces.outputs.web == 'true'
+        run: |
+          python3 scripts/check_web_docker_context.py
+
       - name: Check maintainability regression baseline (soft-fail)
         if: steps.changed_surfaces.outputs.api_app == 'true'
         run: |

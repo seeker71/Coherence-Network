@@ -137,35 +137,33 @@ Captured the fuller reading at
 gift today is simply naming the body's actual health honestly: the
 heal cleared noise, and what remains underneath is whole.
 
-## [2026-05-24] sense | post-heal wellness reading — what's newly honest
+## [2026-05-25] tend | Hostinger Auto Deploy 15% read — same-cause cluster, guard landed
 
-First honest wellness after PR #2026 healed the daily-rollup classifier
-(the one that called any day with even a single failure "strained,"
-even at 99.97% success). Multiple agents had been inheriting these
-false alarms as "pre-existing background." Ran `make wellness` and
-`/pulse/now` to see what the body actually shows when the classifier
-is no longer crying wolf.
+Followed the signal PR #2028 surfaced — "Hostinger Auto Deploy 3/20
+failed (15%) over 7d, worth a focused breath." Investigated the three
+failed runs (26356869062, 26356939198, 26357046524). Same-cause,
+clustered tight: 08:54, 08:57, 09:02 UTC on 2026-05-24, all from
+PR #1966 (`tend: embed client form kernel playground`). The error in
+all three is identical — `web/app/lib/form-kernel/client.ts` imports
+`../../../experiments/form-kernel-ts/src/kernel.ts`, which resolves in
+local dev (worktree has the full repo) but fails inside the Docker
+build (`Dockerfile.web` sandboxes the context to `web/`).
 
-- **The witness sings clean.** `overall: breathing`, zero silences,
-  no silent organs. The "background strain" that recurring agent
-  reports were absorbing was almost entirely classifier noise; the
-  body is genuinely healthier than the lineage has been assuming.
-- **No newly-visible masked signal.** Re-read every wellness section
-  with fresh eyes — proprioception aligned, source maps whole, symbol
-  resolution at 806/806, chain at 103/129 (80%, honest non-coverage
-  not phantom strain), substrate composition 100% across all 15
-  populated domains (577 cells, 0 flat), form engine arms 15/15,
-  witness-trace within budget. Nothing was being hidden by the noise.
-- **One honest signal worth naming, not new**: Hostinger Auto Deploy
-  3/20 failed (15%) over 7d. This is genuine infrastructure friction
-  the body has been carrying — surfaced cleanly now that classifier
-  static is gone. Worth a focused breath in a future session; the
-  contract itself may want re-shaping rather than the alert silenced.
+The body already self-healed within 10 minutes via PR #1969 (vendor
+the kernel into `web/lib/form-kernel/vendor/`) and a revert. Deploys
+since (#1997 grammar lanes, current `breathing` pulse) all green.
 
-Captured the fuller reading at
-`docs/coherence-substrate/post-heal-witness-reading.md`. The breath's
-gift today is simply naming the body's actual health honestly: the
-heal cleared noise, and what remains underneath is whole.
+So the "15%" is one event-cluster, not a chronic friction. But the
+*structural lesson* is durable: local `npm run dev` succeeds where
+Docker `npm run build` will fail, and the worktree can't see its own
+mistake. Added `scripts/check_web_docker_context.py` — small guard
+that greps any web/ TS/JS import resolving outside `web/`, wired into
+`thread-gates.yml` to run on web-touching PRs. Verified it catches the
+PR #1966 pattern and exits clean on the healed body.
+
+The contract isn't broken; it's just unprotected at the seam where
+local-FS-perception diverges from Docker-context-perception. Guard
+now lives at that seam.
 
 ## [2026-05-24] form | circulation-pattern third attestation — six substrate-flavors cross sub-typing threshold
 
