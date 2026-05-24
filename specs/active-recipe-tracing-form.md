@@ -1,7 +1,7 @@
 ---
 id: active-recipe-tracing-form
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: docs/coherence-substrate/active-recipe-tracing.form
     symbols: [recipe_state_shape, recipe_cell_shape, recipe_choice_shape, available_recipes, active_recipes, active_recipes_from_trace, keep_or_choose]
@@ -12,9 +12,27 @@ requirements:
   - "The Form file declares state, recipe library, active recipe, candidate selection, and keep-or-choose choice shapes"
   - "The Form file names the file-backed host bridge for hydrating active recipes from witness traces"
 done_when:
-  - "active-recipe-tracing.form contains recipe_state_shape, available_recipes(), active_recipes(state), and keep_or_choose(state)"
-  - "The library includes stability-harmony, connection-density, attention-flow, and external-listening recipes"
-  - "api/tests/test_active_recipe_tracing_form.py passes"
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "recipe_state_shape")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "available_recipes")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "keep_or_choose")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "stability-harmony")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "connection-density")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "attention-flow")'
+  - 'file_contains("docs/coherence-substrate/active-recipe-tracing.form", "external-listening")'
+  - 'file_exists("api/tests/test_active_recipe_tracing_form.py")'
+  - 'pytest_passes("api/tests/test_active_recipe_tracing_form.py")'
+  - 'file_exists("docs/coherence-substrate/active-recipe-tracing.form")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_state_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_cell_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "recipe_choice_shape")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "available_recipes")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "active_recipes_from_trace")'
+  - 'symbol_in_file("docs/coherence-substrate/active-recipe-tracing.form", "keep_or_choose")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_declares_state_library_and_choice")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_library_can_keep_or_choose")'
+  - 'symbol_in_file("api/tests/test_active_recipe_tracing_form.py", "test_active_recipe_trace_form_points_trace_persistence_to_existing_gap")'
 test: "cd api && python -m pytest -q tests/test_active_recipe_tracing_form.py"
 constraints:
   - "Do not add an API endpoint or Python business-logic service for this slice"

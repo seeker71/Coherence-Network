@@ -71,12 +71,22 @@ ROUND_TRIP_CASES = [
     "!(1 == 2)",
     "if 1 > 0 then 42 else 0",
     "if 1 == 1 then 99",
-    # R_Block coverage (DO, SEQUENCE) — added when running idea-realization-engine
-    # through the substrate revealed verb-category 1.2.9 (R_Block) was not yet
-    # decompilable. LET and WITH have sibling gaps (Identifier/slug trivial
-    # decoder not yet present) — separate breaths.
+    # R_Block coverage (DO, SEQUENCE, LET) — added when running
+    # idea-realization-engine through the substrate revealed
+    # verb-category 1.2.9 (R_Block) was not yet decompilable.
+    #
+    # LET round-trip required two upstream changes that also landed in
+    # this PR:
+    #   1. RType.SLUG decoding in _trivial_value (form_runtime.py).
+    #   2. Identifier interning as a SLUG via substrate_strings instead
+    #      of a one-way hash at type=7 (form.py). The hash collided with
+    #      RType.DATE and made the name unrecoverable.
+    # Both fixed; LET now round-trips cleanly.
     "do { 1 + 2; 3 * 4 }",
     "do { 1 }",
+    "let x = 42",
+    "let answer = (1 + 2)",
+    "let pi = 314",
 ]
 
 

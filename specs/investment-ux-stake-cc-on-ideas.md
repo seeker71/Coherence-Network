@@ -33,6 +33,33 @@ done_when:
   - Web /ideas shows Invest button opening modal with ROI data
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
+  - 'file_exists("api/app/services/stake_compute_service.py")'
+  - 'symbol_in_file("api/app/services/stake_compute_service.py", "compute_next_tasks_for_idea")'
+  - 'file_exists("api/app/services/contribution_ledger_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_ledger_service.py", "CC")'
+  - 'file_exists("api/app/services/investment_service.py")'
+  - 'symbol_in_file("api/app/services/investment_service.py", "compute_positions")'
+  - 'symbol_in_file("api/app/services/investment_service.py", "compute_portfolio")'
+  - 'symbol_in_file("api/app/services/investment_service.py", "compute_preview")'
+  - 'symbol_in_file("api/app/services/investment_service.py", "compute_history")'
+  - 'file_exists("api/app/services/time_pledge_service.py")'
+  - 'symbol_in_file("api/app/services/time_pledge_service.py", "create_pledge")'
+  - 'symbol_in_file("api/app/services/time_pledge_service.py", "fulfill_pledge")'
+  - 'symbol_in_file("api/app/services/time_pledge_service.py", "cc_equivalent_for_hours")'
+  - 'file_exists("api/app/routers/investments.py")'
+  - 'symbol_in_file("api/app/routers/investments.py", "invest-preview")'
+  - 'symbol_in_file("api/app/routers/investments.py", "investments")'
+  - 'symbol_in_file("api/app/routers/investments.py", "investment-history")'
+  - 'symbol_in_file("api/app/routers/investments.py", "pledges")'
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "stake_on_idea")'
+  - 'file_exists("web/components/InvestModal.tsx")'
+  - 'symbol_in_file("web/components/InvestModal.tsx", "InvestModal")'
+  - 'symbol_in_file("web/components/InvestModal.tsx", "InvestButton")'
+  - 'file_exists("web/app/portfolio/investments/page.tsx")'
+  - 'symbol_in_file("web/app/portfolio/investments/page.tsx", "portfolio")'
+  - 'file_exists("web/app/invest/page.tsx")'
+  - 'symbol_in_file("web/app/invest/page.tsx", "investment")'
 test: "pytest -q api/tests/test_investments.py"
 notes: |
   Live (2026-05-22): web/app/invest/page.tsx renders at /invest. The full

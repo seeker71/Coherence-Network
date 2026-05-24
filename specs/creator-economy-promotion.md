@@ -32,6 +32,27 @@ done_when:
   - "GET /api/creator-economy/featured returns paginated list with community_tags field"
   - "Web /creators page loads without 500, renders stats section"
   - "Web /assets/{id}/proof page renders for a valid asset ID"
+  - 'file_exists("api/app/routers/creator_economy.py")'
+  - 'symbol_in_file("api/app/routers/creator_economy.py", "get_creator_stats")'
+  - 'symbol_in_file("api/app/routers/creator_economy.py", "get_asset_proof_card")'
+  - 'symbol_in_file("api/app/routers/creator_economy.py", "list_featured")'
+  - 'file_exists("api/app/services/creator_economy_service.py")'
+  - 'symbol_in_file("api/app/services/creator_economy_service.py", "compute_creator_stats")'
+  - 'symbol_in_file("api/app/services/creator_economy_service.py", "build_proof_card")'
+  - 'symbol_in_file("api/app/services/creator_economy_service.py", "list_featured")'
+  - 'file_exists("api/app/models/creator_economy.py")'
+  - 'symbol_in_file("api/app/models/creator_economy.py", "CreatorStats")'
+  - 'symbol_in_file("api/app/models/creator_economy.py", "ProofCard")'
+  - 'symbol_in_file("api/app/models/creator_economy.py", "FeaturedAsset")'
+  - 'file_exists("api/app/models/asset.py")'
+  - 'symbol_in_file("api/app/models/asset.py", "AssetType")'
+  - 'file_exists("web/app/creators/page.tsx")'
+  - 'symbol_in_file("web/app/creators/page.tsx", "CreatorsLandingPage")'
+  - 'file_exists("web/app/creators/submit/page.tsx")'
+  - 'symbol_in_file("web/app/creators/submit/page.tsx", "CreatorSubmitPage")'
+  - 'file_exists("web/app/assets/[asset_id]/proof/page.tsx")'
+  - 'symbol_in_file("web/app/assets/[asset_id]/proof/page.tsx", "AssetProofPage")'
+  - 'pytest_passes("api/tests/test_creator_economy.py")'
 test: "cd api && python -m pytest tests/test_creator_economy.py -x -q"
 constraints:
   - "No schema migrations — community_tags stored as JSON string in existing asset metadata column"

@@ -20,6 +20,15 @@ done_when:
   - "GET /api/assets — List all assets with pagination (limit parameter)"
   - "Asset types: CODE, MODEL, CONTENT, DATA"
   - "total_cost auto-updates when contributions are recorded"
+  - 'file_exists("api/app/routers/assets.py")'
+  - 'symbol_in_file("api/app/routers/assets.py", "create_asset")'
+  - 'symbol_in_file("api/app/routers/assets.py", "get_asset")'
+  - 'symbol_in_file("api/app/routers/assets.py", "list_assets")'
+  - 'file_exists("api/app/models/asset.py")'
+  - 'symbol_in_file("api/app/models/asset.py", "Asset")'
+  - 'symbol_in_file("api/app/models/asset.py", "AssetCreate")'
+  - 'symbol_in_file("api/app/models/asset.py", "AssetType")'
+  - 'pytest_passes("api/tests/test_assets.py")'
 test: "python3 -m pytest api/tests/test_assets.py -x -v"
 constraints:
   - "changes scoped to listed files only"

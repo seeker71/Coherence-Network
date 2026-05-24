@@ -15,6 +15,13 @@ requirements:
 done_when:
   - "cd api && .venv/bin/pytest -q tests/test_vision_content.py"
   - "cd web && npm run build"
+  - 'file_exists("api/app/services/vision_content_service.py")'
+  - 'symbol_in_file("api/app/services/vision_content_service.py", "get_realize_content")'
+  - 'file_exists("api/app/routers/vision.py")'
+  - 'symbol_in_file("api/app/routers/vision.py", "get_realize_content")'
+  - 'file_exists("web/app/vision/realize/page.tsx")'
+  - 'symbol_in_file("web/app/vision/realize/page.tsx", "RealizePage")'
+  - 'pytest_passes("api/tests/test_vision_content.py::test_vision_realize_reads_scoped_graph_nodes")'
 test: "cd api && python -m pytest -q tests/test_vision_content.py::test_vision_realize_reads_scoped_graph_nodes"
 constraints:
   - "Do not move presentation-only Tailwind classes into the DB."

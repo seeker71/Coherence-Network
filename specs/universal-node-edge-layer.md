@@ -25,6 +25,17 @@ done_when:
   - "ruff check api/app/routers/graph.py api/app/services/graph_service.py exits 0"
   - "GET /api/graph/nodes/{id} returns 200 with node + edges JSON"
   - "POST /api/graph/nodes with duplicate (node_type, external_id) returns 200 (upsert, not 409)"
+  - 'file_exists("api/app/services/graph_service.py")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "create_node")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "get_node")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "create_edge")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "get_edges")'
+  - 'file_exists("api/app/models/graph.py")'
+  - 'symbol_in_file("api/app/models/graph.py", "Node")'
+  - 'symbol_in_file("api/app/models/graph.py", "Edge")'
+  - 'file_exists("api/app/routers/graph.py")'
+  - 'symbol_in_file("api/app/routers/graph.py", "graph")'
+  - 'pytest_passes("api/tests/test_graph_layer.py")'
 test: "cd api && .venv/bin/pytest api/tests/test_graph_layer.py -v --tb=short"
 constraints:
   - "Do NOT modify existing idea/task/node tables — additive only"

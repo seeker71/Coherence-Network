@@ -18,6 +18,14 @@ done_when:
   - "`review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks tha..."
   - "On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive ..."
   - "Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be ti..."
+  - 'file_exists("api/scripts/run_cli_task_flow_matrix.py")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "unified")'
+  - 'symbol_in_file("api/scripts/run_cli_task_flow_matrix.py", "PASS_FAIL")'
+  - 'file_exists("api/scripts/local_runner.py")'
+  - 'symbol_in_file("api/scripts/local_runner.py", "local")'
+  - 'pytest_passes("api/tests/test_runner_spec_gate_guidance.py")'
+  - 'pytest_passes("api/tests/test_flow_enforcement.py")'
+  - 'pytest_passes("api/tests/test_runner_auto_contribution.py")'
 test: "cd api && pytest -q tests/test_runner_spec_gate_guidance.py tests/test_flow_enforcement.py tests/test_runner_auto_contribution.py -v"
 constraints:
   - "changes scoped to listed files only"

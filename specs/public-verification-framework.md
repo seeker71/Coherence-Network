@@ -22,6 +22,18 @@ done_when:
   - "Anyone can call /api/verification/recompute/{asset_id} and get pass/fail"
   - "Merkle chain integrity verified across 30+ days of data"
   - "On-chain Story Protocol royalty records match off-chain CC distribution"
+  - 'file_exists("api/app/services/verification_service.py")'
+  - 'symbol_in_file("api/app/services/verification_service.py", "compute_daily_hashes")'
+  - 'symbol_in_file("api/app/services/verification_service.py", "compute_merkle_root")'
+  - 'symbol_in_file("api/app/services/verification_service.py", "get_chain")'
+  - 'file_exists("api/app/routers/verification.py")'
+  - 'symbol_in_file("api/app/routers/verification.py", "get_chain")'
+  - 'symbol_in_file("api/app/routers/verification.py", "get_snapshot")'
+  - 'symbol_in_file("api/app/routers/verification.py", "recompute_and_verify")'
+  - 'symbol_in_file("api/app/routers/verification.py", "publish_snapshot")'
+  - 'file_exists("scripts/publish_snapshot.py")'
+  - 'symbol_in_file("scripts/publish_snapshot.py", "main")'
+  - 'pytest_passes("api/tests/test_verification.py")'
 test: "python3 -m pytest api/tests/test_verification.py -x -v"
 constraints:
   - "Verification adds zero latency to read path (computed asynchronously)"

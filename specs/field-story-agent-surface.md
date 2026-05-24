@@ -21,6 +21,13 @@ done_when:
   - "POST /api/field-stories/urs-field-story/contributions records a source contribution id."
   - "MCP registry exposes get_field_story, get_field_story_artifact, and contribute_field_story."
   - "The /field/urs web route renders the field story and tracks page reads."
+  - 'file_exists("docs/field/urs/manifest.json")'
+  - 'file_exists("api/app/services/field_story_service.py")'
+  - 'file_exists("api/app/routers/field_stories.py")'
+  - 'file_exists("api/app/services/mcp_tool_registry.py")'
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'file_exists("web/app/field/urs/page.tsx")'
+  - 'pytest_passes("api/tests/test_field_story_agent_surface.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_agent_surface.py"
 constraints:
   - "Do not publish raw Google Takeout zips, extracted HTML, browser cookies, or private authenticated source exports."

@@ -35,7 +35,6 @@ from app.services.substrate import (  # noqa: E402
     form_serialize_cell,
     form_serialize_node_id,
     ingest_concept_file,
-    ingest_git_artifact,
     ingest_guide_file,
     ingest_idea_file,
     ingest_kb_page_file,
@@ -116,15 +115,12 @@ _INGESTERS = {
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    structured = getattr(args, "structured", False)
-    if getattr(args, "artifacts", False):
-        globs = args.paths if args.paths else _ARTIFACT_DEFAULT_GLOBS
-        resolved = _resolve_artifact_paths(globs)
-        if not resolved:
-            print(f"artifacts: no files matched {globs}", file=sys.stderr)
-            return 1
-        print(f"Ingesting {len(resolved)} artifact files [{', '.join(globs)}]")
-        return _ingest_artifact_paths(resolved)
+    # Structured-CTOR is the default — CLAUDE.md "New ingest holds the
+    # discipline by default; --flat is the explicit opt-out." The wellness
+    # check has shown 100% of cells with CTORs are structured; this CLI
+    # default now matches that reality. `--structured` remains accepted as
+    # a no-op for backward compat with existing call sites.
+    structured = not getattr(args, "flat", False)
     if args.all:
         rc = 0
         for domain in (
@@ -175,111 +171,18 @@ def _ingest_files(paths: list[Path], *, structured: bool = False) -> int:
             if not path.exists() or path.is_dir():
                 print(f"  skip (not a file): {path}", file=sys.stderr)
                 continue
-            if path.suffix == ".md":
-                domain = _domain_for_path(path)
-                ingester = _INGESTERS.get(domain or "memory", _INGESTERS["memory"])[1]
-                cell, bp_id, ctor_id = ingester(session, path, structured=structured)
-                print(
-                    f"  [{domain or 'memory'}] {path.name}: "
-                    f"cell_id={cell.cell_id} blueprint={bp_id}"
-                )
-            else:
-                cell, bp_id, _ctor = _ingest_one_artifact(session, path)
-                print(
-                    f"  [artifact] {path.name}: "
-                    f"cell_id={cell.cell_id} blueprint={bp_id}"
-                )
+            if path.suffix != ".md":
+                print(f"  skip (not .md): {path}", file=sys.stderr)
+                continue
+            domain = _domain_for_path(path)
+            ingester = _INGESTERS.get(domain or "memory", _INGESTERS["memory"])[1]
+            cell, bp_id, ctor_id = ingester(session, path, structured=structured)
+            print(
+                f"  [{domain or 'memory'}] {path.name}: "
+                f"cell_id={cell.cell_id} blueprint={bp_id}"
+            )
         session.commit()
     return 0
-
-
-# ---------------------------------------------------------------------------
-# Artifact ingest — non-.md files via the ARTIFACT domain
-# ---------------------------------------------------------------------------
-#
-# ingest_git_artifact wants (path, content_hash, size_bytes, mtime). The hash
-# is a stable identity input — re-ingesting the same file content returns the
-# same cell. Truncated to 16 chars by body convention; see _ARTIFACT_KIND_HZ
-# in markdown_frontend.py for the kind→Hz mapping.
-
-
-def _artifact_content_hash(path: Path) -> str:
-    import hashlib
-
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
-
-
-def _ingest_one_artifact(session, path: Path):
-    """Ingest a single non-.md path as an ARTIFACT cell.
-
-    Stores `source_path` as the repo-relative path so annotate_path() and
-    /api/substrate/annotate find it under the same name the body uses to
-    refer to it.
-    """
-    try:
-        rel = path.resolve().relative_to(REPO_ROOT)
-    except ValueError:
-        rel = path
-    rel_str = str(rel).replace("\\", "/")
-    stat = path.stat()
-    return ingest_git_artifact(
-        session,
-        path=rel_str,
-        content_hash=_artifact_content_hash(path),
-        size_bytes=stat.st_size,
-        mtime=stat.st_mtime,
-    )
-
-
-# Repo-relative globs the body considers "page-substrate territory" — every
-# Next.js page, every API router, every form runtime. Added here so a single
-# `ingest --artifacts` backfills the surfaces a SubstrateBadge wants to find.
-_ARTIFACT_DEFAULT_GLOBS: list[str] = [
-    "web/app/**/page.tsx",
-    "web/app/**/layout.tsx",
-    "web/components/**/*.tsx",
-    "web/lib/**/*.ts",
-    "api/app/routers/*.py",
-    "api/app/services/*.py",
-]
-
-
-def _resolve_artifact_paths(globs: list[str]) -> list[Path]:
-    """Expand globs against REPO_ROOT, return existing files only."""
-    out: list[Path] = []
-    seen: set[str] = set()
-    for pattern in globs:
-        for p in REPO_ROOT.glob(pattern):
-            if not p.is_file():
-                continue
-            key = str(p.resolve())
-            if key in seen:
-                continue
-            seen.add(key)
-            out.append(p)
-    return sorted(out)
-
-
-def _ingest_artifact_paths(paths: list[Path]) -> int:
-    success = fail = 0
-    with session_scope() as session:
-        for path in paths:
-            try:
-                cell, bp_id, _ctor = _ingest_one_artifact(session, path)
-                success += 1
-                if success <= 3 or success % 25 == 0:
-                    rel = path.resolve().relative_to(REPO_ROOT)
-                    print(f"  [{success}] {rel}: bp={bp_id}")
-            except Exception as exc:  # noqa: BLE001
-                fail += 1
-                print(f"  ! failed {path}: {exc}", file=sys.stderr)
-        session.commit()
-    print(f"artifacts: {success} ingested, {fail} failed")
-    return 0 if fail == 0 else 1
 
 
 def _domain_for_path(path: Path) -> str | None:
@@ -465,6 +368,433 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+HZ_BANDS = {
+    174: "ground",      396: "tending",       417: "transmutation",
+    528: "vitality",    639: "transmission",  741: "consciousness",
+    852: "resonance",   963: "wholeness",     432: "neutral",
+}
+
+
+def _ctor_walk_field(session, ctor_nid, field):
+    """Walk a structured-CTOR R_Block.DO for a LET-binding by key name.
+    Returns the value NodeID, or None if not found. Used when a cell-builtin
+    accessor (`.source`, etc.) would shadow a frontmatter key of the same name.
+    """
+    from app.services.substrate.category import RBasic
+    from app.services.substrate.form_runtime import (
+        _node_children, _node_category, _trivial_value,
+    )
+    if ctor_nid is None:
+        return None
+    for let_nid in _node_children(session, ctor_nid):
+        let_cat = _node_category(session, let_nid)
+        if let_cat.type_ != RBasic.BLOCK.value or let_cat.instance != 3:
+            continue
+        kids = _node_children(session, let_nid)
+        if len(kids) != 2:
+            continue
+        try:
+            key = _trivial_value(session, kids[0])
+        except (ValueError, AttributeError):
+            continue
+        if key == field:
+            return kids[1]
+    return None
+
+
+def _decode_source_entries(session, source_nid):
+    """Decode the frontmatter `source:` SEQUENCE into a list of
+    (file_path, [symbols]) tuples. Each entry is a R_Block.DO carrying
+    LET(file, ...) + LET(symbols, SEQUENCE) bindings.
+    """
+    from app.services.substrate.form_runtime import _node_children, _trivial_value
+    from app.services.substrate.category import RType
+    if source_nid is None:
+        return []
+    out = []
+    for entry in _node_children(session, source_nid):
+        file_path = None
+        symbols = []
+        # Walk this entry's LET children for file/symbols keys
+        for let_nid in _node_children(session, entry):
+            kids = _node_children(session, let_nid)
+            if len(kids) != 2:
+                continue
+            try:
+                key = _trivial_value(session, kids[0])
+            except (ValueError, AttributeError):
+                continue
+            if key == "file":
+                try:
+                    file_path = _trivial_value(session, kids[1])
+                except (ValueError, AttributeError):
+                    pass
+            elif key == "symbols":
+                # symbols is a SEQUENCE of strings (or a single string if YAML
+                # flattened). Try both.
+                if kids[1].type_ in (RType.STRING, RType.SLUG):
+                    try:
+                        symbols = [_trivial_value(session, kids[1])]
+                    except (ValueError, AttributeError):
+                        pass
+                else:
+                    for sym_ref in _node_children(session, kids[1]):
+                        if sym_ref.type_ in (RType.STRING, RType.SLUG):
+                            try:
+                                symbols.append(_trivial_value(session, sym_ref))
+                            except (ValueError, AttributeError):
+                                pass
+        if file_path:
+            out.append((file_path, symbols))
+    return out
+
+
+def cmd_execute_dispatch(args: argparse.Namespace) -> int:
+    """Route `coh substrate execute <slug>` to the right domain handler.
+    Auto-detects: tries idea first, then spec. The slug shape is the only
+    needed input; the substrate already knows which domain owns each name.
+    """
+    from app.services.substrate.kernel import lookup_cell
+    slug = args.slug
+    with session_scope() as session:
+        idea = lookup_cell(session, "idea", slug)
+        if idea is not None:
+            return cmd_execute_idea(args)
+        spec = lookup_cell(session, "spec", slug)
+        if spec is not None:
+            return cmd_execute_spec(args, spec)
+        print(
+            f"No @idea({slug}) or @spec({slug}) found in substrate.\n"
+            f"(if not yet ingested, run: coh substrate ingest <path>)",
+            file=sys.stderr,
+        )
+        return 1
+
+
+def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
+    """Run a spec-recipe through the substrate.
+
+    Walking a spec's recipe IS running it. The spec carries claims:
+      - source: files (must exist) and symbols (must resolve in their files)
+      - requirements: predicates the implementation must satisfy
+      - done_when: testable conditions
+      - test: command that validates the whole
+
+    "Implementation" is what makes these claims true. For an unimplemented
+    spec, the source files won't exist yet, symbols can't resolve, the test
+    command fails. Each of those is the *honest run* of the recipe — the
+    recipe says what should be; running it says what is.
+    """
+    import subprocess
+    from pathlib import Path
+
+    from app.services.substrate.form_runtime import (
+        _resolve_access, _node_children, _trivial_value,
+    )
+    from app.services.substrate.category import RType
+
+    with session_scope() as session:
+        # Re-lookup with session-bound state for the walk.
+        from app.services.substrate.kernel import lookup_cell
+        s_cell = lookup_cell(session, "spec", spec.name)
+        if s_cell is None:
+            print(f"@spec({spec.name}) not found", file=sys.stderr)
+            return 1
+
+        slug = s_cell.name
+        print(f"═══ Executing spec-recipe: @spec({slug}) ═══")
+        print()
+        for field in ("id", "idea_id", "status", "priority"):
+            v = _ctor_walk_field(session, s_cell.ctor, field)
+            if v is not None and v.type_ in (RType.STRING, RType.SLUG):
+                try:
+                    print(f"  {field:10s}: {_trivial_value(session, v)}")
+                except (ValueError, AttributeError):
+                    pass
+        print()
+
+        # Source claims — files + symbols
+        source_nid = _ctor_walk_field(session, s_cell.ctor, "source")
+        entries = _decode_source_entries(session, source_nid) if source_nid else []
+
+        files_present, files_missing = [], []
+        symbols_resolved, symbols_missing = [], []
+        if entries:
+            print(f"— source: claims ({len(entries)} entries) —")
+            for fp, syms in entries:
+                p = Path(fp)
+                if p.exists():
+                    files_present.append(fp)
+                    body = p.read_text(errors="replace") if p.is_file() else ""
+                    for sym in syms:
+                        # Cheap symbol resolution: substring presence.
+                        # The wellness check uses a smarter regex for python/ts;
+                        # this is the honest baseline.
+                        bare = sym.split("(")[0].strip()
+                        if bare and bare in body:
+                            symbols_resolved.append((fp, sym))
+                        else:
+                            symbols_missing.append((fp, sym))
+                    print(f"  ✓ {fp}  [{len(syms)} symbol(s)]")
+                else:
+                    files_missing.append(fp)
+                    print(f"  ✗ MISSING: {fp}  [{len(syms)} symbol(s) cannot resolve]")
+            n_files = len(entries)
+            n_syms = sum(len(s) for _, s in entries)
+            print()
+            print(f"  files present : {len(files_present)}/{n_files}")
+            print(f"  symbols resolve: {len(symbols_resolved)}/{n_syms}")
+            print()
+        else:
+            print("— source: not in structured form (legacy markdown text) —")
+            print()
+
+        # done_when: items — try to evaluate each as a Form predicate.
+        # Items that parse as Form expressions evaluate to true/false
+        # against the live substrate. Items that don't parse are honest
+        # prose claims and display as-is.
+        done_when_nid = _ctor_walk_field(session, s_cell.ctor, "done_when")
+        if done_when_nid is not None:
+            from app.services.substrate.form_runtime import form_execute_text
+            items = _node_children(session, done_when_nid) if hasattr(done_when_nid, "type_") else []
+            evaluated = 0
+            passing = 0
+            prose_lines = []
+            form_lines = []
+            for item in items:
+                if not hasattr(item, "type_"):
+                    continue
+                if item.type_ not in (RType.STRING, RType.SLUG):
+                    continue
+                try:
+                    text = _trivial_value(session, item)
+                except (ValueError, AttributeError):
+                    continue
+                if not isinstance(text, str):
+                    continue
+                # Attempt evaluation. If parse fails or evaluates to a
+                # non-boolean value, treat as prose.
+                try:
+                    result = form_execute_text(session, text)
+                except Exception:
+                    prose_lines.append(text)
+                    continue
+                evaluated += 1
+                if result is True:
+                    passing += 1
+                    form_lines.append(("✓", text, "True"))
+                elif result is False:
+                    form_lines.append(("✗", text, "False"))
+                else:
+                    form_lines.append(("→", text, repr(result)))
+            if items:
+                total = len(items)
+                print(
+                    f"— done_when: ({total} item(s); {evaluated} Form-evaluable, "
+                    f"{passing}/{evaluated} passing) —"
+                )
+                for mark, text, val in form_lines:
+                    short = text if len(text) <= 78 else text[:75] + "..."
+                    print(f"  {mark} {short}   = {val}")
+                for text in prose_lines:
+                    short = text if len(text) <= 78 else text[:75] + "..."
+                    print(f"  · {short}  (prose claim — not Form-evaluable)")
+                print()
+
+        # Test command
+        test_nid = _ctor_walk_field(session, s_cell.ctor, "test")
+        test_cmd = None
+        if test_nid is not None and test_nid.type_ == RType.STRING:
+            try:
+                test_cmd = _trivial_value(session, test_nid)
+            except (ValueError, AttributeError):
+                pass
+
+        # Run the test if it exists AND all source files are present
+        if test_cmd:
+            print(f"— test command —")
+            print(f"  $ {test_cmd}")
+            if files_missing:
+                print(
+                    f"  → SKIPPED  ({len(files_missing)} source file(s) missing; "
+                    f"recipe declares them but body has not yet realized them)"
+                )
+            elif args.dry_run:
+                print(f"  → DRY-RUN (no subprocess invoked)")
+            else:
+                r = subprocess.run(test_cmd, shell=True, capture_output=True, text=True)
+                last = ""
+                if r.stdout:
+                    last = r.stdout.strip().split("\n")[-1]
+                elif r.stderr:
+                    last = r.stderr.strip().split("\n")[-1]
+                status = "PASS" if r.returncode == 0 else "FAIL"
+                print(f"  → {status}  ({last[:80]})")
+        else:
+            print("— spec has no `test:` field —")
+        print()
+
+        # Verdict
+        n_files = len(entries)
+        n_syms = sum(len(s) for _, s in entries)
+        if not entries:
+            print("═══ spec-recipe walked (no structured source: to validate) ═══")
+        else:
+            file_ratio = len(files_present) / n_files if n_files else 0
+            sym_ratio = (len(symbols_resolved) / n_syms) if n_syms else 1.0
+            level = "REALIZED" if file_ratio == 1.0 and sym_ratio == 1.0 else (
+                "PARTIAL" if file_ratio > 0 else "ASPIRATIONAL"
+            )
+            print(f"═══ spec-recipe state: {level} "
+                  f"({len(files_present)}/{n_files} files, "
+                  f"{len(symbols_resolved)}/{n_syms} symbols) ═══")
+        return 0
+
+
+def cmd_execute_idea(args: argparse.Namespace) -> int:
+    """Run an idea-recipe end-to-end through the substrate.
+
+    Walks the idea's structured CTOR: anchor → capabilities (each with its
+    surface and resonance band) → linked specs → for each spec, its `test`
+    command → actually invoke the test commands and report PASS/FAIL.
+
+    This is the answer to "can we run an idea recipe similar to how we'd
+    implement it after speccing it?" The recipe IS the executable form;
+    the runtime walks its structure and dispatches concrete actions
+    (substrate lookup, then subprocess) at each step.
+
+    Concrete scope today: dispatches the `test` field of each linked spec.
+    Future: capabilities could dispatch by `surface` (cli/mcp/hooks/...)
+    and resonance could select which arms fire — the dispatch table is
+    already substrate-resident; the surface-specific handlers are the
+    next layer of work.
+    """
+    import subprocess
+
+    from app.services.substrate.kernel import lookup_cell
+    from app.services.substrate.form_runtime import (
+        _resolve_access, _node_children, _trivial_value,
+    )
+    from app.services.substrate.category import RType
+
+    slug = args.slug
+    with session_scope() as session:
+        idea = lookup_cell(session, "idea", slug)
+        if idea is None:
+            print(f"@idea({slug}) not found in substrate", file=sys.stderr)
+            print(f"(if not yet ingested, run: coh substrate ingest ideas/{slug}.md)", file=sys.stderr)
+            return 1
+
+        print(f"═══ Executing idea-recipe: @idea({slug}) ═══")
+        print()
+        # Frontmatter anchors — always present
+        for field in ("title", "pillar", "stage", "work_type"):
+            try:
+                v = _resolve_access(session, idea, field)
+                print(f"  {field:10s}: {v}")
+            except AttributeError:
+                pass
+        print()
+
+        # Capabilities — typed dispatch table if present
+        try:
+            caps_seq = _resolve_access(session, idea, "capabilities")
+            caps = _node_children(session, caps_seq)
+            if caps:
+                print(f"— {len(caps)} capabilities (substrate-resident dispatch table) —")
+                for i, cap in enumerate(caps):
+                    try:
+                        cap_id = _resolve_access(session, cap, "id")
+                        cap_title = _resolve_access(session, cap, "title")
+                        surface = _resolve_access(session, cap, "surface")
+                        resonance = _resolve_access(session, cap, "resonance")
+                        band = HZ_BANDS.get(resonance, "?")
+                        print(f"  [{i}] {cap_id}")
+                        print(f"      title:     {cap_title}")
+                        print(f"      surface:   {surface}")
+                        print(f"      resonance: {resonance} Hz / {band}")
+                    except AttributeError:
+                        print(f"  [{i}] (capability has non-standard shape)")
+                print()
+        except AttributeError:
+            print("— idea has no typed `capabilities:` block (prose-only) —")
+            print()
+
+        # Specs — walk to linked spec cells
+        try:
+            specs_seq = _resolve_access(session, idea, "specs")
+        except AttributeError:
+            print("— idea has no `specs:` list —")
+            return 0
+
+        spec_slugs = []
+        # Two shapes seen in the wild:
+        #   1. specs: SEQUENCE of slug-strings  (the structured form — agent-cli)
+        #   2. specs: single string (legacy: `- [link](path)` markdown rendered
+        #      flat by the tolerant YAML fallback because the markdown-link
+        #      syntax breaks strict YAML parsing).
+        # The structured form is what (B) named as the rewriting target.
+        if isinstance(specs_seq, str):
+            import re as _re
+            # Extract slug from each `[slug](../specs/slug.md)` link
+            spec_slugs = _re.findall(r"\[([a-z0-9][a-z0-9-]*)\]\(\.\./specs/", specs_seq)
+            if spec_slugs:
+                print(
+                    "  (specs in legacy markdown-link format — "
+                    "rewriting to slug-list lets the substrate hold them as a SEQUENCE)"
+                )
+        else:
+            for spec_ref in _node_children(session, specs_seq):
+                if spec_ref.type_ in (RType.STRING, RType.SLUG):
+                    spec_slugs.append(_trivial_value(session, spec_ref))
+
+        print(f"— {len(spec_slugs)} linked spec(s) —")
+        for s_slug in spec_slugs:
+            print(f"  · @spec({s_slug})")
+        print()
+
+        # For each spec, walk to its test command
+        test_cmds = []
+        for s_slug in spec_slugs:
+            spec = lookup_cell(session, "spec", s_slug)
+            if spec is None:
+                print(f"  @spec({s_slug}): NOT FOUND in substrate (try `coh substrate ingest`)")
+                continue
+            try:
+                test_cmd = _resolve_access(session, spec, "test")
+                if test_cmd:
+                    test_cmds.append((s_slug, test_cmd))
+            except AttributeError:
+                pass
+
+        if not test_cmds:
+            print("— no spec carries a `test:` command — nothing to execute —")
+            return 0
+
+        # Run the tests — actual end-to-end execution
+        print(f"— running {len(test_cmds)} substrate-declared test(s) —")
+        any_failed = False
+        for s_slug, cmd in test_cmds:
+            print(f"  exec: @spec({s_slug}).test")
+            print(f"        $ {cmd}")
+            if args.dry_run:
+                print(f"        → DRY-RUN (no subprocess invoked)")
+                continue
+            r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            last_line = ""
+            if r.stdout:
+                last_line = r.stdout.strip().split("\n")[-1]
+            elif r.stderr:
+                last_line = r.stderr.strip().split("\n")[-1]
+            status = "PASS" if r.returncode == 0 else "FAIL"
+            print(f"        → {status}  ({last_line[:80]})")
+            if r.returncode != 0:
+                any_failed = True
+        print()
+        print(f"═══ idea-recipe executed end-to-end via substrate ═══")
+        return 1 if any_failed else 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute a Form expression — actually run the recipe, return a value.
 
@@ -605,21 +935,21 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--kb-pages", action="store_true")
     p_ingest.add_argument("--all", action="store_true", help="Backfill all substrate markdown domains")
     p_ingest.add_argument(
-        "--artifacts",
-        action="store_true",
-        help=(
-            "Ingest non-.md source files as ARTIFACT cells. With no paths, "
-            "walks page.tsx + routers/services + lib defaults so /api/substrate/page "
-            "can annotate any web route or API router. Pass explicit globs as paths."
-        ),
-    )
-    p_ingest.add_argument(
         "--structured",
         action="store_true",
         help=(
-            "Use the composition-discipline structured encoders "
-            "(named-pair LET CTORs + cell-ref/resonance edges authored from "
-            "frontmatter). See docs/coherence-substrate/structural-composition.md."
+            "DEPRECATED no-op: structured is now the default. "
+            "Retained for backward compat with existing call sites. "
+            "Use --flat to opt out of the composition-discipline encoders."
+        ),
+    )
+    p_ingest.add_argument(
+        "--flat",
+        action="store_true",
+        help=(
+            "Opt out of the composition-discipline encoders (CTOR carries "
+            "type-fingerprints only, no values). Used when testing the legacy "
+            "encoding path. See docs/coherence-substrate/structural-composition.md."
         ),
     )
 
@@ -650,6 +980,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Execute a Form expression — run the recipe, return its value",
     )
     p_run.add_argument("expression")
+
+    p_exec = sub.add_parser(
+        "execute",
+        help=(
+            "Run an idea-recipe end-to-end through the substrate: walks the "
+            "idea's structured CTOR (capabilities, specs) and dispatches the "
+            "test commands its linked specs declare."
+        ),
+    )
+    p_exec.add_argument("slug", help="Idea slug (e.g. agent-cli)")
+    p_exec.add_argument(
+        "--dry-run", action="store_true",
+        help="Walk and print the dispatch plan without invoking the test commands.",
+    )
 
     p_disc = sub.add_parser(
         "discover",
@@ -787,6 +1131,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_form(args)
     if args.cmd == "run":
         return cmd_run(args)
+    if args.cmd == "execute":
+        return cmd_execute_dispatch(args)
     if args.cmd == "discover":
         return cmd_discover(args)
     if args.cmd == "sense":
@@ -1840,34 +2186,24 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
-            if not path.exists() or path.is_dir():
+            if not path.exists() or path.is_dir() or path.suffix != ".md":
                 skipped += 1
                 continue
-            if path.suffix == ".md":
-                domain = _domain_for_path(path)
-                if domain is None:
-                    skipped += 1
-                    continue
-                try:
-                    cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
-                        session, path.resolve(), structured=structured
-                    )
-                    success += 1
-                    print(f"  [{domain}] {path.name}: bp={bp_id}")
-                except Exception as exc:
-                    failed += 1
-                    print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
-            else:
-                # Non-.md files land as ARTIFACT cells so page.tsx and
-                # routers/*.py stay in sync with the body. Idempotent by
-                # content-hash; re-ingesting unchanged files is a no-op.
-                try:
-                    cell, bp_id, _ctor = _ingest_one_artifact(session, path)
-                    success += 1
-                    print(f"  [artifact] {path.name}: bp={bp_id}")
-                except Exception as exc:
-                    failed += 1
-                    print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
+            domain = _domain_for_path(path)
+            if domain is None:
+                skipped += 1
+                continue
+            try:
+                # Resolve to absolute so source_path stays consistent across
+                # callers (the hook, manual annotate, the file-only path).
+                cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
+                    session, path.resolve(), structured=structured
+                )
+                success += 1
+                print(f"  [{domain}] {path.name}: bp={bp_id}")
+            except Exception as exc:
+                failed += 1
+                print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
         session.commit()
 
     print(f"\ningest-paths: {success} ingested, {skipped} skipped, {failed} failed")

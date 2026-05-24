@@ -1,6 +1,6 @@
 ---
 idea_id: presence-invitation-surface
-status: active
+status: done
 source:
   - file: api/app/services/presence_invitation_service.py
     symbols: [invite_presence, get_presence]
@@ -13,6 +13,14 @@ requirements:
 done_when:
   - "Focused API tests pass for inviting, listing, reading, and validating presences."
   - "The CLI exposes presence invite/list/read commands."
+  - 'file_exists("api/app/services/presence_invitation_service.py")'
+  - 'symbol_in_file("api/app/services/presence_invitation_service.py", "invite_presence")'
+  - 'symbol_in_file("api/app/services/presence_invitation_service.py", "get_presence")'
+  - 'file_exists("api/app/routers/presence.py")'
+  - 'symbol_in_file("api/app/routers/presence.py", "invite_presence")'
+  - 'symbol_in_file("api/app/routers/presence.py", "list_invited_presences")'
+  - 'symbol_in_file("api/app/routers/presence.py", "get_invited_presence")'
+  - 'pytest_passes("api/tests/test_presence_invitation.py")'
 test: "cd api && python3 -m pytest tests/test_presence_invitation.py -q"
 constraints:
   - "Only change files listed in this spec."

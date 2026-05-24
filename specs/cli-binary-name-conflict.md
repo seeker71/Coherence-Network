@@ -24,6 +24,10 @@ done_when:
   - "`npx coherence-cli ideas` exits 0"
   - "CLAUDE.md contains no bare `cc <command>` references (grep shows 0 matches for `cc ` as CLI invocation)"
   - "cli/bin/cc.mjs no longer exists in the repo"
+  - 'file_exists("cli/package.json")'
+  - 'file_exists("cli/bin/coh.mjs")'
+  - 'file_exists("cli/README.md")'
+  - 'file_exists("CLAUDE.md")'
 test: "cd cli && node bin/coh.mjs --help"
 constraints:
   - "Do NOT break `coherence` alias — it is a backward-compatible entry point for scripts"

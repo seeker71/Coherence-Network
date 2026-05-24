@@ -34,6 +34,38 @@ done_when:
   - GET /api/cc/supply returns coherence score
   - POST /api/cc/stake creates staking position
   - All tests pass
+  - 'file_exists("api/app/services/governance_service.py")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "create_change_request")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "cast_vote")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "get_change_request")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "list_change_requests")'
+  - 'file_exists("api/app/services/grounded_idea_metrics_service.py")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_idea_metrics")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "compute_all_idea_metrics")'
+  - 'symbol_in_file("api/app/services/grounded_idea_metrics_service.py", "collect_all_data")'
+  - 'file_exists("api/app/services/idea_governance_views.py")'
+  - 'symbol_in_file("api/app/services/idea_governance_views.py", "compute_governance_health")'
+  - 'symbol_in_file("api/app/services/idea_governance_views.py", "list_showcase_ideas")'
+  - 'file_exists("api/app/services/coherence_service.py")'
+  - 'symbol_in_file("api/app/services/coherence_service.py", "compute_coherence")'
+  - 'file_exists("api/app/services/right_sizing_service.py")'
+  - 'symbol_in_file("api/app/services/right_sizing_service.py", "build_report")'
+  - 'symbol_in_file("api/app/services/right_sizing_service.py", "compute_granularity_signal")'
+  - 'symbol_in_file("api/app/services/right_sizing_service.py", "apply_suggestion")'
+  - 'file_exists("api/app/services/vitality_service.py")'
+  - 'symbol_in_file("api/app/services/vitality_service.py", "compute_vitality")'
+  - 'file_exists("api/app/services/cc_economics_service.py")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "supply")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "exchange_rate")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "stake")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "unstake")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "coherence_score")'
+  - 'file_exists("api/app/services/distribution_engine.py")'
+  - 'symbol_in_file("api/app/services/distribution_engine.py", "DistributionEngine")'
+  - 'symbol_in_file("api/app/services/distribution_engine.py", "distribute")'
+  - 'pytest_passes("api/tests/test_cc_economics.py")'
+  - 'pytest_passes("api/tests/test_right_sizing.py")'
+  - 'pytest_passes("api/tests/test_flow_vitality.py")'
 test: "python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q"
 ---
 
@@ -41,6 +73,10 @@ test: "python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_siz
 > **Source**: [`api/app/services/governance_service.py`](../api/app/services/governance_service.py) | [`api/app/services/grounded_idea_metrics_service.py`](../api/app/services/grounded_idea_metrics_service.py) | [`api/app/services/coherence_service.py`](../api/app/services/coherence_service.py) | [`api/app/services/right_sizing_service.py`](../api/app/services/right_sizing_service.py) | [`api/app/services/vitality_service.py`](../api/app/services/vitality_service.py) | [`api/app/services/cc_economics_service.py`](../api/app/services/cc_economics_service.py) | [`api/app/services/distribution_engine.py`](../api/app/services/distribution_engine.py)
 
 # Portfolio Governance Health -- Coherence Score, Right-Sizing, and Living Metrics
+
+## Purpose
+
+Portfolio Governance Health -- Coherence Score, Right-Sizing, and Living Metrics — see `idea_id: portfolio-governance` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
 
 ## Goal
 
@@ -64,17 +100,47 @@ The portfolio governance layer spans seven service files implementing six interl
 
 ## Requirements
 
-1. Governance change requests with voting and auto-apply
-2. Grounded idea metrics (actual_value vs potential_value)
-3. Coherence score from 9+ signals
-4. Right-sizing detection (too_large, too_small, overlap via TF-IDF)
-5. Workspace vitality (6 living-system health signals)
-6. CC economics (treasury, staking, exchange rate, coherence invariant)
-7. Distribution engine for CC payouts
-8. Super-idea rollup criteria with auto-status update
+- [ ] Governance change requests with voting and auto-apply
+- [ ] Grounded idea metrics (actual_value vs potential_value)
+- [ ] Coherence score from 9+ signals
+- [ ] Right-sizing detection (too_large, too_small, overlap via TF-IDF)
+- [ ] Workspace vitality (6 living-system health signals)
+- [ ] CC economics (treasury, staking, exchange rate, coherence invariant)
+- [ ] Distribution engine for CC payouts
+- [ ] Super-idea rollup criteria with auto-status update
 
 ## Acceptance Tests
 
 ```bash
 python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/services/governance_service.py`
+- `api/app/services/grounded_idea_metrics_service.py`
+- `api/app/services/idea_governance_views.py`
+- `api/app/services/coherence_service.py`
+- `api/app/services/right_sizing_service.py`
+- `api/app/services/vitality_service.py`
+- `api/app/services/cc_economics_service.py`
+- `api/app/services/distribution_engine.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
+```
+

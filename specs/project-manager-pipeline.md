@@ -25,6 +25,17 @@ done_when:
   - "After review, validates: pytest passes and review output indicates pass"
   - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
   - "If validation passes: advances to next task, starts with spec phase"
+  - 'file_exists("api/scripts/project_manager.py")'
+  - 'symbol_in_file("api/scripts/project_manager.py", "split_item")'
+  - 'symbol_in_file("api/scripts/project_manager.py", "is_too_large")'
+  - 'file_exists("api/app/services/pipeline_advance_service.py")'
+  - 'symbol_in_file("api/app/services/pipeline_advance_service.py", "_extract_partial_work")'
+  - 'symbol_in_file("api/app/services/pipeline_advance_service.py", "_find_spec_file")'
+  - 'file_exists("api/app/services/agent_service_pipeline_status.py")'
+  - 'symbol_in_file("api/app/services/agent_service_pipeline_status.py", "get_pipeline_status")'
+  - 'pytest_passes("api/tests/test_flow_pipeline.py")'
+  - 'pytest_passes("api/tests/test_agent_monitor_helpers.py")'
+  - 'pytest_passes("api/tests/test_task_dedup_service.py")'
 test: "cd api && python -m pytest tests/test_flow_pipeline.py tests/test_agent_monitor_helpers.py tests/test_task_dedup_service.py -q -k 'pipeline or project_manager or split'"
 constraints:
   - "changes scoped to listed files only"

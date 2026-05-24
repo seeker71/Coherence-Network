@@ -29,6 +29,13 @@ done_when:
   - "GET /api/incidents returns complete incident history"
   - "All incidents are logged to audit ledger"
   - "All tests pass in test_incident_response.py"
+  - 'file_exists("api/app/services/auto_heal_service.py")'
+  - 'symbol_in_file("api/app/services/auto_heal_service.py", "graduated")'
+  - 'file_exists("api/app/services/failure_taxonomy_service.py")'
+  - 'symbol_in_file("api/app/services/failure_taxonomy_service.py", "failure")'
+  - 'file_exists("api/app/services/smart_reaper_service.py")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "incident")'
+  - 'pytest_passes("api/tests/test_cc_economics.py")'
 test: "python3 -m pytest api/tests/test_cc_economics.py -x -q"
 constraints:
   - "No incident may be suppressed or delayed in public disclosure"

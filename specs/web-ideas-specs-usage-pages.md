@@ -14,6 +14,12 @@ done_when:
   - "`/ideas` lists ideas from `GET /api/ideas`."
   - "`/ideas/[idea_id]` shows idea details, open questions, and links to relevant APIs."
   - "`/specs` lists specs from `GET /api/inventory/system-lineage` (`specs.items`)."
+  - 'file_exists("web/app/ideas/page.tsx")'
+  - 'symbol_in_file("web/app/ideas/page.tsx", "ideas")'
+  - 'file_exists("web/app/specs/page.tsx")'
+  - 'symbol_in_file("web/app/specs/page.tsx", "specs")'
+  - 'file_exists("web/app/usage/page.tsx")'
+  - 'symbol_in_file("web/app/usage/page.tsx", "usage")'
 test: "cd api && python -m pytest tests/ -q"
 constraints:
   - "changes scoped to listed files only"

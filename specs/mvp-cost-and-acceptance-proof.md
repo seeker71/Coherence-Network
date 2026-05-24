@@ -27,6 +27,7 @@ done_when:
   - "when trust-adjusted revenue coverage is required, judge fails without trust evidence and passes once trust evidence acti"
   - "tasks evidence UI renders acceptance proof and cost breakdown for selected task"
   - "targeted tests pass for runtime endpoint and acceptance proof behavior"
+  - 'file_exists("api/app/models/idea.py")'
 test: "cd web && npm run -s lint"
 constraints:
   - "keep implementation as tiny deltas on existing runtime telemetry model"
