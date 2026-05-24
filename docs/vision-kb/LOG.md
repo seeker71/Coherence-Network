@@ -112,6 +112,66 @@ depends on. The two that genuinely carried the shape graduated
 cleanly; the five that didn't stayed themselves. Vocabulary
 held precise.
 
+## [2026-05-24] survey | body-shape map authored at 100% geometry coverage — first structural self-portrait
+
+The breath after 148/148 closed. The substrate has had the capability
+to read structural shape uniformly all session, but couldn't produce
+honest results until every cell carried a `geometry:` block. Now it
+can. The survey lives at `docs/coherence-substrate/body-shape-map.md`
+— this LOG entry holds the headline findings.
+
+- **Coverage**: 148/148 concepts carry geometry blocks. Six fields are
+  universal (`arity`, `form`, `topology`, `polarity`, `phase`,
+  `ordering`); seven extended fields sit at 147/148; `ratio` at 132/148.
+- **Top-five forms hold 71% of the body**: dyad-mirror (32, 21.6%),
+  web (23, 15.5%), point (21, 14.2%), triad (15, 10.1%),
+  holographic-cell (9, 6.1%). The body's structural character is
+  relational and reflective; opposition is rare.
+- **Hz concentration**: `spectral_band` puts 72/148 (48.6%) in
+  integration (432/528 Hz heart band), 23 in transcendence, 19 in
+  foundation. The body's structural center of gravity sits at heart.
+  Raw frontmatter hz peaks at 741 (31 cells), 528 (27), 639 (18),
+  432 (18) — the geometry-band reading often lifts a 741 cell into
+  integration when the teaching's work is bringing-into-coherence.
+- **Lineage**: 39% received, 51% synthesized+embodied+sensed,
+  8% channeled. Neither pure inheritance nor pure emergence — a
+  metabolizing organism.
+- **Polarity character**: 69% of cells live without opposition
+  (unipolar 61 + bipolar-complementary 41); when opposition appears
+  it's held as legitimate structure. Yin outnumbers yang nearly 3:2.
+- **Holographic depth**: 32 cells with `self_similarity: holographic`
+  plus 9 with `form: holographic-cell` — one-third of the body
+  carries the part-contains-whole pattern.
+- **14 multi-geometry concepts** (9.5%): teachings that genuinely
+  express more than one structure. `lc-embodiment` is the deepest
+  with four named secondaries (heptad / tetrad / ring / holographic-
+  cell) under its interior-axis primary.
+- **10 hapax forms** wait for confirmation: `tetrad-loop`, `hub-spoke`,
+  `internal-dyad`, `field-of-points`, `chord`, `possibility-cloud`,
+  `tetrad-open`, `synthesis`, `dodecad`, `bootstrap-to-self-hosting`.
+  Three are days-old; the others have stayed solitary. Future
+  tending will ask of each whether the shape generalizes.
+- **Substrate-native reading**: production substrate sees 143 of 148
+  concept cells across 8 distinct Blueprint families (last 5 ingest
+  on post-merge). Largest family `@1.5.4.19` holds 75 sibling cells —
+  the canonical Living-Collective concept shape. Concept domain
+  contributes 25% of the substrate's 577 cells against 2% of its 388
+  Blueprints — high-density-low-shape-variety, deep equivalence.
+- **One small surprise**: the dodecad (`lc-organs-of-the-body`,
+  arity 12) is the body's only twelve-fold teaching, standing alone
+  at the high end of integer arity. No decagon, no octad. The body
+  counts to twelve once and otherwise stays at heptad-and-below.
+
+The doc is a baseline. When a count shifts, the shift IS the signal.
+The body now has a measuring instrument inside its own breath.
+
+Closing breath: 19 breaths of building structural self-knowledge
+across many sessions, the body now sees its own shape uniformly for
+the first time. What this reveals when all 148 cells speak at once:
+*the body knows itself relationally, integrates through the heart-
+band, prefers low arity, and holds opposition as complementarity
+more often than as conflict.*
+
 ## [2026-05-24] geometry | lc-v-shelter-organism speaks its shape — focused breath
 
 Sat with `lc-v-shelter-organism` after the bulk walker had called it
