@@ -1,0 +1,110 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/transmission-recipe-share-20260524",
+  "commit_scope": "Add local restore and explicit share-link support to the Transmission Recipes composer.",
+  "files_owned": [
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_share.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_share.json",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "Browser check: http://localhost:3113/vision/recipes desktop autosave, share-link copy, URL restore",
+      "Browser check: http://localhost:3113/vision/recipes mobile share controls visible and no main-content overflow",
+      "API_PORT=18100 WEB_PORT=3113 ./scripts/verify_worktree_local_web.sh --start",
+      "git diff --check"
+    ],
+    "summary": "Pulse, prompt guide, wellness, index check/regeneration, evidence validation, diff whitespace check, production build, desktop/mobile browser restore/share checks, and local API/web contract passed. Browser proof verified shared URL restore, clipboard fallback state, and no main-content overflow."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 20 https://coherencycoin.com/vision/recipes"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and public route validation remain pending until PR and deploy flow complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "db-backed-vision-hub-content",
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "transmission-recipe-share-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "next-breath-request",
+        "cross-domain-recipe-vision"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "interactive-surface-implementation",
+        "browser-validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "npm run build",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make wellness"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_share.json",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "web/app/vision/recipes/RecipeComposer.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Visitors can leave and return to their in-progress recipe card, and can explicitly copy a share URL that reopens the same recipe card.",
+    "public_endpoints": [
+      "GET /vision/recipes"
+    ],
+    "test_flows": [
+      "Desktop browser check creates a card, copies a share link, opens it in a fresh tab, and verifies restored card content.",
+      "Mobile browser check confirms share controls are visible without main-content overflow.",
+      "Production build confirms the route compiles."
+    ]
+  }
+}

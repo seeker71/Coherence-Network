@@ -238,7 +238,9 @@ a source and sees multiple honest extractions:
 The first public doorway is now `/vision/recipes`: a practical surface
 with an interactive card composer, three runnable payloads, and novel
 pairings ready to become workshops, product flows, reliability rituals,
-and community tools.
+and community tools. The composer remembers a draft in the visitor's
+browser and can create a share link that carries the card text when the
+visitor explicitly copies it.
 
 The substrate-facing companion already exists in
 [`modality-as-recipe.form`](../../coherence-substrate/modality-as-recipe.form):
@@ -256,8 +258,8 @@ human-facing doorway: cards people can read, try, verify, and improve.
   -- the practical card walk with complete payloads, proof modes, and
   a first group practice.
 - **[/vision/recipes](/vision/recipes)**
-  -- the public page for composing a card and walking the payloads and
-  novel pairings.
+  -- the public page for composing, restoring, sharing, and walking the
+  payloads and novel pairings.
 - **[modality-as-recipe.form](../../coherence-substrate/modality-as-recipe.form)**
   -- substrate shape for multiple recipe extractions from one source.
 - **[song-as-recipe.form](../../coherence-substrate/song-as-recipe.form)**

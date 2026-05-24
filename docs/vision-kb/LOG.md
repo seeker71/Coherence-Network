@@ -11,6 +11,15 @@ Two paired concepts land together — the *what* and the *how* of an open-ended 
 - **Edges landed in the same breath**: INDEX entries beside `lc-form-perceptron`, frequency-family rows (528, 741), concept count updated, reciprocal cross-references between the two new concepts and into `lc-form-perceptron`, `lc-act-without-penalty`, `lc-grammar-is-the-universal-recipe`, `lc-transmission-recipe-atlas`, `lc-edges-as-vitality`.
 - **Discernment held**: Grant's claim is held by Grant, not by this body; the substrate-bridge is testable, and the runtime is what keeps the test honest. Either outcome — equivalences emerge or they don't — deepens what the body knows.
 
+## [2026-05-24] surface | Transmission Recipes remembers and shares
+
+The public recipe composer now lets a card survive the first breath and travel by consent.
+
+- **Composer deepened**: `/vision/recipes` autosaves the current recipe card in the visitor's browser and restores it on return.
+- **Share link**: the composer can copy a URL carrying the current card text, reopening the same source, lens, proof, boundary, and next embodiment.
+- **Privacy boundary**: card text only leaves the browser when the visitor chooses the share-link action.
+- **Concept edge**: [`lc-transmission-recipe-atlas`](concepts/lc-transmission-recipe-atlas.md) now names local restore and explicit share.
+
 ## [2026-05-24] surface | Transmission Recipes composer
 
 The public recipe doorway can now produce a first artifact in the visitor's hands.

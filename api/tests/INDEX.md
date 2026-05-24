@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 194
+**Total files**: 195
 
 | File | Purpose |
 |---|---|
@@ -188,6 +188,7 @@
 | [test_substrate_string_literal_recovery.py](test_substrate_string_literal_recovery.py) | String literals recover their value at runtime. |
 | [test_substrate_strings.py](test_substrate_strings.py) | Tests for the substrate string-table — cross-process-stable interning. |
 | [test_substrate_structured_ctor.py](test_substrate_structured_ctor.py) | Structural composition discipline — the new structured CTOR encoder. |
+| [test_substrate_surprise_adjacency.py](test_substrate_surprise_adjacency.py) | Tests for the substrate-surprise adjacency refinement. |
 | [test_substrate_vocabulary_commute.py](test_substrate_vocabulary_commute.py) | `?vocabulary` lens + commutative resonance edges. |
 | [test_substrate_word_domain.py](test_substrate_word_domain.py) | Tests for the WORD domain — prose-as-recipe encoder + tokenizer + lookup. |
 | [test_super_idea_rollup.py](test_super_idea_rollup.py) | Tests for super-idea rollup criteria (spec: super-idea-rollup-criteria). |

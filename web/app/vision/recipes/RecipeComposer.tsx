@@ -1,8 +1,8 @@
 // Interactive recipe-card composer for the Transmission Recipes page.
 "use client";
 
-import { useMemo, useState } from "react";
-import { Check, Clipboard, RotateCcw, Wand2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Clipboard, Link2, RotateCcw, Wand2 } from "lucide-react";
 
 type RecipeField =
   | "source"
@@ -33,6 +33,8 @@ const emptyCard: ComposerCard = {
   claimBoundary: "",
   nextEmbodiment: "",
 };
+
+const storageKey = "coherence.transmissionRecipe.card.v1";
 
 const fields: Array<{ id: RecipeField; label: string; placeholder: string; rows?: number }> = [
   {
@@ -147,6 +149,55 @@ function formatCard(card: ComposerCard): string {
   ].join("\n");
 }
 
+function hasCardContent(card: ComposerCard): boolean {
+  return fields.some((field) => card[field.id].trim());
+}
+
+function encodeCard(card: ComposerCard): string {
+  const json = JSON.stringify(card);
+  return btoa(unescape(encodeURIComponent(json)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function decodeCard(value: string | null): ComposerCard | null {
+  if (!value) return null;
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const parsed = JSON.parse(decodeURIComponent(escape(atob(padded)))) as Partial<ComposerCard>;
+    return fields.reduce<ComposerCard>(
+      (acc, field) => ({
+        ...acc,
+        [field.id]: typeof parsed[field.id] === "string" ? parsed[field.id] : "",
+      }),
+      { ...emptyCard },
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  }
+}
+
 function completeness(card: ComposerCard): number {
   const filled = fields.filter((field) => card[field.id].trim()).length;
   return Math.round((filled / fields.length) * 100);
@@ -155,18 +206,72 @@ function completeness(card: ComposerCard): number {
 export function RecipeComposer() {
   const [card, setCard] = useState<ComposerCard>(emptyCard);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [restored, setRestored] = useState<"url" | "local" | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const formatted = useMemo(() => formatCard(card), [card]);
   const completion = completeness(card);
+  const hasContent = hasCardContent(card);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedCard = decodeCard(params.get("recipe"));
+    if (sharedCard) {
+      setCard(sharedCard);
+      setRestored("url");
+      setHydrated(true);
+      return;
+    }
+
+    const savedCard = decodeCard(window.localStorage.getItem(storageKey));
+    if (savedCard) {
+      setCard(savedCard);
+      setRestored("local");
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (hasContent) {
+      window.localStorage.setItem(storageKey, encodeCard(card));
+    } else {
+      window.localStorage.removeItem(storageKey);
+    }
+  }, [card, hasContent, hydrated]);
 
   function updateField(field: RecipeField, value: string) {
     setCard((current) => ({ ...current, [field]: value }));
     setCopied(false);
+    setLinkCopied(false);
   }
 
   async function copyCard() {
     if (!formatted.trim()) return;
-    await navigator.clipboard.writeText(formatted);
-    setCopied(true);
+    const copiedToClipboard = await writeClipboard(formatted);
+    setCopied(copiedToClipboard);
+    setLinkCopied(false);
+  }
+
+  async function copyShareLink() {
+    if (!hasContent) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("recipe", encodeCard(card));
+    url.hash = "composer";
+    const copiedToClipboard = await writeClipboard(url.toString());
+    setLinkCopied(copiedToClipboard);
+    setCopied(false);
+  }
+
+  function clearCard() {
+    setCard(emptyCard);
+    setCopied(false);
+    setLinkCopied(false);
+    setRestored(null);
+    window.localStorage.removeItem(storageKey);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("recipe");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   return (
@@ -189,6 +294,8 @@ export function RecipeComposer() {
                 onClick={() => {
                   setCard(starter.card);
                   setCopied(false);
+                  setLinkCopied(false);
+                  setRestored(null);
                 }}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-stone-800/70 bg-stone-900/40 px-3 py-2 text-sm text-stone-300 transition-colors hover:border-violet-500/35 hover:text-violet-200"
               >
@@ -209,6 +316,15 @@ export function RecipeComposer() {
                 style={{ width: `${completion}%` }}
               />
             </div>
+            <p className="mt-3 text-xs leading-relaxed text-stone-500">
+              {restored === "url"
+                ? "Opened from a shared link. Edits now save in this browser."
+                : restored === "local"
+                  ? "Restored from this browser. Share link only moves the card when you copy it."
+                  : hasContent
+                    ? "Saved in this browser. Share link carries this card text in the URL."
+                    : "Drafts save in this browser once a field has content."}
+            </p>
           </div>
         </div>
 
@@ -234,14 +350,20 @@ export function RecipeComposer() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setCard(emptyCard);
-                    setCopied(false);
-                  }}
+                  onClick={clearCard}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-800/70 bg-stone-950/40 text-stone-400 transition-colors hover:border-amber-500/35 hover:text-amber-200"
                   aria-label="Clear recipe card"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={copyShareLink}
+                  disabled={!hasContent}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-violet-500/25 bg-violet-500/10 px-3 text-sm font-medium text-violet-200 transition-colors hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:border-stone-800 disabled:bg-stone-950/40 disabled:text-stone-600"
+                >
+                  {linkCopied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
+                  {linkCopied ? "Link copied" : "Share link"}
                 </button>
                 <button
                   type="button"
