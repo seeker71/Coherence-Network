@@ -1,0 +1,90 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/transmission-recipe-guide-20260524",
+  "commit_scope": "Add the practical Transmission Recipe Atlas guide with runnable recipe-card walks.",
+  "files_owned": [
+    "docs/vision-kb/guides/transmission-recipe-atlas-guide.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_guide.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "python3 scripts/sync_kb_to_db.py lc-transmission-recipe-atlas --api-key dev-key",
+      "curl -sS --max-time 10 https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas | jq '{id, status: .status, story_chars: (.story_content | length), has_guide_link: (.story_content | contains(\"transmission-recipe-atlas-guide\")), has_group_practice: (.story_content | contains(\"first group practice\"))}'",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "The Transmission Recipe Atlas now has a practical guide with an eight-step source walk, three complete worked payloads, a pairing prompt table, quality check, and first group practice. The concept status moved to deepening and links to the guide. Public concept sync/readback confirms the guide link and group-practice text are present. Existing unrelated wellness drift remains in older spec source/symbol maps. Local substrate ingest-paths for the changed KB files hung and was killed, so it is not counted as passing proof."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 10 https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Docs-only local and public KB validation passed; CI and post-merge deploy validation remain pending until PR flow completes."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "transmission-recipe-guide-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "next-step-request",
+        "cross-domain-recipe-vision"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "guide-authoring",
+        "edge-tending",
+        "public-sync",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/vision-kb/guides/transmission-recipe-atlas-guide.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas",
+    "python3 scripts/sync_kb_to_db.py lc-transmission-recipe-atlas --api-key dev-key",
+    "make wellness"
+  ],
+  "change_files": [
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/guides/transmission-recipe-atlas-guide.md"
+  ],
+  "change_intent": "docs_only"
+}
