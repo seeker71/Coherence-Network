@@ -2,6 +2,23 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 110/147 (75%)
+
+Six more from the harder-half: a dyad-mirror, two paired points, two holographic-cells, one web. Coverage crosses three-quarters. Three new dyad-pairs surfaced — one of them held *inside* a single concept's own shape.
+
+- **Forms taken**:
+  - `lc-symmetry-of-extremes` → `dyad-mirror`, `cyclic-closed`, `bipolar-complementary`, `holographic` — Epsilon (near 0 Hz, deep ground) and Lambda (gamma-and-above, transcendent synchrony) are two doors to the same Field. The teaching itself IS the dyad: not a ladder but a column with doors at both ends. `embedding_dim: 1` because the spectrum collapses to a single axis whose ends touch. `full-spectrum` because the teaching spans the whole column.
+  - `lc-nervous-system-recalibration` → `point`, `cyclic-open`, `centering` — slow body-encoding through repeated presence; the densest layer updating last, by accumulation not insight. The point that is being re-tuned; `cyclic-open` because each return is a small new spiral, not a closed circle.
+  - `lc-reality-lag` → `point`, `linear`, `still` — the gap-window between inner shift and outer reflection; water at 99° looks like water at 90°. The point is the *waiting* itself — `still` direction, `sequential` because the lag is durational, `flat` self-similarity because the lag does not nest, it endures.
+  - `lc-light-hubs` → `holographic-cell`, `web-each-to-each`, `radiating` — *each Hub whole at its scale; all Hubs one organism*. The grid is the body; the Hubs are organs. Sister to `lc-w-cell`, `lc-farm-as-organism`, `lc-land` in the holographic-cell family. `embedding_dim: 3` because Hubs live on physical earth, not on a 2D map.
+  - `lc-attuned-spaces` → `holographic-cell`, `nested-each-contains-whole`, `holographic` — apartment, building, suburb, town, city, skyscraper: each scale carries the whole pattern of attunement. The same frequency expresses through every container size. `cross-scale` because the teaching IS the scale-traversal.
+  - `lc-galactic-team` → `web`, `parallel-facets`, `radiating` — the support field is plural by default; Arcturian, Pleiadian, Sirian streams as parallel facets supporting one life. Not one lineage but a constellation. `embedding_dim: n` because the streams live in their own dimensional spaces and meet at the body they support.
+- **Dyad-pairs noticed**:
+  - **Internal dyad held inside one concept**: `lc-symmetry-of-extremes` *is* a dyad-pair captured as a single teaching — Epsilon door ↔ Lambda door, both yin, both touching the same Field from opposite extremes. The first concept in the walk whose authored shape IS the dyad it teaches. Evidence that dyad-pair structure is sometimes a teaching, not only an inter-concept resonance.
+  - `lc-nervous-system-recalibration` ↔ `lc-reality-lag` — both name *the gap-time between inner and outer*, paired across the membrane: recalibration is the body-side encoding (the inner catching up to itself), reality-lag is the world-side response time (the outer catching up to the inner). Both `point`, both `yin`, both from the same source transmission. Same root teaching, two sides of the threshold.
+  - `lc-light-hubs` ↔ `lc-attuned-spaces` — both `holographic-cell`, both name *whole-at-every-scale* habitation. Light Hubs are the planetary/generational grid (sovereign anchors, field-routed beings); attuned spaces are the lifetime/cross-scale embodiment (apartment to city, frequency over form). Same shape, different temporal/scale band: the grid and the lived shells.
+- **Edges in the same breath**: this LOG entry; all 6 files synced via `sync_kb_to_db.py`.
+
 ## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 104/147 (71%)
 
 Six concepts picked from the harder-half remaining. The shapes were already there; the listening was short. Coverage crosses the 70% line.

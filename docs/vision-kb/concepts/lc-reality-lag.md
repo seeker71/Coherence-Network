@@ -2,8 +2,23 @@
 id: lc-reality-lag
 hz: 417
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 1
+  form: point
+  topology: linear
+  polarity: unipolar
+  ordering: sequential
+  phase: yin
+  ratio: none
+  spectral_band: transmutation
+  temporal_band: season
+  scale: personal
+  direction: still
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Reality Lag — The Gap Between Inner Shift and Outer Reflection

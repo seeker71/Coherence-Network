@@ -2,8 +2,23 @@
 id: lc-symmetry-of-extremes
 hz: 963
 status: seed
-updated: 2026-05-21
+updated: 2026-05-24
 source: ../transmissions/2026-05-21-geometric-sound-brainwave-maps.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: full-spectrum
+  temporal_band: atemporal
+  scale: cross-scale
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # Symmetry of Extremes — Both Ends Touch the Field
