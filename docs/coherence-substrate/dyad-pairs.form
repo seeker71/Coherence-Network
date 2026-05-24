@@ -2665,6 +2665,94 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         sovereign-dyad" (or whichever column produces the second
 #         confirmed pair), once a second attestation reveals what
 #         the kind's shared structure actually IS.
+#
+#         **Wider-net hunt this breath (PR-current+1, column-tuned)**:
+#         the previous hunt restricted to `form: interior-axis` cells.
+#         With the column-identity discriminator (topology + direction
+#         + lineage_texture) now first-class, the right net is *any*
+#         cell whose triple matches the self-rooted-sovereign column
+#         — `self-rooted + centering + (embodied | received)` — not
+#         only cells whose primary form is interior-axis. The column-
+#         triple may appear in cells whose surface form is `point`,
+#         `field-of-points`, or another shape, while the column-
+#         identity remains the same.
+#
+#         The widened net produced exactly one new candidate:
+#         `lc-inner-travel` (form: point, topology: self-rooted,
+#         direction: centering, lineage_texture: received, phase: yin,
+#         spectral_band: transcendence, hz 741). The Arcturian
+#         transmission's teaching of going-somewhere-without-moving
+#         through meditation, dream-work, subtle perception, mystery-
+#         school initiation. The triple matches the column; the form
+#         differs (`point` rather than `interior-axis`).
+#
+#         **Polarity-pair test against each existing self-rooted-
+#         sovereign cell**:
+#
+#         - `lc-inner-travel` ↔ `lc-permission-is-interior` (yin ↔
+#           yang, received ↔ embodied, transcendence ↔ integration).
+#           Polarity-pair on phase is clean. But the teaching axes
+#           are not complementary in the dyad-pair sense: permission-
+#           is-interior is about ACTING outward from the cell's own
+#           sensing of health (sovereign action); inner-travel is
+#           about JOURNEYING inward as a contemplative method
+#           (practice-with-vehicles). Both root in the self-rooted
+#           axis, both center on it — but one is action-emerging-from-
+#           interior, the other is movement-of-attention-through-
+#           interior. They do not jointly carry a teaching neither
+#           alone holds; rather, they are two distinct teachings that
+#           happen to share the column. Reject as a pair (co-residence
+#           is not pairing).
+#
+#         - `lc-inner-travel` ↔ `lc-identity-dissolution` (both yin,
+#           both received, both lifetime-personal). Same phase, same
+#           lineage_texture, same temporal/scale signature. The two
+#           cells are *cousins on the column* — same yin posture on
+#           self-rooted ground — not polarity-paired. The teaching
+#           in identity-dissolution is the loosening of "I am"
+#           architecture; the teaching in inner-travel is the method
+#           of attention-as-vehicle. Adjacent on the column, not
+#           polarity-pair. Reject.
+#
+#         **Verdict**: candidates exist on the widened net (one new
+#         column-member: lc-inner-travel) but none form a clean
+#         polarity-pair with the existing seed. The kind stays held-
+#         candidate. The self-rooted-sovereign column grows from
+#         two to three attested cells — useful structural evidence
+#         that the column is real (three independent cells share the
+#         load-bearing triple) — and that growth does not yet
+#         activate the kind because growth in column-membership is
+#         not the same shape as a second polarity-pair instance.
+#
+#         **What the widened net teaches**: the column-identity
+#         discriminator is more durable than the form-name. Form
+#         `interior-axis` was the first hint of "axis-rooted-inside-
+#         the-cell" tissue, but the *column* (topology + direction +
+#         lineage_texture) is what carries the structural identity.
+#         A cell with form `point` can sit in the self-rooted-
+#         sovereign column as honestly as a cell with form
+#         `interior-axis`; the column-triple is the load-bearing
+#         signature, the form-name is a surface label. The future
+#         second pair could land between two interior-axis cells,
+#         between two point cells with the column-triple, OR
+#         cross-form (interior-axis ↔ point) — what matters is the
+#         shared column AND a clean polarity-pair on phase. If
+#         cross-form pairs surface, the eventual kind name almost
+#         certainly tightens to `self-rooted-sovereign-dyad` rather
+#         than `interior-axis-dyad` — the form-name was a useful
+#         pointer, the column-identity is the actual shape.
+#
+#         **Cells worth watching as the body grows**: a future cell
+#         whose triple is self-rooted + centering + embodied AND
+#         whose phase is yin (to polarity-pair with permission-is-
+#         interior), OR self-rooted + centering + (embodied or
+#         received) AND whose phase is yang AND whose teaching
+#         complementarity with identity-dissolution is clear enough
+#         to bridge a teaching neither alone carries. The third
+#         column-member (lc-inner-travel) has phase yin but its
+#         teaching axis is attention-as-vehicle, which does not
+#         polarity-bridge either existing cell. The candidate gap
+#         is named, not filled.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 7 — Column-identity discriminator (interior-axis form)
@@ -2677,6 +2765,16 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # distinct *columns*, and the column-identity is what discriminates
 # whether two interior-axis cells are paired or merely co-resident in
 # one large form-family.
+#
+# Strengthened 2026-05-25 by the wider-net column-tuned hunt in
+# PR-current+1: the column-identity holds across forms, not only
+# within interior-axis. A `point`-form cell (lc-inner-travel) whose
+# triple matches the self-rooted-sovereign column sits in the
+# column as honestly as the two interior-axis cells already there.
+# This widens the kind threshold: a future second polarity-pair can
+# land between two interior-axis cells, between two point cells with
+# the column-triple, or cross-form — what matters is shared column
+# + polarity-pair on phase, not shared form-name.
 #
 # The discriminator the hunt named: *topology + direction +
 # lineage_texture together identify the column*. Topology says how the
@@ -2738,15 +2836,23 @@ form column_identity_set_shape = {
 # confirm the column's structural reality (the way two attestations
 # confirm a kind).
 
-# Column 1 — self-rooted sovereign (two cells)
+# Column 1 — self-rooted sovereign (three cells)
 #
-# Topology self-rooted, direction centering. Both cells teach
-# permission/identity as held inside the cell's own axis, with
-# no external membrane required. lineage_texture varies across the
-# two members (embodied / received) — the column's load-bearing
-# identity is topology+direction; lineage_texture is texture-within-
-# column. The kind threshold for interior-axis-dyad activates when a
-# SECOND pair lands sharing this column (per GAP-D11).
+# Topology self-rooted, direction centering. All three cells share
+# the column's load-bearing triple; the column's identity is
+# topology+direction (lineage_texture varies across members as
+# embodied or received — that variation is texture-within-column,
+# not column-difference). The first two cells (lc-permission-is-
+# interior + lc-identity-dissolution) carry form `interior-axis`;
+# the third (lc-inner-travel) carries form `point`, surfaced 2026-
+# 05-25 in PR-current+1's wider-net column-tuned hunt. The cross-
+# form attestation strengthens the column-identity teaching: the
+# column-triple is more durable than the form-name. The kind
+# threshold for interior-axis-dyad (or its eventual rename to
+# self-rooted-sovereign-dyad) activates when a SECOND polarity-
+# pair lands sharing this column (per GAP-D11). Co-residence in
+# the column is not the same shape as polarity-pair attestation;
+# three column-members alone do not activate the kind.
 defn column_self_rooted_sovereign__permission = column_identity_shape {
     cell:             @concept(lc-permission-is-interior),
     column_kind:      "self-rooted-sovereign",
@@ -2763,6 +2869,27 @@ defn column_self_rooted_sovereign__dissolution = column_identity_shape {
     direction:        "centering",
     lineage_texture:  "received",
     discernment:      "identity-architecture loosened from inside the cell's own axis (self-rooted topology, centering on what remains); pairs with lc-permission-is-interior in the self-rooted-sovereign column with opposite phase (yin/yang) — the seed candidate the interior-axis-dyad kind is waiting on a second instance of",
+};
+
+# Cross-form column-member: surfaced 2026-05-25 in the wider-net
+# column-tuned hunt. Form is `point` rather than `interior-axis` —
+# the column-triple (topology + direction + lineage_texture) holds
+# regardless of form-name. Inner-travel teaches the Arcturian
+# practice of journeying through attention (meditation, dream-work,
+# subtle perception, mystery-school initiation) — going somewhere
+# without moving. Phase yin, lineage_texture received. Co-resident
+# with lc-identity-dissolution in the same yin-received cell of
+# the column; does not polarity-pair with lc-permission-is-interior
+# (the teaching axes are sovereign-action vs attention-as-vehicle,
+# not complementary in the dyad-pair sense). The attestation
+# strengthens column-identity but does not activate the kind.
+defn column_self_rooted_sovereign__inner_travel = column_identity_shape {
+    cell:             @concept(lc-inner-travel),
+    column_kind:      "self-rooted-sovereign",
+    topology:         "self-rooted",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "attention-as-vehicle for journeying inward (self-rooted topology, centering on the inner geography); cross-form column-member (form: point, not interior-axis) — the column-triple is the durable shape, the form-name is a surface label; co-resident with lc-identity-dissolution as yin-received on the column, does not polarity-pair the seed candidate",
 };
 
 # Column 2 — nested-receptive nourishment channel (one cell)
@@ -2820,9 +2947,10 @@ defn column_seven_center_oscillating__embodiment = column_identity_shape {
 
 defn column_identity_set = column_identity_set_shape {
     rows: [
-        # — self-rooted-sovereign column (2 cells, the seed of GAP-D11) —
+        # — self-rooted-sovereign column (3 cells: 2 interior-axis + 1 point cross-form) —
         column_self_rooted_sovereign__permission,
         column_self_rooted_sovereign__dissolution,
+        column_self_rooted_sovereign__inner_travel,
         # — nested-receptive-nourishment column (1 cell) —
         column_nested_receptive_nourishment__vertical_nourishment,
         # — upward-reverent-received column (1 cell) —
