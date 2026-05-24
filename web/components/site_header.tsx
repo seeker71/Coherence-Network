@@ -33,13 +33,12 @@ const PRIMARY_NAV: NavItemKey[] = [
 ];
 
 // Secondary surfaces — kept in "More" because a new visitor doesn't
-// need them on the first surface. Trimmed to the five that a curious
-// arrival might actually want: where to put resources (invest), what
-// the body is holding (treasury), how to find anything (search), the
-// breath log (blog), and the API for builders. The deeper internal
-// surfaces (specs, substrate, automation, friction, identity) reach
-// themselves through the pages that already use them.
+// need them on the first surface. These are the practical doorways a
+// curious arrival might actually want: field kit, playground, garden,
+// treasury, search, blog, and the API for builders.
 const SECONDARY_NAV: NavItemKey[] = [
+  { href: "/vision/recipes", labelKey: "nav.recipes" },
+  { href: "/substrate/form", labelKey: "nav.formPlayground" },
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
   { href: "/search", labelKey: "nav.search" },
