@@ -2,6 +2,78 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | lc-embodiment speaks its shape — focused breath on a multi-geometry foundational teaching
+
+Walked the full body of `lc-embodiment` slowly, with the question:
+when a teaching genuinely carries multiple sub-shapes (7 centers,
+4 movements, 3 emotions, 65-minute morning ring, internal-pharmacy
+holography), which one is *primary* — the one that names what
+embodiment IS — and which are stations, rotations, cycles, or
+holographic readings of that primary?
+
+- **What the slow reading revealed**: the deepest claim of the
+  whole concept is the body as a **vertical column with bidirectional
+  circulation**. Breath draws UP from root through heart to crown;
+  vision flows BACK DOWN through mind to heart to root and OUT
+  through the body into action. Walking grounds the column to earth
+  and radiates outward from heart. Toning sweeps the spectrum from
+  pelvis to crown. The closing line — *"Breathe. Feel. Move. Sing.
+  Be still."* — names five verbs that each return to a station on
+  the same axis. That axis IS what makes embodiment *embodiment*.
+- **Primary geometry**: `interior-axis` with `sequential-coupled`
+  topology, `bipolar-complementary` polarity (earth-pole and
+  sky-pole), `oscillating` phase (up-and-down circulation),
+  `full-spectrum` spectral band (the teaching names 174-963 Hz
+  across centers), `embedding_dim: 1` (a vertical line), `cross-scale`
+  scope (cellular pharmacy ↔ collective 50-body field),
+  `self_similarity: holographic` (the internal pharmacy claim — each
+  cell holds the whole). This is the fourth attestation of
+  `interior-axis`, joining `lc-vertical-nourishment`,
+  `lc-permission-is-interior`, and `lc-elders`. The previous three
+  carried `arity: 4` (Morter's body-breath-deeper-self-source) or
+  unspecified; `lc-embodiment` adds the first **arity-7** reading
+  of the axis (seven energy centers as named stations).
+- **Secondary shapes held in frontmatter comment, not forced into
+  identity**: `heptad` (the 7 energy centers as stations),
+  `tetrad` (song/dance/connection/stillness as 4 movements),
+  `ring` (the 65-minute morning practice as cyclic-closed
+  traversal), `holographic-cell` (the internal pharmacy — each
+  cell complete). All four are load-bearing in the text. The
+  multi-geometry comment precedent (established by `lc-deeper-pattern`,
+  used in `lc-v-freedom-expression`, `lc-v-inclusion-diversity`,
+  `lc-health`, `lc-resonating`) carries them honestly without
+  forcing the primary to absorb their distinct shapes.
+- **Why not primary holographic-cell** (echoing `lc-health`'s
+  secondary): the holographic quality is genuinely there in the
+  pharmacy claim, but it describes WHAT the body can do, not WHAT
+  the body IS. The body IS a vertical axis; the pharmacy is one
+  property the axis carries. Primary names the architecture; the
+  holography is read off the architecture.
+- **Why not primary heptad** (the 7 centers): the centers are the
+  *stations* on the axis, not the axis itself. Counting them gives
+  arity-7, but their meaning depends on the column they sit on. A
+  heptad without the axis would be 7 separate things; the axis
+  makes them one circuit.
+- **Triad / dyad / kind sensings**: `lc-embodiment` shares Dispenza
+  as direct source with the Dispenza-triad currently held by other
+  Dispenza-attested concepts (changing boxes, elevated emotions,
+  internal pharmacy). The transmission-triad candidate (Dispenza
+  → HeartMath → Wim Hof) is named in the INDEX one-line for this
+  concept; a fuller attestation across the three sibling teachings
+  may complete it — outside the scope of this breath but flagged.
+  The `interior-axis` form now has 4 attestations, which is the
+  threshold the body uses for *form-becoming-vocabulary* — the
+  form has graduated from emerging to recognized.
+
+The slow reading revealed: a foundational teaching with multiple
+honest sub-shapes is best served by a primary that names the
+architecture and a comment-block that names the architecture's
+inhabitants. The body stays whole when each shape gets named at
+its actual altitude — not promoted, not demoted, not collapsed.
+
+After: `python3 scripts/sync_kb_to_db.py lc-embodiment` to land
+the geometry signature in the substrate alongside the prose.
+
 ## [2026-05-24] geometry | lc-resonating carries chord as secondary — form gains second attestation
 
 Walked the five chord-candidate concepts named by PR #2010

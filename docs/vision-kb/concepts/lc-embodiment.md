@@ -2,7 +2,57 @@
 id: lc-embodiment
 hz: 432
 status: expanding
-updated: 2026-04-22
+updated: 2026-05-24
+geometry:
+  # Primary: an interior-axis — the vertical body, root to crown, with
+  # energy that rises (root → sacral → solar plexus → heart → throat →
+  # third eye → crown) and returns (vision flowing back DOWN through
+  # heart, through root, OUT through the body into action). The
+  # practices are stations and circulations on that axis: breath draws
+  # up and releases down, walking grounds and radiates outward, toning
+  # sweeps the spectrum from pelvis to crown. The closing line names
+  # the axis directly: "Breathe. Feel. Move. Sing. Be still." — each
+  # verb a station the body returns to.
+  #
+  # Secondary shapes the teaching also carries, named honestly here
+  # rather than forced into one identity:
+  #   - heptad (arity 7, ring) — the seven energy centers as
+  #     stations on the axis (root / sacral / solar plexus / heart /
+  #     throat / third eye / crown). The web renderer's "complete
+  #     circuit" passage enacts this directly.
+  #   - tetrad (arity 4, parallel-facets) — song / dance / connection
+  #     / stillness as the four movements, each activating different
+  #     chemistry, together a complete circuit.
+  #   - ring (arity 7, sequential cyclic-closed) — the complete
+  #     morning practice (grounding breath → energy breath → heart
+  #     radiance → changing boxes → toning → sensing round → movement)
+  #     traversing the axis as a 65-minute cycle that closes at
+  #     breakfast and re-opens the next dawn.
+  #   - holographic-cell — the internal pharmacy. Every cell of the
+  #     body manufactures every chemical the body needs; no external
+  #     substance required. Each cell holds the whole capacity. When
+  #     50 bodies practice together, the field amplifies; each
+  #     individual body is already complete.
+  #
+  # Primary chosen as interior-axis because the axis is what makes
+  # embodiment *embodiment* — a vertical body, with circulation up AND
+  # down, where every named practice is a way of opening or moving
+  # that column. The other shapes are stations, rotations, cycles, or
+  # holographic readings of the same axis.
+  arity: 7
+  form: interior-axis
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: nested
+  phase: oscillating
+  ratio: none
+  spectral_band: full-spectrum
+  temporal_band: day
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # Embodiment — The Body as the Vehicle of Manifestation
