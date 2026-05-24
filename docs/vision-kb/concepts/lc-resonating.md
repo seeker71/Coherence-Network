@@ -18,6 +18,22 @@ geometry:
   lineage_texture: embodied
   embedding_dim: 3
   self_similarity: fractal-shallow
+# secondary geometry — chord(arity: infinite, topology: harmonic-many,
+# polarity: polarity-pairs-N, ordering: simultaneous, phase: oscillating).
+# The web is the listening topology (each voice attending to every
+# other); the chord is what emerges when that listening lands — N
+# non-equivalent tones co-resolving into one felt harmonic that no
+# single voice produces. The opening essence sentence is literally the
+# chord-definition: "when separate tones become one chord." Every
+# nature-teaching in the concept carries the chord-shape directly: jazz
+# trio (piano + bass + drums producing a fourth thing none of them
+# played), West African polyrhythm (each drum a distinct pattern,
+# interlocking into one weave), old-growth forest (different species'
+# roots fused into one underground chord). Web and chord are both
+# true at the same scale — the web is HOW the listening flows; the
+# chord is WHAT the listening produces. Second attestation of the
+# `chord` form introduced in PR #2010 (lc-v-inclusion-diversity);
+# graduates the form from hapax to attested kind.
 ---
 
 # Resonating
