@@ -1379,6 +1379,7 @@ export class Kernel {
       const workers = Math.max(1, argInt(args, 1));
       const allPure = roots.every((root) => isParallelPure(k, root, new Set<string>()));
       const sequential = (cache: boolean): Value => {
+        const local = new Map<string, Value>();
         const list = roots.map((root) => {
           const key = nodeKey(root);
           if (cache) {
@@ -1387,10 +1388,18 @@ export class Kernel {
               k.walkCacheHits++;
               return cached;
             }
+            const localCached = local.get(key);
+            if (localCached !== undefined) {
+              k.walkCacheHits++;
+              return localCached;
+            }
             k.walkCacheMisses++;
           }
           const value = walk(k, root, new Frame(null));
-          if (cache) k.walkCache.set(key, value);
+          if (cache) {
+            k.walkCache.set(key, value);
+            local.set(key, value);
+          }
           return value;
         });
         return { kind: "list", list };
@@ -1405,14 +1414,24 @@ export class Kernel {
       }
       const out: Value[] = new Array(roots.length);
       const jobs: Array<[number, NodeID]> = [];
+      const first = new Map<string, number>();
+      const fanout = new Map<number, number[]>();
       for (let i = 0; i < roots.length; i++) {
         const root = roots[i]!;
-        const cached = k.walkCache.get(nodeKey(root));
+        const key = nodeKey(root);
+        const cached = k.walkCache.get(key);
         if (cached !== undefined) {
           k.walkCacheHits++;
           out[i] = cached;
+        } else if (first.has(key)) {
+          k.walkCacheHits++;
+          const primary = first.get(key)!;
+          const duplicates = fanout.get(primary) ?? [];
+          duplicates.push(i);
+          fanout.set(primary, duplicates);
         } else {
           k.walkCacheMisses++;
+          first.set(key, i);
           jobs.push([i, root]);
         }
       }
@@ -1425,6 +1444,9 @@ export class Kernel {
       }
       for (const [idx, root] of jobs) {
         k.walkCache.set(nodeKey(root), out[idx]!);
+        for (const dup of fanout.get(idx) ?? []) {
+          out[dup] = out[idx]!;
+        }
       }
       return { kind: "list", list: out };
     };

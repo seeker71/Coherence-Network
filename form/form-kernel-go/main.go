@@ -1314,9 +1314,15 @@ func (k *Kernel) registerNatives() {
 		}
 		sequential := func(cache bool) Value {
 			out := make([]Value, len(roots))
+			local := make(map[NodeID]Value)
 			for i, root := range roots {
 				if cache {
 					if cached, ok := k.walkCache[root]; ok {
+						k.walkCacheHits++
+						out[i] = cached
+						continue
+					}
+					if cached, ok := local[root]; ok {
 						k.walkCacheHits++
 						out[i] = cached
 						continue
@@ -1326,6 +1332,7 @@ func (k *Kernel) registerNatives() {
 				out[i] = k.walk(root, NewFrame(nil))
 				if cache {
 					k.walkCache[root] = out[i]
+					local[root] = out[i]
 				}
 			}
 			return Value{Kind: VList, List: out}
@@ -1343,12 +1350,18 @@ func (k *Kernel) registerNatives() {
 		}
 		out := make([]Value, len(roots))
 		jobs := make([]int, 0, len(roots))
+		first := make(map[NodeID]int)
+		fanout := make(map[int][]int)
 		for i, root := range roots {
 			if cached, ok := k.walkCache[root]; ok {
 				k.walkCacheHits++
 				out[i] = cached
+			} else if primary, ok := first[root]; ok {
+				k.walkCacheHits++
+				fanout[primary] = append(fanout[primary], i)
 			} else {
 				k.walkCacheMisses++
+				first[root] = i
 				jobs = append(jobs, i)
 			}
 		}
@@ -1371,6 +1384,9 @@ func (k *Kernel) registerNatives() {
 		wg.Wait()
 		for _, i := range jobs {
 			k.walkCache[roots[i]] = out[i]
+			for _, dup := range fanout[i] {
+				out[dup] = out[i]
+			}
 		}
 		return Value{Kind: VList, List: out}
 	}
