@@ -2,7 +2,22 @@
 id: lc-w-spanda
 hz: 528
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-complementary
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: transformation
+  temporal_band: instant
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Spanda

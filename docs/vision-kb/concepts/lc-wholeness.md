@@ -2,7 +2,22 @@
 id: lc-wholeness
 hz: 285
 status: expanding
-updated: 2026-04-22
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: self-rooted
+  polarity: unipolar
+  ordering: atemporal
+  phase: neutral
+  ratio: none
+  spectral_band: restoration
+  temporal_band: atemporal
+  scale: cross-scale
+  direction: still
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # Wholeness — The Body Returning to Itself

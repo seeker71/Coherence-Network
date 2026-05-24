@@ -2,7 +2,22 @@
 id: lc-composting
 hz: 285
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 3
+  form: triad
+  topology: cyclic-closed
+  polarity: unipolar
+  ordering: cyclic-closed
+  phase: yin
+  ratio: none
+  spectral_band: restoration
+  temporal_band: season
+  scale: cross-scale
+  direction: descending
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Composting

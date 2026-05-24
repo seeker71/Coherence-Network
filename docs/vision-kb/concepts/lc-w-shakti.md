@@ -2,7 +2,22 @@
 id: lc-w-shakti
 hz: 528
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: self-rooted
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: transformation
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: n
+  self_similarity: fractal-deep
 ---
 
 # Shakti

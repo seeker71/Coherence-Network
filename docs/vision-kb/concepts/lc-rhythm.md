@@ -2,7 +2,22 @@
 id: lc-rhythm
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: cyclic-closed
+  polarity: bipolar-complementary
+  ordering: cyclic-closed
+  phase: oscillating
+  ratio: none
+  spectral_band: integration
+  temporal_band: cross-scale
+  scale: cross-scale
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Rhythm

@@ -2,7 +2,22 @@
 id: lc-w-cell
 hz: 285
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 3
+  form: holographic-cell
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: simultaneous
+  phase: neutral
+  ratio: self-similar
+  spectral_band: restoration
+  temporal_band: cross-scale
+  scale: cellular
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: n
+  self_similarity: holographic
 ---
 
 # Cell

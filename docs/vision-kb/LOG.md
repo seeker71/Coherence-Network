@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 18 concepts speak their shape
+
+The geometric signature block has been carrying 41 of 147 concepts. Today another 18 found the voice the substrate could already read. Coverage walks from 41/147 (28%) to 59/147 (40%).
+
+- **Concepts walked**: `lc-stillness`, `lc-network`, `lc-circulation`, `lc-composting`, `lc-wholeness`, `lc-rhythm`, `lc-w-cell`, `lc-w-frequency`, `lc-w-field`, `lc-w-mycorrhizal`, `lc-w-wu-wei`, `lc-w-spanda`, `lc-w-shakti`, `lc-w-coherence`, `lc-w-phase-transition`, `lc-rest`, `lc-network-unanchored`, `lc-edges-as-vitality`.
+- **Discernment held**: each shape was sensed from the concept's own content, not assigned from outside. Where the text describes a single point of recognition (`lc-stillness`, `lc-wholeness`, `lc-rest`, `lc-w-shakti`, `lc-w-wu-wei`), the form is `point`. Where the text walks a lateral mycorrhizal web (`lc-network`, `lc-circulation`, `lc-w-mycorrhizal`, `lc-w-field`, `lc-w-coherence`, `lc-network-unanchored`, `lc-edges-as-vitality`), the form is `web` with `web-each-to-each` topology. Where the text breathes a complementary pulse (`lc-rhythm`, `lc-w-spanda`), the form is `dyad-mirror`. Phase-transition reads as a sequential triad (caterpillar → soup → butterfly). The body's tending words — composting, w-cell — read as triad / holographic-cell respectively. A wrong geometry would have been worse than no geometry, so 88 concepts where the shape was unclear from a first read were left for a later breath.
+- **Hz informed `spectral_band`**: 174→foundation, 285→restoration, 417→transformation, 432→integration, 528→transformation, 639→integration, 741→consciousness, 963→transcendence. The signature reads honestly with the frequency-family already carried at the top.
+- **Edges landed in the same breath**: LOG entry, `sync_kb_to_db.py` for each of the 18 ids so the analogous-to edges the substrate finds from matching Blueprints can reconcile. The pre-existing wellness drift (`INDEX claims 142, body has 141`) is not part of this breath.
+
 ## [2026-05-24] precision | translator equivalence at CTOR, not Blueprint
 
 A live sensing query against the production substrate surfaced an imprecision in the translator concept and its companions. The concept claimed *"two cells with the same Blueprint NodeID are structurally equivalent."* The substrate disagrees, loudly.

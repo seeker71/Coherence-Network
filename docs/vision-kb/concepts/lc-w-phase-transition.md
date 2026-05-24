@@ -2,7 +2,22 @@
 id: lc-w-phase-transition
 hz: 417
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 3
+  form: triad
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: sequential
+  phase: oscillating
+  ratio: none
+  spectral_band: transformation
+  temporal_band: instant
+  scale: cross-scale
+  direction: ascending
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-deep
 ---
 
 # Phase Transition

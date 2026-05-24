@@ -2,7 +2,22 @@
 id: lc-rest
 hz: 174
 status: deepening
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: receptive-resonance
+  polarity: neutral
+  ordering: atemporal
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: season
+  scale: cross-scale
+  direction: still
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-deep
 ---
 
 # Integration
