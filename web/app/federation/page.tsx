@@ -1,10 +1,13 @@
 // Federation surface — a window into the peer-to-peer geometry the network
-// has chosen to know. Four sections, each read-only:
+// has chosen to know. Seven sections, each read-only:
 //   1. This instance — pulse + self-declared capabilities
 //   2. Known peers — registered instances + observed pulses
 //   3. Substrate alignment — per-peer recipe-shape attestations (aligned /
 //      diverged / discovered, all equal in dignity)
 //   4. Capability comparison — side-by-side providers / languages / canonicals
+//   5. Federated assets (mirrors) — assets served from us, authored on peers
+//   6. Read attestations — peers' signed claims about reads of our assets
+//   7. Settlement shares — outbox (we owe peers) + inbox (peers owe us)
 //
 // Every label honors that each instance speaks its own truth. Nothing here
 // implies any instance has authority over another.
@@ -93,6 +96,68 @@ type AttestationsResponse = {
   count: number;
 };
 
+type AssetMirrorRecord = {
+  local_asset_id: string;
+  origin_instance_id: string;
+  origin_asset_id: string;
+  origin_url: string;
+  origin_payment_address?: string | null;
+  mirrored_at: string;
+};
+
+type FederatedReadAttestation = {
+  id: number;
+  asset_origin_id: string;
+  reader_instance_id: string;
+  reader_subject?: string | null;
+  read_type: string;
+  cc_amount: number;
+  observed_at: string;
+  received_at: string;
+  status: string;
+  signature_verified: boolean;
+};
+
+type FederatedReadAttestationListResponse = {
+  asset_origin_id?: string | null;
+  reader_instance_id?: string | null;
+  attestations: FederatedReadAttestation[];
+  count: number;
+};
+
+type SettlementShareEnvelope = {
+  origin_instance_id: string;
+  serving_instance_id: string;
+  period_start: string;
+  period_end: string;
+  read_count: number;
+  cc_amount_to_serving: number;
+  cc_amount_to_creator: number;
+  serving_share: number;
+  creator_share: number;
+  asset_breakdown: Array<Record<string, unknown>>;
+  signature: string;
+};
+
+type SettlementInboxEntry = {
+  id: number;
+  origin_instance_id: string;
+  period_start: string;
+  period_end: string;
+  read_count: number;
+  cc_amount_to_serving: number;
+  cc_amount_to_creator: number;
+  received_at: string;
+  status: string;
+  signature_verified: boolean;
+};
+
+type SettlementInboxListResponse = {
+  origin_instance_id?: string | null;
+  entries: SettlementInboxEntry[];
+  count: number;
+};
+
 // ─── Loaders ──────────────────────────────────────────────────────────────────
 
 async function fetchJson<T>(url: string): Promise<T | null> {
@@ -130,6 +195,18 @@ function formatUptime(seconds?: number): string {
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m`;
   return `${seconds}s`;
+}
+
+function formatCc(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || isNaN(amount)) return "0";
+  // Up to 4 decimals, but trim trailing zeros; keeps the magnitude honest.
+  const fixed = amount.toFixed(4);
+  return fixed.replace(/\.?0+$/, "") || "0";
+}
+
+function shortId(id: string, head = 8, tail = 4): string {
+  if (!id || id.length <= head + tail + 1) return id;
+  return `${id.slice(0, head)}…${id.slice(-tail)}`;
 }
 
 function overallColor(overall?: string): { dot: string; text: string } {
@@ -189,12 +266,36 @@ export default async function FederationPage() {
   // Client-side fetches use a same-origin path (apiBase is "" in browser).
   const browserApiBase = "";
 
-  const [selfPulse, selfCaps, instances, peerPulses] = await Promise.all([
+  const [
+    selfPulse,
+    selfCaps,
+    instances,
+    peerPulses,
+    mirrors,
+    attestations,
+    outbox,
+    inbox,
+  ] = await Promise.all([
     fetchJson<SelfPulse>(`${apiBase}/api/pulse/self`),
     fetchJson<CapabilityManifest>(`${apiBase}/api/federation/capabilities/self`),
     fetchJson<FederatedInstance[]>(`${apiBase}/api/federation/instances`),
     fetchJson<PeerPulsesResponse>(`${apiBase}/api/pulse/peers`),
+    fetchJson<AssetMirrorRecord[]>(`${apiBase}/api/federation/value/mirrors`),
+    fetchJson<FederatedReadAttestationListResponse>(
+      `${apiBase}/api/federation/value/read-attestations`
+    ),
+    fetchJson<SettlementShareEnvelope[]>(
+      `${apiBase}/api/federation/value/settlement-share/outbox`
+    ),
+    fetchJson<SettlementInboxListResponse>(
+      `${apiBase}/api/federation/value/settlement-share/inbox`
+    ),
   ]);
+
+  const mirrorList = Array.isArray(mirrors) ? mirrors : [];
+  const attestationList = attestations?.attestations ?? [];
+  const outboxList = Array.isArray(outbox) ? outbox : [];
+  const inboxList = inbox?.entries ?? [];
 
   const peerList = Array.isArray(instances) ? instances : [];
   const peerPulseByInstance = new Map<string, PeerPulseRecord>();
@@ -228,6 +329,11 @@ export default async function FederationPage() {
 
   const selfColor = overallColor(selfPulse?.overall);
   const economicsEntries = Object.entries(selfCaps?.economics ?? {});
+
+  // Peer name resolution for value-flow sections — fall back to short id.
+  const peerNameById = new Map<string, string>();
+  for (const p of peerList) peerNameById.set(p.instance_id, p.name);
+  const peerLabel = (id: string): string => peerNameById.get(id) ?? shortId(id);
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-10">
@@ -564,6 +670,261 @@ export default async function FederationPage() {
           </div>
         </section>
       ) : null}
+
+      {/* ─── 5. Federated assets (mirrors) ──────────────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">{t("federation.value.assets.heading")}</h2>
+        {mirrorList.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border/30 bg-background/30 p-6 text-sm text-muted-foreground">
+            {t("federation.value.assets.empty")}
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {mirrorList.map((m) => (
+              <article
+                key={`mirror-${m.local_asset_id}`}
+                className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium font-mono break-all">
+                    {m.local_asset_id}
+                  </h3>
+                  <p className="text-xs text-amber-200">
+                    {t("federation.value.assets.servedFromUs", {
+                      peer: peerLabel(m.origin_instance_id),
+                    })}
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>
+                    <span className="text-muted-foreground/70">
+                      {t("federation.value.assets.originAsset")}:
+                    </span>{" "}
+                    <a
+                      href={m.origin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono hover:text-foreground hover:underline break-all"
+                    >
+                      {m.origin_asset_id}
+                    </a>
+                  </p>
+                  {m.origin_payment_address ? (
+                    <p>
+                      <span className="text-muted-foreground/70">
+                        {t("federation.value.assets.paymentAddress")}:
+                      </span>{" "}
+                      <span className="font-mono break-all">
+                        {m.origin_payment_address}
+                      </span>
+                    </p>
+                  ) : null}
+                  <p>
+                    {t("federation.value.assets.mirroredAt")}:{" "}
+                    {formatTimestamp(m.mirrored_at)}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ─── 6. Read attestations (incoming) ────────────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">
+          {t("federation.value.attestations.heading")}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t("federation.value.attestations.lede")}
+        </p>
+        {attestationList.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border/30 bg-background/30 p-6 text-sm text-muted-foreground">
+            {t("federation.value.attestations.empty")}
+          </p>
+        ) : (
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/40 to-card/20 p-5">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] text-xs">
+                <thead>
+                  <tr className="text-muted-foreground/80">
+                    <th className="text-left font-normal py-1.5 pr-3">
+                      {t("federation.value.attestations.asset")}
+                    </th>
+                    <th className="text-left font-normal py-1.5 pr-3">
+                      {t("federation.peersHeading")}
+                    </th>
+                    <th className="text-left font-normal py-1.5 pr-3">CC</th>
+                    <th className="text-left font-normal py-1.5 pr-3">
+                      {t("federation.value.attestations.observed")}
+                    </th>
+                    <th className="text-left font-normal py-1.5">
+                      {t("federation.value.attestations.verified")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attestationList.slice(0, 50).map((a) => (
+                    <tr key={`att-${a.id}`} className="border-t border-border/15">
+                      <td className="py-1.5 pr-3 font-mono break-all">
+                        {a.asset_origin_id}
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        <span className="text-amber-200">
+                          {t("federation.value.attestations.peerAttests", {
+                            peer: peerLabel(a.reader_instance_id),
+                          })}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        {t("federation.value.attestations.ccAmount", {
+                          amount: formatCc(a.cc_amount),
+                        })}
+                      </td>
+                      <td className="py-1.5 pr-3 text-muted-foreground">
+                        {formatTimestamp(a.observed_at)}
+                      </td>
+                      <td className="py-1.5">
+                        {a.signature_verified ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-500/5 px-2 py-0.5 text-amber-200">
+                            <span>✓</span>
+                            <span>{t("federation.value.attestations.verified")}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-border/30 bg-background/30 px-2 py-0.5 text-muted-foreground">
+                            {t("federation.value.attestations.unsigned")}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {attestationList.length > 50 ? (
+                <p className="text-xs text-muted-foreground/70 pt-2">
+                  + {attestationList.length - 50}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ─── 7. Settlement shares (outbox + inbox) ──────────────────── */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">{t("federation.value.heading")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("federation.value.settlement.lede")}
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Outbox — we owe peers */}
+          <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+            <h3 className="text-sm font-medium">
+              {t("federation.value.settlement.outbox.heading")}
+            </h3>
+            {outboxList.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {t("federation.value.settlement.outbox.empty")}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {outboxList.slice(0, 25).map((env, i) => {
+                  const signed = !!env.signature;
+                  return (
+                    <li
+                      key={`out-${env.serving_instance_id}-${env.period_start}-${i}`}
+                      className="rounded-lg border border-border/20 bg-background/30 p-3 space-y-1"
+                    >
+                      <p className="text-sm text-amber-200">
+                        {t("federation.value.settlement.weOwe", {
+                          amount: formatCc(env.cc_amount_to_serving),
+                          peer: peerLabel(env.serving_instance_id),
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("federation.value.settlement.outbox.period")}:{" "}
+                        {formatTimestamp(env.period_start)} —{" "}
+                        {formatTimestamp(env.period_end)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("federation.value.settlement.outbox.reads", {
+                          n: env.read_count,
+                        })}
+                      </p>
+                      <p className="text-xs">
+                        {signed ? (
+                          <span className="inline-flex items-center gap-1 text-amber-200">
+                            <span>✓</span>
+                            <span>{t("federation.value.attestations.verified")}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {t("federation.value.attestations.unsigned")}
+                          </span>
+                        )}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </article>
+
+          {/* Inbox — peers owe us */}
+          <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+            <h3 className="text-sm font-medium">
+              {t("federation.value.settlement.inbox.heading")}
+            </h3>
+            {inboxList.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {t("federation.value.settlement.inbox.empty")}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {inboxList.slice(0, 25).map((entry) => (
+                  <li
+                    key={`in-${entry.id}`}
+                    className="rounded-lg border border-border/20 bg-background/30 p-3 space-y-1"
+                  >
+                    <p className="text-sm text-blue-200">
+                      {t("federation.value.settlement.peerOwesUs", {
+                        amount: formatCc(entry.cc_amount_to_serving),
+                        peer: peerLabel(entry.origin_instance_id),
+                      })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("federation.value.settlement.inbox.period")}:{" "}
+                      {formatTimestamp(entry.period_start)} —{" "}
+                      {formatTimestamp(entry.period_end)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("federation.value.settlement.inbox.reads", {
+                        n: entry.read_count,
+                      })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("federation.value.attestations.received")}:{" "}
+                      {formatTimestamp(entry.received_at)}
+                    </p>
+                    <p className="text-xs">
+                      {entry.signature_verified ? (
+                        <span className="inline-flex items-center gap-1 text-amber-200">
+                          <span>✓</span>
+                          <span>{t("federation.value.attestations.verified")}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {t("federation.value.attestations.unsigned")}
+                        </span>
+                      )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      </section>
 
       {/* ─── Footer ─────────────────────────────────────────────────── */}
       <nav
