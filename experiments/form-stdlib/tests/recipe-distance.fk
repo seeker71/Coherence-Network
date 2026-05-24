@@ -1,0 +1,99 @@
+; tests/recipe-distance.fk — calibrate and discriminate the metric
+;
+; Three claims to prove with numbers (not vibes):
+;
+;   1. CALIBRATION — same source parsed twice has distance 0.
+;      The metric must agree with structural identity.
+;
+;   2. ROUND-TRIP — parse(emit(parse(src), python)) ≈ parse(src).
+;      The lossless path stays lossless under the metric.
+;      If this is nonzero, the emitter is losing structure
+;      that the parser captured.
+;
+;   3. DISCRIMINATION — two semantically different sources produce
+;      nonzero distance. The metric distinguishes shapes.
+;
+; The numbers print so the kernel trace shows the actual ladder.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/recipe-distance.fk
+
+(do
+    (let NL "
+")
+
+    ;; Two Python sources — same shape, different identifiers + operator.
+    ;; Strange-minimal choice: smallest pair that exercises identifier
+    ;; difference AND operator difference at once. If the metric can tell
+    ;; these apart, it can tell most things apart.
+    (let src-add "def add(a, b): return a + b")
+    (let src-mul "def mul(x, y): return x * y")
+
+    (let recipe-add  (parse-python-universal src-add))
+    (let recipe-add2 (parse-python-universal src-add))
+    (let recipe-mul  (parse-python-universal src-mul))
+
+    (let registry
+        (list (list "python" python-templates)
+              (list "go"     go-templates)))
+
+    ;; Round-trip: Python → universal → Python → universal again
+    (let emitted-py (emit-to "python" recipe-add registry))
+    (let recipe-rt  (parse-python-universal emitted-py))
+
+    ;; Cross-language: Python → universal → Go → (we can't re-parse Go
+    ;; through python-universal grammar; structural distance still works
+    ;; if we re-parse Go through go-universal — but that's a separate
+    ;; test once go-universal parser exists. For now: emit Go is a
+    ;; string-level translator output; the metric proves recipe-rt.)
+
+    ;; ── claim 1: calibration ──
+    (let d-self        (recipe-distance recipe-add recipe-add2))
+    (let d-self-w      (recipe-distance-w recipe-add recipe-add2))
+    (let fid-self      (recipe-fidelity-ppk recipe-add recipe-add2))
+
+    ;; ── claim 2: round-trip fidelity ──
+    (let d-rt          (recipe-distance recipe-add recipe-rt))
+    (let d-rt-w        (recipe-distance-w recipe-add recipe-rt))
+    (let fid-rt        (recipe-fidelity-ppk recipe-add recipe-rt))
+
+    ;; ── claim 3: discrimination ──
+    (let d-diff        (recipe-distance recipe-add recipe-mul))
+    (let d-diff-w      (recipe-distance-w recipe-add recipe-mul))
+    (let fid-diff      (recipe-fidelity-ppk recipe-add recipe-mul))
+
+    ;; Sizes for context
+    (let size-add (recipe-size recipe-add))
+    (let size-mul (recipe-size recipe-mul))
+    (let size-rt  (recipe-size recipe-rt))
+
+    (print "── recipe sizes ──")
+    (print (str_concat "add: " (int_to_str size-add)))
+    (print (str_concat "mul: " (int_to_str size-mul)))
+    (print (str_concat "rt:  " (int_to_str size-rt)))
+    (print "")
+
+    (print "── claim 1: calibration (same source twice) ──")
+    (print (str_concat "  unweighted distance: " (int_to_str d-self)))
+    (print (str_concat "  weighted   distance: " (int_to_str d-self-w)))
+    (print (str_concat "  fidelity (ppk):      " (int_to_str fid-self)))
+    (print "  expected: 0 / 0 / 1000")
+    (print "")
+
+    (print "── claim 2: round-trip (parse→emit→parse, python) ──")
+    (print (str_concat "  unweighted distance: " (int_to_str d-rt)))
+    (print (str_concat "  weighted   distance: " (int_to_str d-rt-w)))
+    (print (str_concat "  fidelity (ppk):      " (int_to_str fid-rt)))
+    (print "  expected: 0 / 0 / 1000 (if emitter is structure-preserving)")
+    (print "")
+
+    (print "── claim 3: discrimination (add vs mul) ──")
+    (print (str_concat "  unweighted distance: " (int_to_str d-diff)))
+    (print (str_concat "  weighted   distance: " (int_to_str d-diff-w)))
+    (print (str_concat "  fidelity (ppk):      " (int_to_str fid-diff)))
+    (print "  expected: > 0 / > 0 / < 1000 (metric must discriminate)")
+    (print "")
+
+    ;; Deterministic kernel return value: sum all three distances + the
+    ;; calibration term. If calibration breaks, this number shifts in a
+    ;; predictable way; if discrimination breaks, d-diff goes to 0.
+    (add d-self (add d-rt d-diff)))

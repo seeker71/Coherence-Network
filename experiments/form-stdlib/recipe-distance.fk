@@ -1,0 +1,134 @@
+; recipe-distance.fk — structural distance between two Recipes
+;
+; The BMF translator pipeline (parse → universal Recipe → emit) gives us
+; bidirectional translation but no measurement. This file adds the missing
+; primitive: a scalar that says how far apart two Recipes are.
+;
+; The substrate's content-addressed NodeID lattice is what makes this cheap.
+; Two Recipes interned with the same Blueprint + the same children intern
+; to the same NodeID — `node_eq` short-circuits entire subtrees to 0 cost.
+; When categories differ or children diverge, we walk the tree and count
+; mismatches. The score is the codec-style fidelity number we need so
+; multi-candidate translation can pick a winner with a number, not a vibe.
+;
+; Two variants live here in parallel so the evidence chooses, not us:
+;
+;   recipe-distance       — unweighted tree-edit count. One mismatch = 1.
+;                            Pure structural diff; treats root and leaf alike.
+;
+;   recipe-distance-w     — depth-weighted. Root-level mismatch costs more
+;                            than leaf-level mismatch (weight 8 at root,
+;                            decays to 1 by depth 7). Matches the substrate's
+;                            own composition discipline: shape-at-root carries
+;                            more information than shape-at-leaf.
+;
+; Both return an integer "cost"; pair with `recipe-size` to normalize.
+; Fidelity-in-parts-per-thousand is the readable form for tests.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Tree size — used as the denominator for normalized fidelity
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn sum-sizes (xs)
+        (if (nil? xs) 0
+            (add (node-size (head xs)) (sum-sizes (tail xs)))))
+
+    (defn node-size (n)
+        (do
+            (let children (node_children n))
+            (if (nil? children) 1
+                (add 1 (sum-sizes children)))))
+
+    (defn recipe-size (a) (node-size a))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Variant 1 — unweighted tree-edit distance
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walk both trees in lock-step. At each node:
+    ;;   - node_eq → 0 (content-addressed identity handles the subtree)
+    ;;   - category mismatch → +1
+    ;;   - recurse pairwise on children
+    ;;   - children-length mismatch → tail of the longer list counts as
+    ;;     pure insertion/deletion cost (each missing node = 1)
+
+    (defn children-dist (xs ys)
+        (if (nil? xs)
+            (sum-sizes ys)
+            (if (nil? ys)
+                (sum-sizes xs)
+                (add (recipe-distance (head xs) (head ys))
+                     (children-dist (tail xs) (tail ys))))))
+
+    (defn recipe-distance (a b)
+        (if (node_eq a b) 0
+            (do
+                (let cat-cost
+                    (if (node_eq (node_category a) (node_category b)) 0 1))
+                (add cat-cost
+                     (children-dist (node_children a) (node_children b))))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Variant 2 — depth-weighted distance
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; A root Blueprint mismatch is a bigger lie than a leaf identifier
+    ;; swap. Weight decays from 8 (root) to 1 (depth ≥ 7). Linear decay
+    ;; keeps the arithmetic integer-clean — the kernel has no floats.
+
+    (defn weight-at (depth)
+        (if (lt depth 7) (sub 8 depth) 1))
+
+    (defn weighted-tail-cost (xs depth)
+        (if (nil? xs) 0
+            (add (mul (weight-at depth) (node-size (head xs)))
+                 (weighted-tail-cost (tail xs) depth))))
+
+    (defn weighted-children-dist (xs ys depth)
+        (if (nil? xs)
+            (weighted-tail-cost ys depth)
+            (if (nil? ys)
+                (weighted-tail-cost xs depth)
+                (add (recipe-distance-weighted (head xs) (head ys) depth)
+                     (weighted-children-dist (tail xs) (tail ys) depth)))))
+
+    (defn recipe-distance-weighted (a b depth)
+        (if (node_eq a b) 0
+            (do
+                (let cat-cost
+                    (if (node_eq (node_category a) (node_category b))
+                        0
+                        (weight-at depth)))
+                (add cat-cost
+                     (weighted-children-dist (node_children a)
+                                             (node_children b)
+                                             (add depth 1))))))
+
+    (defn recipe-distance-w (a b)
+        (recipe-distance-weighted a b 0))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Fidelity in parts-per-thousand — readable normalization
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; 1000 = identical; 0 = maximally different. Denominator is the
+    ;; larger of the two tree sizes so insertion-only distance still
+    ;; produces a bounded score.
+
+    (defn recipe-fidelity-ppk (a b)
+        (do
+            (let d (recipe-distance a b))
+            (let denom (max2 (recipe-size a) (recipe-size b)))
+            (if (eq denom 0) 1000
+                (div (mul (sub denom d) 1000) denom))))
+
+    (defn recipe-fidelity-w-ppk (a b)
+        (do
+            (let d (recipe-distance-w a b))
+            (let sa (weighted-tail-cost (list a) 0))
+            (let sb (weighted-tail-cost (list b) 0))
+            (let denom (max2 sa sb))
+            (if (eq denom 0) 1000
+                (div (mul (sub denom d) 1000) denom))))
+
+    0)
