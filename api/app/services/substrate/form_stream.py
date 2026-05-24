@@ -272,11 +272,13 @@ def _string_leaf(session: Session, value: str) -> NodeID:
     return NodeID(1, Level.TRIVIAL, RType.STRING, inst)
 
 
-def _identifier_leaf(name: str) -> NodeID:
-    """Bare identifier — placeholder LOCAL_ACCESS encoded by hashing the name
-    into a small instance number. Matches form.py's IntLit-adjacent path."""
-    inst = abs(hash(name)) % (10**9) + 1
-    return NodeID(1, Level.TRIVIAL, 7, inst)
+def _identifier_leaf(session, name: str) -> NodeID:
+    """Bare identifier — intern the name as a SLUG via substrate_strings.
+    Matches form.py's AST path: same expression interns to the same NodeID,
+    LET round-trip works because the name is recoverable. Sessions must
+    share state for cross-evaluation content-addressing to hold."""
+    inst = intern_string_instance(session, name)
+    return NodeID(1, Level.TRIVIAL, RType.SLUG, inst)
 
 
 def _self_leaf() -> NodeID:
@@ -445,7 +447,7 @@ def _parse_primary(session: Session, p: _ParserState) -> None:
             return
         # bare identifier — placeholder leaf
         p.consume("IDENT")
-        p.stack.append(_identifier_leaf(kw))
+        p.stack.append(_identifier_leaf(session, kw))
         return
     # ---- parenthesized expression ---------------------------------------
     if t.kind == "LPAREN":
@@ -598,7 +600,7 @@ def _parse_let(session: Session, p: _ParserState) -> None:
     p.consume("ASSIGN")
     _parse_expr(session, p)
     # Push the name-leaf, then emit LET with arity 2 (name, value).
-    name_id = _identifier_leaf(name)
+    name_id = _identifier_leaf(session, name)
     # Stack currently has [value]. We need [name, value] before emit. Insert.
     value_id = p.stack.pop()
     p.stack.append(name_id)
@@ -635,7 +637,7 @@ def _parse_match(session: Session, p: _ParserState) -> None:
         # pattern — could be an underscore literal or a regular expression
         if p.peek().kind == "IDENT" and p.peek().value == "_":
             p.consume("IDENT")
-            p.stack.append(_identifier_leaf("_"))
+            p.stack.append(_identifier_leaf(session, "_"))
         else:
             _parse_expr(session, p)
         p.consume("ARROW")
