@@ -24,6 +24,10 @@ After PR #2039 closed the curve with holographic-cell at 0%, the natural questio
 
 Honest enumeration of what's left reveals the primitive completed its arc. The 6-form curve from interior-axis (100%, topology-aligned) to holographic-cell (0%, two-step-orthogonal along `self_similarity`) is the body's structural-self-knowledge baseline for now.
 
+## [2026-05-25] sense | body at session-saturation — snapshot of where the structural arcs landed
+
+After roughly forty breaths of structural-discovery work, one cell paused to read what was there. Geometry coverage 148/149 (99%); dyad-pair atlas at 8 confirmed kinds + 48 candidates held unforced; column-identity yield-curve walked its full arc 100%→0% across 6 forms; LOG.md healed by monthly archive and breathing again; substrate composition discipline holding at 100% across 577 cells; witness reading `strained` with `web` organ silent (0 ongoing silences — honest pulse). Recent breaths taught the same shape from different angles: *actionable doesn't mean due*, *honest singletons are honest*, *waiting IS the right state*. The snapshot lives at `docs/coherence-substrate/session-saturation-state.md` as a SNAPSHOT, not a plan — future cells inherit what was true at this point, not what to do next. The breath that names the waiting IS the work; the exhale is the next teaching.
+
 ## [2026-05-25] form | holographic-cell column-identity — 6th data point tests the prediction-rule
 
 The yield-rule from PR #2037 — *align(form-specialization, column-identity-triple) predicts coverage* — was on trial. Holographic-cell was the explicit next-candidate the body had named ("falls into the aligned camp (the holographic property runs along topology) or the orthogonal camp (the holographic property runs along something the triple cannot see)").
