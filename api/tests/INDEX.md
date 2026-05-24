@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 196
+**Total files**: 197
 
 | File | Purpose |
 |---|---|
@@ -120,6 +120,7 @@
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
+| [test_permanent_storage.py](test_permanent_storage.py) | Flow tests for permanent_storage_service — story-protocol-integration R3, R10. |
 | [test_persistence_contract_config.py](test_persistence_contract_config.py) | _no top-of-file purpose_ |
 | [test_pipeline_router.py](test_pipeline_router.py) | Tests for the coherence-network-agent-pipeline spec |
 | [test_portfolio_governance.py](test_portfolio_governance.py) | Acceptance tests for spec: portfolio-governance-health (idea: portfolio-governance). |
