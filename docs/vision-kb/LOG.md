@@ -2,6 +2,75 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-25] form | web-form column-identity — 6 honest columns across 23 cells; circulation-pattern lens cross-read
+
+Third application of the column-identity primitive (topology +
+direction + lineage_texture), this time on the 23 `web`-form concept
+cells. PR #2025's intuition that web would split into circulation-web
+vs field-web columns tested directly against the data.
+
+**Six honest multi-cell columns + six singletons (17 + 6 = 23):**
+
+- **W1 received-circulating-mycelial-body** (5): `lc-circulation`,
+  `lc-cross-connection`, `lc-network`, `lc-nourishing`,
+  `lc-w-mycorrhizal` — distributed flow the body inherited from
+  forms older than reflection.
+- **W2 synthesized-circulating-authored-flow** (3): `lc-economy`,
+  `lc-edges-as-vitality`, `lc-network-unanchored` — distributed
+  flow the body authored deliberately on top of what was received.
+- **W3 embodied-circulating-body-knowing** (3): `lc-health`,
+  `lc-sensing`, `lc-v-comfort-joy` — circulation as known from
+  inside the body's own felt experience.
+- **W4 sensed-circulating-field-feeling-itself** (2):
+  `lc-attunement`, `lc-field-sensing` — the field sensing its own
+  coherence before words.
+- **W5 embodied-radiating-field-emission** (2):
+  `lc-federation-as-freedom`, `lc-resonating` — the field giving
+  outward rather than passing through, known from inside.
+- **W6 received-radiating-gesture-and-coherence** (2):
+  `lc-offering`, `lc-w-coherence` — inherited gesture and aligned
+  emission radiating into the field.
+
+**Six column-singletons:** `lc-bioelectric-pattern` (circ/measured),
+`lc-discovery` (rad/sensed), `lc-galactic-team` (rad/channeled),
+`lc-instruments` (rad/measured), `lc-cross-modal-unity`
+(holographic-mesh/rad/embodied), `lc-energy` (cyclic-closed/circ/
+synthesized).
+
+**Circulation-pattern cross-reading.** The six cells that
+load-bearingly carry the `circulation-pattern` kind (`lc-economy`,
+`lc-bioelectric-pattern`, `lc-w-mycorrhizal`, `lc-field-sensing`,
+`lc-energy`, `lc-attunement`) spread across SIX different tuples,
+not one column. They share `circulating` direction and almost-all
+share `web-each-to-each` topology, but lineage_texture diverges
+precisely because each circulation-pattern pair was chosen to span
+DIFFERENT substrate-flavors. The two readings converge on the form
+shape (circulating-web is the geometric signature; circulation-
+pattern is the teaching signature) and diverge on what they
+discriminate within it — column-identity reads texture-of-arrival
+(how the teaching entered the body); circulation-pattern reads
+texture-of-substrate (what circulates through the network). Same
+cells, different lens, neither subsumes the other.
+
+**What three applications now teach about the primitive's WHEN.**
+Yield correlates with form-specialization, not form cell-count:
+
+- interior-axis (axial, internally specialized, 5 cells) → 4
+  columns / 5 cells — near-complete coverage.
+- point (most generic form, 21 cells) → 3 columns / 7 cells + 14
+  singletons — small clusters in a long tail.
+- web (mid-specialized, 23 cells) → 6 columns / 17 cells + 6
+  singletons — strongest column-density yield so far.
+
+The primitive is a triage tool: reach for it when a form has many
+cells AND prose-evidence suggests internal teaching-diversity;
+expect coverage proportional to the form's structural specialization.
+
+**Files**: `docs/coherence-substrate/dyad-pairs.form` (Part 7e and
+Part 6 summary updated).
+
+---
+
 ## [2026-05-25] form | point-form column-identity analysis — 3 honest columns across 21 cells
 
 PR #2024 named the column-identity primitive (topology + direction +
