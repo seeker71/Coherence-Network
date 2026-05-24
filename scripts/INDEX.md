@@ -94,6 +94,7 @@
 | [run_form_practice.py](run_form_practice.py) | !/usr/bin/env python3 |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
+| [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
 | [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | !/usr/bin/env python3 |
 | [seed_db.py](seed_db.py) | !/usr/bin/env python3 |

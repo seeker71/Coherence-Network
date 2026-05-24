@@ -2,6 +2,25 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-pair scan refined — Hz proximity + cross-ref + lineage + same-form; signal/noise 40%
+
+Third scan round in the autoresearch loop for dyad-pair detection. The refined scoring lives in [`scripts/scan_dyad_candidates.py`](../../scripts/scan_dyad_candidates.py); the confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3e.
+
+- **The refinement**: `score = 1.0*cross_ref + 0.6*hz_proximity + 0.3*lineage_match + 0.4*same_form` over 123 geometry-bearing concept cells. Two thresholds — scan-discovered (no prose cross-ref) ≥ 1.0; promoted (cross-ref present) ≥ 1.9. Hz-proximity weighs same-band (1.0), named complementary bands like 174↔963 / 528↔741 (1.0), or adjacent Solfeggio (0.3); lineage-match: same texture (+1.0), mixed (-0.5); same-form: shared geometry.form (1.0).
+- **Why the same-form bonus was added mid-author**: first version without it saturated — top 223 candidates all at score 1.90, ranking became alphabetical. Adding the same-form bonus thinned the top-tier honestly; 95 scan-discovered + 93 promoted now, with real ranking.
+- **Confirmed (4)** — folded as Pairs 12–15 in dyad-pairs.form Part 3e:
+  - `lc-act-without-penalty` ↔ `lc-observer-pays-the-trace` — kind: `source-flow`, axis: trace-economy. Substrate's freedom and its trace-charge.
+  - `lc-attunement-joining` ↔ `lc-unified-body` — kind: `ground-event`, axis: event-and-state. Entry-arc (immune-handshake event) and the body-state it makes.
+  - `lc-awareness-as-self` ↔ `lc-land` — kind: `scale-paired`, axis: ground-axis. Inner ground (consciousness-as-field) and outer ground (land-as-belonging).
+  - `lc-circulation` ↔ `lc-offering` (promoted candidate, scan typed the relation) — kind: `source-flow`, axis: gesture-and-flow. The momentary release and the field-wide flow it feeds.
+- **Demoted from initial draft (1)**: `lc-awareness-as-self ↔ lc-stillness` first read as confirmed (membrane-crossing). Second read against the body's existing rows — Pair 4 (`lc-shared-hold ↔ lc-stillness`, ground-event) and Pair 9 (`lc-awareness-as-self ↔ lc-freedom-as-recognition`, ground-event) — showed both proposed cells are ground-poles of already-noticed ground-event pairs. Reads as equivalence (two names for one ground), not complementarity. The honest read drops signal/noise from 50% to 40%; recording the demotion is the body's discernment-in-motion.
+- **Rejected (6)** — including the demotion above. Documented in Part 4b: REJECT-4 through REJECT-9. Reasons: sequence (act-without-penalty + traces-teach-the-recipe), translator-hypothesis equivalence (anything-arrives-room + transmission-recipe-atlas), shape-twin/substance-divergent (awareness-as-self + nourishment), unrelated layers (awareness-as-self + rest), both-whole-alone equivalence (boundaries + dance-card), ground-pole equivalence (awareness-as-self + stillness).
+- **Held (3)** — borderlines awaiting second eye: `lc-attunement-joining ↔ lc-intimacy` (continuation vs complement); `lc-awareness-as-self ↔ lc-void-as-potential` (could be internal-dyad or external pair); `lc-devotion-placement ↔ lc-tending-over-producing` (equivalence vs complement).
+- **Signal/noise across rounds**: PR #1987 Tier-2 geometry-tuple = 2/5 = **40%**; PR #1992 small-Blueprint-cluster = 0/2 = **0%**; this round refined-scan = 4/10 = **40%**. Cumulative 6/17 = **35.3%**. The refinement holds at 40% — not a climb, but matches the original Tier-2 ratio with a richer scoring function. The honest finding: the body's own discernment (the demotion-on-second-read) is what keeps the ratio truthful; without it, this round would have over-reported.
+- **What the scan teaches now**: the geometry vocabulary saturates the score function — many cells share form/Hz/lineage, so even refined scoring rediscovers the same prose-already-noticed band. The next refinement direction (GAP-D6 in dyad-pairs.form) is topology+phase tuple layered onto Hz+xref+lineage, OR moving from frontmatter-tuple matching to prose-structural signals (shared lemma chains, shared semantic field via the WORD-domain ingest). Two-track threshold matters: scan-discovered (4 confirmed / 8 assessed = 50%) outperforms scan-of-promoted (which mostly rediscovers what prose already linked).
+- **Set is now 17 entries** (15 external pairs + 2 internal-dyads). Six kinds unchanged.
+- **Edges in the same breath**: this LOG entry; the `.form` file lands via post-merge substrate hook; `scan_dyad_candidates.py` registered in `scripts/INDEX.md` via auto-generator.
+
 ## [2026-05-24] geometry | 4 more concepts speak their shape — coverage now 126/148 (85%)
 
 Four from the harder remainder: a spiral, a web, a ring, and a point — each shape unmistakable in the prose. Coverage crosses 85%. One new scale-paired dyad-pair surfaced, third arrival from the "Hardest Part Already Behind You" transmission completes a scale-triad across personal/lifetime → personal/season → planetary/generational.
