@@ -223,13 +223,15 @@ def test_full_creator_to_settlement_flow(client):
             "coherence:contributor:"
         )
 
-    # --- Side-effect: read_tracking_service saw all 3 reads ---
-    # Contract gap (2026-05-24): the content endpoint calls
-    # record_read(asset_id=...) without forwarding read_type/payment_token,
-    # so even paid reads land on the free counter. The aggregate total
-    # still rises by 3, which is what the e2e proves the pipeline counted.
+    # --- Side-effect: read_tracking_service saw all 3 reads as paid ---
+    # Closed 2026-05-24: get_asset_content now forwards read_type,
+    # payment_token, cc_amount, and concept_resonance_snapshot to
+    # record_read, so paid reads land on the paid counter and the
+    # daily aggregate partitions cleanly between paid/free.
     agg = read_tracking_service.get_daily_aggregates(asset_id=node_id)
     assert agg["per_asset"][node_id]["total"] == 3
+    assert agg["per_asset"][node_id]["paid_reads"] == 3
+    assert agg["per_asset"][node_id]["free_reads"] == 0
 
     # --- Seed render events so settlement has something to aggregate ---
     today = date.today()

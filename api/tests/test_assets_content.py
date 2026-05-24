@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 from datetime import date
 from decimal import Decimal
 
@@ -24,7 +25,12 @@ from app.services import graph_service, read_tracking_service
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    # Reset the in-process read event log so paid/free aggregate
+    # assertions in this module don't see events bled in from earlier
+    # tests in the session.
+    read_tracking_service._reset_for_tests()
+    yield TestClient(app)
+    read_tracking_service._reset_for_tests()
 
 
 def _sha256_hex(content: bytes) -> str:
@@ -173,6 +179,115 @@ def test_get_asset_content_records_usage_event(client):
     after = read_tracking_service.get_daily_reads(asset_node_id, date.today())
     assert after is not None
     assert after["read_count"] == before_count + 1
+
+
+# ---------------------------------------------------------------------------
+# Read event forwarding — paid vs free, cc_amount, concept resonance
+# ---------------------------------------------------------------------------
+
+
+def test_paid_read_records_paid_type(client):
+    """A request with a Bearer token lands in the paid counter, not
+    the free counter, in get_daily_aggregates."""
+    asset_id = _register_asset(client, content=b"paid-bucket content")
+    node_id = f"asset:{asset_id}"
+    response = client.get(
+        f"/api/assets/{asset_id}/content",
+        headers={"Authorization": "Bearer x402-paid-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["read_type"] == "paid"
+
+    agg = read_tracking_service.get_daily_aggregates(asset_id=node_id)
+    assert agg["per_asset"][node_id]["paid_reads"] == 1
+    assert agg["per_asset"][node_id]["free_reads"] == 0
+    assert agg["paid_reads"] == 1
+    assert agg["free_reads"] == 0
+
+
+def test_free_read_records_free_type(client):
+    """An anonymous request (no Authorization) lands in the free
+    counter and leaves paid_reads at zero."""
+    asset_id = _register_asset(
+        client,
+        content=b"free-tier preview content",
+        requires_payment=False,
+        free_tier_enabled=True,
+    )
+    node_id = f"asset:{asset_id}"
+    response = client.get(f"/api/assets/{asset_id}/content")
+    assert response.status_code == 200
+    assert response.json()["read_type"] == "free"
+
+    agg = read_tracking_service.get_daily_aggregates(asset_id=node_id)
+    assert agg["per_asset"][node_id]["free_reads"] == 1
+    assert agg["per_asset"][node_id]["paid_reads"] == 0
+
+
+def test_paid_read_records_cc_amount(client):
+    """The recorded event carries cc_amount = asset's cc_amount when
+    paid; free reads record cc_amount = 0."""
+    # Patch a custom cc_amount onto the node so we can assert the
+    # forwarded value isn't just the default.
+    asset_id = _register_asset(client, content=b"cc-amount carrier")
+    graph_service.update_node(
+        f"asset:{asset_id}", properties={"cc_amount": "0.25"}
+    )
+    node_id = f"asset:{asset_id}"
+
+    client.get(
+        f"/api/assets/{asset_id}/content",
+        headers={"Authorization": "Bearer x402-cc-amount-token"},
+    )
+    paid_events = read_tracking_service.get_read_events(node_id)
+    assert len(paid_events) == 1
+    assert paid_events[0]["read_type"] == "paid"
+    assert paid_events[0]["cc_amount"] == pytest.approx(0.25)
+
+    # Free read on the same asset records cc_amount = 0.
+    client.get(f"/api/assets/{asset_id}/content")
+    events = read_tracking_service.get_read_events(node_id)
+    free_event = next(e for e in events if e["read_type"] == "free")
+    assert free_event["cc_amount"] == 0.0
+
+
+def test_concept_resonance_forwarded(client):
+    """An X-Concept-Resonance header (JSON ``{concept_id: weight}``)
+    lands on the read event's concept_resonance_snapshot."""
+    asset_id = _register_asset(client, content=b"resonance-carrying content")
+    node_id = f"asset:{asset_id}"
+    resonance = {"lc-space": 0.8, "lc-energy": 0.4}
+    response = client.get(
+        f"/api/assets/{asset_id}/content",
+        headers={
+            "Authorization": "Bearer x402-resonance",
+            "X-Concept-Resonance": json.dumps(resonance),
+        },
+    )
+    assert response.status_code == 200
+
+    events = read_tracking_service.get_read_events(node_id)
+    assert len(events) == 1
+    snapshot = events[0]["concept_resonance_snapshot"]
+    assert snapshot is not None
+    assert snapshot["lc-space"] == pytest.approx(0.8)
+    assert snapshot["lc-energy"] == pytest.approx(0.4)
+
+
+def test_explicit_reader_id_header_forwarded(client):
+    """An X-Reader-Id header overrides the synthetic paid:<prefix> id."""
+    asset_id = _register_asset(client, content=b"reader-id carrier")
+    node_id = f"asset:{asset_id}"
+    response = client.get(
+        f"/api/assets/{asset_id}/content",
+        headers={
+            "Authorization": "Bearer x402-token",
+            "X-Reader-Id": "reader:alice",
+        },
+    )
+    assert response.status_code == 200
+    events = read_tracking_service.get_read_events(node_id)
+    assert events[0]["reader_id"] == "reader:alice"
 
 
 # ---------------------------------------------------------------------------
