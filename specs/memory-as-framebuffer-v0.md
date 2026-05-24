@@ -7,17 +7,17 @@ source:
   - file: experiments/memory-as-framebuffer-v0/src/lib.rs
     symbols: [Tracked, track!, init_framebuffer, Framebuffer]
   - file: experiments/memory-as-framebuffer-v0/src/allocator.rs
-    symbols: [SlabFramebuffer, Cell, CellHandle, alloc_cell, free_cell]
+    symbols: [SlabFramebuffer, CellHandle, alloc_cell, free_cell]
   - file: experiments/memory-as-framebuffer-v0/src/snapshot.rs
-    symbols: [SnapshotThread, capture_frame, FrameRgba]
+    symbols: [SnapshotThread, capture_frame]
   - file: experiments/memory-as-framebuffer-v0/src/render.rs
-    symbols: [render_frame, type_palette, modulate_brightness, provenance_halo]
+    symbols: [render_frame, type_palette, modulate_brightness, provenance_halo, FrameRgba]
   - file: experiments/memory-as-framebuffer-v0/src/ffmpeg.rs
     symbols: [FfmpegPipe, spawn, write_frame, finalize]
   - file: experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs
     symbols: [fizzbuzz demo with 100 tracked u32 cells]
   - file: experiments/memory-as-framebuffer-v0/tests/smoke.rs
-    symbols: [test_fizzbuzz_produces_nonempty_mp4, test_two_distinct_pixel_colors]
+    symbols: [fizzbuzz_produces_watchable_mp4]
   - file: experiments/memory-as-framebuffer-v0/README.md
     symbols: [run instructions, expected visuals, v0/v1 boundary]
 requirements:
