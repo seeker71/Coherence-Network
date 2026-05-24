@@ -1,7 +1,7 @@
 {
   "date": "2026-05-25",
-  "thread_branch": "codex/form-async-hotspot-20260525",
-  "commit_scope": "Add Form-visible walk cache hit/miss statistics across the paired Go, Rust, and TypeScript kernels so cached async execution has a generic hotspot signal for later JIT and runtime comparison work.",
+  "thread_branch": "codex/form-async-batch-dedupe-20260525",
+  "commit_scope": "Deduplicate duplicate uncached roots inside cached parallel walk batches across the paired Go, Rust, and TypeScript kernels so a repeated NodeID is walked once, fanned out deterministically, and recorded as a batch-local cache hit.",
   "files_owned": [
     "form/form-kernel-go/main.go",
     "form/form-kernel-rust/src/main.rs",
@@ -21,7 +21,7 @@
       "cd form/form-kernel-ts && npm install",
       "cd form/form-kernel-ts && node --import ./node_modules/tsx/dist/loader.mjs src/parallel.test.ts && node --import ./node_modules/tsx/dist/loader.mjs src/inductive.test.ts && npm run check"
     ],
-    "notes": "Witness was strained with no ongoing silences and api/web/schema/audit_integrity non-breathing before edits. Prompt guide passed with zero blocking continuity risks. Wellness passed with aligned maps and Form Python dispatch coverage at 15/15. Source and binary Form artifacts returned 11 across Go, Rust, and TypeScript kernels, proving 4 cache hits + 4 cache misses + 3 structural cache entries after two cached parallel passes. Go race detector returned 11 on the same shape. Rust tests passed 30/30. TS parallel/inductive tests and typecheck passed after installing the local TS kernel dependencies in the fresh worktree."
+    "notes": "Witness was breathing with zero silences before edits. Prompt guide passed with zero blocking continuity risks. Wellness passed with aligned maps and Form Python dispatch coverage at 15/15. Source and binary Form artifacts returned 533 across Go, Rust, and TypeScript kernels, encoding 5 cache hits, 3 cache misses, and 3 structural cache entries after two cached parallel passes. The first pass walks only three unique roots and fans out the duplicate NodeID as a batch-local hit. Go race detector returned 533 on the same shape. Rust tests passed 30/30. TS parallel/inductive tests and typecheck passed after installing the local TS kernel dependencies in the fresh worktree."
   },
   "ci_validation": {
     "status": "pending",
@@ -33,7 +33,7 @@
   },
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "Form code can observe structural walk-cache hit/miss/size counters from the native kernels and use them as hotspot evidence for cached async recipe walks.",
+    "expected_behavior_delta": "Cached parallel Form walks avoid duplicate work inside a single batch by coalescing repeated uncached NodeIDs before worker dispatch, while preserving ordered output and hotspot counters.",
     "public_endpoints": [
       "form-kernel-go CLI",
       "form-kernel-rust CLI",
@@ -42,7 +42,7 @@
     "test_flows": [
       "Clear the walk cache.",
       "Run walk_parallel_cached twice over four pure roots with one duplicate.",
-      "Read walk-cache-stats from Form and confirm the three sibling kernels agree on hits + misses + cache size = 11 in source and binary execution."
+      "Read walk-cache-stats from Form and confirm the three sibling kernels agree on hits=5, misses=3, cache size=3 encoded as 533 in source and binary execution."
     ]
   },
   "phase_gate": {
@@ -58,7 +58,7 @@
     "form-control-flow-kernel-conformance"
   ],
   "task_ids": [
-    "form-async-cache-hotspot-stats-2026-05-25"
+    "form-async-cache-batch-dedupe-2026-05-25"
   ],
   "contributors": [
     {

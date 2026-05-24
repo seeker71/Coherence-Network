@@ -972,9 +972,15 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
     if workers <= 1 || roots.len() <= 1 || k.trace.is_some() {
         let cache_enabled = k.trace.is_none();
         let mut out = Vec::with_capacity(roots.len());
+        let mut local = HashMap::<NodeID, Value>::new();
         for root in &roots {
             if cache_enabled {
                 if let Some(v) = k.walk_cache.get(root).cloned() {
+                    k.walk_cache_hits += 1;
+                    out.push(v);
+                    continue;
+                }
+                if let Some(v) = local.get(root).cloned() {
                     k.walk_cache_hits += 1;
                     out.push(v);
                     continue;
@@ -986,6 +992,7 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
             let value = walk(k, &mut sub_arena, *root, env);
             if cache_enabled {
                 k.walk_cache.insert(*root, value.clone());
+                local.insert(*root, value.clone());
             }
             out.push(value);
         }
@@ -994,12 +1001,18 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
 
     let mut out: Vec<Option<Value>> = vec![None; roots.len()];
     let mut jobs = Vec::<(usize, NodeID)>::new();
+    let mut first = HashMap::<NodeID, usize>::new();
+    let mut fanout = HashMap::<usize, Vec<usize>>::new();
     for (idx, root) in roots.iter().copied().enumerate() {
         if let Some(v) = k.walk_cache.get(&root).cloned() {
             k.walk_cache_hits += 1;
             out[idx] = Some(v);
+        } else if let Some(primary) = first.get(&root).copied() {
+            k.walk_cache_hits += 1;
+            fanout.entry(primary).or_default().push(idx);
         } else {
             k.walk_cache_misses += 1;
+            first.insert(root, idx);
             jobs.push((idx, root));
         }
     }
@@ -1028,6 +1041,11 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
             for (idx, root, value) in handle.join().expect("walk_parallel_cached worker panicked") {
                 k.walk_cache.insert(root, value.clone());
                 out[idx] = Some(value);
+                if let Some(dups) = fanout.get(&idx) {
+                    for dup in dups {
+                        out[*dup] = out[idx].clone();
+                    }
+                }
             }
         }
     }
