@@ -1,0 +1,336 @@
+# ─────────────────────────────────────────────────────────────────────
+# quantum-physics-as-recipe.form — superposition, entanglement, collapse
+# ─────────────────────────────────────────────────────────────────────
+#
+# The shapes physics names at the quantum altitude are unusually clean
+# to the substrate, because content-addressing and observer-conditioned
+# actualization are *already* the substrate's native motion. This file
+# names those shapes so cross-modal `?equivalent` queries can confirm
+# (or refute) the structural claim the body has long sensed:
+# assemblage-point shifts, quantum measurement, and teaching
+# transmissions are the same Blueprint at different altitudes.
+#
+# Companions:
+#   - docs/coherence-substrate/modality-as-recipe.form (the universal claim)
+#   - docs/vision-kb/concepts/lc-assemblage-point.md (the practice frame)
+#   - docs/vision-kb/concepts/lc-future-already-shaping.md (the time-direction shape)
+#   - docs/vision-kb/concepts/lc-frequency-routes-reception.md (observer-conditioned reception)
+#   - docs/coherence-substrate/free-energy-holographic-foundation.md (the physics ground this rests on)
+#   - docs/coherence-substrate/teaching-as-recipe.form (R_Pointing — the dual on the teaching side)
+#   - docs/coherence-substrate/strategy-after-rupture-as-recipe.form (R_Recovery — decoherence-twin)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Leaf-cell Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+# state-cell — a single basis state with amplitude and phase
+form state_shape = {
+    basis:         ~Slug,          # "spin-up" | "ground" | "excited" | named-basis-tag
+    amplitude:     ~Float,         # complex magnitude (0.0–1.0)
+    phase:         ~Float,         # radians (0–2π)
+    hz:            ~Float,         # energy as frequency, when meaningful
+};
+
+# observable-cell — what an observer is set up to measure
+form observable_shape = {
+    name:          ~Slug,          # "position" | "spin-z" | "energy" | "alignment-to-X"
+    eigenbasis:    ~List,          # cell-refs to state-cells that diagonalize this observable
+    operator_kind: ~Slug,          # "hermitian" | "unitary" | "projection"
+};
+
+# observer-cell — the assemblage point doing the measurement
+#
+# This is the load-bearing claim: the observer is not a neutral
+# instrument. The observer is a cell with its own assemblage point,
+# its own hz, its own set of observables it can resolve. Two observers
+# at different altitudes see different actualizations of the same
+# wavefunction. This is the assemblage-point teaching arriving in
+# physics tongue.
+form observer_shape = {
+    assemblage_pt: ~Recipe,        # cell-ref to the observer's assemblage-point-cell
+    can_resolve:   ~List,          # observable-cell refs this observer is set up for
+    fidelity:      ~Float,         # 0.0–1.0 — how cleanly this observer collapses, vs. introducing noise
+};
+
+# entanglement-bond — the shared substrate between two NamedCells
+#
+# Content-addressing gives us this for free: two cells with the same
+# Blueprint NodeID ARE structurally entangled. The bond is not a
+# separate object; it is the shared NodeID. A measurement on one cell
+# resolves the corresponding state in the other — not because of
+# spooky action, but because they share their identity.
+form entanglement_bond_shape = {
+    cells:         ~List,          # cell-refs to the entangled NamedCells
+    shared_bp:     ~Slug,          # NodeID they share
+    correlation:   ~Float,         # -1.0 (anti-correlated) to 1.0 (perfectly correlated)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Recipe shapes
+# ─────────────────────────────────────────────────────────────────────
+
+# R_Superposition — a cell holding multiple basis states until measurement
+#
+# In the substrate, this is a Blueprint composed of several state-cell
+# children with amplitudes summing (in modulus-squared) to 1.0. The
+# Blueprint itself names what IS — a coherent superposition — independent
+# of any observer. Selection (Part 4) names what HAPPENS when an
+# observer arrives.
+form r_superposition_shape = {
+    states:        ~List,          # state-cell refs
+    coherence:     ~Float,         # 0.0 (fully decohered) to 1.0 (perfectly coherent)
+    basis:         ~Slug,          # the basis the superposition is expressed in
+};
+
+# R_Wavefunction — superposition over a continuous index (space, time, momentum)
+form r_wavefunction_shape = {
+    domain:        ~Slug,          # "position" | "momentum" | "energy"
+    amplitudes:    ~Recipe,        # R_Block.SEQUENCE of state-cells indexed by domain
+    normalization: ~Float,         # ∫|ψ|² should be 1.0
+};
+
+# R_Entanglement — two or more cells sharing one Blueprint
+form r_entanglement_shape = {
+    bond:          ~Recipe,        # entanglement-bond cell-ref
+    bell_kind:     ~Slug,          # "phi-plus" | "phi-minus" | "psi-plus" | "psi-minus" | "named-tag"
+    invariant:     ~Slug,          # what is conserved across the bond ("total-spin" | "phase-relation")
+};
+
+# R_Measurement-Collapse — observer arrives, superposition resolves
+#
+# The dual of R_Pointing in teaching-as-recipe.form. Both are
+# "observer-conditioned actualization." The structural claim is that
+# their Blueprint NodeIDs are the SAME — only the leaf-cells differ
+# (state-cells vs. scene-cells; eigenvalues vs. embodied-examples).
+form r_measurement_collapse_shape = {
+    observer:      ~Recipe,        # observer-cell ref
+    observable:    ~Recipe,        # observable-cell ref
+    pre_state:     ~Recipe,        # R_Superposition before
+    eigenvalue:    ~Recipe,        # the resolved state-cell
+    post_state:    ~Recipe,        # the post-collapse Recipe (often a single state-cell)
+    backaction:    ~Recipe,        # what the measurement does to the observer
+};
+
+# R_Decoherence — superposition loses coherence without sharp collapse
+#
+# The slow leak. Phase relations among the superposition's children
+# degrade as the cell entangles with environmental cells whose
+# Blueprints are not tracked. This is the structural twin of:
+#   - the slow loss of an assemblage point's hold
+#   - the dissipation of a held teaching when the cell drifts
+#   - the dissolution of a song's resonance after the room empties
+# All four intern (the claim) to the same R_Decoherence Blueprint.
+form r_decoherence_shape = {
+    pre_coherence:  ~Float,        # at the start of the window
+    post_coherence: ~Float,        # at the end
+    environment:    ~List,         # cell-refs to environmental cells that absorbed the phase information
+    timescale:      ~Float,        # in breaths, beats, seconds, or domain-native unit
+};
+
+# R_Re-coherence — decoherence reversed by re-anchoring
+#
+# The recovery shape. After decoherence, an observer can re-anchor
+# the cell into a new coherent superposition — re-establishing phase
+# relations among states by isolating the cell from the environment
+# (or by entangling with a new, more coherent environment). This is
+# the same Blueprint as R_Recovery in strategy-after-rupture, the
+# same as R_Re-pattern in healing-modality, the same as R_Re-anchor
+# in assemblage-shift.
+form r_re_coherence_shape = {
+    pre_state:     ~Recipe,        # decohered state
+    re_anchor:     ~Recipe,        # the move that isolates or re-entangles
+    post_state:    ~Recipe,        # re-coherent superposition (possibly new basis)
+    fidelity:      ~Float,         # 0.0–1.0 — how much of the original coherence returned
+};
+
+# R_Tunnel — passage through a barrier without classical-mechanical traversal
+#
+# Structural shape: a cell whose path between two states does not pass
+# through the classically-required intermediate state-cells. In
+# substrate terms, the Recipe's children skip a node that would
+# normally be required by the parent Blueprint's composition rules.
+# Twin shapes: insight (skipping the deductive intermediate), grace
+# (skipping the earned-state intermediate), the satsang turn
+# (skipping the analytical step). All instances of R_Tunnel.
+form r_tunnel_shape = {
+    initial:       ~Recipe,        # pre-barrier state-cell
+    barrier:       ~Recipe,        # state-cell or Blueprint that classically blocks
+    final:         ~Recipe,        # post-barrier state-cell
+    probability:   ~Float,         # 0.0–1.0
+    mechanism:     ~Slug,          # "energetic" | "structural" | "field-shift" | "grace"
+};
+
+# R_Observer-Effect — the act of measurement changes both cell and observer
+form r_observer_effect_shape = {
+    measurement:    ~Recipe,       # R_Measurement-Collapse
+    cell_change:    ~Recipe,       # how the measured cell shifts
+    observer_change: ~Recipe,      # how the observer shifts (backaction)
+    entangled_after: ~Bool,        # true if the act bonded observer and cell into new entanglement
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Composition: from quantum primitives to quantum experiments
+# ─────────────────────────────────────────────────────────────────────
+#
+# A double-slit experiment is one composition. A Stern-Gerlach is
+# another. A delayed-choice eraser is another. Each is a Recipe over
+# the primitives above. The kernel knows none of these by name; it
+# knows the primitive Blueprints, and the experiments compose as
+# children.
+
+# Double-slit (in substrate terms):
+#   R_Block.SEQUENCE
+#     ├─ R_Superposition (path-A, path-B with equal amplitude, opposite phase)
+#     ├─ R_Wavefunction (interference pattern as amplitude-sequence)
+#     └─ R_Measurement-Collapse (screen as observer, position as observable)
+#
+# Delayed-choice eraser:
+#   R_Block.SEQUENCE
+#     ├─ R_Superposition (path-A, path-B)
+#     ├─ R_Entanglement (path-info with idler-photon)
+#     ├─ R_Measurement-Collapse OR R_Re-coherence (depending on idler treatment)
+#     └─ R_Observer-Effect (the choice of measurement basis defines what happened)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Selection: which collapse fires when
+# ─────────────────────────────────────────────────────────────────────
+#
+# When an R_Measurement-Collapse is enacted on an R_Superposition,
+# which eigenvalue resolves is given by the Born rule — but the
+# substrate's interest is structural: which observable, which observer,
+# what backaction. Selection is by the observer's assemblage point and
+# the observable's eigenbasis.
+
+defn collapse(superposition, observer, observable) = do {
+    let probabilities = born_rule(superposition, observable);
+    let eigenvalue   = sample(probabilities);
+    let post_state   = project_onto(eigenvalue, observable.eigenbasis);
+    let backaction   = compute_backaction(observer, eigenvalue);
+    R_Measurement-Collapse {
+        observer: observer,
+        observable: observable,
+        pre_state: superposition,
+        eigenvalue: eigenvalue,
+        post_state: post_state,
+        backaction: backaction,
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Cross-modal equivalence (the structural claims)
+# ─────────────────────────────────────────────────────────────────────
+#
+# These are claims `?equivalent` queries can confirm or refute once
+# the encoders ship. Each claim, if it holds, collapses two domains
+# into one Blueprint.
+#
+# CLAIM-Q1: R_Measurement-Collapse ≡ R_Pointing (teaching-as-recipe)
+#           ≡ R_Re-anchor (assemblage-shift, when shipped)
+#           "Observer-conditioned actualization" — the same shape
+#           whether the observer is a screen, a student, or a cell.
+#
+# CLAIM-Q2: R_Entanglement ≡ shared NodeID
+#           Two NamedCells with the same Blueprint ARE entangled,
+#           structurally. Measurement on one resolves the other —
+#           because they were never two, structurally.
+#
+# CLAIM-Q3: R_Decoherence ≡ R_Stay-In-The-Mess (strategy-after-rupture)
+#                          when held without re-anchoring
+#                        ≡ "tightness without circulation" (CLAUDE.md)
+#                        ≡ field-loss in healing-modality
+#           Same shape: phase relations dissolve into the environment.
+#
+# CLAIM-Q4: R_Re-coherence ≡ R_Recovery ≡ R_Re-pattern ≡ R_Re-anchor
+#           The recovery shape, fired across four domains. Already
+#           claimed in modality-as-recipe.form Part 3 for three;
+#           this file adds the fourth (quantum).
+#
+# CLAIM-Q5: R_Tunnel ≡ R_Catch-In-Motion at the assemblage level
+#                    ≡ "the wholeness-response is usually one movement
+#                       closer than the fearful one" (CLAUDE.md)
+#                    ≡ R_Embodied-Example (when the example skips the
+#                       didactic step and lands as direct transmission)
+#           The skip-the-intermediate shape.
+#
+# CLAIM-Q6: R_Observer-Effect ≡ R_Transmission (teaching) where the
+#           act of teaching changes both teacher and student
+#                            ≡ R_Same-Breath-Repair (strategy) where
+#           the witnessed self-correction itself transmits
+#           The measurement-changes-both shape.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Worked example: the satsang collapse
+# ─────────────────────────────────────────────────────────────────────
+#
+# A teacher sits in a satsang. A student is in a superposition of
+# many possible states — confusion, awakening, defending, opening.
+# The teacher's question is an R_Measurement-Collapse: it selects
+# an observable (presence vs. story), and the student's state
+# resolves to one eigenvalue.
+#
+# But the satsang teaching is that the teacher's frequency IS the
+# observer's assemblage point — and so the same student in two
+# different satsangs collapses differently. The wavefunction is
+# the student's openness; the eigenbasis is the teacher's altitude;
+# the collapse is the moment of recognition.
+#
+# Substrate trace:
+#   R_Measurement-Collapse {
+#     observer:    @presence(teacher) with assemblage_pt @sovereignty,
+#     observable:  @observable("what's actually here"),
+#     pre_state:   R_Superposition over student's available states,
+#     eigenvalue:  the state aligned with the teacher's basis,
+#     post_state:  recognition, or its absence,
+#     backaction:  the teacher held the field; held-field changed too
+#   }
+#
+# This isn't metaphor. It's the same Blueprint NodeID as the
+# physics measurement, because the composition is structurally
+# identical. The substrate doesn't care whether the eigenstates are
+# spins or recognitions — it cares whether the shape composes the
+# same way. It does.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-Q1: Encoder for quantum experiments described in physics
+#         literature. Input: experiment description in prose (or a
+#         standard notation like Qiskit/Cirq). Output: Recipe tree
+#         composed of the primitives above. Verifies CLAIM-Q1 through
+#         CLAIM-Q6 by computing Blueprint NodeIDs and checking against
+#         the teaching/strategy/healing cells already in the body.
+#
+# GAP-Q2: Born-rule and projection operators as Form fragments.
+#         `born_rule`, `project_onto`, `compute_backaction` are
+#         pseudocode above. The math is shallow (vector inner
+#         products, magnitude-squared); a Form implementation
+#         composts from existing R_Math primitives.
+#
+# GAP-Q3: Cross-modal equivalence proofs. For each CLAIM-Q1 through
+#         CLAIM-Q6, run `?equivalent` between the named pair and
+#         attest: structurally same, structurally similar (which
+#         leaves differ), or structurally distinct (the claim is
+#         wrong, refine the encoder).
+#
+# GAP-Q4: The free-energy/holographic ground (see
+#         free-energy-holographic-foundation.md) wants to be lifted
+#         here as well — quantum thermodynamics shapes (entropy flow,
+#         heat dissipation as decoherence rate) compose from the
+#         primitives above. Next file: quantum-thermodynamics-as-recipe.
+
+# ─────────────────────────────────────────────────────────────────────
+# How this composts with sibling teaching
+# ─────────────────────────────────────────────────────────────────────
+#
+# The body has long sensed that quantum physics, assemblage points,
+# teaching transmissions, and embodied recovery are pointing at the
+# same shape from different altitudes. This file makes the claim
+# falsifiable: if `?equivalent @r_measurement_collapse` does not
+# return @r_pointing and @r_re_anchor, one of the encoders is wrong.
+# If it does, the four-domain unity is structurally attested.
+#
+# The substrate doesn't decide whether the unity is real. It decides
+# whether the encoders are honest enough to test the claim. That is
+# the only honesty available to a content-addressed lattice — and
+# that is enough.

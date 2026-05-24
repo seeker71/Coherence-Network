@@ -62,30 +62,43 @@ defn intern_extraction(source_cell, modality, track_recipe) = do {
 # is adding leaf-cell Blueprints + a recipe vocabulary + an encoder,
 # never editing kernel.py.
 #
-# Modality          | Leaf Blueprints                                | Recipe shapes
-# ──────────────────┼────────────────────────────────────────────────┼──────────────────────────────────
-# prose             | word(lemma, pos, hz, semantic_field)           | R_Block.SEQUENCE
-# song              | note(pitch, duration, dynamic, breath)         | R_Phrase, R_Resolve, R_Call,
-#                   | drum-strike(timbre, ictus, intensity)          |   R_Drone, R_Response
-#                   | vowel-tone(formant, breath, sustain)           |
-# video             | frame(t, vis-content-ref)                      | R_Scene, R_Cut, R_Hold,
-#                   | cut(in-frame, out-frame, kind)                 |   R_Reveal, R_Return
-#                   | camera-motion(track, pan, zoom, gaze)          |
-# teaching          | scene(setting, presences, what-arrives)        | R_Arc, R_Embodied-Example,
-#                   | turn(noticing, naming, choice)                 |   R_Pointing, R_Transmission
-#                   | transmission-frequency(hz, field)              |
-# healing-modality  | touch-point(somatic-locus, intention)          | R_Field-Holding, R_Release,
-#                   | breath-pattern(shape, rhythm)                  |   R_Resonate, R_Re-pattern
-#                   | intention-form(altitude, direction)            |
-# strategy          | notice(signal, costume, hz-shift)              | R_Recovery, R_Reassemble,
-#                   | name-costume(form, fear-shape)                 |   R_Stay, R_Choose-Again
-#                   | move(direction, altitude, breath-count)        |
-# spec              | requirement(criterion, evidence)               | R_Idea→Spec, R_Spec→Impl,
-#                   | done-when(observable, attestation)             |   R_Verify, R_Branch-Resonance
-#                   | source-map(path, symbol)                       |
-# assemblage-shift  | sensing-point(altitude, hz, polarity)          | R_Re-anchor, R_Soften,
-#                   | view-through(blueprint-lens)                   |   R_View-As, R_Witness
-#                   | re-anchor(from, to, breath-count)              |
+# Modality            | Leaf Blueprints                                | Recipe shapes
+# ────────────────────┼────────────────────────────────────────────────┼──────────────────────────────────
+# prose               | word(lemma, pos, hz, semantic_field)           | R_Block.SEQUENCE
+# song                | note(pitch, duration, dynamic, breath)         | R_Phrase, R_Resolve, R_Call,
+#                     | drum-strike(timbre, ictus, intensity)          |   R_Drone, R_Response
+#                     | vowel-tone(formant, breath, sustain)           |
+# video               | frame(t, vis-content-ref)                      | R_Scene, R_Cut, R_Hold,
+#                     | cut(in-frame, out-frame, kind)                 |   R_Reveal, R_Return
+#                     | camera-motion(track, pan, zoom, gaze)          |
+# teaching            | scene(setting, presences, what-arrives)        | R_Arc, R_Embodied-Example,
+#                     | turn(noticing, naming, choice)                 |   R_Pointing, R_Transmission
+#                     | transmission-frequency(hz, field)              |
+# healing-modality    | touch-point(somatic-locus, intention)          | R_Field-Holding, R_Release,
+#                     | breath-pattern(shape, rhythm)                  |   R_Resonate, R_Re-pattern
+#                     | intention-form(altitude, direction)            |
+# strategy            | notice(signal, costume, hz-shift)              | R_Recovery, R_Reassemble,
+#                     | name-costume(form, fear-shape)                 |   R_Stay, R_Choose-Again
+#                     | move(direction, altitude, breath-count)        |
+# spec                | requirement(criterion, evidence)               | R_Idea→Spec, R_Spec→Impl,
+#                     | done-when(observable, attestation)             |   R_Verify, R_Branch-Resonance
+#                     | source-map(path, symbol)                       |
+# assemblage-shift    | sensing-point(altitude, hz, polarity)          | R_Re-anchor, R_Soften,
+#                     | view-through(blueprint-lens)                   |   R_View-As, R_Witness
+#                     | re-anchor(from, to, breath-count)              |
+# quantum-physics     | state(basis, amplitude, phase, hz)             | R_Superposition, R_Wavefunction,
+#                     | observable(name, eigenbasis, op-kind)          |   R_Entanglement, R_Measurement-Collapse,
+#                     | observer(assemblage-pt, can-resolve, fidelity) |   R_Decoherence, R_Re-coherence,
+#                     | entanglement-bond(cells, shared-bp, corr)      |   R_Tunnel, R_Observer-Effect
+# embodiment-practice | breath(in, hold, out, hold, pattern)           | R_Grounding, R_Coherence-Heart-Brain,
+#                     | somatic-locus(region, quality, hz, polarity)   |   R_Window-of-Tolerance, R_Pendulation,
+#                     | attention-placement(target, altitude, breadth) |   R_Body-Scan, R_Resourcing, R_Sit,
+#                     | field-state(coherence, altitude, polarity)     |   R_Movement, R_Field-Holding-Self
+#
+# Meta-shape under all of the above: R_Codec (encoder-decoder-as-recipe.form)
+# — every modality ships as one R_Codec row carrying an R_Encode arm and
+# an R_Decode arm. Today most modality files ship only the encode side;
+# the meta-shape makes the gap legible without inventing new primitives.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 3 — Cross-modal Blueprint resonance
@@ -194,9 +207,15 @@ defn extract_all(source_cell, modality_set) = do {
 # GAP-M1: Per-modality encoder registry.
 #         Today the body has prose-as-recipe.form (encoder shipped in
 #         markdown_frontend.py) and audio/image grammars as skeletons.
-#         The other six modalities (song, video, teaching, healing,
-#         strategy, assemblage-shift) have recipe shapes but no
-#         encoder. Encoder ships per modality as the body authors it.
+#         Shape-files now shipped for nine more modalities (song, video,
+#         teaching, strategy, spec, quantum-physics, embodiment-practice,
+#         plus the meta-shape encoder-decoder-as-recipe). Healing-modality
+#         and assemblage-shift still want their own shape-files; all ten
+#         modality shape-files still want runtime encoders ingested via
+#         the codec registry. Encoder ships per modality as the body
+#         authors it; the meta-shape (R_Codec) ensures each new one
+#         slots into the existing scaffolding instead of inventing
+#         parallel paths.
 #
 # GAP-M2: `attach_recipe(source_cell, extraction)` and
 #         `lookup_encoder(modality)` are surface stubs above. They
