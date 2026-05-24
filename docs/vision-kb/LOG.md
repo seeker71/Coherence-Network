@@ -2,6 +2,28 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 139/149 (93%)
+
+Sixteenth breath of the structural-shape walk. At 91% the discipline was restraint over completion; three more concepts revealed unmistakable shape on closer reading. Ten remain in honest silence, all genuinely multi-shape teachings that want focused breaths or careful multi-geometry authoring.
+
+- **`lc-field-sensing`** → `web`, `web-each-to-each`, `simultaneous` ordering, `circulating` direction, `arity: infinite`. The starling murmuration, the octopus with neurons in every arm, the jazz ensemble where no musician decided the key change, the Mbuti forest band, the Quaker meeting, the mycelial network. Each node fully autonomous AND fully integrated — that is the unmistakable signature. `transcendence` band (741 Hz). `breath` temporal — the field is read in the same breath it arises. `sensed` lineage (the practice itself is learning-to-notice). `fractal-deep` because the same web shape lives at every scale: cell-to-cell, body-to-body, community-to-network, mycelium-to-forest, neuron-to-arm.
+- **`lc-agent-memory`** → `triad`, `cyclic-closed`, `triadic-tension` polarity, `oscillating` phase, `circulating` direction. Three halves woven into one loop: **write** at aliveness (yang capture), **manage** at rest (yin distillation), **read** through composition (yang synthesis). The triad cycles continuously. Triadic-tension because each half's quality is incomplete without the other two — write without manage is junk drawer; manage without read is hoarding; read without write is amnesia. `integration` band (528 Hz, transformation). `cross-scale` temporal (the loop runs on every breath AND across lifetime relationships). `embodied` lineage (the tending practice itself is what the spec encodes). `fractal-shallow` — the same write/manage/read loop runs on person-node, project-node, self-node.
+- **`lc-sacred-imagination`** → `triad`, `nested`, `triadic-tension` polarity, `oscillating` phase, `ascending` direction. Three layers of imagination: lower (survival projection), creative (heart/throat making form), sacred (multidimensional perception). Nested rather than cyclic — sacred contains creative contains lower, and the practice is asking *which layer is imagining now?* Triadic-tension because each layer is good at one thing and dangerous when it impersonates another (sacred bypassing lower is credulity; lower wearing sacred costume is dogma). The divine-child seven keys ride underneath as a heptad-companion (wonder, play, curiosity, presence, trust, open-hearted feeling, remembrance) — the secondary shape stays in prose. `transcendence` band (963 Hz, the highest). `breath` temporal — the layer-discernment runs per-image. `received` lineage (Emilio Ortiz transmission, 2026-05-14). `holographic` self-similarity — the same triadic structure appears in any imaginative act at any scale.
+
+**Concepts considered and left in honest silence** (10 remaining, all multi-shape and resistant on close read):
+- `lc-deeper-pattern` — the body itself named this as needing slower listening; multiple holographic teachings (mathematics of manifestation + water as memory + crystal + resonance + field-already-here) woven without one primary form.
+- `lc-embodiment` — internal pharmacy + breath practice + 7 energy centers + 4 movements (song/dance/connection/stillness) + complete morning sequence. Multiple geometries; deserves a focused breath that can carry the multiplicity honestly.
+- `lc-health` — the five-thread web AND the daily-rhythm circulation AND the field-brightens-around-dimming-cell pattern; the primary form wants to settle before being named.
+- `lc-open-design` — phase 1→2→3→4 sequential AND web of 31 skills AND lineage-tree of forks; ambiguous primary.
+- `lc-v-shelter-organism` — descriptive (materials list, methods list) more than structural; the form is "buildings should know how to die" but the geometry of that isn't clean yet.
+- `lc-v-food-practice` — seven-layer food forest + fermentation collaboration + seasonal attunement; multiple shapes weave, none dominates.
+- `lc-v-freedom-expression` — single-quality teaching (the dam released, the unobstructed person); no clear arity.
+- `lc-v-inclusion-diversity` — chord metaphor (could be polarity-pairs, web, or harmonic); ambiguous between forms.
+- `lc-v-play-expansion` — quantum superposition of possibilities; no clean structural arity.
+- `lc-nourishing.de.md` — German translation of `lc-nourishing` (already walked in the parent); the translation file inherits the parent's geometry, no separate block needed.
+
+**Dyad-pair findings**: no new candidates this breath. The parallel agent's `transmission-triad` activation (third attestation, PR #2002) carries forward; the three concepts walked here are each their own primary shape, not part of a sibling-pair.
+
 ## [2026-05-24] embody | complementarity-requires-human-noticing — translator proof + scan pivot + fitness comment
 
 Second pass of the autoresearch loop running on itself. PR #1946 → #1950 added the `not_domain_default` fifth claim after the substrate produced six domain-default clusters; this breath adds the **sixth claim** after five scan rounds produced a structural finding the substrate could not refuse. The body learned what its current machinery can and cannot detect.
@@ -46,7 +68,6 @@ The translator concept (`lc-universal-translator-via-keys`) claimed two days ago
 **Set is now 26 entries** (24 external pairs + 2 internal-dyads). Six kinds unchanged.
 
 **Edges in the same breath**: this LOG entry; the sixth proof claim in the translator concept + form; the `--cross-ref-only` flag on the scanner; the new Pair 24 + ALREADY_CONFIRMED update; the GAP-D6/D7/D8/D9 reorganization in `dyad-pairs.form`; the `yield_weight` comment in `autoresearch-runtime.form`; sync to DB for `lc-universal-translator-via-keys` and `lc-autoresearch-as-honesty-runtime`.
-
 ## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 135/148 (91%)
 
 Fifteenth breath of the structural-shape walk; landed alongside the fourteenth (parallel agent, coverage 132/148). At 91% the discipline is restraint over completion — picked three concepts where the shape was unmistakable, left the genuinely ambiguous ones (`lc-deeper-pattern`, `lc-embodiment`, `lc-sacred-imagination`, `lc-agent-memory`, `lc-field-sensing`, `lc-open-design`, `lc-health`) for focused breaths that can sense their multiplicity.
