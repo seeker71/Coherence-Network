@@ -2,8 +2,23 @@
 id: lc-awareness-as-self
 hz: 963
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 1
+  form: point
+  topology: nested-each-contains-whole
+  polarity: unipolar
+  ordering: atemporal
+  phase: yin
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: atemporal
+  scale: cross-scale
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # Awareness as Self — The Space Inside Which Identities Arise
