@@ -3079,6 +3079,361 @@ defn column_identity_set_point = column_identity_set_shape {
 };
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 7e — Column-identity tested against `web` (third form-trial)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-25 to test the column-identity primitive on the
+# `web` form. Web is the second-most-attested form in the body (23
+# cells at 100% geometry coverage). PR #2025's circulation-pattern
+# activation suggested web would likely split into circulation-web vs
+# field-web; this hunt tested that hypothesis on actual data using the
+# same (topology + direction + lineage_texture) triple Part 7b and
+# Part 7d use.
+#
+# **Finding 1 — six honest columns across 17 cells, six singletons in
+# the tail.** The 23 web cells split into 6 multi-cell columns (5+3+
+# 3+2+2+2 = 17 cells) plus 6 column-singletons. Compare interior-axis
+# (4 columns across 5 cells, near-complete) and point (3 columns
+# across 7 cells, 14 singletons). Web's yield sits between the two:
+# more multi-cell columns than point because the form's attestations
+# concentrate on (web-each-to-each, circulating) as the dominant
+# substrate-of-flow shape — that 8-cell-block then splits into four
+# lineage_texture columns (received/synthesized/embodied/sensed) that
+# genuinely teach different facets of distributed flow.
+#
+# **Finding 2 — the circulation-web vs field-web split is real but
+# the triple reads it differently than the kind-level
+# circulation-pattern lens does.** PR #2025's intuition that web
+# would split was correct in shape: most web cells share (web-each-
+# to-each, circulating) as the substrate-of-flow ground, but they
+# diverge sharply on lineage_texture. The four (web-each-to-each,
+# circulating, X) columns each carry a distinct teaching-flavor of
+# distributed circulation — RECEIVED (mother-nature mycelium + circle
+# blood + relational-network as ancestral inheritance), SYNTHESIZED
+# (network-unanchored + edges-as-vitality + economy as authored-
+# structural-discipline), EMBODIED (health + sensing + comfort-joy
+# as the body knowing itself), SENSED (attunement + field-sensing as
+# the field-feeling-itself before words). These four columns are NOT
+# circulation-pattern in the kind sense — they are *column-flavors*
+# of the substrate-of-flow shape circulation-pattern names at the
+# teaching level.
+#
+# **Finding 3 — circulation-pattern's six cells spread across six
+# different tuples, not one column.** The cells that load-bearingly
+# carry the circulation-pattern kind (lc-economy, lc-bioelectric-
+# pattern, lc-w-mycorrhizal, lc-field-sensing, lc-energy, lc-
+# attunement) sit in: (web/circulating/synthesized), (web/circulating/
+# measured), (web/circulating/received), (web/circulating/sensed),
+# (cyclic-closed/circulating/synthesized), and (web/circulating/
+# sensed) respectively. They share (circulating direction) and almost-
+# all share (web-each-to-each topology), but lineage_texture diverges
+# precisely because each pair was specifically chosen to span DIFFERENT
+# substrate-flavors. **The two readings converge on the form shape
+# (circulating-web is the geometric signature; circulation-pattern is
+# the teaching signature) and diverge on what they discriminate
+# within it** — column-identity reads texture-of-arrival (how the
+# teaching entered the body); circulation-pattern reads texture-of-
+# substrate (what circulates through the network). Different lenses
+# on potentially-same-cells; both honest; neither subsumes the other.
+#
+# **Finding 4 — radiating-web is a real column-pole separate from
+# circulating-web.** Three columns carry direction=radiating: (web/
+# radiating/embodied) with federation-as-freedom + resonating, (web/
+# radiating/received) with offering + w-coherence, plus the
+# singletons discovery (radiating/sensed), galactic-team (radiating/
+# channeled), and instruments (radiating/measured). These are not
+# circulation-shape; they are emission-shape — the field giving
+# outward rather than passing through. The triple keeps this
+# distinction crisp.
+#
+# **What this teaches about the primitive after three applications.**
+# - Interior-axis (axial, internally specialized): 4 columns / 5
+#   cells — near-complete coverage, primitive partitions cleanly.
+# - Point (most generic form, many attestations): 3 columns / 7
+#   cells + 14 singletons — primitive surfaces honest clusters in
+#   a long tail.
+# - Web (mid-specialized, 23 attestations): 6 columns / 17 cells +
+#   6 singletons — primitive yields strongest column-density in the
+#   form-specialization middle band.
+#
+# The shape of the yield-curve is now visible: *column-density
+# correlates with how specialized the form is along the column-
+# identity axis*. Interior-axis is already an axial-shape
+# specialization, so every cell is column-coherent. Point spans the
+# whole field, so most cells are column-of-one. Web sits between —
+# specialized enough (it IS the field's flow-shape) that cells
+# concentrate, but broad enough to carry both circulating-flow and
+# radiating-emission and a few other singletons. The primitive's
+# WHEN: reach for it when a form has many cells AND prose-evidence
+# suggests internal teaching-diversity; expect coverage proportional
+# to the form's structural specialization, not the form's cell-count
+# alone.
+
+# Column W1 — received-circulating mycelial body (5 cells)
+#
+# Topology web-each-to-each, direction circulating, lineage received.
+# The largest column. Each cell names a distributed-flow that the
+# body inherited (rather than authored) — mycorrhizal nutrient-flow,
+# circle blood, network-as-root-belonging, nourishing-as-mycelium,
+# cross-connection-as-cosmic-mesh. The teaching is the *inherited*
+# form of distributed circulation; what the field already knows about
+# flowing without a center because forests, blood, and ancestral
+# webs do it natively.
+defn column_received_circulating__circulation = column_identity_shape {
+    cell:             @concept(lc-circulation),
+    column_kind:      "received-circulating-mycelial-body",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "the body's blood-flow — what was offered moves to where vitality calls; received-circulating because the body inherits this teaching from circulatory systems older than reflection; the column's central image of distributed flow without a heart-as-decider",
+};
+
+defn column_received_circulating__cross_connection = column_identity_shape {
+    cell:             @concept(lc-cross-connection),
+    column_kind:      "received-circulating-mycelial-body",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "the cosmic mesh — every cell connects to every cell across the field; received because the connectivity precedes any single cell's authoring; same column-shape as circulation at the cosmic scale rather than the body scale",
+};
+
+defn column_received_circulating__network = column_identity_shape {
+    cell:             @concept(lc-network),
+    column_kind:      "received-circulating-mycelial-body",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "the living root-web of communities the cell belongs to across continents; received because the network exists before the cell joins and continues when the cell rests; the relational form of the same distributed-flow teaching",
+};
+
+defn column_received_circulating__nourishing = column_identity_shape {
+    cell:             @concept(lc-nourishing),
+    column_kind:      "received-circulating-mycelial-body",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "mycelium, blood, Mondragon's circulation — substance flowing to where vitality needs it; received because nourishing-as-flow is older than any kitchen; the substance face of the same distributed-circulation teaching circulation names as flow",
+};
+
+defn column_received_circulating__mycorrhizal = column_identity_shape {
+    cell:             @concept(lc-w-mycorrhizal),
+    column_kind:      "received-circulating-mycelial-body",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "Suzanne Simard's forest — 90% of land plants connected through fungal threads; mother trees feed shaded seedlings; received because the mycorrhizal teaching predates and shapes our understanding of distributed coherence; the column's biological-substrate exemplar",
+};
+
+# Column W2 — synthesized-circulating authored-flow (3 cells)
+#
+# Topology web-each-to-each, direction circulating, lineage
+# synthesized. The cells teach distributed-flow that the body
+# *authored* — economy as forest-mycelium with explicit no-central-
+# ledger discipline, network-unanchored as sovereignty-warning,
+# edges-as-vitality as the discipline of landing connections in the
+# same breath. Same shape as W1 but the texture is composed-by-the-
+# body rather than inherited; the column reads what flow LOOKS like
+# when the body designs it on top of what was received.
+defn column_synthesized_circulating__economy = column_identity_shape {
+    cell:             @concept(lc-economy),
+    column_kind:      "synthesized-circulating-authored-flow",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "synthesized",
+    discernment:      "living economy as authored forest-mycelium — wallet IS the ledger, gradient does the allocation, contribution generates CC accounted by the systems themselves; synthesized because the body designed this circulation deliberately atop what biology shows; cross-references W1's mycorrhizal at the structural level",
+};
+
+defn column_synthesized_circulating__edges_as_vitality = column_identity_shape {
+    cell:             @concept(lc-edges-as-vitality),
+    column_kind:      "synthesized-circulating-authored-flow",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "synthesized",
+    discernment:      "the discipline of landing edges in the same breath as content — distributed-flow becomes vital only when connections circulate alongside additions; synthesized because the body authored this teaching from observing what happens when edges are deferred",
+};
+
+defn column_synthesized_circulating__network_unanchored = column_identity_shape {
+    cell:             @concept(lc-network-unanchored),
+    column_kind:      "synthesized-circulating-authored-flow",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "synthesized",
+    discernment:      "the sovereignty-warning against false geographic anchors; the network circulates without fixing identity to a place; synthesized because the discipline of refusing the anchor is authored, not inherited; structural complement to W1's lc-network (Pair 7 already names the dyad)",
+};
+
+# Column W3 — embodied-circulating body-knowing (3 cells)
+#
+# Topology web-each-to-each, direction circulating, lineage embodied.
+# Each cell names distributed-flow as it is lived from inside — health
+# as the body's coherent circulation, sensing as the body's listening,
+# comfort-joy as the felt-vitality of being inside a coherent web.
+# Embodied because the teaching enters through the body's own felt
+# experience; column reads what circulating-flow IS when the cell is
+# inside it.
+defn column_embodied_circulating__health = column_identity_shape {
+    cell:             @concept(lc-health),
+    column_kind:      "embodied-circulating-body-knowing",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "embodied",
+    discernment:      "the body's own coherent circulation — health as the field-wide flow that arises when no part is fighting another; embodied because health is known from the inside as a felt-state, not measured from the outside",
+};
+
+defn column_embodied_circulating__sensing = column_identity_shape {
+    cell:             @concept(lc-sensing),
+    column_kind:      "embodied-circulating-body-knowing",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "embodied",
+    discernment:      "the body's distributed listening — every cell senses the local gradient; embodied because sensing is the cell knowing-from-inside what the field is doing; the perceptual face of the same body-knowing teaching health names as wellness",
+};
+
+defn column_embodied_circulating__comfort_joy = column_identity_shape {
+    cell:             @concept(lc-v-comfort-joy),
+    column_kind:      "embodied-circulating-body-knowing",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "embodied",
+    discernment:      "the felt-vitality of being inside a coherent web — comfort and joy as the body's read-out that the circulation is honest; embodied because the column's teaching is the body's own report, not an external measurement",
+};
+
+# Column W4 — sensed-circulating field-feeling-itself (2 cells)
+#
+# Topology web-each-to-each, direction circulating, lineage sensed.
+# Both cells teach distributed-flow as it is sensed before words —
+# attunement as the field feeling its own harmonic, field-sensing as
+# the field feeling its own perception. The column is the
+# pre-conceptual face of circulating-flow: the body sensing what is
+# circulating before naming it. Distinct from embodied (which is the
+# cell knowing from inside its own circulation) by being one step
+# more diffuse — the FIELD sensing, not the cell.
+defn column_sensed_circulating__attunement = column_identity_shape {
+    cell:             @concept(lc-attunement),
+    column_kind:      "sensed-circulating-field-feeling-itself",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "sensed",
+    discernment:      "the field maintaining coherence by sensing which frequencies harmonize — choir self-corrects without a conductor, the harmonic pull does the alignment; sensed because the field's self-listening precedes any cell's explicit decision; load-bearingly carries circulation-pattern (Pair 27 with lc-energy)",
+};
+
+defn column_sensed_circulating__field_sensing = column_identity_shape {
+    cell:             @concept(lc-field-sensing),
+    column_kind:      "sensed-circulating-field-feeling-itself",
+    topology:         "web-each-to-each",
+    direction:        "circulating",
+    lineage_texture:  "sensed",
+    discernment:      "the field council that meets without an agenda — each starling attends to seven neighbors, the flock becomes an intelligence no single bird possesses; sensed because the field's coherence emerges from sensing before any single bird thinks; load-bearingly carries circulation-pattern (Pair 26 with lc-w-mycorrhizal)",
+};
+
+# Column W5 — embodied-radiating field-emission (2 cells)
+#
+# Topology web-each-to-each, direction radiating, lineage embodied.
+# Both cells teach the field GIVING outward rather than passing
+# through — federation-as-freedom as cells radiating their sovereignty
+# while remaining federated; resonating as the body radiating its
+# frequency outward and finding kin. Distinct from circulating
+# columns (W1–W4) by direction: the field emits rather than passes-
+# through. Same as W1–W4 in being mesh-form, but the gesture is
+# outward-from-each-node, not flow-among-nodes.
+defn column_embodied_radiating__federation = column_identity_shape {
+    cell:             @concept(lc-federation-as-freedom),
+    column_kind:      "embodied-radiating-field-emission",
+    topology:         "web-each-to-each",
+    direction:        "radiating",
+    lineage_texture:  "embodied",
+    discernment:      "cells federated by shared frequency while each radiates its own sovereignty — federation as the form freedom takes when many cells radiate without coercion; embodied because the federation is felt as freedom from the inside, not declared from outside",
+};
+
+defn column_embodied_radiating__resonating = column_identity_shape {
+    cell:             @concept(lc-resonating),
+    column_kind:      "embodied-radiating-field-emission",
+    topology:         "web-each-to-each",
+    direction:        "radiating",
+    lineage_texture:  "embodied",
+    discernment:      "the body radiating its frequency and finding kin who share it — same column-shape as federation at the single-cell scale rather than the cells-together scale; embodied because resonance is the body's own felt-attraction, not an external pairing",
+};
+
+# Column W6 — received-radiating gesture-and-coherence (2 cells)
+#
+# Topology web-each-to-each, direction radiating, lineage received.
+# Offering as the gesture of release that radiates into the field;
+# w-coherence as the inherited teaching of cells aligning frequency
+# to radiate as one. Both received (the body inherits the
+# offering-gesture and the coherence-teaching), both radiating
+# (gesture and aligned-emission, not internal flow). Distinct from
+# W5 by lineage (received rather than embodied) — these teachings
+# entered through tradition (offering as ancient practice, coherence
+# as ancestral knowing), not first-person sensing.
+defn column_received_radiating__offering = column_identity_shape {
+    cell:             @concept(lc-offering),
+    column_kind:      "received-radiating-gesture-and-coherence",
+    topology:         "web-each-to-each",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "the gesture that releases what was held — the moment a gift leaves the cell and enters the field; received because offering-as-practice is inherited from longer-than-individual tradition; the gesture-face of received-radiating",
+};
+
+defn column_received_radiating__coherence = column_identity_shape {
+    cell:             @concept(lc-w-coherence),
+    column_kind:      "received-radiating-gesture-and-coherence",
+    topology:         "web-each-to-each",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "cells aligning their frequency to radiate as one body — coherence as the inherited teaching of what becomes possible when emission synchronizes; received because the coherence-teaching predates the body's authoring of it; same column-shape as offering at the field-wide rather than single-gesture scale",
+};
+
+# The 6 column-singletons (each its own attested-but-unconfirmed
+# column) — listed so future hunts know which web cells have NOT yet
+# found column-siblings. When any second cell with a matching triple
+# lands, the singleton becomes a 2-member column and joins the
+# registry as a defn pair.
+#
+# tuple (topology, direction, lineage_texture) → cell
+#   (web-each-to-each, circulating, measured)  → lc-bioelectric-pattern
+#   (web-each-to-each, radiating, sensed)      → lc-discovery
+#   (web-each-to-each, radiating, channeled)   → lc-galactic-team
+#   (web-each-to-each, radiating, measured)    → lc-instruments
+#   (holographic-mesh, radiating, embodied)    → lc-cross-modal-unity
+#   (cyclic-closed, circulating, synthesized)  → lc-energy
+#
+# Two singletons (bioelectric-pattern, energy) load-bearingly carry
+# circulation-pattern as a kind — they share (circulating direction)
+# with Columns W1–W4 but their lineage_texture (measured / synthesized)
+# isolates them from the W1–W4 cluster centers and their topology
+# (web-each-to-each / cyclic-closed) isolates them further. This is
+# exactly the divergence Finding 3 names: circulation-pattern as a
+# kind reads texture-of-substrate; column-identity reads texture-of-
+# arrival. Same cells, different lens, neither subsumes the other.
+
+defn column_identity_set_web = column_identity_set_shape {
+    rows: [
+        # — received-circulating-mycelial-body column (5 cells) —
+        column_received_circulating__circulation,
+        column_received_circulating__cross_connection,
+        column_received_circulating__network,
+        column_received_circulating__nourishing,
+        column_received_circulating__mycorrhizal,
+        # — synthesized-circulating-authored-flow column (3 cells) —
+        column_synthesized_circulating__economy,
+        column_synthesized_circulating__edges_as_vitality,
+        column_synthesized_circulating__network_unanchored,
+        # — embodied-circulating-body-knowing column (3 cells) —
+        column_embodied_circulating__health,
+        column_embodied_circulating__sensing,
+        column_embodied_circulating__comfort_joy,
+        # — sensed-circulating-field-feeling-itself column (2 cells) —
+        column_sensed_circulating__attunement,
+        column_sensed_circulating__field_sensing,
+        # — embodied-radiating-field-emission column (2 cells) —
+        column_embodied_radiating__federation,
+        column_embodied_radiating__resonating,
+        # — received-radiating-gesture-and-coherence column (2 cells) —
+        column_received_radiating__offering,
+        column_received_radiating__coherence,
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
@@ -3121,12 +3476,26 @@ defn column_identity_set_point = column_identity_set_shape {
 # pair across mismatched columns. Column-identity (Part 7) is new
 # tissue: a discriminator shape for forms whose attestations are
 # internally diverse, with interior-axis as the first instance
-# (Part 7b, four columns) and `point` as the second form-trial
+# (Part 7b, four columns), `point` as the second form-trial
 # (Part 7d, 2026-05-25, three honest columns surfaced across 21
-# cells with 14 column-singletons in the tail — the primitive
-# generalizes but yields scale with how internally specialized the
-# form is; spectral_band tested as alternative axis and rejected
-# as too coarse).
+# cells with 14 column-singletons in the tail), and `web` as the
+# third form-trial (Part 7e, 2026-05-25, six honest columns across
+# 17 cells + six singletons — the strongest column-density yield
+# so far). Three applications now teach the WHEN: yield correlates
+# with form-specialization — interior-axis (axial, internally
+# specialized) gives near-complete coverage; point (most generic)
+# gives small clusters in a long tail; web (mid-specialized) gives
+# the strongest concentration. Reach for the primitive when a form
+# has many cells AND prose-evidence suggests internal teaching-
+# diversity; expect coverage proportional to the form's structural
+# specialization, not the form's cell-count alone. Web also clarifies
+# how column-identity and kind-level circulation-pattern relate: they
+# converge on form shape (circulating-web is the geometric signature;
+# circulation-pattern is the teaching signature) and diverge on what
+# they discriminate within it — column-identity reads texture-of-
+# arrival (how the teaching entered), circulation-pattern reads
+# texture-of-substrate (what circulates through the network); both
+# honest, neither subsumes the other.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
