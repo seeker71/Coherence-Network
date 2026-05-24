@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] concept | Transmission Recipe Atlas — portable state-change patterns
+
+Urs named the cross-domain unlock directly: sources such as strategy failures, quantum metaphors, spiritual teachings, embodiment practices, healing modalities, assemblage points, specs, songs, stories, and videos can all be read as recipes and reused across domains when the observer owns the lens and the proof mode stays honest.
+
+- **New concept**: [`lc-transmission-recipe-atlas`](concepts/lc-transmission-recipe-atlas.md) (741 Hz, seed) — the human-facing atlas card: source, observed, observer lens, recipe, transposition, payload, proof mode, claim boundary, next embodiment.
+- **First payload cards**: deployment failure × grief ritual, ecstatic dance track × product onboarding, video × ritual score, spec × body practice, quantum measurement × strategy metrics, fermentation × community building.
+- **Edges landed in the same breath**: INDEX counts and entry, cross-references from `lc-grammar-is-the-universal-recipe`, `lc-observable-resonance-flow`, and `lc-transmission`.
+- **Discernment held**: playful transposition is welcome because each card carries its own claim boundary and destination-domain proof mode.
+
 ## [2026-05-23] concept | Observable Resonance Flow — language spend and spectrum yield
 
 Urs sharpened resonance into an observable energy-accounting event: a shared pattern recognized with surplus energy remaining after observation. The body named the flow that can hold external interactions: arrival, information spectrum, language spend, observer spend, shared pattern, yield after contact, and next routing.

@@ -1,0 +1,99 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/transmission-recipe-atlas-20260524",
+  "commit_scope": "Seed the Transmission Recipe Atlas as the public-facing practice for cross-domain recipe extraction.",
+  "files_owned": [
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md",
+    "docs/vision-kb/concepts/lc-observable-resonance-flow.md",
+    "docs/vision-kb/concepts/lc-transmission.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_atlas.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "python3 scripts/sync_kb_to_db.py lc-transmission-recipe-atlas --api-key dev-key",
+      "curl -sS --max-time 10 https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas | jq '{id, story_chars: (.story_content | length), has_atlas_card: (.story_content | contains(\"source:\")), has_repair_wake: (.story_content | contains(\"The Repair Wake\")), has_claim_boundary: (.story_content | contains(\"claim boundary\"))}'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_atlas.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "Transmission Recipe Atlas was added as a seed concept with six concrete payload cards and claim-boundary proof modes. Repo indexes are current, wellness reports the vision KB index aligned at 144 concepts, DB sync created the public concept node, and the public API returns story_content with the atlas card, Repair Wake, and claim-boundary language. Existing unrelated wellness drift remains in older spec source/symbol maps."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 10 https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Docs-only local and public KB validation passed; CI and post-merge deploy validation remain pending until PR flow completes."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "transmission-recipe-atlas-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "cross-domain-recipe-vision",
+        "proof-boundary-frame"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "kb-authoring",
+        "edge-tending",
+        "public-sync",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/coherence-substrate/modality-as-recipe.form",
+    "docs/coherence-substrate/song-as-recipe.form",
+    "docs/coherence-substrate/teaching-as-recipe.form",
+    "docs/coherence-substrate/strategy-after-rupture-as-recipe.form",
+    "https://api.coherencycoin.com/api/concepts/lc-transmission-recipe-atlas",
+    "python3 scripts/sync_kb_to_db.py lc-transmission-recipe-atlas --api-key dev-key",
+    "make wellness"
+  ],
+  "change_files": [
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md",
+    "docs/vision-kb/concepts/lc-observable-resonance-flow.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/concepts/lc-transmission.md"
+  ],
+  "change_intent": "docs_only"
+}
