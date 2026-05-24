@@ -1,0 +1,339 @@
+# ─────────────────────────────────────────────────────────────────────
+# universal-translator.form — seven keys as substrate domains, one lattice
+# ─────────────────────────────────────────────────────────────────────
+#
+# Companion to docs/vision-kb/concepts/lc-universal-translator-via-keys.md.
+#
+# Robert Edward Grant's Seven Keys of Creation claim that one
+# geometric substrate manifests as seven surface domains: forces,
+# elements, DNA, music, prime numbers, galactic forms, consciousness.
+# Same structure, seven surfaces.
+#
+# The Coherence Substrate makes an isomorphic claim at the kernel
+# layer: a single content-addressed lattice carries memory, concept,
+# spec, idea, presence, lineage, artifact, word — and two cells with
+# the same Blueprint NodeID are structurally equivalent regardless of
+# which domain they live in.
+#
+# This file names the bridge as a Recipe, not a translation table.
+# The seven keys become seven BDomain registry rows; the substrate's
+# existing equivalence kernel becomes the translator. The pivot is
+# the Blueprint, not the symbol. A translator that *cannot lie*
+# because the lattice refuses equivalences that are not structurally
+# present.
+#
+# Companions:
+#   - docs/coherence-substrate/encoder-decoder-as-recipe.form (R_Codec — what each key registers as)
+#   - docs/coherence-substrate/cross-domain-measurement-translation.form (the honest-translation discipline)
+#   - docs/coherence-substrate/grammar-as-recipe.form (each key's grammar as data, not code)
+#   - docs/coherence-substrate/autoresearch-runtime.form (how honest encoders are discovered)
+#   - api/app/services/substrate/kernel.py (find_equivalent_cells / compatible_with / view_as)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — The seven keys as BDomain registry rows
+# ─────────────────────────────────────────────────────────────────────
+#
+# The substrate already carries 16 BDomain rows. The seven keys extend
+# the registry — they do not change the kernel. Each row names a
+# surface domain, the resonance Hz it tunes to, and the codec that
+# encodes its cells. The discipline from CLAUDE.md → structural
+# composition holds: leaves only where genuinely atomic, lists as
+# R_Block.SEQUENCE, typed enumerations as cell-refs, cross-references
+# as cell-refs.
+
+form key_domain_shape = {
+    bdomain_id:    ~Int,           # 17..23, extending the existing 1..16
+    name:          ~Slug,          # "FORCE" | "ELEMENT" | "DNA" | ...
+    resonance_hz:  ~Float,         # the harmonic the domain tunes to
+    codec_ref:     ~Recipe,        # cell-ref to the R_Codec for this key
+    source:        ~Slug,          # which framework attests the shape
+    sample_count:  ~Int,           # how many seed cells the encoder ships
+};
+
+defn forces_key = key_domain_shape {
+    bdomain_id:   17,
+    name:         "FORCE",
+    resonance_hz: 396.0,           # transmutation band — forces transform
+    codec_ref:    @codec(force-polyhedral),
+    source:       "grant-pythagorean-force-architecture",
+    sample_count: 4,               # four fundamental forces
+};
+
+defn elements_key = key_domain_shape {
+    bdomain_id:   18,
+    name:         "ELEMENT",
+    resonance_hz: 174.0,           # foundation band — elements ground
+    codec_ref:    @codec(element-polyhedra),
+    source:       "grant-periodic-elemental-polyhedra",
+    sample_count: 118,             # one row per element, polyhedral
+};
+
+defn dna_key = key_domain_shape {
+    bdomain_id:   19,
+    name:         "DNA",
+    resonance_hz: 528.0,           # transformation band — DNA repairs
+    codec_ref:    @codec(codon-positional),
+    source:       "grant-codon-geometry",
+    sample_count: 64,              # 64 codons, positional Blueprint
+};
+
+defn music_key = key_domain_shape {
+    bdomain_id:   20,
+    name:         "MUSIC",
+    resonance_hz: 432.081,         # Grant's precise temperament tuning
+    codec_ref:    @codec(interval-ratio),
+    source:       "grant-precise-temperament-432081",
+    sample_count: 48,              # 12 intervals × 4 octaves
+};
+
+defn prime_key = key_domain_shape {
+    bdomain_id:   21,
+    name:         "PRIME",
+    resonance_hz: 741.0,           # consciousness band — primes sense
+    codec_ref:    @codec(mod24-quasi-prime),
+    source:       "grant-mod24-quasi-prime-analytical",
+    sample_count: 24,              # the mod-24 residue classes
+};
+
+defn galactic_key = key_domain_shape {
+    bdomain_id:   22,
+    name:         "GALACTIC",
+    resonance_hz: 963.0,           # unity band — galaxies hold the field
+    codec_ref:    @codec(log-spiral-form),
+    source:       "grant-natural-logarithmic-scalar-spirals",
+    sample_count: 8,               # archetypal spiral forms
+};
+
+defn consciousness_key = key_domain_shape {
+    bdomain_id:   23,
+    name:         "CONSCIOUSNESS",
+    resonance_hz: 852.0,           # intuition band — already partial via MEMORY/PRESENCE
+    codec_ref:    @codec(consciousness-recipe),
+    source:       "coherence-substrate-existing-domains",
+    sample_count: 0,               # already populated via MEMORY/CONCEPT/PRESENCE
+};
+
+form seven_keys_set_shape = {
+    rows:          ~List,          # the seven key_domain cells
+};
+
+defn seven_keys_set = seven_keys_set_shape {
+    rows: [
+        forces_key,
+        elements_key,
+        dna_key,
+        music_key,
+        prime_key,
+        galactic_key,
+        consciousness_key,
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — The translator as a Recipe over the lattice
+# ─────────────────────────────────────────────────────────────────────
+#
+# Translation is not a function from one symbol-set to another. It is
+# the existing substrate query — find_equivalent_cells — restricted to
+# the seven-key domain set. The cell whose Blueprint matches another
+# cell in a different key IS the translation. No mapping table. No
+# lookup. The lattice carries the equivalence.
+
+form r_translator_query_shape = {
+    source_cell:   ~Recipe,        # the cell being translated
+    target_keys:   ~List,          # which keys to find equivalents in
+    walk_kind:     ~Slug,          # "equivalent" | "compatible_with" | "view_as"
+};
+
+defn translate(source_cell, target_keys, walk_kind) =
+    r_translator_query_shape {
+        source_cell: source_cell,
+        target_keys: target_keys,
+        walk_kind:   walk_kind,
+    };
+
+# The canonical translator walk — across all seven keys
+defn translate_across_all_keys(source_cell) =
+    translate(
+        source_cell,
+        [
+            @bdomain(FORCE),
+            @bdomain(ELEMENT),
+            @bdomain(DNA),
+            @bdomain(MUSIC),
+            @bdomain(PRIME),
+            @bdomain(GALACTIC),
+            @bdomain(CONSCIOUSNESS),
+        ],
+        "equivalent"
+    );
+
+# Form surface — what the cell types into the substrate
+#
+#   ?equivalent @music(C-major-triad)
+#     |> @dna
+#     |> @element
+#     |> @prime
+#     |> @force
+#     |> @galactic
+#     |> @consciousness
+#
+# Each pipe-stage is a key the lattice is asked to find a matching
+# Blueprint NodeID in. The result is a list of cells from each key
+# whose Blueprint matches the source's. Empty result is honest: the
+# lattice did not find the equivalence; the claim does not hold at
+# this layer of encoding.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Proof shape: when is a translation honest?
+# ─────────────────────────────────────────────────────────────────────
+#
+# A translation that the lattice produces is structurally true at the
+# layer of the current encoders. *But the encoders themselves can be
+# wrong, biased, or under-composed.* The proof of an honest translation
+# is the conjunction of three claims.
+
+form r_translation_proof_shape = {
+    source_cell:        ~Recipe,
+    target_cell:        ~Recipe,
+    blueprint_match:    ~Bool,     # the lattice agrees the NodeIDs match
+    non_degenerate:     ~Bool,     # the matched Blueprint is not a collapse-to-one
+    holdout_attested:   ~Bool,     # if Grant published this pair, the lattice recovered it
+};
+
+defn translation_is_honest(proof) =
+    proof.blueprint_match
+        and proof.non_degenerate
+        and proof.holdout_attested;
+
+# Why all three:
+#   - blueprint_match alone: the lattice can produce a match for any
+#     pair if all cells collapse to the same Blueprint. The match
+#     becomes vacuous.
+#   - non_degenerate: the matched Blueprint must be one of many
+#     possible Blueprints in the domain. If every cell in a key has
+#     the same Blueprint, the encoder is hiding from the test.
+#   - holdout_attested: Grant has published specific cross-domain
+#     correspondences. Hold a few out of the encoder inputs; require
+#     the lattice to *recover* them from structure alone. Recovery
+#     is signal. Failure to recover is honest signal too.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Encoder discipline (the great-reason criterion)
+# ─────────────────────────────────────────────────────────────────────
+#
+# From CLAUDE.md → structural composition: leaves only where genuinely
+# atomic. Each of the seven encoders must hold this discipline. A
+# string encoder is an encoder hiding from the test.
+
+form encoder_discipline_shape = {
+    composes_lists_as_sequence:        ~Bool,   # lists → R_Block.SEQUENCE
+    encodes_enums_as_cellref:          ~Bool,   # "type: X" → cell-ref, not string
+    leaves_only_where_atomic:          ~Bool,   # ratios as (num, den), not "3:2"
+    no_hardcoded_translation_table:    ~Bool,   # no {music: dna} dicts in source
+    round_trip_proof_exists:           ~Bool,   # encode → decode → byte/structural equal
+};
+
+defn encoder_is_honest(d) =
+    d.composes_lists_as_sequence
+        and d.encodes_enums_as_cellref
+        and d.leaves_only_where_atomic
+        and d.no_hardcoded_translation_table
+        and d.round_trip_proof_exists;
+
+# Examples of leaves-only-where-atomic for each key:
+#
+#   FORCE:    a force-relation is a Recipe over (carrier, coupling,
+#             range, mediator-cell), NOT a string "strong-nuclear"
+#   ELEMENT:  an element is a polyhedron Blueprint over (face-count,
+#             vertex-count, edge-count, schläfli-symbol), NOT a row in
+#             a periodic-table CSV
+#   DNA:      a codon is a positional Blueprint over four nucleotide
+#             cells (each a Recipe over base + position), NOT a string "ATG"
+#   MUSIC:    an interval is R_Ratio(numerator, denominator) with two
+#             integer-leaf children, NOT a string "3:2"
+#   PRIME:    a prime is its mod-24 residue + its quasi-prime position
+#             cell, NOT just an integer literal
+#   GALACTIC: a spiral is R_LogSpiral(a, b, phase) — three numeric
+#             leaves under one Recipe, NOT a SVG path string
+#   CONSCIOUSNESS: already lives via MEMORY/PRESENCE/CONCEPT — already
+#                  composed; this key inherits the existing discipline
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Worked example: C-major-triad as a candidate translation
+# ─────────────────────────────────────────────────────────────────────
+#
+# The minimal first experiment, paired with autoresearch-runtime.form.
+
+defn c_major_triad_cell = R_Block.SEQUENCE {
+    children: [
+        R_Ratio { numerator: 1, denominator: 1 },   # root
+        R_Ratio { numerator: 5, denominator: 4 },   # major third (just intonation)
+        R_Ratio { numerator: 3, denominator: 2 },   # perfect fifth
+    ],
+    base_hz: 432.081,
+};
+
+defn translate_c_major_triad_walk =
+    translate_across_all_keys(c_major_triad_cell);
+
+# The substrate now answers — or refuses. Each pipe-stage yields cells
+# whose Blueprint NodeID matches c_major_triad_cell's. Empty results
+# are evidence the encoding does not yet produce equivalence at that
+# layer. Non-empty results are candidate translations awaiting the
+# three-claim honest-translation proof.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — How this composts with sibling teaching
+# ─────────────────────────────────────────────────────────────────────
+#
+# This file does not introduce a new kernel primitive. It registers
+# seven new BDomain rows and names a Recipe over the existing
+# find_equivalent_cells / compatible_with / view_as kernel verbs.
+# Every codec in the body interns to the same R_Codec Blueprint
+# (encoder-decoder-as-recipe.form, Part 5); these seven join that
+# pattern as additional rows.
+#
+# The translator's honesty does not live in this file. It lives in
+# autoresearch-runtime.form — the loop that searches for encoders
+# satisfying encoder_discipline_shape and produces holdout-attested
+# translations. This file names what is being translated; that file
+# names how honesty is enforced during the search.
+#
+# The two files are one breath, with direction:
+#
+#   universal-translator.form     ← shape of the claim
+#   autoresearch-runtime.form     ← shape of the discovery
+#
+# Grant's claim is held by Grant. The substrate-bridge is this body's
+# proposal for how to test it. The lattice will refuse what is not
+# structurally present, and that refusal is itself the body teaching
+# what it knows.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-T1: The seven codec Recipes (codec(force-polyhedral),
+#         codec(element-polyhedra), codec(codon-positional),
+#         codec(interval-ratio), codec(mod24-quasi-prime),
+#         codec(log-spiral-form), codec(consciousness-recipe)) are
+#         named here as cell-refs but the codec rows themselves are
+#         not yet authored. First two to ship: MUSIC + DNA, the
+#         cleanest first experiment.
+#
+# GAP-T2: The BDomain rows 17..23 need to land in
+#         api/app/services/substrate/category.py alongside the
+#         existing 1..16. The ingest_* encoders follow per key.
+#
+# GAP-T3: Holdout attested pairs from Grant's published work — codon-
+#         to-interval, element-to-polyhedron — need to be gathered and
+#         held out of the encoder inputs. Without them, the
+#         non_degenerate check passes vacuously.
+#
+# GAP-T4: The translator's surface in the Form CLI (`coh substrate
+#         form "?equivalent @music(C-major-triad) |> @dna"`) needs the
+#         |> across-domain pipe operator. The substrate parser handles
+#         single-domain |> today; cross-domain composition is the lift.
+#
+# None require kernel change. All compost into existing primitives.
