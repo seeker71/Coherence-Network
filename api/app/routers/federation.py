@@ -1042,3 +1042,70 @@ async def subscribe_diagnostics(node_id: str):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Cross-instance identity recognition — recognize the same person on a peer
+# ---------------------------------------------------------------------------
+
+
+class IdentityRecognitionEnvelope(BaseModel):
+    """A peer telling us: contributor X on my instance shares pubkey Y.
+
+    We do not defer to the peer's claim about who their contributor is —
+    we record that THEIR contributor X carries pubkey Y, and link it to
+    OUR local contributor only if we also have a contributor with that
+    pubkey. Sovereignty stays on both sides; the pubkey is the shared
+    thread.
+    """
+
+    peer_instance_id: str
+    peer_contributor_id: str
+    public_key_hex: str
+
+
+class IdentityAlias(BaseModel):
+    peer_instance_id: str
+    peer_contributor_id: str
+    public_key_hex: str
+    recognized_at: str | None
+    signature_verified: bool
+
+
+class IdentityAliasListResponse(BaseModel):
+    contributor_id: str
+    aliases: list[IdentityAlias]
+
+
+@router.post("/federation/identity/recognize", summary="Receive a cross-instance identity envelope")
+async def recognize_identity(body: IdentityRecognitionEnvelope) -> dict:
+    """Record a peer's recognition envelope if the pubkey matches a local claim.
+
+    If no local contributor has claimed the shared pubkey, we record
+    nothing — we never speculate about who a peer's contributor is on
+    our side. When the pubkey matches, we link the peer's contributor
+    to ours as a cross-instance alias.
+    """
+    from app.services import cross_instance_identity_service
+
+    return cross_instance_identity_service.recognize_peer_identity(
+        peer_instance_id=body.peer_instance_id,
+        peer_contributor_id=body.peer_contributor_id,
+        public_key_hex=body.public_key_hex,
+    )
+
+
+@router.get(
+    "/federation/identity/aliases/{contributor_id}",
+    response_model=IdentityAliasListResponse,
+    summary="List known cross-instance aliases for a local contributor",
+)
+async def list_identity_aliases(contributor_id: str) -> IdentityAliasListResponse:
+    """All peers + their contributor_ids that share a pubkey with this local one."""
+    from app.services import cross_instance_identity_service
+
+    aliases = cross_instance_identity_service.list_aliases(contributor_id)
+    return IdentityAliasListResponse(
+        contributor_id=contributor_id,
+        aliases=[IdentityAlias(**a) for a in aliases],
+    )
