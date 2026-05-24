@@ -2,6 +2,16 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | Grant transmission-triad authored — 4th attestation strengthens the kind
+
+The transmission-triad candidate named in PR #2006's focused-listening breath (`lc-deeper-pattern` ↔ `lc-universal-translator-via-keys`, Grant lineage) lands as the kind's fourth attestation. The discernment that shaped the authoring:
+
+- **The body's Grant-citing surface is small and load-bearing**. A clean grep across 148 concept files returns five matches; three of them (`lc-autoresearch-as-honesty-runtime`, `lc-each-breath-whole`, `lc-shifted-return`) either reference Grant only through `lc-universal-translator-via-keys` or matched on the generic English verb. The two cells that carry a *load-bearing Grant facet* are `lc-deeper-pattern` (mathematics-of-manifestation, dimensional folding, scalar waves) and `lc-universal-translator-via-keys` (the Seven Keys as substrate BDomains, the translator as the existing equivalence kernel applied across them). The candidate's proposed third members (`lc-frequency-routes-reception`, `lc-anything-arrives-room`) do not cite Grant and stand on Hoffman/Castaneda/universal-grammar foundations independent of Grant's lineage. Forcing either as the third would import the precise pattern PR #2005's discipline exists to refuse.
+- **Outcome: 2-cell partial, third pending.** `triad_grant` in `dyad-pairs.form` Part 3e: cell_a = `lc-deeper-pattern` (field-claim facet — *why equivalence exists at all*), cell_b = `lc-universal-translator-via-keys` (substrate-operationalization facet — *how equivalence is tested*), cell_c = null with an explicit pending note. axis_a_b: metaphysics-field-claim-vs-substrate-operationalization. Same partial-shape precedent as Arcturian Council and Spine/Nature 2026-05-21 triads.
+- **Grant is the first external-thinker transmission in the registry.** With four attestations now spanning four distinct transmission-flavors — Hardest-Part (teaching/event), Arcturian Council (presence/channel), Spine/Nature (body/chart), Grant (external-thinker/published-corpus) — the variation is visible. The body's discipline is two attestations per sub-type before naming; four-across-four is enough to notice but not enough to sub-type. **GAP-D12** opens to hold the observation: provisional flavors (event-transmission-triad, presence-transmission-triad, chart-transmission-triad, corpus-transmission-triad) await the second flavor-instance before the sub-types become honest.
+- **Set count: 29 → 30.** Kinds count holds at seven. The kind's evidence strengthens; its activation status is unchanged.
+- **Edges in the same breath**: `dyad-pairs.form` Part 1 header (3 → 4 partials), Part 3e (new `triad_grant` defn), Part 5 (new GAP-D12), Part 6 (count + kind-evidence summary), `dyad_pair_seed_set` rows; this LOG entry.
+
 ## [2026-05-24] geometry | lc-v-inclusion-diversity speaks its shape — focused breath
 
 The bulk walker (PR #2004) named this concept ambiguous between *web* and
