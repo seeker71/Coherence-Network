@@ -54,14 +54,71 @@ class UsageEventRecord(Base):
     metric: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    # story-protocol-integration R5 — per-read event payload columns.
+    # All optional so non-read usage events (the original shape) stay valid.
+    asset_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    reader_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    read_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    cc_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    payment_token: Mapped[str | None] = mapped_column(String, nullable=True)
+    concept_resonance_snapshot_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # ---------------------------------------------------------------------------
 # DB helpers
 # ---------------------------------------------------------------------------
 
+_USAGE_EVENT_COLUMN_MIGRATIONS: list[tuple[str, str]] = [
+    ("asset_id", "VARCHAR"),
+    ("reader_id", "VARCHAR"),
+    ("read_type", "VARCHAR"),
+    ("cc_amount", "FLOAT"),
+    ("payment_token", "VARCHAR"),
+    ("concept_resonance_snapshot_json", "TEXT"),
+]
+_R5_COLUMNS_INSTALLED = False
+
+
+def _ensure_r5_columns() -> None:
+    """Best-effort ADD COLUMN migration for R5 fields on
+    value_lineage_usage_events. Handles sqlite (dev/test) and
+    postgres (prod). Idempotent — duplicate-column errors are swallowed.
+    """
+    global _R5_COLUMNS_INSTALLED
+    if _R5_COLUMNS_INSTALLED:
+        return
+    from sqlalchemy import inspect, text
+
+    eng = _udb.engine()
+    try:
+        insp = inspect(eng)
+        existing = {col["name"] for col in insp.get_columns("value_lineage_usage_events")}
+    except Exception:
+        # Table doesn't exist yet — create_all will lay it down with the
+        # full set of columns. Nothing to migrate.
+        _R5_COLUMNS_INSTALLED = True
+        return
+
+    missing = [(n, t) for (n, t) in _USAGE_EVENT_COLUMN_MIGRATIONS if n not in existing]
+    if not missing:
+        _R5_COLUMNS_INSTALLED = True
+        return
+
+    with eng.begin() as conn:
+        for col_name, col_type in missing:
+            try:
+                conn.execute(
+                    text(f"ALTER TABLE value_lineage_usage_events ADD COLUMN {col_name} {col_type}")
+                )
+            except Exception:
+                # Race or dialect difference — column may already exist.
+                pass
+    _R5_COLUMNS_INSTALLED = True
+
+
 def _ensure_schema() -> None:
     _udb.ensure_schema()
+    _ensure_r5_columns()
 
 
 @contextmanager
@@ -92,6 +149,12 @@ def _record_to_link(rec: LineageLinkRecord) -> LineageLink:
 
 
 def _record_to_event(rec: UsageEventRecord) -> UsageEvent:
+    snapshot = None
+    if rec.concept_resonance_snapshot_json:
+        try:
+            snapshot = json.loads(rec.concept_resonance_snapshot_json)
+        except json.JSONDecodeError:
+            snapshot = None
     return UsageEvent(
         id=rec.id,
         lineage_id=rec.lineage_id,
@@ -99,6 +162,12 @@ def _record_to_event(rec: UsageEventRecord) -> UsageEvent:
         metric=rec.metric,
         value=rec.value,
         captured_at=_ensure_utc(rec.captured_at),
+        asset_id=rec.asset_id,
+        reader_id=rec.reader_id,
+        read_type=rec.read_type,
+        cc_amount=rec.cc_amount,
+        payment_token=rec.payment_token,
+        concept_resonance_snapshot=snapshot,
     )
 
 
@@ -382,15 +451,37 @@ def list_links(limit: int = 200) -> list[LineageLink]:
         return [_record_to_link(r) for r in recs]
 
 
-def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent | None:
+def add_usage_event(
+    lineage_id: str,
+    payload: UsageEventCreate,
+    *,
+    require_link: bool = True,
+) -> UsageEvent | None:
+    """Append a usage event to a lineage link.
+
+    The payload accepts the spec story-protocol-integration R5 fields
+    (``reader_id``, ``read_type``, ``cc_amount``, ``payment_token``,
+    ``concept_resonance_snapshot``, ``asset_id``) so per-read events
+    can flow through the same persistence path as usage attributions.
+    All R5 fields are optional — non-read usage events keep their
+    original (source, metric, value) contract.
+
+    When ``require_link`` is ``False``, the link existence check is
+    skipped — used by read tracking which writes events keyed by a
+    synthetic ``asset:{id}`` lineage id without an underlying link.
+    """
     _ensure_schema()
     now = datetime.now(timezone.utc)
     event_id = f"evt_{uuid4().hex[:12]}"
+    snapshot_json: str | None = None
+    if payload.concept_resonance_snapshot is not None:
+        snapshot_json = json.dumps(dict(payload.concept_resonance_snapshot))
     with _session() as s:
-        link_rec = s.query(LineageLinkRecord).filter_by(id=lineage_id).first()
-        if link_rec is None:
-            return None
-        link_rec.updated_at = now
+        if require_link:
+            link_rec = s.query(LineageLinkRecord).filter_by(id=lineage_id).first()
+            if link_rec is None:
+                return None
+            link_rec.updated_at = now
         rec = UsageEventRecord(
             id=event_id,
             lineage_id=lineage_id,
@@ -398,6 +489,12 @@ def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent | 
             metric=payload.metric,
             value=round(float(payload.value), 4),
             captured_at=now,
+            asset_id=payload.asset_id,
+            reader_id=payload.reader_id,
+            read_type=payload.read_type,
+            cc_amount=(round(float(payload.cc_amount), 6) if payload.cc_amount is not None else None),
+            payment_token=payload.payment_token,
+            concept_resonance_snapshot_json=snapshot_json,
         )
         s.add(rec)
     return UsageEvent(
@@ -407,7 +504,50 @@ def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent | 
         metric=payload.metric,
         value=round(float(payload.value), 4),
         captured_at=now,
+        asset_id=payload.asset_id,
+        reader_id=payload.reader_id,
+        read_type=payload.read_type,
+        cc_amount=payload.cc_amount,
+        payment_token=payload.payment_token,
+        concept_resonance_snapshot=payload.concept_resonance_snapshot,
     )
+
+
+def query_read_events(
+    *,
+    asset_id: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> list[UsageEvent]:
+    """Query persisted read events (UsageEvent rows whose source='read').
+
+    Used by read_tracking_service when the graph backend is active —
+    aggregates assemble from these rows so they survive process
+    restarts. The ``asset_id`` filter pushes down to the indexed column;
+    the time window filters on ``captured_at``.
+    """
+    _ensure_schema()
+    with _session() as s:
+        q = s.query(UsageEventRecord).filter(UsageEventRecord.source == "read")
+        if asset_id is not None:
+            q = q.filter(UsageEventRecord.asset_id == asset_id)
+        if since is not None:
+            q = q.filter(UsageEventRecord.captured_at >= since)
+        if until is not None:
+            q = q.filter(UsageEventRecord.captured_at < until)
+        recs = q.order_by(UsageEventRecord.captured_at.asc()).all()
+        return [_record_to_event(r) for r in recs]
+
+
+def _delete_read_events_for_tests() -> int:
+    """Test-only — clear all persisted read events. Does not touch links
+    or non-read usage events.
+    """
+    _ensure_schema()
+    with _session() as s:
+        count = s.query(UsageEventRecord).filter(UsageEventRecord.source == "read").delete()
+        s.commit()
+    return count
 
 
 def _lineage_events(lineage_id: str) -> list[UsageEvent]:
