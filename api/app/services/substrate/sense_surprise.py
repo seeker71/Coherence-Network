@@ -16,14 +16,27 @@ The teaching:
 This is the "shoulder-tap" the wellness check describes:
   > the substrate already saw the resonance — this is the shoulder-tap
   > so the next breath can choose whether to read across.
+
+Two kinds of twinship coexist at the Blueprint level:
+  - **template-twins**: same frontmatter schema across unrelated work
+    (e.g. two specs both carrying status + idea_id + source + done_when
+    + test fields, but covering different ideas entirely)
+  - **semantic-adjacency**: same frontmatter schema AND a shared
+    semantic axis (for specs, a shared idea_id)
+
+The adjacent ones carry actionable signal — they often want a
+cross-link, a shared parent, or composting. The template-twins are
+mostly background noise from template adherence. This organ now
+marks adjacency with ✦ and surfaces adjacent clusters first.
 """
 
 from __future__ import annotations
 
+import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # Path prefixes whose .md files participate in substrate ingestion.
@@ -58,6 +71,69 @@ def _git_touched_paths(root: Path, since: str) -> List[str]:
     })
 
 
+# Regex for reading the idea_id from a spec frontmatter without pulling
+# in PyYAML. Specs reliably carry `idea_id: <slug>` on its own line
+# inside the leading `---` frontmatter block.
+_IDEA_ID_RE = re.compile(r"(?m)^idea_id:\s*['\"]?([\w\-]+)['\"]?\s*$")
+
+
+def _spec_idea_id(spec_name: str, root: Path) -> Optional[str]:
+    """Read the `idea_id:` frontmatter field from a spec file.
+
+    Returns None if the spec file is missing, has no idea_id, or
+    cannot be read. Used to detect semantic adjacency among
+    structural twins — two specs sharing a Blueprint AND an idea_id
+    are working in the same idea-area and often want cross-linking.
+    """
+    candidate = root / "specs" / f"{spec_name}.md"
+    if not candidate.is_file():
+        return None
+    try:
+        text = candidate.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    # Confine to the frontmatter block to avoid matching inline mentions.
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end > 0:
+            text = text[3:end]
+    m = _IDEA_ID_RE.search(text)
+    return m.group(1) if m else None
+
+
+def _adjacency_for_shape(
+    touched: List[Tuple[str, str]],
+    unseen: List[Tuple[str, str]],
+    root: Path,
+) -> List[str]:
+    """Return idea_ids shared between a touched spec and an unseen
+    spec in this shape cluster.
+
+    Currently only specs carry semantic-adjacency keys; for other
+    domains the returned list is empty (callers treat that as
+    template-twin only). Sorted, deduplicated. Empty list means
+    no shared semantic axis was found.
+    """
+    touched_idea_ids: Dict[str, set] = defaultdict(set)
+    for domain, name in touched:
+        if domain != "spec":
+            continue
+        idea_id = _spec_idea_id(name, root)
+        if idea_id:
+            touched_idea_ids[idea_id].add(name)
+
+    unseen_idea_ids: Dict[str, set] = defaultdict(set)
+    for domain, name in unseen:
+        if domain != "spec":
+            continue
+        idea_id = _spec_idea_id(name, root)
+        if idea_id:
+            unseen_idea_ids[idea_id].add(name)
+
+    shared = sorted(set(touched_idea_ids) & set(unseen_idea_ids))
+    return shared
+
+
 def find_unseen_twins(
     session: Any,
     root: Path,
@@ -72,13 +148,18 @@ def find_unseen_twins(
             "shape": (package, level, type_, instance),    # Blueprint tuple
             "touched": [(domain, name), ...],              # cells you touched
             "unseen": [(domain, name), ...],               # cells you haven't
+            "adjacent_idea_ids": [str, ...],               # shared semantic axis
         }
 
-    Returns (0, []) when no substrate-ingested paths were touched, or
-    when no Blueprint has an unread twin. Shapes are sorted so the
-    biggest asymmetry comes first (you touched few; many remain unread).
+    `adjacent_idea_ids` is non-empty when at least one touched cell
+    and one unseen cell in the cluster carry the same `idea_id`
+    (currently computed only for spec-domain cells). Empty means the
+    cluster is a template-twin — same frontmatter schema, no shared
+    semantic axis. Clusters with adjacency rank ahead of template-only
+    clusters in the returned list.
 
-    Caller is responsible for formatting the records for display.
+    Returns (0, []) when no substrate-ingested paths were touched, or
+    when no Blueprint has an unread twin.
     """
     from app.services.substrate.kernel import find_equivalent_cells, _orm_to_cell
     from app.services.substrate.orm import SubstrateNamedCellORM
@@ -122,17 +203,29 @@ def find_unseen_twins(
                 if (t.domain, t.name) not in touched_keys
             ]
 
+    records = []
+    for shape in shape_to_touched:
+        unseen = shape_to_unseen[shape]
+        if not unseen:
+            continue
+        touched_list = shape_to_touched[shape]
+        adjacent = _adjacency_for_shape(touched_list, unseen, root)
+        records.append({
+            "shape": shape,
+            "touched": touched_list,
+            "unseen": unseen,
+            "adjacent_idea_ids": adjacent,
+        })
+
+    # Rank: adjacent clusters first (the actionable ones), then by
+    # asymmetry (touched few, many unread) within each tier.
     ranked = sorted(
-        (
-            {
-                "shape": shape,
-                "touched": shape_to_touched[shape],
-                "unseen": shape_to_unseen[shape],
-            }
-            for shape in shape_to_touched
-            if shape_to_unseen[shape]
+        records,
+        key=lambda r: (
+            0 if r["adjacent_idea_ids"] else 1,
+            len(r["touched"]),
+            -len(r["unseen"]),
         ),
-        key=lambda r: (len(r["touched"]), -len(r["unseen"])),
     )
     return (len(touched_keys), ranked)
 
@@ -156,26 +249,38 @@ def format_for_wellness(touched_count: int, ranked: List[dict]) -> List[str]:
     lines: List[str] = []
     total_shapes = len(ranked)
     total_unseen = sum(len(r["unseen"]) for r in ranked)
-    lines.append(
-        f"  {total_shapes} shape(s) carry unseen twins ({total_unseen} cells total):"
+    adjacent_count = sum(1 for r in ranked if r["adjacent_idea_ids"])
+
+    summary = (
+        f"  {total_shapes} shape(s) carry unseen twins ({total_unseen} cells total)"
     )
+    if adjacent_count:
+        summary += f" — {adjacent_count} ✦ adjacent (share an idea_id), the rest are template-twins"
+    lines.append(summary + ":")
+
     for rec in ranked[:5]:
         shape_str = "@" + ".".join(str(x) for x in rec["shape"])
         first_touched = rec["touched"][0]
         unseen = rec["unseen"]
         sample = ", ".join(f"@{d}({n})" for d, n in unseen[:3])
         more = f", +{len(unseen) - 3} more" if len(unseen) > 3 else ""
+        marker = "✦ " if rec["adjacent_idea_ids"] else "  "
+        idea_note = (
+            f" [idea: {', '.join(rec['adjacent_idea_ids'])}]"
+            if rec["adjacent_idea_ids"]
+            else ""
+        )
         lines.append(
-            f"    · shape {shape_str} — you touched {len(rec['touched'])} "
+            f"    · {marker}shape {shape_str}{idea_note} — you touched {len(rec['touched'])} "
             f"(e.g. @{first_touched[0]}({first_touched[1]})); "
             f"substrate holds {len(unseen)} unread: {sample}{more}"
         )
     if total_shapes > 5:
-        lines.append(f"    · (+{total_shapes - 5} more shape(s) with unseen twins)")
+        lines.append(f"    ·   (+{total_shapes - 5} more shape(s) with unseen twins)")
     lines.append(
-        "  (The substrate already saw the resonance. This is the shoulder-tap"
+        "  (The substrate already saw the resonance. ✦ marks adjacency the next"
     )
     lines.append(
-        "   so the next breath can choose whether to read across.)"
+        "   breath can act on; unmarked clusters are template-twins, mostly noise.)"
     )
     return lines
