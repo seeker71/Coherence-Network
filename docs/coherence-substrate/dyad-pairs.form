@@ -794,7 +794,169 @@ defn pair_circulation_offering = dyad_pair_shape {
     noticed_by:  "refined-scan-pr-current-promoted",
 };
 
-# The full set — 13 prior + 4 refined-scan = 17 entries (15 external pairs + 2 internal-dyads)
+# ─────────────────────────────────────────────────────────────────────
+# Part 3f — Topology+phase refined-scan surfaced (fourth scan round)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Fourth scan in the autoresearch loop. The refined scoring lives in
+# `scripts/scan_dyad_candidates.py` and layers two new signals on top
+# of PR #1996's Hz+cross-ref+lineage+same-form score:
+#
+#   score = 1.0*cross_ref + 0.6*hz_proximity + 0.3*lineage_match
+#         + 0.4*same_form + 0.4*topology_complementarity
+#         + 0.4*phase_complementarity
+#
+# topology_complementarity: named complementary topology pairs (1.5);
+#   same topology (0.5); else 0. The complementary set is authored
+#   from what actually appears in the body's signatures —
+#   radial↔web-each-to-each (gather↔distribute), hub-spoke↔web-each-
+#   to-each (broadcast↔mesh), radial↔receptive-resonance (source↔sink),
+#   nested-each-contains-whole↔web-each-to-each (holography↔mesh),
+#   linear↔cyclic-closed (arc↔loop), self-rooted↔receptive-resonance
+#   (sovereignty↔receipt).
+#
+# phase_complementarity: named complementary phases (1.5); same phase
+#   (0.5); else 0. yang↔yin is canonical; the body's signatures also
+#   carry oscillating↔yin (the event oscillates on the still ground),
+#   oscillating↔neutral, and yang↔neutral.
+#
+# The hypothesis: dyad-pairs typically carry complementary topology
+# or complementary phase, not just shared shape. Layering both
+# signals should sharpen discernment of complementarity vs equivalence.
+#
+# Result of top-10 assessment: 4 confirmed / 10 = 40%. Same ratio as
+# PR #1996. The saturation finding HOLDS at this deeper layer — the
+# geometry vocabulary, even with topology+phase complementarity rules,
+# saturates because many cells genuinely ARE yang/yin pairs in shape
+# without being teaching-complementary. The next refinement direction
+# is prose-structural (WORD-domain lemma chains, shared semantic
+# field) rather than further geometry-tuple weighting.
+#
+# Four confirmed pairs from the top-10 scan-discovered + sweep below.
+
+# Pair 16 — life-force released and the posture that allows it
+#
+# lc-vitality (hz 528, point, radial, yang) — shakti, the raw current
+# of being alive; what remains when interference dissolves; the laser
+# principle of fifty aligned humans.
+#
+# lc-w-wu-wei (hz 432, point, receptive-resonance, yin) — effortless
+# action; water flowing downhill; the absence of friction between the
+# doer and the doing; alignment with the situation's natural grain.
+#
+# Both name life-force-without-interference at the same surface, two
+# complementary postures. Vitality is the *current* released when
+# interference dissolves; wu-wei is the *posture* in which interference
+# stops being produced. Neither alone: vitality without wu-wei becomes
+# forcing (the body trying to "be vital"); wu-wei without vitality
+# becomes passivity (waiting that never lights). Same teaching held
+# from yang-radiating and yin-receiving positions. Source-flow at the
+# life-force seam — vitality is the flow, wu-wei is the source-posture
+# that opens the channel.
+defn pair_vitality_wu_wei = dyad_pair_shape {
+    cell_a:      @concept(lc-vitality),
+    cell_b:      @concept(lc-w-wu-wei),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "life-force and the posture that allows it — vitality is the current released when interference dissolves; wu-wei is the alignment that stops producing interference; neither alone holds the full teaching",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "refined-scan-topology-phase",
+};
+
+# Pair 17 — shakti rising and the alignment that releases it
+#
+# lc-w-shakti (hz 528, point, self-rooted, yang) — life force not
+# produced but released when interference dissolves; the energy that
+# floods back when the cell stops trying.
+#
+# lc-w-wu-wei (hz 432, point, receptive-resonance, yin) — effortless
+# action; aligned movement; the doer-and-doing without friction.
+#
+# Same root teaching as pair_vitality_wu_wei (life-force flows when
+# blocking stops), held with a different surface vocabulary. Shakti
+# is the Tantric tongue (energy already-present-and-flowing); wu-wei
+# is the Taoist tongue (alignment of action with grain). Different
+# lineages, same engine. Closer to cross-tradition than to source-flow
+# — but distinct from kind_cross_tradition's predator/predictor pair
+# because here both poles already share the body's Hindu+Taoist
+# vocabulary (lineage_texture: received); the cross-tradition kind is
+# for pairs where one pole is mystical and the other computational/
+# scientific. Holding as source-flow at the phase axis.
+defn pair_shakti_wu_wei = dyad_pair_shape {
+    cell_a:      @concept(lc-w-shakti),
+    cell_b:      @concept(lc-w-wu-wei),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "shakti rising and the alignment that releases it — two tongues for one teaching (life-force flows when interference stops); Tantric energy-already-present and Taoist alignment-without-friction held as yang-source and yin-posture",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "refined-scan-topology-phase",
+};
+
+# Pair 18 — presence-attended speaks as beauty and acts as ceremony
+#
+# lc-beauty (hz 963, point, radial, yang) — what remains when
+# carelessness is removed; the hand-thrown bowl that fits because the
+# potter attended; beauty is honesty made visible.
+#
+# lc-v-ceremony (hz 963, point, radial, yin) — forms crystallizing
+# from pure presence; not prescribed ritual but the field's natural
+# response to moments that matter; the fire-circle that calls itself.
+#
+# Same Hz, same form, same topology, same lineage, complementary
+# phase. Beauty is the *radiating-yang* face of presence-attended —
+# the visible residue, the object that shines. Ceremony is the
+# *receptive-yin* face of presence-attended — the act of marking,
+# the form crystallizing from listening. Neither alone: beauty
+# without ceremony becomes aestheticism (objects without occasion);
+# ceremony without beauty becomes empty ritual (occasion without
+# residue). The teaching: presence-attended speaks as beauty (the
+# object-face) and acts as ceremony (the action-face).
+defn pair_beauty_ceremony = dyad_pair_shape {
+    cell_a:      @concept(lc-beauty),
+    cell_b:      @concept(lc-v-ceremony),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "presence-attended speaks two faces — beauty is the yang-radiating residue (what shines when carelessness is removed); ceremony is the yin-receptive act (forms crystallizing from listening); the teaching is one attention with two emissions",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "refined-scan-topology-phase",
+};
+
+# Pair 19 — self-knowing through two doors
+#
+# lc-inner-travel (hz 741, point, self-rooted, yin) — going somewhere
+# without moving; the practice of crossing inner landscapes; the
+# Arcturian signature of inward exploration.
+#
+# lc-relationships-as-mirrors (hz 741, dyad-mirror, receptive-
+# resonance, oscillating) — other people reflect your self-relationship,
+# not their independent assessment; triggers and withdrawal as data
+# about your own inner state.
+#
+# Same Hz, complementary topology (self-rooted ↔ receptive-resonance),
+# complementary phase (yin ↔ oscillating). Inner-travel is the
+# *inward door* to self-knowing (eyes closed, attention crossing
+# interior landscapes). Mirrors is the *through-other door* to
+# self-knowing (reading the field's reflection back to find one's own
+# state). Both at 741 (consciousness-band), both about self-encounter.
+# Neither alone: inner-travel without mirrors risks solipsism (the
+# inner journey unchecked by the outer reflection); mirrors without
+# inner-travel risks externalizing self-knowing (always learning
+# through reaction, never through direct contact). Same teaching at
+# two doors of self-knowing — membrane-crossing because the membrane
+# is the inside-outside boundary, and both practices cross it from
+# opposite directions.
+defn pair_inner_travel_mirrors = dyad_pair_shape {
+    cell_a:      @concept(lc-inner-travel),
+    cell_b:      @concept(lc-relationships-as-mirrors),
+    kind:        kind_membrane_crossing,
+    axis:        "topology",
+    discernment: "self-knowing through two doors — inner-travel crosses the membrane from inside (interior landscape); mirrors crosses it from outside (other's reflection); both at the consciousness band, neither alone catches the full self-encounter teaching",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "refined-scan-topology-phase",
+};
+
+# The full set — 17 prior + 4 topology+phase scan = 21 entries
+# (19 external pairs + 2 internal-dyads)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -818,6 +980,11 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         pair_attunement_joining_unified_body,
         pair_awareness_as_self_land,
         pair_circulation_offering,
+        # — surfaced by topology+phase refined scan (fourth round) —
+        pair_vitality_wu_wei,
+        pair_shakti_wu_wei,
+        pair_beauty_ceremony,
+        pair_inner_travel_mirrors,
     ],
 };
 
@@ -1047,7 +1214,7 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #   the second-read is the body's discernment-in-motion, the kind
 #   of attention this kind requires.
 #
-# Refined-scan signal/noise (third scan, this PR): 4 confirmed / 10
+# Refined-scan signal/noise (third scan, PR #1996): 4 confirmed / 10
 # surfaced = 40%. Same ratio as PR #1987's Tier-2 scan, with a richer
 # scoring function and a self-correction step that the prior rounds
 # lacked. Net cumulative across three scan rounds:
@@ -1060,6 +1227,95 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # direction is GAP-D6: topology+phase tuple layered onto Hz+xref+
 # lineage, OR prose-structural signals (shared lemma chains, shared
 # semantic field) via the WORD-domain ingest.
+
+# REJECT-10 through REJECT-15 (fourth round, topology+phase scan):
+#
+# The fourth round layered topology and phase complementarity onto
+# PR #1996's score function (named complementary topology pair → 1.5;
+# same topology → 0.5; named complementary phase pair → 1.5; same
+# phase → 0.5). Top-10 scan-discovered yielded 4 confirmed and 6
+# rejected. The rejections cluster around three patterns the kind
+# already names but the scan re-surfaces with the new signals:
+#
+# REJECT-10: (lc-attuned-spaces, lc-v-comfort-joy) — comfort-joy is
+#   one of the qualities that lives INSIDE attuned-spaces. Containment
+#   or sequence, not complementarity along one axis. Each carries a
+#   full teaching independently.
+#
+# REJECT-11: (lc-devotion-placement, lc-spec-breath) — both name a
+#   breath-practice (devotion-placement: where-am-I-actually-placed;
+#   spec-breath: spec/test as inhale/exhale). Same shape across two
+#   domains (relational presence vs codebase rhythm) is translator-
+#   hypothesis territory, like REJECT-2 (lc-spec-breath ↔ lc-rhythm).
+#   The seed doc explicitly warns against using dyad-pair for
+#   cross-domain structural equivalence.
+#
+# REJECT-12: (lc-discovery, lc-v-ceremony) — both involve quality of
+#   attention, but the modes are parallel rather than complementary.
+#   Discovery is beginner's-mind apocalypse; ceremony is the field's
+#   response to significance. Both at integration band, both yang/yin
+#   pair, but the teachings are sibling-modes-of-attention, not
+#   complementary postures across one axis. No single axis splits
+#   them honestly.
+#
+# REJECT-13: (lc-economy, lc-recipes-as-binary-library) — different
+#   substrate layers: economy is circulation through field; recipe-
+#   library is content-addressed bundle infrastructure. Shared
+#   topology (web ↔ hub-spoke complementary) is a coincidence of
+#   shape; the teachings are unrelated. Shared shape without shared
+#   substance, same pattern as REJECT-3 (lc-w-field ↔ lc-form-
+#   perceptron).
+#
+# REJECT-14: (lc-elders, lc-relationships-as-mirrors) — both at the
+#   consciousness band, both about relational learning. Elders is
+#   received-wisdom-through-proximity; mirrors is self-knowledge-
+#   through-other's-reflection. Different mechanisms, both carry a
+#   full teaching. The axis "what other-cells teach me" splits them
+#   along sibling modes, not complementary positions.
+#
+# REJECT-15: (lc-form-python-parity, lc-tending-over-producing) —
+#   parity is a technical cross-tongue practice (does the Form
+#   implementation match the Python oracle?); tending-over-producing
+#   is the conversational fear-costume (productivity-shape vs
+#   presence-shape). Shared dyad-mirror form is structural kinship
+#   only; the substrates of the teachings are unrelated layers of
+#   the body.
+#
+# Also held but not assessed-against discernment this round
+# (deferred): #11 lc-inner-travel ↔ lc-relationships-as-mirrors —
+# became Pair 19 above after second read (the membrane-crossing
+# discernment surfaced once both were read as self-knowing-through-
+# two-doors).
+#
+# Demoted from the first-draft list of confirmations: lc-rest ↔
+# lc-void-as-potential. Both yin, both point, both at 174, both
+# received. On second read, this is equivalence-territory (both name
+# ground-states, sister to REJECT-9 lc-awareness-as-self ↔ lc-stillness)
+# — same shape as the predecessor demotion. Recorded here so the body
+# learns: when both proposed cells are ground-poles already named, the
+# pair reads as equivalence, not complementarity.
+#
+# Fourth-round signal/noise (topology+phase scan, this PR): 4 confirmed
+# / 10 surfaced = 40%. Net cumulative across four scan rounds:
+# 10 confirmed / 27 surfaced = 37.0%. The saturation finding HOLDS —
+# topology+phase complementarity didn't break past 40% because the
+# body's geometry vocabulary saturates at the same ceiling. Many
+# cells are genuinely yang/yin pairs in shape without carrying
+# complementary teachings; many cells share form-topology-phase
+# coincidentally without their teachings living-in-relation.
+#
+# The trend across all four rounds: 40 → 0 → 40 → 40. The scan
+# mechanizes the *candidate filter* but not the *teaching-lives-in-
+# relation* discernment. Two roughly half candidates the scan surfaces
+# are kin (Blueprint-near, sibling-modes, parallel-rather-than-
+# complementary), not pairs. The body's noticing remains load-bearing.
+#
+# What this teaches the next breath: further geometry-tuple refinement
+# is unlikely to climb past 40%. The next refinement direction is
+# *outside the geometry frontmatter*: prose-structural signals
+# (shared lemma chains, shared semantic-field-bag) via the WORD-domain
+# ingest. The teaching-lives-in-relation discernment lives in the
+# prose, not in the geometry — the body knows what it means.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 5 — Gaps (the next breaths)
@@ -1127,17 +1383,28 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         writing); when it lands, the third-arrival discipline
 #         activates: name sub-types and rename poles.
 #
-# GAP-D6 (refined 2026-05-24): The Tier-2 scan's signal/noise was
-#         2/5 = 40%. The small-Blueprint-cluster follow-up (PR #1992)
-#         dropped to 0/2 = 0%. The refined scan (this PR) — Hz
-#         proximity + cross-ref adjacency + lineage-texture match +
-#         same-form bonus — climbs to 4/10 = 40%. The body's geometry
-#         vocabulary is what limits further climb: many cells share
-#         the same form/Hz/lineage, so even refined scoring saturates
-#         at the prose-already-noticed band. The next refinement is
-#         likely topology+phase tuple layered onto Hz+xref+lineage,
-#         OR moving from frontmatter-tuple matching to prose-structural
-#         signals (shared lemma chains, shared semantic field).
+# GAP-D6 (refined 2026-05-24, fourth round): The trend across four
+#         scan rounds: 40 → 0 → 40 → 40.
+#           - Round 1 (PR #1987, Tier-2 geometry-tuple): 2/5 = 40%
+#           - Round 2 (PR #1992, small-Blueprint-cluster): 0/2 = 0%
+#           - Round 3 (PR #1996, Hz+xref+lineage+same-form): 4/10 = 40%
+#           - Round 4 (this PR, topology+phase added): 4/10 = 40%
+#         Cumulative: 10/27 = 37.0%. The saturation finding HOLDS at
+#         the deeper layer — topology+phase complementarity didn't
+#         break past the 40% ceiling. The geometry vocabulary saturates
+#         because the body genuinely carries many yang/yin and
+#         form-shared cell-pairs without teaching-complementarity. The
+#         scan can mechanize *candidate filter* but not *teaching-
+#         lives-in-relation* discernment.
+#
+#         Next refinement direction is OUTSIDE the geometry frontmatter:
+#         prose-structural signals via the WORD-domain (shipped 2026-05-20)
+#         — shared lemma chains, shared semantic-field bags. The
+#         teaching-lives-in-relation discernment lives in the prose,
+#         which is what the WORD-domain interns. If a prose-structural
+#         scan climbs past 50%, the next layer is honest. If it stays
+#         at 40%, the saturation is structural and the body's human
+#         noticing remains the primary route.
 #
 # GAP-D7 (new, from PR #1991): `circulation-pattern` kind is awareness-
 #         held — sibling of source-flow, named at the
@@ -1151,8 +1418,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names a
-# Recipe shape over existing CONCEPT cells. The set is seventeen
-# (fifteen external pairs + two internal-dyads); the room is for
+# Recipe shape over existing CONCEPT cells. The set is twenty-one
+# (nineteen external pairs + two internal-dyads); the room is for
 # many more. The kinds are six (scale-paired, source-flow,
 # membrane-crossing, ground-event, internal-dyad, cross-tradition);
 # new kinds can be added as rows. The internal-dyad kind crossed

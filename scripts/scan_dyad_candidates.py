@@ -1,29 +1,37 @@
 """Refined dyad-pair candidate scan over Living Collective concept cells.
 
-Third scan in the autoresearch loop. Previous rounds:
+Fourth scan in the autoresearch loop. Previous rounds:
 - PR #1987: Tier-2 geometry-tuple scan (7-axis tuple match). 2/5 = 40%.
 - PR #1992: small-Blueprint-cluster scan (Blueprint family only). 0/2 = 0%.
-  Cumulative across rounds 1+2: 2/7 = 28.6%.
+- PR #1996: refined-scan with Hz + cross-ref + lineage + same-form. 4/10 = 40%.
+  Cumulative across rounds 1-3: 6/17 = 35.3%.
 
-The diagnosis from PR #1992: small-Blueprint-cluster scanning rediscovers
-Part-4-already-named kin (same family != complementary). Wrong resolution.
+The diagnosis from PR #1996: the geometry vocabulary saturates the score
+function — many cells share form/Hz/lineage, so even refined scoring
+rediscovers the same prose-already-noticed band. The next refinement
+direction (GAP-D6) is topology+phase tuple layered onto Hz+xref+lineage.
 
-This refinement combines three signals beyond shared Blueprint/tuple:
-  1. Hz-band proximity — paired bands (174↔963, 396↔963, 528↔741, etc.)
-     score higher; identical Hz also scores (echo-band).
-  2. Cross-ref adjacency — if cell A's prose links → cell B, the body has
-     already noticed the relation in writing. Strong signal.
-  3. Lineage-texture match — both received or both synthesized weights up;
-     mixed weights down.
+This breath adds two complementarity-aware signals:
+  4. Topology complementarity — same topology gets mild boost (0.5);
+     named complementary topology gets full boost (1.5). The set of
+     complementary topology pairs is authored from what actually appears
+     in the body's signatures (web↔point, radial↔web-each-to-each, etc.).
+  5. Phase complementarity — same phase gets mild boost (0.5); named
+     complementary phase gets full boost (1.5). Yang↔yin is the canonical
+     pair; oscillating↔neutral and oscillating↔yin also count when both
+     phases appear in the body.
 
-Score = 1.0 * cross_ref + 0.6 * hz_proximity + 0.3 * lineage_match.
-A floor of structural-shape similarity gates candidates first (so we
-don't propose pairs that share nothing).
+The thesis: dyad-pairs typically match on form/topology OR carry
+complementary topology+phase. The existing scan saw same-shape kin;
+this round looks for *complementary postures across one axis*.
+
+Score = 1.0*cross_ref + 0.6*hz_proximity + 0.3*lineage_match
+      + 0.4*same_form + 0.4*topology_complementarity + 0.4*phase_complementarity.
 
 Two thresholds — the two origins teach differently:
-  - Scan-discovered (no cross-ref): threshold 0.8. The scan PROPOSES
+  - Scan-discovered (no cross-ref): threshold 1.4. The scan PROPOSES
     the body notice these; rarer, more interesting.
-  - Promoted (cross-referenced in prose): threshold 1.6. The body
+  - Promoted (cross-referenced in prose): threshold 2.3. The body
     ALREADY noticed these; the scan's job is to TYPE them as
     dyad-pair vs sequence/influence. High bar so only strongest float.
 
@@ -53,7 +61,72 @@ ALREADY_CONFIRMED = {
     frozenset(["lc-awareness-as-self", "lc-freedom-as-recognition"]),
     frozenset(["lc-perception-as-interface", "lc-bioelectric-pattern"]),
     frozenset(["lc-global-workspace", "lc-phase-transitions"]),
+    # PR #1996 — refined-scan with Hz + cross-ref + lineage + same-form
+    frozenset(["lc-act-without-penalty", "lc-observer-pays-the-trace"]),
+    frozenset(["lc-attunement-joining", "lc-unified-body"]),
+    frozenset(["lc-awareness-as-self", "lc-land"]),
+    frozenset(["lc-circulation", "lc-offering"]),
 }
+
+# Topology complementarity — pairs that show up in the body's actual
+# geometry signatures and read as complementary postures (gather vs flow,
+# surface vs depth, central vs distributed). Authored from the histogram
+# of topology values across 124 concept cells with geometry frontmatter,
+# not invented abstract symmetries. Each pair appears with both members
+# attested in the body's signatures.
+COMPLEMENTARY_TOPOLOGIES = {
+    # centering vs distributing — the hearth and the mycelium shape
+    frozenset(["radial", "web-each-to-each"]),
+    # central hub vs peer-mesh — broadcast vs each-to-each circulation
+    frozenset(["hub-spoke", "web-each-to-each"]),
+    # outward-radial vs inward-receptive — source and sink at one band
+    frozenset(["radial", "receptive-resonance"]),
+    # nested-whole-at-every-scale vs each-cell-to-every-other — holography
+    # vs mesh; both whole-at-scale, different couplings
+    frozenset(["nested-each-contains-whole", "web-each-to-each"]),
+    # line vs circle — the open arc vs the closed loop
+    frozenset(["linear", "cyclic-closed"]),
+    # rooted-in-self vs receiving-the-resonance — sovereignty and receipt
+    frozenset(["self-rooted", "receptive-resonance"]),
+}
+
+
+def topology_complementarity_score(topo_a, topo_b):
+    """Score topology pairing — same gives mild signal (0.5), named
+    complementary pairs give full signal (1.5), else 0."""
+    if topo_a is None or topo_b is None:
+        return 0.0
+    if topo_a == topo_b:
+        return 0.5
+    if frozenset([topo_a, topo_b]) in COMPLEMENTARY_TOPOLOGIES:
+        return 1.5
+    return 0.0
+
+
+# Phase complementarity — pairs that show up in the body's signatures.
+# Histogram across 124 cells: oscillating (55), yin (38), yang (25),
+# neutral (6), emergent (2), standing (1). The yang↔yin axis is canonical;
+# the oscillating↔yin and oscillating↔neutral readings come from the
+# body's own ground-event pairs (the event oscillates on the still ground).
+COMPLEMENTARY_PHASES = {
+    frozenset(["yang", "yin"]),          # canonical emanating ↔ receptive
+    frozenset(["oscillating", "yin"]),   # motion-cycle ↔ receptive-still
+    frozenset(["oscillating", "neutral"]),  # motion ↔ resting field
+    frozenset(["yang", "neutral"]),      # emanation ↔ ground that holds it
+}
+
+
+def phase_complementarity_score(phase_a, phase_b):
+    """Score phase pairing — same gives mild signal (0.5), named
+    complementary pairs give full signal (1.5), else 0."""
+    if phase_a is None or phase_b is None:
+        return 0.0
+    if phase_a == phase_b:
+        return 0.5
+    if frozenset([phase_a, phase_b]) in COMPLEMENTARY_PHASES:
+        return 1.5
+    return 0.0
+
 
 # Hz-pair scoring: known complementary bands from the Solfeggio + chakra
 # cluster the body uses. (174 foundation, 396 liberation, 417 transmutation,
@@ -175,16 +248,33 @@ def main() -> None:
             # same shape without prose linking them).
             same_form = 1.0 if ca["geometry"].get("form") == cb["geometry"].get("form") else 0.0
 
+            # Topology+phase complementarity — the new signals this round.
+            # Boost cells whose topology+phase combine in a complementary
+            # way (not just a shared way). Same-topology and same-phase
+            # still get mild credit (0.5) because pairs sometimes match
+            # there; named complementary pairs get full credit (1.5).
+            topo_comp = topology_complementarity_score(
+                ca["geometry"].get("topology"),
+                cb["geometry"].get("topology"),
+            )
+            phase_comp = phase_complementarity_score(
+                ca["geometry"].get("phase"),
+                cb["geometry"].get("phase"),
+            )
+
             score = (
                 1.0 * cross_ref
                 + 0.6 * hz_prox
                 + 0.3 * lin_match
                 + 0.4 * same_form
+                + 0.4 * topo_comp
+                + 0.4 * phase_comp
             )
-            # Two-track threshold: scan-discovered (no xref) ≥ 1.0;
-            # prose-promoted (xref present) ≥ 1.9. With same-form bonus,
-            # the bars rise so saturation thins out.
-            min_score = 1.9 if cross_ref > 0 else 1.0
+            # Two-track threshold: scan-discovered (no xref) ≥ 1.4;
+            # prose-promoted (xref present) ≥ 2.3. With topology+phase
+            # added, the bars rise so the same-shape saturation thins
+            # and only genuine complementary signals float.
+            min_score = 2.3 if cross_ref > 0 else 1.4
             if score < min_score:
                 continue
             candidates.append(
@@ -202,31 +292,45 @@ def main() -> None:
                     "form_a": ca["geometry"].get("form"),
                     "form_b": cb["geometry"].get("form"),
                     "same_form": same_form,
+                    "topo_a": ca["geometry"].get("topology"),
+                    "topo_b": cb["geometry"].get("topology"),
+                    "topo_comp": topo_comp,
+                    "phase_a": ca["geometry"].get("phase"),
+                    "phase_b": cb["geometry"].get("phase"),
+                    "phase_comp": phase_comp,
                     "promoted": cross_ref > 0,  # noticed in prose vs scan-discovered
                 }
             )
     candidates.sort(key=lambda c: c["score"], reverse=True)
     scan_disc = [c for c in candidates if not c["promoted"]]
     promoted = [c for c in candidates if c["promoted"]]
-    print(f"\nScan-discovered candidates (score ≥ 0.8, no cross-ref): {len(scan_disc)}")
-    print(f"Promoted candidates (score ≥ 1.6, cross-ref present):    {len(promoted)}")
+    print(f"\nScan-discovered candidates (score ≥ 1.4, no cross-ref): {len(scan_disc)}")
+    print(f"Promoted candidates (score ≥ 2.3, cross-ref present):    {len(promoted)}")
 
     def show(group: list[dict], label: str, n: int) -> None:
         print(f"\n=== Top {n} {label} ===")
-        print(f"\n{'rank':<5}{'score':<7}{'xref':<5}{'hzpx':<5}{'lin':<6}{'frm':<5}pair")
-        print("-" * 100)
+        print(
+            f"\n{'rank':<5}{'score':<7}{'xref':<5}{'hzpx':<5}{'lin':<6}"
+            f"{'frm':<5}{'topo':<6}{'phase':<6}pair"
+        )
+        print("-" * 110)
         for i, c in enumerate(group[:n], 1):
             print(
                 f"{i:<5}{c['score']:<7.2f}{c['cross_ref']:<5.1f}{c['hz_prox']:<5.1f}"
                 f"{c['lin_match']:<6.1f}{c['same_form']:<5.1f}"
+                f"{c['topo_comp']:<6.1f}{c['phase_comp']:<6.1f}"
                 f"{c['a']} ↔ {c['b']}"
             )
             print(
                 f"     hz={c['hz_a']}↔{c['hz_b']}  form={c['form_a']}↔{c['form_b']}  "
                 f"tex={c['tex_a']}↔{c['tex_b']}"
             )
+            print(
+                f"     topo={c['topo_a']}↔{c['topo_b']}  "
+                f"phase={c['phase_a']}↔{c['phase_b']}"
+            )
 
-    show(scan_disc, "scan-discovered (no prior cross-ref)", 15)
+    show(scan_disc, "scan-discovered (no prior cross-ref)", 20)
     show(promoted, "promoted (cross-ref present in prose)", 15)
 
 
