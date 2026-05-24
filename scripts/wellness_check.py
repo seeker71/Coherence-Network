@@ -511,6 +511,7 @@ def sense_chain() -> list[str]:
     no_test_declared: list[str] = []
     orphan_specs: list[str] = []
     operational_proof: list[str] = []  # specs honoring "proof: operational"
+    duplicate_test_keys: list[str] = []  # YAML smell — two `test:` keys in one frontmatter
 
     for spec in sorted(specs_dir.glob("*.md")):
         if spec.name in ("INDEX.md", "TEMPLATE.md", "MANIFEST.md"):
@@ -544,9 +545,19 @@ def sense_chain() -> list[str]:
         proof_value = (proof_m.group(1).strip().strip('"').strip("'").lower() if proof_m else "")
         is_operational = proof_value == "operational"
 
-        # test: declaration (string or list) — extract test paths via the same regex coh_substrate uses
-        test_section_m = re.search(r"^test\s*:(.*?)(?:\n[a-z_]+\s*:|---|$)", fm, re.MULTILINE | re.DOTALL)
-        test_text = (test_section_m.group(1) if test_section_m else "")
+        # test: declaration (string or list) — extract test paths from EVERY
+        # `^test:` block. A YAML frontmatter with two `test:` keys (list form
+        # followed by scalar, or vice versa) used to break the old single-shot
+        # regex: it matched the first `test:` and stopped at the next
+        # `^[a-z_]+:` line, which `test:` itself satisfies, leaving the captured
+        # group empty. `findall` with a lookahead terminator concatenates all
+        # `test:` block bodies, and the duplicate is surfaced as a soft warning.
+        test_blocks = re.findall(
+            r"^test\s*:(.*?)(?=\n[a-z_]+\s*:|^---|\Z)", fm, re.MULTILINE | re.DOTALL
+        )
+        if len(test_blocks) > 1:
+            duplicate_test_keys.append(spec.stem)
+        test_text = "\n".join(test_blocks)
         def _resolve_test_path(p: str) -> str:
             # Already explicit: leave alone (api/tests/... or mcp-server/tests/...)
             if p.startswith("api/") or p.startswith("mcp-server/"):
@@ -604,6 +615,13 @@ def sense_chain() -> list[str]:
         lines.append(f"  {len(no_test_declared)} specs have no test: or proof: frontmatter (no proof claimed)")
     if orphan_specs:
         lines.append(f"  {len(orphan_specs)} orphan specs (no idea_id): {', '.join(orphan_specs)}")
+    if duplicate_test_keys:
+        sample = ", ".join(sorted(duplicate_test_keys)[:3])
+        more = f" (+{len(duplicate_test_keys) - 3} more)" if len(duplicate_test_keys) > 3 else ""
+        lines.append(
+            f"  {len(duplicate_test_keys)} spec(s) carry duplicate `test:` keys — "
+            f"deduplicate to one canonical form: {sample}{more}"
+        )
     if not missing_tests and not pending_tests and not no_test_declared and not orphan_specs:
         lines.append("  chain reach is whole — every claim has its proof")
     return lines
