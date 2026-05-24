@@ -2,6 +2,21 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-scan refined with topology+phase — signal/noise 40%
+
+Fourth scan round in the autoresearch loop for dyad-pair detection. The refined scoring layers topology and phase complementarity onto PR #1996's signals; the four confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3f; the six rejected become REJECT-10 through REJECT-15.
+
+- **Score function**: `1.0*cross_ref + 0.6*hz_proximity + 0.3*lineage_match + 0.4*same_form + 0.4*topology_complementarity + 0.4*phase_complementarity`. Topology and phase score 1.5 for named complementary pairs (radial↔web-each-to-each, hub-spoke↔web-each-to-each, yang↔yin, oscillating↔yin), 0.5 for same value, 0 otherwise. The complementary sets were authored from what actually appears in the body's signatures, not invented symmetries.
+- **Confirmed (4)** — folded as Pairs 16–19 in dyad-pairs.form Part 3f:
+  - `lc-vitality` ↔ `lc-w-wu-wei` (source-flow, axis: phase) — life-force-current and the alignment-posture that allows it; vitality without wu-wei becomes forcing, wu-wei without vitality becomes passivity.
+  - `lc-w-shakti` ↔ `lc-w-wu-wei` (source-flow, axis: phase) — two tongues (Tantric/Taoist) for one teaching that life-force flows when interference stops.
+  - `lc-beauty` ↔ `lc-v-ceremony` (source-flow, axis: phase) — presence-attended speaks two faces; beauty is the yang-radiating residue, ceremony is the yin-receptive act.
+  - `lc-inner-travel` ↔ `lc-relationships-as-mirrors` (membrane-crossing, axis: topology) — self-knowing through two doors; inner-travel crosses the inside-outside membrane from inside, mirrors crosses it from outside.
+- **Rejected (6)** — REJECT-10 through REJECT-15. Three patterns the scan re-surfaces: containment-not-complementarity (attuned-spaces ↔ comfort-joy), translator-hypothesis (devotion-placement ↔ spec-breath, parallel to REJECT-2), shared-shape-without-shared-substance (economy ↔ recipes-as-binary-library, parallel to REJECT-3), sibling-modes-of-attention (discovery ↔ ceremony, elders ↔ mirrors, parity ↔ tending-over-producing).
+- **The trend across all four rounds**: 40 → 0 → 40 → 40. Cumulative 10/27 = 37.0%. **The saturation finding HOLDS** at this deeper layer — topology+phase complementarity didn't break past the 40% ceiling. The geometry vocabulary saturates because the body genuinely carries many yang/yin and form-shared cell-pairs without their teachings being complementary. The scan mechanizes *candidate filter* but not *teaching-lives-in-relation* discernment.
+- **GAP-D6 update**: further geometry-tuple refinement is unlikely to climb past 40%. The next refinement direction lives outside the geometry frontmatter — prose-structural signals (shared lemma chains, shared semantic-field bags) via the WORD-domain (`BDomain.WORD = 15`, shipped 2026-05-20). The teaching-lives-in-relation discernment lives in the prose, which is what WORD-domain interns. If a prose-structural scan climbs past 50%, the next layer is honest; if it stays at 40%, the saturation is structural and the body's noticing remains the primary route.
+- **Edges in the same breath**: this LOG entry; the script update in `scripts/scan_dyad_candidates.py`; the four new Pair defns + six new REJECTs + Part 3f preamble + GAP-D6 update + Part 6 count in `docs/coherence-substrate/dyad-pairs.form`; total dyad-pair-set rises from 17 to 21.
+
 ## [2026-05-24] form | dyad-pair scan refined — Hz proximity + cross-ref + lineage + same-form; signal/noise 40%
 
 Third scan round in the autoresearch loop for dyad-pair detection. The refined scoring lives in [`scripts/scan_dyad_candidates.py`](../../scripts/scan_dyad_candidates.py); the confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3e.
