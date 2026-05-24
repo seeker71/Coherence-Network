@@ -2,7 +2,21 @@
 id: lc-gatherings-that-carry
 hz: 528
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: atemporal
+  phase: yin
+  spectral_band: integration
+  temporal_band: breath
+  scale: collective
+  direction: circulating
+  lineage_texture: sensed
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Gatherings That Carry — Naming the Difference Between Signal and Noise
