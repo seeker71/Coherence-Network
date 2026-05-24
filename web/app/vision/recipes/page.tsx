@@ -16,8 +16,11 @@ type RecipePayload = {
   source: string;
   lens: string;
   recipe: string;
+  transposedInto: string;
   impact: string;
   proof: string;
+  boundary: string;
+  nextEmbodiment: string;
   image: string;
   steps: string[];
 };
@@ -27,6 +30,19 @@ type Pairing = {
   destination: string;
   payload: string;
   impact: string;
+  card: ComposerCard;
+};
+
+type ComposerCard = {
+  source: string;
+  observed: string;
+  observerLens: string;
+  recipe: string;
+  transposedInto: string;
+  payload: string;
+  proofMode: string;
+  claimBoundary: string;
+  nextEmbodiment: string;
 };
 
 const recipeCard = [
@@ -41,16 +57,42 @@ const recipeCard = [
   "next embodiment",
 ];
 
+function recipeHref(card: ComposerCard): string {
+  const recipe = Buffer.from(JSON.stringify(card), "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `/vision/recipes?recipe=${recipe}#composer`;
+}
+
+function payloadCard(payload: RecipePayload): ComposerCard {
+  return {
+    source: payload.source,
+    observed: payload.steps.join("; "),
+    observerLens: payload.lens,
+    recipe: payload.recipe,
+    transposedInto: payload.transposedInto,
+    payload: payload.title,
+    proofMode: payload.proof,
+    claimBoundary: payload.boundary,
+    nextEmbodiment: payload.nextEmbodiment,
+  };
+}
+
 const payloads: RecipePayload[] = [
   {
     title: "The Repair Wake",
     source: "A failed deploy where a hidden dependency was trusted without a witness.",
     lens: "Reliability engineer and grief steward.",
     recipe: "rupture -> witness -> name what died -> repair smallest contract -> change one future habit",
+    transposedInto: "engineering incident review and team repair",
     impact:
       "Incident review becomes a repair ceremony with a prevention task, an explicit owner, and a seven-day return.",
     proof:
       "The same rupture does not repeat for 30 days, one contract is repaired, and blame language decreases in the review notes.",
+    boundary: "Organizational repair practice, not therapy or clinical trauma work.",
+    nextEmbodiment: "Run after the next near-miss, before the story hardens into blame.",
     image: "/visuals/network-knowledge-sharing.png",
     steps: [
       "0-5 min: timeline only",
@@ -65,10 +107,13 @@ const payloads: RecipePayload[] = [
     source: "A dance track whose arc teaches arrival, pulse, invitation, build, release, and return.",
     lens: "Product designer and dancer.",
     recipe: "arrive -> entrain -> choose -> intensify -> release -> integrate",
+    transposedInto: "first-run product onboarding",
     impact:
       "A first-time visitor leaves with one recipe they made, instead of a documentation wall they skimmed.",
     proof:
       "The visitor can explain the system in their own words, show the first card, and return to the artifact.",
+    boundary: "Design analogy; no measured entrainment claim.",
+    nextEmbodiment: "Prototype one seven-minute entry flow around a real visitor question.",
     image: "/visuals/life-song-circle.png",
     steps: [
       "Arrive: what are you tending?",
@@ -83,10 +128,13 @@ const payloads: RecipePayload[] = [
     source: "Observer and measurement teachings held as strategy metaphor, with clear claim boundaries.",
     lens: "Strategy steward and claim-boundary keeper.",
     recipe: "possibility field -> metric choice -> behavior collapse -> hidden cost -> counter-metric",
+    transposedInto: "KPI design and public impact review",
     impact:
       "A team sees what a metric will reward, hide, punish, and sacrifice before it becomes culture.",
     proof:
       "A review catches one distortion before policy changes, or the team retires a metric whose hidden cost is no longer acceptable.",
+    boundary: "Quantum and observer language are metaphor here, not physics proof.",
+    nextEmbodiment: "Run before adopting the next growth, reach, impact, or productivity metric.",
     image: "/visuals/09-field-intelligence.png",
     steps: [
       "Primary metric",
@@ -104,36 +152,102 @@ const pairings: Pairing[] = [
     destination: "Public trust architecture",
     payload: "A truth storyboard for evidence pages: wide shot for context, close-up for claim, still frame for proof.",
     impact: "Civic groups and open-source teams can show what happened without overwhelming readers with raw archives.",
+    card: {
+      source: "camera language in documentary and investigative video",
+      observed: "wide shot gives context; close-up carries claim; still frame lets proof rest long enough to inspect",
+      observerLens: "video editor + public evidence steward",
+      recipe: "establish context -> focus claim -> freeze proof -> return to whole system",
+      transposedInto: "public trust architecture for evidence pages",
+      payload: "Truth Storyboard",
+      proofMode: "readers can name the claim, inspect the evidence, and find the raw source without getting lost",
+      claimBoundary: "Story structure clarifies evidence; it does not replace the evidence.",
+      nextEmbodiment: "Use on one public proof page before adding another archive dump.",
+    },
   },
   {
     source: "Fermentation",
     destination: "Contributor onboarding",
     payload: "Starter-culture incubation: one tiny issue, one named maintainer, one warm handoff, one return after seven days.",
     impact: "New contributors become metabolized by the project instead of dropped into a queue.",
+    card: {
+      source: "fermentation as a living culture becoming stable through warmth, time, and starter matter",
+      observed: "a small viable culture needs food, a vessel, warmth, protection from contamination, and return attention",
+      observerLens: "maintainer + fermentation steward",
+      recipe: "starter -> vessel -> warmth -> feed -> return -> share culture",
+      transposedInto: "contributor onboarding",
+      payload: "Starter-Culture Onboarding",
+      proofMode: "new contributor makes one merged contribution, knows the next person to ask, and returns within seven days",
+      claimBoundary: "Metabolism is a project metaphor; contributors remain sovereign people, not culture material.",
+      nextEmbodiment: "Give the next new contributor one tiny issue and one named return witness.",
+    },
   },
   {
     source: "Martial arts kata",
     destination: "Deployment rehearsal",
     payload: "A five-move release kata: stance, environment check, dry run, witnessed deploy, recovery posture.",
     impact: "Teams build embodied release memory before the real incident pressure arrives.",
+    card: {
+      source: "martial arts kata as repeated embodied sequence under pressure",
+      observed: "stance first; breath before motion; sequence reduces panic; return posture matters after impact",
+      observerLens: "release engineer + embodied practice student",
+      recipe: "stance -> scan -> dry move -> witnessed strike -> recovery posture",
+      transposedInto: "deployment rehearsal",
+      payload: "Release Kata",
+      proofMode: "release operator can rehearse the path without prompts and can name rollback posture before deploy",
+      claimBoundary: "Embodied rehearsal supports reliability; it does not remove technical validation.",
+      nextEmbodiment: "Run before the next production deploy with one witness present.",
+    },
   },
   {
     source: "Healing intake",
     destination: "Bug triage",
     payload: "A symptom-to-system intake that asks what changed, what hurts, what still functions, and what support is needed.",
     impact: "Maintainers respond to the whole failure pattern instead of only the loudest symptom.",
+    card: {
+      source: "healing intake practices that listen for symptoms, history, capacity, and support",
+      observed: "the loud symptom is not always the root; what still works matters; support changes the treatment path",
+      observerLens: "maintainer + whole-system triage listener",
+      recipe: "symptom -> change history -> still-working organs -> support needed -> next smallest care",
+      transposedInto: "bug triage",
+      payload: "Whole-System Bug Intake",
+      proofMode: "triage captures reproduction, blast radius, working surfaces, owner, and smallest next repair",
+      claimBoundary: "Care language improves attention; software bugs are not bodies and users are not patients.",
+      nextEmbodiment: "Use on the next ambiguous bug before assigning severity.",
+    },
   },
   {
     source: "Prayer beads",
     destination: "Backlog tending",
     payload: "A review strand: touch each task once, bless, delete, delegate, defer, or do the next honest action.",
     impact: "Backlogs become circulatory systems again instead of silent storage for avoided decisions.",
+    card: {
+      source: "prayer beads as repeated tactile attention, one bead at a time",
+      observed: "attention stays with one bead; repetition calms decision noise; completion is a full strand, not a heroic push",
+      observerLens: "project steward + contemplative task tender",
+      recipe: "touch -> bless -> decide -> move one bead -> close the strand",
+      transposedInto: "backlog tending",
+      payload: "Backlog Bead Strand",
+      proofMode: "each reviewed task is deleted, delegated, deferred with date, or moved into one concrete next action",
+      claimBoundary: "This is attention design, not religious prescription.",
+      nextEmbodiment: "Walk the oldest twenty open tasks with one visible decision per task.",
+    },
   },
   {
     source: "Story as recipe",
     destination: "Climate adaptation workshops",
     payload: "A local myth-to-action map: danger, helper, threshold, sacrifice, gift, return with a public commitment.",
     impact: "Residents can move from climate anxiety into place-specific commitments that carry emotional meaning.",
+    card: {
+      source: "local story arcs where danger, helper, threshold, sacrifice, gift, and return organize courage",
+      observed: "people move when the threat has a place, the helper is named, and the return has a gift for the village",
+      observerLens: "facilitator + place-based story keeper",
+      recipe: "danger -> helper -> threshold -> sacrifice -> gift -> return with vow",
+      transposedInto: "climate adaptation workshop",
+      payload: "Local Myth-to-Action Map",
+      proofMode: "participants leave with one place-specific commitment, one helper, and one public return date",
+      claimBoundary: "Story can organize courage; it does not replace climate science, policy, or material resources.",
+      nextEmbodiment: "Run with one neighborhood around one visible climate stressor.",
+    },
   },
 ];
 
@@ -195,6 +309,13 @@ function PayloadArticle({ payload }: { payload: RecipePayload }) {
             {payload.proof}
           </p>
         </div>
+        <Link
+          href={recipeHref(payloadCard(payload))}
+          className="inline-flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-500/20"
+        >
+          Open this card
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
     </article>
   );
@@ -306,6 +427,13 @@ export default function TransmissionRecipesPage() {
               </div>
               <p className="mt-4 text-sm leading-relaxed text-stone-400">{pairing.payload}</p>
               <p className="mt-4 border-t border-stone-800/60 pt-4 text-sm leading-relaxed text-stone-500">{pairing.impact}</p>
+              <Link
+                href={recipeHref(pairing.card)}
+                className="mt-5 inline-flex items-center gap-2 rounded-lg border border-teal-500/25 bg-teal-500/10 px-4 py-2 text-sm font-medium text-teal-200 transition-colors hover:bg-teal-500/20"
+              >
+                Open card
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </article>
           ))}
         </div>
