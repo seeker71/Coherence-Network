@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 205
+**Total files**: 206
 
 | File | Purpose |
 |---|---|
@@ -134,6 +134,7 @@
 | [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |
+| [test_read_tracking_settlement_bridge.py](test_read_tracking_settlement_bridge.py) | Tests for the read → render-event bridge. |
 | [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |

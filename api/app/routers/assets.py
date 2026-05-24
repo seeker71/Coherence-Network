@@ -661,6 +661,9 @@ async def get_asset_content(
 
     if is_paid:
         try:
+            # Forward read_type + cc_amount + payment token so the read
+            # event carries the paid-tier CC. The render-event bridge in
+            # record_read uses cc_amount as the settlement pool.
             read_tracking_service.record_read(
                 asset_id=node_id,
                 reader_id=reader_id,
@@ -698,7 +701,7 @@ async def get_asset_content(
         }
         return JSONResponse(content=body, status_code=402, headers=payment_headers)
 
-    # Free tier — preview served, read recorded as "free".
+    # Free tier — preview served, read recorded as "free" (cc_amount=0).
     try:
         read_tracking_service.record_read(
             asset_id=node_id,
