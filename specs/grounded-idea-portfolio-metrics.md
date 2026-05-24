@@ -30,6 +30,14 @@ test: "cd api && python -m pytest -q tests/test_edge_cases_regression.py::test_i
 
 # Grounded Idea Portfolio Metrics
 
+## Related Specs
+
+- [`idea-lifecycle-closure`](idea-lifecycle-closure.md) — sibling in the idea-engine cluster: portfolio-metrics judges *what an idea earned*; closure judges *when it's done*. Closure reads these metrics as validation evidence.
+- [`grounded-cost-value-measurement`](grounded-cost-value-measurement.md) — sibling in the idea-engine cluster: feeds the per-task cost/value signals this spec aggregates per-idea.
+
+Surfaced by the substrate-surprise organ on 2026-05-24.
+
+
 **Idea**: `agent-grounded-idea-metrics` (sub-idea of `coherence-signal-depth`)
 **Depends on**: Spec 115 (grounded measurement), Spec 049 (runtime telemetry), Spec 048 (value lineage)
 **Integrates with**:

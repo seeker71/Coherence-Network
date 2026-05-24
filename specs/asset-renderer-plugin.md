@@ -83,6 +83,10 @@ constraints:
 
 # Spec: Pluggable Asset Renderers
 
+## Related Specs
+
+- [`story-protocol-integration`](story-protocol-integration.md) — sibling in the asset/CC lifecycle: this spec is the *rendering* face (asset format → browser display + CC split); story-protocol-integration is the *IP-and-settlement* face (asset → on-chain registration + royalty distribution). Same asset model; complementary halves of the value loop. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 The platform supports ANY digital asset format. A contributor uploads content in any format -- GLTF, PDF, MIDI, KML, CSV, custom binary -- and registers a MIME type. The platform does not need to understand the format. It only needs: (1) a renderer that can display it in the browser, and (2) an asset node in the graph with metadata.

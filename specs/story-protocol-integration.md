@@ -138,6 +138,10 @@ constraints:
 
 # Spec: Story Protocol + x402 + Arweave Integration
 
+## Related Specs
+
+- [`asset-renderer-plugin`](asset-renderer-plugin.md) — sibling in the asset/CC lifecycle: this spec is the *IP-and-settlement* face (asset → on-chain registration + royalty distribution); asset-renderer-plugin is the *rendering* face (asset format → browser display + CC split). Same asset model; complementary halves of the value loop. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Connect asset creation, content delivery, and value distribution to three external protocols: Story Protocol for IP registration and derivative royalties, x402 for HTTP-native micropayments on content reads, and Arweave/IPFS for permanent verifiable storage. Together these turn every community-contributed asset (blueprint, article, 3D model, research paper) into a registered intellectual property that earns CC when read, pays royalties when derived from, and persists permanently with cryptographic proof of integrity. Without this integration, assets live only on our server, have no on-chain provenance, and cannot participate in the broader IP economy.

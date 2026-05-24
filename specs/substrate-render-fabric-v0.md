@@ -41,6 +41,10 @@ constraints:
 
 # Spec: Substrate as Render Fabric — v0
 
+## Related Specs
+
+- [`agent-memory-system`](agent-memory-system.md) — sibling substrate-grounded service: the render-fabric binds Tracked allocations to Blueprint cells; agent-memory binds metabolized moments to relationship-nodes. Both teach *execution lands in substrate, not beside it*. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Bridge the memory-as-framebuffer crate to the existing coherence-substrate so that **render kernels are substrate Recipes**, **type identity is Blueprint hash**, **pointers are substrate cell hashes**, and **provenance is a substrate edge** rather than process-local data. Once this lands, the visualizer is no longer a tool that lives beside the program — it's a face of substrate. Two consequences immediately follow: (1) cross-language type identity (a Rust struct and a Python class with the same structural form share a Blueprint hash and render with the same kernel — register once, both languages get it); (2) the visualization grammar registers in substrate alongside concepts, ideas, and presences, so adding a custom kernel for `Tree<T>` is just adding a Recipe cell + `(Blueprint)-[:rendered_by]->(Recipe)` edge. This is the v0 of that bridge: minimal, scoped to the existing v0 primitives + the Matrix3x3 example, async-friendly so it can't degrade the framebuffer's runtime sovereignty.

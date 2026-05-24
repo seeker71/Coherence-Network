@@ -56,6 +56,10 @@ constraints:
 
 # Spec: Financial Integration -- CC Fiat Bridge
 
+## Related Specs
+
+- [`public-verification-framework`](public-verification-framework.md) — sibling trust-layer spec for the CC economy: this spec is the *fiat bridge* (CC↔USDC↔bank); public-verification-framework is the *audit chain* (every CC flow publicly recomputable, Merkle-rooted, Arweave-anchored) that off-ramp partners and regulators need to trust the CC side. Verification is what makes the bridge bankable. Surfaced by the substrate-surprise organ on 2026-05-24.
+
 ## Purpose
 
 Contributors earn CC by creating digital assets that others read. Today, CC has no exit to the real economy -- a contributor cannot pay rent with CC. This spec builds the bridge: CC converts to USDC on Base L2, USDC converts to fiat via an off-ramp partner, and fiat lands in a bank account. The reverse path (fiat to USDC to CC) lets new contributors buy into the ecosystem. Without this bridge, CC is play money. With it, CC is income.
