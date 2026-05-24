@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 202
+**Total files**: 203
 
 | File | Purpose |
 |---|---|
@@ -150,6 +150,7 @@
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |
+| [test_story_protocol_e2e.py](test_story_protocol_e2e.py) | End-to-end integration flow for the story-protocol-integration arc. |
 | [test_substrate.py](test_substrate.py) | Flow-centric tests for the coherence-substrate. |
 | [test_substrate_artifact_domain.py](test_substrate_artifact_domain.py) | Tests for the ARTIFACT domain — git-tracked files as substrate cells. |
 | [test_substrate_auto_reactive.py](test_substrate_auto_reactive.py) | Auto-firing reactive subscriptions. |
