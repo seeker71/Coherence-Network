@@ -24,14 +24,36 @@ export default function FormPlaygroundPage() {
       </nav>
 
       <header className="mb-8 space-y-4">
-        <h1 className="text-2xl font-semibold">Form playground</h1>
-        <p className="text-sm text-muted-foreground">
-          Form is the substrate's native query language. NodeIDs are first-class;
-          names are query keys, not identities. Type an expression, evaluate, and
-          the lattice answers in its own shape.
+        <p className="text-sm uppercase tracking-[0.22em] text-amber-400/80">Substrate playground</p>
+        <h1 className="text-3xl font-light tracking-tight text-stone-100 md:text-5xl">Ask the lattice one real question.</h1>
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
+          Form is the substrate's native query language. Pick a starter question, evaluate it, then change one word
+          and watch how the returned shape changes.
         </p>
 
-        <div className="rounded-xl border border-stone-800/40 bg-stone-900/30 p-4 space-y-3 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
+          Full teaching:{" "}
+          <Link
+            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#the-perception-this-opens--reading-this-as-a-human-reading-this-as-an-llm"
+            className="underline hover:text-amber-400/80"
+          >
+            The perception this opens
+          </Link>
+          {" · "}
+          Grammar:{" "}
+          <Link
+            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md"
+            className="underline hover:text-amber-400/80"
+          >
+            docs/coherence-substrate/form-language.md
+          </Link>
+        </p>
+      </header>
+
+      <FormPlayground />
+
+      <section className="mt-10 rounded-xl border border-stone-800/40 bg-stone-900/30 p-4 space-y-3 text-sm text-muted-foreground" aria-labelledby="form-perception-heading">
+        <h2 id="form-perception-heading" className="text-lg font-light text-stone-200">What the playground is showing</h2>
           <p>
             Most languages bind meaning to symbols by convention —{" "}
             <em>"tree"</em> means a plant because we agreed. Form binds meaning to{" "}
@@ -60,28 +82,7 @@ export default function FormPlaygroundPage() {
               </p>
             </div>
           </div>
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          Full teaching:{" "}
-          <Link
-            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#the-perception-this-opens--reading-this-as-a-human-reading-this-as-an-llm"
-            className="underline hover:text-amber-400/80"
-          >
-            The perception this opens
-          </Link>
-          {" · "}
-          Grammar:{" "}
-          <Link
-            href="https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md"
-            className="underline hover:text-amber-400/80"
-          >
-            docs/coherence-substrate/form-language.md
-          </Link>
-        </p>
-      </header>
-
-      <FormPlayground />
+      </section>
     </main>
   );
 }

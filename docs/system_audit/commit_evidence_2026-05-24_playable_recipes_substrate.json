@@ -1,0 +1,119 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/playable-recipes-substrate-20260524",
+  "commit_scope": "Make Transmission Recipes and the Form substrate playground more immediately playable for new visitors.",
+  "files_owned": [
+    "web/app/vision/recipes/page.tsx",
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/substrate/form/page.tsx",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-24_playable_recipes_substrate.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 scripts/context_budget.py web/app/vision/recipes/page.tsx web/app/vision/recipes/RecipeComposer.tsx web/app/substrate/form/page.tsx web/app/substrate/form/_components/FormPlayground.tsx web/components/SecondaryLayerNav.tsx web/components/site_header.tsx web/messages/en.json web/messages/de.json web/messages/es.json web/messages/id.json",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "Browser check: desktop /vision/recipes shows three-minute play path, spark buttons, starter cards, and Ask the lattice with no horizontal overflow",
+      "Browser check: desktop /substrate/form shows quest-led evaluator first, Evaluate returns a NodeID, and no horizontal overflow",
+      "Browser check: mobile 390px /vision/recipes and /substrate/form show playable controls with no horizontal overflow",
+      "API_PORT=18100 WEB_PORT=3120 ./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-24_playable_recipes_substrate.json",
+      "git diff --check"
+    ],
+    "summary": "Prompt guide, wellness, context budget, install, build, generated index refresh, desktop/mobile browser checks, and worktree web/API verification passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Browser check: https://coherencycoin.com/vision/recipes exposes the play path and spark buttons",
+      "Browser check: https://coherencycoin.com/substrate/form exposes quest-led evaluator and can evaluate a starter"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and public route validation remain pending until PR and deploy follow-through complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "db-backed-vision-hub-content",
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "playable-recipes-substrate-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "new-visitor-playability-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "frontend-implementation",
+        "browser-validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/vision/recipes/page.tsx",
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/substrate/form/page.tsx",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "npm run build",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make wellness"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-24_playable_recipes_substrate.json",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "web/app/substrate/form/page.tsx",
+    "web/app/vision/recipes/RecipeComposer.tsx",
+    "web/app/vision/recipes/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A new visitor can start from guided choices, create a recipe card, ask the substrate a starter question, evaluate it, and continue playing without reading full documentation first.",
+    "public_endpoints": [
+      "GET /vision/recipes",
+      "GET /substrate/form",
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Desktop recipes page exposes three-minute play path, starter cards, spark buttons, and lattice bridge.",
+      "Desktop Form page exposes quest-led evaluator before the teaching block.",
+      "Form starter evaluates to a NodeID result.",
+      "Mobile recipes and Form pages keep playable controls visible without horizontal overflow.",
+      "Production build confirms route and component bundles compile."
+    ]
+  }
+}
