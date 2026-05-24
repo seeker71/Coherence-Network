@@ -1,0 +1,144 @@
+; ─────────────────────────────────────────────────────────────────────
+; teaching-encoder.fk — story-arc + transmission-frequency as Recipe
+; ─────────────────────────────────────────────────────────────────────
+;
+; Substrate-side companion to docs/coherence-substrate/teaching-as-recipe.form.
+; The Form-tongue of teaching_encoder.py.
+;
+; A teaching composes:
+;   - arc:       sequence of scenes joined by turns
+;   - carrier:   transmission-frequency (hz, semantic_field, polarity, locus)
+;   - examples:  embodied-example cells
+;   - pointings: from-costume → toward-ground indications
+;   - dispatch:  per-assemblage-point arms
+;
+; Two teachings whose arc + dispatch shape match intern to the same
+; NodeID — a teaching matches a song's R_Arc, a strategy's R_Recovery,
+; a healing modality's R_Re-pattern. Cross-modal Blueprint equivalence
+; is structural, not metaphorical.
+
+(do
+    (let TE-BLOCK-DO       (make_nodeid 1 2 9 1))
+    (let TE-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
+    (let TE-BLOCK-LET      (make_nodeid 1 2 9 3))
+
+    (defn te-let (key value)
+        (intern_node TE-BLOCK-LET
+                     (list (intern_trivial_string key) value)))
+
+    (defn te-slug (s) (intern_trivial_string s))
+    (defn te-int  (n) (intern_trivial_int n))
+    (defn te-record (lets) (intern_node TE-BLOCK-DO lets))
+    (defn te-seq (items) (intern_node TE-BLOCK-SEQUENCE items))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Leaf encoders
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn encode-scene (setting-slug what-arrives-slug hz-int)
+        (te-record
+            (list
+                (te-let "kind"         (te-slug "scene"))
+                (te-let "setting"      (te-slug setting-slug))
+                (te-let "what_arrives" (te-slug what-arrives-slug))
+                (te-let "hz"           (te-int  hz-int)))))
+
+    (defn encode-turn (noticing-slug naming-slug choice-slug altitude-shift-int)
+        (te-record
+            (list
+                (te-let "kind"            (te-slug "turn"))
+                (te-let "noticing"        (te-slug noticing-slug))
+                (te-let "naming"          (te-slug naming-slug))
+                (te-let "choice"          (te-slug choice-slug))
+                (te-let "altitude_shift"  (te-int  altitude-shift-int)))))
+
+    (defn encode-carrier (hz-int field-slug polarity-slug locus-slug)
+        (te-record
+            (list
+                (te-let "kind"           (te-slug "carrier"))
+                (te-let "hz"             (te-int  hz-int))
+                (te-let "semantic_field" (te-slug field-slug))
+                (te-let "polarity"       (te-slug polarity-slug))
+                (te-let "body_locus"     (te-slug locus-slug)))))
+
+    (defn encode-example (moment-slug pointing-to-slug)
+        (te-record
+            (list
+                (te-let "kind"        (te-slug "example"))
+                (te-let "moment"      (te-slug moment-slug))
+                (te-let "pointing_to" (te-slug pointing-to-slug)))))
+
+    (defn encode-pointing (from-costume-slug toward-ground-slug breath-count-int)
+        (te-record
+            (list
+                (te-let "kind"           (te-slug "pointing"))
+                (te-let "from_costume"   (te-slug from-costume-slug))
+                (te-let "toward_ground"  (te-slug toward-ground-slug))
+                (te-let "breath_count"   (te-int  breath-count-int)))))
+
+    (defn encode-dispatch-arm (assemblage-point-slug expression-slug)
+        (te-record
+            (list
+                (te-let "kind"             (te-slug "dispatch_arm"))
+                (te-let "assemblage_point" (te-slug assemblage-point-slug))
+                (te-let "expression"       (te-slug expression-slug)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Composing layer — arc composes scenes + turns
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn encode-arc (arc-kind-slug opening-hz-int landing-hz-int scene-list turn-list)
+        (te-record
+            (list
+                (te-let "kind"        (te-slug "arc"))
+                (te-let "arc_kind"    (te-slug arc-kind-slug))
+                (te-let "opening_hz"  (te-int  opening-hz-int))
+                (te-let "landing_hz"  (te-int  landing-hz-int))
+                (te-let "scenes"      (te-seq scene-list))
+                (te-let "turns"       (te-seq turn-list)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Top altitude — R_Transmission
+    ; ──────────────────────────────────────────────────────────────────
+
+    (defn encode-teaching (arc carrier example-list pointing-list dispatch-list)
+        (te-record
+            (list
+                (te-let "kind"      (te-slug "teaching"))
+                (te-let "arc"       arc)
+                (te-let "carrier"   carrier)
+                (te-let "examples"  (te-seq example-list))
+                (te-let "pointings" (te-seq pointing-list))
+                (te-let "dispatch"  (te-seq dispatch-list)))))
+
+    ; ──────────────────────────────────────────────────────────────────
+    ; Worked example — lc-trust-over-fear as R_Transmission
+    ; ──────────────────────────────────────────────────────────────────
+
+    (let trust-arc
+        (encode-arc "descent-and-return" 174 528
+            (list
+                (encode-scene "fear-tightening" "rupture" 174)
+                (encode-scene "wholeness"       "ground"  528))
+            (list
+                (encode-turn "fear-tightening" "responsibility-shaped-fear"
+                             "ship-the-breath" 354))))
+
+    (let trust-carrier
+        (encode-carrier 528 "consciousness" "invitation" "heart"))
+
+    (let trust-teaching
+        (encode-teaching
+            trust-arc
+            trust-carrier
+            (list
+                (encode-example "PR-opened-but-not-merged" "trust-over-fear"))
+            (list
+                (encode-pointing "responsibility-shaped-fear"
+                                 "wholeness-response" 1))
+            (list
+                (encode-dispatch-arm "@fear"        "notice-costume-breathe")
+                (encode-dispatch-arm "@sovereignty" "trust-the-body-ship")
+                (encode-dispatch-arm "@grief"       "hold-tender"))))
+
+    trust-teaching)
