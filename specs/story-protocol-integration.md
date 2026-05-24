@@ -14,7 +14,19 @@ source:
   - file: api/app/services/read_tracking_service.py
     symbols: [record_read(), get_daily_aggregates(), compute_cc_flow()]
   - file: api/app/services/settlement_service.py
-    symbols: [run_daily_settlement(), compute_concept_distribution(), settle_batch()]
+    symbols: [run_daily_settlement(), compute_concept_distribution()]
+# Evolution note (2026-05-24): the original spec named a third symbol
+# `settle_batch()` as a per-batch entry-point distinct from the daily
+# aggregator. During implementation the contract collapsed —
+# `run_daily_settlement()` carries the full path (filter events by
+# date, group by asset, apply evidence multiplier, split by concept
+# weight, return frozen `SettlementBatch`). The router calls it once
+# per `POST /api/settlement/run`; there is no remaining role for a
+# separate sub-batch primitive. Storage and retrieval live in the
+# sibling helpers `store_batch` / `get_batch` / `list_batches`. If a
+# finer-grained batching contract returns (e.g. hourly rollups,
+# concept-pool-only settlements), it wants a new spec rather than
+# reviving this name.
   - file: api/app/services/evidence_service.py
     symbols: [submit_evidence(), verify_evidence(), compute_evidence_bonus()]
   - file: api/app/services/value_lineage_service.py
@@ -26,7 +38,12 @@ source:
   - file: api/app/services/belief_service.py
     symbols: [get_belief_profile()]
   - file: api/app/routers/settlement.py
-    symbols: [trigger_settlement(), get_settlement_status()]
+    symbols: [run_settlement(), get_settlement()]
+# Evolution note (2026-05-24): handler names follow the URL pattern
+# they serve — `run_settlement` for `POST /api/settlement/run`,
+# `get_settlement` for `GET /api/settlement/{date}`. Original spec
+# proposed `trigger_settlement` / `get_settlement_status` before the
+# routes were finalized; the URL-aligned names landed instead.
   - file: api/app/routers/evidence.py
     symbols: [submit_evidence(), list_evidence()]
   - file: api/app/models/settlement.py
@@ -83,7 +100,6 @@ done_when:
   - 'file_exists("api/app/services/settlement_service.py")'
   - 'symbol_in_file("api/app/services/settlement_service.py", "run_daily_settlement")'
   - 'symbol_in_file("api/app/services/settlement_service.py", "compute_concept_distribution")'
-  - 'symbol_in_file("api/app/services/settlement_service.py", "settle_batch")'
   - 'file_exists("api/app/services/evidence_service.py")'
   - 'symbol_in_file("api/app/services/evidence_service.py", "submit_evidence")'
   - 'symbol_in_file("api/app/services/evidence_service.py", "verify_evidence")'
@@ -98,8 +114,8 @@ done_when:
   - 'file_exists("api/app/services/belief_service.py")'
   - 'symbol_in_file("api/app/services/belief_service.py", "get_belief_profile")'
   - 'file_exists("api/app/routers/settlement.py")'
-  - 'symbol_in_file("api/app/routers/settlement.py", "trigger_settlement")'
-  - 'symbol_in_file("api/app/routers/settlement.py", "get_settlement_status")'
+  - 'symbol_in_file("api/app/routers/settlement.py", "run_settlement")'
+  - 'symbol_in_file("api/app/routers/settlement.py", "get_settlement")'
   - 'file_exists("api/app/routers/evidence.py")'
   - 'symbol_in_file("api/app/routers/evidence.py", "submit_evidence")'
   - 'symbol_in_file("api/app/routers/evidence.py", "list_evidence")'

@@ -32,7 +32,7 @@ def _filter_events_by_date(
     return [e for e in events if e.timestamp.date() == batch_date]
 
 
-def _compute_concept_pools(
+def compute_concept_distribution(
     total_cc: Decimal,
     tags: List[AssetConceptTag],
 ) -> List[ConceptPool]:
@@ -41,6 +41,10 @@ def _compute_concept_pools(
     Weights are scaled so the pool sums to total_cc even if the raw
     weights don't sum to 1.0. If an asset has no tags, a single
     'uncategorized' pool carries the full amount.
+
+    Public surface named in story-protocol-integration spec source: map
+    so other services (or settlement-adjacent flows like derivative
+    royalty distribution) can reuse the same concept-weighted split.
     """
     if total_cc == 0:
         return []
@@ -97,7 +101,7 @@ def run_daily_settlement(
         renderer_creator_share = base_renderer * multiplier
         host_node_share = base_host * multiplier
 
-        concept_pools = _compute_concept_pools(
+        concept_pools = compute_concept_distribution(
             asset_creator_share,
             list(asset_concept_tags.get(asset_id, [])),
         )
