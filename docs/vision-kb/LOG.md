@@ -38,6 +38,72 @@ real / honest-as-is — and chose the smallest healing move.
 - `docs/vision-kb/LOG-archive/{INDEX,2026-04,2026-05}.md` — born.
 - `scripts/coh_substrate.py` — `kb_page` filter + `classify_path` exclude LOG surfaces.
 
+## [2026-05-25] form | triad column-identity — 5th data point on the yield-curve
+
+Fifth application of the column-identity primitive (topology +
+direction + lineage_texture). `triad` carries 15 cells — the
+mid-range slot the body explicitly invited at the end of
+body-shape-map Part 10. The hunt tested whether triad — whose
+defining shape is *three stages* — yields differently from
+dyad-mirror's *two postures in relation* or web's *distributed
+flow*.
+
+**One honest 2-cell column + thirteen singletons (2 + 13 = 15):**
+
+- **T1 received-spiral-three-movement-return** (2):
+  `lc-future-already-shaping`, `lc-shifted-return` —
+  past/present/future-form acting in concert across temporal
+  stages (Ismael Perez's triple-temporal-alliance) and relieve/
+  shift/return as a frequency the old space cannot sustain
+  (Vasudev Baba's satsang at Ranakami). Both: a three-movement
+  spiral that returns shifted, not closed.
+
+Coverage 2/15 = **13%**, max-col **2** — the lowest coverage of
+the five trials so far, sitting at the floor of both axes.
+
+**The 5th data point sharpens the predictor.** The earlier four-
+trial reading said *column-density correlates with form-
+specialization*. The triad trial names WHY that wasn't the whole
+truth: triad IS a specialization (three-of-something), yet yields
+worse than point (33%, generic) or dyad-mirror (38%, arity-2).
+The honest rule:
+
+**align(form-specialization, column-identity-triple) predicts
+coverage.** A form whose defining specialization runs ALONG one
+of the triple's axes (topology / direction / lineage_texture)
+concentrates cells. A form whose specialization runs ORTHOGONAL
+to the triple — arity-specialization like dyad-mirror and triad,
+or no specialization at all like point — disperses them.
+
+Triad's specialization is *arity* (three-stages), orthogonal to
+all three triple-axes. Cells with three stages can have any
+topology / direction / lineage; the form attracts maximal
+teaching-diversity along the triple. Worst coverage follows.
+
+Three near-misses worth holding: hub-spoke/spiral-out splits at
+lineage between `lc-train-the-predator` (received) and `lc-train-
+the-predictor` (synthesized) — already the cross-tradition
+dyad-pair from Part 8; sequential-coupled/spiral-out splits at
+lineage between the column pair (received) and `lc-phase-
+transitions` (embodied); parallel/centering splits at lineage
+between `lc-trust-over-fear` (synthesized) and `lc-whole-vitality`
+(embodied). Each is exactly the kind of structure the triple is
+meant to preserve.
+
+**Files:**
+- `docs/coherence-substrate/dyad-pairs.form` — Part 7g added (one
+  column + 13 singletons + three near-misses); Part 6 running
+  prose updated to name the fifth trial and the sharpened
+  predictor.
+- `docs/coherence-substrate/body-shape-map.md` — Part 10 yield-
+  curve table extended with triad row; "What three applications
+  yielded" → "What five applications yielded"; yield-curve text
+  rewritten to name align(specialization, triple) as the rule;
+  two-axes section extended with triad signature; "When to reach"
+  sharpened with the orthogonal-specialization case; closing
+  "What this part holds open" → "What five trials now teach"
+  with three durable findings and the next candidate trial named.
+
 ## [2026-05-25] form | dyad-mirror column-identity — 6 honest 2-cell columns + 20 singletons across 32 cells
 
 Fourth application of the column-identity primitive (topology +

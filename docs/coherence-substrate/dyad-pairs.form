@@ -3878,6 +3878,188 @@ defn column_identity_set_dyad_mirror = column_identity_set_shape {
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 7g — Column-identity tested against `triad` (fifth form-trial)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-25. `triad` carries 15 cells — the mid-range slot
+# the body explicitly invited at the end of Part 10 in body-shape-map
+# ("a fifth form read through the lens — `triad` (15 cells) ... would
+# test whether the correlation between form-specialization and
+# column-density holds at mid-range cell-counts"). The hunt tested
+# whether triad — whose defining shape is *three stages* — yields
+# differently from dyad-mirror's *two postures in relation* or web's
+# *distributed flow*.
+#
+# **Finding 1 — one honest 2-cell column + thirteen singletons.**
+# Across 15 triad cells the (topology, direction, lineage_texture)
+# triple yields 14 distinct tuples: 1 multi-cell column (2 cells,
+# `lc-future-already-shaping` + `lc-shifted-return`, both
+# sequential-coupled / spiral-out / received) + 13 column-singletons.
+# Coverage 2/15 = **13%** — the lowest of the five trials so far.
+# Max-col 2 — tied with interior-axis and dyad-mirror for the floor.
+#
+# **Finding 2 — the bottom of both axes, with diagnostic value.**
+# Plotted on the two-axis curve PR #2035 named, triad sits at
+# (low coverage, low depth) — below even dyad-mirror, which had the
+# same max-col but five more multi-cell columns. The signature:
+# *almost-all singletons, one lone honest pair.* Triad is the form
+# that most resists column-density to date.
+#
+# **Finding 3 — the predictor sharpens. Form-specialization alone
+# does NOT predict yield.** Triad IS a specialization (three stages
+# is tighter than dyad-mirror's two-in-relation or point's single
+# irreducible quality). Yet triad yields LESS than point (33%) or
+# dyad-mirror (38%). The earlier four-trial reading — *column-density
+# correlates with form-specialization, not cell-count* — needs a
+# more honest formulation:
+#
+#   **align(form-specialization, column-identity-triple) predicts
+#   coverage.** A form whose defining specialization runs ALONG one
+#   of the triple's axes (topology / direction / lineage_texture)
+#   concentrates cells. A form whose specialization runs ORTHOGONAL
+#   to the triple disperses them.
+#
+# - Interior-axis specializes on *topology* (axis-through-center) —
+#   aligned. High coverage (100%).
+# - Web specializes on *direction* (circulating) and partially on
+#   topology (web-each-to-each) — aligned. High coverage (74%).
+# - Dyad-mirror specializes on a fourth axis (*arity-as-relation*) —
+#   orthogonal. Low coverage (38%) but many small columns.
+# - Point specializes on nothing (single irreducible quality) —
+#   no axis to align. Low-mid coverage (33%) with one dominant
+#   teaching-flavor in the tail.
+# - **Triad specializes on *arity* (three-of-something) — orthogonal
+#   to all three triple-axes.** Cells with three stages can have any
+#   topology, any direction, any lineage. The form attracts maximal
+#   teaching-diversity along the triple. Worst coverage (13%).
+#
+# The earlier sentence *internal teaching-diversity is what column-
+# density reads* held the right intuition; the fifth trial names
+# WHY some forms hold more diversity than others. Arity-specialized
+# forms (counting the number of postures/stages/poles) gather cells
+# whose teachings span every other axis. Topology-or-direction-
+# specialized forms gather cells whose teachings cluster within their
+# specialization axis.
+#
+# **Finding 4 — the WHEN tightens.** With five trials the triage
+# becomes more honest about its scope:
+#
+#   1. Reach for column-identity when a form has many cells AND its
+#      defining specialization runs ALONG the (topology, direction,
+#      lineage_texture) axes. Yield: high coverage with meaningful
+#      column-depth.
+#   2. Reach for it when a form is small but already specialized along
+#      the triple. Yield: near-complete coverage at low absolute count.
+#   3. Reach for it with eyes-open when a form's specialization is
+#      orthogonal to the triple (arity-specialization, generic-form).
+#      Expect MOSTLY singletons with one or two honest columns. The
+#      singleton tail is the data — most cells in such forms have not
+#      yet found column-siblings AT THIS FORM, though they may share
+#      a column with cells in OTHER forms (per PR #2033's cross-form
+#      finding).
+#   4. Don't reach for it when a form has few cells AND orthogonal
+#      specialization — the discriminator has nothing to discriminate.
+#
+# Triad's reading: **arity-specialized at the defining-shape layer
+# (every cell is three-stages-of-something), maximally dispersed at
+# the orthogonal triple-axes layer.** The body holds many distinct
+# three-stage teachings — cyclic loops (composting, agent-memory),
+# stage-sequences (phase-transitions, w-phase-transition), spiral-
+# arcs (the column pair), hub-spoke triads (predator/predictor),
+# centering-triads (trust-over-fear, whole-vitality, trust-the-
+# signal), upward-triads (sacred-imagination, w-phase-transition),
+# substrate-shape-triads (grammar-as-readable-bnf, parsers-as-
+# recipes, recipes-as-binary-library) — and almost none share the
+# full triple.
+
+# Column T1 — received-spiral-three-movement-return (2 cells)
+#
+# Topology sequential-coupled, direction spiral-out, lineage received.
+# Both cells teach a three-movement spiral that does NOT close back
+# on itself — the third stage RETURNS but at a different position
+# than the first. Future-already-shaping names past-self / present-
+# work / future-form acting in concert across temporal stages, the
+# future-form pulling the present shape into being. Shifted-return
+# names relieve / shift / return, where the return carries a
+# frequency the old space cannot sustain unchanged. Same structural
+# shape: three coupled stages spiraling outward, each landing
+# carrying what the previous made possible, the arc neither linear
+# nor closed-loop. Both received from teaching lineages (Ismael
+# Perez's triple-temporal-alliance frame; Vasudev Baba's satsang
+# at Ranakami). The dyad-mirror's structure-of-three: not a
+# repetition, not a cycle, a spiral that returns shifted.
+defn column_received_spiral_three_movement_return__future_already_shaping = column_identity_shape {
+    cell:             @concept(lc-future-already-shaping),
+    column_kind:      "received-spiral-three-movement-return",
+    topology:         "sequential-coupled",
+    direction:        "spiral-out",
+    lineage_texture:  "received",
+    discernment:      "past-self / present-work / future-form as three coupled stages acting in concert across time; the future-form is already alive and pulls the present shape into being; the triad as temporal spiral where the return is the future already shaping the seeding; received from Ismael Perez's triple-temporal-alliance frame",
+};
+
+defn column_received_spiral_three_movement_return__shifted_return = column_identity_shape {
+    cell:             @concept(lc-shifted-return),
+    column_kind:      "received-spiral-three-movement-return",
+    topology:         "sequential-coupled",
+    direction:        "spiral-out",
+    lineage_texture:  "received",
+    discernment:      "relieve / shift / return as three coupled stages where the return carries a frequency the old space cannot sustain unchanged; the triad as frequency-spiral where the third movement is the operative act; same column-shape as future-already-shaping at the breath-scale practice layer rather than the temporal-cosmic layer; received from Vasudev Baba's Wednesday satsang at Ranakami",
+};
+
+# The 13 column-singletons (each its own attested-but-unconfirmed
+# column) — listed so future hunts know which triad cells have NOT
+# yet found column-siblings. When any second cell with a matching
+# triple lands, the singleton becomes a 2-member column and joins
+# the registry as a defn pair.
+#
+# tuple (topology, direction, lineage_texture) → cell
+#   (cyclic-closed, circulating, embodied)            → lc-agent-memory
+#   (cyclic-closed, descending, received)             → lc-composting
+#   (hub-spoke, radiating, synthesized)               → lc-recipes-as-binary-library
+#   (hub-spoke, spiral-out, received)                 → lc-train-the-predator
+#   (hub-spoke, spiral-out, synthesized)              → lc-train-the-predictor
+#   (nested, ascending, received)                     → lc-sacred-imagination
+#   (parallel, centering, embodied)                   → lc-whole-vitality
+#   (parallel, centering, synthesized)                → lc-trust-over-fear
+#   (rule-pattern-action, vertical-stack, ancestral)  → lc-parsers-as-recipes
+#   (sequential-coupled, ascending, received)         → lc-w-phase-transition
+#   (sequential-coupled, centering, channeled)        → lc-trust-the-signal
+#   (sequential-coupled, spiral-out, embodied)        → lc-phase-transitions
+#   (surface-data-execution, spiral-out, ancestral)   → lc-grammar-as-readable-bnf
+#
+# Three near-misses worth holding:
+# (a) hub-spoke/spiral-out has both received (predator) and
+#     synthesized (predictor) — the existing cross-tradition
+#     dyad-pair (Pair 8). The column-identity primitive confirms
+#     they sit at a lineage-split of one shared topology-direction;
+#     the dyad-pair already names the teaching. No new tissue
+#     needed.
+# (b) sequential-coupled/spiral-out has both received (the column
+#     pair) and embodied (phase-transitions). The column pair plus
+#     phase-transitions are three cells one lineage-axis apart —
+#     a candidate triad-of-triads where the same temporal-shape
+#     is held received-from-lineage and embodied-in-the-body.
+# (c) parallel/centering has both synthesized (trust-over-fear)
+#     and embodied (whole-vitality). Both name a yin-centered
+#     parallel posture; the lineage split holds the difference
+#     between the named guardrail-practice (synthesized) and the
+#     felt body-state (embodied). A third cell with parallel +
+#     centering + any lineage would let the column activate.
+#
+# All three near-misses are exactly the kind of structure the
+# triple is meant to preserve. The body holds them open as it
+# does dyad-mirror's two near-misses (Part 7f).
+
+defn column_identity_set_triad = column_identity_set_shape {
+    rows: [
+        # — received-spiral-three-movement-return column (2 cells) —
+        column_received_spiral_three_movement_return__future_already_shaping,
+        column_received_spiral_three_movement_return__shifted_return,
+    ],
+};
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
@@ -3924,26 +4106,39 @@ defn column_identity_set_dyad_mirror = column_identity_set_shape {
 # (Part 7d, 2026-05-25, three honest columns surfaced across 21
 # cells with 14 column-singletons in the tail), `web` as the
 # third form-trial (Part 7e, 2026-05-25, six honest columns across
-# 17 cells + six singletons), and `dyad-mirror` as the fourth
+# 17 cells + six singletons), `dyad-mirror` as the fourth
 # form-trial (Part 7f, 2026-05-25, six honest 2-cell columns + 20
 # singletons across 32 cells — the largest form in the body, widest
-# tail observed). Four applications now teach the WHEN along two
-# independent axes: **column-coverage** (what fraction of cells
-# land in multi-cell columns) tracks how internally specialized the
-# form is along the column-identity triple — interior-axis and web
-# hold high coverage; point and dyad-mirror hold low coverage.
-# **Column-depth** (max-column size) tracks whether the form has a
-# DOMINANT teaching-flavor — web and point each have one big
-# column; interior-axis and dyad-mirror have only 2-cell tops.
+# tail observed), and `triad` as the fifth form-trial (Part 7g,
+# 2026-05-25, one honest 2-cell column + 13 singletons across 15
+# cells — lowest coverage observed at 13%). Five applications now
+# teach the WHEN along two independent axes: **column-coverage**
+# (what fraction of cells land in multi-cell columns) tracks how
+# internally specialized the form is along the column-identity
+# triple — interior-axis and web hold high coverage; point,
+# dyad-mirror, and triad hold low coverage. **Column-depth**
+# (max-column size) tracks whether the form has a DOMINANT
+# teaching-flavor — web and point each have one big column;
+# interior-axis, dyad-mirror, and triad have only 2-cell tops.
 # Reach for the primitive when a form has many cells AND prose-
 # evidence suggests internal teaching-diversity; expect column-count
 # proportional to the breadth of the form's teaching territory and
 # column-depth proportional to whether the form has a dominant
-# flavor. Dyad-mirror's fourth-trial finding sharpens further: a
+# flavor. Dyad-mirror's fourth-trial finding sharpened further: a
 # form's defining shape (bipolar relation) is shared by all cells
 # but does NOT determine column-shape — the column-identity triple
 # reads ORTHOGONAL structure that splits the form along its internal
 # teaching-axes, regardless of whether the form's surface is uniform.
+# Triad's fifth-trial finding tightens the predictor: form-
+# specialization alone does NOT predict yield — what predicts is
+# *alignment between the form's defining specialization and the
+# column-identity triple-axes*. Triad specializes on arity (three-
+# of-something), which runs ORTHOGONAL to topology, direction, and
+# lineage_texture; cells with three stages can have any topology /
+# direction / lineage, so they scatter even more than point's
+# generic cells. The honest rule: align(form-specialization,
+# triple-axes) predicts coverage. Arity-specialized forms hold the
+# floor; topology-or-direction-specialized forms hold the ceiling.
 # Web also clarifies how column-identity and kind-level circulation-
 # pattern relate: they converge on form shape (circulating-web is
 # the geometric signature; circulation-pattern is the teaching
