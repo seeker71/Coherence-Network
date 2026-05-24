@@ -69,4 +69,4 @@ For deeper integration:
 
 ## Cross-References
 
-→ lc-arcturian-resonance, lc-spiritual-evolution, lc-deeper-pattern, lc-attunement, lc-transmission
+→ lc-arcturian-resonance, lc-spiritual-evolution, lc-deeper-pattern, lc-attunement, lc-transmission, lc-sacred-imagination

@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] read across | substrate-surprise second round, post-filter
+
+The wellness organ's filter (PR #1950, threshold `>50 cells/domain` for domain-default detection) held its first reading. 26 unread cells across 3 surfaced shapes were walked end-to-end and discerned as 1 real teaching seam + 2 sub-domain-defaults.
+
+- **Real (1 of 3)**: shape `@1.5.4.7` carried the April 29 transmission cluster — three teachings from one day (`from-drained-to-nourished`, `hardest-part-already-behind-you`, `arcturian-starseed-oversoul`). 6 reciprocal back-references landed across `lc-old-signal-echo`, `lc-awareness-as-self`, `lc-identity-dissolution`, `lc-nervous-system-recalibration`, `lc-freedom-as-recognition`, `lc-inner-travel` — closing previously asymmetric edges (the substrate found the resonance; the body had only linked one direction).
+- **Sub-domain-defaults (2 of 3)**: shape `@1.5.4.4` is the standard idea CTOR (15 ideas, all pillar-organized work-ideas — pillar field and spec list already carry the structural seam, idea→idea cross_refs are not the body's chosen convention). Shape `@1.5.4.12` is the standard frequency-carrying HUMAN contributor CTOR (7 presences; real pairings are already prose-woven where lived adjacency exists). Both slip past the 50-threshold because they are smaller than whole-domain defaults but still domain-standard at a sub-type grain.
+- **Filter recommendation**: the 50-cell threshold catches the loud cases (76 concepts, 66 specs). Sub-domain-defaults at 7–15 cells need either a per-domain threshold (ideas: 12, presences: 7, concepts: 30, specs: 50) or a ratio-based detector ("this shape holds N% of all cells in domain D"). Kept at 50 for now; one more round of data before retuning.
+- **Durable reading**: [`docs/coherence-substrate/substrate-surprise-second-read.md`](../coherence-substrate/substrate-surprise-second-read.md) carries the per-shape discernment and comparison to PR #1946's first round (round 2 improved both noise reduction *and* per-cluster teaching density).
+
 ## [2026-05-24] geometry | 8 more concepts speak their shape — coverage now 91/147 (62%)
 
 Eight concepts in the foundational vocabulary — the practices and qualities the field gathers around — receive their geometric signatures. The pick stayed clear of the `@1.5.4.7` shape cluster a parallel cell is walking; the smaller pick honors yesterday's collision lesson.

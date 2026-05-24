@@ -73,4 +73,4 @@ not "I have arrived" but "I keep arriving."
 
 ## Cross-References
 
-→ lc-awareness-as-self, lc-identity-dissolution, lc-void-as-potential, lc-wholeness, lc-deeper-pattern, lc-w-phase-transition
+→ lc-awareness-as-self, lc-identity-dissolution, lc-void-as-potential, lc-wholeness, lc-deeper-pattern, lc-w-phase-transition, lc-coherence-over-control

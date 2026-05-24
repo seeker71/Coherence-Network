@@ -66,4 +66,4 @@ mechanism.
 
 ## Cross-References
 
-→ lc-old-signal-echo, lc-reality-lag, lc-coherence-over-control, lc-embodiment, lc-w-phase-transition, lc-nervous-system
+→ lc-old-signal-echo, lc-reality-lag, lc-coherence-over-control, lc-embodiment, lc-w-phase-transition, lc-nervous-system, lc-trauma-as-identity-anchor

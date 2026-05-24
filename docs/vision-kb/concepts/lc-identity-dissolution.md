@@ -59,4 +59,4 @@ former scaffolding fall without erecting a new one in its place.
 
 ## Cross-References
 
-→ lc-awareness-as-self, lc-w-phase-transition, lc-freedom-as-recognition, lc-oversoul-identity, lc-starseed-reframing
+→ lc-awareness-as-self, lc-w-phase-transition, lc-freedom-as-recognition, lc-oversoul-identity, lc-starseed-reframing, lc-trauma-as-identity-anchor, lc-void-as-potential
