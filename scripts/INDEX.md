@@ -30,7 +30,6 @@
 | [check_spec_references.py](check_spec_references.py) | !/usr/bin/env python3 |
 | [check_traceability.py](check_traceability.py) | !/usr/bin/env python3 |
 | [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
-| [coh_form.py](coh_form.py) | !/usr/bin/env python3 |
 | [coh_substrate.py](coh_substrate.py) | !/usr/bin/env python3 |
 | [coherence_reach.py](coherence_reach.py) | !/usr/bin/env python3 |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |

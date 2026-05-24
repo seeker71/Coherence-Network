@@ -3,11 +3,10 @@
 ; ─────────────────────────────────────────────────────────────────────
 ;
 ; Substrate-side companion to docs/coherence-substrate/song-as-recipe.form.
-; Pure recipe-building in Form's tongue. The Python file
-; api/app/services/substrate/song_encoder.py is the runtime boot —
-; this file is the canon.
+; Pure recipe-building in Form's tongue. The Go kernel walks this
+; directly.
 ;
-; Input shape (as a recipe of nested DO/LET pairs, NOT a Python dict):
+; Input shape — a recipe of nested DO/LET pairs:
 ;
 ;   song:
 ;     R_Block.DO
