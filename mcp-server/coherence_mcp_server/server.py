@@ -458,6 +458,104 @@ TOOLS: list[Tool] = [
         description="List federated nodes and their capabilities.",
         inputSchema={"type": "object", "properties": {}},
     ),
+    # Federation — sovereign-instance discovery (read-only windows onto
+    # what this instance carries and what it has observed about peers).
+    # Mirrors the federation tissue shipped in PRs #1974, #1975, #1976.
+    # Write paths (mirror-asset, read-attribution, settlement-share,
+    # sign-capability) are deliberately not exposed — those are state
+    # changes that warrant explicit HTTP-level intent.
+    Tool(
+        name="coherence_federation_self_pulse",
+        description=(
+            "Return THIS instance's current breath state — wraps "
+            "GET /api/pulse/self. Output: {overall, organs, uptime, "
+            "ongoing_silences, instance_id, observed_at}. Use to ask "
+            "'what is this instance breathing right now?' from any "
+            "agent surface without composing the HTTP call. Example: "
+            "coherence_federation_self_pulse() → {overall: 'breathing', "
+            "organs: [...], ...}."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_federation_peer_pulses",
+        description=(
+            "Return the most-recent pulse observed from each peer this "
+            "instance watches — wraps GET /api/pulse/peers. Output: "
+            "{instance_id, peers: [{instance_id, pulse, observed_at}], "
+            "count}. Each instance decides which peers to watch; this "
+            "endpoint reads local observations and never makes outbound "
+            "calls. Example: coherence_federation_peer_pulses() → "
+            "{instance_id: 'self', peers: [...], count: 3}."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_federation_self_capabilities",
+        description=(
+            "Return THIS instance's self-declared capability manifest — "
+            "wraps GET /api/federation/capabilities/self. Output: "
+            "{instance_id, truth_source: 'self', providers, languages, "
+            "substrate_canonicals, economics, ...}. Each field's "
+            "source-of-truth is this instance; peers may carry different "
+            "shapes and that diversity is the point. Example: "
+            "coherence_federation_self_capabilities() → manifest dict."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_federation_substrate_alignment",
+        description=(
+            "Return per-shape substrate attestations this instance holds "
+            "about a named peer — wraps "
+            "GET /api/federation/substrate/attestations/{peer_id}. "
+            "Output: {peer_instance_id, attestations: [{canonical_name, "
+            "alignment, peer_content_hash, local_content_hash, "
+            "observed_at}], count}. A witness record — this instance's "
+            "view of the peer at moments exchanges happened, not "
+            "authoritative about the peer's current state. Example: "
+            "coherence_federation_substrate_alignment(peer_id='node-b')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["peer_id"],
+            "properties": {
+                "peer_id": {
+                    "type": "string",
+                    "description": (
+                        "Peer instance ID to read attestations about, "
+                        "e.g. 'node-b' or a UUID-shaped identifier."
+                    ),
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_federation_substrate_canonicals",
+        description=(
+            "Return THIS instance's interned canonical recipe-shape "
+            "inventory with content-hashes — wraps "
+            "GET /api/federation/substrate/canonicals. Output: "
+            "{instance_id, canonicals: [{canonical_name, content_hash, "
+            "role_slots, interned}], count}. Public structural tissue; "
+            "content-hashes are deterministic from declaration so peers "
+            "can compare structural intent without merging lattices. "
+            "Example: coherence_federation_substrate_canonicals()."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_federation_known_peers",
+        description=(
+            "Return the registered remote instances this instance knows "
+            "about — wraps GET /api/federation/instances. Output: list "
+            "of {instance_id, base_url, registered_at, last_seen_at, "
+            "...}. The 'who else is in the conversation' query. Example: "
+            "coherence_federation_known_peers() → "
+            "[{instance_id: 'node-b', ...}, ...]."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
     Tool(
         name="coherence_awareness_publish",
         description="Publish a diagnostic awareness event from a federation node. Delivered to active diagnostic stream subscribers.",
@@ -1461,6 +1559,24 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get(
                 f"/api/substrate/modality_for/{quote(per_modality_name, safe='')}"
             )
+        # Federation — sovereign-instance discovery (read-only)
+        case "coherence_federation_self_pulse":
+            return api_get("/api/pulse/self")
+        case "coherence_federation_peer_pulses":
+            return api_get("/api/pulse/peers")
+        case "coherence_federation_self_capabilities":
+            return api_get("/api/federation/capabilities/self")
+        case "coherence_federation_substrate_alignment":
+            peer_id = args.get("peer_id", "")
+            if not peer_id:
+                return {"error": "peer_id is required"}
+            return api_get(
+                f"/api/federation/substrate/attestations/{quote(peer_id, safe='')}"
+            )
+        case "coherence_federation_substrate_canonicals":
+            return api_get("/api/federation/substrate/canonicals")
+        case "coherence_federation_known_peers":
+            return api_get("/api/federation/instances")
         # Federation
         case "coherence_list_federation_nodes":
             nodes = api_get("/api/federation/nodes")
