@@ -89,3 +89,41 @@ is the same either way.
 - Swap-out burns before external settlement (CC side is risk-free)
 - Swap-in mints only after confirmation (no free CC)
 - All swaps recorded in append-only treasury ledger
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/services/cc_exchange_adapter.py`
+- `api/app/models/cc_exchange.py`
+- `api/app/routers/cc_exchange.py`
+- `api/app/services/cc_treasury_service.py`
+
+## Verification
+
+```bash
+python -m pytest api/tests/test_cc_exchange.py -v
+```
+
+## Acceptance Tests
+
+- `api/tests/test_cc_exchange.py`
+
+## Requirements
+
+- [ ] GET /api/cc/exchange/adapters returns new_earth and ces
+- [ ] POST /api/cc/exchange/quote returns valid quote with rate
+- [ ] POST /api/cc/exchange/swap creates pending swap
+- [ ] POST /api/cc/exchange/swap/{id}/confirm settles the swap
+- [ ] Treasury coherence score remains >= 1.0 after swaps
+

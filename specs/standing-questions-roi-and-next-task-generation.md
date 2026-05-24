@@ -147,6 +147,10 @@ See `api/tests/test_standing_questions_roi_and_next_task_generation.py` for test
 ## Verification
 
 ```bash
+cd api && python3 -m pytest tests/test_idea_standing_questions.py tests/test_idea_scoring.py -x -v
+```
+
+```bash
 python3 -m pytest api/tests/test_ideas.py -x -v
 ```
 
@@ -154,3 +158,8 @@ python3 -m pytest api/tests/test_ideas.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+

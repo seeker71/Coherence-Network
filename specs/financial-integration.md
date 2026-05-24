@@ -643,6 +643,8 @@ python3 scripts/validate_spec_quality.py specs/financial-integration.md
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 **Landed in this session (pure logic, external-system-free):**
 - Rate computation with spread + staleness detection (R3): `compute_rate()`, `is_rate_stale()` in `api/app/services/cc_fiat_bridge.py`
 - Swap math in both directions (R1 math half): `compute_swap()`

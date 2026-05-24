@@ -68,6 +68,10 @@ test: "python3 -m pytest api/tests/test_flow_core_api.py -q"
 
 # External Presence -- Bots, News Resonance, and Meeting People Where They Are
 
+## Purpose
+
+External Presence -- Bots, News Resonance, and Meeting People Where They Are — see `idea_id: external-presence` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 
 Extend the platform beyond its own URL by ingesting real-world news with resonance matching, integrating with social platforms (Discord, Telegram), providing auto-translation for non-English contributors, and enabling geolocation-based discovery -- meeting contributors where they already are instead of forcing them to visit the website.
@@ -99,3 +103,32 @@ The external presence layer spans seven source files across four capabilities: n
 ```bash
 python3 -m pytest api/tests/test_flow_core_api.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/routers/news.py`
+- `api/app/services/news_ingestion_service.py`
+- `api/app/services/news_resonance_service.py`
+- `api/app/routers/discord_votes.py`
+- `api/app/services/telegram_adapter.py`
+- `api/app/services/translate_service.py`
+- `api/app/routers/geolocation.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_flow_core_api.py -q
+```
+

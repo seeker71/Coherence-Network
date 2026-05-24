@@ -241,6 +241,10 @@ AgentTask (api/app/models/agent.py):
 
 ## Verification
 
+```bash
+pytest -q api/tests/ -k reaper
+```
+
 Five concrete scenarios, executable against production.
 
 ### Scenario 1 — Reaped task receives `timed_out` status

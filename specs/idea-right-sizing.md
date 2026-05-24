@@ -184,6 +184,10 @@ CREATE INDEX idx_rss_snapshot_at ON right_sizing_snapshots(snapshot_at);
 
 ## Verification Scenarios
 
+```bash
+cd api && python -m pytest -q tests/test_right_sizing.py
+```
+
 These scenarios must pass in production against `https://api.coherencycoin.com`.
 
 ### Scenario 1 — Portfolio right-sizing report is readable and has sensible structure
@@ -280,3 +284,19 @@ curl -s "https://api.coherencycoin.com/api/ideas/right-sizing/history?days=7" | 
 
 - **Threshold values** (too_large_questions=10, too_large_tasks=8, overlap_score_min=0.80) must be reviewed with the portfolio owner before the first background sweep runs. These are configurable in `right_sizing.json` but the defaults ship with this spec.
 - **`merge_and_archive` action** is irreversible (soft-delete only). A human must confirm via the API explicitly; there is no "undo" endpoint in this spec.
+
+## Risks and Assumptions
+
+- None.
+
+## Acceptance Tests
+
+- `tests/test_right_sizing.py`
+
+## Requirements
+
+- [ ] Right-sizing report returns valid health counts for 10+ ideas
+- [ ] Dry-run apply previews changes without writing
+- [ ] pytest api/tests/test_right_sizing.py passes
+- [ ] pytest_passes("api/tests/test_right_sizing.py")
+

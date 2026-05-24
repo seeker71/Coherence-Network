@@ -155,6 +155,8 @@ constraints:
 
 ## Acceptance Tests
 
+- Validated by: `cd api && python3 -m pytest tests/test_release_gate_service.py -x -v`
+
 - [x] `test_gate_pr_to_public_endpoint_returns_report`
 - [x] `test_gate_merged_contract_endpoint_returns_report`
 - [x] `test_gate_main_head_502_when_unavailable`
@@ -193,3 +195,8 @@ python3 -m pytest api/tests/test_gates_api.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+

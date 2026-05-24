@@ -74,6 +74,10 @@ test: "python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_siz
 
 # Portfolio Governance Health -- Coherence Score, Right-Sizing, and Living Metrics
 
+## Purpose
+
+Portfolio Governance Health -- Coherence Score, Right-Sizing, and Living Metrics — see `idea_id: portfolio-governance` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 
 Provide the measurement and governance layer that lets the network reason about its idea portfolio as one coherent system -- with grounded metrics that replace guesswork, coherence scoring from 9+ signals, automatic right-sizing detection, workspace vitality tracking, CC economics with treasury invariants, and a distribution engine that pays contributors based on proven impact.
@@ -110,3 +114,33 @@ The portfolio governance layer spans seven service files implementing six interl
 ```bash
 python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/services/governance_service.py`
+- `api/app/services/grounded_idea_metrics_service.py`
+- `api/app/services/idea_governance_views.py`
+- `api/app/services/coherence_service.py`
+- `api/app/services/right_sizing_service.py`
+- `api/app/services/vitality_service.py`
+- `api/app/services/cc_economics_service.py`
+- `api/app/services/distribution_engine.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
+```
+

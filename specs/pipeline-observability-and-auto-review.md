@@ -163,6 +163,8 @@ TaskMetric:
 
 ## Acceptance Tests
 
+- Validated by: `python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v`
+
 - Create task, run agent_runner, verify metrics include duration and status
 - GET /api/agent/metrics returns success_rate and execution_time when tasks exist
 - A/B variant tagging (Phase 2) stores and aggregates by variant

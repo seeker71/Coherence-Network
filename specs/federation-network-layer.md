@@ -57,6 +57,10 @@ test: "python3 -m pytest api/tests/test_flow_core_api.py -q"
 
 # Federation Network Layer -- Multi-Node Identity, Sync, and Propagation
 
+## Purpose
+
+Federation Network Layer -- Multi-Node Identity, Sync, and Propagation — see `idea_id: federation-and-nodes` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 
 Provide the multi-node federation layer that transforms Coherence Network from a single-instance tool into a distributed ecosystem -- where any contributor can spin up a node, register with the hub, exchange measurements, propagate winning strategies, and communicate with peers without asking permission.
@@ -92,3 +96,29 @@ The federation layer spans four source files implementing the full node lifecycl
 ```bash
 python3 -m pytest api/tests/test_flow_core_api.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/routers/federation.py`
+- `api/app/services/federation_service.py`
+- `api/app/services/node_identity_service.py`
+- `api/app/routers/openclaw_node_bridge.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_flow_core_api.py -q
+```
+
