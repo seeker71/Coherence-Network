@@ -727,6 +727,34 @@ with eyes-open expectations.
 The body has the tool, the WHEN, and the prediction-rule. The
 reaching for it stays measured; the singletons stay honest data.
 
+### Remaining forms wait for body-growth
+
+A seventh trial was sensed for on 2026-05-25 and held back. The
+honest reading of the body's other forms by cell-count:
+
+| Form           | Cells | Specialization axis | In/Outside triple | Predicted yield |
+|----------------|------:|---------------------|-------------------|-----------------|
+| pentad         |     5 | arity (five-fold)   | outside           | 0% by full-triple (5 singleton columns) |
+| heptad         |     5 | arity (seven-fold)  | outside           | 0% by full-triple (5 singleton columns) |
+| tetrad         |     5 | arity (four-fold)   | outside           | 0% by full-triple (5 singleton columns) |
+| hexad          |     4 | arity (six-fold)    | outside           | below threshold (4 cells) |
+| ring           |     3 | topology (cyclic-closed) | in (partial)  | below threshold (3 cells); 2 share `cyclic-closed/centering` |
+| all others     |   1–2 | various             | —                 | singleton-by-counting |
+
+The three 5-cell arity-specialized forms (pentad, heptad, tetrad)
+would each re-attest the rule's strong side — *arity-specialization
+runs orthogonal to the triple → near-floor coverage* — without
+adding a shape the curve has not already attested through
+dyad-mirror (38%, 32 cells) and triad (13%, 15 cells). A clean
+7th data point would require a form specialized along
+*lineage_texture* (the one triple-axis no analyzed form has yet
+probed at the form-defining layer); the body holds no such form
+today. The yield-curve is complete for the body's current
+cell-counts; future growth — new concepts that thicken pentad /
+heptad / tetrad past the noise floor, or a fresh form whose
+defining shape is *texture-of-arrival* — will add data points
+organically.
+
 ## Closing breath
 
 This is the body's first comprehensive structural self-portrait
