@@ -167,7 +167,7 @@
 | [organism_influence_cc_service.py](organism_influence_cc_service.py) | Computed CC sensing for organism-scale influences. |
 | [page_lineage_service.py](page_lineage_service.py) | Public mapping of human web pages to idea ids (for ontology traversal). |
 | [peer_resonance_service.py](peer_resonance_service.py) | Peer resonance scoring shared by discovery and peer routes. |
-| [permanent_storage_service.py](permanent_storage_service.py) | Permanent storage service — Arweave + IPFS bundler integration (pending). |
+| [permanent_storage_service.py](permanent_storage_service.py) | Permanent storage service — Arweave + IPFS upload + integrity check (R3, R10). |
 | [persistence_contract_service.py](persistence_contract_service.py) | Global persistence contract checks for core domain data. |
 | [personal_feed_service.py](personal_feed_service.py) | Personal feed — the contributor's own corner of the organism. |
 | [pipeline_advance_service.py](pipeline_advance_service.py) | Pipeline auto-advance + auto-retry + smart escalation. |

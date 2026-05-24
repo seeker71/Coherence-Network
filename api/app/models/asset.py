@@ -124,3 +124,39 @@ class AssetRegistration(AssetRegistrationCreate):
 
     id: str = Field(description="asset:<uuid> identifier")
     created_at: datetime
+
+
+class AssetIPRegistration(BaseModel):
+    """The IP-registration record stored on an asset's graph node after
+    Story Protocol registration completes. See
+    specs/story-protocol-integration.md R1.
+
+    ``sp_ip_id`` is the on-chain IP Asset ID. ``ip_status`` is one of
+    ``pending`` | ``registered`` | ``failed``; failed registrations
+    leave the asset usable per R1's escape hatch.
+    """
+
+    asset_id: str
+    sp_ip_id: Optional[str] = None
+    ip_status: str = "pending"
+    registered_at: Optional[datetime] = None
+    reason: Optional[str] = None
+
+
+class StorageRecord(BaseModel):
+    """The permanent-storage record stored on an asset's graph node
+    after Arweave + IPFS upload completes. See
+    specs/story-protocol-integration.md R3 and R10.
+
+    ``content_hash`` is a SHA-256 hex digest of the raw bytes. The
+    Arweave and IPFS identifiers are content-addressed: same bytes
+    always produce the same id, which is what makes R10 integrity
+    verification tractable without re-hashing on every read.
+    """
+
+    asset_id: str
+    content_hash: str
+    arweave_tx_id: Optional[str] = None
+    ipfs_cid: Optional[str] = None
+    size_bytes: int = 0
+    uploaded_at: Optional[datetime] = None
