@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Cpu, Play, RotateCcw, Sparkles } from "lucide-react";
@@ -9,6 +9,19 @@ import {
   runLocalFormBinary,
   type LocalFormRun,
 } from "@/lib/form-kernel/client";
+import {
+  ACTION_LANGUAGE_STARTER,
+  CROSS_MODALITY_STARTER,
+  GRAMMAR_ACTION_STARTER,
+  GRAMMAR_CAPTURES_STARTER,
+  GRAMMAR_PATTERN_STARTER,
+  PYTHON_FORM_STARTER,
+  compileActionLanguage,
+  compileCrossModalityRecipe,
+  compileGrammarBuilder,
+  compilePythonToForm,
+  type GrammarLaneId,
+} from "@/lib/form-kernel/grammar-lanes";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
 
@@ -732,6 +745,270 @@ function LocalKernelPanel() {
   );
 }
 
+const GRAMMAR_LANES: Array<{
+  id: GrammarLaneId;
+  label: string;
+  audience: string;
+  description: string;
+}> = [
+  {
+    id: "action",
+    label: "BML / Action Language",
+    audience: "embodied command",
+    description: "Run delegate, raise, undo, with, and invoke as action-shaped Form.",
+  },
+  {
+    id: "python",
+    label: "Python => Form",
+    audience: "code translation",
+    description: "Paste a tiny Python function and watch the recipe skeleton appear.",
+  },
+  {
+    id: "builder",
+    label: "Grammar Builder",
+    audience: "new grammar",
+    description: "Define a pattern, captures, and semantic action in one living rule.",
+  },
+  {
+    id: "modality",
+    label: "Cross-Modality Recipe",
+    audience: "source extraction",
+    description: "Turn story, song, video, or source into a transferable recipe.",
+  },
+];
+
+const RECIPE_KINDS = [
+  "teaching recipe",
+  "movement recipe",
+  "implementation recipe",
+  "verification recipe",
+];
+
+function GrammarLanesPanel({
+  onLoadExpression,
+}: {
+  onLoadExpression: (expr: string, showcases: string, nextMove: string) => void;
+}) {
+  const [activeLane, setActiveLane] = useState<GrammarLaneId>("action");
+  const [actionCommand, setActionCommand] = useState(ACTION_LANGUAGE_STARTER);
+  const [pythonSource, setPythonSource] = useState(PYTHON_FORM_STARTER);
+  const [pattern, setPattern] = useState(GRAMMAR_PATTERN_STARTER);
+  const [captures, setCaptures] = useState(GRAMMAR_CAPTURES_STARTER);
+  const [semanticAction, setSemanticAction] = useState(GRAMMAR_ACTION_STARTER);
+  const [modalitySource, setModalitySource] = useState(CROSS_MODALITY_STARTER);
+  const [recipeKind, setRecipeKind] = useState(RECIPE_KINDS[0]);
+
+  const output = useMemo(() => {
+    if (activeLane === "python") return compilePythonToForm(pythonSource);
+    if (activeLane === "builder") {
+      return compileGrammarBuilder(pattern, captures, semanticAction);
+    }
+    if (activeLane === "modality") {
+      return compileCrossModalityRecipe(modalitySource, recipeKind);
+    }
+    return compileActionLanguage(actionCommand);
+  }, [
+    activeLane,
+    actionCommand,
+    captures,
+    modalitySource,
+    pattern,
+    pythonSource,
+    recipeKind,
+    semanticAction,
+  ]);
+
+  return (
+    <section
+      className="grid max-w-full gap-5 overflow-hidden rounded-xl border border-violet-300/70 bg-violet-50/80 p-4 dark:border-violet-500/20 dark:bg-violet-500/5 lg:grid-cols-[0.85fr_1.15fr]"
+      aria-labelledby="grammar-lanes-heading"
+    >
+      <div className="min-w-0 space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300/75">
+            Grammar lanes
+          </p>
+          <h2 id="grammar-lanes-heading" className="text-2xl font-light text-stone-950 dark:text-stone-100">
+            Let new grammars surface here.
+          </h2>
+          <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-400">
+            Each lane turns a different source shape into a Form-facing recipe. Edit the
+            input, read the generated payload, then load the pieces that already execute
+            through the evaluator.
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          {GRAMMAR_LANES.map((lane) => (
+            <button
+              key={lane.id}
+              type="button"
+              onClick={() => setActiveLane(lane.id)}
+              className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                activeLane === lane.id
+                  ? "border-violet-500/60 bg-violet-100/80 text-stone-950 dark:border-violet-400/50 dark:bg-violet-500/10 dark:text-violet-100"
+                  : "border-stone-300/70 bg-white/75 text-stone-800 hover:border-violet-400/60 hover:text-violet-800 dark:border-stone-800/50 dark:bg-stone-950/35 dark:text-stone-300 dark:hover:border-violet-500/35 dark:hover:text-violet-200"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-300/80" aria-hidden="true" />
+                {lane.label}
+              </span>
+              <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-stone-600 dark:text-stone-500">
+                {lane.audience}
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-stone-700 dark:text-stone-500">
+                {lane.description}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="min-w-0 space-y-4 rounded-xl border border-stone-300/70 bg-white/75 p-4 dark:border-stone-800/50 dark:bg-stone-950/35">
+        {activeLane === "action" && (
+          <div className="space-y-2">
+            <label htmlFor="grammar-action" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+              Embodied command
+            </label>
+            <textarea
+              id="grammar-action"
+              value={actionCommand}
+              onChange={(e) => setActionCommand(e.target.value)}
+              className="h-28 w-full min-w-0 resize-y rounded-xl border border-stone-300 bg-white p-3 font-mono text-sm leading-relaxed text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              spellCheck={false}
+            />
+          </div>
+        )}
+
+        {activeLane === "python" && (
+          <div className="space-y-2">
+            <label htmlFor="grammar-python" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+              Python function
+            </label>
+            <textarea
+              id="grammar-python"
+              value={pythonSource}
+              onChange={(e) => setPythonSource(e.target.value)}
+              className="h-40 w-full min-w-0 resize-y rounded-xl border border-stone-300 bg-white p-3 font-mono text-sm leading-relaxed text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              spellCheck={false}
+            />
+          </div>
+        )}
+
+        {activeLane === "builder" && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label htmlFor="grammar-pattern" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+                Pattern
+              </label>
+              <input
+                id="grammar-pattern"
+                value={pattern}
+                onChange={(e) => setPattern(e.target.value)}
+                className="w-full min-w-0 rounded-xl border border-stone-300 bg-white p-3 font-mono text-sm text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="grammar-captures" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+                Captures
+              </label>
+              <input
+                id="grammar-captures"
+                value={captures}
+                onChange={(e) => setCaptures(e.target.value)}
+                className="w-full min-w-0 rounded-xl border border-stone-300 bg-white p-3 font-mono text-sm text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="grammar-action-builder" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+                Semantic action
+              </label>
+              <input
+                id="grammar-action-builder"
+                value={semanticAction}
+                onChange={(e) => setSemanticAction(e.target.value)}
+                className="w-full min-w-0 rounded-xl border border-stone-300 bg-white p-3 font-mono text-sm text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeLane === "modality" && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label htmlFor="recipe-kind" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+                Recipe kind
+              </label>
+              <select
+                id="recipe-kind"
+                value={recipeKind}
+                onChange={(e) => setRecipeKind(e.target.value)}
+                className="w-full min-w-0 rounded-xl border border-stone-300 bg-white p-3 text-sm text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              >
+                {RECIPE_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {kind}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="modality-source" className="text-xs uppercase tracking-[0.18em] text-stone-600 dark:text-stone-500">
+                Source fragment
+              </label>
+              <textarea
+                id="modality-source"
+                value={modalitySource}
+                onChange={(e) => setModalitySource(e.target.value)}
+                className="h-36 w-full min-w-0 resize-y rounded-xl border border-stone-300 bg-white p-3 text-sm leading-relaxed text-stone-900 transition-colors focus:border-violet-500/60 focus:outline-none dark:border-stone-800/50 dark:bg-stone-950/80 dark:text-stone-300 dark:focus:border-violet-500/40"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3 rounded-xl border border-stone-300/70 bg-white/70 p-3 dark:border-stone-800/50 dark:bg-stone-900/25">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-stone-600 dark:text-stone-500">
+              {output.title}
+            </div>
+            <p className="mt-1 text-sm leading-relaxed text-stone-700 dark:text-stone-400">{output.summary}</p>
+          </div>
+          <pre className="max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg border border-stone-800/40 bg-stone-950/60 p-3 text-xs leading-relaxed text-violet-100/90">
+            {output.form}
+          </pre>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {output.steps.map((step) => (
+              <div
+                key={step}
+                className="rounded-lg border border-stone-300/70 bg-stone-50 px-3 py-2 text-xs text-stone-700 dark:border-stone-800/40 dark:bg-stone-950/45 dark:text-stone-400"
+              >
+                {step}
+              </div>
+            ))}
+          </div>
+          {output.loadableExpression && (
+            <button
+              type="button"
+              onClick={() =>
+                onLoadExpression(
+                  output.loadableExpression ?? output.form,
+                  `${output.title} generated this Form expression. Run it, then edit one binding and compare the returned shape.`,
+                  "Run it in the evaluator, then change one noun or verb and run again.",
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-100 px-4 py-2 text-sm font-medium text-violet-800 transition-all hover:border-violet-500/50 hover:bg-violet-200 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:border-violet-500/30 dark:hover:bg-violet-500/20"
+            >
+              <Play className="h-4 w-4" aria-hidden="true" />
+              Load into evaluator
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // Build a starter expression when the playground arrives bound to a cell.
 // `?cell=@concept(lc-pulse)` becomes `@concept(lc-pulse).blueprint` — a
 // useful first question to ask of any cell. The visitor lands inside a
@@ -779,6 +1056,14 @@ export function FormPlayground() {
     setExpression(ex.expr);
     setActiveShowcase(ex.showcases);
     setNextMove("Edit one symbol, run it again, and compare the returned shape.");
+    setResult(null);
+    setError(null);
+  };
+
+  const loadGeneratedExpression = (expr: string, showcases: string, next: string) => {
+    setExpression(expr);
+    setActiveShowcase(showcases);
+    setNextMove(next);
     setResult(null);
     setError(null);
   };
@@ -908,6 +1193,8 @@ export function FormPlayground() {
       </section>
 
       <LocalKernelPanel />
+
+      <GrammarLanesPanel onLoadExpression={loadGeneratedExpression} />
 
       <section className="space-y-4" aria-labelledby="form-atlas-heading">
         <div>
