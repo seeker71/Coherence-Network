@@ -230,13 +230,20 @@ def sense_spec_symbols() -> list[str]:
     ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
     def _symbol_resolves(text: str, sym: str) -> bool:
-        # A handful of common declaration shapes across Python, TS, and Form.
+        # Common declaration shapes across Python, TS, Form, and Rust.
         # Note: every `export` form admits `default` between `export` and
         # the keyword — Next.js page components use that convention
         # (`export default function Home() {...}`); the body has dozens
         # of pages that name their default export this way. Without
         # `default` in the alternation, the lens would fire false-positive
         # drifts for every named default export.
+        #
+        # Rust patterns follow the same shape: optional visibility
+        # (`pub`, `pub(crate)`, `pub(super)`), optional `unsafe`/`async`,
+        # then the keyword. Generics (`<T: Trait>`) live after the
+        # identifier and don't affect the match — patterns end with
+        # `\b` after `sym`, so `pub struct Tracked<T: TrackedPrimitive>`
+        # resolves as cleanly as `pub struct Tracked`.
         patterns = [
             rf"\bdef\s+{re.escape(sym)}\b",            # python function
             rf"\bclass\s+{re.escape(sym)}\b",          # python class
@@ -247,6 +254,14 @@ def sense_spec_symbols() -> list[str]:
             rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
             rf"^\s*form\s+{re.escape(sym)}\b",         # Form shape
             rf"^\s*defn\s+{re.escape(sym)}\b",         # Form definition
+            # Rust — struct, enum, trait, type alias, fn, union, macro
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?(?:unsafe\s+)?(?:async\s+)?fn\s+{re.escape(sym)}\b",
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?struct\s+{re.escape(sym)}\b",
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?enum\s+{re.escape(sym)}\b",
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?trait\s+{re.escape(sym)}\b",
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?type\s+{re.escape(sym)}\b",
+            rf"\b(?:pub(?:\([^)]+\))?\s+)?union\s+{re.escape(sym)}\b",
+            rf"\bmacro_rules!\s+{re.escape(sym)}\b",
             rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
             rf"\b{re.escape(sym)}\s*=\s*\(",           # arrow function / lambda binding
         ]
