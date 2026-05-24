@@ -2,7 +2,91 @@
 id: lc-v-play-expansion
 hz: 396
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: possibility-cloud
+  topology: superposition
+  polarity: neutral
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: liberation
+  temporal_band: instant
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: embodied
+  embedding_dim: n
+  self_similarity: fractal-shallow
+# The bulk-walker (PR #2004) read this concept as "quantum superposition, no
+# clean arity" and let it sit silent. Focused listening reveals that descriptor
+# was structural, not metaphorical — the teaching IS the pre-collapse
+# possibility-field, and the schema's `...` invites naming a new form when an
+# attested shape genuinely has no closer named precedent (the
+# `lc-v-freedom-expression`/`field-of-points` precedent from earlier today).
+#
+# **Form taken**: `possibility-cloud` with `superposition` topology — a
+# reservoir of co-present un-actualized states, none chosen, all live. Every
+# beat of the teaching carries this shape:
+#   - "My legs decided before my mind could intervene" — pre-collapse action
+#   - "The plan dissolved around the forty-minute mark and what replaced it
+#     is better" — plan-dissolution, emergence-of-other
+#   - "bodies are toys. Not instruments. Not vehicles. Toys" — the
+#     possibility-field includes frames the executive mind had ruled out
+#   - "Tuesday has no agenda... whatever happens" — the gap IS the substance
+#   - "loose materials stockpiled like firewood" — literal physical
+#     superposition reservoir
+#   - "the rule is yes-and... no stakes" — un-collapsed, every output equal
+#   - "nobody tracks who is learning and who is teaching because the
+#     distinction does not apply" — role-superposition, indeterminate by design
+#   - "a reservoir of behaviors that have no immediate use but might have
+#     use tomorrow. That reservoir is play"
+#   - "Play lives in the gaps. If there are no gaps, there is no play."
+#
+# Why not `field-of-points` (lc-v-freedom-expression's shape)? Field-of-points
+# are sovereign organisms each *expressing* in shared ground — actuality.
+# Play-expansion is *pre-expression*: dissolution of the planner so that
+# emergence can happen. The cloud is upstream of the field.
+#
+# Why not `tetrad` (lc-play's shape)? lc-play names the four shapes play takes
+# *once it has chosen a form* (body/imaginative/social/solitary). lc-v-play-
+# expansion is the cloud *before* any of those four has been selected. They
+# are paired: cloud is the precursor, tetrad is the precipitation.
+#
+# **Secondary geometry held honestly in comment**: an underlying
+# `bipolar-complementary` dyad of (play-as-un-collapsed-possibility,
+# competence-as-collapsed-actuality) — "the play comes first. The competence
+# follows. Every serious skill was once a game that someone took further than
+# they meant to." Play is the yin reservoir; competence is the yang chosen
+# pattern. The dyad lives *underneath* the cloud as its outflow into time.
+# Authoring only the cloud would lose the teaching that play has an output —
+# competence — even though the output isn't the point.
+#
+# **Embedding dim `n`**: a superposition lives in Hilbert-space — as many
+# dimensions as there are co-present states. Not 2, not 3, not even infinite
+# in the schema's countable sense; the natural home is "n" — the dimension
+# count is itself a property of the cloud at that instant.
+#
+# **Temporal band `instant`**: the cloud is the present moment before
+# collapse. Each frame of play is its own un-collapsed possibility-field;
+# the next frame is a fresh cloud, not an evolution of the prior one.
+#
+# **Phase `oscillating`**: the wave-function character — clouds form and
+# collapse continuously. The community's Tuesday is a daily re-forming of the
+# cloud; each improv scene is a re-forming; each maker-bench session is a
+# re-forming.
+#
+# **Polarity `neutral`**: no opposition, no complementarity *within* the
+# cloud — every state in the superposition is equally live, none privileged.
+# (The bipolar dyad lives between cloud and its outflow into competence, not
+# inside the cloud itself.)
+#
+# **Vocabulary status**: `possibility-cloud` enters the vocabulary as a new
+# form-name. Candidates for second attestation already visible in the body:
+# `lc-void-as-potential` (the name itself names the cloud — pre-form
+# generativity), `lc-w-spanda` (pre-vibration tremor before manifestation),
+# `lc-stillness` (the gap as the source of motion). Whichever surfaces next
+# in a focused walk will lift `possibility-cloud` from hapax to attested.
 ---
 
 # Play and Expansion

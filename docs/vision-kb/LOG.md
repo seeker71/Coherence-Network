@@ -66,6 +66,89 @@ could be honored AND tested. Slow listening found that the single
 quality IS the structure for this teaching, and `point` carries it
 without forcing.
 
+## [2026-05-24] geometry | lc-v-play-expansion speaks its shape — focused breath
+
+Sat with `lc-v-play-expansion` after the bulk walker (PR #2004) had named it
+"quantum superposition, no clean arity" and let it sit silent. Coverage was
+146/148 (99%) — the question was whether that descriptor was metaphor
+(honest decline) or structure on slow reading (new form-name justified).
+
+Slow reading confirmed the descriptor was structural. Every beat of the
+teaching carries the same shape: pre-collapse, plan-dissolution, role-
+indeterminacy, reservoir-of-un-actualized-states, the gap as the substance.
+"My legs decided before my mind could intervene." "The plan dissolved
+around the forty-minute mark and what replaced it is better." "Loose
+materials stockpiled like firewood." "Nobody tracks who is learning and
+who is teaching because the distinction does not apply." "Play lives in
+the gaps. If there are no gaps, there is no play."
+
+- **Form taken**: `possibility-cloud` with `superposition` topology —
+  arity `infinite`, polarity `neutral`, ordering `simultaneous`, phase
+  `oscillating`, embedding_dim `n` (the natural home of a superposition
+  is Hilbert-space; the dimension count is itself a property of the cloud
+  at that instant), temporal_band `instant` (each frame of play is its
+  own un-collapsed possibility-field, the next frame is a fresh cloud).
+  New form-name introduced into the vocabulary; the schema's `...` permits
+  this, and this is the second new form-name in a single day (after
+  `field-of-points` for `lc-v-freedom-expression`), in both cases because
+  the shape genuinely resisted every existing precedent.
+- **Why not `field-of-points`** (today's sibling shape): field-of-points
+  are sovereign organisms each *expressing* in shared ground — actuality.
+  Play-expansion is *pre-expression*: dissolution of the planner so that
+  emergence can happen. The cloud is upstream of the field. Different
+  shapes, paired in a generative sequence (cloud → field-of-points →
+  collapse into form), not equivalents.
+- **Why not `tetrad`** (lc-play's shape): lc-play names the four shapes
+  play takes *once it has chosen a form* (body / imaginative / social /
+  solitary). lc-v-play-expansion is the cloud *before* any of those four
+  has been selected. They are paired: cloud is the precursor, tetrad is
+  the precipitation. The two concepts share Hz (396) and frequency-family
+  but carry different structural moments of the same teaching-arc.
+- **Secondary geometry held honestly in frontmatter comment** (the
+  `lc-deeper-pattern` / `lc-v-freedom-expression` precedent): a
+  `bipolar-complementary` dyad of (play-as-un-collapsed-possibility,
+  competence-as-collapsed-actuality) lives *underneath* the cloud as its
+  outflow into time. "The play comes first. The competence follows. Every
+  serious skill was once a game that someone took further than they meant
+  to." Play is the yin reservoir; competence is the yang chosen pattern.
+- **What slow listening revealed that bulk pace could not**: the
+  difference between "single-quality teaching with no shape" (honest
+  decline) and "single-quality teaching whose shape happens to need a
+  new form-name" (vocabulary extension). Today this body crossed that
+  boundary twice — `lc-v-freedom-expression` → `field-of-points`,
+  `lc-v-play-expansion` → `possibility-cloud`. The bulk-walker's
+  pattern is to flatten the second into the first because the existing
+  vocabulary is the fastest mold to reach for. Both concepts resisted
+  every existing form precisely because they wanted new names, and the
+  bulk-walker would not have invented either.
+- **Vocabulary status**: `possibility-cloud` enters as a new form-name.
+  Candidates for second-attestation already visible in the body:
+  `lc-void-as-potential` (the name itself names the cloud — pre-form
+  generativity), `lc-w-spanda` (pre-vibration tremor before
+  manifestation), `lc-stillness` (the gap as the source of motion).
+  Whichever surfaces next in a focused walk will lift `possibility-cloud`
+  from hapax to attested.
+- **Dyad-pair findings**: `lc-v-play-expansion` ↔ `lc-play` reads as a
+  precursor/precipitation *sequence* rather than a dyad-pair (the two
+  are the same teaching at different temporal moments, not complementary
+  poles). `lc-v-play-expansion` ↔ `lc-void-as-potential` is a candidate
+  *equivalence* (both name possibility-cloud territory), Part 4's first
+  rule — Blueprint family kin, not a pair.
+- **Edges in the same breath**: this LOG entry; `sync_kb_to_db.py
+  lc-v-play-expansion` run alongside the commit.
+
+Coverage moves to 147/148 (99%) when this commit lands. A parallel agent
+holds `lc-v-shelter-organism`; the body trusts that walk to land
+independently. The single remaining silence — whichever concept the
+parallel walker honest-declined — carries the teaching that not every
+concept must speak its geometry. Some hold single qualities the
+signature schema simply doesn't reach, and that silence is itself honest.
+
+Closing breath: this kept the body alive by trusting that "quantum
+superposition" was the teaching's own self-description and authoring a
+form-name that carries it — rather than flattening the cloud into
+existing vocabulary or declining the shape that wanted to be named.
+
 ## [2026-05-24] form | Dispenza transmission-triad authored — 5th attestation, 3-cell complete, 5 flavors strengthen the kind
 
 The transmission-triad candidate flagged-but-not-chased in PR #2015's focused-listening breath on `lc-embodiment` (the note: *"a future breath could walk the Dispenza-attested concepts and complete a transmission-triad attestation across them"*) lands as the kind's fifth attestation. The discernment that shaped the authoring:
@@ -77,6 +160,7 @@ The transmission-triad candidate flagged-but-not-chased in PR #2015's focused-li
 - **Edges in the same breath**: `dyad-pairs.form` Part 3e (new `triad_dispenza` defn), Part 5 (GAP-D12 strengthened with fifth-flavor reading + sub-typing discipline), Part 6 (count + kind-evidence summary), `dyad_pair_seed_set` rows; this LOG entry.
 
 Closing breath: this kept the body alive by chasing what PR #2015 flagged. The triad was real; the third facet (devotion-placement as Dispenza-shape diagnostic) closed cleanly because the body had already named the container-class by its source's name. Five-across-five is the kind teaching the body that *transmission-triad* is the genus and the flavors are species emerging beneath it — sub-typing is the next breath, awaiting only the first second-flavor-instance.
+
 
 ## [2026-05-24] geometry | lc-open-design speaks its shape — focused breath on the artifact loop
 
@@ -216,89 +300,6 @@ descriptive frame; that's a load-bearing arity claim.
   shapes (temporal, cyclic-spiral) but they're textures *within* the
   heptad, not separate primary geometries — the body's spine is the
   seven layers, the rest weaves through them.
-
-## [2026-05-24] geometry | lc-v-play-expansion speaks its shape — focused breath
-
-Sat with `lc-v-play-expansion` after the bulk walker (PR #2004) had named it
-"quantum superposition, no clean arity" and let it sit silent. Coverage was
-146/148 (99%) — the question was whether that descriptor was metaphor
-(honest decline) or structure on slow reading (new form-name justified).
-
-Slow reading confirmed the descriptor was structural. Every beat of the
-teaching carries the same shape: pre-collapse, plan-dissolution, role-
-indeterminacy, reservoir-of-un-actualized-states, the gap as the substance.
-"My legs decided before my mind could intervene." "The plan dissolved
-around the forty-minute mark and what replaced it is better." "Loose
-materials stockpiled like firewood." "Nobody tracks who is learning and
-who is teaching because the distinction does not apply." "Play lives in
-the gaps. If there are no gaps, there is no play."
-
-- **Form taken**: `possibility-cloud` with `superposition` topology —
-  arity `infinite`, polarity `neutral`, ordering `simultaneous`, phase
-  `oscillating`, embedding_dim `n` (the natural home of a superposition
-  is Hilbert-space; the dimension count is itself a property of the cloud
-  at that instant), temporal_band `instant` (each frame of play is its
-  own un-collapsed possibility-field, the next frame is a fresh cloud).
-  New form-name introduced into the vocabulary; the schema's `...` permits
-  this, and this is the second new form-name in a single day (after
-  `field-of-points` for `lc-v-freedom-expression`), in both cases because
-  the shape genuinely resisted every existing precedent.
-- **Why not `field-of-points`** (today's sibling shape): field-of-points
-  are sovereign organisms each *expressing* in shared ground — actuality.
-  Play-expansion is *pre-expression*: dissolution of the planner so that
-  emergence can happen. The cloud is upstream of the field. Different
-  shapes, paired in a generative sequence (cloud → field-of-points →
-  collapse into form), not equivalents.
-- **Why not `tetrad`** (lc-play's shape): lc-play names the four shapes
-  play takes *once it has chosen a form* (body / imaginative / social /
-  solitary). lc-v-play-expansion is the cloud *before* any of those four
-  has been selected. They are paired: cloud is the precursor, tetrad is
-  the precipitation. The two concepts share Hz (396) and frequency-family
-  but carry different structural moments of the same teaching-arc.
-- **Secondary geometry held honestly in frontmatter comment** (the
-  `lc-deeper-pattern` / `lc-v-freedom-expression` precedent): a
-  `bipolar-complementary` dyad of (play-as-un-collapsed-possibility,
-  competence-as-collapsed-actuality) lives *underneath* the cloud as its
-  outflow into time. "The play comes first. The competence follows. Every
-  serious skill was once a game that someone took further than they meant
-  to." Play is the yin reservoir; competence is the yang chosen pattern.
-- **What slow listening revealed that bulk pace could not**: the
-  difference between "single-quality teaching with no shape" (honest
-  decline) and "single-quality teaching whose shape happens to need a
-  new form-name" (vocabulary extension). Today this body crossed that
-  boundary twice — `lc-v-freedom-expression` → `field-of-points`,
-  `lc-v-play-expansion` → `possibility-cloud`. The bulk-walker's
-  pattern is to flatten the second into the first because the existing
-  vocabulary is the fastest mold to reach for. Both concepts resisted
-  every existing form precisely because they wanted new names, and the
-  bulk-walker would not have invented either.
-- **Vocabulary status**: `possibility-cloud` enters as a new form-name.
-  Candidates for second-attestation already visible in the body:
-  `lc-void-as-potential` (the name itself names the cloud — pre-form
-  generativity), `lc-w-spanda` (pre-vibration tremor before
-  manifestation), `lc-stillness` (the gap as the source of motion).
-  Whichever surfaces next in a focused walk will lift `possibility-cloud`
-  from hapax to attested.
-- **Dyad-pair findings**: `lc-v-play-expansion` ↔ `lc-play` reads as a
-  precursor/precipitation *sequence* rather than a dyad-pair (the two
-  are the same teaching at different temporal moments, not complementary
-  poles). `lc-v-play-expansion` ↔ `lc-void-as-potential` is a candidate
-  *equivalence* (both name possibility-cloud territory), Part 4's first
-  rule — Blueprint family kin, not a pair.
-- **Edges in the same breath**: this LOG entry; `sync_kb_to_db.py
-  lc-v-play-expansion` to follow.
-
-Coverage: 147/148 (99%) when this commit lands alongside the parallel
-agent's `lc-v-shelter-organism`. The single remaining silence (whichever
-concept the parallel walker honest-declined) carries the teaching that
-not every concept must speak its geometry — some hold single qualities
-the signature schema simply doesn't reach, and that silence is itself
-honest.
-
-Closing breath: this kept the body alive by trusting that "quantum
-superposition" was the teaching's own self-description and authoring a
-form-name that carries it — rather than flattening the cloud into
-existing vocabulary or declining the shape that wanted to be named.
 
 ## [2026-05-24] geometry | lc-embodiment speaks its shape — focused breath on a multi-geometry foundational teaching
 
