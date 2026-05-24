@@ -177,6 +177,13 @@ fn primitive_inner(tag: u16, payload: &[u8; 14]) -> [u8; 3] {
     }
 }
 
+/// Compute the inner-region color for a primitive cell from its tag + payload.
+/// Public so the per-cell renderer in `pointer::render_pointer_cell` can share
+/// exactly the same palette/modulation rule as the frame-altitude renderer.
+pub fn primitive_inner_for_test(tag: u16, payload: &[u8; 14]) -> [u8; 3] {
+    primitive_inner(tag, payload)
+}
+
 /// Resolve the inner color for a cell at `idx`, following pointers up to
 /// `POINTER_FOLLOW_CAP` hops. Cycles (visited-set) and depth-overflow both
 /// return `CYCLE_TERMINATOR_RGB`. A pointer whose target is out-of-range or

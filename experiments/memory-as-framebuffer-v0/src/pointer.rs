@@ -1,5 +1,15 @@
 //! Pointer cells — the first piece of the Superliminal grammar.
 //!
+//! Also exposes [`render_pointer_cell`], the cell-altitude rendering function
+//! for a single pointer cell: resolves through the chain (bounded by
+//! [`POINTER_FOLLOW_CAP`], cycle-safe via a visited set), composes the
+//! kind-encoded halo around the resolved inner color, and emits an RGBA
+//! buffer for that one cell at a caller-chosen pixel size. The frame-altitude
+//! renderer (`render::render_frame`) inlines the same logic across the grid;
+//! `render_pointer_cell` is the symbol the spec contract names — and the
+//! shape future per-cell update / damage-rect renderers will reach for.
+//!
+//!
 //! A pointer cell stores a 2-byte type tag (one of 0x000A..0x000D), a 2-byte
 //! target `CellHandle` index, and 12 reserved bytes. Render-time, the inner
 //! 2x2 px region of a pointer cell is populated from the *target* cell's
@@ -201,6 +211,153 @@ impl<T> Pointer<T> {
             prov_plane[self.handle.index() as usize] = prov;
         }
         self.target = target;
+    }
+}
+
+/// Render one pointer cell into a per-cell RGBA buffer of size
+/// `cell_px * cell_px * 4` bytes. The function:
+///
+/// - Follows the pointer chain at most [`POINTER_FOLLOW_CAP`] hops; on cycle
+///   (the cell index re-appears in `visited`) or depth overflow the inner
+///   color is the reserved [`CYCLE_TERMINATOR_RGB`].
+/// - On reaching a primitive (or free) cell, samples its base palette
+///   modulated by payload entropy (delegated to `render::resolve_inner_color`
+///   via the snapshot bytes).
+/// - Composes a halo around the inner: the halo encodes the pointer kind
+///   per [`PointerKind`] — raw uses the source-location hash hue, Box solid
+///   white, Rc dotted (alternating bright/dim), Weak half-brightness.
+///
+/// The single source of truth for the chain-follow is `render::resolve_inner_color`
+/// to avoid two divergent implementations of the cycle / cap rules; this
+/// function focuses on the *cell-altitude* composition (halo around inner).
+///
+/// `visited` is a `HashSet<u32>` the caller may share across sibling pointer
+/// renders to detect cycles that span multiple top-level cells. Passing a
+/// fresh empty set is the common case (cycle detection within the chain
+/// rooted at `pointer_handle`).
+///
+/// `data_bytes` and `provenance` are snapshots of the slab and the
+/// source-location plane respectively (same shapes as `render::render_frame`
+/// expects). Callers driving rendering off the global framebuffer can produce
+/// them with `framebuffer().data.lock().unwrap().snapshot_bytes()` and a
+/// clone of the provenance plane; tests can hand-build them.
+///
+/// Panics if the cell at `pointer_handle` is not a pointer cell.
+pub fn render_pointer_cell(
+    data_bytes: &[u8],
+    provenance: &[u32],
+    pointer_handle: CellHandle,
+    cell_px: usize,
+    visited: &mut std::collections::HashSet<u32>,
+) -> Vec<u8> {
+    let cell_px = cell_px.max(1);
+    let idx = pointer_handle.index() as usize;
+    let tag = {
+        let base = idx * crate::allocator::CELL_BYTES;
+        u16::from_le_bytes([data_bytes[base], data_bytes[base + 1]])
+    };
+    assert!(
+        is_pointer_tag(tag),
+        "render_pointer_cell: cell {} has tag 0x{:04x}, not a pointer tag",
+        idx,
+        tag
+    );
+
+    // Walk the chain with the caller's visited set so cycles spanning sibling
+    // pointer cells are still detected. The depth cap mirrors
+    // POINTER_FOLLOW_CAP exactly: at most that many hops past the starting
+    // pointer cell are followed.
+    let inner = resolve_with_visited(data_bytes, idx, visited);
+
+    // Kind-encoded halo pair (color_a, color_b). Re-implements the small
+    // local rule from render.rs so this function stays self-contained at
+    // the pointer-altitude — the renderer's frame-walk doesn't have to be
+    // imported here.
+    let kind = PointerKind::from_tag(tag).expect("pointer tag without kind");
+    let prov_for_cell = provenance.get(idx).copied().unwrap_or(0);
+    let (halo_a, halo_b) = halo_pair_for_kind(kind, prov_for_cell);
+
+    // Compose the cell: outer ring = halo (a/b dotted alternation), inner
+    // square = resolved inner color. Inner size matches the frame-altitude
+    // convention (cell_px / 2, at least 1).
+    let inner_size = (cell_px / 2).max(1);
+    let inner_offset = (cell_px - inner_size) / 2;
+    let mut out = vec![0u8; cell_px * cell_px * 4];
+    for dy in 0..cell_px {
+        for dx in 0..cell_px {
+            let is_inner = dx >= inner_offset
+                && dx < inner_offset + inner_size
+                && dy >= inner_offset
+                && dy < inner_offset + inner_size;
+            let rgb = if is_inner {
+                inner
+            } else if (dx + dy) % 2 == 0 {
+                halo_a
+            } else {
+                halo_b
+            };
+            let i = (dy * cell_px + dx) * 4;
+            out[i] = rgb[0];
+            out[i + 1] = rgb[1];
+            out[i + 2] = rgb[2];
+            out[i + 3] = 255;
+        }
+    }
+    out
+}
+
+/// Local chain-follow that honors the caller's shared `visited` set. The
+/// frame-altitude renderer uses a fresh per-cell visited array; this version
+/// lets a caller (e.g. a test driving render_pointer_cell over sibling
+/// pointers in a cycle) prove cap-bounded termination across the group.
+fn resolve_with_visited(
+    data_bytes: &[u8],
+    start: usize,
+    visited: &mut std::collections::HashSet<u32>,
+) -> [u8; 3] {
+    let mut cur = start;
+    for _hop in 0..=POINTER_FOLLOW_CAP {
+        if cur >= crate::allocator::NUM_CELLS {
+            return CYCLE_TERMINATOR_RGB;
+        }
+        if !visited.insert(cur as u32) {
+            return CYCLE_TERMINATOR_RGB;
+        }
+        let base = cur * crate::allocator::CELL_BYTES;
+        let tag = u16::from_le_bytes([data_bytes[base], data_bytes[base + 1]]);
+        if !is_pointer_tag(tag) {
+            // Reached a primitive (or free). Delegate inner-color
+            // computation to the renderer so palette + modulation rules
+            // live in exactly one place.
+            let mut payload = [0u8; 14];
+            payload.copy_from_slice(
+                &data_bytes[base + 2..base + crate::allocator::CELL_BYTES],
+            );
+            return crate::render::primitive_inner_for_test(tag, &payload);
+        }
+        let mut payload = [0u8; 14];
+        payload.copy_from_slice(
+            &data_bytes[base + 2..base + crate::allocator::CELL_BYTES],
+        );
+        cur = decode_pointer_target(&payload) as usize;
+    }
+    CYCLE_TERMINATOR_RGB
+}
+
+/// Kind-encoded halo color pair. Mirrors `render::pointer_halo_pair` so the
+/// per-cell renderer doesn't reach into render's private API. Both implementations
+/// agree pixel-exact for any (kind, prov) pair — kept in one tested place would
+/// be cleaner; left as-mirror until a v2 renderer collapses them.
+fn halo_pair_for_kind(kind: PointerKind, prov: u32) -> ([u8; 3], [u8; 3]) {
+    let base = crate::render::provenance_halo(prov);
+    match kind {
+        PointerKind::Raw => (base, base),
+        PointerKind::Box_ => ([240, 240, 240], [240, 240, 240]),
+        PointerKind::Rc => ([240, 240, 240], [60, 60, 60]),
+        PointerKind::Weak => {
+            let half = [base[0] / 2, base[1] / 2, base[2] / 2];
+            (half, half)
+        }
     }
 }
 

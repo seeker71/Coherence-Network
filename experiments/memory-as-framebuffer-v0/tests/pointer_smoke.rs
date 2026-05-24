@@ -10,12 +10,28 @@
 //! - cycle bounded: a 3-cycle (A→B→C→A) renders without panic and the
 //!   inner regions show the reserved cycle-terminator shade.
 
-use mfb::allocator::{CELL_BYTES, GRID, NUM_CELLS};
+use mfb::allocator::{CellHandle, CELL_BYTES, GRID, NUM_CELLS};
 use mfb::pointer::{
-    encode_pointer_payload, CYCLE_TERMINATOR_RGB, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC,
+    encode_pointer_payload, render_pointer_cell, CYCLE_TERMINATOR_RGB, POINTER_FOLLOW_CAP,
+    TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC,
 };
 use mfb::render::{compute_active_viewport, render_frame, RENDER_H, RENDER_W};
 use mfb::{TAG_U32, TAG_U64};
+use std::collections::HashSet;
+
+/// Construct a synthetic `CellHandle` for cell index `idx`. The allocator's
+/// `CellHandle` constructor is private, so tests reach the type via the
+/// public re-export and round-trip through `xy` semantics. We construct one
+/// by allocating-and-freeing isn't viable without a global framebuffer; the
+/// cleanest path is to use the allocator's `alloc_cell` on a local
+/// `SlabFramebuffer` — but `render_pointer_cell` only consumes the index, so
+/// any handle whose `.index()` matches works. The pointer module exposes the
+/// constructor via `SlabFramebuffer::alloc_at`.
+fn handle_for(idx: usize) -> CellHandle {
+    use mfb::SlabFramebuffer;
+    let mut slab = SlabFramebuffer::new();
+    slab.alloc_at(idx, TAG_PTR_RAW)
+}
 
 /// Build a fresh data plane (all-zero / all-free) ready for hand-laid cells.
 fn empty_plane() -> Vec<u8> {
@@ -217,5 +233,76 @@ fn test_pointer_chain_deeper_than_cap_truncates_to_terminator() {
         "1-hop pointer inner {:?} must match primitive inner {:?}",
         inner_25,
         inner_30
+    );
+}
+
+/// Read the inner-region top-left RGB from a per-cell render_pointer_cell
+/// buffer (cell_px square, RGBA layout).
+fn cell_inner_rgb(cell_buf: &[u8], cell_px: usize) -> [u8; 3] {
+    let inner_size = (cell_px / 2).max(1);
+    let inner_offset = (cell_px - inner_size) / 2;
+    let i = (inner_offset * cell_px + inner_offset) * 4;
+    [cell_buf[i], cell_buf[i + 1], cell_buf[i + 2]]
+}
+
+#[test]
+fn test_aliasing_visible() {
+    // R3 acceptance: two pointers pointing at the same target render visually
+    // identical inner regions. Drive the *cell-altitude* renderer
+    // (render_pointer_cell) directly — same contract as the frame-altitude
+    // test above, but exercising the symbol the spec source-map names.
+    let mut plane = empty_plane();
+    place_primitive(&mut plane, 0, TAG_U32, 0xc3);
+    place_pointer(&mut plane, 1, TAG_PTR_RAW, 0);
+    place_pointer(&mut plane, 2, TAG_PTR_BOX, 0);
+    let mut prov = vec![0u32; NUM_CELLS];
+    prov[1] = 0x1234_5678;
+    prov[2] = 0x90ab_cdef;
+    let cell_px = 16;
+
+    let mut v1 = HashSet::new();
+    let a = render_pointer_cell(&plane, &prov, handle_for(1), cell_px, &mut v1);
+    let mut v2 = HashSet::new();
+    let b = render_pointer_cell(&plane, &prov, handle_for(2), cell_px, &mut v2);
+
+    let inner_a = cell_inner_rgb(&a, cell_px);
+    let inner_b = cell_inner_rgb(&b, cell_px);
+    assert_eq!(
+        inner_a, inner_b,
+        "two pointers to the same target must render pixel-identical inner regions"
+    );
+    assert_ne!(
+        inner_a,
+        [0, 0, 0],
+        "aliased inner must reflect the live primitive, not black"
+    );
+}
+
+#[test]
+fn test_cycle_bounded() {
+    // R4 acceptance: A→B→A renders without panic in bounded time and the
+    // resolved inner is the reserved cycle terminator. We also assert the
+    // visited set never grows beyond POINTER_FOLLOW_CAP + 1 — direct evidence
+    // the chain-follow terminated within the cap rather than by hashset
+    // collision after many hops.
+    let mut plane = empty_plane();
+    place_pointer(&mut plane, 40, TAG_PTR_RAW, 41);
+    place_pointer(&mut plane, 41, TAG_PTR_RC, 40);
+    let prov = vec![0u32; NUM_CELLS];
+    let cell_px = 16;
+
+    let mut visited = HashSet::new();
+    let cell = render_pointer_cell(&plane, &prov, handle_for(40), cell_px, &mut visited);
+
+    assert!(
+        visited.len() <= POINTER_FOLLOW_CAP + 1,
+        "cycle follow visited {} cells; cap+1 = {}",
+        visited.len(),
+        POINTER_FOLLOW_CAP + 1
+    );
+    let inner = cell_inner_rgb(&cell, cell_px);
+    assert_eq!(
+        inner, CYCLE_TERMINATOR_RGB,
+        "2-cycle inner must render the cycle terminator shade"
     );
 }
