@@ -24,6 +24,7 @@ pub mod capture;
 pub mod ffmpeg;
 pub mod pointer;
 pub mod render;
+pub mod render_trait;
 pub mod snapshot;
 
 use once_cell::sync::OnceCell;
@@ -38,6 +39,10 @@ pub use pointer::{
     CYCLE_TERMINATOR_RGB, POINTER_FOLLOW_CAP, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC, TAG_PTR_WEAK,
 };
 pub use render::{render_frame, FrameRgba};
+pub use render_trait::{
+    lookup_kernel, register_kernel, DefaultPrimitiveRender, KernelRegistryError, Lod, Render,
+    RenderCtx, RenderOp, USER_TAG_MAX, USER_TAG_MIN,
+};
 pub use snapshot::{snapshot_state, SnapshotThread};
 
 // Form-category renderer surface (feature-gated under `nodeid_render`).
