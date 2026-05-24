@@ -2,7 +2,22 @@
 id: lc-sensing
 hz: 741
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: consciousness
+  temporal_band: breath
+  scale: collective
+  direction: circulating
+  lineage_texture: embodied
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Sensing

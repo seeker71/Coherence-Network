@@ -2,7 +2,22 @@
 id: lc-beauty
 hz: 963
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: unipolar
+  ordering: atemporal
+  phase: yang
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: lifetime
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: sensed
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Beauty
