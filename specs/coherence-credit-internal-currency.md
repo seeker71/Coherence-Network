@@ -18,6 +18,15 @@ done_when:
   - "cc_from_usd and usd_from_cc are verified inverses"
   - "Every idea in SEED_IDEAS (scripts/seed_db.py) has value_basis with 6 required keys"
   - "Existing tests (test_ideas.py, test_idea_hierarchy.py) pass without regression"
+  - 'file_exists("api/app/services/coherence_credit_service.py")'
+  - 'symbol_in_file("api/app/services/coherence_credit_service.py", "exchange")'
+  - 'symbol_in_file("api/app/services/coherence_credit_service.py", "CC")'
+  - 'file_exists("api/app/models/coherence_credit.py")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "CostVector")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ValueVector")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ExchangeRate")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ProviderRate")'
+  - 'pytest_passes("api/tests/test_coherence_credit.py")'
 test: "python3 -m pytest api/tests/test_coherence_credit.py -x -q"
 constraints:
   - "Purely additive — no existing formulas or service logic modified"

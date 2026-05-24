@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-reliability
-status: draft
+status: active
 source:
   - file: api/scripts/local_runner.py
     symbols: [execute_with_provider()]
@@ -19,6 +19,15 @@ done_when:
   - "When the smart-reaper observes 3 consecutive stalled liveness events from a non-extending task, it transitions status (extend / needs_human_attention / compost) per existing thresholds"
   - "Existing partial-output diagnostic and resume-task creation in smart-reaper continue to work"
   - "All tests pass"
+  - 'file_exists("api/scripts/local_runner.py")'
+  - 'symbol_in_file("api/scripts/local_runner.py", "execute_with_provider")'
+  - 'file_exists("api/app/services/smart_reaper_service.py")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "is_runner_alive")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "smart_reap_task")'
+  - 'symbol_in_file("api/app/services/smart_reaper_service.py", "build_reap_diagnosis")'
+  - 'pytest_passes("api/tests/test_smart_reaper_module_boundary.py")'
+  - 'pytest_passes("api/tests/test_agent_runner_tool_failure_telemetry.py")'
+  - 'pytest_passes("api/tests/test_runner_attendance.py")'
 test: "cd api && python -m pytest tests/test_smart_reaper_module_boundary.py tests/test_agent_runner_tool_failure_telemetry.py tests/test_runner_attendance.py -v"
 constraints:
   - "Changes scoped to local_runner.py read loop + a new test file `tests/test_runner_attendance.py`"

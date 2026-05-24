@@ -8,6 +8,7 @@ specs:
   - [knowledge-resonance-engine](../specs/knowledge-resonance-engine.md)
   - [agent-memory-system](../specs/agent-memory-system.md)
   - [living-signal-layer](../specs/living-signal-layer.md)
+  - [cross-domain-measurement-translation-record](../specs/cross-domain-measurement-translation-record.md)
   - [source-artifact-sensing-graph-integration](../specs/source-artifact-sensing-graph-integration.md)
   - [gitnexus-integration-experiment](../specs/gitnexus-integration-experiment.md)
   - [recipes-tuned-by-trace](../specs/recipes-tuned-by-trace.md)
@@ -25,6 +26,7 @@ Without a concept layer, every idea is a bag of words. Similarity is keyword mat
 
 - **Concept layer foundation**: 184 universal concepts, 46 relationship types, 53 axes from the Living Codex ontology. Concepts are nodes; relationships are edges. Provides the vocabulary for coherence scoring.
 - **Concept resonance kernel**: Harmonic similarity matching — two ideas that share underlying concepts resonate even when surface words differ. Enables cross-domain discovery.
+- **Cross-domain measurement translation**: Native measurements stay honest in their own units while translation recipes make qualitative value comparable across carriers with visible loss, cost, and replay traces.
 - **Belief system interface**: Per-contributor worldview, interests, concept preferences. Two contributors can see the same idea through different frames.
 - **Belief translation**: Translate any idea through any worldview — same content, different frame. Reduces barrier to entry for non-technical contributors.
 - **Ice / Water / Gas phase states**: Knowledge has states — crystallized (ice), flowing (water), exploratory (gas). Transitions are explicit and reversible.

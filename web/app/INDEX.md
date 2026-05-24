@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 154
+**Total files**: 156
 
 | Route | File | Purpose |
 |---|---|---|
@@ -90,6 +90,7 @@
 | `/news` | [page.tsx](news/page.tsx) | _no top-of-file purpose_ |
 | `/nodes/[id]` | [page.tsx](nodes/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/nodes` | [page.tsx](nodes/page.tsx) | _no top-of-file purpose_ |
+| `/now` | [page.tsx](now/page.tsx) | _no top-of-file purpose_ |
 | `/one-sheet` | [page.tsx](one-sheet/page.tsx) | _no top-of-file purpose_ |
 | `/ontology` | [page.tsx](ontology/page.tsx) | _no top-of-file purpose_ |
 | `/` | [page.tsx](page.tsx) | _no top-of-file purpose_ |
@@ -102,6 +103,7 @@
 | `/people/urs/lineage` | [page.tsx](people/urs/lineage/page.tsx) | _no top-of-file purpose_ |
 | `/people/urs` | [page.tsx](people/urs/page.tsx) | _no top-of-file purpose_ |
 | `/pipeline` | [page.tsx](pipeline/page.tsx) | _no top-of-file purpose_ |
+| `/portfolio/investments` | [page.tsx](portfolio/investments/page.tsx) | _no top-of-file purpose_ |
 | `/portfolio` | [page.tsx](portfolio/page.tsx) | _no top-of-file purpose_ |
 | `/practice` | [page.tsx](practice/page.tsx) | _no top-of-file purpose_ |
 | `/presence-walk/[kind]` | [page.tsx](presence-walk/[kind]/page.tsx) | _no top-of-file purpose_ |

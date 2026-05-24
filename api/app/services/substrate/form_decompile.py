@@ -84,6 +84,98 @@ def recipe_to_form(session: Session, nid: NodeID) -> str:
         if cat.instance == 1:
             return f"(if {kids[0]} then {kids[1]})"
         return f"(if {kids[0]} then {kids[1]} else {kids[2]})"
+    if cat.type_ == RBasic.BLOCK.value:
+        # RBlock instances: 1=DO, 2=SEQUENCE, 3=LET, 4=WITH
+        if cat.instance == 1:
+            body = "; ".join(kids)
+            return f"do {{ {body} }}"
+        if cat.instance == 2:
+            return "; ".join(kids)
+        if cat.instance == 3:
+            if len(kids) == 2:
+                return f"let {kids[0]} = {kids[1]}"
+            return "let (" + ", ".join(kids) + ")"
+        if cat.instance == 4:
+            return f"with {kids[0]} {{ {kids[1]} }}"
+    if cat.type_ == RBasic.RESONANCE.value:
+        # RResonance instances: 1=SHAPES, 2=HARMONIC_AT, 3=BRIDGES,
+        # 4=EMBEDS_IN, 5=NEAR, 6=POLAR_TO, 7=CARRIES_RATIO
+        verbs = {
+            1: "SHAPES", 2: "HARMONIC_AT", 3: "BRIDGES", 4: "EMBEDS_IN",
+            5: "NEAR", 6: "POLAR_TO", 7: "CARRIES_RATIO",
+        }
+        verb = verbs.get(cat.instance, f"RESONANCE_{cat.instance}")
+        if len(kids) == 2:
+            return f"({kids[0]} -{verb}-> {kids[1]})"
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.REALIZE.value:
+        # RRealize instances: 1=REALIZE, 2=PARTIAL_REALIZE, 3=SUPERSEDE
+        # (Other instances fall through with a verb-tagged form preserving
+        # round-trip identity for the substrate even when the surface name
+        # isn't fully canonical.)
+        verbs = {1: "REALIZE", 2: "PARTIAL_REALIZE", 3: "SUPERSEDE"}
+        verb = verbs.get(cat.instance, f"REALIZE_{cat.instance}")
+        if len(kids) == 2:
+            return f"({kids[0]} -{verb}-> {kids[1]})"
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.TEND.value:
+        # RTend covers tend/attune/compost/release — body-relational verbs.
+        # Verb names follow the RTend enum; unknown instances stay tagged
+        # for round-trip identity.
+        if len(kids) == 1:
+            return f"TEND_{cat.instance}({kids[0]})"
+        return f"TEND_{cat.instance}({', '.join(kids)})"
+    # Remaining RBasic arms — each preserves verb-category + instance so
+    # round-trip identity holds at the substrate level. Surface naming
+    # follows the enum; specific instance verbs (e.g. `match` vs
+    # `switch`) can land per-arm as the parser grows to accept them.
+    if cat.type_ == RBasic.MATCH.value:
+        return f"MATCH_{cat.instance}({', '.join(kids)})"
+    if cat.type_ == RBasic.CHOICE.value:
+        # Angelic nondeterminism: choose/fail/stop
+        verbs = {1: "choose", 2: "fail", 3: "stop"}
+        verb = verbs.get(cat.instance, f"CHOICE_{cat.instance}")
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.STATE.value:
+        # BML save/restore/discard
+        verbs = {1: "save", 2: "restore", 3: "discard"}
+        verb = verbs.get(cat.instance, f"STATE_{cat.instance}")
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.EXCEPTION.value:
+        verbs = {1: "raise", 2: "resume"}
+        verb = verbs.get(cat.instance, f"EXCEPTION_{cat.instance}")
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.DELEGATE.value:
+        if len(kids) == 2:
+            return f"(delegate {kids[0]} to {kids[1]})"
+        return f"DELEGATE_{cat.instance}({', '.join(kids)})"
+    if cat.type_ == RBasic.REVERSE.value:
+        verbs = {1: "undo", 2: "inverse"}
+        verb = verbs.get(cat.instance, f"REVERSE_{cat.instance}")
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.COMMON.value:
+        if len(kids) >= 2:
+            return f"(common {' '.join(kids)})"
+        return f"COMMON_{cat.instance}({', '.join(kids)})"
+    if cat.type_ == RBasic.METHOD.value:
+        # METHOD recipes carry (receiver, method-name, args...)
+        if len(kids) >= 2:
+            return f"({kids[0]}.{kids[1]}({', '.join(kids[2:])}))"
+        return f"METHOD_{cat.instance}({', '.join(kids)})"
+    if cat.type_ == RBasic.REACTIVE.value:
+        # on_change / subscription primitives
+        verbs = {1: "on_change", 2: "subscribe"}
+        verb = verbs.get(cat.instance, f"REACTIVE_{cat.instance}")
+        return f"{verb}({', '.join(kids)})"
+    if cat.type_ == RBasic.PROJECTION.value:
+        # `|>` projection
+        if len(kids) == 2:
+            return f"({kids[0]} |> {kids[1]})"
+        return f"PROJECTION_{cat.instance}({', '.join(kids)})"
+    if cat.type_ == RBasic.TRY.value:
+        if len(kids) == 2:
+            return f"try {{ {kids[0]} }} catch {{ {kids[1]} }}"
+        return f"TRY_{cat.instance}({', '.join(kids)})"
     raise NotImplementedError(
         f"recipe_to_form: verb-category {cat} not yet covered. "
         f"Add one elif arm matching the RBasic.<verb>.value."
@@ -91,16 +183,25 @@ def recipe_to_form(session: Session, nid: NodeID) -> str:
 
 
 def _decompile_trivial(session: Session, nid: NodeID) -> str:
-    """Decode a trivial-leaf Recipe back to its Form surface."""
+    """Decode a trivial-leaf Recipe back to its Form surface.
+
+    Type-aware: SLUGs render as bare identifiers (no quotes) since they
+    carry the identity-role; STRINGs render quoted as content. This is
+    what lets `let x = 42` round-trip — the Identifier `x` interns as
+    SLUG and decompiles back to the bare name, not the quoted string.
+    """
+    from app.services.substrate.category import RType
     value = _trivial_value(session, nid)
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
-    if isinstance(value, str):
-        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     if value is None:
         return "null"
+    if isinstance(value, str):
+        if nid.type_ == RType.SLUG:
+            return value  # bare identifier, no quotes
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     raise NotImplementedError(
         f"recipe_to_form: trivial value type {type(value).__name__} not yet covered."
     )

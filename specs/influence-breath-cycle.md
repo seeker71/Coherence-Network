@@ -13,6 +13,9 @@ acceptance:
   - "The field story manifest exposes both human-readable and machine-readable breath-cycle artifacts."
   - "Tests verify the YouTube source count, unroomed influence candidates, and all trace links emitted in the report."
 test: "cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py"
+done_when:
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
+
 ---
 
 # Influence Breath Cycle
@@ -78,4 +81,10 @@ YouTube history is especially large: the derived event trace contains tens of th
 python3 docs/field/urs/tools/influence_breath_cycle.py --field-dir docs/field/urs
 cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
 api/.venv/bin/ruff check tests/test_field_story_trace_index.py ../docs/field/urs/tools/influence_breath_cycle.py
+```
+
+## Verification
+
+```bash
+cd api && .venv/bin/pytest -q tests/test_field_story_trace_index.py
 ```

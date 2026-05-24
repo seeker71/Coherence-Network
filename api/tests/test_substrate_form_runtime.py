@@ -441,10 +441,273 @@ def test_arithmetic_on_tree_walk_result(session):
     assert form_execute_text(session, src) == (n - 1) * 2
 
 
+def test_file_fact_builtins_evaluate_from_form(session):
+    """File-fact predicates run as Form expressions against the disk.
+    These are the predicate vocabulary spec `done_when:` items use when
+    they're written as Form rather than prose. Result is content-addressed;
+    two evaluations of the same expression intern to the same Recipe NodeID.
+    """
+    # Pick a file the test runner is certain about — its own source file.
+    test_file_form = '"api/tests/test_substrate_form_runtime.py"'
+
+    # file_exists
+    assert form_execute_text(
+        session, f'file_exists({test_file_form})'
+    ) is True
+    assert form_execute_text(
+        session, 'file_exists("api/this/file/does/not/exist.py")'
+    ) is False
+
+    # file_contains (this test file contains the test function's name)
+    assert form_execute_text(
+        session,
+        f'file_contains({test_file_form}, "test_file_fact_builtins_evaluate_from_form")',
+    ) is True
+
+    # symbol_in_file (alias)
+    assert form_execute_text(
+        session,
+        f'symbol_in_file({test_file_form}, "test_file_fact_builtins_evaluate_from_form")',
+    ) is True
+
+    # Composition — Form `&&` with two file-fact predicates
+    expr = (
+        f'(file_exists({test_file_form}) '
+        f'&& file_contains({test_file_form}, "test_file_fact_builtins_evaluate_from_form"))'
+    )
+    assert form_execute_text(session, expr) is True
+
+    # file_size graceful on missing
+    assert form_execute_text(
+        session, 'file_size("api/this/file/does/not/exist.py")'
+    ) == 0
+
+
 def test_unknown_field_raises(session):
     _seed_memory_cell(session)
     with pytest.raises(AttributeError):
         form_execute_text(session, '@memory("test memory").not_a_field')
+
+
+def _seed_structured_memory_cell(session):
+    """Create a memory cell with the structured-CTOR encoder so .field()
+    fall-through can walk LET-bindings by key."""
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: structured test memory
+description: cell with structured-CTOR for field-by-name access
+type: feedback
+---
+
+Body of the memory.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+
+def test_structured_ctor_field_by_name(session):
+    """Frontmatter keys interned via structured-CTOR are reachable as
+    cell fields directly. The human reads YAML, the substrate walks LET,
+    the AI bridges — same value across all three voices.
+    """
+    _seed_structured_memory_cell(session)
+    # `name` is a builtin cell field; `description` and `type` fall through
+    # to the structured-CTOR LET-binding walk.
+    assert form_execute_text(
+        session, '@memory("structured test memory").description'
+    ) == "cell with structured-CTOR for field-by-name access"
+    assert form_execute_text(
+        session, '@memory("structured test memory").type'
+    ) == "feedback"
+
+
+def test_structured_ctor_unknown_field_still_raises(session):
+    """Field-by-name fall-through is additive: when no LET-binding matches,
+    the AttributeError still fires (and now lists the structured-CTOR
+    pathway in its hint)."""
+    _seed_structured_memory_cell(session)
+    with pytest.raises(AttributeError, match="frontmatter key"):
+        form_execute_text(
+            session, '@memory("structured test memory").not_a_real_field'
+        )
+
+
+def test_body_section_content_is_word_cell_sequence(session):
+    """Section content is now a R_Block.SEQUENCE of word-cell refs (and
+    punct leaves), not an opaque string. Each unique (lemma, POS) interns
+    once; the substrate becomes word-queryable across ideas/specs/concepts.
+
+    Verifies (D-deeper) — body prose down to the word level.
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    from app.services.substrate.kernel import NodeID
+    from app.services.substrate.category import RType
+    from app.services.substrate.form_runtime import _node_children, _trivial_value
+    import tempfile, os
+    body = """---
+name: word-level section test
+description: test cell
+type: feedback
+---
+
+## First Section
+
+Hello world from this section.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    body_ctor = form_execute_text(
+        session, '@memory("word-level section test").body'
+    )
+    # body.children = [LET("First Section", SEQUENCE [...word-cells...])]
+    let_pair = _node_children(session, body_ctor)[0]
+    let_kids = _node_children(session, let_pair)
+    heading = _trivial_value(session, let_kids[0])
+    assert heading == "First Section"
+    seq = let_kids[1]
+    elements = _node_children(session, seq)
+    # "Hello world from this section." → 5 word tokens + 1 punct
+    word_refs = [e for e in elements if e.type_ == RType.REF]
+    assert len(word_refs) >= 5, f"expected ≥5 word-cells, got {len(word_refs)}"
+
+
+def test_body_sections_walkable_as_named_recipes(session):
+    """Body `## H2` sections are interned as LET-bindings under cell.body.
+    cell.body.nchildren returns the section count; each section's content
+    is itself walkable (see test_body_section_content_is_word_cell_sequence).
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: body sections test
+description: cell with multi-section body
+type: feedback
+---
+
+Intro paragraph (before any heading).
+
+## First Section
+
+First section content.
+
+## Second Section
+
+Second section content with more text.
+
+## Third Section
+
+Third section content.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    # body is a substrate-resident structured recipe.
+    body_ctor = form_execute_text(
+        session, '@memory("body sections test").body'
+    )
+    assert isinstance(body_ctor, NodeID)
+
+    # Three sections.
+    assert form_execute_text(
+        session, '@memory("body sections test").body.nchildren'
+    ) == 3
+
+
+def test_nested_structured_ctor_navigation(session):
+    """Nested frontmatter (list-of-dict) becomes a walkable substrate tree;
+    LET-binding access on Recipe NodeIDs lets the runtime navigate inside.
+
+    YAML frontmatter:
+        capabilities:
+          - id: cli
+            title: command line
+            resonance: 528
+          - id: mcp
+            title: model context protocol
+            resonance: 528
+
+    Substrate shape (after structured ingest):
+        capabilities (LET value) → R_Block.SEQUENCE
+            ├── R_Block.DO { LET("id", "cli"), LET("title", "..."), ... }
+            └── R_Block.DO { LET("id", "mcp"), LET("title", "..."), ... }
+
+    Runtime navigation:
+        cell.capabilities.children[0].title  →  "command line"
+    """
+    from app.services.substrate.markdown_frontend import ingest_markdown_text
+    import tempfile, os
+    body = """---
+name: nested test cell
+description: test nested-structured-ctor navigation
+type: feedback
+capabilities:
+  - id: cli
+    title: command line
+    resonance: 528
+  - id: mcp
+    title: model context protocol
+    resonance: 528
+---
+
+Body.
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(body)
+        path = f.name
+    try:
+        from app.services.substrate import ingest_memory_file
+        from pathlib import Path
+        ingest_memory_file(session, Path(path), structured=True)
+        session.flush()
+    finally:
+        os.unlink(path)
+
+    # Cell.capabilities returns the SEQUENCE NodeID.
+    caps = form_execute_text(
+        session, '@memory("nested test cell").capabilities'
+    )
+    assert isinstance(caps, NodeID)
+
+    # Sequence has 2 children.
+    assert form_execute_text(
+        session, '@memory("nested test cell").capabilities.nchildren'
+    ) == 2
+
+    # First capability's `title` is accessible via LET-walking on the
+    # Recipe NodeID.
+    first = form_execute_text(
+        session, '@memory("nested test cell").capabilities.child(0)'
+    )
+    from app.services.substrate.form_runtime import _resolve_access
+    assert _resolve_access(session, first, "id") == "cli"
+    assert _resolve_access(session, first, "title") == "command line"
+    assert _resolve_access(session, first, "resonance") == 528
 
 
 def test_child_out_of_range_raises(session):

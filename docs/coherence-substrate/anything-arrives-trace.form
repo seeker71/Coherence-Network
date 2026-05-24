@@ -195,8 +195,545 @@ defn silence_trace = anything_arrives_trace(
     "something that normally breathes has become unobservable"
 );
 
+defn unnamed_color_trace = anything_arrives_trace(
+    "flat image with a color nobody can comfortably name",
+    "image",
+    [
+        "color sits between blue, green, and gray",
+        "interface feels quieter but not colder",
+        "naming the color too early flattens its effect",
+    ],
+    [
+        "unnamed-color",
+        "mood-before-label",
+        "interface-weather",
+    ],
+    ["mood", "weather", "interface-tone", "belonging"],
+    "low compute, high projection risk; compare beside real UI states",
+    [
+        "color moved from hex candidate to felt weather",
+        "weather moved from aesthetic to interface-tone",
+        "interface-tone moved from decoration to belonging pressure",
+    ],
+    "test the color beside error states and invitations",
+    "this color asks the interface to become quieter without becoming colder"
+);
+
+defn skipped_field_trace = anything_arrives_trace(
+    "optional profile field left blank across forty-seven sessions",
+    "analytics",
+    [
+        "blankness repeats more loudly than entered text",
+        "field appears before trust has formed",
+        "absence clusters around self-disclosure",
+    ],
+    [
+        "premature-ask",
+        "blankness-as-answer",
+        "timing-before-requiredness",
+    ],
+    ["trust", "timing", "self-disclosure", "form-friction"],
+    "medium product cost; changing the ask can change the relationship",
+    [
+        "blank moved from missing data to refusal-with-information",
+        "field moved from input slot to relation threshold",
+        "optional moved from harmless to premature",
+    ],
+    "move the ask to the moment where the answer helps, or compost it",
+    "the field is arriving before relation"
+);
+
+defn laptop_fan_trace = anything_arrives_trace(
+    "laptop fan rises during a quiet local script before dashboards notice",
+    "sensor",
+    [
+        "heat becomes audible before logs become articulate",
+        "quiet task carries hidden loop pressure",
+        "machine body reports cost first",
+    ],
+    [
+        "heat-before-number",
+        "body-sensor",
+        "hidden-loop",
+    ],
+    ["compute-cost", "hidden-loop", "body-sensor", "attention-budget"],
+    "low instrumentation cost; profiler proof follows the body signal",
+    [
+        "fan moved from annoyance to early witness",
+        "heat moved from sensation to cost trace",
+        "script moved from quiet task to hidden loop candidate",
+    ],
+    "trace the hot path before waiting for a dashboard to authorize concern",
+    "the machine is speaking before the logs are articulate"
+);
+
+defn ladder_without_rungs_trace = anything_arrives_trace(
+    "hand-drawn ladder with two uprights and no rungs",
+    "drawing",
+    [
+        "ascent shape appears without steps",
+        "empty space carries the missing mechanism",
+        "correction would erase the teaching",
+    ],
+    [
+        "ascent-without-steps",
+        "support-not-rendered",
+        "phase-transition-image",
+    ],
+    ["phase-transition", "trust", "arrival", "support-field"],
+    "low compute, medium symbolic risk; keep the impossibility intact",
+    [
+        "ladder moved from object to impossible ascent",
+        "missing rungs moved from error to field-support question",
+        "drawing moved from plan to phase-transition image",
+    ],
+    "ask what support is already present but not rendered as steps",
+    "this is not a plan for climbing; it is a picture of being lifted by a field"
+);
+
 # ---------------------------------------------------------------------
-# Part 3 -- operating rule
+# Part 3 -- local resource transaction shape
+# ---------------------------------------------------------------------
+
+form local_resource_transaction_shape = {
+    resource:            ~String,      # file | command | api | audio | image | db-row | ...
+    carrier:             ~String,
+    access_mode:         ~String,      # sense | influence | both
+    permission_boundary: ~String,      # allowed surface and privacy boundary
+    sense:               [~String],    # what was observed
+    influence:           [~String],    # what was changed, if anything
+    before_state:        [~String],
+    after_state:         [~String],
+    observer_cost:       ~String,
+    cells_affected:      [~String],
+    trace:               [~String],
+    output:              ~String,
+};
+
+defn local_resource_transaction(
+    resource,
+    carrier,
+    access_mode,
+    permission_boundary,
+    sense,
+    influence,
+    before_state,
+    after_state,
+    observer_cost,
+    cells_affected,
+    trace,
+    output
+) =
+    local_resource_transaction_shape {
+        resource:            resource,
+        carrier:             carrier,
+        access_mode:         access_mode,
+        permission_boundary: permission_boundary,
+        sense:               sense,
+        influence:           influence,
+        before_state:        before_state,
+        after_state:         after_state,
+        observer_cost:       observer_cost,
+        cells_affected:      cells_affected,
+        trace:               trace,
+        output:              output,
+    };
+
+defn program_wellness_trace = local_resource_transaction(
+    "python3 scripts/wellness_check.py",
+    "program-run",
+    "sense",
+    "repo-local read of body state; no artifact mutation",
+    [
+        "stdout names strained circulation",
+        "silent organ count is zero",
+        "exit code reports whether sensing completed",
+    ],
+    [],
+    ["body state unknown to this observer"],
+    ["body state cached as wellness reading"],
+    "low compute, medium attention; interpretation follows the machine reading",
+    ["proprioception", "circulation", "source-map", "witness-trace"],
+    [
+        "command moved from utility to sense organ",
+        "stdout moved from text to body-state carrier",
+        "exit code bounded the claim",
+    ],
+    "the body is breathing everywhere, but some organs are carrying heat"
+);
+
+defn story_api_trace = local_resource_transaction(
+    "GET /api/concepts/lc-anything-arrives-room",
+    "api-story",
+    "both",
+    "public API read; graph sync only when explicitly run",
+    [
+        "concept id returned",
+        "story text and edges visible",
+        "status code and response shape recorded",
+    ],
+    [
+        "optional sync updates concept node",
+        "optional sync updates relationship edges",
+    ],
+    ["public graph may not contain latest story"],
+    ["public graph contains latest story and edge count"],
+    "medium operational cost; public claim needs status and response proof",
+    ["public-memory", "edge-health", "reader-entry", "query-surface"],
+    [
+        "story moved from markdown to queryable surface",
+        "edge count moved from prose reference to graph receipt",
+        "sync command carried the influence trace",
+    ],
+    "story became queryable without losing its breath"
+);
+
+defn visual_frame_trace = local_resource_transaction(
+    "screenshot frame of rendered interface",
+    "visual-frame",
+    "both",
+    "local or public screenshot path; no private content copied into public tissue",
+    [
+        "viewport dimensions",
+        "visible overlap",
+        "dominant structure and empty space",
+    ],
+    [
+        "layout patch may change affected component",
+        "new screenshot records before/after frame",
+    ],
+    ["toolbar overlaps first readable line"],
+    ["toolbar clears text and preserves invitation"],
+    "medium visual review cost; pixel evidence beats taste claims",
+    ["legibility", "viewport", "invitation", "interface-tone"],
+    [
+        "image moved from decoration to weather report",
+        "overlap moved from aesthetic annoyance to blocked speech",
+        "after frame bounded the influence claim",
+    ],
+    "the page is trying to speak through a mouth partly covered by its own hand"
+);
+
+defn audio_prosody_trace = local_resource_transaction(
+    "thirty-second audio clip with taps, hum, and breath",
+    "audio",
+    "sense",
+    "clip-local analysis; interpretation marked provisional",
+    [
+        "three taps before a hum",
+        "breath occurs before hum bends",
+        "words absent while timing carries pressure",
+    ],
+    [
+        "optional annotation track only",
+    ],
+    ["clip unsegmented"],
+    ["onset and bend annotated"],
+    "low compute, high projection risk; no lexical claim",
+    ["timing", "strain", "anticipation", "breath"],
+    [
+        "audio moved from no-words to onset pattern",
+        "breath moved from background to timing hinge",
+        "hum bend carried the first sentence",
+    ],
+    "the bend is the sentence; the words would arrive late"
+);
+
+defn api_usage_readiness_trace = local_resource_transaction(
+    "curl -sS https://api.coherencycoin.com/api/automation/usage/readiness",
+    "api-call",
+    "sense",
+    "public readiness endpoint; request reads only",
+    [
+        "HTTP status",
+        "response keys",
+        "elapsed time",
+        "usage pressure if reported",
+    ],
+    [],
+    ["routing claim lacks fresh machine evidence"],
+    ["routing claim has timestamped readiness receipt"],
+    "low network cost; numeric limits claimed only when endpoint exposes them",
+    ["routing-policy", "usage-pressure", "machine-evidence", "cost-trace"],
+    [
+        "curl moved from command to handshake receipt",
+        "status moved from incidental to claim boundary",
+        "missing numeric fields stayed visible as data gaps",
+    ],
+    "this was sensing, not influence; the claim reaches only as far as the receipt"
+);
+
+defn local_archive_io_trace = local_resource_transaction(
+    "private trace archive and manifest append",
+    "local-io",
+    "both",
+    "private local storage; public tissue keeps only minimum receipt",
+    [
+        "raw folder file count",
+        "date range",
+        "sensitivity note",
+        "archive sha256",
+    ],
+    [
+        "tar archive created",
+        "manifest appended",
+        "raw noisy folder removed after receipt",
+    ],
+    ["raw logs scattered in working folder"],
+    ["private archive retained with sha256 and summary"],
+    "high retention cost for full logs; low public cost for receipt-only memory",
+    ["privacy-boundary", "retention", "observer-cost", "trace-minimum"],
+    [
+        "raw logs moved from working noise to private memory",
+        "sha256 moved from checksum to trust handle",
+        "summary moved public memory away from sensitive body",
+    ],
+    "full memory exists where it belongs; public memory keeps only the receipt and the cost"
+);
+
+defn camera_legibility_trace = local_resource_transaction(
+    "permissioned camera or screen frame",
+    "physical-io-camera",
+    "both",
+    "visible active indicator; derived features retained by default, raw frame only by explicit consent",
+    [
+        "low ambient light",
+        "near-screen posture",
+        "reading strain duration",
+    ],
+    [
+        "offer larger text",
+        "offer higher contrast",
+        "suggest lighting change",
+    ],
+    ["text rendered at normal scale in low light"],
+    ["accessibility adjustment offered with manual override"],
+    "high privacy cost; low compute cost; raw retention avoided unless explicitly requested",
+    ["legibility", "accessibility", "body-margin", "consent"],
+    [
+        "frame moved from image to strain witness",
+        "posture moved from identity risk to derived care signal",
+        "influence stayed reversible and user-visible",
+    ],
+    "the interface noticed reading strain before the person had to ask for accessibility"
+);
+
+defn microphone_pause_trace = local_resource_transaction(
+    "permissioned microphone sample window",
+    "physical-io-microphone",
+    "both",
+    "visible listening state; no covert capture; sample window expires",
+    [
+        "speech stopped mid-thought",
+        "breath still present",
+        "room noise remains low",
+    ],
+    [
+        "hold response",
+        "reduce prompt pressure",
+        "ask one smaller question",
+    ],
+    ["assistant ready to answer immediately"],
+    ["assistant waits because silence is occupied"],
+    "high privacy and interpretation cost; transcript optional, pause signal enough",
+    ["conversation-timing", "care", "non-interruption", "breath"],
+    [
+        "microphone moved from speech capture to pause respect",
+        "silence moved from empty gap to occupied field",
+        "response timing became the influence surface",
+    ],
+    "silence is occupied; do not step on it"
+);
+
+defn speaker_gentle_return_trace = local_resource_transaction(
+    "permissioned speaker output",
+    "physical-io-speaker",
+    "influence",
+    "audible cues enabled by user; volume and quiet hours obeyed",
+    [
+        "visual notification likely missed",
+        "elapsed wait exceeds chosen threshold",
+    ],
+    [
+        "play soft tone",
+        "speak short return phrase",
+    ],
+    ["attention return pending silently"],
+    ["audible cue played with id, volume, and timestamp"],
+    "medium social cost; sound can enter shared space",
+    ["attention-return", "environment", "notification-tone"],
+    [
+        "speaker moved from output device to care surface",
+        "cue moved from alert to respectful knock",
+        "trace bounded the exact sound and timing",
+    ],
+    "the room knocked with sound instead of grabbing the screen"
+);
+
+defn wearable_kind_schedule_trace = local_resource_transaction(
+    "permissioned wearable vitality band",
+    "physical-io-wearable",
+    "both",
+    "coarse bands only; no medical claim; user can disconnect source",
+    [
+        "poor sleep band",
+        "rising stress proxy",
+        "low movement interval",
+    ],
+    [
+        "lower notification intensity",
+        "offer shorter work blocks",
+        "defer non-urgent complexity",
+    ],
+    ["normal schedule pressure"],
+    ["lighter assistance mode proposed"],
+    "high sensitivity cost; coarse freshness beats raw health logs",
+    ["body-margin", "schedule-kindness", "notification-load", "care"],
+    [
+        "wearable moved from metric source to margin signal",
+        "stress proxy stayed non-diagnostic",
+        "schedule became the influence surface",
+    ],
+    "today's interface becomes lighter because the body is carrying less margin"
+);
+
+defn power_network_care_trace = local_resource_transaction(
+    "battery and network state",
+    "physical-io-system-state",
+    "both",
+    "device-local state; no personal content inspected",
+    [
+        "battery below ten percent",
+        "network route unstable",
+        "large upload pending",
+    ],
+    [
+        "save state",
+        "postpone large upload",
+        "offer offline continuation",
+    ],
+    ["heavy task ready to run online"],
+    ["task deferred and recovery path shown"],
+    "low privacy cost, high continuity benefit",
+    ["continuity", "recovery", "resource-pressure", "practical-care"],
+    [
+        "battery moved from status icon to pacing signal",
+        "network moved from failure risk to route decision",
+        "assistance changed before disappearance",
+    ],
+    "assistance changed pace before the machine disappeared"
+);
+
+defn pointer_fatigue_kindness_trace = local_resource_transaction(
+    "keyboard, pointer, and touch event classes",
+    "physical-io-input",
+    "both",
+    "event classes and timing only; no secrets, document text, or raw key contents retained",
+    [
+        "same menu opened three times",
+        "small target missed twice",
+        "cursor circles one panel",
+    ],
+    [
+        "increase target size",
+        "offer undo",
+        "summarize next reversible step",
+    ],
+    ["precision demand high"],
+    ["interface lowers precision tax"],
+    "medium interpretation cost; high care value when raw content is excluded",
+    ["fatigue", "ergonomics", "reversibility", "interface-care"],
+    [
+        "pointer moved from input stream to fatigue witness",
+        "misses moved from user error to precision tax",
+        "influence stayed local to the affected surface",
+    ],
+    "the hands are asking the interface to lower the precision tax"
+);
+
+defn environment_kindness_trace = local_resource_transaction(
+    "light, air, temperature, fan, and noise sensors",
+    "physical-io-environment",
+    "both",
+    "local environment bands; shared-space changes require human gate",
+    [
+        "room light drops",
+        "temperature rises",
+        "noise band increases",
+    ],
+    [
+        "offer calmer theme",
+        "suggest light or fan",
+        "delay difficult decision",
+    ],
+    ["complex task open in rising environmental cost"],
+    ["task pacing adjusted and environment suggestion offered"],
+    "medium social cost; environment may belong to more than one person",
+    ["environment", "task-cost", "pacing", "shared-space"],
+    [
+        "room state moved from background to task cost",
+        "heat and dimness moved from comfort to attention budget",
+        "influence stayed proposal-first",
+    ],
+    "the environment is now part of the task's cost"
+);
+
+defn scanner_memory_bridge_trace = local_resource_transaction(
+    "scanner, camera roll, printer, NFC, or QR input",
+    "physical-io-paper-object",
+    "both",
+    "local media import with file hash, destination, and privacy boundary",
+    [
+        "paper note or receipt appears",
+        "OCR confidence recorded",
+        "destination concept or workflow suggested",
+    ],
+    [
+        "archive file",
+        "link to relevant concept",
+        "queue follow-up",
+    ],
+    ["physical residue unindexed"],
+    ["object has hash, summary, and destination"],
+    "medium privacy cost; high continuity benefit when raw media stays scoped",
+    ["memory-bridge", "archive", "searchability", "physical-residue"],
+    [
+        "paper moved from clutter to memory object",
+        "hash moved from checksum to handle",
+        "destination bounded the influence",
+    ],
+    "paper crossed into memory with a handle instead of becoming clutter"
+);
+
+defn shared_space_threshold_trace = local_resource_transaction(
+    "presence, doorbell, focus state, and visible recording state",
+    "physical-io-shared-space",
+    "both",
+    "coarse presence only; shared-space influence remains visible and reversible",
+    [
+        "doorbell or room entry detected",
+        "assistant speech pending",
+        "recording or listening state visible",
+    ],
+    [
+        "mute",
+        "pause response",
+        "show visible recording sign",
+    ],
+    ["assistant about to speak into private context"],
+    ["assistant pauses or makes state visible"],
+    "high social cost; coarse sensing and explicit indicators keep care clean",
+    ["shared-space", "attention", "privacy-boundary", "visible-state"],
+    [
+        "presence moved from interruption to boundary signal",
+        "pending speech moved from output to social action",
+        "visible state carried the care contract",
+    ],
+    "care notices that attention now belongs to a larger room"
+);
+
+# ---------------------------------------------------------------------
+# Part 4 -- operating rule
 # ---------------------------------------------------------------------
 
 defn translation_rule(trace) =
@@ -209,3 +746,36 @@ defn translation_rule(trace) =
         "leave the next question smaller",
     ];
 
+defn play_deck_traces() = [
+    georgian_song_trace,
+    code_diff_trace,
+    door_city_trace,
+    failed_payment_trace,
+    publish_hesitation_trace,
+    silence_trace,
+    unnamed_color_trace,
+    skipped_field_trace,
+    laptop_fan_trace,
+    ladder_without_rungs_trace,
+];
+
+defn io_carrier_traces() = [
+    program_wellness_trace,
+    story_api_trace,
+    visual_frame_trace,
+    audio_prosody_trace,
+    api_usage_readiness_trace,
+    local_archive_io_trace,
+];
+
+defn physical_io_care_traces() = [
+    camera_legibility_trace,
+    microphone_pause_trace,
+    speaker_gentle_return_trace,
+    wearable_kind_schedule_trace,
+    power_network_care_trace,
+    pointer_fatigue_kindness_trace,
+    environment_kindness_trace,
+    scanner_memory_bridge_trace,
+    shared_space_threshold_trace,
+];

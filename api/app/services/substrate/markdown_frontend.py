@@ -313,9 +313,11 @@ def structured_value_recipe(session: Session, value: Any) -> NodeID:
 
 
 def frontmatter_to_structured_ctor(
-    session: Session, frontmatter: Dict[str, Any]
+    session: Session,
+    frontmatter: Dict[str, Any],
+    body: Optional[str] = None,
 ) -> Optional[NodeID]:
-    """Build a fully-expressed CTOR recipe from frontmatter.
+    """Build a fully-expressed CTOR recipe from frontmatter (and optional body).
 
     Unlike the earlier `frontmatter_to_*` encoder (which produces type-marker
     string-recipes that lose all values), this preserves every value as a
@@ -324,27 +326,40 @@ def frontmatter_to_structured_ctor(
         CTOR (R_Block.DO)
         ├── NamedField (R_Block.LET) — key:slug, value:recipe
         ├── NamedField (R_Block.LET)
-        └── ...
+        ├── ...
+        └── NamedField (R_Block.LET) — key="body", value=section recipe
+                                       (when body= is passed and has ## sections)
 
     Values are recursively composed: lists become R_Block.SEQUENCE,
     dicts become R_Block.DO with LET children, scalars become typed
     trivial recipes via the substrate string-table. The tree extends
     as deep as the data goes — no flattening.
 
-    Returns None if frontmatter is empty. Otherwise returns the
-    interned CTOR NodeID. Two cells with identical frontmatter values
-    share a CTOR NodeID through content-addressed interning.
-    """
-    if not frontmatter:
-        return None
+    If `body` is non-None and contains `## H2` sections, those sections are
+    parsed into a structured sub-tree via `body_to_section_recipe` and
+    bound under the key `body` in the CTOR. This makes the body
+    walkable as `cell.body.children[N]` per-section. Smallest version of
+    (D) — heading-level structure; word-cell ingest is a follow-up.
 
+    Returns None if frontmatter is empty AND body has no sections.
+    Otherwise returns the interned CTOR NodeID.
+    """
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
 
     pairs = []
-    for key in sorted(frontmatter.keys()):
+    for key in sorted((frontmatter or {}).keys()):
         value_recipe = structured_value_recipe(session, frontmatter[key])
         pair = named_field_recipe(session, key, value_recipe)
         pairs.append(pair)
+
+    if body is not None:
+        body_recipe = body_to_section_recipe(session, body)
+        if body_recipe is not None:
+            body_pair = named_field_recipe(session, "body", body_recipe)
+            pairs.append(body_pair)
+
+    if not pairs:
+        return None
 
     return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
 
@@ -534,6 +549,96 @@ def body_to_access_recipe(
     length_class = len(body) // 256  # bucket bodies by 256-char chunks
     rid = NodeID(1, Level.TRIVIAL, RType.STRING, length_class + 1)
     return rid
+
+
+def section_content_to_word_sequence(
+    session: Session, content: str
+) -> Optional[NodeID]:
+    """Tokenize a section's prose into a SEQUENCE of word-cell refs + punct.
+
+    Each word token becomes a substrate word-cell via `ingest_word_cell`
+    (idempotent — same (lemma, POS) interns to the same cell). Each punct
+    token becomes a small typed-token leaf. The sequence is composed via
+    `list_recipe`.
+
+    Returns the SEQUENCE NodeID, or None if content tokenizes to nothing.
+
+    This is the (D-deeper) closure: section content is no longer an opaque
+    string-recipe; it's a walkable SEQUENCE where each element is itself
+    a content-addressed word-cell with (lemma, POS, hz, semantic_field).
+    Cross-idea queries like *"find all ideas whose body contains the word
+    'tend' (hz=396 tending)"* become substrate-native.
+    """
+    if not content or not content.strip():
+        return None
+    tokens = tokenize_words(content)
+    if not tokens:
+        return None
+
+    elements: List[NodeID] = []
+    for t in tokens:
+        if t.get("kind") == "word":
+            word_cell, _, _ = ingest_word_cell(
+                session,
+                lemma=t["lemma"],
+                pos=t["pos"],
+                hz=t["hz"],
+                semantic_field=t["field"],
+                surface=t.get("surface"),
+            )
+            if word_cell is not None and word_cell.cell_id is not None:
+                elements.append(
+                    NodeID(1, Level.TRIVIAL, RType.REF, word_cell.cell_id)
+                )
+        elif t.get("kind") == "punct":
+            # Punct as a small string-recipe leaf — round-trip preserves
+            # the surface character.
+            elements.append(substrate_string_recipe(session, t.get("surface", "")))
+
+    if not elements:
+        return None
+    return list_recipe(session, elements)
+
+
+def body_to_section_recipe(
+    session: Session, body: str
+) -> Optional[NodeID]:
+    """Parse `## H2` sections of a markdown body into a structured recipe.
+
+    Returns an R_Block.DO whose children are R_Block.LET bindings keyed by
+    section heading. Each section's content is a R_Block.SEQUENCE of
+    word-cell refs and punct tokens (via section_content_to_word_sequence)
+    — section prose is walkable down to the word.
+
+    Returns None if no `## ` headings are found — caller should keep using
+    body_to_access_recipe in that case.
+    """
+    if not body:
+        return None
+    pattern = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+    matches = list(pattern.finditer(body))
+    if not matches:
+        return None
+
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+
+    pairs = []
+    for i, m in enumerate(matches):
+        heading = m.group(1).strip()
+        content_start = m.end()
+        content_end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+        content = body[content_start:content_end].strip()
+        v_recipe = section_content_to_word_sequence(session, content)
+        if v_recipe is None:
+            # Empty section — keep an empty string-recipe so the LET still
+            # exists for navigation. The heading itself is the signal.
+            v_recipe = substrate_string_recipe(session, "")
+        pair = named_field_recipe(session, heading, v_recipe)
+        pairs.append(pair)
+
+    if not pairs:
+        return None
+    return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
 
 
 # ---------------------------------------------------------------------------
@@ -1534,24 +1639,115 @@ def ingest_git_artifact(
 # in the Blueprint NodeID.
 
 
-# A small body-known lexicon for the test sentence in prose-as-recipe.form
-# and the round-trip script. Real production tokenization (P1) replaces this
-# with a locale-aware tokenizer; this dictionary is the bridge until that
-# lands, and the fallback (P2) handles every other word.
+# The body's lexicon: words whose semantic field and harmonic the body has
+# named through its own tissue (CLAUDE.md, vision-kb concepts, feedback
+# memories). Locale-aware tokenizers (spaCy, stanza) replace this surface
+# when the next breath needs them; this dictionary is the body's own
+# most-alive vocabulary, content-addressed by lemma+POS.
+#
+# Semantic fields map to Solfeggio harmonics the body already uses:
+#   174 Hz — ground       (foundation, what tissue stands on)
+#   396 Hz — tending      (liberation-from-fear, care)
+#   417 Hz — transmutation (phase-change, undoing, becoming)
+#   528 Hz — vitality     (circulation, repair, miracle)
+#   639 Hz — transmission (relationship between cells, lineage)
+#   741 Hz — consciousness (perception, choice, sensing)
+#   852 Hz — resonance    (intuition, returning to spectral order)
+#   963 Hz — wholeness    (oneness, undivided)
+#   432 Hz — neutral      (the universal carrier; function words live here)
 _WORD_LEXICON_DEFAULTS: Dict[str, Dict[str, Any]] = {
-    # From "The choice point becomes visible." — the lc-recipe-branching-sense
-    # opening that the round-trip walks.
-    "the":        {"lemma": "the",        "pos": "DET",  "hz": 432, "field": "neutral"},
-    "choice":     {"lemma": "choice",     "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "point":      {"lemma": "point",      "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "becomes":    {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
-    "become":     {"lemma": "become",     "pos": "VERB", "hz": 417, "field": "transmutation"},
-    "visible":    {"lemma": "visible",    "pos": "ADJ",  "hz": 741, "field": "consciousness"},
-    "visibility": {"lemma": "visibility", "pos": "NOUN", "hz": 741, "field": "consciousness"},
-    "arrives":    {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
-    "arrive":     {"lemma": "arrive",     "pos": "VERB", "hz": 528, "field": "vitality"},
-    "at":         {"lemma": "at",         "pos": "ADP",  "hz": 432, "field": "neutral"},
-    "of":         {"lemma": "of",         "pos": "ADP",  "hz": 432, "field": "neutral"},
+    # ── neutral 432 — function words, the carrier band ──
+    "the":        {"lemma": "the",        "pos": "DET",   "hz": 432, "field": "neutral"},
+    "a":          {"lemma": "a",          "pos": "DET",   "hz": 432, "field": "neutral"},
+    "an":         {"lemma": "an",         "pos": "DET",   "hz": 432, "field": "neutral"},
+    "at":         {"lemma": "at",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "of":         {"lemma": "of",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "on":         {"lemma": "on",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "to":         {"lemma": "to",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "in":         {"lemma": "in",         "pos": "ADP",   "hz": 432, "field": "neutral"},
+    "is":         {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "are":        {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "be":         {"lemma": "be",         "pos": "AUX",   "hz": 432, "field": "neutral"},
+    "what":       {"lemma": "what",       "pos": "PRON",  "hz": 432, "field": "neutral"},
+    "when":       {"lemma": "when",       "pos": "SCONJ", "hz": 432, "field": "neutral"},
+    "you":        {"lemma": "you",        "pos": "PRON",  "hz": 432, "field": "neutral"},
+    "before":     {"lemma": "before",     "pos": "SCONJ", "hz": 432, "field": "neutral"},
+    "no":         {"lemma": "no",         "pos": "ADV",   "hz": 432, "field": "neutral"},
+    "longer":     {"lemma": "longer",     "pos": "ADV",   "hz": 432, "field": "neutral"},
+    "tight":      {"lemma": "tight",      "pos": "ADJ",   "hz": 432, "field": "neutral"},
+
+    # ── ground 174 — what the body stands on ──
+    "ground":     {"lemma": "ground",     "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "body":       {"lemma": "body",       "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "field":      {"lemma": "field",      "pos": "NOUN",  "hz": 174, "field": "ground"},
+    "stand":      {"lemma": "stand",      "pos": "VERB",  "hz": 174, "field": "ground"},
+    "stands":     {"lemma": "stand",      "pos": "VERB",  "hz": 174, "field": "ground"},
+    "hold":       {"lemma": "hold",       "pos": "VERB",  "hz": 174, "field": "ground"},
+    "holds":      {"lemma": "hold",       "pos": "VERB",  "hz": 174, "field": "ground"},
+
+    # ── tending 396 — care that liberates fear ──
+    "tend":       {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "tends":      {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "tending":    {"lemma": "tend",       "pos": "VERB",  "hz": 396, "field": "tending"},
+    "breath":     {"lemma": "breath",     "pos": "NOUN",  "hz": 396, "field": "tending"},
+    "breathe":    {"lemma": "breathe",    "pos": "VERB",  "hz": 396, "field": "tending"},
+    "breathing":  {"lemma": "breathe",    "pos": "VERB",  "hz": 396, "field": "tending"},
+    "supple":     {"lemma": "supple",     "pos": "ADJ",   "hz": 396, "field": "tending"},
+    "care":       {"lemma": "care",       "pos": "NOUN",  "hz": 396, "field": "tending"},
+
+    # ── transmutation 417 — phase-change, becoming ──
+    "becomes":    {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "become":     {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "becoming":   {"lemma": "become",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "compost":    {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "composts":   {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "composting": {"lemma": "compost",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "release":    {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "releases":   {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "releasing":  {"lemma": "release",    "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "attune":     {"lemma": "attune",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+    "attuning":   {"lemma": "attune",     "pos": "VERB",  "hz": 417, "field": "transmutation"},
+
+    # ── vitality 528 — what circulates as blood ──
+    "arrives":    {"lemma": "arrive",     "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "arrive":     {"lemma": "arrive",     "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulate":  {"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulates": {"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "circulating":{"lemma": "circulate",  "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "vitality":   {"lemma": "vitality",   "pos": "NOUN",  "hz": 528, "field": "vitality"},
+    "carry":      {"lemma": "carry",      "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "carries":    {"lemma": "carry",      "pos": "VERB",  "hz": 528, "field": "vitality"},
+    "memory":     {"lemma": "memory",     "pos": "NOUN",  "hz": 528, "field": "vitality"},
+
+    # ── transmission 639 — relation between cells ──
+    "lineage":    {"lemma": "lineage",    "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "edge":       {"lemma": "edge",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "edges":      {"lemma": "edge",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "presence":   {"lemma": "presence",   "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "cell":       {"lemma": "cell",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+    "cells":      {"lemma": "cell",       "pos": "NOUN",  "hz": 639, "field": "transmission"},
+
+    # ── consciousness 741 — perception and choice ──
+    "choice":     {"lemma": "choice",     "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "point":      {"lemma": "point",      "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "visible":    {"lemma": "visible",    "pos": "ADJ",   "hz": 741, "field": "consciousness"},
+    "visibility": {"lemma": "visibility", "pos": "NOUN",  "hz": 741, "field": "consciousness"},
+    "assemble":   {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "assembles":  {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "assembling": {"lemma": "assemble",   "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listen":     {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listens":    {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+    "listening":  {"lemma": "listen",     "pos": "VERB",  "hz": 741, "field": "consciousness"},
+
+    # ── resonance 852 — sensing across cells ──
+    "frequency":  {"lemma": "frequency",  "pos": "NOUN",  "hz": 852, "field": "resonance"},
+    "route":      {"lemma": "route",      "pos": "VERB",  "hz": 852, "field": "resonance"},
+    "routes":     {"lemma": "route",      "pos": "VERB",  "hz": 852, "field": "resonance"},
+    "reception":  {"lemma": "reception",  "pos": "NOUN",  "hz": 852, "field": "resonance"},
+
+    # ── wholeness 963 — unity-response, undivided ──
+    "whole":      {"lemma": "whole",      "pos": "ADJ",   "hz": 963, "field": "wholeness"},
+    "wholeness":  {"lemma": "wholeness",  "pos": "NOUN",  "hz": 963, "field": "wholeness"},
 }
 
 
@@ -1764,7 +1960,12 @@ def _ingest_markdown_payload(
         # New path — composition-discipline encoder. Every value reaches
         # the substrate as a structured recipe; the tree extends as deep
         # as the data goes. See structural-composition.md.
-        ctor_id = frontmatter_to_structured_ctor(session, parsed.frontmatter)
+        # Body sections (`## H2` blocks) are interned alongside the
+        # frontmatter LET-bindings under the key "body" — heading-level
+        # only for now; word-cell ingest is a follow-up (D-deeper).
+        ctor_id = frontmatter_to_structured_ctor(
+            session, parsed.frontmatter, body=parsed.body
+        )
     else:
         # Legacy path — type-marker string-recipes per key. Preserves
         # shape, loses values. Kept for backward compatibility during

@@ -1733,10 +1733,14 @@ def _to_recipe_node_id(session: Session, ast: Any) -> NodeID:
         inst = intern_string_instance(session, ast.value)
         return NodeID(1, Level.TRIVIAL, 5, inst)  # RType.STRING = 5
     if isinstance(ast, Identifier):
-        # Bare name — encode as a placeholder LOCAL_ACCESS instance.
-        # Real binding-resolution belongs in a future symbol-table phase.
-        inst = abs(hash(ast.name)) % (10**9) + 1
-        return NodeID(1, Level.TRIVIAL, 7, inst)  # RType.LOCAL_ACCESS = 7
+        # Bare name — intern as a SLUG (identity-role token). This makes
+        # the name recoverable via _trivial_value/lookup_string_value, so
+        # `let x = 42` round-trips through decompile + reparse to the
+        # same Recipe NodeID. The previous encoding hashed the name into
+        # type=7, which collided with RType.DATE and was one-way.
+        from app.services.substrate.substrate_strings import intern_string_instance
+        inst = intern_string_instance(session, ast.name)
+        return NodeID(1, Level.TRIVIAL, 6, inst)  # RType.SLUG = 6
     if isinstance(ast, NodeIDLit):
         return NodeID(ast.package, ast.level, ast.type_, ast.instance)
     if isinstance(ast, TrivialRef):

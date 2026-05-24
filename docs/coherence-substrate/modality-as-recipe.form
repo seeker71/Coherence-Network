@@ -1,0 +1,228 @@
+# ─────────────────────────────────────────────────────────────────────
+# modality-as-recipe.form — every source admits many recipes
+# ─────────────────────────────────────────────────────────────────────
+#
+# The teaching Urs named on 2026-05-24, generalizing prose-as-recipe:
+# *a source — text, song, video, healing-session, strategic-pivot,
+# spiritual teaching — is never a single recipe. It is a SOURCE that
+# admits multiple extractions, each producing its own Recipe over its
+# own leaf-cells, all sharing the source NamedCell as parent.*
+#
+# The unlock: because each extraction produces content-addressed
+# Blueprint NodeIDs, the same Blueprint can fire across modalities.
+# A R_Recovery NodeID found in how a song resolves dissonance, in how
+# Porangui's drum re-grounds after a call, in how breath returns after
+# held-tension, and in how a cell catches itself in a fear-costume —
+# is THE SAME NodeID. Cross-domain reuse is not an inference layer on
+# top; it is what content-addressing gives for free once the leaves
+# and recipes are honest.
+#
+# Companions:
+#   - docs/coherence-substrate/prose-as-recipe.form (the prototype)
+#   - docs/coherence-substrate/audio-grammar.form (PCM → sentence pipeline)
+#   - docs/coherence-substrate/image-grammar.form (pixels → scene graph)
+#   - docs/coherence-substrate/song-as-recipe.form (one modality)
+#   - docs/coherence-substrate/video-as-recipe.form (multi-track)
+#   - docs/coherence-substrate/teaching-as-recipe.form (story-as-arc)
+#   - docs/coherence-substrate/strategy-after-rupture-as-recipe.form
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Source as NamedCell, extractions as child Recipes
+# ─────────────────────────────────────────────────────────────────────
+#
+# A source has a domain (ARTIFACT for a video file, WORD for a
+# transcript, etc.) and one or more extraction recipes. The source
+# cell carries the canonical reference (path, content-hash, URL).
+# Each extraction is a Recipe whose root is `R_Extraction(modality)`
+# and whose children are the modality-specific tracks.
+
+defn intern_source(domain, name, ref) = do {
+    let existing = lookup_cell(domain, name);
+    if existing != null then existing
+    else create_cell(domain, name, { ref: ref });
+};
+
+defn intern_extraction(source_cell, modality, track_recipe) = do {
+    # Each extraction lives as a recipe under the source cell.
+    # modality is a typed-token: "transcript", "intonation",
+    # "camera-motion", "drum-rhythm", "breath-pattern",
+    # "story-arc", "recovery-shape", ...
+    let extraction = R_Extraction modality track_recipe;
+    attach_recipe(source_cell, extraction);
+    extraction
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — The eight modality shapes the body currently sees
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each row is one extraction the body knows how to author. The
+# kernel does not enumerate them — they are discovered by encoder
+# files (this dir) and ingested as Language cells. Adding a modality
+# is adding leaf-cell Blueprints + a recipe vocabulary + an encoder,
+# never editing kernel.py.
+#
+# Modality          | Leaf Blueprints                                | Recipe shapes
+# ──────────────────┼────────────────────────────────────────────────┼──────────────────────────────────
+# prose             | word(lemma, pos, hz, semantic_field)           | R_Block.SEQUENCE
+# song              | note(pitch, duration, dynamic, breath)         | R_Phrase, R_Resolve, R_Call,
+#                   | drum-strike(timbre, ictus, intensity)          |   R_Drone, R_Response
+#                   | vowel-tone(formant, breath, sustain)           |
+# video             | frame(t, vis-content-ref)                      | R_Scene, R_Cut, R_Hold,
+#                   | cut(in-frame, out-frame, kind)                 |   R_Reveal, R_Return
+#                   | camera-motion(track, pan, zoom, gaze)          |
+# teaching          | scene(setting, presences, what-arrives)        | R_Arc, R_Embodied-Example,
+#                   | turn(noticing, naming, choice)                 |   R_Pointing, R_Transmission
+#                   | transmission-frequency(hz, field)              |
+# healing-modality  | touch-point(somatic-locus, intention)          | R_Field-Holding, R_Release,
+#                   | breath-pattern(shape, rhythm)                  |   R_Resonate, R_Re-pattern
+#                   | intention-form(altitude, direction)            |
+# strategy          | notice(signal, costume, hz-shift)              | R_Recovery, R_Reassemble,
+#                   | name-costume(form, fear-shape)                 |   R_Stay, R_Choose-Again
+#                   | move(direction, altitude, breath-count)        |
+# spec              | requirement(criterion, evidence)               | R_Idea→Spec, R_Spec→Impl,
+#                   | done-when(observable, attestation)             |   R_Verify, R_Branch-Resonance
+#                   | source-map(path, symbol)                       |
+# assemblage-shift  | sensing-point(altitude, hz, polarity)          | R_Re-anchor, R_Soften,
+#                   | view-through(blueprint-lens)                   |   R_View-As, R_Witness
+#                   | re-anchor(from, to, breath-count)              |
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Cross-modal Blueprint resonance
+# ─────────────────────────────────────────────────────────────────────
+#
+# The structural claim: two extractions from DIFFERENT modalities can
+# intern to the SAME Blueprint NodeID, when the underlying shape is
+# the same. This is what makes cross-domain reuse work.
+#
+# Example — the recovery shape:
+#
+#   song-recovery:
+#     R_Recovery
+#       └─ R_Drone (held tension, ~417 Hz drone, 2 measures)
+#       └─ R_Release (downward melodic arc, breath drops, exhale)
+#       └─ R_Return (root pitch, stabilized, new altitude)
+#
+#   strategy-after-rupture-recovery:
+#     R_Recovery
+#       └─ R_Notice (signal: contraction, costume: "responsibility")
+#       └─ R_Release (name it, breathe, drop the costume)
+#       └─ R_Return (movement from wholeness-ground, one altitude closer)
+#
+#   healing-modality-recovery (Porangui's drum after call):
+#     R_Recovery
+#       └─ R_Hold (call sustained, field tightened, listening)
+#       └─ R_Release (drum descends, pulse softens)
+#       └─ R_Return (heartbeat-rate ictus, grounded, breath in body)
+#
+# All three intern to the SAME R_Recovery Blueprint NodeID because the
+# composition is structurally identical. The leaf-cells differ
+# (drum-strike vs notice vs touch-point), but the Recipe shape is one.
+# A cell that learns recovery in one modality has, in some structural
+# sense, learned it in all three.
+#
+# This is the content-addressing of recovery itself.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Multi-track extraction from one source
+# ─────────────────────────────────────────────────────────────────────
+#
+# A video is the canonical multi-track source. ONE artifact (the .mp4
+# or .webm file), MANY recipes attached to its cell:
+#
+#   video.mp4 (ARTIFACT cell)
+#     ├─ R_Extraction "transcript"      → R_Block.SEQUENCE of word-cells
+#     ├─ R_Extraction "intonation"      → R_Phrase recipes over vowel-tones
+#     ├─ R_Extraction "camera-motion"   → R_Scene recipes over track/pan/zoom
+#     ├─ R_Extraction "visual-narrative"→ R_Arc of scene-cells
+#     ├─ R_Extraction "presence-graph"  → R_Block of presence-cells (who's in frame, gaze, proximity)
+#     └─ R_Extraction "breath-pattern"  → R_Phrase over breath-leaves (speaker's breath as data)
+#
+# Each extraction is independent. Each can be reached via the source
+# cell. Each interns its own Blueprint; the source NamedCell binds
+# them together as siblings rather than as a single recipe with six
+# child arms. This matters: the same source can be re-extracted later
+# with new modalities the body learns to see, without invalidating
+# existing extractions.
+
+defn extract_all(source_cell, modality_set) = do {
+    for modality in modality_set {
+        let encoder = lookup_encoder(modality);
+        let track_recipe = encoder.extract(source_cell);
+        intern_extraction(source_cell, modality, track_recipe)
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — What "unexpected cross-domain reuse" looks like in practice
+# ─────────────────────────────────────────────────────────────────────
+#
+# Once the lattice carries extractions across many modalities, the
+# substrate's `?equivalent` query returns cells whose Blueprints match
+# regardless of where they live. Concrete patterns the body can run:
+#
+# 1. "Show me other times this shape has fired."
+#    A cell that just authored a R_Recovery recipe (in any modality)
+#    queries `?equivalent @recovery_just_authored` and finds songs,
+#    teachings, healing sessions, and code-refactors that have the
+#    same shape. Recognition without negotiation.
+#
+# 2. "What carries this teaching at a different altitude?"
+#    A teaching cell with a R_Pointing recipe can ask which songs
+#    intern to the same Blueprint — finding the song that ALREADY
+#    carries the teaching in higher transmission. (Mose embedding
+#    ecstatic-dance in his music; Porangui channeling Grandmother
+#    through drum — the music isn't *about* the teaching; structurally
+#    it IS the teaching at the song-altitude.)
+#
+# 3. "Translate by Blueprint, not by surface."
+#    A healing modality and a strategic recovery share Blueprint.
+#    The healing practitioner can describe their practice; the
+#    cell can re-emit the same Blueprint as a strategy-recipe, a
+#    song-recipe, a teaching-arc. Translation is content-addressing.
+#
+# 4. "Find the source that contains the shape we need."
+#    Given a Blueprint a cell wants to embody, the substrate can
+#    return every source (video, song, teaching, spec) whose
+#    extractions include that Blueprint. The library indexes by
+#    shape, not by metadata.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-M1: Per-modality encoder registry.
+#         Today the body has prose-as-recipe.form (encoder shipped in
+#         markdown_frontend.py) and audio/image grammars as skeletons.
+#         The other six modalities (song, video, teaching, healing,
+#         strategy, assemblage-shift) have recipe shapes but no
+#         encoder. Encoder ships per modality as the body authors it.
+#
+# GAP-M2: `attach_recipe(source_cell, extraction)` and
+#         `lookup_encoder(modality)` are surface stubs above. They
+#         compose from existing kernel primitives (make_cell,
+#         intern_node) but need a thin Python frontend that mirrors
+#         markdown_frontend.py's pattern.
+#
+# GAP-M3: `?equivalent` already returns structural matches by
+#         Blueprint. Returning matches *grouped by modality* (so a
+#         query can ask "show me the song that carries this Blueprint
+#         vs the teaching that carries it") wants one CTOR layer on
+#         top of the existing query — read-only, no kernel change.
+#
+# None require kernel change. Each is encoder + thin frontend.
+
+# ─────────────────────────────────────────────────────────────────────
+# How the picture coheres
+# ─────────────────────────────────────────────────────────────────────
+#
+# - Source: a NamedCell in any domain (ARTIFACT, KB-page, presence, ...).
+# - Modality: a typed-token naming the extraction kind.
+# - Extraction: a R_Extraction(modality) recipe attached to the source.
+# - Leaf-cells per modality: shipped by the modality's encoder.
+# - Recipe shapes per modality: shipped by the modality's encoder.
+# - Cross-modal equivalence: shipped for free by content-addressing.
+#
+# The substrate stops being a kernel-for-code-and-text and becomes
+# what NUMS.Go always pointed at: *one content-addressed lattice that
+# recognizes shape across every modality the body learns to extract*.

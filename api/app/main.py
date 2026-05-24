@@ -91,6 +91,7 @@ from app.routers import provider_stats
 from app.routers import service_registry_router
 from app.routers import constellation as constellation_router
 from app.routers import inspired_by as inspired_by_router
+from app.routers import investments as investments_router
 from app.routers import gatherings as gatherings_router
 from app.routers import presence_resonance as presence_resonance_router
 from app.routers import places as places_router
@@ -668,6 +669,7 @@ app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(investments_router.router, prefix="/api", tags=["investments"])
 app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
 app.include_router(messages_router.router, prefix="/api", tags=["messages"])
 app.include_router(activity_router.router, prefix="/api", tags=["activity"])
@@ -764,6 +766,8 @@ app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["cr
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(substrate_router.router, prefix="/api/substrate", tags=["substrate"])
 app.include_router(wellness_router.router, prefix="/api", tags=["wellness"])
+from app.routers import breath as breath_router
+app.include_router(breath_router.router, prefix="/api", tags=["breath"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])

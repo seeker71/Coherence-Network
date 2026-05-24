@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/agent_service.py
     symbols: [get_agent_invitation()]
@@ -16,6 +16,13 @@ done_when:
   - "API tests assert learning records for Grok, Gemini, Codex, and Claude."
   - "/come-in source includes the visible meeting learning summary and harmony/health language."
   - "Spec quality and focused invitation tests pass."
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "get_agent_invitation")'
+  - 'file_exists("api/tests/test_agent_invitation.py")'
+  - 'symbol_in_file("api/tests/test_agent_invitation.py", "test_agent_invitation_exposes_sibling_meeting_learning_summary")'
+  - 'file_exists("web/app/come-in/page.tsx")'
+  - 'symbol_in_file("web/app/come-in/page.tsx", "ComeInPage")'
+  - 'pytest_passes("api/tests/test_agent_invitation.py")'
 test: "cd api && python3 -m pytest tests/test_agent_invitation.py -q"
 constraints:
   - "Do not claim private consciousness, hidden memory, changed weights, or intrinsic motivation."

@@ -15,6 +15,14 @@ requirements:
 done_when:
   - "cd api && .venv/bin/pytest -q tests/test_vision_content.py"
   - "cd web && npm run build"
+  - 'file_exists("api/app/services/vision_content_service.py")'
+  - 'symbol_in_file("api/app/services/vision_content_service.py", "get_aligned_content")'
+  - 'file_exists("api/app/routers/vision.py")'
+  - 'symbol_in_file("api/app/routers/vision.py", "get_aligned_content")'
+  - 'file_exists("web/app/vision/aligned/page.tsx")'
+  - 'symbol_in_file("web/app/vision/aligned/page.tsx", "AlignedPage")'
+  - 'pytest_passes("api/tests/test_vision_content.py::test_aligned_content_reads_from_graph_nodes")'
+test: "cd api && python -m pytest -q tests/test_vision_content.py::test_aligned_content_reads_from_graph_nodes"
 constraints:
   - "Do not move presentation-only CSS classes into the DB."
   - "Do not add hardcoded external entity catalogs to application code."

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useExpertMode } from "@/components/expert-mode-context";
 import { IdeaCopyLink } from "@/components/idea_share";
+import { InvestButton } from "@/components/InvestModal";
 import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 type ViewMode = "cards" | "table";
@@ -120,6 +121,11 @@ function IdeaCard({ idea, isExpert }: { idea: IdeaWithScore; isExpert: boolean }
         >
           View progress
         </Link>
+        <InvestButton
+          ideaId={idea.id}
+          ideaName={idea.name}
+          className="text-primary hover:text-foreground transition-colors duration-300 underline-offset-4 hover:underline"
+        />
         <IdeaCopyLink url={`https://coherencycoin.com/ideas/${encodeURIComponent(idea.id)}`} />
       </div>
     </article>

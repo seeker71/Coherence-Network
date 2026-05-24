@@ -151,6 +151,11 @@ absorbing it as anonymous belief.
   a hierarchy; corrects the *ascend-to-be-conscious* misreading
   any vertical-frequency chart can invite, including yesterday's
   earlier spine chart.
+- [`2026-05-22-awen-live-chantress-seba.md`](2026-05-22-awen-live-chantress-seba.md)
+  — *Awen (Live)* by Chantress Seba, public YouTube Music audio shared
+  directly into the anything-arrives conversation. Metadata available;
+  `youtube-watcher` found no subtitles. **No concepts seeded — held as
+  source-marked audio arrival and trace-honesty example.**
 
 ## Two postures the body holds toward sources
 

@@ -29,6 +29,36 @@ done_when:
   - "docs/EXTERNAL_ENABLEMENT_TRACKING.md shows last passing run date and all API endpoints exercised"
   - ".github/workflows/external-proof.yml exists and runs the proof script on push to main"
   - "All tests pass"
+  - 'file_exists("scripts/external_proof_demo.py")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "ProofRunner")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "create_idea")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "advance_stage")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "record_contribution")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "check_coherence_score")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "archive_idea")'
+  - 'symbol_in_file("scripts/external_proof_demo.py", "run")'
+  - 'file_exists("api/tests/test_external_proof_demo.py")'
+  - 'symbol_in_file("api/tests/test_external_proof_demo.py", "test_external_proof_idea_payload_matches_public_contract")'
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "create_idea")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "get_idea")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "advance_idea_stage")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "set_idea_stage")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "list_ideas")'
+  - 'file_exists("api/app/routers/contributions.py")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "create_contribution")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "record_open_contribution")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "list_contributions")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "get_contribution")'
+  - 'file_exists("api/app/routers/coherence.py")'
+  - 'symbol_in_file("api/app/routers/coherence.py", "get_coherence_score")'
+  - 'symbol_in_file("api/app/routers/coherence.py", "CoherenceScoreResponse")'
+  - 'file_exists("api/app/routers/health.py")'
+  - 'symbol_in_file("api/app/routers/health.py", "health")'
+  - 'symbol_in_file("api/app/routers/health.py", "ready")'
+  - 'symbol_in_file("api/app/routers/health.py", "ping")'
+  - 'symbol_in_file("api/app/routers/health.py", "HealthResponse")'
+  - 'file_exists("docs/EXTERNAL_ENABLEMENT_TRACKING.md")'
 test: "COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 scripts/external_proof_demo.py --dry-run"
 constraints:
   - "No internal imports — script must run from any machine with only requests/httpx"

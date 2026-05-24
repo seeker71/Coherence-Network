@@ -14,6 +14,15 @@ requirements:
   - "`GET /api/contributions/ledger/{contributor_id}` must accept an optional"
   - "`amount_cc` must incorporate the task's DIF score if present in"
   - "`_NODE_ID` must appear verbatim in `metadata.node_id` of every auto-recorded"
+test: "cd api && python -m pytest -q tests/test_runner_auto_contribution.py"
+done_when:
+  - 'file_exists("api/app/services/agent_runner_registry_service.py")'
+  - 'symbol_in_file("api/app/services/agent_runner_registry_service.py", "runner")'
+  - 'symbol_in_file("api/app/services/agent_runner_registry_service.py", "auto-contribution")'
+  - 'file_exists("api/app/services/contribution_ledger_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_ledger_service.py", "contribution")'
+  - 'pytest_passes("api/tests/test_runner_auto_contribution.py")'
+
 ---
 
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)

@@ -21,6 +21,11 @@ done_when:
   - "Setting API_ACCESS_LOG_ENABLED=0 disables the middleware."
   - "Existing middleware (RequestDurationMiddleware, capture_runtime_metrics) continues to function."
   - "All tests in api/tests/test_request_logging.py pass."
+  - 'file_exists("api/app/middleware/request_duration.py")'
+  - 'symbol_in_file("api/app/middleware/request_duration.py", "RequestDurationMiddleware")'
+  - 'file_exists("api/app/main.py")'
+  - 'symbol_in_file("api/app/main.py", "middleware")'
+  - 'pytest_passes("api/tests/test_request_logging.py")'
 test: "cd api && python -m pytest tests/test_request_logging.py -q"
 constraints:
   - "Changes scoped to listed files only."

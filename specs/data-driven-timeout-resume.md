@@ -22,8 +22,15 @@ done_when:
   - Agent runner logs timeout=adaptive or timeout=fixed on every task pickup
   - Resume tasks have is_resume=true and prepend partial output to direction
   - pytest api/tests/test_timeout_adaptive_service.py passes
+  - 'file_exists("api/app/services/smart_reap_service.py")'
+  - 'symbol_in_file("api/app/services/smart_reap_service.py", "timeout")'
+  - 'file_exists("api/app/services/agent_execution_retry.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_retry.py", "_resolve_retry_max")'
+  - 'file_exists("api/app/services/agent_task_continuation_service.py")'
+  - 'symbol_in_file("api/app/services/agent_task_continuation_service.py", "task")'
 test:
   - "pytest -q api/tests/test_timeout_adaptive_service.py"
+test: "pytest -q api/tests/test_timeout_adaptive_service.py"
 ---
 
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)

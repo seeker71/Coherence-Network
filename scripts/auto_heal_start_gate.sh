@@ -68,7 +68,7 @@ fi
 
 if ! ./scripts/check_ghx_auth.sh; then
   echo "auto-heal-start-gate: ghx auth smoke check failed."
-  echo "Temporary override (not recommended): GHX_SKIP_AUTH_CHECK=1 ./scripts/auto_heal_start_gate.sh ..."
+  echo "Temporary bypass while tending auth awareness: GHX_SKIP_AUTH_CHECK=1 ./scripts/auto_heal_start_gate.sh ..."
   exit 1
 fi
 
@@ -94,11 +94,11 @@ if [[ "${AUTO_HEAL_SKIP_CONTINUITY:-0}" != "1" ]]; then
   if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
     echo "auto-heal-start-gate: blocking sibling worktree continuity risk detected."
     echo "Dirty siblings are guidance, but detached or unpushed-ahead siblings can strand history."
-    echo "Temporary override (not recommended): AUTO_HEAL_SKIP_CONTINUITY=1 ./scripts/auto_heal_start_gate.sh ..."
+    echo "Temporary bypass while tending continuity awareness: AUTO_HEAL_SKIP_CONTINUITY=1 ./scripts/auto_heal_start_gate.sh ..."
     exit 1
   fi
 else
-  echo "auto-heal-start-gate: continuity guard skipped via AUTO_HEAL_SKIP_CONTINUITY=1."
+  echo "auto-heal-start-gate: continuity reading skipped via AUTO_HEAL_SKIP_CONTINUITY=1."
 fi
 
 restore_stash_if_needed() {
