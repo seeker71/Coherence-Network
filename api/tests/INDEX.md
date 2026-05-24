@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 199
+**Total files**: 200
 
 | File | Purpose |
 |---|---|
@@ -138,6 +138,7 @@
 | [test_request_logging.py](test_request_logging.py) | Tests for the api-request-logging-middleware spec |
 | [test_request_outcomes_middleware.py](test_request_outcomes_middleware.py) | Tests for the per-minute request outcomes counter. |
 | [test_right_sizing.py](test_right_sizing.py) | Right-sizing integration tests (spec 158). |
+| [test_runner_attendance.py](test_runner_attendance.py) | Tests for runner-attendance-loop spec. |
 | [test_runner_auto_contribution.py](test_runner_auto_contribution.py) | Tests for runner auto-contribution spec. |
 | [test_runner_spec_gate_guidance.py](test_runner_spec_gate_guidance.py) | _no top-of-file purpose_ |
 | [test_runtime_api.py](test_runtime_api.py) | Tests for the canonical-route-registry-and-runtime-mapping spec |
