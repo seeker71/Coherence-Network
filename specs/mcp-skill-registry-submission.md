@@ -21,6 +21,12 @@ done_when:
   - registry-submissions returns exactly six items
   - registry-dashboard returns 200 even when stats are fully unavailable
   - pytest api/tests/test_registry_discovery.py passes
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "MCP")'
+  - 'file_exists("api/app/services/mcp_tool_registry.py")'
+  - 'symbol_in_file("api/app/services/mcp_tool_registry.py", "tool")'
+  - 'file_exists("api/app/routers/registry_discovery.py")'
+  - 'symbol_in_file("api/app/routers/registry_discovery.py", "registry")'
 test: "pytest -q api/tests/test_registry_discovery.py"
 notes: |
   Live status as of 2026-05-22 (post container-asset-sync):

@@ -10,6 +10,11 @@ done_when:
   - "For every agent task command execution, record a runtime event:"
   - "When a command fails (non-zero exit OR timeout OR suspicious zero-output success), write a friction event via API:"
   - "Monitor should raise a `expensive_failed_task` issue when recent failed tasks exceed a cost threshold:"
+  - 'file_exists("api/app/services/failure_taxonomy_service.py")'
+  - 'symbol_in_file("api/app/services/failure_taxonomy_service.py", "failure")'
+  - 'file_exists("api/app/services/agent_execution_retry.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_retry.py", "failure")'
+  - 'pytest_passes("api/tests/test_agent_runner_tool_failure_telemetry.py")'
 test: "python3 -m pytest api/tests/test_agent_runner_tool_failure_telemetry.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -20,6 +25,10 @@ constraints:
 > **Source**: [`api/app/services/failure_taxonomy_service.py`](../api/app/services/failure_taxonomy_service.py) | [`api/app/services/agent_execution_retry.py`](../api/app/services/agent_execution_retry.py)
 
 # Tool Failure Awareness (Cost Without Gain)
+
+## Purpose
+
+Tool Failure Awareness (Cost Without Gain) — see `idea_id: pipeline-optimization` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
 
 ## Goal
 Detect and surface expensive tool failures (time/cost spent without value) automatically.
@@ -121,3 +130,9 @@ python3 -m pytest api/tests/test_agent_runner_tool_failure_telemetry.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Files
+
+- `api/app/services/failure_taxonomy_service.py`
+- `api/app/services/agent_execution_retry.py`
+

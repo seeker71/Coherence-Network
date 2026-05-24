@@ -1,6 +1,6 @@
 ---
 idea_id: living-lineage
-status: active
+status: done
 source:
   - file: docs/field/urs/tools/build_trace_indexes.py
     symbols: [compact_volume(), influence_spectrum(), backtrace_samples(), build_indexes()]
@@ -17,6 +17,15 @@ done_when:
   - "Author, work, and month trace records carry volume, influence_spectrum, source_mix, and backtrace_samples."
   - "The field-story trace API test proves rich fields and duration backfill are present on an author and work slice."
   - "Generated trace manifest documents the richer field_event_shape."
+  - 'file_exists("docs/field/urs/tools/build_trace_indexes.py")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "compact_volume")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "influence_spectrum")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "backtrace_samples")'
+  - 'symbol_in_file("docs/field/urs/tools/build_trace_indexes.py", "build_indexes")'
+  - 'file_exists("docs/field/urs/trace/manifest.json")'
+  - 'file_exists("api/tests/test_field_story_trace_index.py")'
+  - 'symbol_in_file("api/tests/test_field_story_trace_index.py", "test_trace_index_api_returns_author_and_work_waves")'
+  - 'pytest_passes("api/tests/test_field_story_trace_index.py")'
 test: "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py"
 constraints:
   - "Keep raw source bodies private; publish derived movement and compact backtrace references only."

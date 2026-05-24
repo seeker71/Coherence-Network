@@ -15,6 +15,9 @@ done_when:
   - "the page is reachable at /people/elon-musk"
   - "the page renders through the existing /people/[id] route + presence-content pipeline"
   - "Next.js build succeeds for the web app"
+  - 'file_exists("web/app/people/[id]/page.tsx")'
+  - 'symbol_in_file("web/app/people/[id]/page.tsx", "PersonPage")'
+  - 'file_exists("docs/presence-content/elon-musk.json")'
 constraints:
   - "Do not claim Elon Musk has joined or endorsed the network."
   - "Do not recommend buying, selling, transferring, or holding any security."

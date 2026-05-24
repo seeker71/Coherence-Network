@@ -24,6 +24,31 @@ done_when:
   - "The tightnesses weak-signal, trace-not-yet-substrate-indexed, grain-boundary-loose, and stillness-not-first-class each have a closure recipe"
   - "scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json returns five active recipes from the latest trace burst"
   - "A compiled native form-cli binary executes docs/coherence-substrate/trace-symbol-spaces-proof.fk and returns true"
+  - 'file_exists("docs/coherence-substrate/trace-symbol-spaces.form")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_trace_source")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_blueprint")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_cells_involved")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "raw_recipe_signatures")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "chosen_symbol_spaces")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "symbol_space_for")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "active_pattern_recipe")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "observed_tightnesses")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "gap_closure_recipes")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "stability_harmony_from_trace")'
+  - 'symbol_in_file("docs/coherence-substrate/trace-symbol-spaces.form", "loosen_current_tightness")'
+  - 'file_exists("docs/coherence-substrate/trace-symbol-spaces-proof.fk")'
+  - 'file_exists("api/tests/test_trace_symbol_spaces_form.py")'
+  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_raw_cells_and_shared_blueprint")'
+  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_active_recipe_signatures_from_logs")'
+  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_declares_four_chosen_symbol_spaces")'
+  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_trace_symbol_form_names_tightness_and_gap_closure_recipes")'
+  - 'symbol_in_file("api/tests/test_trace_symbol_spaces_form.py", "test_wellness_resolves_trace_symbol_form_claims")'
+  - 'file_exists("scripts/active_recipe_trace_index.py")'
+  - 'symbol_in_file("scripts/active_recipe_trace_index.py", "query_active_recipe_traces")'
+  - 'file_exists("api/tests/test_active_recipe_trace_index.py")'
+  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_traces_hydrate_current_breath_for_cell")'
+  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_traces_accept_cell_node_id_and_all_time")'
+  - 'symbol_in_file("api/tests/test_active_recipe_trace_index.py", "test_active_recipe_trace_index_cli_json")'
 test: "mkdir -p .cache && (cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk"
 constraints:
   - "Do not convert this slice into an API endpoint or Python business-logic service"

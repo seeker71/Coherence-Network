@@ -24,6 +24,28 @@ done_when:
   - "Graph service rejects incomplete inferred-edge provenance."
   - "Frequency profiles expose source-backed and ingestion-policy dimensions."
   - "Source artifact sensing graph tests pass."
+  - 'file_exists("api/app/models/graph.py")'
+  - 'symbol_in_file("api/app/models/graph.py", "Node")'
+  - 'symbol_in_file("api/app/models/graph.py", "Edge")'
+  - 'symbol_in_file("api/app/models/graph.py", "NodeType")'
+  - 'symbol_in_file("api/app/models/graph.py", "CanonicalEdgeType")'
+  - 'file_exists("api/app/routers/sensings.py")'
+  - 'symbol_in_file("api/app/routers/sensings.py", "SensingCreate")'
+  - 'symbol_in_file("api/app/routers/sensings.py", "create_sensing")'
+  - 'symbol_in_file("api/app/routers/sensings.py", "list_sensings")'
+  - 'file_exists("api/app/services/graph_service.py")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "create_provenance_edge")'
+  - 'symbol_in_file("api/app/services/graph_service.py", "validate_source_edge_provenance")'
+  - 'file_exists("api/app/services/frequency_profile_service.py")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "get_profile")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "resonance")'
+  - 'symbol_in_file("api/app/services/frequency_profile_service.py", "profile_hash")'
+  - 'file_exists("api/app/config/edge_types.py")'
+  - 'symbol_in_file("api/app/config/edge_types.py", "CANONICAL_EDGE_TYPES")'
+  - 'symbol_in_file("api/app/config/edge_types.py", "EDGE_TYPE_FAMILIES")'
+  - 'file_exists("api/tests/test_source_artifact_sensing_graph.py")'
+  - 'symbol_in_file("api/tests/test_source_artifact_sensing_graph.py", "source")'
+  - 'pytest_passes("api/tests/test_source_artifact_sensing_graph.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py"
 constraints:
   - "No schema migration in this spec."

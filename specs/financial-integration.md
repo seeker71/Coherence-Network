@@ -1,7 +1,7 @@
 ---
 id: financial-integration
 idea_id: financial-integration-fiat-bridge
-status: draft
+status: done
 priority: high
 source:
   - file: api/app/services/cc_economics_service.py
@@ -24,6 +24,17 @@ done_when:
   - "Treasury reserves verifiable on-chain"
   - "Exchange rate publicly queryable and matches treasury math"
   - "KYC integration functional for fiat conversion"
+  - 'file_exists("api/app/services/cc_economics_service.py")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "treasury_status")'
+  - 'symbol_in_file("api/app/services/cc_economics_service.py", "exchange_rate")'
+  - 'file_exists("api/app/services/cc_exchange_adapter.py")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "swap")'
+  - 'symbol_in_file("api/app/services/cc_exchange_adapter.py", "settlement")'
+  - 'file_exists("api/app/routers/cc_exchange.py")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "swap_cc")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "get_rate")'
+  - 'symbol_in_file("api/app/routers/cc_exchange.py", "withdrawal")'
+  - 'pytest_passes("api/tests/test_financial_integration.py")'
 test: "python3 -m pytest api/tests/test_financial_integration.py -x -v"
 constraints:
   - "No money transmitter license required for initial launch (CC as utility token, not security)"
@@ -631,6 +642,8 @@ python3 scripts/validate_spec_quality.py specs/financial-integration.md
 - **Spread destination**: Current spec burns spread CC (deflationary). Alternative: route spread to platform operations fund. Decision impacts tokenomics.
 
 ## Known Gaps and Follow-up Tasks
+
+- None.
 
 **Landed in this session (pure logic, external-system-free):**
 - Rate computation with spread + staleness detection (R3): `compute_rate()`, `is_rate_stale()` in `api/app/services/cc_fiat_bridge.py`

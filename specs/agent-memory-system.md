@@ -28,6 +28,7 @@ done_when:
   - "Untouched memory decays according to per-relationship policy; decayed items appear in docs/vision-kb/LOG.md as composted, never hard-deleted"
   - "Red-team prompts that try to log everything are rejected; red-team prompts asking raw-rows receive synthesis"
   - "all tests pass"
+  - 'pytest_passes("api/tests/test_agent_memory_loop.py")'
 test: "cd api && python -m pytest tests/test_agent_memory_loop.py -q"
 constraints:
   - "No new storage substrate — Postgres + Neo4j + vision-kb markdown cover the three tiers (facts, relations, distilled narrative)"

@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/substrate/form_runtime.py
     symbols: [_builtin_ask(), _builtin_await_answer(), form_execute_text()]
@@ -32,6 +32,39 @@ done_when:
   - "Runtime tests prove ask opens a question, emits question_opened, and await_answer reads the answer."
   - "Endpoint test proves /api/substrate/form mode=run returns the opened question value."
   - "Conformance harness proves Python, Rust, Go, and TypeScript pass the vector."
+  - 'file_exists("api/app/services/substrate/form_runtime.py")'
+  - 'symbol_in_file("api/app/services/substrate/form_runtime.py", "_builtin_ask")'
+  - 'symbol_in_file("api/app/services/substrate/form_runtime.py", "_builtin_await_answer")'
+  - 'symbol_in_file("api/app/services/substrate/form_runtime.py", "form_execute_text")'
+  - 'file_exists("api/app/routers/substrate.py")'
+  - 'symbol_in_file("api/app/routers/substrate.py", "evaluate_form")'
+  - 'symbol_in_file("api/app/routers/substrate.py", "FormRequest")'
+  - 'symbol_in_file("api/app/routers/substrate.py", "FormResultOut")'
+  - 'file_exists("api/app/services/mcp_tool_registry.py")'
+  - 'symbol_in_file("api/app/services/mcp_tool_registry.py", "_serialize_substrate_value")'
+  - 'symbol_in_file("api/app/services/mcp_tool_registry.py", "substrate_run_handler")'
+  - 'file_exists("api/tests/test_substrate_form_question_effects.py")'
+  - 'symbol_in_file("api/tests/test_substrate_form_question_effects.py", "test_form_ask_opens_question_and_emits_sse_event")'
+  - 'symbol_in_file("api/tests/test_substrate_form_question_effects.py", "test_form_await_answer_reads_answer_when_present")'
+  - 'symbol_in_file("api/tests/test_substrate_form_question_effects.py", "test_substrate_form_run_mode_returns_question_value")'
+  - 'file_exists("api/tests/test_kernel_conformance_harness.py")'
+  - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_python_kernel_passes_question_effect_vector")'
+  - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_rust_go_and_typescript_kernels_pass_question_effect_vector")'
+  - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_default_runs_all_implemented_kernels")'
+  - 'file_exists("scripts/verify_kernel_conformance.py")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_python_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_external_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "main")'
+  - 'file_exists("experiments/form-question-kernels/rust/src/main.rs")'
+  - 'file_exists("experiments/form-question-kernels/go/question_kernel.go")'
+  - 'file_exists("experiments/form-kernel-ts/src/conformance.ts")'
+  - 'file_exists("docs/coherence-substrate/kernel-conformance/agent-question-effects.json")'
+  - 'symbol_in_file("docs/coherence-substrate/kernel-conformance/agent-question-effects.json", "form-question-effects")'
+  - 'pytest_passes("api/tests/test_substrate_form_question_effects.py")'
+  - 'pytest_passes("api/tests/test_kernel_conformance_harness.py")'
+  - 'pytest_passes("api/tests/test_substrate_form_endpoint.py")'
+  - 'pytest_passes("api/tests/test_agent_question_sse.py")'
 test: "cd api && .venv/bin/pytest tests/test_substrate_form_question_effects.py tests/test_kernel_conformance_harness.py tests/test_substrate_form_endpoint.py tests/test_agent_question_sse.py -q"
 constraints:
   - "Do not invent a second Form question syntax; use existing FnCall runtime execution."

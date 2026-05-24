@@ -27,6 +27,23 @@ done_when:
   - "GET /api/ideas/progress returns per-stage counts and completion percentage"
   - "Auto-advance function exists and is callable from task-completion hooks"
   - "All tests in api/tests/test_idea_lifecycle.py pass"
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "set_idea_stage")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "advance_idea_stage")'
+  - 'file_exists("api/app/services/idea_lifecycle_ops.py")'
+  - 'symbol_in_file("api/app/services/idea_lifecycle_ops.py", "advance_idea_stage")'
+  - 'symbol_in_file("api/app/services/idea_lifecycle_ops.py", "set_idea_stage")'
+  - 'symbol_in_file("api/app/services/idea_lifecycle_ops.py", "auto_advance_for_task")'
+  - 'file_exists("api/app/services/idea_dashboards.py")'
+  - 'symbol_in_file("api/app/services/idea_dashboards.py", "compute_progress_dashboard")'
+  - 'file_exists("api/app/models/idea.py")'
+  - 'symbol_in_file("api/app/models/idea.py", "IdeaStage")'
+  - 'symbol_in_file("api/app/models/idea.py", "IDEA_STAGE_ORDER")'
+  - 'symbol_in_file("api/app/models/idea.py", "ProgressDashboard")'
+  - 'symbol_in_file("api/app/models/idea.py", "StageBucket")'
+  - 'pytest_passes("api/tests/test_flow_core_api.py")'
+  - 'pytest_passes("api/tests/test_idea_lifecycle_closure.py")'
+  - 'pytest_passes("api/tests/test_edge_cases_regression.py")'
 test: "cd api && python -m pytest tests/test_flow_core_api.py tests/test_idea_lifecycle_closure.py tests/test_edge_cases_regression.py -x -v -k 'lifecycle or stage or progress'"
 constraints:
   - "Do not modify existing endpoint response schemas (additive stage field only)"

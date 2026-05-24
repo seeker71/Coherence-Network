@@ -1,6 +1,6 @@
 ---
 idea_id: memory-as-framebuffer
-status: draft
+status: active
 source:
   - file: experiments/memory-as-framebuffer-v0/Cargo.toml
     symbols: [crate manifest with image, crc32fast deps]
@@ -33,6 +33,41 @@ done_when:
   - "The watched mp4 visibly shows distinct colored regions for the 100 cells, brightness modulation as values change through the loop, and provenance halos shifting between fizz/buzz/fizzbuzz code paths."
   - "cargo test --release passes the smoke test."
   - "If ffmpeg is not on PATH, the smoke test skips with an actionable error rather than failing."
+  - 'file_exists("experiments/memory-as-framebuffer-v0/Cargo.toml")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/Cargo.toml", "crate")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/Cargo.toml", "crc32fast")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/lib.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "Tracked")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "init_framebuffer")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/lib.rs", "Framebuffer")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/allocator.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "SlabFramebuffer")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "Cell")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "CellHandle")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "alloc_cell")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/allocator.rs", "free_cell")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/snapshot.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "SnapshotThread")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "capture_frame")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/snapshot.rs", "FrameRgba")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "render_frame")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "type_palette")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "modulate_brightness")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "provenance_halo")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "FfmpegPipe")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "spawn")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "write_frame")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/ffmpeg.rs", "finalize")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/fizzbuzz.rs", "fizzbuzz")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/smoke.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/smoke.rs", "test_fizzbuzz_produces_nonempty_mp4")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/smoke.rs", "test_two_distinct_pixel_colors")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/README.md")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/README.md", "run")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/README.md", "expected")'
 test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release"
 constraints:
   - "Single language (Rust). No FFI to C/C++ besides the ffmpeg subprocess. No GPU integration in v0 — software-rendered RGBA frames only."

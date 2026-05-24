@@ -16,6 +16,9 @@ done_when:
   - "Agent runner sends a stable worker identifier when claiming tasks."
   - "ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating dup..."
   - "Implementation-request question sync uses active-task deduplication and task fingerprints."
+  - 'file_exists("api/app/services/contribution_cost_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost_with_provenance")'
+  - 'pytest_passes("api/tests/test_agent_task_claims.py")'
 test: "python3 -m pytest api/tests/test_agent_task_claims.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -26,6 +29,10 @@ constraints:
 > **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
 # Task Claim Tracking and ROI Auto-Pick De-duplication
+
+## Purpose
+
+Task Claim Tracking and ROI Auto-Pick De-duplication — see `idea_id: value-attribution` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
 
 ## Goal
 Prevent parallel contributors/agents from working the same ROI-ranked task at the same time. Track who started a task and ensure automatic ROI task generation skips work already in progress.
@@ -108,3 +115,8 @@ python3 -m pytest api/tests/test_agent_task_claims.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+

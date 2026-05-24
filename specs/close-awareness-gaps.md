@@ -1,6 +1,6 @@
 ---
 idea_id: close-awareness-gaps
-status: active
+status: done
 source:
   - file: api/app/routers/federation.py
     symbols: [get_messages(), get_message_by_id()]
@@ -22,6 +22,21 @@ done_when:
   - "The fact report script runs far enough to emit a report path without the removed _select_executor failure."
   - "No model-provider calls are required by the new daemon or profile path."
   - "Identity self-report tests pass for codex, claude, and grok."
+  - 'file_exists("api/app/routers/federation.py")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_messages")'
+  - 'symbol_in_file("api/app/routers/federation.py", "get_message_by_id")'
+  - 'file_exists("api/scripts/cursor_fact_report.py")'
+  - 'symbol_in_file("api/scripts/cursor_fact_report.py", "_routing_policy_proof")'
+  - 'file_exists("scripts/awareness_node_daemon.py")'
+  - 'symbol_in_file("scripts/awareness_node_daemon.py", "AgentProfile")'
+  - 'symbol_in_file("scripts/awareness_node_daemon.py", "build_identity_card")'
+  - 'symbol_in_file("scripts/awareness_node_daemon.py", "render_identity_text")'
+  - 'symbol_in_file("scripts/awareness_node_daemon.py", "load_profiles")'
+  - 'symbol_in_file("scripts/awareness_node_daemon.py", "run_once")'
+  - 'file_exists("config/agent_profiles.json")'
+  - 'pytest_passes("api/tests/test_federation_message_readback.py")'
+  - 'pytest_passes("api/tests/test_cursor_fact_report_routing.py")'
+  - 'pytest_passes("api/tests/test_awareness_node_daemon.py")'
 test: "cd api && python3 -m pytest tests/test_federation_message_readback.py tests/test_cursor_fact_report_routing.py tests/test_awareness_node_daemon.py -q"
 constraints:
   - "Use guidance-level language in user-facing docs and profile text."

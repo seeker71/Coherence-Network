@@ -17,12 +17,27 @@ PLACEHOLDER_PATTERNS = [
 ]
 
 SECTION_ALIASES = {
-    "purpose": {"purpose"},
-    "requirements": {"requirements", "requirements checklist"},
-    "files": {"files to create/modify", "files to create or modify", "files to modify"},
-    "acceptance": {"acceptance tests", "acceptance criteria"},
-    "verification": {"verification", "verification steps", "validation", "validation steps"},
-    "out_of_scope": {"out of scope", "non-goals", "not in scope"},
+    "purpose": {"purpose", "summary", "problem", "overview", "context"},
+    "requirements": {
+        "requirements", "requirements checklist", "functional requirements",
+        "spec requirements",
+    },
+    "files": {
+        "files", "files to create/modify", "files to create or modify",
+        "files to modify", "files to create / modify",
+        "files to create", "files affected", "files changed",
+    },
+    "acceptance": {
+        "acceptance tests", "acceptance criteria", "acceptance",
+        "tests", "test plan",
+    },
+    "verification": {
+        "verification", "verification steps",
+        "validation steps", "verification scenarios", "manual verification",
+    },
+    "out_of_scope": {
+        "out of scope", "non-goals", "not in scope", "outofscope",
+    },
     "risks": {
         "risks and assumptions",
         "assumptions and risks",
@@ -36,6 +51,9 @@ SECTION_ALIASES = {
         "known gaps",
         "gap follow-ups",
         "risks and known gaps",
+        "gaps",
+        "follow-ups",
+        "follow-up tasks",
     },
 }
 
@@ -67,12 +85,17 @@ def _parse_sections(markdown: str) -> list[tuple[str, str]]:
 
 def _find_section(sections: list[tuple[str, str]], aliases: set[str]) -> str | None:
     normalized_aliases = {_normalize_heading(alias) for alias in aliases}
+    # Pass 1: exact match wins (so a real `## Verification` heading
+    # beats a `## Validation Contract` startswith-alias match).
     for title, body in sections:
         if title in normalized_aliases:
             return body
-        # Allow partial match if title starts with an alias (e.g. "Verification CI complete")
+    # Pass 2: startswith partial match (e.g. "Verification (CI complete)").
+    # Suffix-match is deliberately not supported — misfires on subheadings
+    # like "Input Validation" that share an alias prefix.
+    for title, body in sections:
         for alias in normalized_aliases:
-            if title.startswith(alias + " ") or title.endswith(" " + alias):
+            if title.startswith(alias + " "):
                 return body
     return None
 

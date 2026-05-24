@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: docs/coherence-substrate/kernel-conformance/form-loop-mutation.json
     symbols: [form-loop-mutation]
@@ -22,6 +22,21 @@ done_when:
   - "The loop/mutation vector passes for Python, Rust, Go, and TypeScript."
   - "The existing control-flow, infix, core built-ins, and question-effect vectors still pass for Python, Rust, Go, and TypeScript."
   - "Docs state the exact conformance boundary."
+  - 'file_exists("docs/coherence-substrate/kernel-conformance/form-loop-mutation.json")'
+  - 'symbol_in_file("docs/coherence-substrate/kernel-conformance/form-loop-mutation.json", "form-loop-mutation")'
+  - 'file_exists("scripts/verify_kernel_conformance.py")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_python_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "run_external_kernel")'
+  - 'symbol_in_file("scripts/verify_kernel_conformance.py", "main")'
+  - 'file_exists("experiments/form-question-kernels/rust/src/main.rs")'
+  - 'file_exists("experiments/form-question-kernels/go/question_kernel.go")'
+  - 'file_exists("experiments/form-kernel-ts/src/conformance.ts")'
+  - 'file_exists("api/tests/test_kernel_conformance_harness.py")'
+  - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_python_kernel_passes_loop_mutation_vector")'
+  - 'symbol_in_file("api/tests/test_kernel_conformance_harness.py", "test_rust_go_and_typescript_kernels_pass_loop_mutation_vector")'
+  - 'pytest_passes("api/tests/test_kernel_conformance_harness.py")'
+  - 'pytest_passes("tests/test_kernel_conformance_harness.py")'
 test: "python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-loop-mutation.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-infix-operators.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-core-builtins.json --kernel python --kernel rust --kernel go --kernel typescript --json && python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --kernel typescript --json && cd api && .venv/bin/pytest tests/test_kernel_conformance_harness.py -q"
 constraints:
   - "Do not claim Rust, Go, or TypeScript implement the full Form language."

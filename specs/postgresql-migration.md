@@ -26,6 +26,13 @@ done_when:
   - "Project dependencies table (graph edges) with foreign keys"
   - "Contributors table with UUID primary keys"
   - "Assets table with UUID primary keys"
+  - 'file_exists("api/app/services/unified_db.py")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "database_url")'
+  - 'symbol_in_file("api/app/services/unified_db.py", "_create_engine")'
+  - 'file_exists("api/app/adapters/postgres_store.py")'
+  - 'symbol_in_file("api/app/adapters/postgres_store.py", "PostgreSQL")'
+  - 'file_exists("api/scripts/migrate_tracking_domains_to_postgres.py")'
+  - 'symbol_in_file("api/scripts/migrate_tracking_domains_to_postgres.py", "migration")'
 proof: operational
 proof_note: "The migration scripts themselves are one-time gestures that ran live on the VPS — the proof is the database now holds the data in postgres tables. The unified_db schema layer is continuously exercised by 9+ test files (test_graph_model_boundaries, test_attribution_middleware, test_auth_keys_api, test_contributor_key_store, test_edge_cases_regression, test_portfolio_governance, and others) on every test run, plus every running API request in production reads/writes through unified_db. A dedicated migration unit test would be theater: passing on a fresh sqlite while real postgres schema drift surfaces as production query errors."
 constraints:

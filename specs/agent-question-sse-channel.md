@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/routers/agent_question_routes.py
     symbols: [create_question_route(), list_questions_route(), question_events_sse(), answer_question_route()]
@@ -20,6 +20,22 @@ done_when:
   - "API lifecycle test proves create, list, answer, and answered status."
   - "SSE test proves the stream emits a question_opened event for a sub-agent question."
   - "Web build succeeds with the question console route."
+  - 'file_exists("api/app/routers/agent_question_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_question_routes.py", "create_question_route")'
+  - 'symbol_in_file("api/app/routers/agent_question_routes.py", "list_questions_route")'
+  - 'symbol_in_file("api/app/routers/agent_question_routes.py", "question_events_sse")'
+  - 'symbol_in_file("api/app/routers/agent_question_routes.py", "answer_question_route")'
+  - 'file_exists("api/app/services/agent_question_service.py")'
+  - 'symbol_in_file("api/app/services/agent_question_service.py", "create_question")'
+  - 'symbol_in_file("api/app/services/agent_question_service.py", "list_questions")'
+  - 'symbol_in_file("api/app/services/agent_question_service.py", "answer_question")'
+  - 'symbol_in_file("api/app/services/agent_question_service.py", "get_question_events")'
+  - 'file_exists("api/tests/test_agent_question_sse.py")'
+  - 'symbol_in_file("api/tests/test_agent_question_sse.py", "test_agent_question_lifecycle")'
+  - 'symbol_in_file("api/tests/test_agent_question_sse.py", "test_agent_question_sse_replays_opened_event")'
+  - 'file_exists("web/app/agent/questions/page.tsx")'
+  - 'symbol_in_file("web/app/agent/questions/page.tsx", "AgentQuestionsPage")'
+  - 'pytest_passes("api/tests/test_agent_question_sse.py")'
 test: "cd api && .venv/bin/pytest tests/test_agent_question_sse.py -q && cd ../web && npm run build"
 constraints:
   - "MVP storage is in-memory only; no database migration in this breath."

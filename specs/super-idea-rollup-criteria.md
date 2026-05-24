@@ -17,6 +17,7 @@ done_when:
   - "R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition"
   - "R3: Super-idea manifestation_status auto-updates when rollup criteria met"
   - "R4: Dashboard shows rollup progress (children validated / total children)"
+  - 'pytest_passes("api/tests/test_super_idea_rollup.py")'
 test: "python3 -m pytest api/tests/test_super_idea_rollup.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -91,3 +92,16 @@ python3 -m pytest api/tests/test_idea_hierarchy.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+
+## Acceptance Tests
+
+- `api/tests/test_super_idea_rollup.py`
+
+
+## Files
+
+- `specs/super-idea-rollup-criteria.md`

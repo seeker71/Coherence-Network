@@ -26,6 +26,13 @@ done_when:
   - "Coherence score invariant enforced -- minting pauses when score < 1.0"
   - "1% spread applied and visible in exchange rate response"
   - "All tests pass in test_cc_economics.py"
+  - 'file_exists("api/app/models/coherence_credit.py")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "CostVector")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ValueVector")'
+  - 'symbol_in_file("api/app/models/coherence_credit.py", "ExchangeRate")'
+  - 'file_exists("api/app/services/coherence_credit_service.py")'
+  - 'symbol_in_file("api/app/services/coherence_credit_service.py", "exchange")'
+  - 'pytest_passes("api/tests/test_coherence_credit.py")'
 test: "python3 -m pytest api/tests/test_coherence_credit.py -x -q"
 constraints:
   - "No unbacked CC may ever exist -- treasury invariant is a hard constraint"

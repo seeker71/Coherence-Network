@@ -16,6 +16,21 @@ done_when:
   - "Change request stores proposer attribution and vote attribution."
   - "Human or machine reviewer can cast yes/no vote via API and web."
   - "Approved request auto-applies by default and records apply result."
+  - 'file_exists("api/app/routers/onboarding.py")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "register")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "get_session")'
+  - 'symbol_in_file("api/app/routers/onboarding.py", "upgrade_oauth")'
+  - 'file_exists("api/app/services/onboarding_service.py")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "register")'
+  - 'symbol_in_file("api/app/services/onboarding_service.py", "resolve_session")'
+  - 'file_exists("api/app/services/governance_service.py")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "create_change_request")'
+  - 'symbol_in_file("api/app/services/governance_service.py", "cast_vote")'
+  - 'file_exists("api/app/models/governance.py")'
+  - 'symbol_in_file("api/app/models/governance.py", "ChangeRequest")'
+  - 'symbol_in_file("api/app/models/governance.py", "ChangeRequestVote")'
+  - 'symbol_in_file("api/app/models/governance.py", "VoteDecision")'
+  - 'pytest_passes("api/tests/test_contributor_journey.py")'
 test: "cd api && pytest -q tests/test_contributor_journey.py"
 constraints:
   - "changes scoped to listed files only"

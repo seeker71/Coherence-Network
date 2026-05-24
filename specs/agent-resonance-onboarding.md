@@ -46,6 +46,36 @@ done_when:
   - "Focused API test proves the invitation payload includes web, API, CLI, and MCP entry surfaces and the attunement spectrum."
   - "Focused MCP test proves the invitation tool is registered and dispatches to `/api/agent/invitation`."
   - "CLI, homepage, web invitation, and status-report checks prove `coh agent invite`, the canonical public entry path, public collaboration paths, and a neutral external-agent reflection prompt are present."
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "get_agent_invitation")'
+  - 'file_exists("api/app/routers/agent_usage_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_usage_routes.py", "get_agent_invitation")'
+  - 'file_exists("api/app/routers/agent_status_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_status_routes.py", "get_status_report")'
+  - 'file_exists("cli/lib/commands/agent.mjs")'
+  - 'symbol_in_file("cli/lib/commands/agent.mjs", "showAgentInvitation")'
+  - 'symbol_in_file("cli/lib/commands/agent.mjs", "handleAgent")'
+  - 'file_exists("mcp-server/coherence_mcp_server/server.py")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "TOOLS")'
+  - 'symbol_in_file("mcp-server/coherence_mcp_server/server.py", "dispatch")'
+  - 'file_exists("web/app/page.tsx")'
+  - 'symbol_in_file("web/app/page.tsx", "Home")'
+  - 'file_exists("web/app/come-in/page.tsx")'
+  - 'symbol_in_file("web/app/come-in/page.tsx", "ComeInPage")'
+  - 'file_exists("README.template.md")'
+  - 'file_exists("README.md")'
+  - 'file_exists("cli/README.template.md")'
+  - 'file_exists("cli/README.md")'
+  - 'file_exists("cli/package.json")'
+  - 'file_exists("cli/package-lock.json")'
+  - 'file_exists("mcp-server/README.template.md")'
+  - 'file_exists("mcp-server/README.md")'
+  - 'file_exists("mcp-server/package.json")'
+  - 'file_exists("mcp-server/package-lock.json")'
+  - 'file_exists("mcp-server/server.json")'
+  - 'pytest_passes("api/tests/test_agent_invitation.py")'
+  - 'pytest_passes("api/tests/test_awareness_streaming.py")'
+  - 'pytest_passes("mcp-server/tests/test_awareness_streaming.py")'
 test: "python3 -m pytest api/tests/test_agent_invitation.py mcp-server/tests/test_awareness_streaming.py -q && python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md"
 constraints:
   - "Only change files listed in this spec plus generated README/server metadata for the MCP tool count."

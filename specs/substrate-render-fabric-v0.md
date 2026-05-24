@@ -29,6 +29,7 @@ done_when:
   - "POST /api/substrate/render-kernels creates a kernel; the Rust example's next render cycle picks up the new kernel and the matrix3x3 cells render through it (when v1-render-trait is also live)."
   - "test_substrate_render_kernels.py passes: register, lookup, edge persistence."
   - "tests/substrate_bridge_smoke.rs passes: provenance hash resolution, kernel fetch."
+  - 'pytest_passes("api/tests/test_substrate_render_kernels.py")'
 test: "cd api && .venv/bin/pytest -q tests/test_substrate_render_kernels.py && cd ../experiments/memory-as-framebuffer-v0 && cargo test --release substrate_bridge"
 constraints:
   - "Builds on memory-as-framebuffer-v0 (Rust crate) and the existing coherence-substrate (Python). The substrate cell schema and graph DB are already in place — this spec uses them, does not redefine them."

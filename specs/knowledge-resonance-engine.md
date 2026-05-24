@@ -34,6 +34,41 @@ done_when:
   - GET /api/resonance/proof shows discovery health
   - GET /api/discover/{contributor_id} returns personalized feed
   - All tests pass
+  - 'file_exists("api/app/services/concept_service.py")'
+  - 'symbol_in_file("api/app/services/concept_service.py", "list_concepts")'
+  - 'symbol_in_file("api/app/services/concept_service.py", "get_concept")'
+  - 'symbol_in_file("api/app/services/concept_service.py", "search_concepts")'
+  - 'file_exists("api/app/services/concept_resonance_kernel.py")'
+  - 'symbol_in_file("api/app/services/concept_resonance_kernel.py", "compute_crk")'
+  - 'symbol_in_file("api/app/services/concept_resonance_kernel.py", "text_to_symbol")'
+  - 'symbol_in_file("api/app/services/concept_resonance_kernel.py", "HarmonicComponent")'
+  - 'symbol_in_file("api/app/services/concept_resonance_kernel.py", "ConceptSymbol")'
+  - 'symbol_in_file("api/app/services/concept_resonance_kernel.py", "ResonanceResult")'
+  - 'file_exists("api/app/services/belief_service.py")'
+  - 'symbol_in_file("api/app/services/belief_service.py", "get_belief_profile")'
+  - 'symbol_in_file("api/app/services/belief_service.py", "patch_belief_profile")'
+  - 'symbol_in_file("api/app/services/belief_service.py", "compute_resonance")'
+  - 'file_exists("api/app/services/idea_resonance_service.py")'
+  - 'symbol_in_file("api/app/services/idea_resonance_service.py", "get_cross_domain_pairs")'
+  - 'symbol_in_file("api/app/services/idea_resonance_service.py", "find_resonant_ideas")'
+  - 'symbol_in_file("api/app/services/idea_resonance_service.py", "compute_pair_resonance")'
+  - 'symbol_in_file("api/app/services/idea_resonance_service.py", "get_resonance_proof")'
+  - 'file_exists("api/app/services/accessible_ontology_service.py")'
+  - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "create_concept")'
+  - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "list_concepts")'
+  - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "get_concept")'
+  - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "patch_concept")'
+  - 'file_exists("api/app/services/discovery_service.py")'
+  - 'symbol_in_file("api/app/services/discovery_service.py", "build_discovery_feed")'
+  - 'file_exists("api/app/routers/resonance.py")'
+  - 'symbol_in_file("api/app/routers/resonance.py", "get_cross_domain_resonances")'
+  - 'symbol_in_file("api/app/routers/resonance.py", "get_resonance_for_idea")'
+  - 'symbol_in_file("api/app/routers/resonance.py", "get_resonance_proof")'
+  - 'file_exists("api/app/routers/beliefs.py")'
+  - 'symbol_in_file("api/app/routers/beliefs.py", "get_beliefs")'
+  - 'symbol_in_file("api/app/routers/beliefs.py", "patch_beliefs")'
+  - 'symbol_in_file("api/app/routers/beliefs.py", "get_resonance")'
+  - 'pytest_passes("api/tests/test_flow_discovery.py")'
 test: "python3 -m pytest api/tests/test_flow_discovery.py -q"
 ---
 
@@ -41,6 +76,10 @@ test: "python3 -m pytest api/tests/test_flow_discovery.py -q"
 > **Source**: [`api/app/services/concept_service.py`](../api/app/services/concept_service.py) | [`api/app/services/concept_resonance_kernel.py`](../api/app/services/concept_resonance_kernel.py) | [`api/app/services/belief_service.py`](../api/app/services/belief_service.py) | [`api/app/services/idea_resonance_service.py`](../api/app/services/idea_resonance_service.py) | [`api/app/services/accessible_ontology_service.py`](../api/app/services/accessible_ontology_service.py) | [`api/app/services/discovery_service.py`](../api/app/services/discovery_service.py) | [`api/app/routers/resonance.py`](../api/app/routers/resonance.py) | [`api/app/routers/beliefs.py`](../api/app/routers/beliefs.py)
 
 # Knowledge and Resonance Engine -- 184 Concepts, Harmonic Matching, Belief Translation
+
+## Purpose
+
+Knowledge and Resonance Engine -- 184 Concepts, Harmonic Matching, Belief Translation — see `idea_id: knowledge-and-resonance` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
 
 ## Goal
 
@@ -62,17 +101,47 @@ The knowledge and resonance engine spans eight source files implementing four la
 
 ## Requirements
 
-1. 184 universal concepts with 46 typed relationships and 53 axes
-2. Concept Resonance Kernel (CRK) -- harmonic spectral matching
-3. Optimal Transport distance (OT-phi) for coherence scoring
-4. Contributor belief profiles with 6 worldview axes
-5. Cross-domain resonance discovery between ideas from different domains
-6. Accessible ontology -- non-technical contributors can suggest/endorse concepts
-7. Serendipity discovery feed combining 5 resonance sources
-8. Resonance proof endpoint showing network health
+- [ ] 184 universal concepts with 46 typed relationships and 53 axes
+- [ ] Concept Resonance Kernel (CRK) -- harmonic spectral matching
+- [ ] Optimal Transport distance (OT-phi) for coherence scoring
+- [ ] Contributor belief profiles with 6 worldview axes
+- [ ] Cross-domain resonance discovery between ideas from different domains
+- [ ] Accessible ontology -- non-technical contributors can suggest/endorse concepts
+- [ ] Serendipity discovery feed combining 5 resonance sources
+- [ ] Resonance proof endpoint showing network health
 
 ## Acceptance Tests
 
 ```bash
 python3 -m pytest api/tests/test_flow_discovery.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/services/concept_service.py`
+- `api/app/services/concept_resonance_kernel.py`
+- `api/app/services/belief_service.py`
+- `api/app/services/idea_resonance_service.py`
+- `api/app/services/accessible_ontology_service.py`
+- `api/app/services/discovery_service.py`
+- `api/app/routers/resonance.py`
+- `api/app/routers/beliefs.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_flow_discovery.py -q
+```
+

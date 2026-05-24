@@ -1,6 +1,6 @@
 ---
 idea_id: home-content-contribution-attribution
-status: active
+status: done
 source:
   - file: api/app/routers/translations.py
     symbols: [submit_translation()]
@@ -61,6 +61,58 @@ done_when:
   - "CLI exposes `coh content set` for file-backed content edits."
   - "Home-linked page routes mount explicit page read pings and render canonical page views when supplied."
   - "Home-page external developer links send attributed asset click pings."
+  - 'file_exists("api/app/routers/translations.py")'
+  - 'symbol_in_file("api/app/routers/translations.py", "submit_translation")'
+  - 'file_exists("api/app/routers/entity_views.py")'
+  - 'symbol_in_file("api/app/routers/entity_views.py", "upsert_view")'
+  - 'file_exists("api/app/routers/views.py")'
+  - 'symbol_in_file("api/app/routers/views.py", "views_ping")'
+  - 'file_exists("api/app/routers/concepts.py")'
+  - 'symbol_in_file("api/app/routers/concepts.py", "upsert_concept_view")'
+  - 'file_exists("api/app/routers/ideas.py")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "get_idea")'
+  - 'symbol_in_file("api/app/routers/ideas.py", "list_ideas")'
+  - 'file_exists("api/app/services/entity_view_attribution_service.py")'
+  - 'symbol_in_file("api/app/services/entity_view_attribution_service.py", "record_view_attribution")'
+  - 'symbol_in_file("api/app/services/entity_view_attribution_service.py", "credit_view_source")'
+  - 'file_exists("web/hooks/useViewTracking.ts")'
+  - 'symbol_in_file("web/hooks/useViewTracking.ts", "useReadPing")'
+  - 'file_exists("web/app/ideas/[idea_id]/IdeaReadPing.tsx")'
+  - 'symbol_in_file("web/app/ideas/[idea_id]/IdeaReadPing.tsx", "IdeaReadPing")'
+  - 'file_exists("web/app/ideas/[idea_id]/page.tsx")'
+  - 'symbol_in_file("web/app/ideas/[idea_id]/page.tsx", "IdeaDetailPage")'
+  - 'file_exists("web/app/vision/[conceptId]/edit/_components/StoryEditor.tsx")'
+  - 'symbol_in_file("web/app/vision/[conceptId]/edit/_components/StoryEditor.tsx", "StoryEditor")'
+  - 'file_exists("cli/lib/commands/content.mjs")'
+  - 'symbol_in_file("cli/lib/commands/content.mjs", "handleContent")'
+  - 'file_exists("web/components/content/EditablePageContent.tsx")'
+  - 'symbol_in_file("web/components/content/EditablePageContent.tsx", "EditablePageIntro")'
+  - 'symbol_in_file("web/components/content/EditablePageContent.tsx", "EditablePageMarkdown")'
+  - 'file_exists("web/components/content/AttributedExternalLink.tsx")'
+  - 'symbol_in_file("web/components/content/AttributedExternalLink.tsx", "AttributedExternalLink")'
+  - 'file_exists("web/app/page.tsx")'
+  - 'symbol_in_file("web/app/page.tsx", "Home")'
+  - 'file_exists("web/app/come-in/page.tsx")'
+  - 'symbol_in_file("web/app/come-in/page.tsx", "ComeInPage")'
+  - 'file_exists("web/app/silence/page.tsx")'
+  - 'symbol_in_file("web/app/silence/page.tsx", "SilencePage")'
+  - 'file_exists("web/app/with-us/page.tsx")'
+  - 'symbol_in_file("web/app/with-us/page.tsx", "WithUsPage")'
+  - 'file_exists("web/app/vision/page.tsx")'
+  - 'symbol_in_file("web/app/vision/page.tsx", "VisionPage")'
+  - 'file_exists("web/app/ideas/page.tsx")'
+  - 'symbol_in_file("web/app/ideas/page.tsx", "IdeasPage")'
+  - 'file_exists("web/app/resonance/page.tsx")'
+  - 'symbol_in_file("web/app/resonance/page.tsx", "ResonancePage")'
+  - 'file_exists("web/app/invest/page.tsx")'
+  - 'symbol_in_file("web/app/invest/page.tsx", "InvestPage")'
+  - 'file_exists("web/app/pipeline/page.tsx")'
+  - 'symbol_in_file("web/app/pipeline/page.tsx", "PipelinePage")'
+  - 'file_exists("web/app/nodes/page.tsx")'
+  - 'symbol_in_file("web/app/nodes/page.tsx", "NodesPage")'
+  - 'file_exists("web/app/contribute/page.tsx")'
+  - 'symbol_in_file("web/app/contribute/page.tsx", "ContributePage")'
+  - 'pytest_passes("api/tests/test_entity_view_attribution.py")'
 test: "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py -q"
 constraints:
   - "Do not change existing home page layout."

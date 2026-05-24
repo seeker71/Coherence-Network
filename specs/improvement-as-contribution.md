@@ -36,6 +36,28 @@ done_when:
   - "GET /api/improvements/renderers/{id}/compare returns versions sorted descending by render_count"
   - "POST /api/improvements/hosting-nodes returns 201 with parent_node_id set"
   - "all tests pass: cd api && python -m pytest tests/test_improvement_attribution.py -q"
+  - 'file_exists("api/app/models/renderer.py")'
+  - 'symbol_in_file("api/app/models/renderer.py", "Renderer")'
+  - 'symbol_in_file("api/app/models/renderer.py", "RendererCreate")'
+  - 'file_exists("api/app/routers/renderers.py")'
+  - 'symbol_in_file("api/app/routers/renderers.py", "register_renderer")'
+  - 'symbol_in_file("api/app/routers/renderers.py", "fork_renderer")'
+  - 'file_exists("api/app/routers/render_events.py")'
+  - 'symbol_in_file("api/app/routers/render_events.py", "log_render_event")'
+  - 'file_exists("api/app/services/render_attribution_service.py")'
+  - 'symbol_in_file("api/app/services/render_attribution_service.py", "attribute_render_cc")'
+  - 'file_exists("api/app/routers/improvements.py")'
+  - 'symbol_in_file("api/app/routers/improvements.py", "list_provider_versions")'
+  - 'symbol_in_file("api/app/routers/improvements.py", "get_version_earnings")'
+  - 'file_exists("api/app/models/improvement.py")'
+  - 'symbol_in_file("api/app/models/improvement.py", "ProviderVersion")'
+  - 'symbol_in_file("api/app/models/improvement.py", "ProviderVersionComparison")'
+  - 'file_exists("api/app/services/improvement_attribution_service.py")'
+  - 'symbol_in_file("api/app/services/improvement_attribution_service.py", "get_version_comparison")'
+  - 'symbol_in_file("api/app/services/improvement_attribution_service.py", "record_usage_event")'
+  - 'file_exists("api/tests/test_improvement_attribution.py")'
+  - 'symbol_in_file("api/tests/test_improvement_attribution.py", "test")'
+  - 'pytest_passes("api/tests/test_improvement_attribution.py")'
 test: "cd api && python -m pytest tests/test_improvement_attribution.py -q"
 constraints:
   - "Forking never deactivates, deprecates, or modifies the parent provider"

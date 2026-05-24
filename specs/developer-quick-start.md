@@ -21,6 +21,14 @@ done_when:
   - pytest runs all flow tests in under 10 seconds
   - scripts/agent_status.py --diff reports file-level conflicts
   - All tests pass
+  - 'file_exists("api/app/routers/health.py")'
+  - 'symbol_in_file("api/app/routers/health.py", "health")'
+  - 'file_exists("api/tests/conftest.py")'
+  - 'symbol_in_file("api/tests/conftest.py", "_reset_service_caches_between_tests")'
+  - 'file_exists("scripts/agent_status.py")'
+  - 'symbol_in_file("scripts/agent_status.py", "_parse_worktrees")'
+  - 'file_exists(".claude/launch.json")'
+  - 'pytest_passes("api/tests/test_flow_core_api.py")'
 test: "python3 -m pytest api/tests/test_flow_core_api.py -q"
 ---
 

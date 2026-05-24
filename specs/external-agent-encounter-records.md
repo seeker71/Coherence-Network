@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/routers/agent_external_encounters.py
     symbols: [create_external_agent_encounter(), list_external_agent_encounters(), link_external_agent_encounter_task()]
@@ -22,6 +22,21 @@ done_when:
   - "Focused API tests prove encounter creation works without a task."
   - "Focused API tests prove a linked response task snapshots route_decision metadata."
   - "Invitation tests prove the public return path names /api/agent/external-encounters."
+  - 'file_exists("api/app/routers/agent_external_encounters.py")'
+  - 'symbol_in_file("api/app/routers/agent_external_encounters.py", "create_external_agent_encounter")'
+  - 'symbol_in_file("api/app/routers/agent_external_encounters.py", "list_external_agent_encounters")'
+  - 'symbol_in_file("api/app/routers/agent_external_encounters.py", "link_external_agent_encounter_task")'
+  - 'file_exists("api/app/routers/agent.py")'
+  - 'symbol_in_file("api/app/routers/agent.py", "router")'
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "get_agent_invitation")'
+  - 'file_exists("api/tests/test_external_agent_encounters.py")'
+  - 'symbol_in_file("api/tests/test_external_agent_encounters.py", "test_external_agent_encounter_records_trace_without_task")'
+  - 'symbol_in_file("api/tests/test_external_agent_encounters.py", "test_external_agent_encounter_links_response_task_route_snapshot")'
+  - 'file_exists("api/tests/test_agent_invitation.py")'
+  - 'symbol_in_file("api/tests/test_agent_invitation.py", "test_agent_invitation_api_shape")'
+  - 'pytest_passes("api/tests/test_external_agent_encounters.py")'
+  - 'pytest_passes("api/tests/test_agent_invitation.py")'
 test: "cd api && python3 -m pytest tests/test_external_agent_encounters.py tests/test_agent_invitation.py -q"
 constraints:
   - "No database schema changes."

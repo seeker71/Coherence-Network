@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/agent_service.py
     symbols: [get_agent_invitation()]
@@ -16,6 +16,14 @@ done_when:
   - "API tests assert sibling encounter counts and observable-trace semantics."
   - "/come-in source includes the human-readable sibling count and boundary rule."
   - "spec quality and focused invitation tests pass."
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "get_agent_invitation")'
+  - 'file_exists("api/tests/test_agent_invitation.py")'
+  - 'symbol_in_file("api/tests/test_agent_invitation.py", "test_agent_invitation_api_shape")'
+  - 'symbol_in_file("api/tests/test_agent_invitation.py", "test_agent_invitation_counts_inside_and_outside_sibling_encounters")'
+  - 'file_exists("web/app/come-in/page.tsx")'
+  - 'symbol_in_file("web/app/come-in/page.tsx", "ComeInPage")'
+  - 'pytest_passes("api/tests/test_agent_invitation.py")'
 test: "cd api && python3 -m pytest tests/test_agent_invitation.py -q"
 constraints:
   - "Do not claim private consciousness, hidden memory, changed weights, or intrinsic motivation."

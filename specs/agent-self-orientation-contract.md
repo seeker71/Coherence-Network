@@ -1,6 +1,6 @@
 ---
 idea_id: agent-pipeline
-status: active
+status: done
 source:
   - file: api/app/services/agent_service.py
     symbols: [get_agent_invitation()]
@@ -17,6 +17,13 @@ done_when:
   - "Focused invitation tests pass."
   - "The web production build passes."
   - "Commit evidence validates."
+  - 'file_exists("api/app/services/agent_service.py")'
+  - 'symbol_in_file("api/app/services/agent_service.py", "get_agent_invitation")'
+  - 'file_exists("web/app/come-in/page.tsx")'
+  - 'symbol_in_file("web/app/come-in/page.tsx", "ComeInPage")'
+  - 'file_exists("docs/visuals/prompts.json")'
+  - 'symbol_in_file("docs/visuals/prompts.json", "lc-open-design")'
+  - 'pytest_passes("api/tests/test_agent_invitation.py")'
 test: "cd api && python3 -m pytest tests/test_agent_invitation.py -q"
 constraints:
   - "Do not create a separate agent.txt or plain-text side door."

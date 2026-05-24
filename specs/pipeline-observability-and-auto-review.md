@@ -26,6 +26,15 @@ done_when:
   - "Usage per task — Token/cost proxy or API call count per task (when providers expose it)"
   - "Pipeline metrics endpoint — `GET /api/agent/metrics` returning execution time P50/P95, success rate, usage summary"
   - "Prompt variants — Support `context.prompt_variant` or prompt ID in task; log which variant was used"
+  - 'file_exists("api/app/services/agent_execution_metrics.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_metrics.py", "resolve_cost_controls")'
+  - 'symbol_in_file("api/app/services/agent_execution_metrics.py", "attribution_values_from_output")'
+  - 'file_exists("api/app/services/agent_execution_hooks.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_hooks.py", "register_lifecycle_hook")'
+  - 'symbol_in_file("api/app/services/agent_execution_hooks.py", "dispatch_lifecycle_event")'
+  - 'file_exists("api/app/routers/agent_status_routes.py")'
+  - 'symbol_in_file("api/app/routers/agent_status_routes.py", "pipeline")'
+  - 'pytest_passes("api/tests/test_monitor_pipeline_stale_running.py")'
 test: "python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -153,6 +162,8 @@ TaskMetric:
 - `specs/pipeline-observability-and-auto-review.md` — This spec
 
 ## Acceptance Tests
+
+- Validated by: `python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v`
 
 - Create task, run agent_runner, verify metrics include duration and status
 - GET /api/agent/metrics returns success_rate and execution_time when tasks exist

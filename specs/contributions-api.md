@@ -22,6 +22,14 @@ done_when:
   - "GET /api/assets/{asset_id}/contributions — List all contributions to an asset"
   - "GET /api/contributors/{contributor_id}/contributions — List all contributions by a contributor"
   - "POST /api/contributions/github — Track contribution from GitHub webhook (auto-create contributor/asset)"
+  - 'file_exists("api/app/routers/contributions.py")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "create_contribution")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "list_contributions")'
+  - 'symbol_in_file("api/app/routers/contributions.py", "get_contribution")'
+  - 'file_exists("api/app/models/contribution.py")'
+  - 'symbol_in_file("api/app/models/contribution.py", "Contribution")'
+  - 'symbol_in_file("api/app/models/contribution.py", "ContributionCreate")'
+  - 'pytest_passes("api/tests/test_contributions.py")'
 test: "python3 -m pytest api/tests/test_contributions.py -x -v"
 constraints:
   - "changes scoped to listed files only"

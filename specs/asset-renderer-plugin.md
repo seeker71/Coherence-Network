@@ -41,6 +41,33 @@ done_when:
   - "Built-in renderers work for markdown, images, PDF, and HTML"
   - "Renderer SDK type definitions exported from web/lib/renderer-sdk.ts"
   - "All tests pass"
+  - 'file_exists("api/app/routers/assets.py")'
+  - 'symbol_in_file("api/app/routers/assets.py", "register_asset")'
+  - 'symbol_in_file("api/app/routers/assets.py", "get_asset")'
+  - 'file_exists("api/app/routers/renderers.py")'
+  - 'symbol_in_file("api/app/routers/renderers.py", "register_renderer")'
+  - 'symbol_in_file("api/app/routers/renderers.py", "list_renderers")'
+  - 'symbol_in_file("api/app/routers/renderers.py", "get_renderer_for_mime")'
+  - 'file_exists("api/app/routers/render_events.py")'
+  - 'symbol_in_file("api/app/routers/render_events.py", "log_render_event")'
+  - 'symbol_in_file("api/app/routers/render_events.py", "get_asset_analytics")'
+  - 'file_exists("api/app/models/asset.py")'
+  - 'symbol_in_file("api/app/models/asset.py", "AssetRegistration")'
+  - 'symbol_in_file("api/app/models/asset.py", "AssetType")'
+  - 'file_exists("api/app/models/renderer.py")'
+  - 'symbol_in_file("api/app/models/renderer.py", "Renderer")'
+  - 'symbol_in_file("api/app/models/renderer.py", "RendererCreate")'
+  - 'symbol_in_file("api/app/models/renderer.py", "RenderEvent")'
+  - 'symbol_in_file("api/app/models/renderer.py", "RenderCCSplit")'
+  - 'file_exists("api/app/services/render_attribution_service.py")'
+  - 'symbol_in_file("api/app/services/render_attribution_service.py", "attribute_render_cc")'
+  - 'file_exists("web/app/assets/[asset_id]/page.tsx")'
+  - 'symbol_in_file("web/app/assets/[asset_id]/page.tsx", "AssetDetailPage")'
+  - 'symbol_in_file("web/app/assets/[asset_id]/page.tsx", "RendererComponent")'
+  - 'file_exists("web/lib/renderer-sdk.ts")'
+  - 'symbol_in_file("web/lib/renderer-sdk.ts", "RendererProps")'
+  - 'symbol_in_file("web/lib/renderer-sdk.ts", "registerRenderer")'
+  - 'pytest_passes("api/tests/test_asset_renderer.py")'
 test: "python3 -m pytest api/tests/test_asset_renderer.py -x -v"
 constraints:
   - "Changes scoped to listed files only"

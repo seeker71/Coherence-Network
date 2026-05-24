@@ -21,6 +21,14 @@ done_when:
   - "classify_error correctly categorizes timeout, crash, provider, validation patterns"
   - "GET /api/agent/diagnostics-completeness returns correct shape"
   - "all tests pass"
+  - 'file_exists("api/app/services/failed_task_diagnostics_service.py")'
+  - 'symbol_in_file("api/app/services/failed_task_diagnostics_service.py", "classify_error")'
+  - 'symbol_in_file("api/app/services/failed_task_diagnostics_service.py", "ensure_diagnostics")'
+  - 'file_exists("api/app/models/agent.py")'
+  - 'symbol_in_file("api/app/models/agent.py", "AgentTask")'
+  - 'symbol_in_file("api/app/models/agent.py", "AgentTaskUpdate")'
+  - 'file_exists("api/app/services/agent_task_store_service.py")'
+  - 'pytest_passes("api/tests/test_failed_task_diagnostics.py")'
 test: "cd api && python -m pytest tests/test_failed_task_diagnostics.py -q"
 constraints:
   - "no changes to existing test files"

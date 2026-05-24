@@ -14,6 +14,13 @@ done_when:
   - test_finalize_snapshot_uses_summary_metric_for_usage_remaining passes
   - test_automation_usage_endpoint_coalesces_provider_families passes
   - test_automation_usage_endpoint_times_out_to_snapshot_fallback passes
+  - 'file_exists("api/app/services/automation_usage_service.py")'
+  - 'file_exists("api/app/models/automation_usage.py")'
+  - 'symbol_in_file("api/app/models/automation_usage.py", "UsageAlert")'
+  - 'symbol_in_file("api/app/models/automation_usage.py", "ProviderUsageOverview")'
+  - 'symbol_in_file("api/app/models/automation_usage.py", "ProviderUsageSnapshot")'
+test:
+  - "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 test: "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 ---
 

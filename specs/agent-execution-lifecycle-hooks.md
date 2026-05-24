@@ -23,6 +23,14 @@ done_when:
   - "Emit lifecycle telemetry events during task execution (`claimed`, `execution_started`, `finalized`, plus block/valida..."
   - "Add configurable lifecycle subscribers (`runtime` and `jsonl`) that can be enabled/disabled via environment setting."
   - "Add a compact lifecycle summary query endpoint for recent lifecycle events."
+  - 'file_exists("api/app/services/agent_execution_hooks.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_hooks.py", "register_lifecycle_hook")'
+  - 'symbol_in_file("api/app/services/agent_execution_hooks.py", "dispatch_lifecycle_event")'
+  - 'file_exists("api/app/services/agent_execution_hooks_config.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_hooks_config.py", "hook")'
+  - 'file_exists("api/app/services/agent_execution_task_flow.py")'
+  - 'symbol_in_file("api/app/services/agent_execution_task_flow.py", "_emit_lifecycle_event")'
+  - 'pytest_passes("api/tests/test_agent_execute_endpoint.py")'
 test: "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"lifecycle or hook_error or lifecycle_summary\""
 constraints:
   - "changes scoped to listed files only"

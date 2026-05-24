@@ -16,6 +16,10 @@ done_when:
   - "Auto-track GitHub workflow uses the same normalized estimator model to reduce inflated payload values."
   - "Contributions web page displays effective normalized cost and highlights raw-to-normalized adjustment when present."
   - "Tests cover estimator behavior and GitHub contribution route normalization."
+  - 'file_exists("api/app/services/contribution_cost_service.py")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost")'
+  - 'symbol_in_file("api/app/services/contribution_cost_service.py", "estimate_commit_cost_with_provenance")'
+  - 'pytest_passes("api/tests/test_contribution_cost_service.py")'
 test: "python3 -m pytest api/tests/test_contribution_cost_service.py -x -v"
 constraints:
   - "changes scoped to listed files only"
@@ -26,6 +30,10 @@ constraints:
 > **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
 # Normalize GitHub Commit Cost Estimation
+
+## Purpose
+
+Normalize GitHub Commit Cost Estimation — see `idea_id: value-attribution` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
 
 ## Goal
 Fix inflated per-commit contribution cost values by replacing the high-multiplier estimator with a bounded normalized model and enforcing normalization server-side.

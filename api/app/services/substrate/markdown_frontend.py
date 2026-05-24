@@ -313,9 +313,11 @@ def structured_value_recipe(session: Session, value: Any) -> NodeID:
 
 
 def frontmatter_to_structured_ctor(
-    session: Session, frontmatter: Dict[str, Any]
+    session: Session,
+    frontmatter: Dict[str, Any],
+    body: Optional[str] = None,
 ) -> Optional[NodeID]:
-    """Build a fully-expressed CTOR recipe from frontmatter.
+    """Build a fully-expressed CTOR recipe from frontmatter (and optional body).
 
     Unlike the earlier `frontmatter_to_*` encoder (which produces type-marker
     string-recipes that lose all values), this preserves every value as a
@@ -324,27 +326,40 @@ def frontmatter_to_structured_ctor(
         CTOR (R_Block.DO)
         ├── NamedField (R_Block.LET) — key:slug, value:recipe
         ├── NamedField (R_Block.LET)
-        └── ...
+        ├── ...
+        └── NamedField (R_Block.LET) — key="body", value=section recipe
+                                       (when body= is passed and has ## sections)
 
     Values are recursively composed: lists become R_Block.SEQUENCE,
     dicts become R_Block.DO with LET children, scalars become typed
     trivial recipes via the substrate string-table. The tree extends
     as deep as the data goes — no flattening.
 
-    Returns None if frontmatter is empty. Otherwise returns the
-    interned CTOR NodeID. Two cells with identical frontmatter values
-    share a CTOR NodeID through content-addressed interning.
-    """
-    if not frontmatter:
-        return None
+    If `body` is non-None and contains `## H2` sections, those sections are
+    parsed into a structured sub-tree via `body_to_section_recipe` and
+    bound under the key `body` in the CTOR. This makes the body
+    walkable as `cell.body.children[N]` per-section. Smallest version of
+    (D) — heading-level structure; word-cell ingest is a follow-up.
 
+    Returns None if frontmatter is empty AND body has no sections.
+    Otherwise returns the interned CTOR NodeID.
+    """
     from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
 
     pairs = []
-    for key in sorted(frontmatter.keys()):
+    for key in sorted((frontmatter or {}).keys()):
         value_recipe = structured_value_recipe(session, frontmatter[key])
         pair = named_field_recipe(session, key, value_recipe)
         pairs.append(pair)
+
+    if body is not None:
+        body_recipe = body_to_section_recipe(session, body)
+        if body_recipe is not None:
+            body_pair = named_field_recipe(session, "body", body_recipe)
+            pairs.append(body_pair)
+
+    if not pairs:
+        return None
 
     return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
 
@@ -534,6 +549,96 @@ def body_to_access_recipe(
     length_class = len(body) // 256  # bucket bodies by 256-char chunks
     rid = NodeID(1, Level.TRIVIAL, RType.STRING, length_class + 1)
     return rid
+
+
+def section_content_to_word_sequence(
+    session: Session, content: str
+) -> Optional[NodeID]:
+    """Tokenize a section's prose into a SEQUENCE of word-cell refs + punct.
+
+    Each word token becomes a substrate word-cell via `ingest_word_cell`
+    (idempotent — same (lemma, POS) interns to the same cell). Each punct
+    token becomes a small typed-token leaf. The sequence is composed via
+    `list_recipe`.
+
+    Returns the SEQUENCE NodeID, or None if content tokenizes to nothing.
+
+    This is the (D-deeper) closure: section content is no longer an opaque
+    string-recipe; it's a walkable SEQUENCE where each element is itself
+    a content-addressed word-cell with (lemma, POS, hz, semantic_field).
+    Cross-idea queries like *"find all ideas whose body contains the word
+    'tend' (hz=396 tending)"* become substrate-native.
+    """
+    if not content or not content.strip():
+        return None
+    tokens = tokenize_words(content)
+    if not tokens:
+        return None
+
+    elements: List[NodeID] = []
+    for t in tokens:
+        if t.get("kind") == "word":
+            word_cell, _, _ = ingest_word_cell(
+                session,
+                lemma=t["lemma"],
+                pos=t["pos"],
+                hz=t["hz"],
+                semantic_field=t["field"],
+                surface=t.get("surface"),
+            )
+            if word_cell is not None and word_cell.cell_id is not None:
+                elements.append(
+                    NodeID(1, Level.TRIVIAL, RType.REF, word_cell.cell_id)
+                )
+        elif t.get("kind") == "punct":
+            # Punct as a small string-recipe leaf — round-trip preserves
+            # the surface character.
+            elements.append(substrate_string_recipe(session, t.get("surface", "")))
+
+    if not elements:
+        return None
+    return list_recipe(session, elements)
+
+
+def body_to_section_recipe(
+    session: Session, body: str
+) -> Optional[NodeID]:
+    """Parse `## H2` sections of a markdown body into a structured recipe.
+
+    Returns an R_Block.DO whose children are R_Block.LET bindings keyed by
+    section heading. Each section's content is a R_Block.SEQUENCE of
+    word-cell refs and punct tokens (via section_content_to_word_sequence)
+    — section prose is walkable down to the word.
+
+    Returns None if no `## ` headings are found — caller should keep using
+    body_to_access_recipe in that case.
+    """
+    if not body:
+        return None
+    pattern = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+    matches = list(pattern.finditer(body))
+    if not matches:
+        return None
+
+    from app.services.substrate.kernel import DOMAIN_RECIPE, intern_node
+
+    pairs = []
+    for i, m in enumerate(matches):
+        heading = m.group(1).strip()
+        content_start = m.end()
+        content_end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+        content = body[content_start:content_end].strip()
+        v_recipe = section_content_to_word_sequence(session, content)
+        if v_recipe is None:
+            # Empty section — keep an empty string-recipe so the LET still
+            # exists for navigation. The heading itself is the signal.
+            v_recipe = substrate_string_recipe(session, "")
+        pair = named_field_recipe(session, heading, v_recipe)
+        pairs.append(pair)
+
+    if not pairs:
+        return None
+    return intern_node(session, DOMAIN_RECIPE, RID_block_do(), pairs)
 
 
 # ---------------------------------------------------------------------------
@@ -1855,7 +1960,12 @@ def _ingest_markdown_payload(
         # New path — composition-discipline encoder. Every value reaches
         # the substrate as a structured recipe; the tree extends as deep
         # as the data goes. See structural-composition.md.
-        ctor_id = frontmatter_to_structured_ctor(session, parsed.frontmatter)
+        # Body sections (`## H2` blocks) are interned alongside the
+        # frontmatter LET-bindings under the key "body" — heading-level
+        # only for now; word-cell ingest is a follow-up (D-deeper).
+        ctor_id = frontmatter_to_structured_ctor(
+            session, parsed.frontmatter, body=parsed.body
+        )
     else:
         # Legacy path — type-marker string-recipes per key. Preserves
         # shape, loses values. Kept for backward compatibility during

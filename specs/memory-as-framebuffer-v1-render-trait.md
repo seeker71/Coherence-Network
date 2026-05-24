@@ -21,6 +21,20 @@ done_when:
   - "cargo run --release --example custom_renderer produces matrix3x3.mp4 where the matrix renders as a 3x3 visible grid rather than as 9 separate primitive cells."
   - "tests/render_trait_smoke.rs passes: default-render-matches-v0 (pixel equivalence within tolerance), custom-render-overrides (registered kernel beats default), kernel-registry (registering twice errors, lookup hits return Some)."
   - "v0 fizzbuzz example continues to produce identical mp4 output after refactoring through the Render trait dispatch."
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render_trait.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "Render")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "RenderCtx")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "RenderOp")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "register_kernel")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render_trait.rs", "lookup_kernel")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/src/render.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/src/render.rs", "render_frame")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/examples/custom_renderer.rs", "Matrix3x3")'
+  - 'file_exists("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_default_render_matches_v0")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_custom_render_overrides")'
+  - 'symbol_in_file("experiments/memory-as-framebuffer-v0/tests/render_trait_smoke.rs", "test_kernel_registry")'
 test: "cd experiments/memory-as-framebuffer-v0 && cargo test --release render_trait"
 constraints:
   - "Builds on memory-as-framebuffer-v0. The v0 fizzbuzz mp4 must remain pixel-equivalent (within H.264 tolerance) after refactor; this is a structural change, not a visual one."
