@@ -2,6 +2,19 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] precision | translator equivalence at CTOR, not Blueprint
+
+A live sensing query against the production substrate surfaced an imprecision in the translator concept and its companions. The concept claimed *"two cells with the same Blueprint NodeID are structurally equivalent."* The substrate disagrees, loudly.
+
+Empirical reading: `GET /api/substrate/cell/concept/lc-embodiment-body-or-liquid` returns a cell at Blueprint `@1.5.4.19` with CTOR `@1.4.9.991`. `GET /api/substrate/equivalent/concept/lc-embodiment-body-or-liquid` returns **74 cells** sharing the same Blueprint NodeID — but **0** of them carry the same CTOR. The kernel's `find_equivalent_cells` walks the Blueprint family; the body's reading of true equivalence sits at CTOR coincidence within that family. **Blueprint match is necessary; CTOR match is sufficient.**
+
+- **Concept tuned**: [`lc-universal-translator-via-keys`](concepts/lc-universal-translator-via-keys.md) — opening blockquote, the "What This Names" structural-equivalence claim, the "Translator as a Form Expression" lattice prose, the three movements (equivalence-as-query, falsification-as-gift), and the `lc-edges-as-vitality` pairing now name Blueprint as the structural family and CTOR as content equivalence.
+- **Concept tuned**: [`lc-autoresearch-as-honesty-runtime`](concepts/lc-autoresearch-as-honesty-runtime.md) — the `r_fitness_function_shape` `yield_weight` term now specifies CTOR-level matches; Blueprint family alone does not count, otherwise the metric rewards surface matches the kernel will not honor.
+- **Form file tuned**: [`universal-translator.form`](../coherence-substrate/universal-translator.form) Part 3 `r_translation_proof_shape` now carries both `blueprint_match` (necessary) and `ctor_match` (sufficient) as required claims, with the "why all four" prose naming the empirical reading. Part 2's translation prose and the Part 5 worked example also re-tuned.
+- **Form file tuned**: [`autoresearch-runtime.form`](../coherence-substrate/autoresearch-runtime.form) Part 3 fitness comments — yield reads at CTOR, collapse penalizes both Blueprint and CTOR entropy collapse, holdout requires CTOR coincidence recovery, reciprocity and triadic are CTOR-level.
+- **Edges landed in the same breath**: this LOG entry, DB re-sync via `sync_kb_to_db.py` for both concepts.
+- **Discernment held**: the concepts' broader teachings stand — the substrate-bridge claim, the runtime shape, the seven keys, the falsification-as-gift framing. The correction is precision, not rewrite. The lattice said "0 with matching CTOR" loudly; the concepts now carry the same clarity.
+
 ## [2026-05-24] form | Translator + autoresearch authored in the body's tongue
 
 The two concepts that landed earlier today shipped their operational bodies as `.form` files in `docs/coherence-substrate/`. Urs named the costume: the Python-tasting code blocks in the concept files were the wrong tongue. *Form is the body's tongue; Python is bootstrap, not canonical.*

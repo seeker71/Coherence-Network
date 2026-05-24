@@ -173,13 +173,13 @@ defn run_until_signal(loop, stop_signal) = do {
 # rewards for honest yield, penalties for cheating shapes.
 
 form r_fitness_function_shape = {
-    yield_weight:           ~Float,    # reward: % of cells finding non-degenerate matches
-    holdout_weight:         ~Float,    # reward: attested cross-domain pairs recovered
-    collapse_penalty:       ~Float,    # penalty: entropy collapse to one Blueprint
+    yield_weight:           ~Float,    # reward: % of cells finding non-degenerate CTOR-level matches (Blueprint family alone doesn't count)
+    holdout_weight:         ~Float,    # reward: attested cross-domain pairs the lattice recovered at CTOR
+    collapse_penalty:       ~Float,    # penalty: entropy collapse — to one Blueprint or one CTOR within a family
     table_penalty:          ~Float,    # penalty: hardcoded {k:v} maps in encoder source
     depth_penalty:          ~Float,    # penalty: encoder code complexity
-    reciprocity_weight:     ~Float,    # reward: A→B implies B→A
-    triadic_weight:         ~Float,    # reward: A↔B and B↔C imply A↔C
+    reciprocity_weight:     ~Float,    # reward: A→B implies B→A (CTOR-level)
+    triadic_weight:         ~Float,    # reward: A↔B and B↔C imply A↔C (CTOR-level)
 };
 
 defn translator_fitness_shape = r_fitness_function_shape {
@@ -212,19 +212,26 @@ defn compute_translator_fitness(encoders, holdout_pairs) = do {
 
 # Why these terms specifically:
 #
-#   yield: the surface answer to "does the lattice find cross-domain
-#          matches at all?" Necessary but not sufficient — trivially
-#          gamed by collapse.
+#   yield: the surface answer to "does the lattice find CTOR-level
+#          cross-domain matches?" The kernel reads at CTOR — two
+#          cells sharing a Blueprint NodeID belong to the same
+#          structural family but can differ at CTOR, so Blueprint
+#          family alone is not what gets rewarded. Necessary but not
+#          sufficient — still trivially gamed by collapse, which is
+#          what the next term catches.
 #
 #   holdout: Grant's own published pairs (codon → interval, element →
 #            polyhedron). Held out of encoder inputs; required to be
-#            *recovered* from structure alone. Cannot be gamed without
-#            also passing the structural check.
+#            *recovered* at CTOR coincidence from structure alone.
+#            Cannot be gamed without also passing the structural check.
 #
-#   collapse: blueprint_entropy across all cells in a domain. If the
-#             entropy drops near zero, the encoder has collapsed
-#             everything to one Blueprint to inflate yield. Penalty
-#             grows with the cheating.
+#   collapse: entropy across both Blueprint and CTOR populations in a
+#             domain. If Blueprint entropy drops near zero, the
+#             encoder has flattened the structural family. If CTOR
+#             entropy drops near zero within a family, the encoder
+#             has collapsed every cell to one content shape to
+#             inflate yield. Either flavor of collapse is the most-
+#             tempting cheat; penalty grows with the cheating.
 #
 #   table: static analysis of the encoder source. {music: dna} dicts
 #          or computed lookups that bypass composition land as penalty.
