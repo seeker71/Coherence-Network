@@ -172,6 +172,14 @@ from app.services.substrate.resonance import (
     shapes_edge,
     topology_cell,
 )
+from app.services.substrate.modality_shapes import (
+    CANONICAL_SHAPES,
+    DOMAIN_RECIPE_SHAPE,
+    canonical_shape_names,
+    intern_all_canonical_shapes,
+    intern_canonical_shape,
+    shape_signature_blueprint,
+)
 from app.services.substrate.markdown_frontend import (
     BID_concept,
     BID_idea,
@@ -395,4 +403,11 @@ __all__ = [
     "polarity_cell",
     "shapes_edge",
     "topology_cell",
+    # Modality shapes — cross-modal canonical recipe shapes
+    "CANONICAL_SHAPES",
+    "DOMAIN_RECIPE_SHAPE",
+    "canonical_shape_names",
+    "intern_all_canonical_shapes",
+    "intern_canonical_shape",
+    "shape_signature_blueprint",
 ]
