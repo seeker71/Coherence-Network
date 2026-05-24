@@ -12,6 +12,8 @@
 // Aligned with api/app/services/substrate/category.py and the Go/Rust
 // kernels. Cross-kernel NodeID agreement is the conformance contract.
 
+import { readFileSync } from "node:fs";
+
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
 // ---------------------------------------------------------------------------
@@ -192,16 +194,6 @@ export function nodeKey(n: NodeID): string {
 // keys is well-optimized and BigInt conversions in inner loops are slow.
 
 export type NativeFn = (k: Kernel, args: Value[]) => Value;
-
-// KernelHost — optional effects supplied by the embedding runtime.
-// Browser callers omit these and keep evaluation local/in-memory. CLI callers
-// pass Node adapters so the same kernel can still read files and write traces.
-export interface KernelHost {
-  readonly readTextFile?: (path: string) => string;
-  readonly readBinaryFile?: (path: string) => Uint8Array;
-  readonly writeStdout?: (text: string) => void;
-  readonly writeStderr?: (text: string) => void;
-}
 
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
@@ -453,7 +445,7 @@ export class Kernel {
   // Surfaces the structural shape of evaluated Python at its own altitude.
   ctorCounts?: Map<string, number>;
 
-  constructor(private readonly host: KernelHost = {}) {
+  constructor() {
     this.registerNatives();
   }
 
@@ -797,7 +789,7 @@ export class Kernel {
 
     this.registerNative("print", catCall(), (_k, args) => {
       const parts = args.map((a) => this.renderForPrint(a));
-      this.host.writeStdout?.(parts.join(" ") + "\n");
+      process.stdout.write(parts.join(" ") + "\n");
       return { kind: "null" };
     });
     // String ops
@@ -951,9 +943,7 @@ export class Kernel {
     // File I/O
     this.registerNative("read_file", catCall(), (_k, args) => {
       try {
-        const readTextFile = this.host.readTextFile;
-        if (!readTextFile) return { kind: "null" };
-        return { kind: "str", str: readTextFile(argStr(args, 0)) };
+        return { kind: "str", str: readFileSync(argStr(args, 0), "utf8") };
       } catch {
         return { kind: "null" };
       }
@@ -964,9 +954,7 @@ export class Kernel {
     // char_at + ord; binary grammars walk a byte-list with nth.
     this.registerNative("read_file_bytes", catCall(), (_k, args) => {
       try {
-        const readBinaryFile = this.host.readBinaryFile;
-        if (!readBinaryFile) return { kind: "null" };
-        const buf = readBinaryFile(argStr(args, 0));
+        const buf = readFileSync(argStr(args, 0));
         const out: Value[] = new Array(buf.length);
         for (let i = 0; i < buf.length; i++) {
           out[i] = { kind: "int", int: buf[i]! };
@@ -1074,13 +1062,13 @@ export class Kernel {
     this.registerNative("trace", catUndefined(), (_k, args) => {
       if (args.length >= 2) {
         const label = args[0]?.kind === "str" ? args[0].str : "trace";
-        this.host.writeStderr?.(
+        process.stderr.write(
           `[trace ${label}] ${this.renderForPrint(args[1] ?? { kind: "null" })}\n`,
         );
         return args[1] ?? { kind: "null" };
       }
       const v = args[0] ?? { kind: "null" };
-      this.host.writeStderr?.(`[trace] ${this.renderForPrint(v)}\n`);
+      process.stderr.write(`[trace] ${this.renderForPrint(v)}\n`);
       return v;
     });
   }
