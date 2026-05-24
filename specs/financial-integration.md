@@ -5,11 +5,21 @@ status: done
 priority: high
 source:
   - file: api/app/services/cc_economics_service.py
-    symbols: [treasury_status, exchange_rate]
+    symbols: [exchange_rate, supply, coherence_score]
   - file: api/app/services/cc_exchange_adapter.py
-    symbols: [swap, settlement]
+    symbols: [initiate_swap, confirm_swap, get_quote, list_adapters]
   - file: api/app/routers/cc_exchange.py
-    symbols: [swap_cc, get_rate, withdrawal]
+    symbols: [initiate_swap, get_quote, list_adapters, get_history]
+# Evolution note (2026-05-24): naming evolved during implementation.
+# Original spec called for `swap` / `settlement` / `swap_cc` / `get_rate` /
+# `withdrawal`; live surface uses `initiate_swap` / `confirm_swap` /
+# `get_quote` / adapter-routed history. `treasury_status` was never
+# implemented as a function — treasury health surfaces through
+# `cc_treasury_service.coherence_status()` (called from
+# community_pulse_service.py) and `coherence_score()` here. Fiat
+# off-ramp (`withdrawal`) is not in the current surface; the spec's
+# R8/R9 wants its own focused breath when withdrawal returns to the
+# roadmap.
 requirements:
   - "CC <> USDC exchange via Base L2 (using x402 facilitator infrastructure)"
   - "Treasury backing: every CC in circulation backed by real value (Arweave-stored proof)"

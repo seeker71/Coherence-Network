@@ -3,13 +3,19 @@ idea_id: federation-and-nodes
 status: active
 source:
   - file: api/app/routers/federation.py
-    symbols: [get_aggregated_node_stats, get_network_summary]
+    symbols: [get_aggregated_node_stats]
   - file: api/app/services/federation_service.py
-    symbols: [get_aggregated_node_stats, get_network_summary]
-  - file: api/app/models/federation.py
-    symbols: [NetworkSummaryResponse, AggregatedNodeStatsResponse]
+    symbols: [get_aggregated_node_stats]
   - file: web/app/nodes/page.tsx
-    symbols: [loadData, NodesPage, NetworkStatsSection]
+    symbols: [loadData, NodesPage]
+# Evolution note (2026-05-24): the `/api/federation/network-summary`
+# surface (get_network_summary, NetworkSummaryResponse,
+# AggregatedNodeStatsResponse, NetworkStatsSection) was removed during
+# the fleet-capability refactor in favour of `/api/federation/nodes/capabilities`
+# returning `FleetCapabilitySummary`. Aggregated stats live on at
+# `get_aggregated_node_stats`. If network-summary semantics return, they
+# want a new spec or a focused revival branch rather than reviving
+# these stale symbol claims.
 requirements:
   - "GET /api/federation/nodes/stats returns per-provider network-wide success rates, mean duration, per-node breakdown, and alerts — already implemented; must return correct shape"
   - "GET /api/federation/network-summary returns node counts (total, online, idle), fleet success rate, active providers, and total measurements in window"
