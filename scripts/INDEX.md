@@ -101,6 +101,7 @@
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [song_recipe_proof.py](song_recipe_proof.py) | !/usr/bin/env python3 |
+| [spec_recipe_proof.py](spec_recipe_proof.py) | !/usr/bin/env python3 |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | !/usr/bin/env python3 |
 | [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
