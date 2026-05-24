@@ -369,6 +369,13 @@ export default function TransmissionRecipesPage() {
                 Read the concept
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </Link>
+              <Link
+                href="/substrate/form?cell=@concept(lc-transmission-recipe-atlas)"
+                className="inline-flex items-center gap-2 rounded-lg border border-teal-500/25 bg-teal-500/10 px-5 py-3 text-sm font-medium text-teal-200 transition-colors hover:bg-teal-500/20"
+              >
+                Ask the lattice
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
           </div>
         </div>

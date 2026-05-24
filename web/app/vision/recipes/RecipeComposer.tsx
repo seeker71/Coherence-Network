@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clipboard, Link2, RotateCcw, Wand2 } from "lucide-react";
+import { Check, Clipboard, Link2, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 
 type RecipeField =
   | "source"
@@ -19,7 +19,14 @@ type ComposerCard = Record<RecipeField, string>;
 
 type Starter = {
   title: string;
+  promise: string;
   card: ComposerCard;
+};
+
+type Spark = {
+  label: string;
+  field: RecipeField;
+  value: string;
 };
 
 const emptyCard: ComposerCard = {
@@ -93,6 +100,7 @@ const fields: Array<{ id: RecipeField; label: string; placeholder: string; rows?
 const starters: Starter[] = [
   {
     title: "Repair Wake",
+    promise: "Turn a failure into one repaired future habit.",
     card: {
       source: "a failed deploy where a hidden dependency was trusted without a witness",
       observed: "alert fatigue, unclear owner, fast patch, repeated surprise, quiet shame afterward",
@@ -107,6 +115,7 @@ const starters: Starter[] = [
   },
   {
     title: "Dance Onboarding",
+    promise: "Turn a song arc into a first-run experience.",
     card: {
       source: "an ecstatic dance track with arrival, pulse, invitation, build, release, and return",
       observed: "the body understands the arc before the mind explains the arc",
@@ -121,6 +130,7 @@ const starters: Starter[] = [
   },
   {
     title: "Metric Spellbreaker",
+    promise: "Turn measurement pressure into a clearer decision.",
     card: {
       source: "measurement and observer teachings held as strategy metaphor",
       observed: "what gets measured becomes visible; what is unmeasured becomes easier to sacrifice",
@@ -132,6 +142,39 @@ const starters: Starter[] = [
       claimBoundary: "quantum language is metaphor here, not physics proof",
       nextEmbodiment: "run before adopting any growth, reach, impact, or productivity metric",
     },
+  },
+];
+
+const sparks: Spark[] = [
+  {
+    label: "Song -> workshop",
+    field: "source",
+    value: "a song whose build, drop, silence, and return teach how a group changes state",
+  },
+  {
+    label: "Video -> proof page",
+    field: "observed",
+    value: "wide shot gives context, close-up carries claim, still frame lets proof rest long enough to inspect",
+  },
+  {
+    label: "Practice -> product",
+    field: "observerLens",
+    value: "embodiment facilitator + product designer",
+  },
+  {
+    label: "Spec -> ceremony",
+    field: "recipe",
+    value: "intention -> constraints -> smallest test -> witnessed run -> proof note -> next breath",
+  },
+  {
+    label: "Create a real artifact",
+    field: "payload",
+    value: "a one-page field kit someone can run with a group this week",
+  },
+  {
+    label: "Bound the claim",
+    field: "claimBoundary",
+    value: "this is a practice analogy; it supports attention and does not replace domain expertise or consent",
   },
 ];
 
@@ -246,6 +289,19 @@ export function RecipeComposer() {
     setLinkCopied(false);
   }
 
+  function applySpark(spark: Spark) {
+    setCard((current) => {
+      const existing = current[spark.field].trim();
+      return {
+        ...current,
+        [spark.field]: existing ? `${existing}; ${spark.value}` : spark.value,
+      };
+    });
+    setCopied(false);
+    setLinkCopied(false);
+    setRestored(null);
+  }
+
   async function copyCard() {
     if (!formatted.trim()) return;
     const copiedToClipboard = await writeClipboard(formatted);
@@ -286,6 +342,27 @@ export function RecipeComposer() {
             </p>
           </div>
 
+          <div className="grid gap-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-4 text-sm text-stone-300">
+            <div className="flex items-center gap-2 text-violet-200">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <span className="font-medium">Three-minute play path</span>
+            </div>
+            <ol className="grid gap-2 sm:grid-cols-3">
+              <li className="rounded-md border border-stone-800/60 bg-stone-950/35 p-3">
+                <span className="block text-xs uppercase tracking-[0.16em] text-stone-500">1. Pick</span>
+                Start with a card below.
+              </li>
+              <li className="rounded-md border border-stone-800/60 bg-stone-950/35 p-3">
+                <span className="block text-xs uppercase tracking-[0.16em] text-stone-500">2. Bend</span>
+                Change one field to fit your real source.
+              </li>
+              <li className="rounded-md border border-stone-800/60 bg-stone-950/35 p-3">
+                <span className="block text-xs uppercase tracking-[0.16em] text-stone-500">3. Move</span>
+                Copy it, share it, or run it this week.
+              </li>
+            </ol>
+          </div>
+
           <div className="grid gap-2 sm:grid-cols-3">
             {starters.map((starter) => (
               <button
@@ -297,12 +374,36 @@ export function RecipeComposer() {
                   setLinkCopied(false);
                   setRestored(null);
                 }}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-stone-800/70 bg-stone-900/40 px-3 py-2 text-sm text-stone-300 transition-colors hover:border-violet-500/35 hover:text-violet-200"
+                className="flex min-h-[88px] flex-col items-start justify-center gap-2 rounded-lg border border-stone-800/70 bg-stone-900/40 px-3 py-3 text-left text-sm text-stone-300 transition-colors hover:border-violet-500/35 hover:text-violet-200"
               >
-                <Wand2 className="h-4 w-4 text-violet-300/70" aria-hidden="true" />
-                {starter.title}
+                <span className="inline-flex items-center gap-2 font-medium text-stone-100">
+                  <Wand2 className="h-4 w-4 text-violet-300/70" aria-hidden="true" />
+                  {starter.title}
+                </span>
+                <span className="text-xs leading-relaxed text-stone-500">{starter.promise}</span>
               </button>
             ))}
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-stone-800/60 bg-stone-900/25 p-4">
+            <div>
+              <h3 className="text-sm font-medium text-stone-200">Spark buttons</h3>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                Use these when the blank field feels too open. Each one drops a usable phrase into one part of the card.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {sparks.map((spark) => (
+                <button
+                  key={`${spark.field}-${spark.label}`}
+                  type="button"
+                  onClick={() => applySpark(spark)}
+                  className="rounded-lg border border-stone-800/70 bg-stone-950/40 px-3 py-2 text-xs text-stone-300 transition-colors hover:border-amber-500/35 hover:text-amber-200"
+                >
+                  {spark.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-lg border border-stone-800/60 bg-stone-900/25 p-4">

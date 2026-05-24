@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight, Play, RotateCcw, Sparkles } from "lucide-react";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
 
@@ -57,6 +58,49 @@ type ExampleGroup = {
   blurb: string;
   examples: Example[];
 };
+
+type Quest = {
+  label: string;
+  audience: string;
+  expr: string;
+  showcases: string;
+  nextMove: string;
+};
+
+const QUESTS: Quest[] = [
+  {
+    label: "Ask what a teaching is shaped like",
+    audience: "first-time visitor",
+    expr: "@concept(lc-trust-over-fear).blueprint",
+    showcases:
+      "A concept's Blueprint NodeID is its structural identity. This is the quickest way to see that the substrate is answering with shape, not prose.",
+    nextMove: "Change the concept id, then ask ?equivalent on the same cell.",
+  },
+  {
+    label: "Find structural kin",
+    audience: "researcher",
+    expr: "?equivalent @concept(lc-trust-over-fear)",
+    showcases:
+      "Structural equivalents share a Blueprint NodeID even when their names, domains, or words differ.",
+    nextMove: "Open any returned cell and ask for its .ctor.",
+  },
+  {
+    label: "Read the body's count",
+    audience: "steward",
+    expr: "?lattice",
+    showcases:
+      "A lattice snapshot gives the count-level framebuffer: blueprints, recipes, cells, and relationships currently interned.",
+    nextMove: "Run ?vocabulary next to see which recipe categories are circulating.",
+  },
+  {
+    label: "Make code become a recipe",
+    audience: "builder",
+    expr: "do { let x = 5; let y = x + 3; y * 2 }",
+    showcases:
+      "Form interns code as a Recipe NodeID. Two expressions with the same structure converge on the same identity.",
+    nextMove: "Change one number and watch the recipe identity change.",
+  },
+];
 
 // Curated tour of every unique Form construct. Each example is runnable
 // against the live substrate. Grouped so the reader can sense the
@@ -544,20 +588,32 @@ export function FormPlayground() {
   const searchParams = useSearchParams();
   const cellParam = searchParams.get("cell");
   const starter = starterFromCell(cellParam);
-  const firstExample = GROUPS[0].examples[0];
+  const firstQuest = QUESTS[0];
   const [expression, setExpression] = useState(
-    starter ? starter.expr : firstExample.expr,
+    starter ? starter.expr : firstQuest.expr,
   );
   const [activeShowcase, setActiveShowcase] = useState(
-    starter ? starter.showcases : firstExample.showcases,
+    starter ? starter.showcases : firstQuest.showcases,
+  );
+  const [nextMove, setNextMove] = useState(
+    starter ? "Run it, then replace .blueprint with .ctor or prepend ?equivalent." : firstQuest.nextMove,
   );
   const [evaluating, setEvaluating] = useState(false);
   const [result, setResult] = useState<FormResultOut | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const pickQuest = (quest: Quest) => {
+    setExpression(quest.expr);
+    setActiveShowcase(quest.showcases);
+    setNextMove(quest.nextMove);
+    setResult(null);
+    setError(null);
+  };
+
   const pickExample = (ex: Example) => {
     setExpression(ex.expr);
     setActiveShowcase(ex.showcases);
+    setNextMove("Edit one symbol, run it again, and compare the returned shape.");
     setResult(null);
     setError(null);
   };
@@ -587,8 +643,112 @@ export function FormPlayground() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
+    <div className="space-y-8">
+      <section className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]" aria-labelledby="form-play-heading">
+        <div className="space-y-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.22em] text-amber-300/75">Play first</p>
+            <h2 id="form-play-heading" className="text-2xl font-light text-stone-100">
+              Pick a question. Press Evaluate. Change one word.
+            </h2>
+            <p className="text-sm leading-relaxed text-stone-400">
+              These are live substrate questions with a real answer. No setup, no repo clone, no grammar study first.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            {QUESTS.map((quest) => (
+              <button
+                key={quest.expr}
+                type="button"
+                onClick={() => pickQuest(quest)}
+                className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                  expression === quest.expr
+                    ? "border-amber-500/50 bg-amber-500/10 text-amber-100"
+                    : "border-stone-800/50 bg-stone-950/35 text-stone-300 hover:border-amber-500/35 hover:text-amber-200"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Sparkles className="h-4 w-4 text-amber-300/75" aria-hidden="true" />
+                  {quest.label}
+                </span>
+                <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-stone-500">
+                  {quest.audience}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-xl border border-stone-800/50 bg-stone-900/25 p-4">
+          <div className="space-y-2">
+            <label htmlFor="form-expression" className="text-xs uppercase tracking-[0.18em] text-stone-500">
+              Expression
+            </label>
+            <textarea
+              id="form-expression"
+              value={expression}
+              onChange={(e) => {
+                setExpression(e.target.value);
+                setNextMove("Run it, read the returned shape, then change one part and run again.");
+              }}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  evaluate();
+                }
+              }}
+              className="h-32 w-full resize-y rounded-xl border border-stone-800/50 bg-stone-950/60 p-3 font-mono text-sm leading-relaxed text-stone-300 transition-colors focus:border-amber-500/40 focus:outline-none"
+              placeholder="@spec(agent-pipeline)"
+              spellCheck={false}
+            />
+            {activeShowcase && <p className="text-xs leading-relaxed text-stone-500">{activeShowcase}</p>}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={evaluate}
+              disabled={evaluating || !expression.trim()}
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-5 py-2.5 text-sm font-medium text-amber-300/90 transition-all hover:border-amber-500/30 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Play className="h-4 w-4" aria-hidden="true" />
+              {evaluating ? "Evaluating..." : "Evaluate"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                pickQuest(firstQuest);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-800/60 bg-stone-950/35 px-4 py-2.5 text-sm text-stone-400 transition-colors hover:border-stone-700 hover:text-stone-200"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Reset
+            </button>
+            <span className="text-xs text-stone-600">⌘↩ to evaluate</span>
+          </div>
+
+          {nextMove && (
+            <div className="rounded-lg border border-teal-500/20 bg-teal-500/5 p-3 text-sm leading-relaxed text-teal-100/80">
+              <span className="font-medium text-teal-200">Next move:</span> {nextMove}
+            </div>
+          )}
+
+          {error && (
+            <div className="whitespace-pre-wrap rounded-xl border border-red-800/30 bg-red-900/10 p-3 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          {result && <ResultPanel result={result} />}
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-labelledby="form-atlas-heading">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-stone-500">Expression atlas</p>
+          <h2 id="form-atlas-heading" className="mt-2 text-xl font-light text-stone-200">
+            Keep playing with the deeper grammar.
+          </h2>
+        </div>
         {GROUPS.map((group) => (
           <div key={group.heading} className="space-y-2">
             <div>
@@ -613,45 +773,14 @@ export function FormPlayground() {
             </div>
           </div>
         ))}
+      </section>
+
+      <div className="rounded-xl border border-stone-800/50 bg-stone-900/25 p-4 text-sm leading-relaxed text-stone-400">
+        <Link href="/vision/recipes" className="inline-flex items-center gap-2 text-amber-200 hover:text-amber-100">
+          Turn this structural question into a transmission recipe
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
-
-      <div className="space-y-2">
-        <textarea
-          value={expression}
-          onChange={(e) => setExpression(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-              e.preventDefault();
-              evaluate();
-            }
-          }}
-          className="w-full h-32 p-3 bg-stone-900/50 border border-stone-800/40 rounded-xl text-stone-300 font-mono text-sm leading-relaxed resize-y focus:outline-none focus:border-amber-500/30 transition-colors"
-          placeholder="@spec(agent-pipeline)"
-          spellCheck={false}
-        />
-        {activeShowcase && (
-          <p className="text-xs text-stone-500 italic">{activeShowcase}</p>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <button
-          onClick={evaluate}
-          disabled={evaluating || !expression.trim()}
-          className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {evaluating ? "Evaluating..." : "Evaluate"}
-        </button>
-        <span className="text-xs text-stone-600">⌘↩ to evaluate</span>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-800/30 bg-red-900/10 p-3 text-sm text-red-300 whitespace-pre-wrap">
-          {error}
-        </div>
-      )}
-
-      {result && <ResultPanel result={result} />}
     </div>
   );
 }
