@@ -24,6 +24,17 @@ const LAYER_SUBNAV: Array<{
   items: SubItem[];
 }> = [
   {
+    prefix: "/vision",
+    items: [
+      { href: "/vision", labelKey: "nav.sub.vision" },
+      { href: "/vision/recipes", labelKey: "nav.sub.recipes" },
+      { href: "/vision/lived", labelKey: "nav.sub.lived" },
+      { href: "/vision/realize", labelKey: "nav.sub.realize" },
+      { href: "/vision/aligned", labelKey: "nav.sub.aligned" },
+      { href: "/vision/join", labelKey: "nav.sub.join" },
+    ],
+  },
+  {
     prefix: "/people",
     items: [
       { href: "/people", labelKey: "nav.sub.all" },
@@ -53,6 +64,7 @@ const LAYER_SUBNAV: Array<{
       { href: "/nodes", labelKey: "nav.sub.nodes" },
       { href: "/vitality", labelKey: "nav.vitality" },
       { href: "/pulse", labelKey: "nav.pulse" },
+      { href: "/substrate/form", labelKey: "nav.sub.formPlayground" },
     ],
   },
 ];
@@ -69,6 +81,7 @@ const LAYER_ALIASES: Record<string, string> = {
   "/nodes": "/resonance",
   "/vitality": "/resonance",
   "/pulse": "/resonance",
+  "/substrate": "/resonance",
 };
 
 export function SecondaryLayerNav() {

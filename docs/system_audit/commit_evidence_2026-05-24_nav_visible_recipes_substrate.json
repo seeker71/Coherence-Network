@@ -1,0 +1,127 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/nav-visible-recipes-substrate-20260524",
+  "commit_scope": "Make Transmission Recipes and the Form substrate playground more visible in navigation.",
+  "files_owned": [
+    "web/components/site_header.tsx",
+    "web/components/SecondaryLayerNav.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "api/tests/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-24_nav_visible_recipes_substrate.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-24_nav_visible_recipes_substrate.json",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "Browser check: desktop /vision secondary nav shows Recipes and More shows Recipes/Form Playground",
+      "Browser check: desktop /substrate/form secondary nav shows Form Playground under Pulse",
+      "Browser check: mobile header menu shows Recipes and Form Playground with no horizontal overflow",
+      "API_PORT=18100 WEB_PORT=3115 ./scripts/verify_worktree_local_web.sh --start",
+      "git diff --check"
+    ],
+    "summary": "Prompt guide, wellness, index generation, evidence validation, JSON parsing, npm install, production build, desktop/mobile browser nav checks, and worktree local web/API verification passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Browser check: https://coherencycoin.com/vision exposes Recipes in navigation",
+      "Browser check: https://coherencycoin.com/substrate/form exposes Form Playground in navigation"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI and public route validation remain pending until PR and deploy follow-through complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "db-backed-vision-hub-content",
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "nav-visible-recipes-substrate-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "navigation-visibility-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "navigation-implementation",
+        "browser-validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/components/site_header.tsx",
+    "web/components/SecondaryLayerNav.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "api/tests/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "npm run build",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make wellness"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-05-24_nav_visible_recipes_substrate.json",
+    "scripts/INDEX.md",
+    "web/components/SecondaryLayerNav.tsx",
+    "web/components/site_header.tsx",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/id.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Visitors can discover Transmission Recipes and the Form substrate playground from contextual navigation and the mobile/header More menu.",
+    "public_endpoints": [
+      "GET /vision",
+      "GET /vision/recipes",
+      "GET /substrate/form"
+    ],
+    "test_flows": [
+      "Desktop /vision check sees Recipes in the secondary layer nav.",
+      "Desktop More menu check sees Recipes and Form Playground links.",
+      "Desktop /substrate/form check sees Form Playground active in the Pulse secondary nav.",
+      "Mobile menu check sees Recipes and Form Playground without horizontal overflow.",
+      "Production build confirms nav and locale bundles compile."
+    ]
+  }
+}
