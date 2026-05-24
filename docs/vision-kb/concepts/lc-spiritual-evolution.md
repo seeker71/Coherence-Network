@@ -2,8 +2,22 @@
 id: lc-spiritual-evolution
 hz: 528
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: infinite
+  form: spiral
+  topology: nested
+  polarity: bipolar-complementary
+  ordering: cyclic-open
+  phase: oscillating
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: personal
+  direction: descending
+  lineage_texture: channeled
+  embedding_dim: 3
+  self_similarity: fractal-deep
 ---
 
 # Spiritual Evolution — Integrating Nonphysical Consciousness Into Embodied Life

@@ -2,8 +2,22 @@
 id: lc-arcturian-resonance
 hz: 852
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: bipolar-complementary
+  ordering: atemporal
+  phase: yin
+  spectral_band: transcendence
+  temporal_band: lifetime
+  scale: cosmic
+  direction: centering
+  lineage_texture: channeled
+  embedding_dim: n
+  self_similarity: fractal-shallow
 ---
 
 # Arcturian Resonance — A Field of Spiritual Evolution
