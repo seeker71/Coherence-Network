@@ -21,20 +21,21 @@ The per-service flow tests prove the individual surfaces in isolation:
   - test_story_protocol.py         — pure logic
 
 This file is additive coverage — it proves the seven pieces compose
-into a working user-facing flow. Two contract gaps the e2e walks
-around (and which are real signals for future tend work):
+into a working user-facing flow.
 
-  1. ``POST /api/assets/register`` does not currently auto-fire
-     ``ip_registration_service.register_ip_asset`` or
-     ``permanent_storage_service.upload_to_arweave/upload_to_ipfs``.
-     The test invokes the services directly after registration and
-     patches the resulting sp_ip_id / arweave_tx / ipfs_cid onto the
-     graph node so the verification endpoint surfaces them.
-  2. ``read_tracking_service.record_read`` (fired by the content GET)
-     and the ``render_events`` store consumed by settlement are
-     decoupled — content reads do not auto-emit render events. The
-     test therefore POSTs to ``/api/render-events`` alongside each
-     content fetch to seed the settlement input.
+Gap closed (2026-05-24): ``POST /api/assets/register`` now auto-fires
+``ip_registration_service.register_ip_asset`` and
+``permanent_storage_service.upload_to_arweave/upload_to_ipfs`` per spec
+R1; the helper below reads the resulting sp_ip_id / arweave_tx /
+ipfs_cid straight off the response body. Focused coverage for the
+wiring lives in ``test_assets_register_auto_fires.py``.
+
+One remaining contract gap the e2e still walks around:
+``read_tracking_service.record_read`` (fired by the content GET) and
+the ``render_events`` store consumed by settlement are decoupled —
+content reads do not auto-emit render events. The test therefore POSTs
+to ``/api/render-events`` alongside each content fetch to seed the
+settlement input.
 """
 
 from __future__ import annotations
@@ -101,11 +102,13 @@ def _register_with_ip_and_storage(
     requires_payment: bool = False,
     free_tier_enabled: bool = True,
 ) -> tuple[str, str, dict, dict, dict]:
-    """Register an asset, fire IP registration + storage uploads, patch
-    the resulting refs onto the graph node, and patch payment gating.
+    """Register an asset — auto-fire pipeline lands sp_ip_id, arweave_tx
+    and ipfs_cid on the response. Patches payment gating onto the node
+    since those settings aren't part of the registration contract.
 
     Returns: (uuid_str, node_id, registration_body, ip_record, storage_pair)
-    where storage_pair is ``{"arweave": ..., "ipfs": ...}``.
+    where ``ip_record`` and ``storage_pair`` reshape the auto-fire results
+    into the shapes the rest of the e2e expects.
     """
     if concept_tags is None:
         concept_tags = [
@@ -124,43 +127,42 @@ def _register_with_ip_and_storage(
         "metadata": {"content_base64": content_b64},
     }
 
-    # Step 1 — register asset
+    # Register — IP registration + Arweave + IPFS auto-fire inside the
+    # handler. All three refs land on the response.
     response = client.post("/api/assets/register", json=payload)
     assert response.status_code == 201, response.text
     registration = response.json()
     node_id = registration["id"]
     uuid_str = node_id.removeprefix("asset:")
 
-    # Step 2 — IP registration fires
-    ip_record = ip_registration_service.register_ip_asset(
-        uuid_str, {"type": "text/plain", "name": registration["name"]}
-    )
-    assert ip_record["ip_status"] == "registered"
-    assert ip_record["sp_ip_id"] is not None
+    assert registration["ip_status"] == "registered"
+    assert registration["sp_ip_id"] is not None
+    assert registration["arweave_tx"] is not None
+    assert registration["arweave_tx"].startswith("ar:mock:")
+    assert registration["ipfs_cid"] is not None
+    assert registration["ipfs_cid"].startswith("Qm")
 
-    # Step 3 — permanent storage upload (Arweave + IPFS)
-    arweave = permanent_storage_service.upload_to_arweave(
-        content, {"name": registration["name"]}, asset_id=uuid_str
-    )
-    ipfs = permanent_storage_service.upload_to_ipfs(content, asset_id=uuid_str)
-    assert arweave["arweave_tx_id"].startswith("ar:mock:")
-    assert ipfs["ipfs_cid"].startswith("Qm")
-    assert arweave["content_hash"] == ipfs["content_hash"]
+    ip_record = {
+        "sp_ip_id": registration["sp_ip_id"],
+        "ip_status": registration["ip_status"],
+    }
+    storage_pair = {
+        "arweave": {"arweave_tx_id": registration["arweave_tx"]},
+        "ipfs": {"ipfs_cid": registration["ipfs_cid"]},
+    }
 
-    # Patch the IP + storage refs and payment gating onto the node so the
-    # downstream endpoints (content delivery, verification) surface them.
+    # Payment gating isn't part of the registration contract — patch it
+    # onto the node so the content-delivery endpoint sees the test's
+    # intended payment posture.
     graph_service.update_node(
         node_id,
         properties={
-            "sp_ip_id": ip_record["sp_ip_id"],
-            "arweave_tx": arweave["arweave_tx_id"],
-            "ipfs_cid": ipfs["ipfs_cid"],
             "requires_payment": requires_payment,
             "free_tier_enabled": free_tier_enabled,
             "payment_address": f"coherence:contributor:{creator_id}",
         },
     )
-    return uuid_str, node_id, registration, ip_record, {"arweave": arweave, "ipfs": ipfs}
+    return uuid_str, node_id, registration, ip_record, storage_pair
 
 
 def _seed_render_event(

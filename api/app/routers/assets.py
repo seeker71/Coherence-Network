@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 from decimal import Decimal
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,12 @@ from app.models.asset import (
 )
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
-from app.services import graph_service, read_tracking_service
+from app.services import (
+    graph_service,
+    ip_registration_service,
+    permanent_storage_service,
+    read_tracking_service,
+)
 from app.services.locale_projection import project, project_many, resolve_caller_lang
 from app.services.story_protocol_bridge import (
     build_x402_payment_required_headers,
@@ -93,6 +99,9 @@ def _node_to_registration(node: dict) -> AssetRegistration:
         creation_cost_cc=creation_cost,
         metadata=props.get("metadata", {}) or {},
         created_at=created_at,
+        sp_ip_id=props.get("sp_ip_id"),
+        ip_status=props.get("ip_status", "pending"),
+        ip_reason=props.get("ip_reason"),
     )
 
 
@@ -179,6 +188,29 @@ async def create_asset(asset: AssetCreate) -> Asset:
     return asset_obj
 
 
+def _content_bytes_from_metadata(metadata: dict | None) -> bytes | None:
+    """Pull raw content bytes out of the registration metadata payload.
+
+    The MIME-aware register flow accepts ``content_base64`` (preferred,
+    for arbitrary bytes) or ``content`` (UTF-8 text shortcut). Returns
+    None when neither is present — the asset is still created, the
+    storage upload step just becomes a no-op.
+    """
+    if not isinstance(metadata, dict):
+        return None
+    b64 = metadata.get("content_base64")
+    if isinstance(b64, str) and b64:
+        try:
+            return base64.b64decode(b64)
+        except (ValueError, base64.binascii.Error) as e:
+            log.warning("content_base64 decode failed: %s", e)
+            return None
+    text = metadata.get("content")
+    if isinstance(text, str) and text:
+        return text.encode("utf-8")
+    return None
+
+
 @router.post(
     "/assets/register",
     response_model=AssetRegistration,
@@ -194,13 +226,42 @@ async def register_asset(body: AssetRegistrationCreate) -> AssetRegistration:
     accepts CODE/MODEL/CONTENT/DATA taxonomy for pipeline contributions.
     This endpoint supports arbitrary MIME types so a renderer can pair
     with the asset by type. See specs/asset-renderer-plugin.md R1.
+
+    Per specs/story-protocol-integration.md R1, registration auto-fires
+    three downstream services after the asset node lands:
+
+      1. ``ip_registration_service.register_ip_asset`` — mints the
+         Story Protocol IP Asset id, surfaces as ``sp_ip_id``.
+      2. ``permanent_storage_service.upload_to_arweave`` — uploads
+         raw bytes (from ``metadata.content_base64`` or
+         ``metadata.content``), surfaces as ``arweave_tx``.
+      3. ``permanent_storage_service.upload_to_ipfs`` — same bytes,
+         surfaces as ``ipfs_cid``.
+
+    Failures in any subcall are isolated: the asset is still created
+    and usable. Failed IP registration → ``ip_status="failed"`` with
+    ``ip_reason`` set, ``sp_ip_id=None``. Failed storage → the
+    corresponding ref stays None. R1: "If registration fails, ip_status
+    is failed and the asset remains usable without IP registration."
+
+    **Sync now, async later.** The three subcalls run synchronously in
+    this iteration — the services are fast in-memory mocks and adding
+    a background queue would be ornament before the partner SDKs land.
+    When the real Story Protocol SDK + Irys/Bundlr arrive, the
+    expensive network calls move to a background worker (Celery, ARQ,
+    or FastAPI BackgroundTasks) and the handler returns immediately
+    with ``ip_status="pending"``.
     """
     registration_id = f"asset:{uuid4()}"
+    asset_uuid = registration_id.removeprefix("asset:")
     now = datetime.now(timezone.utc)
     concept_tags_serializable = [
         {"concept_id": t.concept_id, "weight": t.weight}
         for t in body.concept_tags
     ]
+
+    # Step 1 — create the graph node. Any later subcall failure leaves
+    # this in place so the asset is recoverable.
     graph_service.create_node(
         id=registration_id,
         type="asset",
@@ -220,19 +281,86 @@ async def register_asset(body: AssetRegistrationCreate) -> AssetRegistration:
             "created_at": now.isoformat(),
         },
     )
+
+    # Step 2 — auto-fire IP registration. Isolated from the asset
+    # creation so a failed registration still leaves the asset usable.
+    sp_ip_id: str | None = None
+    ip_status = "pending"
+    ip_reason: str | None = None
+    try:
+        ip_record = ip_registration_service.register_ip_asset(
+            asset_uuid,
+            {"type": body.type, "name": body.name},
+        )
+        sp_ip_id = ip_record.get("sp_ip_id")
+        ip_status = ip_record.get("ip_status", "pending")
+        ip_reason = ip_record.get("reason")
+    except Exception as e:  # don't fail registration on IP failure (R1)
+        log.warning(
+            "auto-fire IP registration failed for %s: %s", registration_id, e
+        )
+        ip_status = "failed"
+        ip_reason = str(e)
+
+    # Step 3 — auto-fire permanent storage uploads. Isolated per surface
+    # so a failure on one (Arweave) doesn't block the other (IPFS).
+    arweave_tx_id: str | None = body.arweave_tx
+    ipfs_cid: str | None = body.ipfs_cid
+    content_bytes = _content_bytes_from_metadata(body.metadata)
+    if content_bytes is not None:
+        try:
+            arweave = permanent_storage_service.upload_to_arweave(
+                content_bytes,
+                {"name": body.name, "type": body.type},
+                asset_id=asset_uuid,
+            )
+            arweave_tx_id = arweave.get("arweave_tx_id") or arweave_tx_id
+        except Exception as e:
+            log.warning(
+                "auto-fire Arweave upload failed for %s: %s", registration_id, e
+            )
+        try:
+            ipfs = permanent_storage_service.upload_to_ipfs(
+                content_bytes, asset_id=asset_uuid
+            )
+            ipfs_cid = ipfs.get("ipfs_cid") or ipfs_cid
+        except Exception as e:
+            log.warning(
+                "auto-fire IPFS upload failed for %s: %s", registration_id, e
+            )
+
+    # Step 4 — patch the auto-fire results onto the node so downstream
+    # endpoints (content delivery, verification) surface them.
+    patch: dict[str, Any] = {
+        "sp_ip_id": sp_ip_id,
+        "ip_status": ip_status,
+        "ip_reason": ip_reason,
+        "arweave_tx": arweave_tx_id,
+        "ipfs_cid": ipfs_cid,
+    }
+    try:
+        graph_service.update_node(registration_id, properties=patch)
+    except Exception as e:
+        log.warning(
+            "failed to patch auto-fire results onto %s: %s", registration_id, e
+        )
+
     return AssetRegistration(
         id=registration_id,
         type=body.type,
         name=body.name,
         description=body.description,
         content_hash=body.content_hash,
-        arweave_tx=body.arweave_tx,
-        ipfs_cid=body.ipfs_cid,
+        arweave_tx=arweave_tx_id,
+        ipfs_cid=ipfs_cid,
         concept_tags=body.concept_tags,
         creator_id=body.creator_id,
         creation_cost_cc=body.creation_cost_cc,
         metadata=body.metadata,
         created_at=now,
+        sp_ip_id=sp_ip_id,
+        ip_status=ip_status,
+        ip_reason=ip_reason,
     )
 
 
