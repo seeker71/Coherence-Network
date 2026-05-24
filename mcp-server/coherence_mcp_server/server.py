@@ -556,6 +556,166 @@ TOOLS: list[Tool] = [
         ),
         inputSchema={"type": "object", "properties": {}},
     ),
+    # Story Protocol — read-only surfaces over the story-protocol tissue
+    # shipped in PRs #1931, #1934, #1940, #1942, #1943, #1953. Each tool
+    # is a thin wrapper over an existing REST endpoint so any agent
+    # (Claude Desktop, Codex, Cursor, A2A) can query asset detail, IP
+    # registration status, content-integrity verification, evidence
+    # submissions, settlement batches, and render-event analytics
+    # without composing the HTTP call. Write paths (asset registration,
+    # evidence submission, settlement run) are deliberately not exposed
+    # — those are state changes that warrant explicit HTTP intent.
+    Tool(
+        name="coherence_asset_get",
+        description=(
+            "Return full asset detail — wraps GET /api/assets/{asset_id}. "
+            "Output: Asset model with id, description, type, ipfs_cid, "
+            "arweave_tx, sp_ip_id, ip_status, ip_reason, content_hash, "
+            "payment fields. Story-protocol-named alias for the existing "
+            "coherence_get_asset; both target the same endpoint. Example: "
+            "coherence_asset_get(asset_id='...uuid...')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {
+                    "type": "string",
+                    "description": "Asset UUID.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_asset_verification",
+        description=(
+            "Check content integrity for an asset — wraps "
+            "GET /api/assets/{asset_id}/verification. Output: "
+            "{asset_id, content_hash, recomputed_hash, integrity, "
+            "arweave_tx_id, arweave_url, ipfs_cid, ipfs_url, sp_ip_id, "
+            "sp_explorer_url, verified_at}. integrity is 'verified' "
+            "when stored hash matches recomputed SHA-256, 'failed' on "
+            "mismatch, 'no_hash' when no hash is stored. Example: "
+            "coherence_asset_verification(asset_id='...uuid...')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {
+                    "type": "string",
+                    "description": "Asset UUID.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_ip_status",
+        description=(
+            "Return IP registration status for an asset as recorded on "
+            "the asset node — wraps GET /api/assets/{asset_id}. Output "
+            "narrows to {asset_id, sp_ip_id, ip_status, ip_reason}. "
+            "ip_status is one of pending, registered, failed. "
+            "Focused alternative to fetching the full asset detail when "
+            "the caller only needs the Story Protocol registration "
+            "state. Example: coherence_ip_status(asset_id='...uuid...')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {
+                    "type": "string",
+                    "description": "Asset UUID.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_evidence_for_asset",
+        description=(
+            "Return every evidence submission + verification for an "
+            "asset, plus the currently applicable CC multiplier — wraps "
+            "GET /api/evidence/asset/{asset_id}. Output: "
+            "{asset_id, submissions, verifications, "
+            "cc_multiplier_applicable}. The composite view used by the "
+            "settlement batcher when computing per-asset payouts. "
+            "Example: coherence_evidence_for_asset(asset_id='...')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {
+                    "type": "string",
+                    "description": "Asset id or stable slug.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_settlement_batches",
+        description=(
+            "List recent settlement batches, most-recent-first — wraps "
+            "GET /api/settlement. Output: list of SettlementBatch with "
+            "batch_date, asset payouts, concept pools, totals. The "
+            "ledger of daily CC distributions computed from render "
+            "events + evidence multipliers (story-protocol-integration "
+            "R8). Example: coherence_settlement_batches(limit=20)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "number",
+                    "description": "Max batches to return (default 20, 1-365).",
+                    "default": 20,
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_settlement_for_date",
+        description=(
+            "Return the stored settlement batch for a specific date — "
+            "wraps GET /api/settlement/{batch_date}. Output: "
+            "SettlementBatch. 404-shape error when no batch was "
+            "computed for the date. Example: "
+            "coherence_settlement_for_date(batch_date='2026-05-24')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["batch_date"],
+            "properties": {
+                "batch_date": {
+                    "type": "string",
+                    "description": "ISO date, e.g. '2026-05-24'.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="coherence_asset_analytics",
+        description=(
+            "Return aggregate render-event analytics for an asset — "
+            "wraps GET /api/render-events/analytics/{asset_id}. Output: "
+            "{asset_id, total_renders, unique_readers, avg_duration_ms, "
+            "total_cc_earned, cc_to_asset_creator, "
+            "cc_to_renderer_creators, cc_to_host_nodes}. Returns "
+            "zero-valued analytics for an asset with no events (not "
+            "404). Example: coherence_asset_analytics(asset_id='...')."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {
+                    "type": "string",
+                    "description": "Asset id or stable slug.",
+                },
+            },
+        },
+    ),
     Tool(
         name="coherence_awareness_publish",
         description="Publish a diagnostic awareness event from a federation node. Delivered to active diagnostic stream subscribers.",
@@ -1577,6 +1737,57 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/federation/substrate/canonicals")
         case "coherence_federation_known_peers":
             return api_get("/api/federation/instances")
+        # Story Protocol — read-only surfaces (assets, IP, evidence,
+        # settlement, render analytics). See the tool definitions for
+        # the per-route mapping. Write paths intentionally stay HTTP.
+        case "coherence_asset_get":
+            asset_id = args.get("asset_id", "")
+            if not asset_id:
+                return {"error": "asset_id is required"}
+            return api_get(f"/api/assets/{quote(asset_id, safe='')}")
+        case "coherence_asset_verification":
+            asset_id = args.get("asset_id", "")
+            if not asset_id:
+                return {"error": "asset_id is required"}
+            return api_get(
+                f"/api/assets/{quote(asset_id, safe='')}/verification"
+            )
+        case "coherence_ip_status":
+            asset_id = args.get("asset_id", "")
+            if not asset_id:
+                return {"error": "asset_id is required"}
+            asset = api_get(f"/api/assets/{quote(asset_id, safe='')}")
+            if isinstance(asset, dict) and "error" in asset:
+                return asset
+            if not isinstance(asset, dict):
+                return {"error": "unexpected asset payload"}
+            return {
+                "asset_id": asset.get("id", asset_id),
+                "sp_ip_id": asset.get("sp_ip_id"),
+                "ip_status": asset.get("ip_status"),
+                "ip_reason": asset.get("ip_reason"),
+            }
+        case "coherence_evidence_for_asset":
+            asset_id = args.get("asset_id", "")
+            if not asset_id:
+                return {"error": "asset_id is required"}
+            return api_get(f"/api/evidence/asset/{quote(asset_id, safe='')}")
+        case "coherence_settlement_batches":
+            return api_get(
+                "/api/settlement", {"limit": args.get("limit", 20)}
+            )
+        case "coherence_settlement_for_date":
+            batch_date = args.get("batch_date", "")
+            if not batch_date:
+                return {"error": "batch_date is required"}
+            return api_get(f"/api/settlement/{quote(batch_date, safe='')}")
+        case "coherence_asset_analytics":
+            asset_id = args.get("asset_id", "")
+            if not asset_id:
+                return {"error": "asset_id is required"}
+            return api_get(
+                f"/api/render-events/analytics/{quote(asset_id, safe='')}"
+            )
         # Federation
         case "coherence_list_federation_nodes":
             nodes = api_get("/api/federation/nodes")
