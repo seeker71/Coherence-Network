@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] surface | Transmission Recipes public doorway
+
+The atlas now has a public web surface where a visitor can see the card, walk three complete payloads, and choose from novel pairings with real-world stakes.
+
+- **New route**: `/vision/recipes` -- Transmission Recipes page with the card fields, The Repair Wake, Onboarding as Ceremony, Metric Spellbreaker, and six next pairings.
+- **Hub doorway**: `/vision` now links directly to the recipes page beside the concept garden entry.
+- **Concept edge**: [`lc-transmission-recipe-atlas`](concepts/lc-transmission-recipe-atlas.md) now names the public doorway.
+- **Discernment held**: every pairing keeps proof in the destination domain and names claim boundaries through the card shape.
+
 ## [2026-05-24] guide | Transmission Recipe Atlas — first usable walk
 
 The atlas moved from concept into practice: a source can now be walked into a complete recipe card with enough structure for another person to run it.

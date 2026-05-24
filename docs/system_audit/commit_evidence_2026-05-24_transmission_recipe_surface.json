@@ -1,0 +1,111 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/transmission-recipe-surface-20260524",
+  "commit_scope": "Add a public Transmission Recipes web surface and link it from the Living Collective vision hub.",
+  "files_owned": [
+    "web/app/vision/recipes/page.tsx",
+    "web/app/vision/page.tsx",
+    "web/app/INDEX.md",
+    "MANIFEST.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_surface.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "Browser check: http://localhost:3110/vision/recipes desktop 1280x720",
+      "Browser check: http://localhost:3110/vision/recipes mobile 390x844",
+      "API_PORT=18100 WEB_PORT=3111 ./scripts/verify_worktree_local_web.sh --start"
+    ],
+    "summary": "Added /vision/recipes with the recipe-card fields, three complete payloads, six novel pairings, and existing visual assets. Linked it from /vision and named the route in the Transmission Recipe Atlas concept and LOG. Production build, local worktree web/API validation, index check, diff check, and desktop/mobile browser checks passed. Wellness is breathing overall with pre-existing source-map and symbol drift unrelated to this page."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 10 https://coherencycoin.com/vision/recipes"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and post-merge public route validation remain pending until PR flow completes."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "db-backed-vision-hub-content",
+    "knowledge-resonance-engine"
+  ],
+  "task_ids": [
+    "transmission-recipe-surface-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "next-step-request",
+        "cross-domain-recipe-vision"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "web-surface-implementation",
+        "vision-hub-linking",
+        "browser-validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/app/vision/recipes/page.tsx",
+    "web/app/vision/page.tsx",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "docs/vision-kb/LOG.md",
+    "npm run build",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make wellness"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-05-24_transmission_recipe_surface.json",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-transmission-recipe-atlas.md",
+    "web/app/INDEX.md",
+    "web/app/vision/page.tsx",
+    "web/app/vision/recipes/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Visitors can open /vision/recipes from the Living Collective hub and see a public Transmission Recipes surface with a hero, recipe-card fields, runnable payloads, novel pairings, and links back to the atlas concept.",
+    "public_endpoints": [
+      "GET /vision",
+      "GET /vision/recipes",
+      "GET /vision/lc-transmission-recipe-atlas"
+    ],
+    "test_flows": [
+      "Desktop browser check at http://localhost:3110/vision/recipes confirmed hero, payload text, links, image loading, and no main-content overflow.",
+      "Mobile browser check at 390x844 confirmed hero, payload section, responsive stacking, image loading in the payload viewport, and no main-content overflow.",
+      "Local worktree web/API validation passed with API_PORT=18100 WEB_PORT=3111 ./scripts/verify_worktree_local_web.sh --start."
+    ]
+  }
+}
