@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 126
+**Total files**: 128
 
 | File | Purpose |
 |---|---|
@@ -95,6 +95,7 @@
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
 | [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
+| [scan_dyad_candidates_word.py](scan_dyad_candidates_word.py) | WORD-domain prose-structural dyad-pair scan over Living Collective concepts. |
 | [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | !/usr/bin/env python3 |
 | [seed_db.py](seed_db.py) | !/usr/bin/env python3 |

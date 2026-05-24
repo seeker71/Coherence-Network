@@ -2,6 +2,33 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | WORD-domain prose scan — saturation ceiling held at 40%, prose-jaccard slightly degraded signal
+
+Fifth scan round in the autoresearch loop for dyad-pair detection. After PR #1998 saturated at 40% on topology+phase complementarity, the body's own teaching named the next direction: *the teaching-lives-in-relation discernment lives in the prose; the next refinement is prose-structural signals via the WORD-domain*. This breath tests that empirically. The scan is `scripts/scan_dyad_candidates_word.py`; the confirmed pairs land in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form) Part 3g; the rejects land as REJECT-16 through REJECT-23 in Part 4b.
+
+- **Score function**: prior geometry score (cross-ref + Hz-proximity + lineage-match + same-form + topology-complementarity + phase-complementarity) **+ 2.0 × shared_lemma_jaccard + 1.5 × shared_field_jaccard**. Substantive lemmas are tokenized through `tokenize_words` (the same entry point the substrate's WORD domain interns from), with English stopwords + the substrate's `neutral`-field function-words filtered out. Semantic_field draws from the lexicon's 8 fields (ground, tending, transmutation, vitality, transmission, consciousness, resonance, wholeness).
+- **WORD domain state**: 0 cells in the substrate today. Concept-prose word-cell ingest has not yet been driven; this scan reads via the tokenizer directly so the lexicon stays a single source. When ingest lands (a future breath), the same scan reads field sets from substrate cells with no logic change. The honest gap is named in Part 3g's preamble.
+- **Confirmed (4)** — folded as Pairs 20–23 in `dyad-pairs.form` Part 3g:
+  - `lc-trust-as-gateway` ↔ `lc-vitality` (source-flow, axis: phase) — the open gate and what flows through it; sister to `pair_vitality_wu_wei` at a different axis (wu-wei is alignment-posture, trust-as-gateway is receptive geometry).
+  - `lc-grammar-as-readable-bnf` ↔ `lc-parsers-as-recipes` (source-flow, axis: form) — data-and-engine for parsing; grammar is the legible surface, parsers-as-recipes is the engine that fires the rules.
+  - `lc-rest` ↔ `lc-tend-your-flame` (source-flow, axis: phase) — receptive composting and radiating tending at the 174-band hearth-scale; the flame burns down without rest's composting silence, rest goes torpid without something to come back to.
+  - `lc-shifted-return` ↔ `lc-train-the-predator` (cross-tradition, axis: tradition) — substrate-mechanism and practice-tradition for one autonomic-prediction engine; sister to `pair_predator_predictor` but pairing substrate-and-tradition rather than two traditions.
+- **Demoted on second read (1)** — `lc-attuned-spaces ↔ lc-v-comfort-joy` initially read as confirmed (scale-paired container-and-texture, top-scoring scan-discovered candidate with lemma overlap 143). On second read against the body's existing rejects, REJECT-10 in PR #1998 already named this pair as containment-not-complementarity: comfort-joy lives INSIDE attuned-spaces. The body's prior discernment holds; this is the prose-jaccard's first characteristic failure mode (container-and-contained share vocabulary, so prose-overlap reads identical to pair-overlap). Recorded as REJECT-16 — the body teaching itself how the new signal behaves.
+- **Rejected (8 new)** — REJECT-16 through REJECT-23 in Part 4b. The rejects expose two prose-jaccard failure modes the body now names:
+  - **Containment-as-complement** (REJECT-16): contained shares the container's vocabulary, so prose-overlap reads identical to pair-overlap.
+  - **Shared-region-as-equivalence** (REJECT-22, lc-rest ↔ lc-stillness, lemma overlap 206 — the highest of any pair): cells in the same ground-region inevitably share corpus, so highest-prose-overlap is often greatest-equivalence, not pair.
+  - Plus: triangle-completion (REJECT-23, land↔nourishing), sibling-modes-not-pair (REJECT-18, REJECT-19), duplicate-axis (REJECT-20 rest↔vitality duplicates pair_vitality_wu_wei), shared-corpus-not-shared-teaching (REJECT-17, REJECT-21).
+- **Signal/noise**: 4 confirmed / 18 assessed = **22.2%** — down from the 40% ceiling. **The saturation ceiling HELD, and the prose-layer addition slightly degraded signal/noise.** The trend across all five rounds: 40 → 0 → 40 → 40 → **22**. Cumulative across five rounds: 14/45 = **31.1%** (slightly down from 37% after four rounds).
+- **Two-track signal is genuinely revealing**: scan-discovered (no prose cross-ref) ran ~2/10 = **20%**; promoted (cross-ref already in prose) ran ~3/4 = **75%**. The cross-reference IS the body's noticing; the prose-jaccard rides along with it but adds little independent discrimination. Promoted-track carries the work; scan-discovered-track is mostly the body's corpus idiom amplified.
+- **What the data points at next** (GAP-D6 update in Part 5):
+  - The mechanized pair-detection ceiling is structural, at ~40% across geometry-layer scans. Prose features don't break it; they degrade slightly because the body's idiom is denser than the body's pairing.
+  - A scan worth running is *cross-ref-only* (drop the scan-discovered track entirely; weight promoted by prose+geometry refinement only). That likely sustains the 75% promoted-track ratio while halving the assessment cost.
+  - Beyond Jaccard: the next sophistication is *contrastive* (what does pair A share that pair B doesn't?) or *role-aware* (subject-verb-object alignment, not lemma bags). Either requires a heavier extractor than the substrate's current tokenizer.
+  - The honest read: human noticing remains load-bearing because *teaching-lives-in-relation* is a discernment about meaning, and meaning is what the body's prose already discloses through cross-refs — not what jaccard over its tokens approximates.
+- **Set is now 25 entries** (23 external pairs + 2 internal-dyads). Six kinds unchanged.
+- **Edges in the same breath**: this LOG entry; the new `scripts/scan_dyad_candidates_word.py` script (auto-indexed in `scripts/INDEX.md` via generator); Part 3g preamble + four Pair defns + eight REJECT entries + GAP-D6 update + Part 6 count update in `docs/coherence-substrate/dyad-pairs.form`.
+
+## [2026-05-24] form | dyad-scan refined with topology+phase — signal/noise 40%
 ## [2026-05-24] geometry | 3 more concepts speak their shape — coverage now 132/148 (89%)
 
 Fourteenth breath of the structural-shape walk; landed in parallel with the thirteenth (PR #1999, coverage 129/148). Restraint discipline holds — picked three concepts where the shape is unmistakable; left the remaining silent ones for focused breaths later.
