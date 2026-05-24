@@ -24,6 +24,15 @@ Empirical reading: `GET /api/substrate/cell/concept/lc-embodiment-body-or-liquid
 - **Edges landed in the same breath**: this LOG entry, DB re-sync via `sync_kb_to_db.py` for both concepts.
 - **Discernment held**: the concepts' broader teachings stand — the substrate-bridge claim, the runtime shape, the seven keys, the falsification-as-gift framing. The correction is precision, not rewrite. The lattice said "0 with matching CTOR" loudly; the concepts now carry the same clarity.
 
+## [2026-05-24] surface | Transmission Recipes becomes a field kit
+
+The public recipe page now lets visitors open any worked payload or novel pairing as an editable composer card.
+
+- **Payload cards**: The Repair Wake, Onboarding as Ceremony, and Metric Spellbreaker each carry a full nine-field recipe card behind an "Open this card" action.
+- **Pairing cards**: six novel pairings now open as grounded cards with source, observed pattern, lens, recipe, proof mode, claim boundary, and next embodiment.
+- **Visitor path**: example -> editable card -> local restore -> share link now forms one continuous public path.
+- **Concept edge**: [`lc-transmission-recipe-atlas`](concepts/lc-transmission-recipe-atlas.md) now names prefilled payload and pairing cards as part of the public field kit.
+
 ## [2026-05-24] form | Translator + autoresearch authored in the body's tongue
 
 The two concepts that landed earlier today shipped their operational bodies as `.form` files in `docs/coherence-substrate/`. Urs named the costume: the Python-tasting code blocks in the concept files were the wrong tongue. *Form is the body's tongue; Python is bootstrap, not canonical.*

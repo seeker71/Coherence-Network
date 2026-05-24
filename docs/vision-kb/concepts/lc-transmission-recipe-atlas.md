@@ -240,7 +240,9 @@ with an interactive card composer, three runnable payloads, and novel
 pairings ready to become workshops, product flows, reliability rituals,
 and community tools. The composer remembers a draft in the visitor's
 browser and can create a share link that carries the card text when the
-visitor explicitly copies it.
+visitor explicitly copies it. The public payloads and novel pairings now
+open as prefilled composer cards, so a visitor can move from example to
+editable field kit without translating the pattern by hand.
 
 The substrate-facing companion already exists in
 [`modality-as-recipe.form`](../../coherence-substrate/modality-as-recipe.form):
@@ -258,8 +260,8 @@ human-facing doorway: cards people can read, try, verify, and improve.
   -- the practical card walk with complete payloads, proof modes, and
   a first group practice.
 - **[/vision/recipes](/vision/recipes)**
-  -- the public page for composing, restoring, sharing, and walking the
-  payloads and novel pairings.
+  -- the public page for composing, restoring, sharing, and opening
+  prefilled payload and pairing cards.
 - **[modality-as-recipe.form](../../coherence-substrate/modality-as-recipe.form)**
   -- substrate shape for multiple recipe extractions from one source.
 - **[song-as-recipe.form](../../coherence-substrate/song-as-recipe.form)**
