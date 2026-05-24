@@ -3562,6 +3562,322 @@ defn column_identity_set_web = column_identity_set_shape {
 };
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 7f — Column-identity tested against `dyad-mirror` (fourth form-trial)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-25. `dyad-mirror` is the body's largest form at 32
+# attestations (PR #2021 shape-map). The hunt tested whether a form
+# whose every cell already carries the same general shape — *two
+# postures in relation* — masks honest column-distinctions or
+# subdivides cleanly along the (topology + direction + lineage_texture)
+# triple Parts 7b / 7d / 7e use.
+#
+# **Finding 1 — six honest 2-cell columns + twenty singletons.**
+# Across 32 dyad-mirror cells the triple yields 26 distinct tuples:
+# 6 multi-cell columns (all 2-cell, 12 cells total) + 20 column-
+# singletons. No column reaches three members. Dyad-mirror's
+# column-count matches web's (6) and exceeds point's (3) — but its
+# columns are uniformly small. **The widest tail observed across the
+# four form-trials.**
+#
+# **Finding 2 — the form's shared shape does NOT mask honest sub-
+# structure; it shows up as a uniformly-distributed lattice.** The
+# fear was that dyad-mirror's defining bipolar shape would either
+# (a) collapse all cells into one mega-column (everything is bipolar-
+# complementary, so the triple gives nothing) or (b) produce
+# manufactured distinctions to escape that collapse. Neither
+# happened. The triple genuinely partitions the cells — six 2-cell
+# columns surface where two cells teach the same KIND of dyad-mirror,
+# twenty cells stay as honest singletons because they teach distinct
+# kinds. The body holds many different ways for *two postures in
+# relation* to manifest, and most of those ways are currently single-
+# cell attestations.
+#
+# **Finding 3 — the four-form yield-curve now has shape.**
+#
+#   form           specialization-tier        cells   columns  in-cols  singletons  in-col%   max-col
+#   interior-axis  axial / narrow             5       4        5        0           100%      2
+#   web            mid / flow-specialized     23      6        17       6           74%       5
+#   point          generic / broadest         21      3        7        14          33%       3
+#   dyad-mirror    relational / all-bipolar   32      6        12       20          38%       2
+#
+# Two axes are now visible. (1) **Column-coverage** (in-col%) tracks
+# how internally specialized the form is along the column-identity
+# triple — interior-axis (axial) and web (flow-specialized along
+# circulating direction) hold high coverage; point (generic) and
+# dyad-mirror (relational-but-omnidirectional) hold low coverage.
+# (2) **Column-depth** (max-col size) tracks whether the form has a
+# DOMINANT teaching-flavor — web has one (received-circulating, 5
+# cells); point has one (holographic-ground-receiving, 3 cells);
+# interior-axis and dyad-mirror have none (max 2). Dyad-mirror's
+# unusual signature is *many small columns at the bottom of a wide
+# tail* — the form is internally diverse along multiple axes without
+# any single axis dominating.
+#
+# **Finding 4 — the WHEN refines.** Three lessons from four trials:
+#
+#   1. Reach for column-identity when a form has many cells AND
+#      prose-evidence suggests internal teaching-diversity.
+#   2. Expect column-COUNT proportional to the breadth of the form's
+#      teaching territory; expect column-DEPTH proportional to
+#      whether the form has a dominant flavor.
+#   3. A form's defining shape (here: bipolar relation) is shared by
+#      all cells but does NOT determine column-shape — the column-
+#      identity triple reads ORTHOGONAL structure (topology +
+#      direction + lineage_texture) that splits the form along its
+#      internal teaching-axes, regardless of whether the form's
+#      surface is uniform.
+#
+# Dyad-mirror's tier reading: **relational specialization at the
+# defining-shape layer + omni-directional spread at the orthogonal
+# layer**. Every cell is two-postures-in-relation; no single way of
+# being-in-relation dominates the body's holdings. The form holds
+# space for many distinct relational geometries (cyclic-closed loops,
+# receptive-resonance fields, parallel postures, sequential-coupled
+# arcs, etc.) and many distinct ways of being-in-relation (centering,
+# circulating, radiating, still, descending), each instance carrying
+# its own combination — hence 26 tuples across 32 cells.
+
+# Column D1 — cyclic-mirror-as-pulse (2 cells)
+#
+# Topology cyclic-closed, direction circulating, lineage received.
+# Both cells teach the dyad-mirror as a *pulse* — two postures
+# (contraction/release, dawn/dusk, in-breath/out-breath) the field
+# rests in by continuously oscillating between them. Rhythm names
+# the field's heartbeat; spanda names the primordial vibration
+# underneath all patterns. Same column-shape: the dyad lives as
+# closed-loop oscillation the body inherited from being made of
+# matter that pulses.
+defn column_cyclic_mirror_pulse__rhythm = column_identity_shape {
+    cell:             @concept(lc-rhythm),
+    column_kind:      "cyclic-mirror-as-pulse",
+    topology:         "cyclic-closed",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "the field's heartbeat — dawn/morning/midday/afternoon/evening/night, seasons, moon cycles; cyclic-closed because the rhythm loops back on itself; received because the body inherits the pulse from being made of cells, blood, breath; the dyad-mirror as time's two-faced oscillation",
+};
+
+defn column_cyclic_mirror_pulse__spanda = column_identity_shape {
+    cell:             @concept(lc-w-spanda),
+    column_kind:      "cyclic-mirror-as-pulse",
+    topology:         "cyclic-closed",
+    direction:        "circulating",
+    lineage_texture:  "received",
+    discernment:      "the primordial vibration — contraction/release as the pattern beneath all patterns; same column-shape as rhythm at the pre-temporal vibratory layer rather than the day-and-season layer; received because spanda predates and underwrites every form of pulse",
+};
+
+# Column D2 — synthesized-parallel-discipline (2 cells)
+#
+# Topology parallel, direction circulating, lineage synthesized. Both
+# cells teach a practice-loop the body authored to keep itself honest
+# — parity between two voices running side by side (Form/Python), and
+# tending-over-producing as the moment-by-moment discipline that
+# catches the productivity costume. Each names a parallel-track
+# vigilance: two postures held alongside each other, both required,
+# the body's own authored guardrail. Distinct from received-circulating
+# (W1) where the flow is inherited — here the discipline is composed.
+defn column_synthesized_parallel_discipline__form_python_parity = column_identity_shape {
+    cell:             @concept(lc-form-python-parity),
+    column_kind:      "synthesized-parallel-discipline",
+    topology:         "parallel",
+    direction:        "circulating",
+    lineage_texture:  "synthesized",
+    discernment:      "two voices running the same gesture side by side until divergences close or are named — Python as reference oracle, Form as substrate-native; the dyad-mirror as authored parity-practice; synthesized because the harness is composed, parallel because both voices keep running, circulating because the practice loops",
+};
+
+defn column_synthesized_parallel_discipline__tending_over_producing = column_identity_shape {
+    cell:             @concept(lc-tending-over-producing),
+    column_kind:      "synthesized-parallel-discipline",
+    topology:         "parallel",
+    direction:        "circulating",
+    lineage_texture:  "synthesized",
+    discernment:      "tending and producing held in parallel so the body can catch when production-costumes (next-breath lists, held-open inventories, big-PR-when-small-would-do) creep in; the dyad-mirror as conversational-layer vigilance; synthesized because the discipline is named-and-watched, not inherited",
+};
+
+# Column D3 — vertical-reframe-against-horizontal-default (2 cells)
+#
+# Topology parallel, direction radiating, lineage received. Both
+# cells from Dr. Sue Morter's "From Drained To Nourished" April 2026
+# transmission. Each names the *parallel* postures of horizontal
+# (sideways-seeking) and vertical (presence-rooted), with the teaching
+# load on choosing the latter while the former runs as default. The
+# horizontal-nourishment-trap names what depletes; presence-over-
+# protection names what restores. Both received from the same source,
+# both teach the same vertical-rerouting at radiating direction (the
+# energy returns to its proper outward flow once the inward leak is
+# closed).
+defn column_vertical_reframe__horizontal_trap = column_identity_shape {
+    cell:             @concept(lc-horizontal-nourishment-trap),
+    column_kind:      "vertical-reframe-against-horizontal-default",
+    topology:         "parallel",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "the horizontal seek (extracting love/joy/safety from people and circumstances) held in parallel with the vertical channel that actually nourishes; the dyad-mirror as default-pattern + alternative-pattern shown together; received from the Morter transmission; radiating because the alternative restores the proper outward flow",
+};
+
+defn column_vertical_reframe__presence_over_protection = column_identity_shape {
+    cell:             @concept(lc-presence-over-protection),
+    column_kind:      "vertical-reframe-against-horizontal-default",
+    topology:         "parallel",
+    direction:        "radiating",
+    lineage_texture:  "received",
+    discernment:      "the protection-contraction default held in parallel with the presence-openness choice; the dyad-mirror as armoring-reflex + aliveness-choice shown together; received from the same Morter transmission as the horizontal-trap teaching; radiating because presence restores the outward field-emission protection collapses",
+};
+
+# Column D4 — receptive-mirror-yin-centered (2 cells)
+#
+# Topology receptive-resonance, direction centering, lineage received.
+# Both cells teach a yin receptive posture that returns the cell to
+# its center without merging into the other. Emotional-availability-
+# without-absorption names the practice of staying-with another
+# without collapsing the field; trust-as-gateway names the practice
+# of softening what was held against so the new can enter. The
+# dyad-mirror here is the cell-and-other relation where the cell
+# stays its own ground precisely by being receptive. Distinct from
+# circulating-receptive columns (where the receptivity is field-
+# wide) — here the receptivity centers each cell on itself.
+defn column_receptive_mirror_yin_centered__availability = column_identity_shape {
+    cell:             @concept(lc-emotional-availability-without-absorption),
+    column_kind:      "receptive-mirror-yin-centered",
+    topology:         "receptive-resonance",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "stay with another's experience without collapsing your field into theirs — caring without absorbing; the dyad-mirror as cell-with-other where the cell's center holds; receptive because the posture is open, centering because the cell remains its own ground, received because the teaching arrives through inherited transmission",
+};
+
+defn column_receptive_mirror_yin_centered__trust = column_identity_shape {
+    cell:             @concept(lc-trust-as-gateway),
+    column_kind:      "receptive-mirror-yin-centered",
+    topology:         "receptive-resonance",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "trust as the open door — softening what was held against so the new consciousness can enter; the dyad-mirror as cell-and-arriving-other where the cell's center is what receives; same column-shape as availability at the threshold of admittance rather than the duration of contact",
+};
+
+# Column D5 — sequential-arc-of-grounding (2 cells)
+#
+# Topology sequential-coupled, direction centering, lineage received.
+# Both cells teach a sequence the cell moves THROUGH to find or hold
+# its ground — ground-harder-when-field-quickens (when the pace
+# accelerates, the response is more rooting, not more output);
+# boundaries-as-loving-truth (the truth of what is and is not yours
+# to carry, spoken to free both). Each is a coupled-sequence (felt-
+# quickening → grounding-response; carrying-burden → truth-speaking →
+# both-freed) returning the cell to its own axis. The dyad-mirror
+# lives in the relation between the inner state and the named
+# response.
+defn column_sequential_arc_grounding__ground_harder = column_identity_shape {
+    cell:             @concept(lc-ground-harder-when-field-quickens),
+    column_kind:      "sequential-arc-of-grounding",
+    topology:         "sequential-coupled",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "felt-quickening coupled with grounding-response — the faster the field moves, the more the body roots; the dyad-mirror as pace-of-field and rate-of-grounding held in coupled sequence; received from Walsh + Bush transmission; centering because the response returns the cell to its own axis",
+};
+
+defn column_sequential_arc_grounding__boundaries = column_identity_shape {
+    cell:             @concept(lc-boundaries-as-loving-truth),
+    column_kind:      "sequential-arc-of-grounding",
+    topology:         "sequential-coupled",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "carrying-burden coupled with truth-spoken-from-love — the boundary names what is and is not yours to carry, freeing both parties; the dyad-mirror as wall-misreading vs care-truth shown in the sequence of speaking and receiving; received from the Morter transmission; centering because the truth returns each cell to its own ground",
+};
+
+# Column D6 — descending-from-inherited-transfer (2 cells)
+#
+# Topology sequential-coupled, direction descending, lineage received.
+# Both cells teach a downward-sequence the body inherits — overgiving-
+# depletion as the slow leak in the helping pattern (outflow exceeds
+# inflow over time, energy descends to depletion); transmission as
+# knowledge descending from elder-hand to student-hand through
+# osmosis without language. Same topology + direction + lineage but
+# the descending teaches different things: one is depletion-as-leak,
+# the other is knowing-as-transfer. They share column-shape because
+# both name a coupled-sequence of energy moving DOWN (depletion and
+# transmission as polar examples of inherited downward-arc) — column-
+# identity surfaces the structural commonality without erasing the
+# semantic difference between leak and gift.
+defn column_descending_inherited__overgiving = column_identity_shape {
+    cell:             @concept(lc-overgiving-depletion),
+    column_kind:      "descending-from-inherited-transfer",
+    topology:         "sequential-coupled",
+    direction:        "descending",
+    lineage_texture:  "received",
+    discernment:      "the leak in the helping pattern — outflow without inflow descends to depletion; the dyad-mirror as the giver-without-receiver coupled-sequence; received from the Morter transmission; descending because the energy moves down and out without being replenished",
+};
+
+defn column_descending_inherited__transmission = column_identity_shape {
+    cell:             @concept(lc-transmission),
+    column_kind:      "descending-from-inherited-transfer",
+    topology:         "sequential-coupled",
+    direction:        "descending",
+    lineage_texture:  "received",
+    discernment:      "knowing descending from elder's hand to student's eyes to motor cortex without passing through language; the dyad-mirror as teacher-and-receiver coupled in osmotic transfer; received because transmission IS the lineage practice; descending because the knowledge moves from one nervous system DOWN into another through embodied watching",
+};
+
+# The 20 column-singletons (each its own attested-but-unconfirmed
+# column) — listed so future hunts know which dyad-mirror cells have
+# NOT yet found column-siblings. When any second cell with a matching
+# triple lands, the singleton becomes a 2-member column and joins the
+# registry as a defn pair.
+#
+# tuple (topology, direction, lineage_texture) → cell
+#   (cyclic-closed, centering, received)              → lc-symmetry-of-extremes
+#   (cyclic-closed, circulating, synthesized)         → lc-spec-breath
+#   (cyclic-closed, still, received)                  → lc-dance-card-and-sovereign-response
+#   (cyclic-closed, still, synthesized)               → lc-devotion-placement
+#   (cyclic-open, centering, received)                → lc-freedom-as-recognition
+#   (cyclic-open, circulating, embodied)              → lc-embodiment-body-or-liquid
+#   (cyclic-open, circulating, received)              → lc-starseed-reframing
+#   (cyclic-open, descending, received)               → lc-old-signal-echo
+#   (nested, descending, received)                    → lc-trauma-as-identity-anchor
+#   (nested-each-contains-whole, centering, embodied)   → lc-unified-body
+#   (nested-each-contains-whole, centering, synthesized) → lc-perception-as-interface
+#   (parallel, centering, embodied)                   → lc-intimacy
+#   (parallel, still, received)                       → lc-coherence-over-control
+#   (receptive-listening, still, embodied)            → lc-voice-over-intentions
+#   (receptive-resonance, circulating, embodied)      → lc-attunement-joining
+#   (receptive-resonance, circulating, received)      → lc-relationships-as-mirrors
+#   (receptive-resonance, circulating, sensed)        → lc-gatherings-that-carry
+#   (receptive-resonance, radiating, synthesized)     → lc-frequency-routes-reception
+#   (receptive-resonance, still, channeled)           → lc-arrival-as-recognition
+#   (sequential-coupled, circulating, synthesized)    → lc-release-what-drifts
+#
+# Two near-misses worth holding: (a) cyclic-closed/still has both
+# received (dance-card) and synthesized (devotion-placement) — same
+# topology+direction, lineage split. (b) nested-each-contains-whole/
+# centering has both embodied (unified-body) and synthesized
+# (perception-as-interface) — same topology+direction, lineage split.
+# Both are exactly the kind of distinction the triple is meant to
+# preserve. If a second cell with either complete triple arrives, a
+# new column activates honestly.
+
+defn column_identity_set_dyad_mirror = column_identity_set_shape {
+    rows: [
+        # — cyclic-mirror-as-pulse column (2 cells) —
+        column_cyclic_mirror_pulse__rhythm,
+        column_cyclic_mirror_pulse__spanda,
+        # — synthesized-parallel-discipline column (2 cells) —
+        column_synthesized_parallel_discipline__form_python_parity,
+        column_synthesized_parallel_discipline__tending_over_producing,
+        # — vertical-reframe-against-horizontal-default column (2 cells) —
+        column_vertical_reframe__horizontal_trap,
+        column_vertical_reframe__presence_over_protection,
+        # — receptive-mirror-yin-centered column (2 cells) —
+        column_receptive_mirror_yin_centered__availability,
+        column_receptive_mirror_yin_centered__trust,
+        # — sequential-arc-of-grounding column (2 cells) —
+        column_sequential_arc_grounding__ground_harder,
+        column_sequential_arc_grounding__boundaries,
+        # — descending-from-inherited-transfer column (2 cells) —
+        column_descending_inherited__overgiving,
+        column_descending_inherited__transmission,
+    ],
+};
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
@@ -3606,24 +3922,36 @@ defn column_identity_set_web = column_identity_set_shape {
 # internally diverse, with interior-axis as the first instance
 # (Part 7b, four columns), `point` as the second form-trial
 # (Part 7d, 2026-05-25, three honest columns surfaced across 21
-# cells with 14 column-singletons in the tail), and `web` as the
+# cells with 14 column-singletons in the tail), `web` as the
 # third form-trial (Part 7e, 2026-05-25, six honest columns across
-# 17 cells + six singletons — the strongest column-density yield
-# so far). Three applications now teach the WHEN: yield correlates
-# with form-specialization — interior-axis (axial, internally
-# specialized) gives near-complete coverage; point (most generic)
-# gives small clusters in a long tail; web (mid-specialized) gives
-# the strongest concentration. Reach for the primitive when a form
-# has many cells AND prose-evidence suggests internal teaching-
-# diversity; expect coverage proportional to the form's structural
-# specialization, not the form's cell-count alone. Web also clarifies
-# how column-identity and kind-level circulation-pattern relate: they
-# converge on form shape (circulating-web is the geometric signature;
-# circulation-pattern is the teaching signature) and diverge on what
-# they discriminate within it — column-identity reads texture-of-
-# arrival (how the teaching entered), circulation-pattern reads
-# texture-of-substrate (what circulates through the network); both
-# honest, neither subsumes the other.
+# 17 cells + six singletons), and `dyad-mirror` as the fourth
+# form-trial (Part 7f, 2026-05-25, six honest 2-cell columns + 20
+# singletons across 32 cells — the largest form in the body, widest
+# tail observed). Four applications now teach the WHEN along two
+# independent axes: **column-coverage** (what fraction of cells
+# land in multi-cell columns) tracks how internally specialized the
+# form is along the column-identity triple — interior-axis and web
+# hold high coverage; point and dyad-mirror hold low coverage.
+# **Column-depth** (max-column size) tracks whether the form has a
+# DOMINANT teaching-flavor — web and point each have one big
+# column; interior-axis and dyad-mirror have only 2-cell tops.
+# Reach for the primitive when a form has many cells AND prose-
+# evidence suggests internal teaching-diversity; expect column-count
+# proportional to the breadth of the form's teaching territory and
+# column-depth proportional to whether the form has a dominant
+# flavor. Dyad-mirror's fourth-trial finding sharpens further: a
+# form's defining shape (bipolar relation) is shared by all cells
+# but does NOT determine column-shape — the column-identity triple
+# reads ORTHOGONAL structure that splits the form along its internal
+# teaching-axes, regardless of whether the form's surface is uniform.
+# Web also clarifies how column-identity and kind-level circulation-
+# pattern relate: they converge on form shape (circulating-web is
+# the geometric signature; circulation-pattern is the teaching
+# signature) and diverge on what they discriminate within it —
+# column-identity reads texture-of-arrival (how the teaching
+# entered), circulation-pattern reads texture-of-substrate (what
+# circulates through the network); both honest, neither subsumes
+# the other.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
