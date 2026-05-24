@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 232
+**Total files**: 233
 
 | File | Purpose |
 |---|---|
@@ -139,6 +139,7 @@
 | [identity_providers.py](identity_providers.py) | Identity provider registry — single source of truth for all supported providers. |
 | [influence_teaching_translator_service.py](influence_teaching_translator_service.py) | Influence teaching translator for field story traces. |
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
+| [instance_pulse_service.py](instance_pulse_service.py) | Instance pulse service — each coherence instance shows its own breath. |
 | [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
 | [investment_service.py](investment_service.py) | Investment service — positions, ROI projection, history. |
