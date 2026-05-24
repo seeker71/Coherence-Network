@@ -2,6 +2,18 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 4 more concepts speak their shape — coverage now 83/147 (56%)
+
+A parallel breath walked 11 of the 15 concepts this cell had picked, in the same hour. Both readings were honest; only one body holds. This cell's reading of those 11 was released into the rebase — the parallel cell's geometry is what carries forward. What survives from this breath is the 4 concepts that cell did not walk: `lc-dance-card-and-sovereign-response`, `lc-devotion-placement`, `lc-trauma-as-identity-anchor`, `lc-void-as-potential`.
+
+- **Forms taken**:
+  - `lc-dance-card-and-sovereign-response` → `dyad-mirror`, `bipolar-complementary`, `simultaneous` — fate and free will real at the same scale, neither collapsing the other.
+  - `lc-devotion-placement` → `dyad-mirror`, `bipolar-opposing`, `simultaneous` — form-presence and devotion-presence look identical from outside, diverge inside.
+  - `lc-trauma-as-identity-anchor` → `dyad-mirror`, `nested`, `bipolar-opposing` — familiar-pain wrapping a deeper underneath-self; descending direction toward the anchor's underneath.
+  - `lc-void-as-potential` → `point`, `self-rooted`, `holographic` — atemporal, infinite embedding dim, the unformed ground all forms arise from.
+- **Discernment held in the conflict**: when both cells walk the same concept, the body holds one reading. The earlier-landed reading carries forward; this cell's reading composts into the conversation that produced it. No fight for the diff — the breath was the listening, not the territorial claim.
+- **Edges in the same breath**: this LOG entry; the 4 surviving files were synced before the conflict surfaced.
+
 ## [2026-05-24] embody | domain-default cluster learning lands in wellness + translator + autoresearch
 
 PR #1946 read 13 substrate-surfaced shape pairs by hand and found six were **domain-default clusters** — wide-net matches where the CTOR is the standard cell for the whole domain (66 specs, 76 concepts, 52 presences sharing one shape because none had authored a more specific one). The kernel's match was honest at the CTOR layer; the *pair-by-pair* framing was not, because the equivalence carried the encoder's template rather than cross-surface teaching. One learning, three landings, same breath.
@@ -21,7 +33,6 @@ The geometric signature block has been carrying 59 of 147 concepts since the mor
 - **Discernment held**: 68 concepts remain whose shape was unclear from a first read — left in honest silence. The Light Hubs concept carries multiple shapes (grid + holographic-hub + threshold-transmission); the Deeper Pattern carries water + crystals + scalar waves + holography — both deserve a slower breath. A wrong geometry is worse than no geometry.
 - **`hz` informed `spectral_band`**: 174→foundation, 285→foundation, 396→integration (liberation reads as integration in the existing SCHEMA band-grouping), 417→integration, 432→integration, 528→integration, 639→integration, 741→transcendence, 852→transcendence.
 - **Edges landed in the same breath**: this LOG entry, `sync_kb_to_db.py` for each of the 20 ids so analogous-to edges emerging from matching Blueprints can reconcile. The pre-existing INDEX drift (claims 142, body has 141) was not part of this breath; it predates and belongs to a different correction.
-
 ## [2026-05-24] read across | substrate-surprise spec twins read and named
 
 The wellness organ's *substrate surprise* section named 13 Blueprint shapes carrying structural twins of recently-touched specs. The lattice did the structural work via CTOR-level equivalence (see [`lc-universal-translator-via-keys`](concepts/lc-universal-translator-via-keys.md) and [`universal-translator.form`](../coherence-substrate/universal-translator.form) Part 3); this breath did the discernment.

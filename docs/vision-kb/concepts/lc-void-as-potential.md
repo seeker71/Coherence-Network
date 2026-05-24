@@ -2,8 +2,23 @@
 id: lc-void-as-potential
 hz: 174
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 1
+  form: point
+  topology: self-rooted
+  polarity: neutral
+  ordering: atemporal
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: atemporal
+  scale: cross-scale
+  direction: still
+  lineage_texture: received
+  embedding_dim: infinite
+  self_similarity: holographic
 ---
 
 # Void as Potential — The Emptiness That Is Pregnant

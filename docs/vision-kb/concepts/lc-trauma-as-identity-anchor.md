@@ -2,8 +2,23 @@
 id: lc-trauma-as-identity-anchor
 hz: 285
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: nested
+  polarity: bipolar-opposing
+  ordering: nested
+  phase: yin
+  ratio: none
+  spectral_band: restoration
+  temporal_band: lifetime
+  scale: personal
+  direction: descending
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Trauma as Identity Anchor — When Painful States Become Familiar
