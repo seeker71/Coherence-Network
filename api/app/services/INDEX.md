@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 234
+**Total files**: 235
 
 | File | Purpose |
 |---|---|
@@ -98,6 +98,7 @@
 | [federation_push_service.py](federation_push_service.py) | Client-side push logic for federation measurement summaries (Spec 131). |
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
 | [federation_substrate_service.py](federation_substrate_service.py) | federation_substrate_service — freedom-preserving canonical exchange. |
+| [federation_value_flow_service.py](federation_value_flow_service.py) | federation_value_flow_service — freedom-preserving CC distribution across instances. |
 | [field_story_mcp_tools.py](field_story_mcp_tools.py) | MCP registry entries for published field stories. |
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |
