@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 199
+**Total files**: 200
 
 | File | Purpose |
 |---|---|
@@ -206,4 +206,5 @@
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
 | [test_vision_content.py](test_vision_content.py) | _no top-of-file purpose_ |
+| [test_wellness_chain_duplicates.py](test_wellness_chain_duplicates.py) | Regression test: the chain organ tolerates duplicate ``test:`` keys. |
 | [test_worktree_continuity_guard.py](test_worktree_continuity_guard.py) | _no top-of-file purpose_ |
